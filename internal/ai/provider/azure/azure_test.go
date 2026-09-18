@@ -658,6 +658,61 @@ func TestChatEndpoint_V1DoesNotDuplicatePath(t *testing.T) {
 	}
 }
 
+func TestStream_V1NotFoundFallsBackToChat(t *testing.T) {
+	t.Parallel()
+	var streamHits, chatHits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var probe map[string]any
+		_ = json.Unmarshal(body, &probe)
+		stream, _ := probe["stream"].(bool)
+		if stream {
+			streamHits++
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = io.WriteString(w, `{ "error": { "type": "invalid_request_error", "code": "DeploymentNotFound", "message": "The API deployment for this resource does not exist." } }`)
+			return
+		}
+		chatHits++
+		_, _ = io.WriteString(w, `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"from-chat"}}],"usage":{"prompt_tokens":4,"completion_tokens":2}}`)
+	}))
+	t.Cleanup(srv.Close)
+	a, err := New(provider.ProviderConfig{
+		BaseURL: srv.URL + "/openai/v1",
+		Model:   "model-router",
+		APIKey:  "k",
+		Flavor:  provider.AzureFlavorOpenAI,
+	}, WithHTTPClient(srv.Client()))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ch, err := a.Stream(context.Background(), provider.ChatRequest{
+		Messages: []provider.Message{{Role: provider.RoleUser, Content: "hi"}},
+	})
+	if err != nil {
+		t.Fatalf("Stream: %v", err)
+	}
+	var content string
+	var terminal provider.Chunk
+	for c := range ch {
+		if c.Err != nil {
+			t.Fatalf("chunk err: %v", c.Err)
+		}
+		content += c.Delta
+		if c.Done {
+			terminal = c
+		}
+	}
+	if streamHits != 1 || chatHits != 1 {
+		t.Fatalf("hits stream=%d chat=%d", streamHits, chatHits)
+	}
+	if content != "from-chat" {
+		t.Fatalf("content=%q", content)
+	}
+	if !terminal.Done || terminal.FinishReason != provider.FinishStop {
+		t.Fatalf("terminal = %+v", terminal)
+	}
+}
+
 func TestOpenAIV1_Chat_URLAuthAndBody(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

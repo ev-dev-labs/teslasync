@@ -408,8 +408,8 @@ type turnResult struct {
 }
 
 // completeTurn uses the provider's real streaming path whenever advertised.
-// Capability drift falls back to Chat only when Stream refuses synchronously,
-// before any frame has been consumed.
+// Any Stream failure that happens before a frame is consumed falls back
+// to Chat (capability drift, Foundry stream 404, etc.).
 func (d *Dispatcher) completeTurn(
 	ctx context.Context,
 	req provider.ChatRequest,
@@ -420,7 +420,10 @@ func (d *Dispatcher) completeTurn(
 		if err == nil {
 			return turn, "stream", nil
 		}
-		if consumed || !errors.Is(err, provider.ErrCapabilityNotSupported) {
+		// Fall back to Chat only when Stream refused before any
+		// frame — including Azure Foundry 404 DeploymentNotFound
+		// on stream:true while the same Chat probe succeeds.
+		if consumed {
 			return turnResult{}, "stream", err
 		}
 	}

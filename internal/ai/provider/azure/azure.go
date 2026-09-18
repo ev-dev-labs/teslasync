@@ -206,11 +206,58 @@ func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan 
 	if resp.StatusCode/100 != 2 {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("%w: azure stream status %d: %s", provider.ErrUpstream, resp.StatusCode, string(raw))
+		streamErr := fmt.Errorf("%w: azure stream status %d: %s", provider.ErrUpstream, resp.StatusCode, string(raw))
+		// Foundry OpenAI v1 (especially model-router) accepts the
+		// same chat/completions URL for non-stream Chat that
+		// Validate uses, but returns 404 DeploymentNotFound when
+		// the body has stream:true. Retry as Chat and synthesize
+		// chunks so Helix still completes.
+		if resp.StatusCode == http.StatusNotFound {
+			chatResp, chatErr := a.Chat(ctx, req)
+			if chatErr == nil {
+				return chatResponseAsStream(ctx, chatResp), nil
+			}
+		}
+		return nil, streamErr
 	}
 	out := make(chan provider.Chunk, 8)
 	go relayStream(ctx, resp.Body, out)
 	return out, nil
+}
+
+// chatResponseAsStream turns a completed Chat response into the
+// Stream channel shape dispatch already consumes.
+func chatResponseAsStream(ctx context.Context, resp *provider.ChatResponse) <-chan provider.Chunk {
+	out := make(chan provider.Chunk, 8)
+	go func() {
+		defer close(out)
+		if resp == nil {
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream fallback returned nil chat", provider.ErrUpstream)})
+			return
+		}
+		if resp.Message.Content != "" {
+			send(ctx, out, provider.Chunk{Delta: resp.Message.Content})
+		}
+		for i := range resp.ToolCalls {
+			call := resp.ToolCalls[i]
+			send(ctx, out, provider.Chunk{ToolDelta: &call})
+		}
+		finish := resp.FinishReason
+		if finish == "" {
+			if len(resp.ToolCalls) > 0 {
+				finish = provider.FinishToolCalls
+			} else {
+				finish = provider.FinishStop
+			}
+		}
+		send(ctx, out, provider.Chunk{
+			Done:         true,
+			FinishReason: finish,
+			InputTokens:  resp.InputTokens,
+			OutputTokens: resp.OutputTokens,
+		})
+	}()
+	return out
 }
 
 // Embed uses the Azure embeddings route. URL shape depends on flavor:
