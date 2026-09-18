@@ -18,13 +18,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import '../../../i18n';
 
 import AlertStudioPage from './AlertStudioPage';
 import type { AlertRule, AlertRuleInput } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import { ToastProvider } from '@/components/feedback/Toast';
+import { NavigationGuardProvider, GuardedLink } from '@/components/feedback';
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
     {},
@@ -116,18 +117,114 @@ vi.mock('@/api/hooks/useNotifications', async () => {
   };
 });
 
+function CurrentLocation() {
+  const { pathname } = useLocation();
+  return <span data-testid="current-location">{pathname}</span>;
+}
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/notifications/rules']}>
         <ToastProvider>
-          <AlertStudioPage />
+          <NavigationGuardProvider>
+            <CurrentLocation />
+            <GuardedLink to="/vehicles">Leave studio</GuardedLink>
+            <AlertStudioPage />
+          </NavigationGuardProvider>
         </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
+
+describe('AlertStudioPage navigation protection', () => {
+  beforeEach(() => {
+    RULES = [];
+    recordedSavePayloads.length = 0;
+    window.localStorage.clear();
+  });
+
+  it('does not warn just for restoring a locally saved draft, but warns for new edits', async () => {
+    const first = renderPage();
+    fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Recovered draft' } });
+    await waitFor(() => {
+      expect(window.localStorage.getItem('teslasync:draft:v5:alertstudio:rule:new')).toContain('Recovered draft');
+    }, { timeout: 2000 });
+    first.unmount();
+    renderPage();
+    expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Recovered draft');
+    fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
+    await waitFor(() => expect(screen.getByTestId('current-location')).toHaveTextContent('/vehicles'));
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'New edit' } });
+    fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
+    expect(await screen.findByText('Unsaved changes')).toBeInTheDocument();
+  });
+
+  it('discarding a recovered draft leaves a clean editor and removes the stored draft', async () => {
+    const first = renderPage();
+    fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Discard me' } });
+    await waitFor(() => {
+      expect(window.localStorage.getItem('teslasync:draft:v5:alertstudio:rule:new')).toContain('Discard me');
+    }, { timeout: 2000 });
+    first.unmount();
+    renderPage();
+    fireEvent.click(screen.getByTestId('draft-recovery-discard'));
+    expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('');
+    expect(window.localStorage.getItem('teslasync:draft:v5:alertstudio:rule:new')).toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
+    await waitFor(() => expect(screen.getByTestId('current-location')).toHaveTextContent('/vehicles'));
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+  });
+
+  it('does not warn when leaving a new untouched editor', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('current-location')).toHaveTextContent('/vehicles');
+    });
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('warns for edits and stops warning when edits are undone', async () => {
+    renderPage();
+    const name = screen.getByPlaceholderText('My alert rule');
+    fireEvent.change(name, { target: { value: 'Unsaved rule' } });
+    fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
+    expect(await screen.findByText('Unsaved changes')).toBeInTheDocument();
+    expect(screen.getByTestId('current-location')).toHaveTextContent('/notifications/rules');
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    fireEvent.change(name, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('current-location')).toHaveTextContent('/vehicles');
+    });
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+  });
+
+  it('does not warn when inspecting an existing saved rule without edits', async () => {
+    RULES = [{
+      id: 42, name: 'Saved rule', enabled: true, severity: 'warn',
+      all_vehicles: true, vehicle_ids: [], signal_name: 'BatteryLevel',
+      op: '<', value_num: 20, cooldown_min: 15, trigger_mode: 'once',
+      kind: 'signal', created_at: '', updated_at: '',
+    } as AlertRule];
+    renderPage();
+    selectRule('Saved rule');
+    await waitFor(() => expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Saved rule'));
+    fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
+    await waitFor(() => expect(screen.getByTestId('current-location')).toHaveTextContent('/vehicles'));
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+  });
+});
 
 function selectRule(name: string) {
   const span = screen.getByText(name);

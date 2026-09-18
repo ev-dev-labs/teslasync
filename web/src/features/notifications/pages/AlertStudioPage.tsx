@@ -581,7 +581,6 @@ export default function AlertStudio() {
   const [ruleSearch, setRuleSearch] = useUrlString('q', '')
   const [testChannelIds, setTestChannelIds] = useState<number[] | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const initialEditorRef = useRef<string>(JSON.stringify(freshEditor()))
 
   // `useFormDraft` resets its internal state during
   // render whenever `draftKey` changes (documented React 18 pattern).
@@ -629,10 +628,15 @@ export default function AlertStudio() {
       || JSON.stringify(v) === freshEditorJsonRef.current,
   })
 
-  const isDirty = useMemo(
-    () => JSON.stringify(editor) !== initialEditorRef.current,
-    [editor],
-  )
+  // A recovered draft is already persisted locally. Merely opening it is
+  // not a new edit; compare against what the user actually saw on entry.
+  const initialEditorRef = useRef<string>(JSON.stringify(editor))
+  const isDirty = JSON.stringify(editor) !== initialEditorRef.current
+
+  const handleDiscardDraft = useCallback(() => {
+    initialEditorRef.current = JSON.stringify(freshEditor())
+    discardDraft()
+  }, [discardDraft])
 
   // Derive the vehicle name surfaced in the
   // message-template preview. Mirrors the backend's
@@ -1720,7 +1724,7 @@ export default function AlertStudio() {
                 <DraftRecoveryBanner
                   hasDraft={hasDraft}
                   draftSavedAt={draftSavedAt}
-                  onDiscard={discardDraft}
+                  onDiscard={handleDiscardDraft}
                   itemNoun={t('draft.noun.rule', 'Alert rule')}
                 />
               </div>
