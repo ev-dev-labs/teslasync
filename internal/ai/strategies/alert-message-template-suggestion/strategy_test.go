@@ -4,8 +4,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/eval"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 )
+
+func TestGoldenPromptMatchesProduction(t *testing.T) {
+	t.Parallel()
+	set, err := eval.LoadGoldenSet("goldens.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(set.Feature.System) != strings.TrimSpace(SystemPrompt) {
+		t.Fatal("goldens.yaml must evaluate the production prompt, not an older writing brief")
+	}
+}
 
 func TestStrategy_FeatureID(t *testing.T) {
 	t.Parallel()
@@ -38,6 +50,11 @@ func TestStrategy_System(t *testing.T) {
 		"Do NOT copy bland catalog presets",
 		"Tesla owner would be glad they received",
 		`{{SignalName}} is {{Value}} (threshold {{Threshold}})`,
+		"the creative idea IS the product",
+		"three genuinely different creative angles",
+		"A gear state is NOT proof of movement",
+		"Critical alerts prioritise clarity",
+		"NOT a checklist of tokens",
 	} {
 		if !strings.Contains(sys, must) {
 			t.Errorf("System() missing %q", must)

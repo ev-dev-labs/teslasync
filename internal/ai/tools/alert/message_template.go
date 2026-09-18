@@ -392,11 +392,11 @@ func writingBrief(rule *alertmodel.AlertRule) string {
 	sev := strings.ToLower(strings.TrimSpace(rule.Severity))
 	switch sev {
 	case "critical":
-		return "Tone: urgent, high-stakes Tesla notification a driver would actually read. Name the vehicle and signal, include the live value and limit, make severity unmistakable. " + forbidden
+		return "Tone: urgent and calm, not theatrical. Make the actual condition unmistakable; use a value and limit only for numeric comparisons. No jokes or invented danger. Suggest a safe next check, never an unsupported diagnosis or interacting with the phone while driving. " + forbidden
 	case "warn":
-		return "Tone: sharp human heads-up — specific, not generic. Name the vehicle and signal, include value vs threshold, one concrete next-look. " + forbidden
+		return "Tone: sharp human heads-up, with restrained personality. Lead with what needs attention, not telemetry jargon. Include value vs threshold only for numeric comparisons; boolean and enum states need natural-language meaning, not a fictional limit. No celebration or invented consequences. " + forbidden
 	default:
-		return "Tone: memorable Tesla-owner copy with personality (wit or celebration when severity is info). Ground in this signal or metric. " + forbidden
+		return "Tone: witty, observant, and event-specific. Make the car feel like a character without inventing facts. Choose one fresh creative angle, not an emoji attached to a status line. For enum/boolean equality, express the selected state naturally; do not force SignalName, Value, or Threshold into a second telemetry sentence. State is not proof of movement or a completed action. Use numerical placeholders when they carry useful information. " + forbidden
 	}
 }
 

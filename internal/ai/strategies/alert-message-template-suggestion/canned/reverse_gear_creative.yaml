@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: draft_reverse
+        name: draft_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"Gear","op":"=","value_text":"R","severity":"info"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: validate_reverse
+        name: validate_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"Gear","op":"=","value_text":"R","severity":"info","template":"{{VehicleName}} has a different definition of forward planning. Reverse selected."}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      {{VehicleName}} has a different definition of forward planning. Reverse selected.
+      A dry observation about the selected gear, without pretending the car has moved.
+    input_tokens: 240
+    output_tokens: 60
