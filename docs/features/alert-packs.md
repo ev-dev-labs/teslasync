@@ -54,3 +54,11 @@ Manual packs remain available when AI is disabled or the provider fails.
 Migration `000245_alert_packs` adds installation and membership tables, without
 altering the existing alert-rule schema. Leave it applied when rolling back the
 application. Its down migration removes pack tracking only, not alert rules.
+
+The pack installation request accepts `cooldown_s` (60 to 604800 seconds, in
+whole-minute increments). The preview displays minutes; the existing ordinary
+rule persistence contract is unchanged.
+
+`TestPacksPostgres` requires `TESLASYNC_TEST_DB` pointing to a migrated test
+database. It clones the alert-rule schema without rows into a temporary schema,
+uses its own ID sequence, and removes that schema after the test.

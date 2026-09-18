@@ -65,14 +65,9 @@ func TestPacksPostgres(t *testing.T) {
 	_, err = pool.Exec(ctx, `
 		CREATE TABLE vehicles(id BIGINT PRIMARY KEY);
 		INSERT INTO vehicles VALUES (1),(2);
-		CREATE TABLE alert_rules(
-			id BIGSERIAL PRIMARY KEY, name TEXT, description TEXT, enabled BOOLEAN, vehicle_id BIGINT,
-			all_vehicles BOOLEAN, signal_name TEXT, op TEXT, value_num DOUBLE PRECISION, value_text TEXT,
-			value_bool BOOLEAN, value_min DOUBLE PRECISION, value_max DOUBLE PRECISION, severity TEXT,
-			cooldown_min INTEGER, trigger_mode TEXT, snoozed_until TIMESTAMPTZ, kind TEXT, metric_id TEXT,
-			metric_window TEXT, metric_threshold DOUBLE PRECISION, metric_op TEXT, max_fires_per_resolution INTEGER,
-			escalation_after_min INTEGER, escalation_severity TEXT, msg_template TEXT, include_title BOOLEAN,
-			created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ);
+		CREATE TABLE alert_rules (LIKE public.alert_rules INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES);
+		CREATE SEQUENCE alert_pack_rule_ids OWNED BY alert_rules.id;
+		ALTER TABLE alert_rules ALTER COLUMN id SET DEFAULT nextval('alert_pack_rule_ids');
 		CREATE TABLE alert_rule_vehicles(rule_id BIGINT REFERENCES alert_rules(id) ON DELETE CASCADE,
 			vehicle_id BIGINT REFERENCES vehicles(id), PRIMARY KEY(rule_id,vehicle_id));`)
 	if err != nil {

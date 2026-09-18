@@ -26,7 +26,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
   const [discard, setDiscard] = useState(false)
   const [selected, setSelected] = useState(() => pack.rules.map(rule => rule.id))
   const [selections, setSelections] = useState<Record<string, PackSelection>>(() => Object.fromEntries(pack.rules.map(template => [
-    template.id, { template_id: template.id, value_num: template.rule.value_num ?? undefined, cooldown_min: template.rule.cooldown_min,
+    template.id, { template_id: template.id, value_num: template.rule.value_num ?? undefined, cooldown_s: template.rule.cooldown_min * 60,
       message: t(`alertPacks.rules.${template.id}.message`, template.rule.msg_template ?? '') },
   ])))
   const snapshot = JSON.stringify({ name, enabled, vehicleSelection, selected: [...selected].sort(), selections })
@@ -41,7 +41,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       const value = choice.value_num ?? template?.rule.value_num
       const numericValid = value == null || (Number.isFinite(value) && value >= (template?.unit === '%' ? 0 : -100) && value <= 100)
       return numericValid && Boolean(choice.message?.trim()) && (choice.message?.length ?? 0) <= 1024
-        && (choice.cooldown_min == null || (Number.isInteger(choice.cooldown_min) && choice.cooldown_min >= 1 && choice.cooldown_min <= 10080))
+        && (choice.cooldown_s == null || (Number.isInteger(choice.cooldown_s) && choice.cooldown_s % 60 === 0 && choice.cooldown_s >= 60 && choice.cooldown_s <= 604800))
     })
   const close = () => {
     if (install.isPending) return

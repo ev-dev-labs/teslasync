@@ -43,7 +43,7 @@ export interface PackSelection {
   template_id: string
   value_num?: number
   message?: string
-  cooldown_min?: number
+  cooldown_s?: number
 }
 
 export interface InstallPackInput {

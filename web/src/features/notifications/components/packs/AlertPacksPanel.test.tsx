@@ -75,6 +75,7 @@ describe('Alert Packs', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
     fireEvent.click(screen.getByRole('switch', { name: 'Charging complete' }))
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '25' } })
+    fireEvent.change(screen.getByLabelText('Minimum minutes between notifications'), { target: { value: '120' } })
     fireEvent.change(screen.getByLabelText('Notification message'), { target: { value: '{{VehicleName}} needs a charge.' } })
     fireEvent.click(screen.getByRole('switch', { name: 'Enable newly created rules immediately' }))
     fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
@@ -82,7 +83,7 @@ describe('Alert Packs', () => {
     const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({
       version: 1, all_vehicles: true, vehicle_ids: [], enabled: true,
-      rules: [{ template_id: 'battery-low', value_num: 25, cooldown_min: 60, message: '{{VehicleName}} needs a charge.' }],
+      rules: [{ template_id: 'battery-low', value_num: 25, cooldown_s: 7200, message: '{{VehicleName}} needs a charge.' }],
     })
   })
 

@@ -29,10 +29,10 @@ type Pack struct {
 }
 
 type Selection struct {
-	TemplateID  string   `json:"template_id"`
-	ValueNum    *float64 `json:"value_num,omitempty"`
-	Message     *string  `json:"message,omitempty"`
-	CooldownMin *int     `json:"cooldown_min,omitempty"`
+	TemplateID string   `json:"template_id"`
+	ValueNum   *float64 `json:"value_num,omitempty"`
+	Message    *string  `json:"message,omitempty"`
+	CooldownS  *int     `json:"cooldown_s,omitempty"`
 }
 
 type InstallRequest struct {
@@ -233,11 +233,11 @@ func Prepare(pack Pack, req InstallRequest) ([]Template, string, error) {
 			}
 			t.Rule.MsgTemplate = ptr(message)
 		}
-		if selection.CooldownMin != nil {
-			if *selection.CooldownMin < 1 || *selection.CooldownMin > 10080 {
-				return nil, "", errors.New("cooldown must be between 1 and 10080 minutes")
+		if selection.CooldownS != nil {
+			if *selection.CooldownS < 60 || *selection.CooldownS > 604800 || *selection.CooldownS%60 != 0 {
+				return nil, "", errors.New("cooldown must be whole minutes between 60 and 604800 seconds")
 			}
-			t.Rule.CooldownMin = *selection.CooldownMin
+			t.Rule.CooldownMin = *selection.CooldownS / 60
 		}
 		out = append(out, t)
 	}

@@ -53,13 +53,13 @@ func TestPrepare(t *testing.T) {
 	req.AllVehicles = false
 	req.VehicleIDs = []int64{2, 1, 2}
 	req.Rules[0].ValueNum = ptr(25.0)
-	req.Rules[0].CooldownMin = ptr(120)
+	req.Rules[0].CooldownS = ptr(7200)
 	req.Rules[0].Message = ptr(" {{VehicleName}} needs a charge. ")
 	got, scope, err := Prepare(pack, req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scope != "1,2" || !reflect.DeepEqual(got[0].Rule.VehicleIDs, []int64{1, 2}) || *got[0].Rule.ValueNum != 25 || *got[0].Rule.MsgTemplate != "{{VehicleName}} needs a charge." {
+	if scope != "1,2" || !reflect.DeepEqual(got[0].Rule.VehicleIDs, []int64{1, 2}) || *got[0].Rule.ValueNum != 25 || got[0].Rule.CooldownMin != 120 || *got[0].Rule.MsgTemplate != "{{VehicleName}} needs a charge." {
 		t.Fatalf("incorrect normalization: scope=%s rules=%+v", scope, got)
 	}
 	after, _ := json.Marshal(pack)
@@ -71,22 +71,23 @@ func TestPrepare(t *testing.T) {
 func TestPrepareRejectsInvalidRequests(t *testing.T) {
 	pack, _ := Find("everyday")
 	tests := map[string]func(*InstallRequest){
-		"version":          func(r *InstallRequest) { r.Version = 99 },
-		"empty":            func(r *InstallRequest) { r.Rules = nil },
-		"unknown":          func(r *InstallRequest) { r.Rules[0].TemplateID = "invented" },
-		"duplicate":        func(r *InstallRequest) { r.Rules = append(r.Rules, r.Rules[0]) },
-		"scope conflict":   func(r *InstallRequest) { r.VehicleIDs = []int64{1} },
-		"empty scope":      func(r *InstallRequest) { r.AllVehicles = false },
-		"negative ID":      func(r *InstallRequest) { r.AllVehicles = false; r.VehicleIDs = []int64{-1} },
-		"nan":              func(r *InstallRequest) { r.Rules[0].ValueNum = ptr(math.NaN()) },
-		"infinity":         func(r *InstallRequest) { r.Rules[0].ValueNum = ptr(math.Inf(1)) },
-		"range":            func(r *InstallRequest) { r.Rules[0].ValueNum = ptr(101.0) },
-		"negative percent": func(r *InstallRequest) { r.Rules[0].ValueNum = ptr(-1.0) },
-		"text threshold":   func(r *InstallRequest) { r.Rules[0] = Selection{TemplateID: "charge-complete", ValueNum: ptr(3.0)} },
-		"blank message":    func(r *InstallRequest) { r.Rules[0].Message = ptr("  ") },
-		"long message":     func(r *InstallRequest) { r.Rules[0].Message = ptr(strings.Repeat("a", 1025)) },
-		"cooldown zero":    func(r *InstallRequest) { r.Rules[0].CooldownMin = ptr(0) },
-		"cooldown huge":    func(r *InstallRequest) { r.Rules[0].CooldownMin = ptr(10081) },
+		"version":                 func(r *InstallRequest) { r.Version = 99 },
+		"empty":                   func(r *InstallRequest) { r.Rules = nil },
+		"unknown":                 func(r *InstallRequest) { r.Rules[0].TemplateID = "invented" },
+		"duplicate":               func(r *InstallRequest) { r.Rules = append(r.Rules, r.Rules[0]) },
+		"scope conflict":          func(r *InstallRequest) { r.VehicleIDs = []int64{1} },
+		"empty scope":             func(r *InstallRequest) { r.AllVehicles = false },
+		"negative ID":             func(r *InstallRequest) { r.AllVehicles = false; r.VehicleIDs = []int64{-1} },
+		"nan":                     func(r *InstallRequest) { r.Rules[0].ValueNum = ptr(math.NaN()) },
+		"infinity":                func(r *InstallRequest) { r.Rules[0].ValueNum = ptr(math.Inf(1)) },
+		"range":                   func(r *InstallRequest) { r.Rules[0].ValueNum = ptr(101.0) },
+		"negative percent":        func(r *InstallRequest) { r.Rules[0].ValueNum = ptr(-1.0) },
+		"text threshold":          func(r *InstallRequest) { r.Rules[0] = Selection{TemplateID: "charge-complete", ValueNum: ptr(3.0)} },
+		"blank message":           func(r *InstallRequest) { r.Rules[0].Message = ptr("  ") },
+		"long message":            func(r *InstallRequest) { r.Rules[0].Message = ptr(strings.Repeat("a", 1025)) },
+		"cooldown zero":           func(r *InstallRequest) { r.Rules[0].CooldownS = ptr(0) },
+		"cooldown huge":           func(r *InstallRequest) { r.Rules[0].CooldownS = ptr(604801) },
+		"cooldown partial minute": func(r *InstallRequest) { r.Rules[0].CooldownS = ptr(61) },
 	}
 	for name, mutate := range tests {
 		t.Run(name, func(t *testing.T) {

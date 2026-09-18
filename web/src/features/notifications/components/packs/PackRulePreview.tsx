@@ -37,8 +37,8 @@ export default function PackRulePreview({ template, selection, selected, disable
           />}
           {template.unit === '°C' && <Caption>{t('alertPacks.canonicalTemperature', 'Enter Celsius; the trigger summary above also shows your preferred temperature unit.')}</Caption>}
           <Input label={t('alertPacks.cooldown', 'Minimum minutes between notifications')} type="number" min={1} max={10080}
-            value={selection.cooldown_min ?? rule.cooldown_min} disabled={disabled}
-            onChange={e => onChange({ ...selection, cooldown_min: Number(e.target.value) })} />
+            value={selection.cooldown_s == null ? rule.cooldown_min : selection.cooldown_s / 60} disabled={disabled}
+            onChange={e => onChange({ ...selection, cooldown_s: Number(e.target.value) * 60 })} />
           <Textarea label={t('alertPacks.message', 'Notification message')} value={selection.message ?? rule.msg_template ?? ''}
             maxLength={1024} rows={3} disabled={disabled}
             onChange={e => onChange({ ...selection, message: e.target.value })} />
