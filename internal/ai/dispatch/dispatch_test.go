@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -413,6 +414,29 @@ func TestDispatcher_FallsBackWhenStreamCapabilityDrifts(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 	if got := strings.Join(w.Deltas(), ""); got != "fallback" {
+		t.Fatalf("joined deltas = %q", got)
+	}
+	if p.streamCalls != 1 || p.chatCalls != 1 {
+		t.Fatalf("provider calls: stream=%d chat=%d", p.streamCalls, p.chatCalls)
+	}
+}
+
+func TestDispatcher_FallsBackWhenStream404sBeforeFrames(t *testing.T) {
+	t.Parallel()
+
+	p := &streamingScriptedProvider{
+		streamErr: fmt.Errorf("%w: azure stream status 404: DeploymentNotFound", provider.ErrUpstream),
+		chatResp: &provider.ChatResponse{
+			Message: provider.Message{Role: provider.RoleAssistant, Content: "chat-ok"},
+		},
+	}
+	d := New(tools.NewRegistry(), p, nil, 0)
+	w := NewCaptureWriter()
+
+	if err := d.Run(context.Background(), fakeStrategy{}, strategy.StrategyInput{}, w); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := strings.Join(w.Deltas(), ""); got != "chat-ok" {
 		t.Fatalf("joined deltas = %q", got)
 	}
 	if p.streamCalls != 1 || p.chatCalls != 1 {
