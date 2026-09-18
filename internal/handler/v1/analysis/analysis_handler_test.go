@@ -1,6 +1,8 @@
 package analysis
 
 import (
+	"context"
+	"encoding/json"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -31,5 +33,26 @@ func TestAnalysisWindow(t *testing.T) {
 				t.Fatal("window silently cropped")
 			}
 		})
+	}
+}
+
+func TestRespondAnalysisWritesPayloadNotEnvelope(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/physics/ledger", nil)
+	respondAnalysis(rec, req, "api.physics.test", func(context.Context) (map[string]string, error) {
+		return map[string]string{"kind": "range"}, nil
+	})
+	if rec.Code != 200 {
+		t.Fatalf("status=%d", rec.Code)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json: %v", err)
+	}
+	if _, wrapped := body["data"]; wrapped {
+		t.Fatalf("payload wrapped in data envelope: %v", body)
+	}
+	if body["kind"] != "range" {
+		t.Fatalf("kind=%v body=%v", body["kind"], body)
 	}
 }

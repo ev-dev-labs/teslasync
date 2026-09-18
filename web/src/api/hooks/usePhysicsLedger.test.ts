@@ -19,7 +19,14 @@ vi.mock('@/api/client', async () => {
   return { ...actual, request: requestMock };
 });
 
-import { physicsLedgerKeys, usePhysicsLedger, useDriveLedger, useChargeLedger, useParkLedger } from './usePhysicsLedger';
+import {
+  physicsLedgerKeys,
+  readPhysicsLedger,
+  usePhysicsLedger,
+  useDriveLedger,
+  useChargeLedger,
+  useParkLedger,
+} from './usePhysicsLedger';
 
 function makeWrapper() {
   const qc = new QueryClient({
@@ -84,10 +91,35 @@ describe('usePhysicsLedger', () => {
     expect(url).toContain('vehicle_id=1');
   });
 
+  it('unwraps a legacy {data: ledger} envelope so panels are not empty', async () => {
+    requestMock.mockResolvedValueOnce({
+      data: { kind: 'range', honesty: 'Predicted vs measured', drive: { honesty: 'Drive energy' } },
+    });
+    const { result } = renderHook(
+      () => usePhysicsLedger({ vehicleId: '1', start: '2026-09-13T12:00:00Z', end: '2026-09-14T12:00:00Z' }),
+      { wrapper: makeWrapper() },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.kind).toBe('range');
+    expect(result.current.data?.drive).toEqual({ honesty: 'Drive energy' });
+  });
+
   it('builds distinct cache keys per scope', () => {
     const a = physicsLedgerKeys.window({ vehicleId: '1' });
     const b = physicsLedgerKeys.window({ vehicleId: '2' });
     expect(a).not.toEqual(b);
     expect(physicsLedgerKeys.drive('7')).not.toEqual(physicsLedgerKeys.charge('7'));
+  });
+});
+
+describe('readPhysicsLedger', () => {
+  it('returns a root ledger unchanged', () => {
+    const ledger = { kind: 'drive', honesty: 'Drive energy' };
+    expect(readPhysicsLedger(ledger)).toBe(ledger);
+  });
+
+  it('unwraps {data: ledger} when the root has no kind', () => {
+    const inner = { kind: 'range', honesty: 'Predicted vs measured' };
+    expect(readPhysicsLedger({ data: inner })).toBe(inner);
   });
 });
