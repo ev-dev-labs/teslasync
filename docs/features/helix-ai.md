@@ -60,7 +60,7 @@ Helix is provider-agnostic. The same feature works against any of these:
 | ----------------------- | --------- | ---------------------------------------------------------- |
 | Ollama                  | Local     | Privacy-first deployments, no per-token cost, latency-bound by hardware |
 | OpenAI                  | Cloud     | Strong general models, broad tool-use support              |
-| Azure OpenAI / Foundry  | Cloud     | Enterprise customers with Azure agreements                 |
+| Microsoft Foundry v1   | Cloud     | Chat Completions or Responses with Azure-hosted deployments |
 | Anthropic               | Cloud     | Long-context narratives, structured prose                  |
 | Mock                    | Dev only  | Tests; never used at runtime                               |
 

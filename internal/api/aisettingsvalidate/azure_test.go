@@ -29,14 +29,13 @@ func TestAzureNegotiationErrorPreservesBothFailures(t *testing.T) {
 
 func TestAzureValidationAndHelixUseSameIdentity(t *testing.T) {
 	for _, tc := range []struct {
-		name, flavor, suffix, override, want string
+		name, protocol, override, want string
 	}{
-		{"classic", "openai", "", "", "saved-deployment"},
-		{"v1_openai", "openai", "/openai/v1", "", "saved-deployment"},
-		{"v1_foundry_ignores_hidden", "foundry", "/openai/v1", "", "visible-model"},
-		{"legacy_foundry_ignores_hidden", "foundry", "/models", "", "visible-model"},
-		{"explicit_clear", "openai", "", `,"deployment":""`, "visible-model"},
-		{"explicit_override", "openai", "/openai/v1", `,"deployment":"edited-deployment"`, "edited-deployment"},
+		{"auto", "auto", "", "visible-model"},
+		{"chat", "chat_completions", "", "visible-model"},
+		{"responses", "responses", "", "visible-model"},
+		{"edited_identity", "responses", `,"model":"edited-deployment"`, "edited-deployment"},
+		{"edited_protocol", "chat_completions", `,"api_protocol":"responses"`, "visible-model"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var mu sync.Mutex
@@ -47,21 +46,28 @@ func TestAzureValidationAndHelixUseSameIdentity(t *testing.T) {
 					Model               string `json:"model"`
 					MaxTokens           int    `json:"max_tokens"`
 					MaxCompletionTokens int    `json:"max_completion_tokens"`
+					MaxOutputTokens     int    `json:"max_output_tokens"`
 					Stream              bool   `json:"stream"`
 				}
 				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 					t.Error(err)
 				}
-				identity := body.Model
-				if tc.flavor == "openai" && tc.suffix == "" {
-					identity = strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/openai/deployments/"), "/chat/completions")
+				wantPath := "/openai/v1/chat/completions"
+				if tc.protocol == "responses" || tc.name == "edited_protocol" {
+					wantPath = "/openai/v1/responses"
 				}
-				cap := body.MaxTokens + body.MaxCompletionTokens
+				if r.URL.Path != wantPath || r.URL.RawQuery != "" {
+					t.Errorf("path=%s want=%s", r.URL.String(), wantPath)
+				}
+				identity := body.Model
+				cap := body.MaxTokens + body.MaxCompletionTokens + body.MaxOutputTokens
 				mu.Lock()
 				identities = append(identities, identity)
 				budgets = append(budgets, cap)
 				mu.Unlock()
-				if body.Stream {
+				if wantPath == "/openai/v1/responses" {
+					_, _ = io.WriteString(w, `{"status":"completed","output_text":"OK"}`)
+				} else if body.Stream {
 					w.Header().Set("Content-Type", "text/event-stream")
 					_, _ = io.WriteString(w, "data: "+`{"choices":[{"delta":{"content":"OK"},"finish_reason":"stop"}]}`+"\n\ndata: [DONE]\n\n")
 				} else {
@@ -72,8 +78,8 @@ func TestAzureValidationAndHelixUseSameIdentity(t *testing.T) {
 			saved := map[string]any{
 				"default": "azure",
 				"azure": map[string]any{
-					"base_url": srv.URL + tc.suffix, "api_key": "k", "model": "visible-model",
-					"deployment": "saved-deployment", "flavor": tc.flavor,
+					"base_url": srv.URL + "/openai/v1", "api_key": "k", "model": "visible-model",
+					"api_protocol": tc.protocol,
 				},
 			}
 			var live provider.Provider

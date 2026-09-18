@@ -26,9 +26,16 @@ func (a chatOnlyAzure) Capabilities() provider.Capabilities {
 }
 
 func TestAzureHelixDispatchRoundTrip(t *testing.T) {
-	for _, responses := range []bool{false, true} {
+	for _, tc := range []struct {
+		responses bool
+		protocol  string
+	}{
+		{false, provider.FoundryProtocolAuto}, {true, provider.FoundryProtocolAuto},
+		{false, provider.FoundryProtocolChat}, {true, provider.FoundryProtocolResponses},
+	} {
+		responses := tc.responses
 		for _, stream := range []bool{false, true} {
-			t.Run(fmt.Sprintf("responses=%v/stream=%v", responses, stream), func(t *testing.T) {
+			t.Run(fmt.Sprintf("protocol=%s/responses=%v/stream=%v", tc.protocol, responses, stream), func(t *testing.T) {
 				model := "model-router"
 				if responses {
 					model = "gpt-chat-latest"
@@ -88,7 +95,7 @@ func TestAzureHelixDispatchRoundTrip(t *testing.T) {
 				defer srv.Close()
 				a, err := azure.New(provider.ProviderConfig{
 					BaseURL: srv.URL + "/openai/v1", Model: model, APIKey: "k",
-					Flavor: provider.AzureFlavorFoundry, Deployment: "hidden-stale-deployment",
+					APIProtocol: tc.protocol,
 				}, azure.WithHTTPClient(srv.Client()))
 				if err != nil {
 					t.Fatal(err)
@@ -116,7 +123,7 @@ func TestAzureHelixDispatchRoundTrip(t *testing.T) {
 					t.Fatalf("completion=%s %d/%d", finish, in, out)
 				}
 				wantAttempts := int32(2)
-				if responses {
+				if responses && tc.protocol == provider.FoundryProtocolAuto {
 					wantAttempts = 4
 				}
 				if turns.Load() != 2 || attempts.Load() != wantAttempts {

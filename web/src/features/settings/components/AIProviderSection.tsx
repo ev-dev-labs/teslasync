@@ -37,33 +37,14 @@ export interface AIProviderDraft {
   api_key: string
   /** Daily cap in cents. 0 means unset. */
   cost_cap_cents: number
-  /**
-   * Azure-only: API version query parameter. Ignored by other
-   * providers but persists in the per-provider sub-map so a user
-   * who swaps providers doesn't lose their Azure config.
-   */
-  api_version: string
-  /**
-   * Azure-only: selects between the Azure OpenAI Service surface
-   * (deployment-name routing in URL) and the Azure AI Foundry /
-   * Inference API (model-in-body routing).
-   */
-  flavor: string
-  /**
-   * Azure-only: chat deployment name. Empty → adapter falls back
-   * to `model`. Surfaced as a separate field so cost/audit can
-   * record the model identity even when the deployment is named
-   * differently.
-   */
-  deployment: string
+  /** Foundry v1 chat protocol. No deployment-name heuristics. */
+  api_protocol: string
   /**
    * Embedding model identifier. Used by the F7 RAG worker; not
    * always exposed in the UI but persisted so a previous setting
    * survives a save round-trip.
    */
   embedding_model: string
-  /** Azure-only embedding deployment name (analog of `deployment`). */
-  embedding_deployment: string
 }
 
 interface Props {
@@ -107,11 +88,8 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             ? {}
             : { api_key: value.api_key }),
           model: value.model,
-          api_version: value.api_version,
-          flavor: value.flavor,
-          deployment: value.deployment,
+          api_protocol: value.api_protocol,
           embedding_model: value.embedding_model,
-          embedding_deployment: value.embedding_deployment,
         }
       : {
           mode: 'local',
@@ -178,7 +156,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
               ? [
                   { value: 'openai', label: 'OpenAI' },
                   { value: 'anthropic', label: 'Anthropic' },
-                  { value: 'azure', label: 'Azure AI' },
+                  { value: 'azure', label: 'Microsoft Foundry' },
                   { value: 'google', label: 'Google' },
                 ]
               : [
@@ -194,7 +172,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             value.provider === 'azure'
               ? t(
                   'ai.settings.provider.azureModelLabel',
-                  'Deployment / model name',
+                  'Deployment name',
                 )
               : t('ai.settings.provider.model', 'Model')
           }
@@ -212,88 +190,44 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             value.provider === 'azure'
               ? t(
                   'ai.settings.provider.azureModelHint',
-                  'Use the Foundry deployment name from the portal. Classic Azure OpenAI can match the deployment field.',
+                  'Use the exact deployment name from your Foundry portal, not the underlying model family.',
                 )
               : undefined
           }
         />
       </div>
 
-      {/*
-       * Azure surfaces both Azure OpenAI Service (deployment-name
-       * routing in the URL) and the Azure AI Foundry / Inference API
-       * (model-in-body multi-vendor surface). The flavor switch + the
-       * deployment / api-version inputs live behind a provider===azure
-       * guard so the existing OpenAI/Anthropic flows are unchanged.
-       */}
       {isCloud && value.provider === 'azure' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
-            label={t('ai.settings.provider.azureFlavor', 'Azure surface')}
-            value={value.flavor || 'openai'}
-            onChange={(e) => patch({ flavor: e.target.value })}
-            data-testid="ai-provider-azure-flavor"
+            label={t('ai.settings.provider.azureProtocol', 'API protocol')}
+            value={value.api_protocol || 'auto'}
+            onChange={(e) => patch({ api_protocol: e.target.value })}
+            data-testid="ai-provider-azure-protocol"
             options={[
               {
-                value: 'openai',
-                label: t(
-                  'ai.settings.provider.azureFlavorOpenAI',
-                  'Azure OpenAI Service (gpt-4o, gpt-4-turbo, …)',
-                ),
+                value: 'auto',
+                label: t('ai.settings.provider.azureProtocolAuto', 'Auto (Chat Completions first)'),
               },
               {
-                value: 'foundry',
-                label: t(
-                  'ai.settings.provider.azureFlavorFoundry',
-                  'Microsoft Foundry (Chat Completions / Responses)',
-                ),
+                value: 'chat_completions',
+                label: t('ai.settings.provider.azureProtocolChat', 'Chat Completions'),
+              },
+              {
+                value: 'responses',
+                label: t('ai.settings.provider.azureProtocolResponses', 'Responses'),
               },
             ]}
           />
-
           <Input
-            label={t('ai.settings.provider.azureApiVersion', 'API version')}
-            placeholder="2024-10-21"
-            value={value.api_version}
-            onChange={(e) => patch({ api_version: e.target.value })}
-            data-testid="ai-provider-azure-api-version"
-            hint={t(
-              'ai.settings.provider.azureApiVersionHint',
-              'Used by classic Azure OpenAI and legacy Foundry inference. Ignored for …/openai/v1 endpoints.',
-            )}
+            label={t('ai.settings.provider.azureEmbeddingModel', 'Embedding deployment name (optional)')}
+            value={value.embedding_model}
+            onChange={(e) => patch({ embedding_model: e.target.value })}
+            data-testid="ai-provider-azure-embedding-model"
           />
-
-          {value.flavor !== 'foundry' && (
-            <>
-              <Input
-                label={t(
-                  'ai.settings.provider.azureDeployment',
-                  'Chat deployment name',
-                )}
-                placeholder={value.model || 'gpt-4o-mini'}
-                value={value.deployment}
-                onChange={(e) => patch({ deployment: e.target.value })}
-                data-testid="ai-provider-azure-deployment"
-                hint={t(
-                  'ai.settings.provider.azureDeploymentHint',
-                  'Leave blank to reuse the Model field.',
-                )}
-              />
-
-              <Input
-                label={t(
-                  'ai.settings.provider.azureEmbeddingDeployment',
-                  'Embedding deployment name (optional)',
-                )}
-                placeholder={value.embedding_model || 'text-embedding-3-small'}
-                value={value.embedding_deployment}
-                onChange={(e) =>
-                  patch({ embedding_deployment: e.target.value })
-                }
-                data-testid="ai-provider-azure-embedding-deployment"
-              />
-            </>
-          )}
+          <HelperText className="sm:col-span-2">
+            {t('ai.settings.provider.azureProtocolHint', 'Auto tries Responses only when Chat Completions is unavailable. Explicit protocols never fall back. Responses output is buffered until completion; embeddings always use v1.')}
+          </HelperText>
         </div>
       )}
 
@@ -341,7 +275,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
           data-testid="ai-provider-azure-base-url"
           hint={t(
             'ai.settings.provider.azureBaseUrlHint',
-            'Foundry v1: https://{resource}.services.ai.azure.com/openai/v1 (Chat Completions with Responses fallback). Legacy inference endpoints remain supported as configured.',
+            'Foundry OpenAI v1 only: https://{resource}.services.ai.azure.com/openai/v1. Resource roots also work; other API paths are rejected.',
           )}
         />
       )}

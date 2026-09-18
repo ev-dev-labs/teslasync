@@ -12,46 +12,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 )
 
-func TestResponsesNegotiation_OnlyExplicitV1(t *testing.T) {
-	t.Parallel()
-	foundry, err := New(provider.ProviderConfig{
-		BaseURL: "https://example.services.ai.azure.com",
-		APIKey:  "k",
-		Model:   "any-deployment",
-		Flavor:  provider.AzureFlavorFoundry,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if foundry.usesOpenAIV1() {
-		t.Fatal("legacy Foundry must remain on its configured inference endpoint")
-	}
-	v1, err := New(provider.ProviderConfig{
-		BaseURL: "https://example.services.ai.azure.com/openai/v1",
-		APIKey:  "k",
-		Model:   "gpt-4o",
-		Flavor:  provider.AzureFlavorOpenAI,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !v1.usesOpenAIV1() {
-		t.Fatal("/openai/v1 permits Responses fallback for any model")
-	}
-	classic, err := New(provider.ProviderConfig{
-		BaseURL: "https://example.openai.azure.com",
-		APIKey:  "k",
-		Model:   "gpt-4o",
-		Flavor:  provider.AzureFlavorOpenAI,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if classic.usesOpenAIV1() {
-		t.Fatal("classic Azure OpenAI flavor stays on chat completions")
-	}
-}
-
 func TestChat_Gpt56Sol_UsesFoundryResponsesAPI(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -99,10 +59,10 @@ func TestChat_Gpt56Sol_UsesFoundryResponsesAPI(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
-		BaseURL: srv.URL + "/openai/v1",
-		Model:   "any-foundry-deployment",
-		APIKey:  "k",
-		Flavor:  provider.AzureFlavorFoundry,
+		BaseURL:     srv.URL + "/openai/v1",
+		Model:       "any-foundry-deployment",
+		APIKey:      "k",
+		APIProtocol: provider.FoundryProtocolResponses,
 	}, WithHTTPClient(srv.Client()))
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -199,10 +159,10 @@ func TestStream_Gpt56Sol_SynthesizesFromResponses(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
-		BaseURL: srv.URL + "/openai/v1",
-		Model:   "any-foundry-deployment",
-		APIKey:  "k",
-		Flavor:  provider.AzureFlavorFoundry,
+		BaseURL:     srv.URL + "/openai/v1",
+		Model:       "any-foundry-deployment",
+		APIKey:      "k",
+		APIProtocol: provider.FoundryProtocolResponses,
 	}, WithHTTPClient(srv.Client()))
 	if err != nil {
 		t.Fatalf("New: %v", err)

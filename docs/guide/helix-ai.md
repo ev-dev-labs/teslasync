@@ -143,19 +143,38 @@ plus a `mock` adapter for tests:
 | Adapter | Use cases |
 |---|---|
 | `openai` | OpenAI hosted models (gpt-4o, gpt-4o-mini, gpt-4.1, …) |
-| `azure` | Classic Azure OpenAI deployment routes, configured legacy Foundry inference, or OpenAI v1 (`{resource}.services.ai.azure.com/openai/v1` or `{resource}.openai.azure.com/openai/v1`). v1 tries Chat Completions first, then Responses only on structured operation-not-supported / not-found errors. No model-name protocol selection. |
+| `azure` | Microsoft Foundry **OpenAI v1 only** (`{resource}.services.ai.azure.com/openai/v1` or `{resource}.openai.azure.com/openai/v1`). Select Auto, Chat Completions, or Responses. No model-name routing or older API surfaces. |
 
-For Foundry, set **Deployment / model name** to the portal deployment name;
-the hidden classic **Chat deployment name** override is ignored. For the
-Azure OpenAI Service surface, a nonempty chat deployment override takes precedence
-over the model field. Validate and Helix use the same identity; clearing the
-override is persisted. Validate uses a 30-second timeout and an explicit
+Set **Deployment name** to the exact portal deployment name. The optional
+**Embedding deployment name** is independent of the chat deployment. Both use
+the same Foundry v1 base URL and API key; the persisted provider key remains
+`azure`, so existing credentials and feature-provider selections are preserved.
+Resource-root URLs automatically receive `/openai/v1`; `/models`, deployment-path
+URLs, queries, and other API paths are rejected rather than routed elsewhere.
+
+**API protocol** defaults to **Auto**: Chat Completions first, then one Responses
+attempt only on structured operation-not-supported / not-found errors.
+**Chat Completions** and **Responses** call only the selected API, without fallback.
+The selection is persisted as `api_protocol` (`auto`, `chat_completions`, or
+`responses`) and is used by validation and Helix Chat/Stream identically.
+Embeddings always call `/openai/v1/embeddings`, regardless of chat protocol.
+
+**Existing configuration migration:** obsolete `flavor`, `api_version`,
+`deployment`, and `embedding_deployment` fields are not part of the adapter.
+For entries without `api_protocol`, the configuration-read boundary promotes a previously effective chat deployment
+override into `model` (a stale override from a Foundry-flavor entry
+is ignored, preserving its existing model identity). An embedding override is
+promoted into `embedding_model`. The settings form displays these effective
+names and removes obsolete keys on Save. Modern entries with `api_protocol`
+ignore obsolete override keys. No legacy routes or model-specific
+heuristics remain. Review the visible names and endpoint before saving.
+
+Validate uses a 30-second timeout and an explicit
 1,024-output-token Azure probe budget (including reasoning tokens). Normal
 requests keep their caller-supplied token budget.
 
-Only explicit `/openai/v1` endpoints negotiate protocols. A request makes at
-most two attempts and never strips that path or switches to a classic deployment
-route. Authentication, rate-limit, server, and token-budget failures do not
+Auto makes at most two attempts and never changes the configured API base.
+Authentication, rate-limit, server, and token-budget failures do not
 trigger fallback; if both protocols fail, both errors are retained.
 Responses requests send `store: false` and replay tool calls/results explicitly.
 Responses fallback streaming is **buffered**, not token-by-token SSE: Helix

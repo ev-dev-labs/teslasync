@@ -109,7 +109,7 @@ func TestV1ToolRoundTrips(t *testing.T) {
 					}))
 					defer srv.Close()
 					a, err := New(provider.ProviderConfig{BaseURL: srv.URL + "/openai/v1", Model: model,
-						Deployment: "hidden-stale-deployment", Flavor: provider.AzureFlavorFoundry, APIKey: "k"},
+						APIKey: "k"},
 						WithHTTPClient(srv.Client()))
 					if err != nil {
 						t.Fatal(err)
@@ -336,35 +336,6 @@ func TestTransportFailureNeverNegotiates(t *testing.T) {
 		}
 		if !errors.Is(err, provider.ErrUpstream) || transport.calls.Load() != 1 {
 			t.Fatalf("stream=%v err=%v calls=%d", stream, err, transport.calls.Load())
-		}
-	}
-}
-
-func TestLegacyEndpointsNeverNegotiate(t *testing.T) {
-	for _, flavor := range []string{provider.AzureFlavorFoundry, provider.AzureFlavorOpenAI} {
-		for _, stream := range []bool{false, true} {
-			var calls atomic.Int32
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				calls.Add(1)
-				if strings.Contains(r.URL.Path, "/openai/v1") {
-					t.Error("rewrote configured legacy endpoint")
-				}
-				w.WriteHeader(404)
-				_, _ = io.WriteString(w, `{"error":{"code":"DeploymentNotFound"}}`)
-			}))
-			a, err := New(provider.ProviderConfig{BaseURL: srv.URL, APIKey: "k", Model: "any", Flavor: flavor})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if stream {
-				_, err = a.Stream(context.Background(), provider.ChatRequest{})
-			} else {
-				_, err = a.Chat(context.Background(), provider.ChatRequest{})
-			}
-			srv.Close()
-			if !errors.Is(err, provider.ErrUpstream) || calls.Load() != 1 {
-				t.Fatalf("flavor=%s stream=%v err=%v calls=%d", flavor, stream, err, calls.Load())
-			}
 		}
 	}
 }

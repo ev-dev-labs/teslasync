@@ -44,24 +44,13 @@ const (
 
 	// DefaultCloudEmbeddingModel is the default cloud embedding model.
 	DefaultCloudEmbeddingModel = "text-embedding-3-small"
-
-	// DefaultAzureAPIVersion is the Azure API version the adapter
-	// sends when the user has not pinned one in settings. Azure
-	// exposes versioned APIs separately from the underlying model
-	// — picking a stable, GA-aligned version here keeps the adapter
-	// working without per-deploy edits.
-	DefaultAzureAPIVersion = "2024-10-21"
 )
 
-// Azure flavor literals — selects the Azure inference surface the
-// adapter targets. AzureFlavorOpenAI keeps the Azure OpenAI Service
-// routing (deployment-name in URL, no model in body); AzureFlavorFoundry
-// uses the modern Azure AI Inference / Foundry API (multi-vendor,
-// model-in-body routing).
+// FoundryProtocolAuto negotiates capabilities without inspecting model names.
 const (
-	AzureFlavorOpenAI  = "openai"
-	AzureFlavorFoundry = "foundry"
-	DefaultAzureFlavor = AzureFlavorOpenAI
+	FoundryProtocolAuto      = "auto"
+	FoundryProtocolChat      = "chat_completions"
+	FoundryProtocolResponses = "responses"
 )
 
 // AI mode literals. Mirrors the validated set in
@@ -97,31 +86,9 @@ type ProviderConfig struct {
 	EmbeddingModel string `json:"embedding_model,omitempty"`
 	APIKey         string `json:"api_key,omitempty"`
 
-	// APIVersion is the wire-format API version some adapters need
-	// to send as a query parameter. Currently consumed by the Azure
-	// adapter (see [NameAzure]); other adapters ignore it. Empty
-	// falls back to [DefaultAzureAPIVersion] for Azure.
-	APIVersion string `json:"api_version,omitempty"`
-
-	// Flavor selects between sub-surfaces of a single provider name.
-	// Currently consumed by the Azure adapter, where it switches
-	// between [AzureFlavorOpenAI] (Azure OpenAI Service —
-	// deployment-name routing) and [AzureFlavorFoundry] (Azure AI
-	// Foundry / Inference API — multi-vendor unified endpoint).
-	// Other adapters ignore it. Empty falls back to
-	// [DefaultAzureFlavor] for Azure.
-	Flavor string `json:"flavor,omitempty"`
-
-	// Deployment is the Azure chat deployment name when the
-	// underlying URL routes by deployment (Azure OpenAI Service).
-	// Empty falls back to [Model] so a user whose deployment is
-	// named after the model (the common case) needs only one
-	// field. Ignored by adapters that route by model identifier.
-	Deployment string `json:"deployment,omitempty"`
-
-	// EmbeddingDeployment mirrors [Deployment] for the embeddings
-	// route. Falls back to [EmbeddingModel] when empty.
-	EmbeddingDeployment string `json:"embedding_deployment,omitempty"`
+	// APIProtocol selects Foundry v1 chat operation only. Embeddings always use
+	// the same v1 base URL and their own model identity.
+	APIProtocol string `json:"api_protocol,omitempty"`
 
 	// PinnedIP is set by [ValidateLocal] at config-save time so the
 	// runtime can detect DNS rebinding. Empty in
@@ -153,29 +120,31 @@ func ParseProviderConfig(raw map[string]any, providerName string) (ProviderConfi
 	if !ok {
 		return ProviderConfig{}, fmt.Errorf("%w: %q", ErrMissingConfig, providerName)
 	}
-	asMap, ok := entry.(map[string]any)
-	if !ok {
-		// JSON unmarshal of "any" sometimes yields json.RawMessage
-		// instead of map[string]any depending on the upstream
-		// decoder; round-trip through json so callers do not have
-		// to care.
-		blob, err := json.Marshal(entry)
-		if err != nil {
-			return ProviderConfig{}, fmt.Errorf("%w: %q is not an object", ErrMissingConfig, providerName)
-		}
-		var cfg ProviderConfig
-		if err := json.Unmarshal(blob, &cfg); err != nil {
-			return ProviderConfig{}, fmt.Errorf("%w: %q decode: %v", ErrMissingConfig, providerName, err)
-		}
-		return applyDefaults(providerName, cfg), nil
-	}
-	blob, err := json.Marshal(asMap)
+	blob, err := json.Marshal(entry)
 	if err != nil {
 		return ProviderConfig{}, fmt.Errorf("%w: %q marshal: %v", ErrMissingConfig, providerName, err)
 	}
 	var cfg ProviderConfig
 	if err := json.Unmarshal(blob, &cfg); err != nil {
 		return ProviderConfig{}, fmt.Errorf("%w: %q decode: %v", ErrMissingConfig, providerName, err)
+	}
+	if providerName == NameAzure && cfg.APIProtocol == "" {
+		// Configuration migration only: preserve the previously effective identity
+		// before dropping obsolete keys. No old HTTP routing survives this boundary.
+		var old struct {
+			Flavor              string `json:"flavor"`
+			Deployment          string `json:"deployment"`
+			EmbeddingDeployment string `json:"embedding_deployment"`
+		}
+		if err := json.Unmarshal(blob, &old); err != nil {
+			return ProviderConfig{}, fmt.Errorf("%w: azure identity migration: %v", ErrMissingConfig, err)
+		}
+		if old.Flavor != "foundry" && old.Deployment != "" {
+			cfg.Model = old.Deployment
+		}
+		if old.EmbeddingDeployment != "" {
+			cfg.EmbeddingModel = old.EmbeddingDeployment
+		}
 	}
 	return applyDefaults(providerName, cfg), nil
 }
@@ -243,17 +212,8 @@ func applyDefaults(providerName string, cfg ProviderConfig) ProviderConfig {
 			cfg.Model = "claude-3-5-sonnet-20240620"
 		}
 	case NameAzure:
-		// Azure: BaseURL is the user's resource endpoint
-		// (https://{resource}.openai.azure.com for the OpenAI
-		// flavor, or the Foundry endpoint for that flavor).
-		// Deployment / EmbeddingDeployment fall back to Model /
-		// EmbeddingModel inside the adapter, so no defaulting is
-		// needed here. APIVersion + Flavor have stable defaults.
-		if cfg.APIVersion == "" {
-			cfg.APIVersion = DefaultAzureAPIVersion
-		}
-		if cfg.Flavor == "" {
-			cfg.Flavor = DefaultAzureFlavor
+		if cfg.APIProtocol == "" {
+			cfg.APIProtocol = FoundryProtocolAuto
 		}
 	}
 	return cfg

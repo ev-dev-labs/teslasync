@@ -1,55 +1,7 @@
-// Package azure is the Azure AI [provider.Provider] adapter.
-//
-// Microsoft hosts AI inference behind two distinct surfaces and this
-// adapter supports both via the [provider.ProviderConfig.Flavor] knob.
-// A third URL shape — Azure AI Foundry OpenAI v1 — is used when the
-// path ends in /openai/v1. Chat Completions is tried first; a structured
-// operation-not-supported or 404 error permits one Responses attempt. See:
+// Package azure implements Microsoft Foundry OpenAI v1.
+// Auto tries Chat Completions then one Responses fallback on a structured
+// unsupported-operation / not-found error. Explicit protocols never negotiate.
 // https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
-//
-//  1. Azure OpenAI Service ([provider.AzureFlavorOpenAI], the default).
-//     Hosts the OpenAI model family (gpt-4o, gpt-4-turbo,
-//     text-embedding-3-*, etc.). Routes by *deployment name* in the URL
-//     path:
-//
-//     {base_url}/openai/deployments/{deployment}/chat/completions
-//     ?api-version={version}
-//
-//     where {base_url} is the resource endpoint
-//     (https://{resource}.openai.azure.com). The request body MUST
-//     omit the "model" field — Azure rejects requests where the body
-//     model disagrees with the deployment.
-//
-//  2. Azure AI Foundry / Inference API ([provider.AzureFlavorFoundry]).
-//     The older unified multi-vendor surface:
-//
-//     {base_url}/chat/completions?api-version={version}
-//     {base_url}/embeddings?api-version={version}
-//
-//     Routes by *model* in the request body.
-//
-//  3. Azure AI Foundry OpenAI v1 (auto-detected). Portal snippet:
-//
-//     base_url  https://{resource}.services.ai.azure.com/openai/v1
-//     model     {deployment_name}  (e.g. gpt-5.6-sol)
-//
-//     {base_url}/chat/completions   (no api-version query)
-//     {base_url}/embeddings
-//
-//     Body includes "model". Auth sends api-key and
-//     Authorization: Bearer (the OpenAI SDK path). Newer models
-//     use max_completion_tokens instead of max_tokens.
-//
-// Classic flavors still share:
-//   - Auth: "api-key: {key}" header (NOT Authorization Bearer; that
-//     reserved name is used by the Microsoft Entra ID auth path).
-//   - Required "?api-version=" query parameter.
-//   - The OpenAI Chat Completions JSON envelope (messages, tools,
-//     tool_calls, SSE streaming format).
-//
-// The wire types here mirror openai/openai.go because the JSON
-// envelope is identical. They are re-declared rather than imported so
-// either adapter can drift independently if Azure ever breaks parity.
 package azure
 
 import (
@@ -62,7 +14,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"time"
 
@@ -101,10 +52,8 @@ func WithHTTPClient(c *http.Client) Option {
 //     error).
 //   - cfg.BaseURL fails to parse as a URL.
 //
-// Empty Flavor / APIVersion are filled from [provider.DefaultAzureFlavor]
-// and [provider.DefaultAzureAPIVersion] respectively. Flavor must be
-// one of [provider.AzureFlavorOpenAI] or [provider.AzureFlavorFoundry];
-// any other value is rejected.
+// Resource roots are normalized to /openai/v1. Other API paths are rejected,
+// rather than silently changing the target surface.
 func New(cfg provider.ProviderConfig, opts ...Option) (*Adapter, error) {
 	if strings.TrimSpace(cfg.BaseURL) == "" {
 		return nil, fmt.Errorf("azure: empty base_url")
@@ -112,21 +61,27 @@ func New(cfg provider.ProviderConfig, opts ...Option) (*Adapter, error) {
 	if strings.TrimSpace(cfg.APIKey) == "" {
 		return nil, fmt.Errorf("azure: empty api_key")
 	}
-	if _, err := url.Parse(cfg.BaseURL); err != nil {
+	u, err := url.Parse(strings.TrimSpace(cfg.BaseURL))
+	if err != nil {
 		return nil, fmt.Errorf("azure: parse base_url: %w", err)
 	}
-	if cfg.APIVersion == "" {
-		cfg.APIVersion = provider.DefaultAzureAPIVersion
+	if (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return nil, fmt.Errorf("azure: base_url must be a Foundry resource URL without credentials, query or fragment")
 	}
-	if cfg.Flavor == "" {
-		cfg.Flavor = provider.DefaultAzureFlavor
-	}
-	switch cfg.Flavor {
-	case provider.AzureFlavorOpenAI, provider.AzureFlavorFoundry:
-		// ok
+	switch strings.TrimRight(u.Path, "/") {
+	case "", "/openai/v1":
+		u.Path = "/openai/v1"
 	default:
-		return nil, fmt.Errorf("azure: unknown flavor %q (want %q or %q)",
-			cfg.Flavor, provider.AzureFlavorOpenAI, provider.AzureFlavorFoundry)
+		return nil, fmt.Errorf("azure: use the Foundry /openai/v1 base URL; other API paths are not supported")
+	}
+	cfg.BaseURL = u.String()
+	if cfg.APIProtocol == "" {
+		cfg.APIProtocol = provider.FoundryProtocolAuto
+	}
+	switch cfg.APIProtocol {
+	case provider.FoundryProtocolAuto, provider.FoundryProtocolChat, provider.FoundryProtocolResponses:
+	default:
+		return nil, fmt.Errorf("azure: unknown api_protocol %q", cfg.APIProtocol)
 	}
 	a := &Adapter{cfg: cfg}
 	for _, opt := range opts {
@@ -143,10 +98,7 @@ func Builder(cfg provider.ProviderConfig) (provider.Provider, error) { return Ne
 
 func (a *Adapter) Name() string { return provider.NameAzure }
 
-// Both Azure flavors support tools and streaming. Embeddings are
-// advertised true; the per-call
-// path returns an error when no embedding deployment / model is
-// configured.
+// Responses streaming is buffered; Chat Completions uses native SSE.
 func (a *Adapter) Capabilities() provider.Capabilities {
 	return provider.Capabilities{
 		Tools:      true,
@@ -157,11 +109,14 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 }
 
 func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
+	if a.cfg.APIProtocol == provider.FoundryProtocolResponses {
+		return a.chatViaResponses(ctx, req)
+	}
 	out, err := a.doChatCompletions(ctx, req)
 	if err == nil {
 		return out, nil
 	}
-	if a.usesOpenAIV1() && canTryResponses(err) && ctx.Err() == nil {
+	if a.cfg.APIProtocol == provider.FoundryProtocolAuto && canTryResponses(err) && ctx.Err() == nil {
 		fallback, fallbackErr := a.chatViaResponses(ctx, req)
 		if fallbackErr != nil {
 			return nil, errors.Join(err, fallbackErr)
@@ -176,7 +131,7 @@ func (a *Adapter) doChatCompletions(ctx context.Context, req provider.ChatReques
 	if err != nil {
 		return nil, err
 	}
-	body, err := encodeChatRequest(req, modelInBody, false, a.usesCompletionTokenCap(req, modelInBody))
+	body, err := encodeChatRequest(req, modelInBody, false)
 	if err != nil {
 		return nil, err
 	}
@@ -201,11 +156,18 @@ func (a *Adapter) doChatCompletions(ctx context.Context, req provider.ChatReques
 }
 
 func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan provider.Chunk, error) {
+	if a.cfg.APIProtocol == provider.FoundryProtocolResponses {
+		resp, err := a.chatViaResponses(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return chatResponseAsStream(ctx, resp), nil
+	}
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
 		return nil, err
 	}
-	body, err := encodeChatRequest(req, modelInBody, true, a.usesCompletionTokenCap(req, modelInBody))
+	body, err := encodeChatRequest(req, modelInBody, true)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +184,7 @@ func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan 
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		_ = resp.Body.Close()
 		streamErr := newOperationError("stream", resp.StatusCode, raw)
-		if a.usesOpenAIV1() && canTryResponses(streamErr) && ctx.Err() == nil {
+		if a.cfg.APIProtocol == provider.FoundryProtocolAuto && canTryResponses(streamErr) && ctx.Err() == nil {
 			chatResp, fallbackErr := a.chatViaResponses(ctx, req)
 			if fallbackErr != nil {
 				return nil, errors.Join(streamErr, fallbackErr)
@@ -271,25 +233,17 @@ func chatResponseAsStream(ctx context.Context, resp *provider.ChatResponse) <-ch
 	return out
 }
 
-// Embed uses the Azure embeddings route. URL shape depends on flavor:
-//
-//   - OpenAI flavor:  {base}/openai/deployments/{depl}/embeddings?api-version=...
-//   - Foundry flavor: {base}/embeddings?api-version=... (model in body)
+// Embed always uses Foundry v1 embeddings, independently of the chat protocol.
 func (a *Adapter) Embed(ctx context.Context, req provider.EmbedRequest) (*provider.EmbedResponse, error) {
 	identity := a.embedIdentity(req)
 	if identity == "" {
 		return nil, fmt.Errorf("azure: empty embedding deployment / model")
 	}
-	endpoint, err := a.embedURL(identity)
+	endpoint, err := a.buildOpenAIV1URL("embeddings")
 	if err != nil {
 		return nil, err
 	}
-	payload := map[string]any{"input": req.Input}
-	if a.cfg.Flavor == provider.AzureFlavorFoundry || a.usesOpenAIV1() {
-		// Foundry and OpenAI v1 route embeddings by model in the
-		// request body, the same way OpenAI's public endpoint does.
-		payload["model"] = identity
-	}
+	payload := map[string]any{"input": req.Input, "model": identity}
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -331,202 +285,33 @@ func (a *Adapter) Embed(ctx context.Context, req provider.EmbedRequest) (*provid
 	return out, nil
 }
 
-// chatEndpoint returns the absolute chat URL for this request and a
-// boolean indicating whether the request body should include the
-// "model" field. The body-model behaviour differs between flavors:
-//
-//   - OpenAI flavor: deployment encoded in URL → omit body model.
-//   - Foundry flavor: shared endpoint → include body model so the
-//     server can route to the right backing model.
 func (a *Adapter) chatEndpoint(req provider.ChatRequest) (endpoint string, modelInBody string, err error) {
-	if a.usesOpenAIV1() {
-		identity := a.chatDeployment(req)
-		if identity == "" {
-			return "", "", fmt.Errorf("azure: empty v1 model")
-		}
-		u, err := a.buildOpenAIV1URL("chat", "completions")
-		if err != nil {
-			return "", "", err
-		}
-		return u, identity, nil
+	identity := a.chatDeployment(req)
+	if identity == "" {
+		return "", "", fmt.Errorf("azure: empty Foundry deployment name")
 	}
-	switch a.cfg.Flavor {
-	case provider.AzureFlavorFoundry:
-		// Model identity for body — fall back to cfg.Model when the
-		// caller does not pin a model. dispatch currently does not
-		// pin one, so cfg.Model is the routing key in practice.
-		identity := req.Model
-		if identity == "" {
-			identity = a.cfg.Model
-		}
-		if identity == "" {
-			return "", "", fmt.Errorf("azure: empty foundry model")
-		}
-		u, err := a.buildURL("chat", "completions")
-		if err != nil {
-			return "", "", err
-		}
-		return u, identity, nil
-	default: // AzureFlavorOpenAI
-		deployment := a.chatDeployment(req)
-		if deployment == "" {
-			return "", "", fmt.Errorf("azure: empty chat deployment")
-		}
-		u, err := a.buildURL("openai", "deployments", deployment, "chat", "completions")
-		if err != nil {
-			return "", "", err
-		}
-		return u, "", nil
-	}
+	u, err := a.buildOpenAIV1URL("chat", "completions")
+	return u, identity, err
 }
 
-// chatDeployment picks the OpenAI-flavor chat deployment name for a
-// request. Per-request Model > cfg.Deployment > cfg.Model. The third
-// fallback honours the common case where the user named their Azure
-// deployment after the model identifier and stored it in the single
-// "model" field.
 func (a *Adapter) chatDeployment(req provider.ChatRequest) string {
 	if req.Model != "" {
 		return req.Model
 	}
-	return ChatIdentity(a.cfg)
+	return a.cfg.Model
 }
 
-// ChatIdentity returns the configured deployment used by both validation and
-// Helix. Foundry's hidden classic deployment field must not override its model.
-func ChatIdentity(cfg provider.ProviderConfig) string {
-	if cfg.Flavor != provider.AzureFlavorFoundry && cfg.Deployment != "" {
-		return cfg.Deployment
-	}
-	return cfg.Model
-}
-
-// embedIdentity is the model-or-deployment string used by the embed
-// path. For the OpenAI flavor it becomes the URL deployment segment;
-// for Foundry it goes into the request body. Per-request Model >
-// cfg.EmbeddingDeployment > cfg.EmbeddingModel.
 func (a *Adapter) embedIdentity(req provider.EmbedRequest) string {
 	if req.Model != "" {
 		return req.Model
 	}
-	if a.cfg.EmbeddingDeployment != "" {
-		return a.cfg.EmbeddingDeployment
-	}
 	return a.cfg.EmbeddingModel
-}
-
-// embedURL builds the absolute embeddings URL for the configured
-// flavor. identity is only used by the OpenAI flavor (URL-routed).
-func (a *Adapter) embedURL(identity string) (string, error) {
-	if a.usesOpenAIV1() {
-		return a.buildOpenAIV1URL("embeddings")
-	}
-	switch a.cfg.Flavor {
-	case provider.AzureFlavorFoundry:
-		return a.buildURL("embeddings")
-	default:
-		return a.buildURL("openai", "deployments", identity, "embeddings")
-	}
-}
-
-// isAzureOpenAIV1 reports whether baseURL is Azure AI Foundry's
-// OpenAI-compatible v1 surface. Only the path is authoritative —
-// hostname *.services.ai.azure.com also hosts classic
-// /openai/deployments/{name}/chat/completions?api-version= which
-// Helix used successfully before auto-detect (#118) forced v1.
-func isAzureOpenAIV1(baseURL string) bool {
-	u, err := url.Parse(strings.TrimSpace(baseURL))
-	if err != nil {
-		return false
-	}
-	p := strings.ToLower(path.Clean(u.Path))
-	return strings.HasSuffix(p, "/openai/v1")
-}
-
-func (a *Adapter) usesOpenAIV1() bool {
-	return isAzureOpenAIV1(a.cfg.BaseURL)
 }
 
 const defaultMaxCompletionTokens = 8192
 
-func needsMaxCompletionTokens(model string) bool {
-	m := strings.ToLower(strings.TrimSpace(model))
-	if strings.Contains(m, "gpt-5") {
-		return true
-	}
-	for _, prefix := range []string{"o1", "o3", "o4"} {
-		if m == prefix || strings.HasPrefix(m, prefix+"-") {
-			return true
-		}
-	}
-	return false
-}
-
-func (a *Adapter) usesCompletionTokenCap(req provider.ChatRequest, modelInBody string) bool {
-	if a.usesOpenAIV1() {
-		return true
-	}
-	identity := modelInBody
-	if identity == "" {
-		identity = a.chatDeployment(req)
-	}
-	return needsMaxCompletionTokens(identity)
-}
-
-// buildOpenAIV1URL joins BaseURL (ensuring /openai/v1) with extra
-// segments and omits api-version. Foundry's v1 GA API 404s when the
-// classic Azure OpenAI api-version (2024-10-21) is attached.
 func (a *Adapter) buildOpenAIV1URL(segments ...string) (string, error) {
-	u, err := url.Parse(a.cfg.BaseURL)
-	if err != nil {
-		return "", fmt.Errorf("azure: parse base_url: %w", err)
-	}
-	basePath := strings.TrimRight(u.Path, "/")
-	if !strings.Contains(strings.ToLower(path.Clean("/"+strings.TrimPrefix(basePath, "/"))), "/openai/v1") {
-		if basePath == "" || basePath == "/" {
-			basePath = "/openai/v1"
-		} else {
-			basePath = path.Join(basePath, "openai", "v1")
-		}
-	}
-	if !strings.HasPrefix(basePath, "/") {
-		basePath = "/" + basePath
-	}
-	parts := []string{basePath}
-	for _, s := range segments {
-		parts = append(parts, url.PathEscape(s))
-	}
-	u.Path = path.Join(parts...)
-	if !strings.HasPrefix(u.Path, "/") {
-		u.Path = "/" + u.Path
-	}
-	u.RawQuery = ""
-	return u.String(), nil
-}
-
-// buildURL composes BaseURL + path segments + the api-version query
-// parameter using net/url so deployment names with characters that
-// require percent-encoding (rare but legal: digits, dashes, dots,
-// underscores) round-trip correctly. The variadic segments are joined
-// with path.Join after PathEscape so a user-typed deployment name
-// containing a slash cannot escape the intended sub-tree.
-func (a *Adapter) buildURL(segments ...string) (string, error) {
-	u, err := url.Parse(a.cfg.BaseURL)
-	if err != nil {
-		return "", fmt.Errorf("azure: parse base_url: %w", err)
-	}
-	escaped := make([]string, 0, len(segments)+1)
-	if u.Path != "" {
-		escaped = append(escaped, u.Path)
-	}
-	for _, s := range segments {
-		escaped = append(escaped, url.PathEscape(s))
-	}
-	u.Path = path.Join(escaped...)
-	q := u.Query()
-	q.Set("api-version", a.cfg.APIVersion)
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return url.JoinPath(a.cfg.BaseURL, segments...)
 }
 
 func (a *Adapter) newRequest(ctx context.Context, method, urlStr string, body io.Reader) (*http.Request, error) {
@@ -535,13 +320,8 @@ func (a *Adapter) newRequest(ctx context.Context, method, urlStr string, body io
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	// Azure uses the case-sensitive "api-key" header. The "Authorization:
-	// Bearer …" form is reserved for Microsoft Entra ID token auth, which
-	// this adapter does not yet support (V1 is api-key only).
 	req.Header.Set("api-key", a.cfg.APIKey)
-	if a.usesOpenAIV1() || strings.Contains(urlStr, "/openai/v1") {
-		req.Header.Set("Authorization", "Bearer "+a.cfg.APIKey)
-	}
+	req.Header.Set("Authorization", "Bearer "+a.cfg.APIKey)
 	return req, nil
 }
 
@@ -557,8 +337,6 @@ type azureChatRequest struct {
 	Messages            []azureWireMsg  `json:"messages"`
 	Tools               []azureWireTool `json:"tools,omitempty"`
 	Stream              bool            `json:"stream,omitempty"`
-	Temperature         float32         `json:"temperature,omitempty"`
-	MaxTokens           int             `json:"max_tokens,omitempty"`
 	MaxCompletionTokens int             `json:"max_completion_tokens,omitempty"`
 }
 
@@ -632,11 +410,7 @@ type azureStreamFrame struct {
 	} `json:"error,omitempty"`
 }
 
-// encodeChatRequest serialises a [provider.ChatRequest] into the
-// Azure JSON envelope. modelInBody is non-empty only for the Foundry
-// flavor; for Azure OpenAI Service the body MUST omit the model
-// field (the deployment name in the URL is the routing key).
-func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool, useCompletionTokens bool) ([]byte, error) {
+func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool) ([]byte, error) {
 	wireMsgs := make([]azureWireMsg, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		wm := azureWireMsg{Role: m.Role, Content: m.Content, Name: m.Name, ToolCallID: m.ToolID}
@@ -674,24 +448,11 @@ func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool
 		Tools:    wireTools,
 		Stream:   stream,
 	}
-	// Reasoning models reject temperature / top_p / penalties.
-	// https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/chatgpt
-	if !useCompletionTokens {
-		wire.Temperature = req.Temperature
+	n := req.MaxTokens
+	if n <= 0 {
+		n = defaultMaxCompletionTokens
 	}
-	if useCompletionTokens {
-		n := req.MaxTokens
-		if n <= 0 {
-			// gpt-5 / o-series spend hidden reasoning tokens
-			// against this cap. Azure 400s with "max_tokens or
-			// model output limit was reached" when the field is
-			// omitted or set to 1 (the settings probe).
-			n = defaultMaxCompletionTokens
-		}
-		wire.MaxCompletionTokens = n
-	} else if req.MaxTokens > 0 {
-		wire.MaxTokens = req.MaxTokens
-	}
+	wire.MaxCompletionTokens = n
 	if len(wireTools) == 0 {
 		wire.Tools = nil
 	}

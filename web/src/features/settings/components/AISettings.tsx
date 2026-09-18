@@ -90,9 +90,23 @@ function readProviderConfigEntry(
 ): Record<string, unknown> | undefined {
   if (cfg == null || providerName === '') return undefined
   const entry = cfg[providerName]
-  return entry != null && typeof entry === 'object' && !Array.isArray(entry)
+  const value = entry != null && typeof entry === 'object' && !Array.isArray(entry)
     ? (entry as Record<string, unknown>)
     : undefined
+  if (providerName !== 'azure' || value == null) return value
+  // One-time config migration: move the effective identities into visible
+  // fields and discard obsolete controls before either validation or saving.
+  const result = { ...value }
+  const previousDeployment = readProviderString(value, 'deployment', '')
+  const previousEmbedding = readProviderString(value, 'embedding_deployment', '')
+  if (!value.api_protocol && value.flavor !== 'foundry' && previousDeployment !== '') {
+    result.model = previousDeployment
+  }
+  if (!value.api_protocol && previousEmbedding !== '') result.embedding_model = previousEmbedding
+  for (const key of ['flavor', 'api_version', 'deployment', 'embedding_deployment']) {
+    delete result[key]
+  }
+  return result
 }
 
 /**
@@ -112,7 +126,7 @@ function stripLegacyTopLevelKeys(
   const out: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(cfg)) {
     if ((LEGACY_TOP_LEVEL_KEYS as readonly string[]).includes(k)) continue
-    out[k] = v
+    out[k] = k === 'azure' ? readProviderConfigEntry(cfg, k) : v
   }
   return out
 }
@@ -185,15 +199,8 @@ export function AISettings() {
       model: readProviderString(entry, 'model', ''),
       api_key: '',
       cost_cap_cents: settings?.ai_cost_cap_cents ?? 0,
-      api_version: readProviderString(entry, 'api_version', ''),
-      flavor: readProviderString(entry, 'flavor', ''),
-      deployment: readProviderString(entry, 'deployment', ''),
+      api_protocol: readProviderString(entry, 'api_protocol', 'auto'),
       embedding_model: readProviderString(entry, 'embedding_model', ''),
-      embedding_deployment: readProviderString(
-        entry,
-        'embedding_deployment',
-        '',
-      ),
     }
   })
   // ADR-015 §I7 — when the user re-enables AI and the server still
@@ -239,15 +246,8 @@ export function AISettings() {
           ? ''
           : readProviderString(entry, 'api_key', ''),
       cost_cap_cents: settings.ai_cost_cap_cents ?? 0,
-      api_version: readProviderString(entry, 'api_version', ''),
-      flavor: readProviderString(entry, 'flavor', ''),
-      deployment: readProviderString(entry, 'deployment', ''),
+      api_protocol: readProviderString(entry, 'api_protocol', 'auto'),
       embedding_model: readProviderString(entry, 'embedding_model', ''),
-      embedding_deployment: readProviderString(
-        entry,
-        'embedding_deployment',
-        '',
-      ),
     })
     setRestoreDismissed(false)
     // Intentionally depend on the JSON snapshot, not the object
@@ -305,11 +305,8 @@ export function AISettings() {
       // format clean across export/import round-trips.
       //
       // Merge (not replace) the per-provider sub-object: a partial
-      // form (e.g. one without the api_version input visible)
-      // must NOT clobber provider-specific keys the user set
-      // previously. The form state owns api_version / flavor /
-      // deployment / embedding_* explicitly so they round-trip on
-      // every save.
+      // form must not clobber other providers or their saved credentials.
+      // readProviderConfigEntry removes obsolete Azure controls.
       ai_provider_config: {
         ...stripLegacyTopLevelKeys(settings?.ai_provider_config),
         default: provider.provider,
@@ -323,21 +320,12 @@ export function AISettings() {
           // Optional / provider-specific fields are only emitted
           // when non-empty so a config that doesn't use them
           // doesn't grow noise keys.
-          ...(provider.api_version.trim() === ''
-            ? {}
-            : { api_version: provider.api_version }),
-          ...(provider.flavor.trim() === ''
-            ? {}
-            : { flavor: provider.flavor }),
-          ...(provider.provider === 'azure' || provider.deployment.trim() !== ''
-            ? { deployment: provider.deployment.trim() }
+          ...(provider.provider === 'azure'
+            ? { api_protocol: provider.api_protocol || 'auto' }
             : {}),
-          ...(provider.embedding_model.trim() === ''
-            ? {}
-            : { embedding_model: provider.embedding_model }),
-          ...(provider.embedding_deployment.trim() === ''
-            ? {}
-            : { embedding_deployment: provider.embedding_deployment }),
+          ...(provider.provider === 'azure' || provider.embedding_model.trim() !== ''
+            ? { embedding_model: provider.embedding_model.trim() }
+            : {}),
           // Only forward a non-empty key; an empty string would clobber
           // a previously-saved key (the server treats empty as
           // explicit clear).
@@ -381,15 +369,8 @@ export function AISettings() {
         model: readProviderString(newEntry, 'model', ''),
         api_key: '',
         cost_cap_cents: next.cost_cap_cents,
-        api_version: readProviderString(newEntry, 'api_version', ''),
-        flavor: readProviderString(newEntry, 'flavor', ''),
-        deployment: readProviderString(newEntry, 'deployment', ''),
+        api_protocol: readProviderString(newEntry, 'api_protocol', 'auto'),
         embedding_model: readProviderString(newEntry, 'embedding_model', ''),
-        embedding_deployment: readProviderString(
-          newEntry,
-          'embedding_deployment',
-          '',
-        ),
       })
     },
     [provider.provider, settings?.ai_provider_config],

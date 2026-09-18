@@ -23,7 +23,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
-	"github.com/ev-dev-labs/teslasync/internal/ai/provider/azure"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
@@ -58,13 +57,10 @@ type validateConfigRequest struct {
 	// saved semantics. APIKey in particular falls back to the
 	// previously-saved key so the user can validate after editing
 	// a non-secret field without re-typing the secret.
-	APIKey              string  `json:"api_key,omitempty"`
-	Model               string  `json:"model,omitempty"`
-	APIVersion          string  `json:"api_version,omitempty"`
-	Flavor              string  `json:"flavor,omitempty"`
-	Deployment          *string `json:"deployment,omitempty"`
-	EmbeddingModel      string  `json:"embedding_model,omitempty"`
-	EmbeddingDeployment string  `json:"embedding_deployment,omitempty"`
+	APIKey         string `json:"api_key,omitempty"`
+	Model          string `json:"model,omitempty"`
+	APIProtocol    string `json:"api_protocol,omitempty"`
+	EmbeddingModel string `json:"embedding_model,omitempty"`
 }
 
 // validateConfigResponse is the JSON body of a successful 200.
@@ -240,26 +236,18 @@ func handleValidateCloud(
 	savedCfg, _ := provider.ParseProviderConfig(rawCfg, name)
 
 	cfg := provider.ProviderConfig{
-		BaseURL:             firstNonEmpty(req.BaseURL, savedCfg.BaseURL),
-		Model:               firstNonEmpty(req.Model, savedCfg.Model),
-		EmbeddingModel:      firstNonEmpty(req.EmbeddingModel, savedCfg.EmbeddingModel),
-		APIKey:              firstNonEmpty(req.APIKey, savedCfg.APIKey),
-		APIVersion:          firstNonEmpty(req.APIVersion, savedCfg.APIVersion),
-		Flavor:              firstNonEmpty(req.Flavor, savedCfg.Flavor),
-		Deployment:          savedCfg.Deployment,
-		EmbeddingDeployment: firstNonEmpty(req.EmbeddingDeployment, savedCfg.EmbeddingDeployment),
-	}
-	// Omitted means reuse saved config; an explicit blank clears the override,
-	// exactly as the settings form's save operation does.
-	if req.Deployment != nil {
-		cfg.Deployment = strings.TrimSpace(*req.Deployment)
+		BaseURL:        firstNonEmpty(req.BaseURL, savedCfg.BaseURL),
+		Model:          firstNonEmpty(req.Model, savedCfg.Model),
+		EmbeddingModel: firstNonEmpty(req.EmbeddingModel, savedCfg.EmbeddingModel),
+		APIKey:         firstNonEmpty(req.APIKey, savedCfg.APIKey),
+		APIProtocol:    firstNonEmpty(req.APIProtocol, savedCfg.APIProtocol),
 	}
 
 	// Cheap pre-flight checks so the SPA can render a precise
 	// "you forgot the API key" message instead of an opaque
 	// adapter error. The order matters: api_key is the most
 	// likely missing field, then base_url for Azure, then
-	// deployment for Azure OpenAI Service flavor.
+	// deployment name for Foundry.
 	if cfg.APIKey == "" {
 		httpx.WriteErrorCode(w, http.StatusUnprocessableEntity,
 			"api key is required for cloud validation",
@@ -272,18 +260,11 @@ func handleValidateCloud(
 			validateConfigCodeMissingBaseURL)
 		return
 	}
-	if name == provider.NameAzure {
-		flavor := cfg.Flavor
-		if flavor == "" {
-			flavor = provider.DefaultAzureFlavor
-		}
-		if flavor == provider.AzureFlavorOpenAI &&
-			cfg.Deployment == "" && cfg.Model == "" {
-			httpx.WriteErrorCode(w, http.StatusUnprocessableEntity,
-				"deployment name (or model) is required for Azure OpenAI Service",
-				validateConfigCodeMissingDeployment)
-			return
-		}
+	if name == provider.NameAzure && cfg.Model == "" {
+		httpx.WriteErrorCode(w, http.StatusUnprocessableEntity,
+			"deployment name is required for Microsoft Foundry",
+			validateConfigCodeMissingDeployment)
+		return
 	}
 
 	prov, err := registry.ProviderForName(name, cfg)
@@ -325,9 +306,6 @@ func handleValidateCloud(
 	}
 
 	probedModel := cfg.Model
-	if name == provider.NameAzure {
-		probedModel = azure.ChatIdentity(cfg)
-	}
 
 	httpx.WriteJSON(w, http.StatusOK, validateConfigResponse{
 		OK:          true,
