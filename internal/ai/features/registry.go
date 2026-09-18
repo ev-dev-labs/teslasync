@@ -1576,6 +1576,40 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Alert message template suggestion.
+	//
+	// `alert-message-template-suggestion` is an opt-in Helix advisor on
+	// Alert Studio's message-template editor. It proposes ONE
+	// notification body template grounded in the user's currently
+	// selected alert dimensions (kind, signal or metric, operator,
+	// severity, thresholds) via two propose-only tools:
+	// draft_alert_message_template (placeholder catalog + related
+	// presets from internal/alertmsg) and validate_alert_message_template
+	// (unknown-token + length check). The advisor NEVER persists;
+	// the user clicks Apply to copy the template into the existing
+	// editor, then Save on the canonical alerts handler.
+	//
+	// Backend: POST /api/v1/ai/alerts/message-template/draft is
+	// guard-wrapped (ADR-015 §I6 + §I7).
+	// Frontend: /notifications/studio (legacy /alerts/studio redirect).
+	// UI test ID: ai-feature-alert-message-template-suggestion-root.
+	"alert-message-template-suggestion": {
+		ID:          "alert-message-template-suggestion",
+		Name:        "Helix alert message template suggestion",
+		Description: "Opt-in Helix advisor on Alert Studio that proposes a notification message template from the alert dimensions the user already selected (kind, signal or computed metric, operator, severity, thresholds). Routes through two propose-only tools: draft_alert_message_template returns the same placeholder catalog and related presets the deterministic editor uses; validate_alert_message_template rejects unknown {{tokens}} and over-long bodies so an applied template is byte-equivalent to one the user could type. Helix never saves; Apply copies the draft into the existing Message Template field and the canonical Save button remains the only write path. The deterministic preset gallery and {{ autocomplete remain the baseline when AI is off.",
+		Tier:        "A",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/alerts/message-template/draft"},
+			Frontend:  []string{"/alerts/studio"},
+			UITestIDs: []string{"ai-feature-alert-message-template-suggestion-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Alert tuning suggestions.
 	//
 	// `alert-tuning-suggestions` is an opt-in LLM that proposes a

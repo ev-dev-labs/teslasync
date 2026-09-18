@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_alert_message_template_fail_1
+        name: draft_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"BrakePedal","op":"="}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_alert_message_template_fail_1
+        name: validate_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"BrakePedal","op":"=","template":"{{NotARealPlaceholder}} fired"}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I cannot recommend that template: unknown placeholders: NotARealPlaceholder.
+      Retry with only keys from the allowed catalog such as VehicleName or Value.
+    input_tokens: 240
+    output_tokens: 80

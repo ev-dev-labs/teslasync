@@ -61,6 +61,8 @@ func respondAnalysis[T any](w http.ResponseWriter, r *http.Request, name string,
 	// Write the payload at the JSON root. httputil.Respond wraps {data:...};
 	// request() does not unwrap, so the physics/science pages would treat
 	// the envelope as the ledger and render every panel empty.
+	// Do not import internal/api/httpx — handler/v1 must stay thin
+	// (TestHandlerV1Thinness forbids internal/api).
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(value)

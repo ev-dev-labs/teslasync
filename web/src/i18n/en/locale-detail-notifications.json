@@ -159,6 +159,16 @@
         "badge": "Helix",
         "draftButton": "Draft alert"
       },
+      "aiTemplate": {
+        "title": "Suggest a message template",
+        "description": "Ask Helix to propose one notification body from the alert dimensions you already selected. Helix uses the same placeholder catalog as the editor and never saves — Apply copies the draft into the field below, then you click Save.",
+        "badge": "Helix",
+        "suggestButton": "Suggest template",
+        "applyButton": "Apply to editor",
+        "emptyHint": "Choose a signal or computed metric (and operator) first so Helix can ground the template.",
+        "previewLabel": "Proposed template (review before applying):",
+        "previewPlaceholders": "Placeholders: {{keys}}"
+      },
       "aiTuning": {
         "title": "Suggest lower-noise tuning",
         "description": "Review recent firings and propose a typed AlertRule patch. Descriptive replay only — review before saving.",

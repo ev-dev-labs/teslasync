@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_alert_message_template_signal_1
+        name: draft_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"BrakePedal","op":"=","severity":"info"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_alert_message_template_signal_1
+        name: validate_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"BrakePedal","op":"=","severity":"info","template":"{{VehicleName}}: BrakePedal is {{Value}}"}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      Suggested template for BrakePedal: {{VehicleName}}: BrakePedal is {{Value}}.
+      It uses VehicleName and Value from the allowed catalog. Apply it in Alert Studio, then Save if you want to keep it.
+    input_tokens: 240
+    output_tokens: 80

@@ -46,6 +46,7 @@ import {
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
+import { AIAlertMessageTemplateSuggestion } from '@/components/ai/AIAlertMessageTemplateSuggestion'
 import {
   useAlertMessagePlaceholders,
   useAlertMessagePresets,
@@ -435,6 +436,12 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
             for={`${textareaId}-include-title`}
           />
         </div>
+
+        <AIAlertMessageTemplateSuggestion
+          draft={draft}
+          onApplyTemplate={onTemplateChange}
+          disabled={disabled}
+        />
 
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1">
