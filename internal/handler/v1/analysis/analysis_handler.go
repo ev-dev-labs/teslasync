@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,7 +13,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/domain"
 	"github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
@@ -61,5 +61,7 @@ func respondAnalysis[T any](w http.ResponseWriter, r *http.Request, name string,
 	// Write the payload at the JSON root. httputil.Respond wraps {data:...};
 	// request() does not unwrap, so the physics/science pages would treat
 	// the envelope as the ledger and render every panel empty.
-	httpx.WriteJSON(w, http.StatusOK, value)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(value)
 }
