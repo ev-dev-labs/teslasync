@@ -190,7 +190,7 @@ function InnerSection({
       )}
       description={t(
         'notifications.alertStudio.aiTemplate.description',
-        'Ask Helix to propose one notification body from the alert dimensions you already selected. Helix uses the same placeholder catalog as the editor and never saves — Apply copies the draft into the field below, then you click Save.',
+        'Ask Helix to write a distinctive Tesla-owner notification body from the alert dimensions you already selected — not a bland threshold line. Helix uses the same placeholder catalog as the editor and never saves — Apply copies the draft into the field below, then you click Save.',
       )}
       buttonLabel={t(
         'notifications.alertStudio.aiTemplate.suggestButton',

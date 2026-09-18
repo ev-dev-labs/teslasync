@@ -34,6 +34,10 @@ func TestStrategy_System(t *testing.T) {
 		"Do NOT invent {{tokens}}",
 		"The template MUST be related to the selected dimensions",
 		"You NEVER save the template",
+		"writing_brief",
+		"Do NOT copy bland catalog presets",
+		"Tesla owner would be glad they received",
+		`{{SignalName}} is {{Value}} (threshold {{Threshold}})`,
 	} {
 		if !strings.Contains(sys, must) {
 			t.Errorf("System() missing %q", must)
