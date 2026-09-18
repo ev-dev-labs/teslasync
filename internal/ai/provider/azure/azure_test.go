@@ -602,7 +602,7 @@ func TestIsAzureOpenAIV1(t *testing.T) {
 		want bool
 	}{
 		{"https://my-resource.services.ai.azure.com/openai/v1", true},
-		{"https://my-resource.services.ai.azure.com", true},
+		{"https://my-resource.services.ai.azure.com", false},
 		{"https://my-resource.openai.azure.com/openai/v1", true},
 		{"https://my-resource.openai.azure.com", false},
 		{"http://127.0.0.1:1234", false},
@@ -614,7 +614,7 @@ func TestIsAzureOpenAIV1(t *testing.T) {
 	}
 }
 
-func TestChatEndpoint_V1ServicesHost(t *testing.T) {
+func TestChatEndpoint_ServicesHostUsesClassicOpenAI(t *testing.T) {
 	t.Parallel()
 	a, err := New(provider.ProviderConfig{
 		BaseURL:    "https://my-resource.services.ai.azure.com",
@@ -630,11 +630,14 @@ func TestChatEndpoint_V1ServicesHost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("chatEndpoint: %v", err)
 	}
-	if model != "gpt-5.6-sol" {
-		t.Errorf("modelInBody=%q", model)
+	if model != "" {
+		t.Errorf("modelInBody=%q, want empty (deployment in URL)", model)
 	}
-	if u != "https://my-resource.services.ai.azure.com/openai/v1/chat/completions" {
-		t.Errorf("url=%s", u)
+	if !strings.Contains(u, "/openai/deployments/gpt-5.6-sol/chat/completions") {
+		t.Errorf("url=%s, want classic deployments path", u)
+	}
+	if !strings.Contains(u, "api-version=2024-10-21") {
+		t.Errorf("url=%s, want api-version", u)
 	}
 }
 
@@ -762,5 +765,51 @@ func TestOpenAIV1_Chat_URLAuthAndBody(t *testing.T) {
 	}
 	if resp.Message.Content != "ok" {
 		t.Fatalf("content=%q", resp.Message.Content)
+	}
+}
+
+func TestChat_V1NotFoundFallsBackToDeployments(t *testing.T) {
+	t.Parallel()
+	var v1Hits, deployHits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/openai/v1/") {
+			v1Hits++
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = io.WriteString(w, `{ "error": { "code": "DeploymentNotFound" } }`)
+			return
+		}
+		if !strings.Contains(r.URL.Path, "/openai/deployments/gpt-5.6-sol/chat/completions") {
+			t.Errorf("unexpected path=%s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if r.URL.Query().Get("api-version") == "" {
+			t.Errorf("missing api-version on %s", r.URL.String())
+		}
+		deployHits++
+		_, _ = io.WriteString(w, `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"classic"}}]}`)
+	}))
+	t.Cleanup(srv.Close)
+	a, err := New(provider.ProviderConfig{
+		BaseURL:    srv.URL + "/openai/v1",
+		Model:      "gpt-5.6-sol",
+		APIKey:     "k",
+		APIVersion: "2024-10-21",
+		Flavor:     provider.AzureFlavorOpenAI,
+	}, WithHTTPClient(srv.Client()))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	resp, err := a.Chat(context.Background(), provider.ChatRequest{
+		Messages: []provider.Message{{Role: provider.RoleUser, Content: "ping"}},
+	})
+	if err != nil {
+		t.Fatalf("Chat: %v", err)
+	}
+	if resp.Message.Content != "classic" {
+		t.Fatalf("content=%q", resp.Message.Content)
+	}
+	if v1Hits != 1 || deployHits != 1 {
+		t.Fatalf("hits v1=%d deploy=%d", v1Hits, deployHits)
 	}
 }

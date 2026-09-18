@@ -176,7 +176,17 @@ func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return nil, fmt.Errorf("%w: azure chat status %d: %s", provider.ErrUpstream, resp.StatusCode, string(raw))
+		chatErr := fmt.Errorf("%w: azure chat status %d: %s", provider.ErrUpstream, resp.StatusCode, string(raw))
+		// Foundry portal endpoints often include /openai/v1, but
+		// gpt-5.x deployments 404 on that chat/completions surface.
+		// Retry the pre-#118 flavor URL (deployments or Foundry
+		// inference) after stripping /openai/v1.
+		if resp.StatusCode == http.StatusNotFound && a.usesOpenAIV1() {
+			if fallback, ferr := a.withoutOpenAIV1().Chat(ctx, req); ferr == nil {
+				return fallback, nil
+			}
+		}
+		return nil, chatErr
 	}
 	var wire azureChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
@@ -413,23 +423,46 @@ func (a *Adapter) embedURL(identity string) (string, error) {
 }
 
 // isAzureOpenAIV1 reports whether baseURL is Azure AI Foundry's
-// OpenAI-compatible v1 surface. Detected from:
-//   - path containing /openai/v1 (the portal "endpoint" field)
-//   - host *.services.ai.azure.com (Foundry AI Services resource)
+// OpenAI-compatible v1 surface. Only the path is authoritative —
+// hostname *.services.ai.azure.com also hosts classic
+// /openai/deployments/{name}/chat/completions?api-version= which
+// Helix used successfully before auto-detect (#118) forced v1.
 func isAzureOpenAIV1(baseURL string) bool {
 	u, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil {
 		return false
 	}
 	p := strings.ToLower(path.Clean(u.Path))
-	if strings.Contains(p, "/openai/v1") {
-		return true
-	}
-	return strings.Contains(strings.ToLower(u.Hostname()), "services.ai.azure.com")
+	return strings.Contains(p, "/openai/v1")
 }
 
 func (a *Adapter) usesOpenAIV1() bool {
 	return isAzureOpenAIV1(a.cfg.BaseURL)
+}
+
+func stripOpenAIV1Path(baseURL string) string {
+	u, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil {
+		return strings.TrimSpace(baseURL)
+	}
+	cleaned := path.Clean(u.Path)
+	lower := strings.ToLower(cleaned)
+	if i := strings.Index(lower, "/openai/v1"); i >= 0 {
+		cleaned = cleaned[:i]
+		if cleaned == "" {
+			cleaned = "/"
+		}
+		u.Path = cleaned
+	}
+	u.RawQuery = ""
+	u.Fragment = ""
+	return strings.TrimRight(u.String(), "/")
+}
+
+func (a *Adapter) withoutOpenAIV1() *Adapter {
+	clone := *a
+	clone.cfg.BaseURL = stripOpenAIV1Path(a.cfg.BaseURL)
+	return &clone
 }
 
 // buildOpenAIV1URL joins BaseURL (ensuring /openai/v1) with extra
