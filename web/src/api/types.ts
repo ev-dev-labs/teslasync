@@ -3793,17 +3793,19 @@ export interface PhysicsLedger {
   kind: string
   start: string
   end: string
-  dynamics: PhysicsLongitudinalDynamics
-  drive: PhysicsDriveLedger
-  charge: PhysicsChargeLedger
-  park: PhysicsParkLedger
-  thermal: PhysicsThermalLedger
-  range: PhysicsRangeLedger
-  tires: PhysicsTireLedger
-  epochs: PhysicsEpochResidual[]
-  unknown_intervals: PhysicsUnknownInterval[]
+  // Nested ledgers are Go pointers; encoding/json emits null (or omits
+  // after camelCase transforms) when that domain has no samples.
+  dynamics: PhysicsLongitudinalDynamics | null
+  drive: PhysicsDriveLedger | null
+  charge: PhysicsChargeLedger | null
+  park: PhysicsParkLedger | null
+  thermal: PhysicsThermalLedger | null
+  range: PhysicsRangeLedger | null
+  tires: PhysicsTireLedger | null
+  epochs: PhysicsEpochResidual[] | null
+  unknown_intervals: PhysicsUnknownInterval[] | null
   unknown_hours: number
-  black_box: PhysicsBlackBoxPoint[]
+  black_box: PhysicsBlackBoxPoint[] | null
   contradictions?: string[]
   markers?: PhysicsMarker[]
   truncated: boolean

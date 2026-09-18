@@ -32,11 +32,15 @@ export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefin
           <div className="flex flex-wrap gap-2">
             <Badge variant="neutral" size="sm">
               {t('driveDetail.ledger.regen', 'Regen')}:{' '}
-              {ledger.dynamics.regen_wh != null ? formatEnergy(ledger.dynamics.regen_wh) : t('common.unknown', 'Unknown')}
+              {ledger.dynamics?.regen_wh != null
+                ? formatEnergy(ledger.dynamics.regen_wh)
+                : t('common.unknown', 'Unknown')}
             </Badge>
             <Badge variant="neutral" size="sm">
               {t('driveDetail.ledger.friction', 'Friction brake')}:{' '}
-              {ledger.dynamics.friction_brake_wh != null ? formatEnergy(ledger.dynamics.friction_brake_wh) : t('common.unknown', 'Unknown')}
+              {ledger.dynamics?.friction_brake_wh != null
+                ? formatEnergy(ledger.dynamics.friction_brake_wh)
+                : t('common.unknown', 'Unknown')}
             </Badge>
             {ledger.truncated ? (
               <Badge variant="danger" size="sm">
