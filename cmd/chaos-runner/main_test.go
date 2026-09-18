@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -28,6 +30,8 @@ func TestMain(m *testing.M) {
 	log.Logger = zerolog.Nop()
 	os.Exit(m.Run())
 }
+
+func ptr[T any](v T) *T { return &v }
 
 func TestEnvOr(t *testing.T) {
 	const key = "CHAOS_RUNNER_TEST_ENVOR"
@@ -357,6 +361,88 @@ func TestMakeAPIProbeWithConfig(t *testing.T) {
 			err := makeAPIProbeWithConfig(apiURL, tt.cfg)(ctx)
 			tt.check(t, err)
 		})
+	}
+}
+
+func TestRetryRecoveryProbe_PreservesLastStatusOnDeadline(t *testing.T) {
+	t.Parallel()
+	cfg := probeConfig{httpTimeout: 200 * time.Millisecond, deadline: 80 * time.Millisecond, interval: 10 * time.Millisecond}
+	var calls atomic.Int32
+	err := retryRecoveryProbe(context.Background(), cfg, func(context.Context) error {
+		calls.Add(1)
+		if calls.Load() == 1 {
+			return fmt.Errorf("/healthz returned 503")
+		}
+		return context.DeadlineExceeded
+	})
+	if err == nil {
+		t.Fatal("want error")
+	}
+	if !strings.Contains(err.Error(), "503") {
+		t.Fatalf("error = %q, want it to preserve the last concrete 503 failure", err.Error())
+	}
+}
+
+func TestVerifyFleetStateRecovered_ReportsLiveBatteryEvidence(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/vehicles/states" {
+			t.Fatalf("path=%s", r.URL.Path)
+		}
+		_, _ = io.WriteString(w, `{"data":{"vehicles":[{"vehicle_id":42,"state":{"battery_level":88},"data_source":"live_signal_store","verified_fields":["battery_level"]}]}}`)
+	}))
+	defer srv.Close()
+	gotID, err := verifyFleetStateRecovered(context.Background(), srv.Client(), srv.URL, ptr(88))
+	if err != nil {
+		t.Fatalf("verifyFleetStateRecovered: %v", err)
+	}
+	if gotID != 42 {
+		t.Fatalf("vehicleID=%d, want 42", gotID)
+	}
+}
+
+func TestVerifyFleetStateRecovered_RejectsMalformedOrEmptyFleet(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name    string
+		body    string
+		wantErr string
+	}{
+		{"empty fleet", `{"data":{"vehicles":[]}}`, "no vehicle"},
+		{"missing vehicles", `{"data":{}}`, "data.vehicles"},
+		{"bad id", `{"data":{"vehicles":[{"vehicle_id":0,"state":{"battery_level":12}}]}}`, "invalid vehicle_id"},
+		{"missing state for live battery", `{"data":{"vehicles":[{"vehicle_id":7,"data_source":"live_signal_store","verified_fields":["battery_level"]}]}}`, "missing state"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = io.WriteString(w, tt.body)
+			}))
+			defer srv.Close()
+			_, err := verifyFleetStateRecovered(context.Background(), srv.Client(), srv.URL, ptr(12))
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("err=%v, want substring %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestVerifyBatteryRecoveredAndContainsString(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/vehicles/7/battery" {
+			t.Fatalf("path=%s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	if err := verifyBatteryRecovered(context.Background(), srv.Client(), srv.URL, 7); err != nil {
+		t.Fatalf("verifyBatteryRecovered: %v", err)
+	}
+	if !containsString([]string{"battery_level", "range"}, "battery_level") {
+		t.Fatal("containsString should find the expected value")
+	}
+	if containsString([]string{"battery_level"}, "range") {
+		t.Fatal("containsString should reject missing values")
 	}
 }
 

@@ -209,7 +209,13 @@ func retryRecoveryProbe(ctx context.Context, cfg probeConfig, probe func(context
 			}
 			return nil
 		} else {
-			lastErr = err
+			// A timeout from the request context is often just the retry
+			// loop hitting the overall deadline; keep the last concrete
+			// recovery failure (e.g. HTTP 503) so callers see the real
+			// reason a service never recovered.
+			if !errors.Is(err, context.DeadlineExceeded) || lastErr == nil {
+				lastErr = err
+			}
 		}
 		wait := min(interval, time.Until(deadline))
 		if wait <= 0 {
