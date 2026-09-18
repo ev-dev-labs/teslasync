@@ -12,19 +12,16 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 )
 
-// Foundry OpenAI v1 Responses API — official surface for gpt-5.6-sol
-// and later reasoning models.
+// Foundry OpenAI v1 Responses API fallback, selected by operation errors,
+// never by a deployment's name.
 // https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
-//
-// Chat Completions on gpt-5.6+ rejects function tools unless
-// reasoning_effort=none. Helix uses tools, so this path is required.
-
 type responsesCreate struct {
 	Model           string           `json:"model"`
 	Instructions    string           `json:"instructions,omitempty"`
 	Input           []map[string]any `json:"input"`
 	Tools           []responsesTool  `json:"tools,omitempty"`
 	MaxOutputTokens int              `json:"max_output_tokens,omitempty"`
+	Store           bool             `json:"store"`
 }
 
 type responsesTool struct {
@@ -37,15 +34,20 @@ type responsesTool struct {
 type responsesResult struct {
 	OutputText string `json:"output_text"`
 	Status     string `json:"status"`
-	Output     []struct {
+	Error      *struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
+	Output []struct {
 		Type      string `json:"type"`
 		Role      string `json:"role"`
 		CallID    string `json:"call_id"`
 		Name      string `json:"name"`
 		Arguments string `json:"arguments"`
 		Content   []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
+			Type    string `json:"type"`
+			Text    string `json:"text"`
+			Refusal string `json:"refusal"`
 		} `json:"content"`
 	} `json:"output"`
 	Usage struct {
@@ -84,7 +86,7 @@ func (a *Adapter) chatViaResponses(ctx context.Context, req provider.ChatRequest
 		return nil, fmt.Errorf("%w: azure responses read: %v", provider.ErrUpstream, err)
 	}
 	if resp.StatusCode/100 != 2 {
-		return nil, fmt.Errorf("%w: azure responses status %d: %s", provider.ErrUpstream, resp.StatusCode, string(raw))
+		return nil, newOperationError("responses", resp.StatusCode, raw)
 	}
 	return decodeResponses(raw)
 }
@@ -120,9 +122,6 @@ func encodeResponsesRequest(req provider.ChatRequest, model string) ([]byte, err
 			input = append(input, map[string]any{"role": m.Role, "content": m.Content})
 		}
 	}
-	if len(input) == 0 {
-		input = append(input, map[string]any{"role": "user", "content": "ping"})
-	}
 	tools := make([]responsesTool, 0, len(req.Tools))
 	for _, t := range req.Tools {
 		tools = append(tools, responsesTool{
@@ -133,7 +132,7 @@ func encodeResponsesRequest(req provider.ChatRequest, model string) ([]byte, err
 		})
 	}
 	n := req.MaxTokens
-	if n <= 1 {
+	if n <= 0 {
 		n = defaultMaxCompletionTokens
 	}
 	wire := responsesCreate{
@@ -166,6 +165,16 @@ func decodeResponses(raw []byte) (*provider.ChatResponse, error) {
 	if err := json.Unmarshal(raw, &wire); err != nil {
 		return nil, fmt.Errorf("%w: azure responses decode: %v", provider.ErrUpstream, err)
 	}
+	if wire.Error != nil {
+		return nil, fmt.Errorf("%w: azure responses %s: %s", provider.ErrUpstream, wire.Error.Code, wire.Error.Message)
+	}
+	if wire.Status != "completed" {
+		reason := ""
+		if wire.IncompleteDetails != nil {
+			reason = wire.IncompleteDetails.Reason
+		}
+		return nil, fmt.Errorf("%w: azure responses status %q: %s", provider.ErrUpstream, wire.Status, reason)
+	}
 	out := &provider.ChatResponse{
 		InputTokens:  wire.Usage.InputTokens,
 		OutputTokens: wire.Usage.OutputTokens,
@@ -182,6 +191,9 @@ func decodeResponses(raw []byte) (*provider.ChatResponse, error) {
 	for _, item := range wire.Output {
 		switch item.Type {
 		case "function_call":
+			if item.CallID == "" || item.Name == "" || !json.Valid([]byte(item.Arguments)) {
+				return nil, fmt.Errorf("%w: azure responses invalid function call", provider.ErrUpstream)
+			}
 			out.ToolCalls = append(out.ToolCalls, provider.ToolCall{
 				ID:        item.CallID,
 				Name:      item.Name,
@@ -189,6 +201,9 @@ func decodeResponses(raw []byte) (*provider.ChatResponse, error) {
 			})
 		case "message":
 			for _, c := range item.Content {
+				if c.Type == "refusal" {
+					return nil, fmt.Errorf("%w: azure responses refusal: %s", provider.ErrUpstream, c.Refusal)
+				}
 				if c.Type == "output_text" && c.Text != "" {
 					text = append(text, c.Text)
 				}
@@ -201,14 +216,8 @@ func decodeResponses(raw []byte) (*provider.ChatResponse, error) {
 	if len(out.ToolCalls) > 0 {
 		out.FinishReason = provider.FinishToolCalls
 	}
-	if wire.Status == "incomplete" {
-		reason := ""
-		if wire.IncompleteDetails != nil {
-			reason = wire.IncompleteDetails.Reason
-		}
-		if reason == "max_output_tokens" {
-			out.FinishReason = provider.FinishLength
-		}
+	if out.Message.Content == "" && len(out.ToolCalls) == 0 {
+		return nil, fmt.Errorf("%w: azure responses completed without text or tool calls", provider.ErrUpstream)
 	}
 	return out, nil
 }

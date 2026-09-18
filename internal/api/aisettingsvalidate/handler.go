@@ -7,7 +7,7 @@ package aisettingsvalidate
 // AI routes are guard-wrapped (ADR-015 §I6).
 //
 // Local mode only resolves DNS and enforces local-address rules. Cloud mode
-// performs a one-token probe because syntax checks cannot validate provider,
+// performs a bounded probe because syntax checks cannot validate provider,
 // endpoint, deployment, API version, and key alignment; saved API keys may be
 // reused for the probe and are never logged.
 
@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/ai/provider/azure"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
@@ -57,13 +58,13 @@ type validateConfigRequest struct {
 	// saved semantics. APIKey in particular falls back to the
 	// previously-saved key so the user can validate after editing
 	// a non-secret field without re-typing the secret.
-	APIKey              string `json:"api_key,omitempty"`
-	Model               string `json:"model,omitempty"`
-	APIVersion          string `json:"api_version,omitempty"`
-	Flavor              string `json:"flavor,omitempty"`
-	Deployment          string `json:"deployment,omitempty"`
-	EmbeddingModel      string `json:"embedding_model,omitempty"`
-	EmbeddingDeployment string `json:"embedding_deployment,omitempty"`
+	APIKey              string  `json:"api_key,omitempty"`
+	Model               string  `json:"model,omitempty"`
+	APIVersion          string  `json:"api_version,omitempty"`
+	Flavor              string  `json:"flavor,omitempty"`
+	Deployment          *string `json:"deployment,omitempty"`
+	EmbeddingModel      string  `json:"embedding_model,omitempty"`
+	EmbeddingDeployment string  `json:"embedding_deployment,omitempty"`
 }
 
 // validateConfigResponse is the JSON body of a successful 200.
@@ -111,6 +112,10 @@ const validateConfigLocalTimeout = 5 * time.Second
 // trades spinner duration for false-negative reduction. The SPA
 // surfaces "validating…" so the user knows work is in flight.
 const validateConfigCloudTimeout = 30 * time.Second
+
+// Includes reasoning tokens; this is a validation budget, not an override of
+// a caller's Chat/Stream token cap.
+const validateConfigAzureProbeTokens = 1024
 
 // httpStatusInErrorRe extracts an HTTP status code from a wrapped
 // adapter error message (the adapters embed the status in the wrap
@@ -241,8 +246,13 @@ func handleValidateCloud(
 		APIKey:              firstNonEmpty(req.APIKey, savedCfg.APIKey),
 		APIVersion:          firstNonEmpty(req.APIVersion, savedCfg.APIVersion),
 		Flavor:              firstNonEmpty(req.Flavor, savedCfg.Flavor),
-		Deployment:          firstNonEmpty(req.Deployment, savedCfg.Deployment),
+		Deployment:          savedCfg.Deployment,
 		EmbeddingDeployment: firstNonEmpty(req.EmbeddingDeployment, savedCfg.EmbeddingDeployment),
+	}
+	// Omitted means reuse saved config; an explicit blank clears the override,
+	// exactly as the settings form's save operation does.
+	if req.Deployment != nil {
+		cfg.Deployment = strings.TrimSpace(*req.Deployment)
 	}
 
 	// Cheap pre-flight checks so the SPA can render a precise
@@ -290,19 +300,19 @@ func handleValidateCloud(
 		return
 	}
 
-	// One-shot probe. MaxTokens=1 keeps cost negligible (~$0.0001
-	// for gpt-4o-mini). "ping" is short enough that the model
-	// almost always emits a single token without the conversation
-	// derailing into long-form output.
+	// Leave Model unset, as Helix does, so adapter deployment precedence is
+	// identical during validation and actual use.
 	probeReq := provider.ChatRequest{
-		Model: cfg.Model,
 		Messages: []provider.Message{
-			{Role: "user", Content: "ping"},
+			{Role: "user", Content: "Reply only with OK."},
 		},
 		MaxTokens:   1,
 		Temperature: 0,
 	}
-	resp, err := prov.Chat(ctx, probeReq)
+	if name == provider.NameAzure {
+		probeReq.MaxTokens = validateConfigAzureProbeTokens
+	}
+	_, err = prov.Chat(ctx, probeReq)
 	if err != nil {
 		code, msg := classifyCloudProbeError(ctx, err)
 		log.Info().
@@ -315,11 +325,8 @@ func handleValidateCloud(
 	}
 
 	probedModel := cfg.Model
-	if resp != nil && resp.Message.Content != "" {
-		// Some providers echo the model identifier in the response;
-		// we keep the configured one for stability since the
-		// response shape is provider-specific.
-		_ = resp
+	if name == provider.NameAzure {
+		probedModel = azure.ChatIdentity(cfg)
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, validateConfigResponse{
@@ -336,6 +343,15 @@ func handleValidateCloud(
 // sentinel chain (errors.Is), (2) the embedded HTTP status from the
 // adapter's error message, (3) ctx cancellation, in that order.
 func classifyCloudProbeError(ctx context.Context, err error) (code, message string) {
+	// Protocol negotiation retains both failures. Classify the final operation,
+	// but do not hide the first error from the validation result.
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		failures := joined.Unwrap()
+		if len(failures) > 0 {
+			code, _ := classifyCloudProbeError(ctx, failures[len(failures)-1])
+			return code, err.Error()
+		}
+	}
 	if errors.Is(err, provider.ErrCapabilityNotSupported) {
 		return validateConfigCodeInvalid, err.Error()
 	}

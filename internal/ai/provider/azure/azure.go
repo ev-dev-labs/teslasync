@@ -3,8 +3,8 @@
 // Microsoft hosts AI inference behind two distinct surfaces and this
 // adapter supports both via the [provider.ProviderConfig.Flavor] knob.
 // A third URL shape — Azure AI Foundry OpenAI v1 — is used when the
-// path contains /openai/v1, or when the model is gpt-5.6+ / gpt-6
-// (official Responses API). See:
+// path ends in /openai/v1. Chat Completions is tried first; a structured
+// operation-not-supported or 404 error permits one Responses attempt. See:
 // https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
 //
 //  1. Azure OpenAI Service ([provider.AzureFlavorOpenAI], the default).
@@ -157,15 +157,21 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 }
 
 func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
-	if a.usesResponsesAPI(req) {
-		resp, err := a.chatViaResponses(ctx, req)
-		if err == nil {
-			return resp, nil
-		}
-		if !isAzureNotFound(err) {
-			return nil, err
-		}
+	out, err := a.doChatCompletions(ctx, req)
+	if err == nil {
+		return out, nil
 	}
+	if a.usesOpenAIV1() && canTryResponses(err) && ctx.Err() == nil {
+		fallback, fallbackErr := a.chatViaResponses(ctx, req)
+		if fallbackErr != nil {
+			return nil, errors.Join(err, fallbackErr)
+		}
+		return fallback, nil
+	}
+	return nil, err
+}
+
+func (a *Adapter) doChatCompletions(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
 		return nil, err
@@ -185,17 +191,7 @@ func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		chatErr := fmt.Errorf("%w: azure chat status %d: %s", provider.ErrUpstream, resp.StatusCode, string(raw))
-		// Foundry portal endpoints often include /openai/v1, but
-		// gpt-5.x deployments 404 on that chat/completions surface.
-		// Retry the pre-#118 flavor URL (deployments or Foundry
-		// inference) after stripping /openai/v1.
-		if resp.StatusCode == http.StatusNotFound && a.usesOpenAIV1() {
-			if fallback, ferr := a.withoutOpenAIV1().Chat(ctx, req); ferr == nil {
-				return fallback, nil
-			}
-		}
-		return nil, chatErr
+		return nil, newOperationError("chat", resp.StatusCode, raw)
 	}
 	var wire azureChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
@@ -205,15 +201,6 @@ func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider
 }
 
 func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan provider.Chunk, error) {
-	if a.usesResponsesAPI(req) {
-		chatResp, err := a.chatViaResponses(ctx, req)
-		if err == nil {
-			return chatResponseAsStream(ctx, chatResp), nil
-		}
-		if !isAzureNotFound(err) {
-			return nil, err
-		}
-	}
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
 		return nil, err
@@ -234,17 +221,13 @@ func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan 
 	if resp.StatusCode/100 != 2 {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		_ = resp.Body.Close()
-		streamErr := fmt.Errorf("%w: azure stream status %d: %s", provider.ErrUpstream, resp.StatusCode, string(raw))
-		// Foundry OpenAI v1 (especially model-router) accepts the
-		// same chat/completions URL for non-stream Chat that
-		// Validate uses, but returns 404 DeploymentNotFound when
-		// the body has stream:true. Retry as Chat and synthesize
-		// chunks so Helix still completes.
-		if resp.StatusCode == http.StatusNotFound {
-			chatResp, chatErr := a.Chat(ctx, req)
-			if chatErr == nil {
-				return chatResponseAsStream(ctx, chatResp), nil
+		streamErr := newOperationError("stream", resp.StatusCode, raw)
+		if a.usesOpenAIV1() && canTryResponses(streamErr) && ctx.Err() == nil {
+			chatResp, fallbackErr := a.chatViaResponses(ctx, req)
+			if fallbackErr != nil {
+				return nil, errors.Join(streamErr, fallbackErr)
 			}
+			return chatResponseAsStream(ctx, chatResp), nil
 		}
 		return nil, streamErr
 	}
@@ -406,10 +389,16 @@ func (a *Adapter) chatDeployment(req provider.ChatRequest) string {
 	if req.Model != "" {
 		return req.Model
 	}
-	if a.cfg.Deployment != "" {
-		return a.cfg.Deployment
+	return ChatIdentity(a.cfg)
+}
+
+// ChatIdentity returns the configured deployment used by both validation and
+// Helix. Foundry's hidden classic deployment field must not override its model.
+func ChatIdentity(cfg provider.ProviderConfig) string {
+	if cfg.Flavor != provider.AzureFlavorFoundry && cfg.Deployment != "" {
+		return cfg.Deployment
 	}
-	return a.cfg.Model
+	return cfg.Model
 }
 
 // embedIdentity is the model-or-deployment string used by the embed
@@ -451,7 +440,7 @@ func isAzureOpenAIV1(baseURL string) bool {
 		return false
 	}
 	p := strings.ToLower(path.Clean(u.Path))
-	return strings.Contains(p, "/openai/v1")
+	return strings.HasSuffix(p, "/openai/v1")
 }
 
 func (a *Adapter) usesOpenAIV1() bool {
@@ -459,21 +448,6 @@ func (a *Adapter) usesOpenAIV1() bool {
 }
 
 const defaultMaxCompletionTokens = 8192
-
-func (a *Adapter) usesResponsesAPI(_ provider.ChatRequest) bool {
-	// Foundry routing is by surface, not model name. Any deployment
-	// on the Foundry flavor or an /openai/v1 endpoint uses Responses.
-	// https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
-	return a.cfg.Flavor == provider.AzureFlavorFoundry || a.usesOpenAIV1()
-}
-
-func isAzureNotFound(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "status 404") || strings.Contains(msg, "DeploymentNotFound")
-}
 
 func needsMaxCompletionTokens(model string) bool {
 	m := strings.ToLower(strings.TrimSpace(model))
@@ -497,31 +471,6 @@ func (a *Adapter) usesCompletionTokenCap(req provider.ChatRequest, modelInBody s
 		identity = a.chatDeployment(req)
 	}
 	return needsMaxCompletionTokens(identity)
-}
-
-func stripOpenAIV1Path(baseURL string) string {
-	u, err := url.Parse(strings.TrimSpace(baseURL))
-	if err != nil {
-		return strings.TrimSpace(baseURL)
-	}
-	cleaned := path.Clean(u.Path)
-	lower := strings.ToLower(cleaned)
-	if i := strings.Index(lower, "/openai/v1"); i >= 0 {
-		cleaned = cleaned[:i]
-		if cleaned == "" {
-			cleaned = "/"
-		}
-		u.Path = cleaned
-	}
-	u.RawQuery = ""
-	u.Fragment = ""
-	return strings.TrimRight(u.String(), "/")
-}
-
-func (a *Adapter) withoutOpenAIV1() *Adapter {
-	clone := *a
-	clone.cfg.BaseURL = stripOpenAIV1Path(a.cfg.BaseURL)
-	return &clone
 }
 
 // buildOpenAIV1URL joins BaseURL (ensuring /openai/v1) with extra

@@ -542,6 +542,7 @@ describe('AIProviderSection — Azure surface', () => {
       isCloud: true,
       initial: makeDraft({ provider: 'azure', flavor: 'openai' }),
     })
+
     // Precondition: deployment inputs visible for the OpenAI-Service flavor.
     expect(screen.getByTestId('ai-provider-azure-deployment')).toBeInTheDocument()
 
@@ -557,6 +558,32 @@ describe('AIProviderSection — Azure surface', () => {
     ).toBeNull()
     expect(screen.getByTestId('ai-provider-azure-api-version')).toBeInTheDocument()
     expect(screen.getByTestId('ai-provider-azure-base-url')).toBeInTheDocument()
+  })
+
+  it('keeps the visible Foundry identity in validation despite a saved classic override', async () => {
+    mockedRequest.mockResolvedValue({
+      ok: true, mode: 'cloud', probed_model: 'gpt-chat-latest',
+    })
+    renderSection({
+      isCloud: true,
+      initial: makeDraft({
+        provider: 'azure', flavor: 'foundry',
+        base_url: 'https://example.services.ai.azure.com/openai/v1',
+        model: 'gpt-chat-latest', deployment: 'stale-classic-deployment',
+      }),
+    })
+    expect(screen.queryByTestId('ai-provider-azure-deployment')).toBeNull()
+    expect(screen.getByRole('option', {
+      name: 'Microsoft Foundry (Chat Completions / Responses)',
+    })).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('ai-provider-validate-cloud'))
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-provider-validate-banner')).toHaveTextContent('gpt-chat-latest')
+    })
+    expect(validateBody()).toMatchObject({
+      provider: 'azure', flavor: 'foundry', model: 'gpt-chat-latest',
+      deployment: 'stale-classic-deployment',
+    })
   })
 
   it('uses the plain "Model" label for a non-Azure cloud provider', () => {

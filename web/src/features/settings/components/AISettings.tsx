@@ -329,9 +329,9 @@ export function AISettings() {
           ...(provider.flavor.trim() === ''
             ? {}
             : { flavor: provider.flavor }),
-          ...(provider.deployment.trim() === ''
-            ? {}
-            : { deployment: provider.deployment }),
+          ...(provider.provider === 'azure' || provider.deployment.trim() !== ''
+            ? { deployment: provider.deployment.trim() }
+            : {}),
           ...(provider.embedding_model.trim() === ''
             ? {}
             : { embedding_model: provider.embedding_model }),

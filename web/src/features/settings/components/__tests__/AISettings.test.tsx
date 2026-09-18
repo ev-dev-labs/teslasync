@@ -297,6 +297,50 @@ describe('AISettings — validate endpoint exercised end-to-end', () => {
 })
 
 describe('AISettings — F1↔F2 provider config schema (namespaced shape)', () => {
+  it('validates and saves an explicitly cleared Azure deployment override', async () => {
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path === '/settings/ai/validate-config') {
+        return { ok: true, mode: 'cloud', probed_model: 'visible-model' }
+      }
+      if (path === '/settings' && init?.method === 'PUT') {
+        return JSON.parse(String(init.body))
+      }
+      return undefined
+    })
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'cloud',
+      ai_provider_config: {
+        default: 'azure',
+        azure: {
+          base_url: 'https://example.openai.azure.com/openai/v1',
+          model: 'visible-model',
+          deployment: 'old-deployment',
+          flavor: 'openai',
+        },
+      },
+    })
+    fireEvent.change(screen.getByTestId('ai-provider-azure-deployment'), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByTestId('ai-provider-validate-cloud'))
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-provider-validate-banner')).toHaveAttribute('data-validate-kind', 'ok')
+    })
+    const probe = mockedRequest.mock.calls.find((call) => call[0] === '/settings/ai/validate-config')
+    expect(JSON.parse(String(probe![1].body))).toMatchObject({
+      model: 'visible-model', deployment: '', flavor: 'openai',
+    })
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+    await waitFor(() => {
+      const save = mockedRequest.mock.calls.find((call) => call[0] === '/settings' && call[1]?.method === 'PUT')
+      expect(save).toBeDefined()
+      expect(JSON.parse(String(save![1].body)).ai_provider_config.azure).toMatchObject({
+        model: 'visible-model', deployment: '', flavor: 'openai',
+      })
+    })
+  })
+
   // The backend parser (ParseProviderConfig in
   // internal/ai/provider/config.go) expects ai_provider_config in
   // the namespaced shape:
@@ -452,4 +496,3 @@ describe('AISettings — F1↔F2 provider config schema (namespaced shape)', () 
     ).toBe('http://legacy:11434')
   })
 })
-

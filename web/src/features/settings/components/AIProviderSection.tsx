@@ -92,7 +92,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
     // Build the request payload. For local mode only mode + base_url
     // matter (the validator is provider-agnostic). For cloud mode we
     // send the full configuration so the backend can build a real
-    // adapter and run a 1-token chat probe — empty fields fall back
+    // adapter and run a bounded chat probe — omitted fields fall back
     // to the saved per-provider entry server-side, so editing one
     // field doesn't force the user to re-state the rest.
     const req: ValidateAiProviderRequest = isCloud
@@ -245,7 +245,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
                 value: 'foundry',
                 label: t(
                   'ai.settings.provider.azureFlavorFoundry',
-                  'Microsoft Foundry (Responses API)',
+                  'Microsoft Foundry (Chat Completions / Responses)',
                 ),
               },
             ]}
@@ -259,7 +259,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             data-testid="ai-provider-azure-api-version"
             hint={t(
               'ai.settings.provider.azureApiVersionHint',
-              'Classic Azure OpenAI only. Ignored for Foundry …/openai/v1 endpoints.',
+              'Used by classic Azure OpenAI and legacy Foundry inference. Ignored for …/openai/v1 endpoints.',
             )}
           />
 
@@ -341,7 +341,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
           data-testid="ai-provider-azure-base-url"
           hint={t(
             'ai.settings.provider.azureBaseUrlHint',
-            'Foundry: https://{resource}.services.ai.azure.com/openai/v1 (Responses API). Classic Azure OpenAI: https://{resource}.openai.azure.com.',
+            'Foundry v1: https://{resource}.services.ai.azure.com/openai/v1 (Chat Completions with Responses fallback). Legacy inference endpoints remain supported as configured.',
           )}
         />
       )}
@@ -394,7 +394,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
           />
 
           {/*
-           * Cloud Validate. Sends a 1-token chat probe to the
+           * Cloud Validate. Sends a bounded chat probe to the
            * configured upstream so the user can confirm api_key +
            * URL + flavor + deployment all line up before saving.
            * Empty api_key is allowed — the backend falls back to

@@ -12,7 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 )
 
-func TestUsesResponsesAPI_BySurfaceNotModel(t *testing.T) {
+func TestResponsesNegotiation_OnlyExplicitV1(t *testing.T) {
 	t.Parallel()
 	foundry, err := New(provider.ProviderConfig{
 		BaseURL: "https://example.services.ai.azure.com",
@@ -23,8 +23,8 @@ func TestUsesResponsesAPI_BySurfaceNotModel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !foundry.usesResponsesAPI(provider.ChatRequest{}) {
-		t.Fatal("Foundry flavor must use Responses for any model")
+	if foundry.usesOpenAIV1() {
+		t.Fatal("legacy Foundry must remain on its configured inference endpoint")
 	}
 	v1, err := New(provider.ProviderConfig{
 		BaseURL: "https://example.services.ai.azure.com/openai/v1",
@@ -35,8 +35,8 @@ func TestUsesResponsesAPI_BySurfaceNotModel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !v1.usesResponsesAPI(provider.ChatRequest{}) {
-		t.Fatal("/openai/v1 must use Responses for any model")
+	if !v1.usesOpenAIV1() {
+		t.Fatal("/openai/v1 permits Responses fallback for any model")
 	}
 	classic, err := New(provider.ProviderConfig{
 		BaseURL: "https://example.openai.azure.com",
@@ -47,7 +47,7 @@ func TestUsesResponsesAPI_BySurfaceNotModel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if classic.usesResponsesAPI(provider.ChatRequest{}) {
+	if classic.usesOpenAIV1() {
 		t.Fatal("classic Azure OpenAI flavor stays on chat completions")
 	}
 }
@@ -55,6 +55,9 @@ func TestUsesResponsesAPI_BySurfaceNotModel(t *testing.T) {
 func TestChat_Gpt56Sol_UsesFoundryResponsesAPI(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rejectChatOperation(w, r) {
+			return
+		}
 		if r.URL.Path != "/openai/v1/responses" {
 			t.Errorf("path=%s want /openai/v1/responses", r.URL.Path)
 		}
@@ -96,7 +99,7 @@ func TestChat_Gpt56Sol_UsesFoundryResponsesAPI(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
-		BaseURL: srv.URL,
+		BaseURL: srv.URL + "/openai/v1",
 		Model:   "any-foundry-deployment",
 		APIKey:  "k",
 		Flavor:  provider.AzureFlavorFoundry,
@@ -124,6 +127,9 @@ func TestChat_Gpt56Sol_UsesFoundryResponsesAPI(t *testing.T) {
 func TestChat_Gpt56Sol_ResponsesTools(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rejectChatOperation(w, r) {
+			return
+		}
 		if !strings.HasSuffix(r.URL.Path, "/openai/v1/responses") {
 			t.Errorf("path=%s", r.URL.Path)
 		}
@@ -183,6 +189,9 @@ func TestChat_Gpt56Sol_ResponsesTools(t *testing.T) {
 func TestStream_Gpt56Sol_SynthesizesFromResponses(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rejectChatOperation(w, r) {
+			return
+		}
 		if !strings.HasSuffix(r.URL.Path, "/responses") {
 			t.Errorf("path=%s", r.URL.Path)
 		}
@@ -190,7 +199,7 @@ func TestStream_Gpt56Sol_SynthesizesFromResponses(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
-		BaseURL: srv.URL,
+		BaseURL: srv.URL + "/openai/v1",
 		Model:   "any-foundry-deployment",
 		APIKey:  "k",
 		Flavor:  provider.AzureFlavorFoundry,
@@ -239,7 +248,19 @@ func TestEncodeResponsesRequest_SystemBecomesInstructions(t *testing.T) {
 	if len(input) != 1 {
 		t.Fatalf("input=%s", body)
 	}
-	if int(probe["max_output_tokens"].(float64)) != defaultMaxCompletionTokens {
-		t.Errorf("max_output_tokens floored from 1: %v", probe["max_output_tokens"])
+	if int(probe["max_output_tokens"].(float64)) != 1 {
+		t.Errorf("caller cap was changed: %v", probe["max_output_tokens"])
 	}
+	if store, ok := probe["store"].(bool); !ok || store {
+		t.Fatalf("store must explicitly be false: %s", body)
+	}
+}
+
+func rejectChatOperation(w http.ResponseWriter, r *http.Request) bool {
+	if strings.HasSuffix(r.URL.Path, "/chat/completions") {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = io.WriteString(w, `{"error":{"code":"OperationNotSupported","message":"The requested operation is unsupported."}}`)
+		return true
+	}
+	return false
 }

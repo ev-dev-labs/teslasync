@@ -143,7 +143,27 @@ plus a `mock` adapter for tests:
 | Adapter | Use cases |
 |---|---|
 | `openai` | OpenAI hosted models (gpt-4o, gpt-4o-mini, gpt-4.1, …) |
-| `azure` | Azure OpenAI Service (`{resource}.openai.azure.com` + deployment path) **or** Azure AI Foundry OpenAI v1 (`{resource}.services.ai.azure.com/openai/v1`, model = deployment name). Pasting the Foundry portal endpoint auto-selects v1 routing so Validate no longer 404s. |
+| `azure` | Classic Azure OpenAI deployment routes, configured legacy Foundry inference, or OpenAI v1 (`{resource}.services.ai.azure.com/openai/v1` or `{resource}.openai.azure.com/openai/v1`). v1 tries Chat Completions first, then Responses only on structured operation-not-supported / not-found errors. No model-name protocol selection. |
+
+For Foundry, set **Deployment / model name** to the portal deployment name;
+the hidden classic **Chat deployment name** override is ignored. For the
+Azure OpenAI Service surface, a nonempty chat deployment override takes precedence
+over the model field. Validate and Helix use the same identity; clearing the
+override is persisted. Validate uses a 30-second timeout and an explicit
+1,024-output-token Azure probe budget (including reasoning tokens). Normal
+requests keep their caller-supplied token budget.
+
+Only explicit `/openai/v1` endpoints negotiate protocols. A request makes at
+most two attempts and never strips that path or switches to a classic deployment
+route. Authentication, rate-limit, server, and token-budget failures do not
+trigger fallback; if both protocols fail, both errors are retained.
+Responses requests send `store: false` and replay tool calls/results explicitly.
+Responses fallback streaming is **buffered**, not token-by-token SSE: Helix
+receives text/tool chunks followed by one terminal event after completion.
+Failed, incomplete, refused, and empty Responses results are errors, not success.
+
+Protocol references: [Azure Responses API](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses)
+and [Azure OpenAI v1 lifecycle](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle).
 | `anthropic` | Claude models (Sonnet, Opus, Haiku, …) |
 | `ollama` | Self-hosted models via [Ollama](https://ollama.com) — fully local |
 
