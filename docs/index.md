@@ -40,27 +40,27 @@ features:
 ## Docs that assume you can read a compose file
 
 <div class="docs-card-grid">
-<a class="docs-card" href="/teslasync/get-started">
+<a class="docs-card" href="/get-started">
 <strong>Get started</strong>
 <span>Install, connect Tesla, enable streaming, then open the catalogue.</span>
 </a>
-<a class="docs-card" href="/teslasync/guide/tesla-fleet-api">
+<a class="docs-card" href="/guide/tesla-fleet-api">
 <strong>Connect Tesla</strong>
 <span>Fleet API application, scopes, redirect URI, owner consent.</span>
 </a>
-<a class="docs-card" href="/teslasync/guide/fleet-telemetry">
+<a class="docs-card" href="/guide/fleet-telemetry">
 <strong>Enable streaming</strong>
 <span>Fleet Telemetry receiver, TLS, virtual key, signed config.</span>
 </a>
-<a class="docs-card" href="/teslasync/features/catalogue">
+<a class="docs-card" href="/features/catalogue">
 <strong>Find a screen</strong>
 <span>213 routes grouped like the app sidebar.</span>
 </a>
-<a class="docs-card" href="/teslasync/deployment/docker">
+<a class="docs-card" href="/deployment/docker">
 <strong>Docker</strong>
 <span>Compose, ports, secrets, local trial vs public host.</span>
 </a>
-<a class="docs-card" href="/teslasync/operations/release-verification">
+<a class="docs-card" href="/operations/release-verification">
 <strong>Operate</strong>
 <span>Release verification, secrets, Fleet API budget.</span>
 </a>
