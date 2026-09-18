@@ -143,7 +143,7 @@ plus a `mock` adapter for tests:
 | Adapter | Use cases |
 |---|---|
 | `openai` | OpenAI hosted models (gpt-4o, gpt-4o-mini, gpt-4.1, …) |
-| `azure` | Azure OpenAI deployments (same protocol, different auth + URLs) |
+| `azure` | Azure OpenAI Service (`{resource}.openai.azure.com` + deployment path) **or** Azure AI Foundry OpenAI v1 (`{resource}.services.ai.azure.com/openai/v1`, model = deployment name). Pasting the Foundry portal endpoint auto-selects v1 routing so Validate no longer 404s. |
 | `anthropic` | Claude models (Sonnet, Opus, Haiku, …) |
 | `ollama` | Self-hosted models via [Ollama](https://ollama.com) — fully local |
 

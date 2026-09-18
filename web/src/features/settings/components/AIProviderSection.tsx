@@ -191,22 +191,28 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
 
         <Input
           label={
-            value.provider === 'azure' && value.flavor !== 'foundry'
+            value.provider === 'azure'
               ? t(
                   'ai.settings.provider.azureModelLabel',
-                  'Model identifier (e.g. gpt-4o-mini)',
+                  'Deployment / model name',
                 )
               : t('ai.settings.provider.model', 'Model')
           }
-          placeholder={isCloud ? 'gpt-4o-mini' : 'llama3.1:8b'}
+          placeholder={
+            value.provider === 'azure'
+              ? 'gpt-5.6-sol'
+              : isCloud
+                ? 'gpt-4o-mini'
+                : 'llama3.1:8b'
+          }
           value={value.model}
           onChange={(e) => patch({ model: e.target.value })}
           data-testid="ai-provider-model"
           hint={
-            value.provider === 'azure' && value.flavor !== 'foundry'
+            value.provider === 'azure'
               ? t(
                   'ai.settings.provider.azureModelHint',
-                  'Used for cost tracking. Leave Deployment blank if your Azure deployment is named the same.',
+                  'Foundry portal “deployment_name” (e.g. gpt-5.6-sol). Classic Azure OpenAI can leave this matching the deployment field.',
                 )
               : undefined
           }
@@ -239,7 +245,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
                 value: 'foundry',
                 label: t(
                   'ai.settings.provider.azureFlavorFoundry',
-                  'Azure AI Foundry / Inference (multi-vendor)',
+                  'Azure AI Foundry (OpenAI v1 / gpt-5.x)',
                 ),
               },
             ]}
@@ -253,7 +259,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             data-testid="ai-provider-azure-api-version"
             hint={t(
               'ai.settings.provider.azureApiVersionHint',
-              'Leave blank to use the adapter default.',
+              'Classic Azure OpenAI only. Ignored for Foundry …/openai/v1 endpoints.',
             )}
           />
 
@@ -329,13 +335,13 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             'ai.settings.provider.azureBaseUrl',
             'Resource endpoint URL',
           )}
-          placeholder="https://my-resource.openai.azure.com"
+          placeholder="https://my-resource.services.ai.azure.com/openai/v1"
           value={value.base_url}
           onChange={(e) => patch({ base_url: e.target.value })}
           data-testid="ai-provider-azure-base-url"
           hint={t(
             'ai.settings.provider.azureBaseUrlHint',
-            'The Azure OpenAI resource endpoint or Azure AI Foundry endpoint.',
+            'Paste the Foundry portal endpoint (…/openai/v1). Classic Azure OpenAI still uses https://{resource}.openai.azure.com.',
           )}
         />
       )}

@@ -562,7 +562,7 @@ func TestEncodeChatRequest_AssistantToolCallRoundTrip(t *testing.T) {
 			},
 		},
 	}
-	body, err := encodeChatRequest(req, "", false)
+	body, err := encodeChatRequest(req, "", false, false)
 	if err != nil {
 		t.Fatalf("encodeChatRequest: %v", err)
 	}
@@ -592,5 +592,120 @@ func TestEncodeChatRequest_AssistantToolCallRoundTrip(t *testing.T) {
 	}
 	if fn, _ := tc["function"].(map[string]any); fn["name"] != "calc" {
 		t.Errorf("tool_calls[0].function.name = %#v, want calc", fn["name"])
+	}
+}
+
+func TestIsAzureOpenAIV1(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		url  string
+		want bool
+	}{
+		{"https://my-resource.services.ai.azure.com/openai/v1", true},
+		{"https://my-resource.services.ai.azure.com", true},
+		{"https://my-resource.openai.azure.com/openai/v1", true},
+		{"https://my-resource.openai.azure.com", false},
+		{"http://127.0.0.1:1234", false},
+	}
+	for _, c := range cases {
+		if got := isAzureOpenAIV1(c.url); got != c.want {
+			t.Errorf("isAzureOpenAIV1(%q)=%v want %v", c.url, got, c.want)
+		}
+	}
+}
+
+func TestChatEndpoint_V1ServicesHost(t *testing.T) {
+	t.Parallel()
+	a, err := New(provider.ProviderConfig{
+		BaseURL:    "https://my-resource.services.ai.azure.com",
+		Model:      "gpt-5.6-sol",
+		APIKey:     "k",
+		APIVersion: "2024-10-21",
+		Flavor:     provider.AzureFlavorOpenAI,
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	u, model, err := a.chatEndpoint(provider.ChatRequest{})
+	if err != nil {
+		t.Fatalf("chatEndpoint: %v", err)
+	}
+	if model != "gpt-5.6-sol" {
+		t.Errorf("modelInBody=%q", model)
+	}
+	if u != "https://my-resource.services.ai.azure.com/openai/v1/chat/completions" {
+		t.Errorf("url=%s", u)
+	}
+}
+
+func TestChatEndpoint_V1DoesNotDuplicatePath(t *testing.T) {
+	t.Parallel()
+	a, err := New(provider.ProviderConfig{
+		BaseURL: "https://my-resource.services.ai.azure.com/openai/v1",
+		Model:   "gpt-5.6-sol",
+		APIKey:  "k",
+		Flavor:  provider.AzureFlavorOpenAI,
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	u, _, err := a.chatEndpoint(provider.ChatRequest{})
+	if err != nil {
+		t.Fatalf("chatEndpoint: %v", err)
+	}
+	if u != "https://my-resource.services.ai.azure.com/openai/v1/chat/completions" {
+		t.Errorf("url=%s", u)
+	}
+}
+
+func TestOpenAIV1_Chat_URLAuthAndBody(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/openai/v1/chat/completions" {
+			t.Errorf("path=%s", r.URL.Path)
+		}
+		if r.URL.RawQuery != "" {
+			t.Errorf("query=%s, want empty (no api-version)", r.URL.RawQuery)
+		}
+		if got := r.Header.Get("api-key"); got != "k" {
+			t.Errorf("api-key=%q", got)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer k" {
+			t.Errorf("Authorization=%q", got)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var probe map[string]any
+		_ = json.Unmarshal(body, &probe)
+		if got, _ := probe["model"].(string); got != "gpt-5.6-sol" {
+			t.Errorf("model=%q body=%s", got, body)
+		}
+		if _, has := probe["max_tokens"]; has {
+			t.Errorf("max_tokens should be omitted on v1: %s", body)
+		}
+		if got, _ := probe["max_completion_tokens"].(float64); got != 1 {
+			t.Errorf("max_completion_tokens=%v", probe["max_completion_tokens"])
+		}
+		_, _ = io.WriteString(w, `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"ok"}}]}`)
+	}))
+	t.Cleanup(srv.Close)
+	a, err := New(provider.ProviderConfig{
+		BaseURL:    srv.URL + "/openai/v1",
+		Model:      "gpt-5.6-sol",
+		APIKey:     "k",
+		APIVersion: "2024-10-21",
+		Flavor:     provider.AzureFlavorOpenAI,
+	}, WithHTTPClient(srv.Client()))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	resp, err := a.Chat(context.Background(), provider.ChatRequest{
+		Messages:  []provider.Message{{Role: provider.RoleUser, Content: "ping"}},
+		MaxTokens: 1,
+	})
+	if err != nil {
+		t.Fatalf("Chat: %v", err)
+	}
+	if resp.Message.Content != "ok" {
+		t.Fatalf("content=%q", resp.Message.Content)
 	}
 }
