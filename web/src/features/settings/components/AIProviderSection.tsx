@@ -245,7 +245,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
                 value: 'foundry',
                 label: t(
                   'ai.settings.provider.azureFlavorFoundry',
-                  'Azure AI Foundry (OpenAI v1 / gpt-5.x)',
+                  'Microsoft Foundry (Responses API / gpt-5.6-sol)',
                 ),
               },
             ]}
@@ -341,7 +341,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
           data-testid="ai-provider-azure-base-url"
           hint={t(
             'ai.settings.provider.azureBaseUrlHint',
-            'Paste the Foundry portal endpoint (…/openai/v1). Classic Azure OpenAI still uses https://{resource}.openai.azure.com.',
+            'Foundry: https://{resource}.services.ai.azure.com/openai/v1 (Responses API). Classic Azure OpenAI: https://{resource}.openai.azure.com.',
           )}
         />
       )}

@@ -734,7 +734,7 @@ func TestOpenAIV1_Chat_URLAuthAndBody(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		var probe map[string]any
 		_ = json.Unmarshal(body, &probe)
-		if got, _ := probe["model"].(string); got != "gpt-5.6-sol" {
+		if got, _ := probe["model"].(string); got != "gpt-5" {
 			t.Errorf("model=%q body=%s", got, body)
 		}
 		if _, has := probe["max_tokens"]; has {
@@ -748,7 +748,7 @@ func TestOpenAIV1_Chat_URLAuthAndBody(t *testing.T) {
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
 		BaseURL:    srv.URL + "/openai/v1",
-		Model:      "gpt-5.6-sol",
+		Model:      "gpt-5",
 		APIKey:     "k",
 		APIVersion: "2024-10-21",
 		Flavor:     provider.AzureFlavorOpenAI,
@@ -778,7 +778,7 @@ func TestChat_V1NotFoundFallsBackToDeployments(t *testing.T) {
 			_, _ = io.WriteString(w, `{ "error": { "code": "DeploymentNotFound" } }`)
 			return
 		}
-		if !strings.Contains(r.URL.Path, "/openai/deployments/gpt-5.6-sol/chat/completions") {
+		if !strings.Contains(r.URL.Path, "/openai/deployments/gpt-5/chat/completions") {
 			t.Errorf("unexpected path=%s", r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -792,7 +792,7 @@ func TestChat_V1NotFoundFallsBackToDeployments(t *testing.T) {
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
 		BaseURL:    srv.URL + "/openai/v1",
-		Model:      "gpt-5.6-sol",
+		Model:      "gpt-5",
 		APIKey:     "k",
 		APIVersion: "2024-10-21",
 		Flavor:     provider.AzureFlavorOpenAI,
@@ -832,7 +832,7 @@ func TestChat_Gpt5Classic_DefaultMaxCompletionTokens(t *testing.T) {
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
 		BaseURL:    srv.URL,
-		Model:      "gpt-5.6-sol",
+		Model:      "gpt-5",
 		APIKey:     "k",
 		APIVersion: "2024-10-21",
 		Flavor:     provider.AzureFlavorOpenAI,

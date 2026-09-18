@@ -2,10 +2,10 @@
 //
 // Microsoft hosts AI inference behind two distinct surfaces and this
 // adapter supports both via the [provider.ProviderConfig.Flavor] knob.
-// A third URL shape — Azure AI Foundry's OpenAI v1 API — is detected
-// from the base URL (hostname services.ai.azure.com or a path of
-// /openai/v1) and overrides flavor-based routing so pasting the
-// Foundry portal snippet does not 404:
+// A third URL shape — Azure AI Foundry OpenAI v1 — is used when the
+// path contains /openai/v1, or when the model is gpt-5.6+ / gpt-6
+// (official Responses API). See:
+// https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
 //
 //  1. Azure OpenAI Service ([provider.AzureFlavorOpenAI], the default).
 //     Hosts the OpenAI model family (gpt-4o, gpt-4-turbo,
@@ -157,6 +157,9 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 }
 
 func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
+	if a.usesResponsesAPI(req) {
+		return a.chatViaResponses(ctx, req)
+	}
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
 		return nil, err
@@ -196,6 +199,13 @@ func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider
 }
 
 func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan provider.Chunk, error) {
+	if a.usesResponsesAPI(req) {
+		chatResp, err := a.chatViaResponses(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return chatResponseAsStream(ctx, chatResp), nil
+	}
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
 		return nil, err
@@ -442,6 +452,23 @@ func (a *Adapter) usesOpenAIV1() bool {
 
 const defaultMaxCompletionTokens = 8192
 
+func needsResponsesAPI(model string) bool {
+	m := strings.ToLower(strings.TrimSpace(model))
+	if strings.Contains(m, "gpt-6") {
+		return true
+	}
+	for _, p := range []string{"gpt-5.6", "gpt-5.5", "gpt-5.4", "gpt-5.3", "gpt-5.2"} {
+		if strings.Contains(m, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *Adapter) usesResponsesAPI(req provider.ChatRequest) bool {
+	return needsResponsesAPI(a.chatDeployment(req))
+}
+
 func needsMaxCompletionTokens(model string) bool {
 	m := strings.ToLower(strings.TrimSpace(model))
 	if strings.Contains(m, "gpt-5") {
@@ -557,7 +584,7 @@ func (a *Adapter) newRequest(ctx context.Context, method, urlStr string, body io
 	// Bearer …" form is reserved for Microsoft Entra ID token auth, which
 	// this adapter does not yet support (V1 is api-key only).
 	req.Header.Set("api-key", a.cfg.APIKey)
-	if a.usesOpenAIV1() {
+	if a.usesOpenAIV1() || strings.Contains(urlStr, "/openai/v1") {
 		req.Header.Set("Authorization", "Bearer "+a.cfg.APIKey)
 	}
 	return req, nil
@@ -687,11 +714,15 @@ func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool
 		wireTools = append(wireTools, wt)
 	}
 	wire := azureChatRequest{
-		Model:       modelInBody,
-		Messages:    wireMsgs,
-		Tools:       wireTools,
-		Stream:      stream,
-		Temperature: req.Temperature,
+		Model:    modelInBody,
+		Messages: wireMsgs,
+		Tools:    wireTools,
+		Stream:   stream,
+	}
+	// Reasoning models reject temperature / top_p / penalties.
+	// https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/chatgpt
+	if !useCompletionTokens {
+		wire.Temperature = req.Temperature
 	}
 	if useCompletionTokens {
 		n := req.MaxTokens
