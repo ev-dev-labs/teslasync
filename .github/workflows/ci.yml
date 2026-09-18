@@ -114,44 +114,26 @@ jobs:
           DATABASE_USER: test
           DATABASE_PASS: test
           DATABASE_NAME: teslasync_test
-        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+        run: |
+          set -o pipefail
+          go test -race -coverprofile=coverage.out -covermode=atomic -json ./... | tee test-events.json
 
       - name: Generate backend coverage reports
-        if: always() && hashFiles('coverage.out') != ''
+        if: always() && (hashFiles('coverage.out') != '' || hashFiles('test-events.json') != '')
         run: |
-          go tool cover -func=coverage.out > coverage.txt
-          go tool cover -html=coverage.out -o coverage.html
-          # Per-package roll-up (statement coverage averaged across the package's funcs)
-          awk '
-            /^total:/ { next }
-            {
-              n = split($1, parts, "/")
-              file = parts[n]; sub(/:.*$/, "", file)
-              pkg = parts[1]
-              for (i = 2; i < n; i++) pkg = pkg "/" parts[i]
-              gsub("%", "", $3)
-              sum[pkg] += $3
-              cnt[pkg]++
-            }
-            END {
-              for (p in sum) printf "%6.2f%%  %s\n", sum[p]/cnt[p], p
-            }
-          ' coverage.txt | sort -nr > coverage-by-package.txt
-          TOTAL_LINE=$(grep '^total:' coverage.txt || echo "total: (statements) 0.0%")
-          {
-            echo "## 📊 Backend Coverage"
-            echo ""
-            echo "**$TOTAL_LINE**"
-            echo ""
-            echo "Full HTML + per-function reports are attached to this run as the **backend-coverage** artifact."
-            echo ""
-            echo "<details><summary>Per-package coverage (top 50)</summary>"
-            echo ""
-            echo '```'
-            head -n 50 coverage-by-package.txt
-            echo '```'
-            echo "</details>"
-          } >> "$GITHUB_STEP_SUMMARY"
+          python3 .github/scripts/backend_coverage_summary.py --self-test
+          if [ -f coverage.out ]; then
+            go tool cover -func=coverage.out > coverage.txt
+            go tool cover -html=coverage.out -o coverage.html
+          fi
+          python3 .github/scripts/backend_coverage_summary.py \
+            --profile coverage.out \
+            --func coverage.txt \
+            --json test-events.json \
+            --summary "$GITHUB_STEP_SUMMARY" \
+            --markdown-out coverage-summary.md \
+            --package-out coverage-by-package.txt \
+            --file-out coverage-by-file.txt
 
       - name: Architecture test (no forbidden import edges)
         run: |
@@ -213,6 +195,9 @@ jobs:
             coverage.html
             coverage.txt
             coverage-by-package.txt
+            coverage-by-file.txt
+            coverage-summary.md
+            test-events.json
 
   frontend:
     name: Frontend (lint + test + build)
@@ -245,29 +230,19 @@ jobs:
         # doing this after an upgrade; this boots the real runtime.
         run: npm run check:vite-deprecations
       - name: Test
-        run: npx vitest run --coverage --reporter=verbose
+        run: |
+          mkdir -p coverage
+          npx vitest run --coverage --reporter=verbose --reporter=json --outputFile=coverage/vitest-results.json
 
       - name: Generate frontend coverage report
-        if: always() && hashFiles('web/coverage/coverage-summary.json') != ''
+        if: always() && (hashFiles('web/coverage/coverage-summary.json') != '' || hashFiles('web/coverage/vitest-results.json') != '')
         run: |
-          node -e '
-            const fs = require("fs");
-            const path = "coverage/coverage-summary.json";
-            if (!fs.existsSync(path)) { process.exit(0); }
-            const t = JSON.parse(fs.readFileSync(path, "utf8")).total;
-            const out = [];
-            out.push("## 📊 Frontend Coverage");
-            out.push("");
-            out.push("| Metric | Covered | Total | % |");
-            out.push("|--------|--------:|------:|--:|");
-            for (const k of ["statements","branches","functions","lines"]) {
-              const m = t[k];
-              out.push(`| ${k} | ${m.covered} | ${m.total} | ${m.pct}% |`);
-            }
-            out.push("");
-            out.push("Browsable HTML report attached as the **frontend-coverage** artifact (open `coverage/index.html`).");
-            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, out.join("\n") + "\n");
-          '
+          node ../.github/scripts/frontend_coverage_summary.mjs --self-test
+          node ../.github/scripts/frontend_coverage_summary.mjs \
+            --summary-json coverage/coverage-summary.json \
+            --vitest-json coverage/vitest-results.json \
+            --step-summary "$GITHUB_STEP_SUMMARY" \
+            --markdown-out coverage/job-summary.md
 
       - name: Upload coverage
         if: always()
