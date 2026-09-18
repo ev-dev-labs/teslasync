@@ -25,6 +25,18 @@
   <img src="https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-3178C6?logo=typescript&logoColor=white" alt="React and TypeScript frontend" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/ev-dev-labs/teslasync/actions/workflows/ci.yml"><img src="https://github.com/ev-dev-labs/teslasync/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <a href="https://github.com/ev-dev-labs/teslasync/actions/workflows/si-canonical-gate.yml"><img src="https://github.com/ev-dev-labs/teslasync/actions/workflows/si-canonical-gate.yml/badge.svg?branch=main" alt="SI canonical gate" /></a>
+  <a href="https://github.com/ev-dev-labs/teslasync/actions/workflows/ops-gate.yml"><img src="https://github.com/ev-dev-labs/teslasync/actions/workflows/ops-gate.yml/badge.svg?branch=main" alt="Ops gate" /></a>
+  <a href="https://github.com/ev-dev-labs/teslasync/actions/workflows/security.yml"><img src="https://github.com/ev-dev-labs/teslasync/actions/workflows/security.yml/badge.svg?branch=main" alt="Security" /></a>
+  <a href="https://github.com/ev-dev-labs/teslasync/actions/workflows/frontend-quality.yml"><img src="https://github.com/ev-dev-labs/teslasync/actions/workflows/frontend-quality.yml/badge.svg?branch=main" alt="Frontend quality gates" /></a>
+  <a href="https://github.com/ev-dev-labs/teslasync/actions/workflows/helm-ci.yml"><img src="https://github.com/ev-dev-labs/teslasync/actions/workflows/helm-ci.yml/badge.svg?branch=main" alt="Helm Chart CI" /></a>
+  <a href="https://github.com/ev-dev-labs/teslasync/actions/workflows/ai-eval.yml"><img src="https://github.com/ev-dev-labs/teslasync/actions/workflows/ai-eval.yml/badge.svg?branch=main" alt="ai-eval" /></a>
+  <a href="https://github.com/ev-dev-labs/teslasync/actions/workflows/release.yml"><img src="https://github.com/ev-dev-labs/teslasync/actions/workflows/release.yml/badge.svg?branch=main" alt="Release" /></a>
+  <a href="https://github.com/ev-dev-labs/teslasync/actions/workflows/docs.yml"><img src="https://github.com/ev-dev-labs/teslasync/actions/workflows/docs.yml/badge.svg?branch=main" alt="Docs" /></a>
+</p>
+
 ---
 
 ## More than a snapshot of your car
