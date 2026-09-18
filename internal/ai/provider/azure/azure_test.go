@@ -813,3 +813,49 @@ func TestChat_V1NotFoundFallsBackToDeployments(t *testing.T) {
 		t.Fatalf("hits v1=%d deploy=%d", v1Hits, deployHits)
 	}
 }
+
+func TestChat_Gpt5Classic_DefaultMaxCompletionTokens(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var probe map[string]any
+		_ = json.Unmarshal(body, &probe)
+		if _, has := probe["max_tokens"]; has {
+			t.Errorf("gpt-5 must not send max_tokens: %s", body)
+		}
+		got, _ := probe["max_completion_tokens"].(float64)
+		if int(got) != defaultMaxCompletionTokens {
+			t.Errorf("max_completion_tokens=%v want %d", probe["max_completion_tokens"], defaultMaxCompletionTokens)
+		}
+		_, _ = io.WriteString(w, `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"ok"}}]}`)
+	}))
+	t.Cleanup(srv.Close)
+	a, err := New(provider.ProviderConfig{
+		BaseURL:    srv.URL,
+		Model:      "gpt-5.6-sol",
+		APIKey:     "k",
+		APIVersion: "2024-10-21",
+		Flavor:     provider.AzureFlavorOpenAI,
+	}, WithHTTPClient(srv.Client()))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if _, err := a.Chat(context.Background(), provider.ChatRequest{
+		Messages: []provider.Message{{Role: provider.RoleUser, Content: "ping"}},
+	}); err != nil {
+		t.Fatalf("Chat: %v", err)
+	}
+}
+
+func TestNeedsMaxCompletionTokens(t *testing.T) {
+	t.Parallel()
+	if !needsMaxCompletionTokens("gpt-5.6-sol") {
+		t.Fatal("gpt-5.6-sol")
+	}
+	if needsMaxCompletionTokens("gpt-4o-mini") {
+		t.Fatal("gpt-4o-mini")
+	}
+	if !needsMaxCompletionTokens("o3-mini") {
+		t.Fatal("o3-mini")
+	}
+}

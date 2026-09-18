@@ -161,7 +161,7 @@ func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider
 	if err != nil {
 		return nil, err
 	}
-	body, err := encodeChatRequest(req, modelInBody, false, a.usesOpenAIV1())
+	body, err := encodeChatRequest(req, modelInBody, false, a.usesCompletionTokenCap(req, modelInBody))
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan 
 	if err != nil {
 		return nil, err
 	}
-	body, err := encodeChatRequest(req, modelInBody, true, a.usesOpenAIV1())
+	body, err := encodeChatRequest(req, modelInBody, true, a.usesCompletionTokenCap(req, modelInBody))
 	if err != nil {
 		return nil, err
 	}
@@ -440,6 +440,32 @@ func (a *Adapter) usesOpenAIV1() bool {
 	return isAzureOpenAIV1(a.cfg.BaseURL)
 }
 
+const defaultMaxCompletionTokens = 8192
+
+func needsMaxCompletionTokens(model string) bool {
+	m := strings.ToLower(strings.TrimSpace(model))
+	if strings.Contains(m, "gpt-5") {
+		return true
+	}
+	for _, prefix := range []string{"o1", "o3", "o4"} {
+		if m == prefix || strings.HasPrefix(m, prefix+"-") {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *Adapter) usesCompletionTokenCap(req provider.ChatRequest, modelInBody string) bool {
+	if a.usesOpenAIV1() {
+		return true
+	}
+	identity := modelInBody
+	if identity == "" {
+		identity = a.chatDeployment(req)
+	}
+	return needsMaxCompletionTokens(identity)
+}
+
 func stripOpenAIV1Path(baseURL string) string {
 	u, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil {
@@ -628,7 +654,7 @@ type azureStreamFrame struct {
 // Azure JSON envelope. modelInBody is non-empty only for the Foundry
 // flavor; for Azure OpenAI Service the body MUST omit the model
 // field (the deployment name in the URL is the routing key).
-func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool, v1 bool) ([]byte, error) {
+func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool, useCompletionTokens bool) ([]byte, error) {
 	wireMsgs := make([]azureWireMsg, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		wm := azureWireMsg{Role: m.Role, Content: m.Content, Name: m.Name, ToolCallID: m.ToolID}
@@ -667,9 +693,17 @@ func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool
 		Stream:      stream,
 		Temperature: req.Temperature,
 	}
-	if v1 {
-		wire.MaxCompletionTokens = req.MaxTokens
-	} else {
+	if useCompletionTokens {
+		n := req.MaxTokens
+		if n <= 0 {
+			// gpt-5 / o-series spend hidden reasoning tokens
+			// against this cap. Azure 400s with "max_tokens or
+			// model output limit was reached" when the field is
+			// omitted or set to 1 (the settings probe).
+			n = defaultMaxCompletionTokens
+		}
+		wire.MaxCompletionTokens = n
+	} else if req.MaxTokens > 0 {
 		wire.MaxTokens = req.MaxTokens
 	}
 	if len(wireTools) == 0 {
