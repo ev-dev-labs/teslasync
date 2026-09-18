@@ -32,8 +32,6 @@ type request struct {
 	ValueNum        *float64 `json:"value_num"`
 	ValueText       *string  `json:"value_text"`
 	ValueBool       *bool    `json:"value_bool"`
-	ValueMin        *float64 `json:"value_min"`
-	ValueMax        *float64 `json:"value_max"`
 	MetricID        string   `json:"metric_id"`
 	MetricWindow    string   `json:"metric_window"`
 	MetricOp        string   `json:"metric_op"`
