@@ -32,6 +32,8 @@ type request struct {
 	ValueNum        *float64 `json:"value_num"`
 	ValueText       *string  `json:"value_text"`
 	ValueBool       *bool    `json:"value_bool"`
+	ValueMin        *float64 `json:"value_min"`
+	ValueMax        *float64 `json:"value_max"`
 	MetricID        string   `json:"metric_id"`
 	MetricWindow    string   `json:"metric_window"`
 	MetricOp        string   `json:"metric_op"`
@@ -154,12 +156,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 	userMsg := fmt.Sprintf(
-		"Suggest a message template for this alert. "+
+		"Write a distinctive Tesla-owner notification body for this alert — not a bland threshold line. "+
 			"kind=%s signal_name=%q op=%q severity=%q metric_id=%q metric_op=%q. "+
 			"Caller JSON (copy numeric operands and range bounds exactly): %s. "+
 			"Call draft_alert_message_template FIRST with these exact dimensions, "+
-			"then compose a template using only allowed_placeholders, "+
+			"follow writing_brief, remix fun/verbose related_presets, "+
+			"compose a voiceful 1-2 sentence template using only allowed_placeholders, "+
 			"then call validate_alert_message_template. "+
+			"Do NOT copy '{{SignalName}} is {{Value}} (threshold {{Threshold}})'. "+
 			"Do NOT save the template; the user applies it in Alert Studio.",
 		body.Kind, body.SignalName, body.Op, body.Severity, body.MetricID, body.MetricOp,
 		string(raw),

@@ -48,6 +48,54 @@ func TestDraftAlertMessageTemplate_SignalDimensions(t *testing.T) {
 	if len(env.RelatedPresets) == 0 {
 		t.Error("expected related presets for a signal rule")
 	}
+	if env.WritingBrief == "" {
+		t.Fatal("expected writing_brief")
+	}
+	if !strings.Contains(env.WritingBrief, "{{SignalName}} is {{Value}} (threshold {{Threshold}})") {
+		t.Errorf("writing_brief missing forbidden bland shape: %q", env.WritingBrief)
+	}
+	if env.RelatedPresets[0].ID != "signal-fun-celebration" &&
+		!containsTag(env.RelatedPresets[0].Tags, "fun") {
+		t.Errorf("first related preset should be fun-ranked, got id=%q tags=%v",
+			env.RelatedPresets[0].ID, env.RelatedPresets[0].Tags)
+	}
+	for _, p := range env.RelatedPresets {
+		if strings.TrimSpace(p.Template) == "" {
+			t.Errorf("empty template leaked in related preset %q", p.ID)
+		}
+	}
+}
+
+func containsTag(tags []string, want string) bool {
+	for _, tag := range tags {
+		if tag == want {
+			return true
+		}
+	}
+	return false
+}
+
+func TestWritingBrief_MatchesSeverity(t *testing.T) {
+	t.Parallel()
+	tool := &draftAlertMessageTemplate{}
+	in, err := tool.Validate(json.RawMessage(`{
+		"kind": "signal",
+		"signal_name": "BrakePedal",
+		"op": ">",
+		"severity": "critical",
+		"value_num": 80
+	}`))
+	if err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	out, err := tool.Execute(context.Background(), in)
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	env := out.(*alertMessageTemplateDraftOutput)
+	if !strings.Contains(env.WritingBrief, "urgent") {
+		t.Errorf("critical writing_brief=%q", env.WritingBrief)
+	}
 }
 
 func TestDraftAlertMessageTemplate_MissingSignalName(t *testing.T) {
