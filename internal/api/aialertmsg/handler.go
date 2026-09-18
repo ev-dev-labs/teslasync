@@ -32,8 +32,6 @@ type request struct {
 	ValueNum        *float64 `json:"value_num"`
 	ValueText       *string  `json:"value_text"`
 	ValueBool       *bool    `json:"value_bool"`
-	ValueMin        *float64 `json:"value_min"`
-	ValueMax        *float64 `json:"value_max"`
 	MetricID        string   `json:"metric_id"`
 	MetricWindow    string   `json:"metric_window"`
 	MetricOp        string   `json:"metric_op"`
@@ -77,25 +75,25 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 	return dispatch.ConfirmDenied, nil
 }
 
-func parseRequest(r *http.Request) (*request, error) {
+func parseRequest(r *http.Request) (*request, []byte, error) {
 	if r.Body == nil {
-		return nil, fmt.Errorf("request body is required")
+		return nil, nil, fmt.Errorf("request body is required")
 	}
 	defer r.Body.Close()
 	limited := io.LimitReader(r.Body, maxBodyBytes+1)
 	raw, err := io.ReadAll(limited)
 	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
+		return nil, nil, fmt.Errorf("read body: %w", err)
 	}
 	if len(raw) > maxBodyBytes {
-		return nil, fmt.Errorf("request body too large")
+		return nil, nil, fmt.Errorf("request body too large")
 	}
 	if len(strings.TrimSpace(string(raw))) == 0 {
-		return nil, fmt.Errorf("request body is required")
+		return nil, nil, fmt.Errorf("request body is required")
 	}
 	var body request
 	if err := json.Unmarshal(raw, &body); err != nil {
-		return nil, fmt.Errorf("invalid JSON body")
+		return nil, nil, fmt.Errorf("invalid JSON body")
 	}
 	body.Kind = strings.TrimSpace(body.Kind)
 	body.SignalName = strings.TrimSpace(body.SignalName)
@@ -106,25 +104,25 @@ func parseRequest(r *http.Request) (*request, error) {
 	body.MetricWindow = strings.TrimSpace(body.MetricWindow)
 	body.MetricOp = strings.TrimSpace(body.MetricOp)
 	if body.Kind != "signal" && body.Kind != "computed_metric" {
-		return nil, fmt.Errorf("kind must be signal or computed_metric")
+		return nil, nil, fmt.Errorf("kind must be signal or computed_metric")
 	}
 	if body.Kind == "signal" {
 		if body.SignalName == "" {
-			return nil, fmt.Errorf("signal_name is required for kind=signal")
+			return nil, nil, fmt.Errorf("signal_name is required for kind=signal")
 		}
 		if body.Op == "" {
-			return nil, fmt.Errorf("op is required for kind=signal")
+			return nil, nil, fmt.Errorf("op is required for kind=signal")
 		}
 	}
 	if body.Kind == "computed_metric" && body.MetricID == "" {
-		return nil, fmt.Errorf("metric_id is required for kind=computed_metric")
+		return nil, nil, fmt.Errorf("metric_id is required for kind=computed_metric")
 	}
-	return &body, nil
+	return &body, raw, nil
 }
 
 // ServeHTTP streams a propose-only template suggestion.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, err := parseRequest(r)
+	body, raw, err := parseRequest(r)
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
@@ -158,11 +156,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	userMsg := fmt.Sprintf(
 		"Suggest a message template for this alert. "+
 			"kind=%s signal_name=%q op=%q severity=%q metric_id=%q metric_op=%q. "+
+			"Caller JSON (copy numeric operands and range bounds exactly): %s. "+
 			"Call draft_alert_message_template FIRST with these exact dimensions, "+
 			"then compose a template using only allowed_placeholders, "+
 			"then call validate_alert_message_template. "+
 			"Do NOT save the template; the user applies it in Alert Studio.",
 		body.Kind, body.SignalName, body.Op, body.Severity, body.MetricID, body.MetricOp,
+		string(raw),
 	)
 
 	in := strategy.StrategyInput{LastMessage: userMsg}

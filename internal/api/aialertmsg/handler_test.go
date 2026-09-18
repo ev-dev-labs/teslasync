@@ -92,7 +92,7 @@ func TestParseRequest_RequiresDimensions(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.body))
-			_, err := parseRequest(req)
+			_, _, err := parseRequest(req)
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("err=%v want substring %q", err, tc.want)
 			}
@@ -103,11 +103,14 @@ func TestParseRequest_RequiresDimensions(t *testing.T) {
 func TestParseRequest_OK(t *testing.T) {
 	t.Parallel()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"kind":"signal","signal_name":"BrakePedal","op":"="}`))
-	got, err := parseRequest(req)
+	got, raw, err := parseRequest(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got.SignalName != "BrakePedal" {
 		t.Fatalf("got %+v", got)
+	}
+	if !strings.Contains(string(raw), "BrakePedal") {
+		t.Fatalf("raw=%s", raw)
 	}
 }
