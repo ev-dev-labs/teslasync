@@ -534,10 +534,7 @@ describe('AIProviderSection — Azure surface', () => {
     ).toBeInTheDocument()
     expect(screen.getByTestId('ai-provider-azure-base-url')).toBeInTheDocument()
 
-    // Model label switches to the Azure-specific identifier copy.
-    expect(
-      screen.getByText('Model identifier (e.g. gpt-4o-mini)'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Deployment / model name')).toBeInTheDocument()
   })
 
   it('hides the deployment inputs when the Foundry flavor is selected', () => {
@@ -564,9 +561,7 @@ describe('AIProviderSection — Azure surface', () => {
 
   it('uses the plain "Model" label for a non-Azure cloud provider', () => {
     renderSection({ isCloud: true, initial: makeDraft({ provider: 'openai' }) })
-    expect(
-      screen.queryByText('Model identifier (e.g. gpt-4o-mini)'),
-    ).toBeNull()
+    expect(screen.queryByText('Deployment / model name')).toBeNull()
     expect(screen.getByText('Model')).toBeInTheDocument()
   })
 })

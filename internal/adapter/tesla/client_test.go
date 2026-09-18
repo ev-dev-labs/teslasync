@@ -236,12 +236,17 @@ func TestWakeUp(t *testing.T) {
 
 	t.Run("non-200 returns error", func(t *testing.T) {
 		t.Parallel()
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusRequestTimeout)
-		}))
-		defer srv.Close()
-
-		c := newTestClient(srv.URL, 5*time.Second)
+		// Do not use httptest + 408: net/http treats Request Timeout as an
+		// idle-connection close and can surface "CloseIdleConnections called"
+		// instead of the status (flake under go test -race ./...).
+		c := newTestClient("http://tesla.test", 5*time.Second)
+		c.httpClient.Transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusRequestTimeout,
+				Body:       http.NoBody,
+				Header:     make(http.Header),
+			}, nil
+		})
 		err := c.WakeUp(context.Background(), "VINW")
 		if err == nil {
 			t.Fatal("expected error for non-200, got nil")
