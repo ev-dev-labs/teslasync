@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -75,9 +76,10 @@ type placeholderRef struct {
 }
 
 type relatedPresetRef struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Template string `json:"template"`
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	Template string   `json:"template"`
+	Tags     []string `json:"tags,omitempty"`
 }
 
 type alertMessageTemplateDraftOutput struct {
@@ -88,6 +90,7 @@ type alertMessageTemplateDraftOutput struct {
 	MetricID            string             `json:"metric_id,omitempty"`
 	AllowedPlaceholders []placeholderRef   `json:"allowed_placeholders"`
 	RelatedPresets      []relatedPresetRef `json:"related_presets"`
+	WritingBrief        string             `json:"writing_brief,omitempty"`
 	Status              string             `json:"status"`
 	ValidationError     string             `json:"validation_error,omitempty"`
 }
@@ -106,9 +109,10 @@ type draftAlertMessageTemplate struct{}
 func (t *draftAlertMessageTemplate) Name() string { return "draft_alert_message_template" }
 
 func (t *draftAlertMessageTemplate) Description() string {
-	return "Return the placeholder catalog and related presets for the caller's selected alert dimensions (kind, signal_name or metric_id, op, severity, thresholds). " +
-		"PROPOSE-ONLY: does not save a template. Call this FIRST. Returns {allowed_placeholders, related_presets, status}. " +
-		"Then compose a short template using ONLY allowed_placeholders keys and call validate_alert_message_template."
+	return "Return the placeholder catalog, related presets, and writing_brief for the caller's selected alert dimensions (kind, signal_name or metric_id, op, severity, thresholds). " +
+		"PROPOSE-ONLY: does not save a template. Call this FIRST. Returns {allowed_placeholders, related_presets, writing_brief, status}. " +
+		"Follow writing_brief. Prefer related_presets tagged fun or verbose as inspiration — do not copy concise or threshold-comparison presets. " +
+		"Then compose a distinctive Tesla-owner template using ONLY allowed_placeholders keys and call validate_alert_message_template."
 }
 
 func (t *draftAlertMessageTemplate) InputSchema() json.RawMessage {
@@ -150,6 +154,7 @@ func (t *draftAlertMessageTemplate) Execute(_ context.Context, in any) (any, err
 		MetricID:            stringPtrValue(rule.MetricID),
 		AllowedPlaceholders: placeholderRefs(rule),
 		RelatedPresets:      relatedPresetRefs(rule),
+		WritingBrief:        writingBrief(rule),
 		Status:              "ok",
 	}, nil
 }
@@ -317,8 +322,15 @@ func relatedPresetRefs(rule *alertmodel.AlertRule) []relatedPresetRef {
 	for _, p := range alertmsg.Placeholders(rule) {
 		allowed[p.Key] = struct{}{}
 	}
-	out := make([]relatedPresetRef, 0, relatedPresetLimit)
+	type scored struct {
+		ref  relatedPresetRef
+		rank int
+	}
+	scoredPresets := make([]scored, 0, len(src))
 	for _, p := range src {
+		if strings.TrimSpace(p.Template) == "" {
+			continue
+		}
 		keys := alertmsg.ExtractPlaceholderKeys(p.Template)
 		ok := true
 		for _, k := range keys {
@@ -330,12 +342,62 @@ func relatedPresetRefs(rule *alertmodel.AlertRule) []relatedPresetRef {
 		if !ok {
 			continue
 		}
-		out = append(out, relatedPresetRef{ID: p.ID, Name: p.Name, Template: p.Template})
-		if len(out) >= relatedPresetLimit {
-			break
-		}
+		tags := append([]string(nil), p.Tags...)
+		scoredPresets = append(scoredPresets, scored{
+			ref: relatedPresetRef{
+				ID:       p.ID,
+				Name:     p.Name,
+				Template: p.Template,
+				Tags:     tags,
+			},
+			rank: presetInspirationRank(tags),
+		})
+	}
+	sort.SliceStable(scoredPresets, func(i, j int) bool {
+		return scoredPresets[i].rank < scoredPresets[j].rank
+	})
+	if len(scoredPresets) > relatedPresetLimit {
+		scoredPresets = scoredPresets[:relatedPresetLimit]
+	}
+	out := make([]relatedPresetRef, 0, len(scoredPresets))
+	for _, s := range scoredPresets {
+		out = append(out, s.ref)
 	}
 	return out
+}
+
+func presetInspirationRank(tags []string) int {
+	has := func(want string) bool {
+		for _, tag := range tags {
+			if tag == want {
+				return true
+			}
+		}
+		return false
+	}
+	switch {
+	case has("fun"):
+		return 0
+	case has("verbose"):
+		return 1
+	case has("concise"), has("default"), has("minimal"):
+		return 3
+	default:
+		return 2
+	}
+}
+
+func writingBrief(rule *alertmodel.AlertRule) string {
+	const forbidden = `Do NOT copy "{{SignalName}} is {{Value}} (threshold {{Threshold}})" or other bland concise/threshold presets.`
+	sev := strings.ToLower(strings.TrimSpace(rule.Severity))
+	switch sev {
+	case "critical":
+		return "Tone: urgent, high-stakes Tesla notification a driver would actually read. Name the vehicle and signal, include the live value and limit, make severity unmistakable. " + forbidden
+	case "warn":
+		return "Tone: sharp human heads-up — specific, not generic. Name the vehicle and signal, include value vs threshold, one concrete next-look. " + forbidden
+	default:
+		return "Tone: memorable Tesla-owner copy with personality (wit or celebration when severity is info). Ground in this signal or metric. " + forbidden
+	}
 }
 
 func stringPtrValue(v *string) string {
