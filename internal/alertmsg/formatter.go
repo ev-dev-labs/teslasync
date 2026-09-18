@@ -71,6 +71,30 @@ const MaxTemplateLength = 1024
 // ADR-005 "Future work" for the deferred Sprig-style upgrade.
 var substituteRe = regexp.MustCompile(`\{\{\s*(\w+)\s*\}\}`)
 
+// ExtractPlaceholderKeys returns the unique {{key}} tokens in template,
+// in first-seen order. Unknown or malformed braces are ignored — the
+// renderer leaves those as literal text (ADR-005).
+func ExtractPlaceholderKeys(template string) []string {
+	matches := substituteRe.FindAllStringSubmatch(template, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(matches))
+	seen := make(map[string]struct{}, len(matches))
+	for _, m := range matches {
+		if len(m) < 2 {
+			continue
+		}
+		key := m[1]
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, key)
+	}
+	return out
+}
+
 // Context is the merged-signals-plus-builtins map passed to RenderBody,
 // RenderTitle and Substitute. Callers construct it via BuildContext and
 // then add any per-dispatch built-ins (Severity, MetricValue, ...).

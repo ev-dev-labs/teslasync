@@ -66,6 +66,7 @@ type AIHandlers struct {
 	YIR                                  http.Handler
 	Anomaly                              http.Handler
 	Alert                                http.Handler
+	AlertMessageTemplate                 http.Handler
 	Automation                           http.Handler
 	Search                               http.Handler
 	DriveCoach                           http.Handler
@@ -922,6 +923,12 @@ func mountAIRoutes(
 		}
 		r.Post("/alerts/rules/{ruleID}/tune/draft", g.Wrap("alert-tuning-suggestions", alertTuningHandler))
 
+		var alertMessageTemplateHandler http.HandlerFunc = aiAlertMessageTemplateStubHandler
+		if h.AlertMessageTemplate != nil {
+			alertMessageTemplateHandler = h.AlertMessageTemplate.ServeHTTP
+		}
+		r.Post("/alerts/message-template/draft", g.Wrap("alert-message-template-suggestion", alertMessageTemplateHandler))
+
 		// inbox-auto-categorization (Phase-50 / A2, slice 0035).
 		// Opt-in LLM that reads recent notification_log rows
 		// (last 7 days by default) for the requested vehicle +
@@ -1311,6 +1318,10 @@ func aiAnomalyStubHandler(w http.ResponseWriter, _ *http.Request) {
 // is held by the guard, not the stub.
 func aiAlertStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai alert builder is not yet implemented")
+}
+
+func aiAlertMessageTemplateStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai alert message template suggestion is not yet implemented")
 }
 
 // aiAutomationStubHandler mirrors aiAlertStubHandler for the N2 slice

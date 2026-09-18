@@ -21,6 +21,7 @@ import (
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
 	aialert "github.com/ev-dev-labs/teslasync/internal/api/aialert"
+	aialertmsg "github.com/ev-dev-labs/teslasync/internal/api/aialertmsg"
 	aialerttune "github.com/ev-dev-labs/teslasync/internal/api/aialerttune"
 	aianomaly "github.com/ev-dev-labs/teslasync/internal/api/aianomaly"
 	aiautomation "github.com/ev-dev-labs/teslasync/internal/api/aiautomation"
@@ -304,6 +305,7 @@ import (
 	// the shared tool registry are constructed at boot and shared with
 	// the AI chatbot HTTP handler.
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	alertmsgtemplatesuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-message-template-suggestion"
 	alerttuningsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions"
 	anomalyexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations"
 	autonameunnamedlocations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations"
@@ -1182,6 +1184,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	alert.RegisterAlertBuilderTools(aiToolRegistry, alert.AlertBuilderSources{
 		Validator: aialert.NewRuleValidator(),
 	})
+	alert.RegisterAlertMessageTemplateTools(aiToolRegistry)
+	aiAlertMessageTemplateHandler := aialertmsg.NewHandler(
+		aiRegistry,
+		aiToolRegistry,
+		alertmsgtemplatesuggestion.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
 	aiAlertHandler := aialert.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
@@ -5014,6 +5023,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			YIR:                                  aiYIRHandler,
 			Anomaly:                              aiAnomalyHandler,
 			Alert:                                aiAlertHandler,
+			AlertMessageTemplate:                 aiAlertMessageTemplateHandler,
 			Automation:                           aiAutomationHandler,
 			Search:                               aiSearchHandler,
 			DriveCoach:                           aiDriveCoachHandler,

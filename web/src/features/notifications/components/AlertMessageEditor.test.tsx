@@ -91,6 +91,10 @@ const presets: AlertMessagePreset[] = [
 
 const previewMutate = vi.fn()
 
+vi.mock('@/components/ai/AIAlertMessageTemplateSuggestion', () => ({
+  AIAlertMessageTemplateSuggestion: () => null,
+}))
+
 vi.mock('@/api/hooks/useAlertMessageHelpers', () => ({
   useAlertMessagePlaceholders: () => ({
     data: placeholders,

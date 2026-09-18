@@ -396,3 +396,13 @@ func TestFriendlySignal(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractPlaceholderKeys(t *testing.T) {
+	got := ExtractPlaceholderKeys("{{VehicleName}} {{ Value }} {{VehicleName}} leftover {not}")
+	if len(got) != 2 || got[0] != "VehicleName" || got[1] != "Value" {
+		t.Fatalf("got %#v", got)
+	}
+	if ExtractPlaceholderKeys("") != nil {
+		t.Fatal("empty template should return nil")
+	}
+}

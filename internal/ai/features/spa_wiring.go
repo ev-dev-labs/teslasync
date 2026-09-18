@@ -146,6 +146,12 @@ var SPAWiringIndicatorOnly = []string{
 // constraints automatically.
 var SPAWiringTable = []SPAWiring{
 	{
+		FeatureID: "alert-message-template-suggestion",
+		Component: "components/ai/AIAlertMessageTemplateSuggestion.tsx",
+		Endpoint:  "POST /api/v1/ai/alerts/message-template/draft",
+		Render:    RenderNarrative,
+	},
+	{
 		FeatureID: "alert-tuning-suggestions",
 		Component: "components/ai/AIAlertTuningSuggestions.tsx",
 		Endpoint:  "POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft",
