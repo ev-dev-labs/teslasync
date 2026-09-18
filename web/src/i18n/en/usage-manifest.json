@@ -1,5 +1,6 @@
 {
   "namespaceToBundle": {
+    "alertPacks": "notifications",
     "density": "shell",
     "honesty": "shell",
     "signalTransportAgreement": "telemetry",
@@ -602,6 +603,16 @@
     "science": "science"
   },
   "bundles": {
+    "notifications": [
+      "alertPacks",
+      "alertRules",
+      "notificationBurnRate",
+      "notificationLatency",
+      "notificationSounds",
+      "pinned",
+      "severity",
+      "webpush"
+    ],
     "shell": [
       "a11y",
       "achievements",
@@ -1111,15 +1122,6 @@
       "vehicleManagement",
       "vehicleSettings",
       "vehicles"
-    ],
-    "notifications": [
-      "alertRules",
-      "notificationBurnRate",
-      "notificationLatency",
-      "notificationSounds",
-      "pinned",
-      "severity",
-      "webpush"
     ],
     "charging": [
       "autopilot",
@@ -3119,6 +3121,7 @@
     "workspaceContext"
   ],
   "namespaceFallbackBundles": {
+    "alertPacks": "notifications",
     "density": "detail-density",
     "honesty": "detail-honesty",
     "signalTransportAgreement": "telemetry",

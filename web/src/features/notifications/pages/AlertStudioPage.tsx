@@ -48,6 +48,7 @@ import { alertRuleSchema } from '../schemas/alertRule'
 import { ruleTemplates, type RuleTemplate } from '../lib/alertRuleTemplates'
 import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
 import { AlertMessageEditor } from '../components/AlertMessageEditor'
+import AlertPacksPanel from '../components/packs/AlertPacksPanel'
 import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
 import { Icons } from '@/lib/icons';
 import { AINLAlertBuilder } from '@/components/ai/AINLAlertBuilder'
@@ -575,6 +576,7 @@ export default function AlertStudio() {
   const bulkEnableMut = useBulkEnableRules()
   const bulkDisableMut = useBulkDisableRules()
   const [showTemplates, setShowTemplates] = useState(false)
+  const [showPacks, setShowPacks] = useState(false)
   const [templateSearch, setTemplateSearch] = useState('')
   const [templateCategory, setTemplateCategory] = useState<string | null>(null)
   // Rule list search lives in the URL.
@@ -1358,6 +1360,9 @@ export default function AlertStudio() {
       error={error ?? null}
       actions={
         <>
+          <UiButton variant="ghost" size="sm" onClick={() => setShowPacks(value => !value)}>
+            {t('alertPacks.title', 'Alert Packs')}
+          </UiButton>
           <UiButton variant="ghost" size="sm" icon={<Icons.sparkles className="h-3.5 w-3.5 text-amber-300" />} onClick={() => setShowTemplates(!showTemplates)}>
             {t('notifications.alertStudio.actions.templates', 'Templates')}
           </UiButton>
@@ -1420,6 +1425,12 @@ export default function AlertStudio() {
           />
         </section>
       </FadeIn>
+
+      {showPacks && <AlertPacksPanel onEditRule={id => {
+        const rule = rulesList.find(item => item.id === id)
+        if (rule) handleSelectRule(rule)
+        else setFormError(t('alertPacks.ruleMissing', 'This rule is no longer available. Refresh the rule list.'))
+      }} />}
 
       {showTemplates && (
         <FadeIn>

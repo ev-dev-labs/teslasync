@@ -82,6 +82,7 @@ export default withMermaid(defineConfig({
           { text: 'Commands', link: '/features/catalogue-commands' },
           { text: 'Automation', link: '/features/catalogue-automation' },
           { text: 'Notifications', link: '/features/catalogue-notifications' },
+          { text: 'Alert Packs', link: '/features/alert-packs' },
           { text: 'Advanced Intelligence', link: '/features/catalogue-advanced-intelligence' },
           { text: 'Ownership Intelligence', link: '/features/catalogue-ownership-intelligence' },
           { text: 'Security', link: '/features/catalogue-security' },

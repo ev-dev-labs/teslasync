@@ -184,6 +184,16 @@
     "watchFaceNL"
   ],
   "grouped": {
+    "notifications": [
+      "alertPacks",
+      "alertRules",
+      "notificationBurnRate",
+      "notificationLatency",
+      "notificationSounds",
+      "pinned",
+      "severity",
+      "webpush"
+    ],
     "telemetry": [
       "liveMonitor",
       "mqtt",
@@ -573,15 +583,6 @@
       "vehicleManagement",
       "vehicleSettings",
       "vehicles"
-    ],
-    "notifications": [
-      "alertRules",
-      "notificationBurnRate",
-      "notificationLatency",
-      "notificationSounds",
-      "pinned",
-      "severity",
-      "webpush"
     ],
     "charging": [
       "autopilot",

@@ -14,6 +14,26 @@
 version: 1
 
 slos:
+  - name: alert_packs_availability
+    description: "Alert pack catalog, installations and removal endpoints must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, alerts]
+
+  - name: alert_pack_ai_availability
+    description: "Opt-in Helix custom pack proposals must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ai/alerts/packs/draft\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ai/alerts/packs/draft\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: notifications
+    tags: [http, ai, alerts]
+
   - name: api_availability
     description: "HTTP request success ratio across /api/v1/. Counts non-5xx responses as good events."
     sli:

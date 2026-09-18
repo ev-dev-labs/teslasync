@@ -373,3 +373,16 @@ migrations:
     reversible: true
     reviewed_by: "@atulmgupta"
     reviewed_on: "2026-09-14"
+
+  - version: 245
+    name: alert_packs
+    forward_compatible: true
+    forward_compatibility_notes: New installation and membership tables; ordinary alert rules unchanged.
+    rollback_notes: Leave applied on rollback. Down removes pack tracking, never alert rules.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Creates two empty tables and an index; foreign keys briefly lock referenced tables.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-18"

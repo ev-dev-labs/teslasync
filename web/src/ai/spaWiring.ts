@@ -31,6 +31,15 @@ export interface SPAWiringEntry {
 
 export const SPA_WIRING: ReadonlyArray<SPAWiringEntry> = Object.freeze([
   Object.freeze({
+    featureId: "alert-pack-builder",
+    component: "components/ai/AIAlertPackBuilder.tsx",
+    endpoint: "POST /api/v1/ai/alerts/packs/draft",
+    endpointPath: "/ai/alerts/packs/draft",
+    method: "POST",
+    render: "proposal",
+    baselineFormHandoff: "/notifications/studio",
+  }),
+  Object.freeze({
     featureId: "alert-message-template-suggestion",
     component: "components/ai/AIAlertMessageTemplateSuggestion.tsx",
     endpoint: "POST /api/v1/ai/alerts/message-template/draft",
@@ -528,6 +537,15 @@ export const SPA_WIRING: ReadonlyArray<SPAWiringEntry> = Object.freeze([
 ] as const);
 
 export const SPA_WIRING_BY_ID: Readonly<Record<AiFeatureId, SPAWiringEntry>> = Object.freeze({
+  "alert-pack-builder": Object.freeze({
+    featureId: "alert-pack-builder",
+    component: "components/ai/AIAlertPackBuilder.tsx",
+    endpoint: "POST /api/v1/ai/alerts/packs/draft",
+    endpointPath: "/ai/alerts/packs/draft",
+    method: "POST",
+    render: "proposal",
+    baselineFormHandoff: "/notifications/studio",
+  }),
   "alert-message-template-suggestion": Object.freeze({
     featureId: "alert-message-template-suggestion",
     component: "components/ai/AIAlertMessageTemplateSuggestion.tsx",

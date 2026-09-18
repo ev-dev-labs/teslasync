@@ -6,6 +6,7 @@ Sidebar group **Notifications**. In the app, expand this section in the left nav
 | ------ | ---- | ------------ | ---------- |
 | Notification Inbox | `/notifications/inbox` | Recent alerts and system messages. | Renders an empty state when no data is available — the page is not hidden. |
 | Alert Center | `/notifications/alerts` | Active and acknowledged alerts grouped by severity. | Renders an empty state when no data is available — the page is not hidden. |
+| Alert Studio and [Alert Packs](./alert-packs.md) | `/notifications/studio` | Create individual rules or preview and install curated/custom groups, optionally proposed by Helix. | Manual templates and pack previews remain available without installed rules or AI. |
 | Notification Channels | `/notifications/channels` | Where alerts are sent — email, SMS, push, webhook. | Renders an empty state when no data is available — the page is not hidden. |
 | Webhooks | `/notifications/webhooks` | POST alerts to your own URL for downstream automation. | Renders an empty state when no data is available — the page is not hidden. |
 | Browser Notifications | `/notifications/browser` | Enable browser push notifications for this device. | Renders an empty state when no data is available — the page is not hidden. |
