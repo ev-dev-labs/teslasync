@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_alert_message_template_metric_1
+        name: draft_alert_message_template
+        arguments: '{"kind":"computed_metric","metric_id":"charging_cost","metric_op":">","metric_threshold":5}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_alert_message_template_metric_1
+        name: validate_alert_message_template
+        arguments: '{"kind":"computed_metric","metric_id":"charging_cost","metric_op":">","metric_threshold":5,"template":"{{VehicleName}}: {{MetricID}} is {{MetricValue}} (threshold {{MetricThreshold}})"}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      Suggested template for charging_cost: {{VehicleName}}: {{MetricID}} is {{MetricValue}} (threshold {{MetricThreshold}}).
+      Apply it in Alert Studio, then Save if you want to keep it.
+    input_tokens: 240
+    output_tokens: 80

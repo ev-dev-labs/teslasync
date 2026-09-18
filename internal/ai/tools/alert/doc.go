@@ -2,13 +2,15 @@
 // management: drafting new rules from natural-language prompts and
 // tuning existing rules based on firing history.
 //
-// Two tools:
+// Tools:
 //   - alert_builder: drafts an AlertRule from a NL goal, then a
 //     companion validate tool runs the canonical validator
 //     before persistence.
 //   - alert_tuning: proposes a patch to an existing rule based on
 //     its recent firing history (false-positive reduction or
 //     sensitivity boost).
+//   - message_template: proposes a notification body template from
+//     the selected alert dimensions using the alertmsg catalog.
 //
 // They share `*alertmodel.AlertRule` plus the validate-then-draft
 // two-step pattern, so they live together in this subpkg per

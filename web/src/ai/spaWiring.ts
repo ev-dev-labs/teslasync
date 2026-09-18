@@ -31,6 +31,15 @@ export interface SPAWiringEntry {
 
 export const SPA_WIRING: ReadonlyArray<SPAWiringEntry> = Object.freeze([
   Object.freeze({
+    featureId: "alert-message-template-suggestion",
+    component: "components/ai/AIAlertMessageTemplateSuggestion.tsx",
+    endpoint: "POST /api/v1/ai/alerts/message-template/draft",
+    endpointPath: "/ai/alerts/message-template/draft",
+    method: "POST",
+    render: "narrative",
+    baselineFormHandoff: "",
+  }),
+  Object.freeze({
     featureId: "alert-tuning-suggestions",
     component: "components/ai/AIAlertTuningSuggestions.tsx",
     endpoint: "POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft",
@@ -519,6 +528,15 @@ export const SPA_WIRING: ReadonlyArray<SPAWiringEntry> = Object.freeze([
 ] as const);
 
 export const SPA_WIRING_BY_ID: Readonly<Record<AiFeatureId, SPAWiringEntry>> = Object.freeze({
+  "alert-message-template-suggestion": Object.freeze({
+    featureId: "alert-message-template-suggestion",
+    component: "components/ai/AIAlertMessageTemplateSuggestion.tsx",
+    endpoint: "POST /api/v1/ai/alerts/message-template/draft",
+    endpointPath: "/ai/alerts/message-template/draft",
+    method: "POST",
+    render: "narrative",
+    baselineFormHandoff: "",
+  }),
   "alert-tuning-suggestions": Object.freeze({
     featureId: "alert-tuning-suggestions",
     component: "components/ai/AIAlertTuningSuggestions.tsx",
