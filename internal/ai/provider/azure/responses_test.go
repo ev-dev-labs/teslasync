@@ -12,19 +12,43 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 )
 
-func TestNeedsResponsesAPI(t *testing.T) {
+func TestUsesResponsesAPI_BySurfaceNotModel(t *testing.T) {
 	t.Parallel()
-	if !needsResponsesAPI("gpt-5.6-sol") {
-		t.Fatal("gpt-5.6-sol")
+	foundry, err := New(provider.ProviderConfig{
+		BaseURL: "https://example.services.ai.azure.com",
+		APIKey:  "k",
+		Model:   "any-deployment",
+		Flavor:  provider.AzureFlavorFoundry,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !needsResponsesAPI("gpt-6-astra") {
-		t.Fatal("gpt-6-astra")
+	if !foundry.usesResponsesAPI(provider.ChatRequest{}) {
+		t.Fatal("Foundry flavor must use Responses for any model")
 	}
-	if needsResponsesAPI("gpt-5") {
-		t.Fatal("gpt-5 uses chat completions + max_completion_tokens")
+	v1, err := New(provider.ProviderConfig{
+		BaseURL: "https://example.services.ai.azure.com/openai/v1",
+		APIKey:  "k",
+		Model:   "gpt-4o",
+		Flavor:  provider.AzureFlavorOpenAI,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if needsResponsesAPI("gpt-4o") {
-		t.Fatal("gpt-4o")
+	if !v1.usesResponsesAPI(provider.ChatRequest{}) {
+		t.Fatal("/openai/v1 must use Responses for any model")
+	}
+	classic, err := New(provider.ProviderConfig{
+		BaseURL: "https://example.openai.azure.com",
+		APIKey:  "k",
+		Model:   "gpt-4o",
+		Flavor:  provider.AzureFlavorOpenAI,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if classic.usesResponsesAPI(provider.ChatRequest{}) {
+		t.Fatal("classic Azure OpenAI flavor stays on chat completions")
 	}
 }
 
@@ -46,7 +70,7 @@ func TestChat_Gpt56Sol_UsesFoundryResponsesAPI(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		var probe map[string]any
 		_ = json.Unmarshal(body, &probe)
-		if got, _ := probe["model"].(string); got != "gpt-5.6-sol" {
+		if got, _ := probe["model"].(string); got != "any-foundry-deployment" {
 			t.Errorf("model=%q", got)
 		}
 		if _, has := probe["temperature"]; has {
@@ -73,9 +97,9 @@ func TestChat_Gpt56Sol_UsesFoundryResponsesAPI(t *testing.T) {
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
 		BaseURL: srv.URL,
-		Model:   "gpt-5.6-sol",
+		Model:   "any-foundry-deployment",
 		APIKey:  "k",
-		Flavor:  provider.AzureFlavorOpenAI,
+		Flavor:  provider.AzureFlavorFoundry,
 	}, WithHTTPClient(srv.Client()))
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -167,8 +191,9 @@ func TestStream_Gpt56Sol_SynthesizesFromResponses(t *testing.T) {
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
 		BaseURL: srv.URL,
-		Model:   "gpt-5.6-sol",
+		Model:   "any-foundry-deployment",
 		APIKey:  "k",
+		Flavor:  provider.AzureFlavorFoundry,
 	}, WithHTTPClient(srv.Client()))
 	if err != nil {
 		t.Fatalf("New: %v", err)

@@ -158,7 +158,13 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 
 func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
 	if a.usesResponsesAPI(req) {
-		return a.chatViaResponses(ctx, req)
+		resp, err := a.chatViaResponses(ctx, req)
+		if err == nil {
+			return resp, nil
+		}
+		if !isAzureNotFound(err) {
+			return nil, err
+		}
 	}
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
@@ -201,10 +207,12 @@ func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider
 func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan provider.Chunk, error) {
 	if a.usesResponsesAPI(req) {
 		chatResp, err := a.chatViaResponses(ctx, req)
-		if err != nil {
+		if err == nil {
+			return chatResponseAsStream(ctx, chatResp), nil
+		}
+		if !isAzureNotFound(err) {
 			return nil, err
 		}
-		return chatResponseAsStream(ctx, chatResp), nil
 	}
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
@@ -452,21 +460,19 @@ func (a *Adapter) usesOpenAIV1() bool {
 
 const defaultMaxCompletionTokens = 8192
 
-func needsResponsesAPI(model string) bool {
-	m := strings.ToLower(strings.TrimSpace(model))
-	if strings.Contains(m, "gpt-6") {
-		return true
-	}
-	for _, p := range []string{"gpt-5.6", "gpt-5.5", "gpt-5.4", "gpt-5.3", "gpt-5.2"} {
-		if strings.Contains(m, p) {
-			return true
-		}
-	}
-	return false
+func (a *Adapter) usesResponsesAPI(_ provider.ChatRequest) bool {
+	// Foundry routing is by surface, not model name. Any deployment
+	// on the Foundry flavor or an /openai/v1 endpoint uses Responses.
+	// https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
+	return a.cfg.Flavor == provider.AzureFlavorFoundry || a.usesOpenAIV1()
 }
 
-func (a *Adapter) usesResponsesAPI(req provider.ChatRequest) bool {
-	return needsResponsesAPI(a.chatDeployment(req))
+func isAzureNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "status 404") || strings.Contains(msg, "DeploymentNotFound")
 }
 
 func needsMaxCompletionTokens(model string) bool {

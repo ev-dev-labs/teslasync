@@ -200,7 +200,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
           }
           placeholder={
             value.provider === 'azure'
-              ? 'gpt-5.6-sol'
+              ? 'your-deployment-name'
               : isCloud
                 ? 'gpt-4o-mini'
                 : 'llama3.1:8b'
@@ -212,7 +212,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             value.provider === 'azure'
               ? t(
                   'ai.settings.provider.azureModelHint',
-                  'Foundry portal “deployment_name” (e.g. gpt-5.6-sol). Classic Azure OpenAI can leave this matching the deployment field.',
+                  'Use the Foundry deployment name from the portal. Classic Azure OpenAI can match the deployment field.',
                 )
               : undefined
           }
@@ -245,7 +245,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
                 value: 'foundry',
                 label: t(
                   'ai.settings.provider.azureFlavorFoundry',
-                  'Microsoft Foundry (Responses API / gpt-5.6-sol)',
+                  'Microsoft Foundry (Responses API)',
                 ),
               },
             ]}

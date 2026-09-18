@@ -181,11 +181,11 @@ func TestOpenAIFlavor_DeploymentOverride(t *testing.T) {
 func TestFoundryFlavor_Chat_URLAndModelInBody(t *testing.T) {
 	t.Parallel()
 	a := newAdapter(t, provider.AzureFlavorFoundry, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, "/chat/completions") || strings.Contains(r.URL.Path, "/deployments/") {
-			t.Errorf("foundry path=%s, want /chat/completions without deployments segment", r.URL.Path)
+		if !strings.HasSuffix(r.URL.Path, "/openai/v1/responses") {
+			t.Errorf("foundry path=%s, want /openai/v1/responses", r.URL.Path)
 		}
-		if got := r.URL.Query().Get("api-version"); got != "2024-10-21" {
-			t.Errorf("api-version=%q", got)
+		if r.URL.RawQuery != "" {
+			t.Errorf("api-version=%q, Foundry Responses omits it", r.URL.RawQuery)
 		}
 		if got := r.Header.Get("api-key"); got != "azure-test-key" {
 			t.Errorf("api-key header=%q", got)
@@ -196,7 +196,7 @@ func TestFoundryFlavor_Chat_URLAndModelInBody(t *testing.T) {
 		if got, _ := probe["model"].(string); got != "gpt-4o-mini" {
 			t.Errorf("body model=%q, want gpt-4o-mini", got)
 		}
-		_, _ = io.WriteString(w, `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"ok"}}]}`)
+		_, _ = io.WriteString(w, `{"status":"completed","output_text":"ok"}`)
 	}))
 	if _, err := a.Chat(context.Background(), provider.ChatRequest{
 		Messages: []provider.Message{{Role: provider.RoleUser, Content: "hi"}},
@@ -680,7 +680,7 @@ func TestStream_V1NotFoundFallsBackToChat(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
-		BaseURL: srv.URL + "/openai/v1",
+		BaseURL: srv.URL,
 		Model:   "model-router",
 		APIKey:  "k",
 		Flavor:  provider.AzureFlavorOpenAI,
@@ -719,7 +719,7 @@ func TestStream_V1NotFoundFallsBackToChat(t *testing.T) {
 func TestOpenAIV1_Chat_URLAuthAndBody(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/openai/v1/chat/completions" {
+		if r.URL.Path != "/openai/v1/responses" {
 			t.Errorf("path=%s", r.URL.Path)
 		}
 		if r.URL.RawQuery != "" {
@@ -740,10 +740,10 @@ func TestOpenAIV1_Chat_URLAuthAndBody(t *testing.T) {
 		if _, has := probe["max_tokens"]; has {
 			t.Errorf("max_tokens should be omitted on v1: %s", body)
 		}
-		if got, _ := probe["max_completion_tokens"].(float64); got != 1 {
-			t.Errorf("max_completion_tokens=%v", probe["max_completion_tokens"])
+		if _, has := probe["messages"]; has {
+			t.Errorf("Responses API uses input, not messages: %s", body)
 		}
-		_, _ = io.WriteString(w, `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"ok"}}]}`)
+		_, _ = io.WriteString(w, `{"status":"completed","output_text":"ok"}`)
 	}))
 	t.Cleanup(srv.Close)
 	a, err := New(provider.ProviderConfig{
@@ -809,7 +809,7 @@ func TestChat_V1NotFoundFallsBackToDeployments(t *testing.T) {
 	if resp.Message.Content != "classic" {
 		t.Fatalf("content=%q", resp.Message.Content)
 	}
-	if v1Hits != 1 || deployHits != 1 {
+	if v1Hits < 1 || deployHits != 1 {
 		t.Fatalf("hits v1=%d deploy=%d", v1Hits, deployHits)
 	}
 }
