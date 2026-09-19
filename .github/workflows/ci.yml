@@ -419,6 +419,7 @@ jobs:
 
   docker:
     name: Docker · ${{ matrix.image }}
+    needs: [generated, backend, frontend]
     # Pin to ubuntu-latest because self-hosted arc-runner pods have been
     # observed to stall the export-worker build indefinitely (>35 min vs
     # ~9 min for the sibling api/notification-worker builds on the same

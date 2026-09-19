@@ -46,10 +46,12 @@ test('existing aggregate names reject any required job that did not succeed', ()
   }
 });
 
-test('independent builds/checks do not wait for test completion or publish images', () => {
-  for (const id of ['generated', 'backend-checks', 'backend-build', 'backend-database', 'frontend-checks', 'docker']) {
+test('independent validation runs in parallel but Docker waits for successful gates', () => {
+  for (const id of ['generated', 'backend-checks', 'backend-build', 'backend-database', 'frontend-checks']) {
     assert.equal(ci.jobs[id].needs, undefined);
   }
+  assert.deepEqual(ci.jobs.docker.needs, ['generated', 'backend', 'frontend']);
+  assert.equal(ci.jobs.docker.if, undefined);
   const build = ci.jobs.docker.steps.find(step => step.uses?.startsWith('docker/build-push-action'));
   assert.equal(build.with.push, false);
 });

@@ -187,8 +187,10 @@ CI scales out across hosted runners rather than oversubscribing one machine:
 - Vitest uses eight native shards with two workers per runner. The merge job
   checks all shard artifacts against full test-file discovery before merging
   Vitest's coverage maps. Go profiles merge atomic block counts, not percentages.
-- Lint, architecture checks, individual Go binary builds, frontend builds, database
-  replay/rollback, and build-only Docker jobs start independently of unit tests.
+- Lint, architecture checks, individual Go binary builds, frontend builds, and
+  database replay/rollback start independently of unit tests. Docker image builds
+  wait for generated-artifact, backend, and frontend gates to pass; failed tests
+  or incomplete coverage merges skip Docker rather than spending build compute.
 - Browser jobs reuse one hermetic build. Chromium responsive/smoke tests and
   Windows visual snapshots each use four shards. Accessibility and performance
   run on separate runners with one worker each; Firefox and WebKit remain independent.
