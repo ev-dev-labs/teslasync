@@ -230,6 +230,7 @@ export default function SettingsPage() {
                   {overviewCards.map((card) => (
                     <StatCard
                       key={card.label}
+                      className="min-w-0 [overflow-wrap:anywhere]"
                       label={card.label}
                       value={card.value}
                       sublabel={card.sublabel}
