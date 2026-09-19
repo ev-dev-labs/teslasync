@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { assertMockApiComplete, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 
-for (const { width, theme } of [320, 390, 768, 1024, 1440, 1920].flatMap(width =>
-  (['dark', 'light'] as const).map(theme => ({ width, theme })))) {
-  test(`settings categories stay readable and preserve edits at ${width}px in ${theme}`, async ({ page }) => {
+for (const { width, theme, scale } of [320, 390, 768, 1024, 1280, 1440, 1920, 2560].flatMap(width =>
+  (['dark', 'light'] as const).flatMap(theme => [1, 1.35].map(scale => ({ width, theme, scale }))))) {
+  test(`settings categories stay readable and preserve edits at ${width}px in ${theme} with ${scale}x text`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     await seedBrowserState(page, theme, '/settings')
     const api = await installApiMocks(page, 'populated', theme)
@@ -13,6 +13,8 @@ for (const { width, theme } of [320, 390, 768, 1024, 1440, 1920].flatMap(width =
     })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, api)
+    await page.evaluate(scale => document.documentElement.style.setProperty('--font-scale', String(scale)), scale)
+    await expect(page.locator('html')).toHaveCSS('--font-scale', String(scale))
     const selectCategory = async (id: string, label: RegExp) => {
       if (width < 1024) {
         await page.getByRole('combobox', { name: 'Settings categories', exact: true }).selectOption(id)
@@ -34,6 +36,43 @@ for (const { width, theme } of [320, 390, 768, 1024, 1440, 1920].flatMap(width =
     expect(actionBox!.y).toBeGreaterThanOrEqual(descriptionBox!.y + descriptionBox!.height)
     await expect(actionCard.getByRole('heading')).toBeVisible()
     expect(await actionCard.getByRole('heading').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+    const shortcutCards = page.getByRole('region', { name: 'Settings shortcuts', exact: true }).locator('[data-print-card]')
+    await expect(shortcutCards).toHaveCount(3)
+    for (const [index, card] of (await shortcutCards.all()).entries()) {
+      const paragraph = card.locator('p')
+      const box = await paragraph.boundingBox()
+      expect(box!.width).toBeGreaterThanOrEqual(180)
+      const button = card.getByRole('button')
+      if (await button.count()) {
+        const buttonBox = await button.boundingBox()
+        expect(buttonBox!.y).toBeGreaterThanOrEqual(box!.y + box!.height)
+        expect(buttonBox!.height).toBeGreaterThanOrEqual(44)
+        await button.click({ trial: true })
+      }
+      await card.scrollIntoViewIfNeeded()
+      await card.screenshot({ path: testInfo.outputPath(`settings-shortcut-${index + 1}.png`) })
+    }
+    const categoryDescription = page.getByText('Current preferences and useful shortcuts', { exact: true }).filter({ visible: true }).last()
+    const saveHint = page.getByText('Each section keeps its existing save controls. Switching categories keeps your unsaved edits.', { exact: true })
+    const categoryBox = await categoryDescription.boundingBox()
+    const hintBox = await saveHint.boundingBox()
+    expect(hintBox!.y).toBeGreaterThanOrEqual(categoryBox!.y + categoryBox!.height)
+    const overflowText = await page.locator('#overview [data-print-card]').evaluateAll(cards => cards.flatMap(card => {
+      const bounds = card.getBoundingClientRect()
+      const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT)
+      const overflow: string[] = []
+      while (walker.nextNode()) {
+        const node = walker.currentNode
+        if (!node.textContent?.trim()) continue
+        const range = document.createRange()
+        range.selectNodeContents(node)
+        if ([...range.getClientRects()].some(rect => rect.left < bounds.left || rect.right > bounds.right + 1)) {
+          overflow.push(node.textContent)
+        }
+      }
+      return overflow
+    }))
+    expect(overflowText, 'Overview text must fit inside its card, not clip or spill into adjacent cards').toEqual([])
     const noOverflow = async () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false)
     }

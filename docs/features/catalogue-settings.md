@@ -19,4 +19,9 @@ Reset controls live in **Reset & recovery**, separate from everyday preferences.
 The overview retains the current-preference summary, export link, guided-tour
 launcher, and setup-checklist restart.
 
+Overview shortcuts stack their descriptions above their actions instead of
+squeezing them alongside buttons. Cards reflow with the available width and
+wrap their titles. Browser regression checks cover 320–2560px viewports in
+light and dark themes, at normal and 135% text size.
+
 [← All groups](./catalogue.md)
