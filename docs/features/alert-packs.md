@@ -19,7 +19,14 @@ current and future vehicles or a specific subset, and review each trigger,
 severity, message and cooldown. Numeric operands use canonical units; temperature
 inputs are explicitly Celsius and the preview also displays your preferred unit.
 
-**Master settings** at the top set cooldown, once/repeat behavior and title
+Desktop previews use a comparison table; phones and tablets use compact cards.
+Open a rule to edit its threshold, notification message or delivery settings.
+Only one rule editor opens at a time, and changing pages or layouts preserves edits.
+Use **All rules**, **Selected** or **Customized** to narrow the list. The persistent
+footer shows the selected count, whether new rules will start paused, and the
+explicit installation action.
+
+**Master settings** in the desktop sidebar or mobile disclosure set cooldown, once/repeat behavior and title
 inclusion for the whole pack. Each rule can switch to **individual delivery
 settings**. Later master changes affect inherited rules only; **Apply master
 settings to all rules** explicitly clears the individual delivery overrides.
