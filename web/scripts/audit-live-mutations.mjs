@@ -109,6 +109,7 @@ const MODE_INDEPENDENT_MUTATIONS = {
   ],
   'hooks/useAiSettings.ts': ['useSaveAiSettings', 'useValidateAiProvider'],
   'hooks/useAlertMessageHelpers.ts': ['useAlertMessagePreview'],
+  'hooks/useAlertPacks.ts': ['useInstallAlertPack', 'useRemoveAlertPack'],
   'hooks/useAnnotations.ts': [
     'useCreateAnnotation',
     'useUpdateAnnotation',
