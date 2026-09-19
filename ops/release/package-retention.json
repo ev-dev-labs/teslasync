@@ -1,0 +1,14 @@
+{
+  "packages": [
+    "teslasync-api",
+    "teslasync-web",
+    "teslasync-notification-worker",
+    "teslasync-export-worker",
+    "teslasync-automation-worker",
+    "teslasync-fleet-telemetry",
+    "charts/teslasync"
+  ],
+  "stable": { "keep": 10, "days": 90 },
+  "prerelease": { "keep": 5, "days": 14 },
+  "protectedVersions": []
+}
