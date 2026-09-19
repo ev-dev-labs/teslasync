@@ -24,6 +24,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  BACKEND_SHARDS: '8'
+  FRONTEND_SHARDS: '8'
+
 jobs:
   generated:
     name: Generated artifacts are current
@@ -61,23 +65,47 @@ jobs:
           fi
           echo "worktree clean"
 
-  backend:
-    name: Backend (lint + test + build)
-    # Pinned to ubuntu-latest (not the arc-runner default) because `go test
-    # -race` requires CGO, which requires a C compiler at runtime, and the
-    # self-hosted arc-runner image does not currently ship one (`cgo: C
-    # compiler "gcc" not found`). Frontend + Docker jobs can still ride
-    # arc-runner — they do not need CGO. Re-pin to arc-runner once its
-    # image includes build-essential / gcc.
+  backend-checks:
+    name: Backend ${{ matrix.check }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [lint, architecture]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Lint
+        if: matrix.check == 'lint'
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+          golangci-lint run ./...
+      - name: Architecture tests and metrics
+        if: matrix.check == 'architecture'
+        run: |
+          go test -race -v ./internal/arch/...
+          go run ./tools/archmetrics -compare tools/archmetrics/baseline.json
+      - name: Sharding and report regression tests
+        if: matrix.check == 'architecture'
+        run: |
+          python3 .github/scripts/test_ci_test_shards.py
+          python3 .github/scripts/backend_coverage_summary.py --self-test
+
+  backend-tests:
+    name: Backend race tests (${{ matrix.shard }}/8)
+    # Race instrumentation needs GCC/CGO; ARC does not currently provide GCC.
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     services:
       postgres:
-        # Use the TimescaleDB image because migration 000142_baseline_typed.up.sql
-        # does `CREATE EXTENSION IF NOT EXISTS timescaledb;`. The plain
-        # postgres:17-alpine image does not ship that extension. The image is
-        # postgres-spec compliant (same ports, env vars, pg_isready), so the
-        # only knock-on change is bumping --health-retries because the larger
-        # image takes longer to warm up on a fresh runner.
+        # Every shard owns its database; no cross-runner schemas or mutations.
         image: timescale/timescaledb-ha:pg17
         env:
           POSTGRES_USER: test
@@ -92,22 +120,13 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
-
-      - name: Lint
-        run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
-          golangci-lint run ./...
-
-      - name: Test
+          go-version-file: go.mod
+      - name: Assign every package to one balanced shard
+        run: python3 .github/scripts/ci_test_shards.py plan --count "$BACKEND_SHARDS" --index "${{ matrix.shard }}" --output shard
+      - name: Race tests with atomic coverage
         env:
-          # ubuntu-latest's setup-go@v5 enables CGO by default, but be
-          # explicit so the intent is documented and the step stays
-          # bulletproof against future runner / setup-go changes:
-          # `-race` strictly requires CGO.
           CGO_ENABLED: 1
           DATABASE_HOST: localhost
           DATABASE_PORT: 5432
@@ -115,17 +134,42 @@ jobs:
           DATABASE_PASS: test
           DATABASE_NAME: teslasync_test
         run: |
-          set -o pipefail
-          go test -race -coverprofile=coverage.out -covermode=atomic -json ./... | tee test-events.json
+          set -euo pipefail
+          mapfile -t packages < shard/packages.txt
+          go test -race -coverprofile=shard/coverage.out -covermode=atomic -json "${packages[@]}" | tee shard/test-events.json
+      - name: Upload raw shard evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-${{ matrix.shard }}
+          path: shard/
+          if-no-files-found: error
+          retention-days: 7
+
+  backend-coverage:
+    name: Merge backend coverage
+    if: always()
+    needs: backend-tests
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: backend-test-*
+          path: backend-shards
+      - name: Reject missing packages and merge atomic profiles
+        run: python3 .github/scripts/ci_test_shards.py merge --count "$BACKEND_SHARDS" --input backend-shards --output .
 
       - name: Generate backend coverage reports
-        if: always() && (hashFiles('coverage.out') != '' || hashFiles('test-events.json') != '')
         run: |
           python3 .github/scripts/backend_coverage_summary.py --self-test
-          if [ -f coverage.out ]; then
-            go tool cover -func=coverage.out > coverage.txt
-            go tool cover -html=coverage.out -o coverage.html
-          fi
+          go tool cover -func=coverage.out > coverage.txt
+          go tool cover -html=coverage.out -o coverage.html
           python3 .github/scripts/backend_coverage_summary.py \
             --profile coverage.out \
             --func coverage.txt \
@@ -135,15 +179,49 @@ jobs:
             --package-out coverage-by-package.txt \
             --file-out coverage-by-file.txt
 
-      - name: Architecture test (no forbidden import edges)
-        run: |
-          go test -v ./internal/arch/...
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          if-no-files-found: error
+          path: |
+            coverage.out
+            coverage.html
+            coverage.txt
+            coverage-by-package.txt
+            coverage-by-file.txt
+            coverage-summary.md
+            test-events.json
 
-      - name: Architecture metrics regression check
-        run: |
-          go run ./tools/archmetrics -compare tools/archmetrics/baseline.json
-
+  backend-database:
+    name: Backend database (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [replay, rollback]
+    services:
+      postgres:
+        image: timescale/timescaledb-ha:pg17
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: teslasync_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
       - name: Integration test (telemetry replay)
+        if: matrix.suite == 'replay'
         # KNOWN-FAILING (phase-50 in flight): TestTelemetryReplay asserts a
         # post-typed-migration invariant (signal_catalog/signal_observations
         # tables exist, 0 surviving raw_json jsonb columns, every writer fires
@@ -170,6 +248,7 @@ jobs:
         run: go test -tags integration -race -count=1 ./internal/api/... -run TestTelemetryReplay -v
 
       - name: Migration rollback test
+        if: matrix.suite == 'rollback'
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/teslasync_test?sslmode=disable
         run: |
@@ -179,34 +258,109 @@ jobs:
           migrate -path migrations -database "$DATABASE_URL" down 1
           migrate -path migrations -database "$DATABASE_URL" up
 
+  backend-build:
+    name: Go build (${{ matrix.binary }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        binary: [teslasync, notification-worker, export-worker]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
       - name: Build
-        run: |
-          CGO_ENABLED=0 go build -ldflags="-s -w" -o teslasync ./cmd/teslasync
-          CGO_ENABLED=0 go build -ldflags="-s -w" -o notification-worker ./cmd/notification-worker
-          CGO_ENABLED=0 go build -ldflags="-s -w" -o export-worker ./cmd/export-worker
+        env:
+          CGO_ENABLED: 0
+        run: go build -ldflags="-s -w" -o "${{ matrix.binary }}" "./cmd/${{ matrix.binary }}"
 
-      - name: Upload coverage
+  backend:
+    name: Backend (lint + test + build)
+    if: always()
+    needs: [backend-checks, backend-tests, backend-coverage, backend-database, backend-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every backend job
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required backend job failed, was cancelled, or was skipped"'
+
+  frontend-checks:
+    name: Frontend ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [lint, build]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - name: Lint
+        if: matrix.check == 'lint'
+        run: npm run lint
+      - name: Transform pipeline uses no deprecated Vite options
+        if: matrix.check == 'lint'
+        run: npm run check:vite-deprecations
+      - name: Coverage completeness and report regression tests
+        if: matrix.check == 'lint'
+        run: |
+          node --test ../.github/scripts/check_vitest_blobs.test.mjs ../.github/scripts/ci_workflows.test.mjs
+          node ../.github/scripts/frontend_coverage_summary.mjs --self-test
+      - name: Build
+        if: matrix.check == 'build'
+        run: npm run build
+      - name: No source maps in the publishable build
+        if: matrix.check == 'build'
+        run: npm run check:source-maps
+
+  frontend-tests:
+    name: Frontend tests (${{ matrix.shard }}/8)
+    # Bounded workers per hosted runner; scale out without starving jsdom.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - name: Test shard with native coverage blob
+        run: |
+          npx vitest run --shard=${{ matrix.shard }}/"$FRONTEND_SHARDS" --maxWorkers=2 \
+            --coverage --coverage.reporter=json --coverage.reportOnFailure \
+            --reporter=default --reporter=blob
+      - name: Upload raw shard evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-coverage
-          path: |
-            coverage.out
-            coverage.html
-            coverage.txt
-            coverage-by-package.txt
-            coverage-by-file.txt
-            coverage-summary.md
-            test-events.json
+          name: frontend-test-${{ matrix.shard }}
+          path: web/.vitest-reports/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
 
-  frontend:
-    name: Frontend (lint + test + build)
-    # Pinned to ubuntu-latest to match the Backend job: the arc-runner is
-    # too resource-starved for vitest's default 5s testTimeout (45+ tests
-    # routinely time out under load even though the same suite finishes
-    # in ~80s locally and on ubuntu-latest). Re-pin to arc-runner once
-    # the runner image has the bandwidth budget for jsdom + chart-heavy
-    # component trees.
+  frontend-coverage:
+    name: Merge frontend coverage
+    if: always()
+    needs: frontend-tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -221,18 +375,17 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - run: npm ci --legacy-peer-deps
-      - name: Lint
-        run: npm run lint
-      - name: Transform pipeline uses no deprecated Vite options
-        # CLEAN-02: Vitest 4 resolves its own nested Vite 8 (rolldown/OXC),
-        # where the esbuild-era options @vitejs/plugin-react@4 sets are
-        # deprecated. Static config assertions cannot see a *dependency* start
-        # doing this after an upgrade; this boots the real runtime.
-        run: npm run check:vite-deprecations
-      - name: Test
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: frontend-test-*
+          path: web/.vitest-reports
+          merge-multiple: true
+      - name: Reject missing tests and merge native coverage maps
         run: |
-          mkdir -p coverage
-          npx vitest run --coverage --reporter=verbose --reporter=json --outputFile=coverage/vitest-results.json
+          npx vitest list --filesOnly --json=vitest-discovery.json
+          node ../.github/scripts/check_vitest_blobs.mjs .vitest-reports "$FRONTEND_SHARDS" vitest-discovery.json
+          npx vitest --mergeReports=.vitest-reports --coverage \
+            --reporter=default --reporter=json --outputFile.json=coverage/vitest-results.json
 
       - name: Generate frontend coverage report
         if: always() && (hashFiles('web/coverage/coverage-summary.json') != '' || hashFiles('web/coverage/vitest-results.json') != '')
@@ -250,16 +403,19 @@ jobs:
         with:
           name: frontend-coverage
           path: web/coverage/
+          if-no-files-found: error
 
-      - name: Build
-        run: npm run build
-
-      - name: No source maps in the publishable build
-        # CLEAN-04: `npm run build` sets no VITE_SOURCEMAP_MODE, so
-        # `build.sourcemap` is false and dist/ must contain zero `.map` files
-        # and zero sourceMappingURL references. postbuild already runs this;
-        # repeated here as an explicit, greppable CI assertion.
-        run: npm run check:source-maps
+  frontend:
+    name: Frontend (lint + test + build)
+    if: always()
+    needs: [frontend-checks, frontend-tests, frontend-coverage]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every frontend job
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required frontend job failed, was cancelled, or was skipped"'
 
   docker:
     name: Docker · ${{ matrix.image }}
@@ -269,7 +425,6 @@ jobs:
     # run). GitHub-hosted ubuntu-latest finishes all three images
     # consistently. Override via the workflow_dispatch `runner` input.
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
-    needs: [backend, frontend]
     strategy:
       fail-fast: false
       matrix:

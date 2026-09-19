@@ -69,10 +69,42 @@ jobs:
       - run: npm run e2e:scenario-contract
       - run: npm run e2e:list
 
-  chromium-quality:
-    name: Chromium responsive, a11y, keyboard, and performance
+  browser-build:
+    name: Shared hermetic browser build
     runs-on: ubuntu-latest
-    needs: contract
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npm run e2e:build
+        env:
+          E2E_MOCKS: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-app
+          path: web/e2e/.app-dist/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  chromium-tests:
+    name: Chromium ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    needs: browser-build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: responsive-1, suite: quality, shard: '1/4'}
+          - {name: responsive-2, suite: quality, shard: '2/4'}
+          - {name: responsive-3, suite: quality, shard: '3/4'}
+          - {name: responsive-4, suite: quality, shard: '4/4'}
+          - {name: accessibility, suite: a11y, shard: '1/1'}
+          - {name: performance, suite: performance, shard: '1/1'}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -82,61 +114,45 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
       - run: npx playwright install --with-deps chromium
-      - name: Build once and run Chromium gates
-        shell: bash
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-app
+          path: web/e2e/.app-dist
+      - name: Run isolated Chromium suite
         env:
           E2E_MOCKS: '1'
-        run: |
-          set -euo pipefail
-          npm run e2e:build
-          mkdir -p test-results
-          node node_modules/vite/bin/vite.js preview \
-            --outDir e2e/.app-dist --host 127.0.0.1 --port 4173 --strictPort \
-            > test-results/preview.log 2>&1 &
-          PREVIEW_PID=$!
-          cleanup() {
-            kill "$PREVIEW_PID" 2>/dev/null || true
-            wait "$PREVIEW_PID" 2>/dev/null || true
-          }
-          trap cleanup EXIT
-          for attempt in $(seq 1 120); do
-            if curl --fail --silent --show-error http://127.0.0.1:4173/ >/dev/null; then
-              break
-            fi
-            if ! kill -0 "$PREVIEW_PID" 2>/dev/null; then
-              cat test-results/preview.log
-              exit 1
-            fi
-            if [ "$attempt" -eq 120 ]; then
-              cat test-results/preview.log
-              exit 1
-            fi
-            sleep 1
-          done
-          export E2E_BASE_URL=http://127.0.0.1:4173
-          export E2E_SKIP_WEBSERVER=1
-          npm run e2e:quality:run
-          npm run e2e:performance:run
-          npm run e2e:a11y:run
-          if grep -Eiq 'ECONNREFUSED|proxy error|http proxy error' test-results/preview.log; then
-            cat test-results/preview.log
-            exit 1
-          fi
+          E2E_REUSE_BUILD: '1'
+        run: npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }}
       - name: Upload Chromium failure evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: chromium-quality-report
+          name: chromium-${{ matrix.name }}-report
           if-no-files-found: ignore
           retention-days: 14
           path: |
             web/test-results/
             web/playwright-report/
 
+  chromium-quality:
+    name: Chromium responsive, a11y, keyboard, and performance
+    if: always()
+    needs: [contract, browser-build, chromium-tests]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Require every Chromium gate
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required browser job failed, was cancelled, or was skipped"'
+
   cross-browser:
     name: ${{ matrix.browser }} critical smoke
     runs-on: ubuntu-latest
-    needs: contract
+    needs: browser-build
     strategy:
       fail-fast: false
       matrix:
@@ -150,44 +166,15 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
       - run: npx playwright install --with-deps ${{ matrix.browser }}
-      - name: Build once and run lightweight engine smoke
-        shell: bash
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-app
+          path: web/e2e/.app-dist
+      - name: Run lightweight engine smoke
         env:
           E2E_MOCKS: '1'
-        run: |
-          set -euo pipefail
-          npm run e2e:build
-          mkdir -p test-results
-          node node_modules/vite/bin/vite.js preview \
-            --outDir e2e/.app-dist --host 127.0.0.1 --port 4173 --strictPort \
-            > test-results/preview.log 2>&1 &
-          PREVIEW_PID=$!
-          cleanup() {
-            kill "$PREVIEW_PID" 2>/dev/null || true
-            wait "$PREVIEW_PID" 2>/dev/null || true
-          }
-          trap cleanup EXIT
-          for attempt in $(seq 1 120); do
-            if curl --fail --silent --show-error http://127.0.0.1:4173/ >/dev/null; then
-              break
-            fi
-            if ! kill -0 "$PREVIEW_PID" 2>/dev/null; then
-              cat test-results/preview.log
-              exit 1
-            fi
-            if [ "$attempt" -eq 120 ]; then
-              cat test-results/preview.log
-              exit 1
-            fi
-            sleep 1
-          done
-          export E2E_BASE_URL=http://127.0.0.1:4173
-          export E2E_SKIP_WEBSERVER=1
-          npx playwright test --project=${{ matrix.browser }}-smoke
-          if grep -Eiq 'ECONNREFUSED|proxy error|http proxy error' test-results/preview.log; then
-            cat test-results/preview.log
-            exit 1
-          fi
+          E2E_REUSE_BUILD: '1'
+        run: npm run e2e -- --project=${{ matrix.browser }}-smoke
       - name: Upload engine failure evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -199,10 +186,14 @@ jobs:
             web/test-results/
             web/playwright-report/
 
-  visual:
-    name: Deliberate visual snapshot gate (Windows baseline)
+  visual-tests:
+    name: Windows visual snapshots (${{ matrix.shard }}/4)
     runs-on: windows-latest
-    needs: contract
+    needs: browser-build
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -212,65 +203,40 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
       - run: npx playwright install chromium
-      - name: Build once and compare committed snapshots
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-app
+          path: web/e2e/.app-dist
+      - name: Compare committed Windows snapshots
         env:
           E2E_MOCKS: '1'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          npm run e2e:build
-          if ($LASTEXITCODE -ne 0) { throw "E2E build failed: $LASTEXITCODE" }
-          New-Item -ItemType Directory -Force test-results | Out-Null
-          $preview = Start-Process -FilePath node -ArgumentList @(
-            'node_modules/vite/bin/vite.js',
-            'preview',
-            '--outDir', 'e2e/.app-dist',
-            '--host', '127.0.0.1',
-            '--port', '4173',
-            '--strictPort'
-          ) -PassThru -RedirectStandardOutput test-results/preview.log -RedirectStandardError test-results/preview-error.log
-          try {
-            $ready = $false
-            for ($attempt = 1; $attempt -le 120; $attempt++) {
-              if ($preview.HasExited) {
-                Get-Content test-results/preview*.log -ErrorAction SilentlyContinue
-                throw "Vite preview exited before readiness: $($preview.ExitCode)"
-              }
-              try {
-                $response = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4173/ -TimeoutSec 2
-                if ($response.StatusCode -eq 200) { $ready = $true; break }
-              } catch {}
-              Start-Sleep -Seconds 1
-            }
-            if (-not $ready) {
-              Get-Content test-results/preview*.log -ErrorAction SilentlyContinue
-              throw 'Vite preview was not ready within 120 seconds'
-            }
-            $env:E2E_BASE_URL = 'http://127.0.0.1:4173'
-            $env:E2E_SKIP_WEBSERVER = '1'
-            npm run e2e:visual:run
-            if ($LASTEXITCODE -ne 0) { throw "Visual suite failed: $LASTEXITCODE" }
-            $proxyLeak = Select-String -Path test-results/preview*.log -Pattern 'ECONNREFUSED|proxy error|http proxy error' -ErrorAction SilentlyContinue
-            if ($proxyLeak) {
-              $proxyLeak | ForEach-Object { Write-Error $_.Line }
-              throw 'E2E preview emitted a proxy/network escape error'
-            }
-          } finally {
-            if (-not $preview.HasExited) {
-              Stop-Process -Id $preview.Id
-              $preview.WaitForExit(5000)
-            }
-          }
+          E2E_REUSE_BUILD: '1'
+        run: npm run e2e:visual -- --shard=${{ matrix.shard }}/4 --workers=2
       - name: Upload visual diffs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: visual-regression-report
+          name: visual-regression-report-${{ matrix.shard }}
           if-no-files-found: ignore
           retention-days: 14
           path: |
             web/test-results/
             web/playwright-report/
+
+  visual:
+    name: Deliberate visual snapshot gate (Windows baseline)
+    if: always()
+    needs: [contract, browser-build, visual-tests]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Require every Windows snapshot shard
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required visual job failed, was cancelled, or was skipped"'
 
   authenticated-production-smoke:
     name: Optional authenticated production smoke
