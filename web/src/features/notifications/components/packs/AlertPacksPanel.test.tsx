@@ -65,16 +65,44 @@ beforeEach(() => {
 })
 
 describe('Alert Packs', () => {
+  it('renders a flat property grid with no grouped editors or mysterious default behavior option', () => {
+    setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
+    const table = screen.getByRole('table', { name: 'Choose rules' })
+    expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
+      'Selected', 'Rule', 'Operator', 'Value', 'Cooldown (min)', 'Alert behavior', 'Channels', 'Notification message', 'Include title', 'Defaults',
+    ])
+    for (const cell of within(table).getAllByRole('cell')) {
+      expect(cell.querySelectorAll('input,select,textarea').length).toBeLessThanOrEqual(1)
+    }
+    const behavior = screen.getAllByLabelText('Alert behavior')[0]
+    expect(within(behavior).getAllByRole('option').map(option => option.textContent)).toEqual(['Once per condition', 'Repeat while active'])
+    expect(behavior).toHaveValue('once')
+    expect(screen.getByRole('region', { name: 'Pack defaults' })).toBeInTheDocument()
+  })
+
+  it('keeps title inheritance independent and resets only delivery overrides', () => {
+    setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
+    const title = screen.getAllByRole('checkbox', { name: 'Include title in notifications' })[0]
+    fireEvent.change(screen.getByLabelText('Default title inclusion'), { target: { value: 'false' } })
+    expect(title).not.toBeChecked()
+    fireEvent.click(title)
+    fireEvent.change(screen.getByLabelText('Default title inclusion'), { target: { value: 'true' } })
+    fireEvent.change(screen.getByLabelText('Default title inclusion'), { target: { value: 'false' } })
+    expect(title).toBeChecked()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Reset delivery to pack defaults' })[0])
+    expect(title).not.toBeChecked()
+  })
+
   it('keeps overrides field-specific and resetting delivery preserves messages, operators and channels', async () => {
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     await waitFor(() => expect(screen.getAllByLabelText('Channels')[0]).toBeEnabled())
     fireEvent.change(screen.getAllByLabelText('Minimum minutes between notifications')[0], { target: { value: '120' } })
-    fireEvent.change(screen.getByLabelText('Master alert behavior'), { target: { value: 'repeat' } })
-    expect(screen.getAllByLabelText('Alert behavior')[0]).toHaveValue('')
+    fireEvent.change(screen.getByLabelText('Default alert behavior'), { target: { value: 'repeat' } })
+    expect(screen.getAllByLabelText('Alert behavior')[0]).toHaveValue('repeat')
     fireEvent.change(screen.getAllByLabelText('Operator')[0], { target: { value: '>=' } })
     fireEvent.change(screen.getAllByLabelText('Channels')[0], { target: { value: '2' } })
     fireEvent.change(screen.getAllByLabelText('Notification message')[0], { target: { value: 'My reviewed message' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Reset to master' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Reset delivery to pack defaults' })[0])
     expect(screen.getAllByLabelText('Minimum minutes between notifications')[0]).toHaveValue(60)
     expect(screen.getAllByLabelText('Operator')[0]).toHaveValue('>=')
     expect(screen.getAllByLabelText('Channels')[0]).toHaveValue('custom')
@@ -146,7 +174,7 @@ describe('Alert Packs', () => {
     expect(screen.getAllByLabelText('Minimum minutes between notifications')).toHaveLength(2)
     expect(screen.getAllByLabelText('Alert behavior')).toHaveLength(2)
     expect(screen.getAllByLabelText('Channels')).toHaveLength(2)
-    expect(screen.queryByRole('button', { name: 'Apply master settings to all rules' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Apply defaults to all rules' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Customize/ })).not.toBeInTheDocument()
     fireEvent.focus(screen.getAllByLabelText('Notification message')[0])
     fireEvent.blur(screen.getAllByLabelText('Notification message')[0])
@@ -159,8 +187,8 @@ describe('Alert Packs', () => {
     vi.mocked(useMediaQuery).mockReturnValue(false)
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Master cooldown (minutes)')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Master settings/ })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByLabelText('Default cooldown (minutes)')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Pack defaults/ })).toHaveAttribute('aria-expanded', 'false')
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '25' } })
     expect(screen.getAllByLabelText('Notification message')).toHaveLength(2)
     fireEvent.change(screen.getByRole('combobox', { name: 'Show rules' }), { target: { value: 'customized' } })
@@ -173,15 +201,15 @@ describe('Alert Packs', () => {
   it('inherits master settings, preserves individual overrides, and explicitly reapplies master settings', async () => {
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
-    fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value: '15' } })
-    fireEvent.change(screen.getByLabelText('Master alert behavior'), { target: { value: 'repeat' } })
+    fireEvent.change(screen.getByLabelText('Default cooldown (minutes)'), { target: { value: '15' } })
+    fireEvent.change(screen.getByLabelText('Default alert behavior'), { target: { value: 'repeat' } })
     expect(screen.getAllByLabelText('Minimum minutes between notifications')[0]).toHaveValue(15)
     fireEvent.change(screen.getAllByLabelText('Minimum minutes between notifications')[0], { target: { value: '120' } })
     fireEvent.change(screen.getAllByLabelText('Alert behavior')[0], { target: { value: 'once' } })
-    fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText('Default cooldown (minutes)'), { target: { value: '30' } })
     expect(screen.getAllByLabelText('Minimum minutes between notifications')[0]).toHaveValue(120)
     expect(screen.getAllByLabelText('Minimum minutes between notifications')[1]).toHaveValue(30)
-    fireEvent.click(screen.getByRole('button', { name: 'Apply master settings to all rules' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply defaults to all rules' }))
     expect(screen.getAllByLabelText('Minimum minutes between notifications').every(input => (input as HTMLInputElement).value === '30')).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
     await waitFor(() => {
@@ -204,10 +232,10 @@ describe('Alert Packs', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select all matching rules' }))
     expect(screen.getByText('2 of 2 rules selected')).toBeInTheDocument()
     for (const value of ['', '0', '1.5', '10081']) {
-      fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value } })
+      fireEvent.change(screen.getByLabelText('Default cooldown (minutes)'), { target: { value } })
       expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeDisabled()
     }
-    fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText('Default cooldown (minutes)'), { target: { value: '1' } })
     expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled()
   })
 

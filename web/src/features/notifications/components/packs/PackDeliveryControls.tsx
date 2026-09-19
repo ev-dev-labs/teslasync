@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Caption, Input, Select } from '@/components/ui'
+import { Input, Select } from '@/components/ui'
 import type { PackSelection } from '@/api/hooks/useAlertPacks'
 
 export type PackDelivery = Required<Pick<PackSelection, 'cooldown_s' | 'trigger_mode' | 'include_title'>>
@@ -9,30 +9,30 @@ interface Props {
   value: PackDelivery
   onChange: (value: PackDelivery) => void
   disabled: boolean
-  master?: boolean
-  compact?: boolean
 }
 
-export default function PackDeliveryControls({ value, onChange, disabled, master = false, compact = false }: Props) {
+export default function PackDeliveryControls({ value, onChange, disabled }: Props) {
   const { t } = useTranslation()
   const id = useId()
   return (
-    <div className="@container space-y-2">
-      <div className="grid gap-3 @sm:grid-cols-2">
-        <Input id={`${id}-cooldown`} label={master ? t('alertPacks.masterCooldown', 'Master cooldown (minutes)') : t('alertPacks.cooldown', 'Minimum minutes between notifications')}
+    <>
+        <Input id={`${id}-cooldown`} label={t('alertPacks.cooldownCompact', 'Cooldown (min)')}
+          aria-label={t('alertPacks.masterCooldown', 'Default cooldown (minutes)')} className="h-11"
           type="number" min={1} max={10080} step={1} value={Number.isNaN(value.cooldown_s) ? '' : value.cooldown_s / 60}
           disabled={disabled} onChange={e => onChange({ ...value, cooldown_s: e.target.value === '' ? NaN : Number(e.target.value) * 60 })} />
-        <Select id={`${id}-mode`} label={master ? t('alertPacks.masterBehavior', 'Master alert behavior') : t('alertPacks.behavior', 'Alert behavior')}
+        <Select id={`${id}-mode`} label={t('alertPacks.masterBehavior', 'Default alert behavior')}
+          aria-label={t('alertPacks.masterBehavior', 'Default alert behavior')} className="h-11"
           value={value.trigger_mode} disabled={disabled}
           options={[
-            { value: 'once', label: compact ? t('alertPacks.onceShort', 'Once per condition') : t('alertPacks.behaviorOnce', 'Once until condition resets') },
-            { value: 'repeat', label: compact ? t('alertPacks.repeatShort', 'Repeat while active') : t('alertPacks.behaviorRepeat', 'Repeat after cooldown while active') },
+            { value: 'once', label: t('alertPacks.onceShort', 'Once per condition') },
+            { value: 'repeat', label: t('alertPacks.repeatShort', 'Repeat while active') },
           ]}
           onChange={e => onChange({ ...value, trigger_mode: e.target.value === 'repeat' ? 'repeat' : 'once' })} />
-      </div>
-      {!compact && <Caption className="block">{value.trigger_mode === 'repeat'
-        ? t('alertPacks.repeat', 'Repeats while the condition remains true, no more often than the cooldown. Changed-value rules still require a new change.')
-        : t('alertPacks.once', 'Fires once when the condition becomes true; resets when it becomes false. Changed-value rules fire on each change, subject to cooldown.')}</Caption>}
-    </div>
+        <Select id={`${id}-title`} label={t('alertPacks.titleColumn', 'Include title')}
+          aria-label={t('alertPacks.defaultTitle', 'Default title inclusion')} className="h-11"
+          value={String(value.include_title)} disabled={disabled}
+          options={[{ value: 'true', label: t('common.yes', 'Yes') }, { value: 'false', label: t('common.no', 'No') }]}
+          onChange={event => onChange({ ...value, include_title: event.target.value === 'true' })} />
+    </>
   )
 }

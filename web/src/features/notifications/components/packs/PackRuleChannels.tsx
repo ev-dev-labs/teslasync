@@ -16,7 +16,7 @@ export default function PackRuleChannels({ id, channels, value, disabled, onChan
   const { t } = useTranslation()
   return <div className="space-y-2">
     <Select id={`pack-${id}-channels`} label={compact ? undefined : t('alertPacks.channels', 'Channels')}
-      aria-label={t('alertPacks.channels', 'Channels')}
+      aria-label={t('alertPacks.channels', 'Channels')} className="h-11"
       disabled={disabled} value={value === null ? 'all' : value.length ? 'custom' : 'none'}
       options={[
         { value: 'all', label: t('alertPacks.inheritChannels', 'All enabled channels') },

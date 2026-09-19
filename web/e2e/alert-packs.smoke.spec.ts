@@ -103,7 +103,7 @@ for (const theme of ['light', 'dark'] as const) {
   })
 }
 
-for (const width of [320, 390, 768, 1440]) {
+for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
   for (const theme of ['light', 'dark'] as const) {
     test(`alert pack controls and Helix proposal stay readable at ${width}px ${theme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 1000 })
@@ -171,11 +171,29 @@ for (const width of [320, 390, 768, 1440]) {
       expect(footerBox!.y + footerBox!.height).toBeLessThanOrEqual(1001)
       await expect(dialog.getByRole('button', { name: /^Customize / })).toHaveCount(0)
       await dialog.screenshot({ path: test.info().outputPath('pack-overview.png') })
-      if (width < 1024) await dialog.getByRole('button', { name: /Master settings/ }).click()
-      await expect(dialog.getByLabel('Master cooldown (minutes)')).toBeVisible()
-      await dialog.getByLabel('Master cooldown (minutes)').fill('15')
-      await dialog.getByLabel('Master alert behavior').selectOption('repeat')
-      if (width < 1024) await dialog.getByRole('button', { name: /Master settings/ }).click()
+      if (width < 1024) await dialog.getByRole('button', { name: /Pack defaults/ }).click()
+      await expect(dialog.getByLabel('Default cooldown (minutes)')).toBeVisible()
+      if (width >= 1024) {
+        const controls = dialog.locator('[data-pack-default-controls]').locator('input, select, button[aria-haspopup="listbox"]')
+        await expect(controls).toHaveCount(5)
+        const positions = await controls.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().y))
+        expect(Math.max(...positions) - Math.min(...positions), 'Default controls must share one aligned row').toBeLessThanOrEqual(2)
+        const table = dialog.getByRole('table', { name: 'Choose rules' })
+        await expect(table.getByRole('columnheader')).toHaveText([
+          'Selected', 'Rule', 'Operator', 'Value', 'Cooldown (min)', 'Alert behavior', 'Channels', 'Notification message', 'Include title', 'Defaults',
+        ])
+        expect(await table.getByRole('columnheader').evaluateAll(headers => headers.every(header => getComputedStyle(header).textAlign === 'left'))).toBe(true)
+        const row = table.locator('tbody tr').first()
+        expect((await row.boundingBox())!.height, 'Rows must be compact, not stacked mini-forms').toBeLessThanOrEqual(100)
+        expect(await row.getByRole('cell').evaluateAll(cells => cells.every(cell => cell.querySelectorAll('input,select,textarea').length <= 1))).toBe(true)
+        const rowPositions = await row.locator('input:not([type="checkbox"]), select, textarea').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().y))
+        expect(Math.max(...rowPositions) - Math.min(...rowPositions), 'Each cell editor must start at the same vertical position').toBeLessThanOrEqual(2)
+      }
+      await dialog.getByLabel('Default cooldown (minutes)').fill('15')
+      await dialog.getByLabel('Default alert behavior').selectOption('repeat')
+      if (width < 1024) await dialog.getByRole('button', { name: /Pack defaults/ }).click()
+      await expect(dialog.getByLabel('Alert behavior', { exact: true }).first()).toHaveValue('repeat')
+      await expect(dialog.getByRole('option', { name: /^Master:/ })).toHaveCount(0)
       await dialog.getByLabel('Minimum minutes between notifications', { exact: true }).first().fill('120')
       await dialog.getByLabel('Operator', { exact: true }).first().selectOption('<=')
       await dialog.getByLabel('Threshold (%)', { exact: true }).first().fill('25')
@@ -206,10 +224,10 @@ for (const width of [320, 390, 768, 1440]) {
       await dialog.getByRole('button', { name: 'Previous', exact: true }).click()
       await expect(dialog.getByLabel('Minimum minutes between notifications', { exact: true }).first()).toHaveValue('120')
       await dialog.screenshot({ path: test.info().outputPath('pack-rule-editor.png') })
-      if (width < 1024) await dialog.getByRole('button', { name: /Master settings/ }).click()
-      await dialog.getByRole('button', { name: 'Apply master settings to all rules' }).click()
+      if (width < 1024) await dialog.getByRole('button', { name: /Pack defaults/ }).click()
+      await dialog.getByRole('button', { name: 'Apply defaults to all rules' }).click()
       await expect(dialog.getByLabel('Minimum minutes between notifications', { exact: true }).first()).toHaveValue('15')
-      if (width < 1024) await dialog.getByRole('button', { name: /Master settings/ }).click()
+      if (width < 1024) await dialog.getByRole('button', { name: /Pack defaults/ }).click()
       expect(await dialog.evaluate(el => el.scrollWidth > el.clientWidth + 1)).toBe(false)
       await dialog.screenshot({ path: test.info().outputPath('pack-controls.png') })
       expect(installations).toHaveLength(0)

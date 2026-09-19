@@ -17,6 +17,7 @@ import PackRuleTriggerEditor from './PackRuleTriggerEditor'
 import PackRuleDeliveryEditor from './PackRuleDeliveryEditor'
 import PackRuleMessageEditor from './PackRuleMessageEditor'
 import PackRuleChannels from './PackRuleChannels'
+import PackRuleResetButton from './PackRuleResetButton'
 import PackDeliveryControls, { type PackDelivery } from './PackDeliveryControls'
 
 interface Props {
@@ -87,10 +88,10 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
     onChange: (choice: PackSelection) => setSelections(previous => ({ ...previous, [template.id]: choice })),
   })
   const columns: Column<PackTemplate>[] = [
-    { key: 'selection', header: t('alertPacks.selected', 'Selected'), className: 'w-12', render: template =>
+    { key: 'selection', header: t('alertPacks.selected', 'Selected'), align: 'left', className: 'w-16', render: template => <div className="flex h-11 items-center">
       <Checkbox aria-label={t(`alertPacks.rules.${template.id}.name`, template.rule.name)}
-        checked={selected.includes(template.id)} disabled={install.isPending} onChange={checked => toggleRule(template.id, checked)} /> },
-    { key: 'rule', header: t('alertPacks.rule', 'Rule'), className: 'min-w-32 max-w-48 whitespace-normal', render: template => <div className="min-w-0 space-y-1">
+        checked={selected.includes(template.id)} disabled={install.isPending} onChange={checked => toggleRule(template.id, checked)} /></div> },
+    { key: 'rule', header: t('alertPacks.rule', 'Rule'), align: 'left', className: 'min-w-48 max-w-60 whitespace-normal', render: template => <div className="min-w-0 space-y-1">
       <Text as="p" variant="bodySm" weight="medium">
         {t(`alertPacks.rules.${template.id}.name`, template.rule.name)}
       </Text>
@@ -99,35 +100,45 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
         {customized.has(template.id) && <Badge variant="info" size="sm">{t('alertPacks.customized', 'Customized')}</Badge>}
       </div>
     </div> },
-    { key: 'condition', header: t('alertPacks.trigger', 'Trigger'), className: 'min-w-44 max-w-56 whitespace-normal', render: template => <PackRuleTriggerEditor {...ruleProps(template)} /> },
-    { key: 'delivery', header: t('alertPacks.deliverySettings', 'Delivery'), className: 'min-w-48 max-w-56 whitespace-normal', render: template => <PackRuleDeliveryEditor {...ruleProps(template)} /> },
-    { key: 'channels', header: t('alertPacks.channels', 'Channels'), className: 'min-w-40 max-w-48 whitespace-normal', render: template => <PackRuleChannels
+    { key: 'operator', header: t('alertPacks.operator', 'Operator'), align: 'left', className: 'min-w-32 w-32', render: template =>
+      <PackRuleTriggerEditor {...ruleProps(template)} field="operator" compact /> },
+    { key: 'value', header: t('alertPacks.valueColumn', 'Value'), align: 'left', className: 'min-w-32 w-32', render: template =>
+      <PackRuleTriggerEditor {...ruleProps(template)} field="value" compact /> },
+    { key: 'cooldown', header: t('alertPacks.cooldownCompact', 'Cooldown (min)'), align: 'left', className: 'min-w-32 w-32', render: template =>
+      <PackRuleDeliveryEditor {...ruleProps(template)} field="cooldown" compact /> },
+    { key: 'behavior', header: t('alertPacks.behavior', 'Alert behavior'), align: 'left', className: 'min-w-48 w-48', render: template =>
+      <PackRuleDeliveryEditor {...ruleProps(template)} field="behavior" compact /> },
+    { key: 'channels', header: t('alertPacks.channels', 'Channels'), align: 'left', className: 'min-w-56 w-56 whitespace-normal', render: template => <PackRuleChannels
       id={template.id} value={selections[template.id].channel_ids ?? null} channels={channels.data ?? []} disabled={install.isPending || channels.isLoading} compact
       onChange={channel_ids => ruleProps(template).onChange({ ...selections[template.id], channel_ids })} /> },
-    { key: 'message', header: t('alertPacks.message', 'Notification message'), className: 'min-w-72 w-1/3 whitespace-normal', render: template => <PackRuleMessageEditor {...ruleProps(template)} compact /> },
+    { key: 'message', header: t('alertPacks.message', 'Notification message'), align: 'left', className: 'min-w-80 whitespace-normal', render: template => <PackRuleMessageEditor {...ruleProps(template)} compact /> },
+    { key: 'title', header: t('alertPacks.titleColumn', 'Include title'), align: 'left', className: 'w-24', render: template =>
+      <PackRuleDeliveryEditor {...ruleProps(template)} field="title" compact /> },
+    { key: 'defaults', header: t('alertPacks.defaultsColumn', 'Defaults'), align: 'left', className: 'w-16', render: template =>
+      <PackRuleResetButton {...ruleProps(template)} /> },
   ]
-  const settings = <div className="grid gap-4 md:grid-cols-3">
-    <div className="space-y-2">
-    <PackDeliveryControls value={master} onChange={setMaster} disabled={install.isPending} master compact />
-    <Checkbox label={t('alertPacks.includeTitle', 'Include title in notifications')} checked={master.include_title} disabled={install.isPending}
-      onChange={include_title => setMaster(previous => ({ ...previous, include_title }))} />
-    {overrideCount > 0 && <Button variant="secondary" size="sm" className="h-auto whitespace-normal" disabled={install.isPending}
-      onClick={() => setSelections(previous => Object.fromEntries(Object.entries(previous).map(
-        ([id, { cooldown_s: _cooldown, trigger_mode: _mode, include_title: _title, ...choice }]) => [id, choice],
-      )))}>{t('alertPacks.applyMaster', 'Apply master settings to all rules')}</Button>}
-    </div>
-    <div className="space-y-2">
-      <label htmlFor={vehicleId}><Caption>{t('alertPacks.vehicles', 'Vehicles')}</Caption></label>
+  const settings = <div className="space-y-3">
+    <div data-pack-default-controls className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(7rem,1fr)_minmax(11rem,1.3fr)_minmax(7rem,1fr)_minmax(12rem,1.5fr)_minmax(13rem,1.5fr)]">
+    <PackDeliveryControls value={master} onChange={setMaster} disabled={install.isPending} />
+    <div className="space-y-1">
+      <label htmlFor={vehicleId} className="flex items-center"><Text size="sm" weight="medium" color="secondary">{t('alertPacks.vehicles', 'Vehicles')}</Text></label>
       {vehicles.isLoading ? <Spinner /> : state.fatalError ? <ErrorDisplay error={state.fatalError} onRetry={() => void vehicles.refetch()} />
-        : <VehicleMultiSelect id={vehicleId} vehicles={vehicles.data ?? []} value={vehicleSelection} disabled={install.isPending} onChange={setVehicleSelection} />}
+        : <VehicleMultiSelect id={vehicleId} vehicles={vehicles.data ?? []} value={vehicleSelection} disabled={install.isPending} onChange={setVehicleSelection}
+          className="[&>button]:h-11 [&>button]:rounded-shape-md [&>button]:border-[var(--control-border)] [&>button]:bg-[var(--control-bg)]" />}
       <StaleRefreshWarning state={state} />
     </div>
-    <div className="space-y-2">
-    <Select label={t('alertPacks.afterInstall', 'After installation')} value={enabled ? 'enabled' : 'paused'} disabled={install.isPending}
+    <Select label={t('alertPacks.afterInstall', 'After installation')} value={enabled ? 'enabled' : 'paused'} disabled={install.isPending} className="h-11"
       options={[{ value: 'paused', label: t('alertPacks.keepPaused', 'Keep paused (recommended)') },
         { value: 'enabled', label: t('alertPacks.enableImmediately', 'Enable immediately') }]}
       onChange={event => setEnabled(event.target.value === 'enabled')} />
-    <Accordion title={t('alertPacks.howInstallWorks', 'How installation works')} headerClassName="px-0 py-2" bodyClassName="space-y-3 px-0 py-3">
+    </div>
+    <div className="flex flex-wrap items-start gap-2">
+      <Caption className="min-w-48 flex-1">{t('alertPacks.masterHelp', 'Rows follow these defaults until you edit them. Reset delivery to follow the defaults again.')}</Caption>
+      {overrideCount > 0 && <Button variant="secondary" size="sm" className="h-auto min-h-11 whitespace-normal" disabled={install.isPending}
+        onClick={() => setSelections(previous => Object.fromEntries(Object.entries(previous).map(
+          ([id, { cooldown_s: _cooldown, trigger_mode: _mode, include_title: _title, ...choice }]) => [id, choice],
+        )))}>{t('alertPacks.applyMaster', 'Apply defaults to all rules')}</Button>}
+    <Accordion title={t('alertPacks.howInstallWorks', 'How installation works')} className="max-w-full" headerClassName="px-2 py-1" bodyClassName="max-w-prose space-y-3 p-3">
       <Text as="p" variant="bodySm">{t(`alertPacks.catalog.${pack.id}.description`, pack.description)}</Text>
       <Caption className="block">{t('alertPacks.delivery', 'Uses your existing notification channels, preferences and quiet hours. No vehicle commands are sent. Telemetry availability varies by vehicle.')}</Caption>
       <Caption className="block">{t('alertPacks.duplicates', 'Matching triggers for the same vehicle selection are reused unchanged, even if disabled. Different thresholds or overlapping vehicle selections may still produce similar notifications.')}</Caption>
@@ -176,39 +187,39 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       </div> : <div className="space-y-4">
         {pack.id === 'custom' && <Input label={t('alertPacks.packName', 'Pack name')} value={name} maxLength={100} disabled={install.isPending} onChange={e => setName(e.target.value)} />}
         <div className="min-w-0 space-y-4">
-          {desktop ? <section aria-label={t('alertPacks.masterSettings', 'Master settings')} className="space-y-3 self-start rounded-lg bg-[var(--surface-2)] p-4">
-            <PanelTitle>{t('alertPacks.masterSettings', 'Master settings')}</PanelTitle>{settings}
-          </section> : <Accordion title={t('alertPacks.masterSettings', 'Master settings')} icon={<Icons.settings className="h-4 w-4" />}
+          {desktop ? <section aria-label={t('alertPacks.masterSettings', 'Pack defaults')} className="space-y-3 self-start rounded-lg bg-[var(--surface-2)] p-4">
+            <PanelTitle>{t('alertPacks.masterSettings', 'Pack defaults')}</PanelTitle>{settings}
+          </section> : <Accordion title={t('alertPacks.masterSettings', 'Pack defaults')} icon={<Icons.settings className="h-4 w-4" />}
             className="border-[var(--border-default)] bg-[var(--surface-2)]"
             badge={<Badge>{t('alertPacks.cooldownSummary', '{{minutes}} min', { minutes: Number.isFinite(master.cooldown_s) ? master.cooldown_s / 60 : '—' })}</Badge>}>
             {settings}
           </Accordion>}
           <section aria-label={t('alertPacks.chooseRules', 'Choose rules')} className="min-w-0 space-y-3">
-            <div className="space-y-1">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <PanelTitle>{t('alertPacks.chooseRules', 'Choose rules')}</PanelTitle>
-              <Caption className="block">{t('alertPacks.chooseBrief', 'Edit each rule directly. Delivery settings follow the master until you change them. Nothing is saved until you install.')}</Caption>
+              <Caption className="block">{t('alertPacks.chooseBrief', 'Edit fields directly. Focus a message to read more. Nothing is saved until you install.')}</Caption>
             </div>
             {channels.isLoading && <Spinner />}
             {channelState.fatalError && <ErrorDisplay error={channelState.fatalError} onRetry={() => void channels.refetch()} />}
             {!channels.isLoading && !channelState.fatalError && channels.data?.length === 0 && <Caption className="block">{t('alertPacks.noConfiguredChannels', 'No external channels configured.')}</Caption>}
             <StaleRefreshWarning state={channelState} />
-            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-              <SearchInput value={search} onChange={value => { setSearch(value); setPage(0) }} placeholder={t('alertPacks.searchRules', 'Search pack rules...')} />
-              <Select aria-label={t('alertPacks.showRules', 'Show rules')} value={view} onChange={event => { setView(event.target.value); setPage(0) }}
-                options={[{ value: 'all', label: t('alertPacks.allRules', 'All rules') },
-                  { value: 'selected', label: t('alertPacks.selected', 'Selected') },
-                  { value: 'customized', label: t('alertPacks.customized', 'Customized') }]} />
-            </div>
-            <div className="flex min-h-9 flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <Checkbox label={t('alertPacks.selectAll', 'Select all')} aria-label={t('alertPacks.selectVisible', 'Select all matching rules')}
                 checked={allMatchingSelected} indeterminate={!allMatchingSelected && filtered.some(rule => selected.includes(rule.id))}
                 disabled={install.isPending || filtered.length === 0} onChange={checked => setSelected(ids => checked
                   ? [...new Set([...ids, ...filtered.map(rule => rule.id)])] : ids.filter(id => !filtered.some(rule => rule.id === id)))} />
+              <div className="min-w-40 flex-1">
+                <SearchInput value={search} onChange={value => { setSearch(value); setPage(0) }} placeholder={t('alertPacks.searchRules', 'Search pack rules...')} />
+              </div>
+              <Select aria-label={t('alertPacks.showRules', 'Show rules')} value={view} onChange={event => { setView(event.target.value); setPage(0) }}
+                options={[{ value: 'all', label: t('alertPacks.allRules', 'All rules') },
+                  { value: 'selected', label: t('alertPacks.selected', 'Selected') },
+                  { value: 'customized', label: t('alertPacks.customized', 'Customized') }]} />
               <Caption>{t('alertPacks.showingRules', '{{count}} matching rules', { count: filtered.length })}</Caption>
             </div>
             {desktop ? <DataTable tableId="notifications:pack-preview" caption={t('alertPacks.chooseRules', 'Choose rules')} columns={columns} density="compact"
-              data={visible} keyExtractor={template => template.id} className="[&_td]:align-top"
-              mobileColumns={['selection', 'rule', 'condition', 'delivery', 'channels', 'message']} />
+              data={visible} keyExtractor={template => template.id} className="[&_td]:align-top [&_th]:whitespace-nowrap [&_th]:text-left"
+              mobileColumns={columns.map(column => column.key)} />
               : <div className="space-y-2">{visible.map(template => <PackRulePreview key={template.id} {...ruleProps(template)} />)}</div>}
             {filtered.length === 0 && <div className="space-y-2 rounded-lg border border-[var(--border-default)] p-4">
               <Caption className="block">{t('alertPacks.noMatchingRules', 'No matching rules. Clear the search to see the full pack.')}</Caption>

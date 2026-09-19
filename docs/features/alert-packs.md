@@ -19,20 +19,23 @@ current and future vehicles or a specific subset, and review each trigger,
 severity, message and cooldown. Numeric operands use canonical units; temperature
 inputs are explicitly Celsius and the preview also displays your preferred unit.
 
-Desktop previews use an editable table; phones and tablets expose the same fields
-on cards. Edit operators, numeric thresholds, cooldowns, behavior, channels and
-notification messages directly, without expanding a rule. Message fields grow on
-focus. Changing pages, filters or layouts preserves edits.
+Desktop previews use a flat editable table: operator, value, cooldown, behavior,
+channels, message and title inclusion each have their own aligned column, with
+no nested forms inside cells. Phones and tablets expose the same fields on cards.
+Message fields grow on focus. Narrow desktop windows scroll the table horizontally
+instead of squeezing its controls. Changing pages, filters or layouts preserves edits.
 Use **All rules**, **Selected** or **Customized** to narrow the list. The persistent
 footer shows the selected count, whether new rules will start paused, and the
 explicit installation action.
 
-**Master settings** above the table or in the mobile disclosure set cooldown, once/repeat behavior and title
-inclusion for the whole pack. Editing a row creates an override for that field;
-other fields still follow their master defaults. **Reset to master** clears that
-row's delivery overrides. Later master changes affect inherited fields only; **Apply master
-settings to all rules** explicitly clears the individual delivery overrides.
-Messages, thresholds and selection are preserved. Master settings are installation
+**Pack defaults** above the table or in the mobile disclosure set cooldown,
+once/repeat behavior and title inclusion for the whole pack. Desktop controls
+share one aligned row. Each rule displays its effective settings, not a separate
+"Master" option in its behavior dropdown. Editing a cell creates an override for
+that field; other fields continue to follow the defaults.
+The reset icon in the **Defaults** column clears that rule's delivery overrides.
+**Apply defaults to all rules** explicitly clears every delivery override.
+Messages, operators, thresholds, channels and selection are preserved. Defaults are installation
 defaults, not a live link that subsequently changes installed rules.
 
 Each message has a small Helix action when message-template suggestions are

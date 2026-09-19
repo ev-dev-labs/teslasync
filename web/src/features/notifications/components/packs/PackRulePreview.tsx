@@ -8,6 +8,7 @@ import PackRuleTriggerEditor from './PackRuleTriggerEditor'
 import PackRuleDeliveryEditor from './PackRuleDeliveryEditor'
 import PackRuleMessageEditor from './PackRuleMessageEditor'
 import PackRuleChannels from './PackRuleChannels'
+import PackRuleResetButton from './PackRuleResetButton'
 
 interface Props {
   template: PackTemplate
@@ -36,12 +37,18 @@ export default function PackRulePreview(props: Props) {
         </div>
       </div>
     </div>
-    <PackRuleTriggerEditor {...props} />
-    <PackRuleMessageEditor {...props} />
     <div className="grid gap-3 sm:grid-cols-2">
-      <PackRuleDeliveryEditor {...props} />
+      <PackRuleTriggerEditor {...props} field="operator" />
+      <PackRuleTriggerEditor {...props} field="value" />
+      <PackRuleDeliveryEditor {...props} field="cooldown" />
+      <PackRuleDeliveryEditor {...props} field="behavior" />
       <PackRuleChannels id={template.id} value={selection.channel_ids ?? null} channels={channels} disabled={disabled}
         onChange={channel_ids => onChange({ ...selection, channel_ids })} />
+    </div>
+    <PackRuleMessageEditor {...props} />
+    <div className="flex items-center justify-between gap-2">
+      <PackRuleDeliveryEditor {...props} field="title" />
+      <PackRuleResetButton {...props} />
     </div>
   </section>
 }
