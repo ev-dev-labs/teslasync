@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { load } from 'js-yaml';
 import { AXE_DEBT_BY_ROUTE } from './axeBaseline';
 import { isSensitiveRun, resolveStorageState } from './configEnv';
 import { isSsePath, resolveApiFixture } from './mockApi';
@@ -136,31 +137,44 @@ test('authenticated smoke records only sanitized aggregate status', () => {
   expect(productionJob).not.toContain('web/playwright-report/');
 });
 
-test('CI builds once per browser job and reuses one preview', () => {
-  const workflow = readFileSync(resolve(process.cwd(), '..', '.github', 'workflows', 'frontend-quality.yml'), 'utf8');
-  const job = (name: string, next?: string) => {
-    const start = workflow.split(`  ${name}:`)[1];
-    return next ? start.split(`  ${next}:`)[0] : start;
-  };
-  const count = (source: string, value: string) => source.split(value).length - 1;
-  const contract = job('contract', 'chromium-quality');
-  const chromium = job('chromium-quality', 'cross-browser');
-  const crossBrowser = job('cross-browser', 'visual');
-  const visual = job('visual', 'authenticated-production-smoke');
-  const authenticated = job('authenticated-production-smoke');
+test('CI shares one hermetic build and gives each browser shard one managed preview', () => {
+  interface WorkflowStep {
+    run?: string;
+    uses?: string;
+    with?: Record<string, unknown>;
+    env?: Record<string, string>;
+  }
+  const workflow = load(readFileSync(
+    resolve(process.cwd(), '..', '.github', 'workflows', 'frontend-quality.yml'), 'utf8',
+  )) as { jobs: Record<string, { needs?: string; steps: WorkflowStep[] }> };
+  const build = workflow.jobs['browser-build'];
+  const buildSteps = Object.values(workflow.jobs).flatMap(job =>
+    job.steps.filter(step => step.run?.includes('npm run e2e:build')));
+  expect(buildSteps).toHaveLength(1);
+  expect(build.steps).toContain(buildSteps[0]);
+  expect(buildSteps[0].env).toMatchObject({ E2E_MOCKS: '1' });
+  expect(build.steps.find(step => step.uses?.startsWith('actions/upload-artifact'))?.with)
+    .toMatchObject({ name: 'e2e-app', path: 'web/e2e/.app-dist/', 'if-no-files-found': 'error' });
 
-  expect(count(contract, 'npm run e2e:build')).toBe(0);
-  expect(count(chromium, 'npm run e2e:build')).toBe(1);
-  expect(count(crossBrowser, 'npm run e2e:build')).toBe(1);
-  expect(count(visual, 'npm run e2e:build')).toBe(1);
-  expect(count(authenticated, 'npm run e2e:build')).toBe(0);
-  expect(chromium).toContain('npm run e2e:quality:run');
-  expect(chromium).toContain('npm run e2e:performance:run');
-  expect(chromium).toContain('npm run e2e:a11y:run');
-  expect(crossBrowser).toContain('E2E_SKIP_WEBSERVER=1');
-  expect(visual).toContain("npm run e2e:visual:run");
-  expect(workflow).not.toContain('npm run e2e:quality\n');
-  expect(workflow).not.toContain('npm run e2e:visual\n');
+  for (const [id, command] of [
+    ['chromium-tests', 'npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }}'],
+    ['cross-browser', 'npm run e2e -- --project=${{ matrix.browser }}-smoke'],
+    ['visual-tests', 'npm run e2e:visual -- --shard=${{ matrix.shard }}/4 --workers=2'],
+  ]) {
+    const job = workflow.jobs[id];
+    expect(job.needs).toBe('browser-build');
+    expect(job.steps.find(step => step.uses?.startsWith('actions/download-artifact'))?.with)
+      .toMatchObject({ name: 'e2e-app', path: 'web/e2e/.app-dist' });
+    expect(job.steps.find(step => step.run === command)?.env)
+      .toMatchObject({ E2E_REUSE_BUILD: '1', E2E_MOCKS: '1' });
+  }
+
+  const { scripts } = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as {
+    scripts: Record<string, string>;
+  };
+  for (const suite of ['e2e', 'e2e:quality', 'e2e:performance', 'e2e:a11y', 'e2e:visual']) {
+    expect(scripts[suite]).toBe(`node scripts/run-e2e-suite.mjs ${suite}:run`);
+  }
 });
 
 test('local suite wrapper separates build time from preview readiness', () => {
