@@ -46,6 +46,16 @@ function getDialog(): HTMLElement {
 }
 
 describe('Modal — visibility', () => {
+  it('keeps footer actions inside the focus trap but outside the scrolling body', () => {
+    render(<Modal open title="Preview" onClose={vi.fn()} footer={<button>Install</button>}><p>Rules</p></Modal>);
+    const action = screen.getByRole('button', { name: 'Install' });
+    expect(getDialog()).toContainElement(action);
+    expect(action.closest('[data-modal-scroll-body]')).toBeNull();
+    expect(action.closest('[data-modal-footer]')).not.toBeNull();
+    action.focus();
+    fireEvent.keyDown(action, { key: 'Tab' });
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+  });
   it('renders nothing when open is false', () => {
     render(
       <Modal open={false} onClose={() => {}} title="Hidden">

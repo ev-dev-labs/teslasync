@@ -20,8 +20,8 @@ import type { AppSettings } from '@/api/types'
  *
  * Mirrors `validateConfigRequest` in
  * `internal/api/ai_settings_validate_handler.go`. Cloud mode uses the
- * extended set (api_key / model / api_version / flavor / deployment /
- * embedding_*); local mode only consults `mode` + `base_url`. All
+ * extended set (api_key / model / api_protocol / embedding_model);
+ * local mode only consults `mode` + `base_url`. All
  * cloud fields are optional and fall back to the saved per-provider
  * entry server-side, so editing one field doesn't force the user to
  * re-state the rest.
@@ -32,11 +32,8 @@ export interface ValidateAiProviderRequest {
   base_url?: string
   api_key?: string
   model?: string
-  api_version?: string
-  flavor?: string
-  deployment?: string
+  api_protocol?: string
   embedding_model?: string
-  embedding_deployment?: string
 }
 
 /**
@@ -76,9 +73,8 @@ export interface ValidateAiProviderSuccess {
  * no registered adapter.
  * - `missing_api_key` — cloud probe needs an API key (request
  * omitted it AND no saved key fallback).
- * - `missing_base_url` — Azure flavor needs a resource endpoint.
- * - `missing_deployment`— Azure OpenAI Service flavor needs a
- * deployment name (or model) to route to.
+ * - `missing_base_url` — Foundry needs a resource endpoint.
+ * - `missing_deployment`— Foundry needs a deployment name.
  * - `unauthorized` — provider returned 401/403 (bad key).
  * - `not_found` — provider returned 404 (bad URL or
  * deployment slug).

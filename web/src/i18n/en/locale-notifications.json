@@ -1,4 +1,504 @@
 {
+  "alertPacks": {
+    "defaultChannels": "Default channels",
+    "valueColumn": "Value",
+    "titleColumn": "Include title",
+    "defaultsColumn": "Defaults",
+    "defaultTitle": "Default title inclusion",
+    "changedOperator": "Changes",
+    "anyValue": "Any value",
+    "temperatureValueHelp": "Enter Celsius. Display equivalent: {{value}}",
+    "operator": "Operator",
+    "cooldownCompact": "Cooldown (min)",
+    "onceTiny": "Once",
+    "repeatTiny": "Repeat",
+    "messageRequired": "Enter a notification message.",
+    "channels": "Channels",
+    "channelsSelected": "{{count}} selected",
+    "removeChannel": "Remove {{name}}",
+    "noConfiguredChannels": "No external channels configured.",
+    "masterBehaviorValue": "Master: {{behavior}}",
+    "masterCooldownShort": "Cooldown follows master",
+    "resetMaster": "Reset delivery to pack defaults",
+    "helixMessage": "Suggest a message for {{name}}",
+    "customizeRule": "Customize {{name}}",
+    "customized": "Customized",
+    "customDelivery": "Own settings · {{minutes}} min",
+    "followsMaster": "Follows master settings",
+    "inheritedDelivery": "{{minutes}} min cooldown · {{behavior}} · changes to master settings apply automatically.",
+    "excludedRule": "Not selected for installation. Your edits are kept if you select it again.",
+    "selected": "Selected",
+    "rule": "Rule",
+    "trigger": "Trigger",
+    "deliverySettings": "Delivery",
+    "cooldownSummary": "{{minutes}} min",
+    "onceShort": "Once per condition",
+    "repeatShort": "Repeat while active",
+    "individualShort": "Individual",
+    "masterShort": "Master",
+    "masterBrief": "Defaults for every selected rule. Customize a rule only when it needs different settings.",
+    "vehicles": "Vehicles",
+    "afterInstall": "After installation",
+    "keepPaused": "Keep paused (recommended)",
+    "enableImmediately": "Enable immediately",
+    "howInstallWorks": "How installation works",
+    "enabledSummary": "New rules will be enabled",
+    "pausedSummary": "New rules will be paused for review",
+    "installCount": "Install {{count}} rules",
+    "chooseRules": "Choose rules",
+    "chooseBrief": "Edit fields directly. Focus a message to read more. Nothing is saved until you install.",
+    "showRules": "Show rules",
+    "allRules": "All rules",
+    "showingRules": "{{count}} matching rules",
+    "selectAll": "Select all",
+    "matchingCount": "{{count}} of {{total}}",
+    "clearFilters": "Clear filters",
+    "filterAllChannels": "All channels",
+    "filterAutomatic": "Automatic routing",
+    "deleteRulesTitle_one": "Delete {{count}} rule?",
+    "deleteRulesTitle_other": "Delete {{count}} rules?",
+    "noFilteredRules": "No rules match the current search and channel filter.",
+    "noMatchingRules": "No matching rules. Clear the search to see the full pack.",
+    "rulePage": "Page {{page}} of {{total}}",
+    "masterSettings": "Pack defaults",
+    "masterCooldown": "Default cooldown (minutes)",
+    "masterBehavior": "Default alert behavior",
+    "masterHelp": "Rows follow these defaults until you edit them. Reset delivery to follow the defaults again.",
+    "applyMaster": "Apply defaults to all rules",
+    "individualSettings": "Use individual delivery settings",
+    "includeTitle": "Include title in notifications",
+    "behavior": "Alert behavior",
+    "behaviorOnce": "Once until condition resets",
+    "behaviorRepeat": "Repeat after cooldown while active",
+    "repeat": "Repeats while the condition remains true, no more often than the cooldown. Changed-value rules still require a new change.",
+    "searchRules": "Search pack rules...",
+    "selectedCount": "{{selected}} of {{total}} rules selected",
+    "selectVisible": "Select all matching rules",
+    "deselectVisible": "Deselect matching rules",
+    "proposedCount": "{{count}} proposed rules",
+    "proposedRules": "Proposed rules",
+    "bulkDeleted": "{{count}} rules deleted",
+    "bulkDeleteFailed": "Deletion did not finish. Refresh the list to review remaining rules before retrying.",
+    "ruleChannels": "Channels for {{name}}",
+    "channelHelp": "Choose external delivery channels for this rule. Browser notifications and quiet hours are unchanged. Disabled channels do not deliver.",
+    "allChannels": "All enabled channels, including future channels",
+    "noExternalHelp": "No external channels selected. This rule still appears in the browser.",
+    "clearMissingChannels": "Remove unavailable channel selections",
+    "deleteRulesTitle": "Delete {{count}} rules?",
+    "deleteRulesHelp": "This permanently deletes the chosen rules, including any edits. Pack membership will be updated. Rules outside this selection are kept.",
+    "channelFilter": "Filter by notification channel",
+    "anyChannel": "Any channel selection",
+    "inheritChannels": "All enabled channels",
+    "noExternal": "No external channels",
+    "selectAllRules": "Select all matching rules",
+    "deleteSelected": "Delete selected",
+    "deleteAll": "Delete all matching rules",
+    "listScope": "Selection and deletion apply to the loaded rules matching your search and channel filter.",
+    "missingChannel": "Unavailable channel #{{id}}",
+    "title": "Alert Packs",
+    "intro": "Start with a goal, not a blank rule. Preview a curated group, choose your vehicles and install ordinary, independently editable rules.",
+    "search": "Search packs...",
+    "preview": "Preview {{name}}",
+    "previewAction": "Preview pack",
+    "ruleCount": "{{count}} rules · version {{version}}",
+    "noMatches": "No matching packs",
+    "trySearch": "Try another search or clear the filter.",
+    "clear": "Clear search",
+    "installedTitle": "Installed packs",
+    "refresh": "Refresh",
+    "noneInstalled": "No packs on this page",
+    "choosePack": "Preview a pack above to get started. Existing rules and templates are unchanged.",
+    "previous": "Previous",
+    "next": "Next",
+    "once": "Fires once when the condition becomes true; resets when it becomes false. Changed-value rules fire on each change, subject to cooldown.",
+    "threshold": "Threshold ({{unit}})",
+    "canonicalTemperature": "Enter Celsius; the trigger summary above also shows your preferred temperature unit.",
+    "cooldown": "Minimum minutes between notifications",
+    "message": "Notification message",
+    "placeholders": "Keep the double-braced placeholder names unchanged.",
+    "unsaved": "You have an uninstalled alert pack configuration.",
+    "installed": "Pack installed. Created {{created}} rules; reused {{reused}} existing rules without changing them.",
+    "created": "Created",
+    "reused": "Existing rule kept unchanged",
+    "disabled": "disabled",
+    "enabled": "Enabled",
+    "done": "Done",
+    "delivery": "Uses your existing notification channels, preferences and quiet hours. No vehicle commands are sent. Telemetry availability varies by vehicle.",
+    "duplicates": "Matching triggers for the same vehicle selection are reused unchanged, even if disabled. Different thresholds or overlapping vehicle selections may still produce similar notifications.",
+    "enableInstall": "Enable newly created rules immediately",
+    "disabledDefault": "New rules are disabled by default so you can review them. Existing rules keep their current enabled state.",
+    "invalid": "Select at least one rule and a vehicle scope, and check message, threshold and cooldown values.",
+    "install": "Install selected rules",
+    "cancel": "Cancel",
+    "discard": "Discard this pack configuration? No rules have been installed.",
+    "discardConfirm": "Discard configuration",
+    "keepEditing": "Keep editing",
+    "installedVersion": "Version {{version}} · installed {{date}}",
+    "allVehicles": "All current and future vehicles",
+    "vehicleScope": "Vehicle IDs: {{ids}}",
+    "editIndividually": "Rules remain independent. Edit, enable, disable or delete them in the existing rule editor. Pack updates never overwrite your changes.",
+    "deleted": "Deleted",
+    "shared": "Shared with another pack",
+    "editRule": "Edit {{name}}",
+    "edit": "Edit rule",
+    "remove": "Remove pack",
+    "removeTitle": "Remove {{name}}",
+    "removeHelp": "By default, all rules are kept. Select only the rules you also want to delete, including any edits you made to them. Existing or shared rules cannot be deleted here.",
+    "deleteCount": "{{count}} rules selected for deletion.",
+    "confirmRemove": "Confirm removal",
+    "ruleMissing": "This rule is no longer available. Refresh the rule list.",
+    "packName": "Pack name",
+    "aiTitle": "Build a custom pack with Helix",
+    "aiDescription": "Describe your goal, from a focused group to comprehensive coverage. Helix selects supported rules; you review defaults and individual overrides before installing.",
+    "aiGenerate": "Suggest an alert pack",
+    "goal": "What would you like to keep an eye on?",
+    "goalExample": "For example: a low-noise group for charging and battery on longer trips",
+    "aiReview": "Review this proposed pack",
+    "catalog": {
+      "all": {
+        "name": "All alerts",
+        "description": "Every unique rule from every supported pack in one installation. Review the selection: overlapping thresholds and frequent state changes can be noisy. Vehicle support and telemetry availability vary."
+      },
+      "everyday": {
+        "name": "Everyday essentials",
+        "description": "Battery, charging, locks, gear selection, home arrivals and departures, and software reminders for daily ownership."
+      },
+      "charging": {
+        "name": "Charging companion",
+        "description": "Charging starts, stops and completion, port and latch changes, fast-charger connections, schedules and cold-weather preparation."
+      },
+      "security": {
+        "name": "Security settings",
+        "description": "Locks, PIN, valet, guest mode, Sentry and window changes. These are not intrusion detection or parked-only rules."
+      },
+      "trip": {
+        "name": "Road-trip companion",
+        "description": "Layered battery reminders, charging, gear selection, navigation changes and weather preparation for longer journeys."
+      },
+      "climate": {
+        "name": "Cabin comfort",
+        "description": "Cabin and outside temperatures, preconditioning, climate power and keeper modes. Not an occupant-safety monitor."
+      },
+      "battery": {
+        "name": "Battery watch",
+        "description": "Layered battery thresholds, charge limits, battery heating, BMS completion and module temperatures."
+      },
+      "driving": {
+        "name": "Drive and arrival",
+        "description": "Gear changes, driver presence and navigation. Individual signals do not prove a journey started or that the vehicle is moving."
+      },
+      "locations": {
+        "name": "Places and routines",
+        "description": "Home, work, saved favorites and destination changes using the vehicle's location flags."
+      },
+      "software": {
+        "name": "Software watch",
+        "description": "Update availability, progress, schedules and version changes. A stopped update is not proof of success."
+      },
+      "media": {
+        "name": "Soundtrack companion",
+        "description": "Track, artist, station, source and playback changes. May be chatty; review cooldowns before enabling."
+      },
+      "powershare": {
+        "name": "Powershare watch",
+        "description": "Power-sharing state, type and stop reasons, with battery-reserve reminders. Requires a vehicle that supports Powershare."
+      },
+      "winter": {
+        "name": "Cold-weather readiness",
+        "description": "Cold cabin and battery, preconditioning, heating and charge-port cold-weather mode. Not a road-ice or occupant-safety detector."
+      },
+      "handover": {
+        "name": "Shared vehicle handover",
+        "description": "Lock, PIN, valet, guest mode and driver-presence changes. Review access settings yourself; no commands are issued."
+      },
+      "custom": {
+        "name": "Custom pack",
+        "description": "Choose supported rules to build your own group."
+      }
+    },
+    "rules": {
+      "battery-reserve": {
+        "name": "Battery reserve below 30%",
+        "message": "{{VehicleName}} has {{Value}}% remaining. A good moment to plan the next plug-in."
+      },
+      "battery-full": {
+        "name": "Battery above 90%",
+        "message": "{{VehicleName}} has reached {{Value}}%. Plenty in the battery for the next chapter."
+      },
+      "battery-heating": {
+        "name": "Battery heater active",
+        "message": "{{VehicleName}} is warming its battery. Cold-weather preparation is underway."
+      },
+      "battery-heating-ended": {
+        "name": "Battery heater stopped",
+        "message": "{{VehicleName}} reports its battery heater has stopped."
+      },
+      "bms-full": {
+        "name": "BMS full charge complete",
+        "message": "{{VehicleName}} reports its battery-management full-charge cycle complete."
+      },
+      "module-hot": {
+        "name": "Battery module temperature high",
+        "message": "{{VehicleName}} reports a warm battery module. Review the temperature trend; this alert does not diagnose a fault."
+      },
+      "module-cold": {
+        "name": "Battery module temperature low",
+        "message": "{{VehicleName}} has a cold battery module. Charging and regeneration may be limited."
+      },
+      "charge-port-open": {
+        "name": "Charge port opened",
+        "message": "{{VehicleName}} has opened its charge port. Ready for a connection."
+      },
+      "charge-port-closed": {
+        "name": "Charge port closed",
+        "message": "{{VehicleName}} reports its charge port closed."
+      },
+      "fast-charger": {
+        "name": "Fast charger connected",
+        "message": "{{VehicleName}} has detected a fast charger. Watch the charging session for actual power."
+      },
+      "fast-charger-left": {
+        "name": "Fast charger disconnected",
+        "message": "{{VehicleName}} no longer detects a fast charger."
+      },
+      "charge-scheduled": {
+        "name": "Scheduled charging pending",
+        "message": "{{VehicleName}} is waiting on its charging schedule."
+      },
+      "charge-schedule-mode": {
+        "name": "Charging schedule changed",
+        "message": "{{VehicleName}} has a new charging schedule mode: {{Value}}."
+      },
+      "charge-latch": {
+        "name": "Charge port latch changed",
+        "message": "{{VehicleName}} reports a charge-port latch change: {{Value}}."
+      },
+      "charge-cold-weather": {
+        "name": "Charge port cold-weather mode",
+        "message": "{{VehicleName}} has enabled charge-port cold-weather mode."
+      },
+      "locked": {
+        "name": "Vehicle locked",
+        "message": "{{VehicleName}} reports locked. One less thing to double-check."
+      },
+      "pin-enabled": {
+        "name": "PIN to Drive enabled",
+        "message": "{{VehicleName}} reports PIN to Drive enabled."
+      },
+      "valet-disabled": {
+        "name": "Valet mode disabled",
+        "message": "{{VehicleName}} reports Valet Mode disabled. Review access settings when keys change hands."
+      },
+      "guest-enabled": {
+        "name": "Guest mode enabled",
+        "message": "{{VehicleName}} reports Guest Mode enabled."
+      },
+      "guest-disabled": {
+        "name": "Guest mode disabled",
+        "message": "{{VehicleName}} reports Guest Mode disabled."
+      },
+      "sentry-state": {
+        "name": "Sentry mode changed",
+        "message": "{{VehicleName}} changed Sentry Mode to {{Value}}. A mode change is not evidence of an intrusion."
+      },
+      "window-driver": {
+        "name": "Driver window changed",
+        "message": "{{VehicleName}} reports the driver window is {{Value}}."
+      },
+      "window-rear-driver": {
+        "name": "Rear driver window changed",
+        "message": "{{VehicleName}} reports the rear driver window is {{Value}}."
+      },
+      "drive-started": {
+        "name": "Drive gear selected",
+        "message": "{{VehicleName}} has selected Drive. The next chapter is ahead."
+      },
+      "drive-parked": {
+        "name": "Park gear selected",
+        "message": "{{VehicleName}} has selected Park. Take a breath before the next trip."
+      },
+      "drive-reverse": {
+        "name": "Reverse gear selected",
+        "message": "{{VehicleName}} has selected Reverse. A small step back before moving on."
+      },
+      "drive-neutral": {
+        "name": "Neutral gear selected",
+        "message": "{{VehicleName}} reports Neutral selected."
+      },
+      "driver-arrived": {
+        "name": "Driver seat occupied",
+        "message": "{{VehicleName}} reports the driver seat occupied."
+      },
+      "driver-left": {
+        "name": "Driver seat unoccupied",
+        "message": "{{VehicleName}} reports the driver seat unoccupied."
+      },
+      "driver-belt": {
+        "name": "Driver seatbelt changed",
+        "message": "{{VehicleName}} reports driver seatbelt state {{Value}}. This does not establish whether the vehicle is moving."
+      },
+      "home-arrived": {
+        "name": "Arrived home",
+        "message": "{{VehicleName}} reports home. The familiar end of a journey."
+      },
+      "home-left": {
+        "name": "Left home",
+        "message": "{{VehicleName}} no longer reports being at home."
+      },
+      "work-arrived": {
+        "name": "Arrived at work",
+        "message": "{{VehicleName}} reports arrival at work."
+      },
+      "work-left": {
+        "name": "Left work",
+        "message": "{{VehicleName}} no longer reports being at work."
+      },
+      "favorite-arrived": {
+        "name": "Arrived at a favorite location",
+        "message": "{{VehicleName}} reports arrival at a saved favorite."
+      },
+      "favorite-left": {
+        "name": "Left a favorite location",
+        "message": "{{VehicleName}} no longer reports being at a saved favorite."
+      },
+      "destination-changed": {
+        "name": "Navigation destination changed",
+        "message": "{{VehicleName}} has updated its destination: {{Value}}."
+      },
+      "preconditioning-ended": {
+        "name": "Preconditioning stopped",
+        "message": "{{VehicleName}} reports preconditioning has stopped."
+      },
+      "hvac-on": {
+        "name": "Climate system active",
+        "message": "{{VehicleName}} has switched climate on. Comfort is getting some attention."
+      },
+      "hvac-off": {
+        "name": "Climate system stopped",
+        "message": "{{VehicleName}} has switched climate off."
+      },
+      "climate-keeper": {
+        "name": "Climate keeper mode changed",
+        "message": "{{VehicleName}} reports climate keeper mode {{Value}}. Never use this notification as an occupant-safety monitor."
+      },
+      "climate-auto": {
+        "name": "Automatic climate mode changed",
+        "message": "{{VehicleName}} has changed automatic climate mode to {{Value}}."
+      },
+      "outside-hot": {
+        "name": "Outside temperature high",
+        "message": "{{VehicleName}} reports hot weather outside. Plan cabin comfort before departure."
+      },
+      "outside-freezing": {
+        "name": "Outside temperature below freezing",
+        "message": "{{VehicleName}} reports freezing air outside. This does not measure road conditions."
+      },
+      "update-available": {
+        "name": "Software update available",
+        "message": "{{VehicleName}} has a software update available. A new chapter is waiting."
+      },
+      "update-started": {
+        "name": "Software update in progress",
+        "message": "{{VehicleName}} is updating its software. Leave the update to finish."
+      },
+      "update-ended": {
+        "name": "Software update no longer in progress",
+        "message": "{{VehicleName}} no longer reports an update in progress. Check the vehicle for the outcome."
+      },
+      "update-version": {
+        "name": "Available software version changed",
+        "message": "{{VehicleName}} reports available software version {{Value}}."
+      },
+      "update-schedule": {
+        "name": "Software update schedule changed",
+        "message": "{{VehicleName}} changed its software update schedule: {{Value}}."
+      },
+      "media-track": {
+        "name": "Now-playing track changed",
+        "message": "{{VehicleName}} changed the soundtrack: {{Value}}."
+      },
+      "media-artist": {
+        "name": "Now-playing artist changed",
+        "message": "{{VehicleName}} is now showing artist {{Value}}."
+      },
+      "media-playback": {
+        "name": "Media playback changed",
+        "message": "{{VehicleName}} reports playback state {{Value}}."
+      },
+      "media-source": {
+        "name": "Media source changed",
+        "message": "{{VehicleName}} switched its audio source to {{Value}}."
+      },
+      "media-station": {
+        "name": "Media station changed",
+        "message": "{{VehicleName}} tuned to {{Value}}."
+      },
+      "powershare-state": {
+        "name": "Powershare state changed",
+        "message": "{{VehicleName}} reports Powershare state {{Value}}."
+      },
+      "powershare-stop": {
+        "name": "Powershare stop reason changed",
+        "message": "{{VehicleName}} reports Powershare stop reason {{Value}}. Review the vehicle for context."
+      },
+      "powershare-type": {
+        "name": "Powershare type changed",
+        "message": "{{VehicleName}} reports Powershare type {{Value}}."
+      },
+      "battery-low": {
+        "name": "Battery running low",
+        "message": "{{VehicleName}} is down to {{Value}}% battery. Time to put the next charge on the map."
+      },
+      "battery-critical": {
+        "name": "Battery critically low",
+        "message": "{{VehicleName}} has {{Value}}% battery remaining. Plan a safe charging stop."
+      },
+      "charge-complete": {
+        "name": "Charging complete",
+        "message": "{{VehicleName}} has finished its charging chapter. Next stop: your choice."
+      },
+      "charge-started": {
+        "name": "Charging started",
+        "message": "{{VehicleName}} is taking an electricity break. Charging has started."
+      },
+      "charge-stopped": {
+        "name": "Charging stopped",
+        "message": "{{VehicleName}} reports charging stopped. If that was not planned, check the session."
+      },
+      "unlocked": {
+        "name": "Vehicle unlocked",
+        "message": "{{VehicleName}} reports unlocked. A useful heads-up if you expected it to be locked."
+      },
+      "pin-disabled": {
+        "name": "PIN to Drive disabled",
+        "message": "{{VehicleName}} reports PIN to Drive disabled. Check this setting if the change was unexpected."
+      },
+      "valet-enabled": {
+        "name": "Valet mode enabled",
+        "message": "{{VehicleName}} reports Valet Mode enabled. The keys may be shared, but the settings are worth a glance."
+      },
+      "cabin-hot": {
+        "name": "Cabin temperature high",
+        "message": "{{VehicleName}} reports a hot cabin. Check cabin conditions before getting in; never rely on this alert for occupant safety."
+      },
+      "cabin-cold": {
+        "name": "Cabin below freezing",
+        "message": "{{VehicleName}} has a frosty cabin. Consider preconditioning before your next departure."
+      },
+      "software-version": {
+        "name": "Software version changed",
+        "message": "{{VehicleName}} has a new software chapter: {{Value}}. Take a look at the release notes."
+      },
+      "preconditioning": {
+        "name": "Preconditioning active",
+        "message": "{{VehicleName}} is getting ready: preconditioning is active."
+      },
+      "charge-limit": {
+        "name": "Charge limit changed",
+        "message": "{{VehicleName}} has a new charging target: {{Value}}%. Check that it suits your next journey."
+      }
+    }
+  },
   "alertRules": {
     "title": "Alert rules",
     "subtitle": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio.",

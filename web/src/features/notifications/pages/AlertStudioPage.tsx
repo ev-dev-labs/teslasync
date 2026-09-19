@@ -28,7 +28,7 @@ import { useAvailableSignals } from '@/api/hooks/useSignals'
 import type { AlertRuleKind, ComputedMetricOp, SignalUnitKind } from '@/api/types'
 import type { SignalValueType } from '@/types/signals'
 import { GlassPanel, Badge, Button as UiButton, Checkbox, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal, HelpIcon, Tabs, Toggle, Text, PanelTitle, Caption, HelperText, ErrorText } from '@/components/ui'
-import { BulkActionsToolbar, type BulkAction, MetricCard, SeverityBadge, SeverityIcon } from '@/components/data-display'
+import { type BulkAction, MetricCard, SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { AlertBanner, DraftRecoveryBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
@@ -48,7 +48,11 @@ import { alertRuleSchema } from '../schemas/alertRule'
 import { ruleTemplates, type RuleTemplate } from '../lib/alertRuleTemplates'
 import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
 import { AlertMessageEditor } from '../components/AlertMessageEditor'
+import AlertPacksPanel from '../components/packs/AlertPacksPanel'
+import RuleListTools from '../components/RuleListTools'
+import RuleChannelDialog from '../components/RuleChannelDialog'
 import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
+import { DEFAULT_ALERT_COOLDOWN_S, getAlertBehaviorOptions } from '../lib/alertDelivery'
 import { Icons } from '@/lib/icons';
 import { AINLAlertBuilder } from '@/components/ai/AINLAlertBuilder'
 import {
@@ -169,7 +173,7 @@ function freshEditor(): EditorState {
     value_min: '',
     value_max: '',
     severity: 'warn',
-    cooldown_min: 15,
+    cooldown_min: DEFAULT_ALERT_COOLDOWN_S / 60,
     // The default was 'repeat'. The
     // user-reported "locked vehicle alert spam" was caused by every
     // new rule silently inheriting 'repeat'. Now the editor opens
@@ -575,13 +579,15 @@ export default function AlertStudio() {
   const bulkEnableMut = useBulkEnableRules()
   const bulkDisableMut = useBulkDisableRules()
   const [showTemplates, setShowTemplates] = useState(false)
+  const [showPacks, setShowPacks] = useState(false)
   const [templateSearch, setTemplateSearch] = useState('')
   const [templateCategory, setTemplateCategory] = useState<string | null>(null)
   // Rule list search lives in the URL.
   const [ruleSearch, setRuleSearch] = useUrlString('q', '')
+  const [channelFilter, setChannelFilter] = useUrlString('channel', '')
+  const [channelRuleId, setChannelRuleId] = useState<number | null>(null)
   const [testChannelIds, setTestChannelIds] = useState<number[] | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const initialEditorRef = useRef<string>(JSON.stringify(freshEditor()))
 
   // `useFormDraft` resets its internal state during
   // render whenever `draftKey` changes (documented React 18 pattern).
@@ -629,10 +635,15 @@ export default function AlertStudio() {
       || JSON.stringify(v) === freshEditorJsonRef.current,
   })
 
-  const isDirty = useMemo(
-    () => JSON.stringify(editor) !== initialEditorRef.current,
-    [editor],
-  )
+  // A recovered draft is already persisted locally. Merely opening it is
+  // not a new edit; compare against what the user actually saw on entry.
+  const initialEditorRef = useRef<string>(JSON.stringify(editor))
+  const isDirty = JSON.stringify(editor) !== initialEditorRef.current
+
+  const handleDiscardDraft = useCallback(() => {
+    initialEditorRef.current = JSON.stringify(freshEditor())
+    discardDraft()
+  }, [discardDraft])
 
   // Derive the vehicle name surfaced in the
   // message-template preview. Mirrors the backend's
@@ -742,10 +753,14 @@ export default function AlertStudio() {
   )
 
   const filteredRules = useMemo(() => {
-    if (!ruleSearch) return rulesList
     const q = ruleSearch.toLowerCase()
-    return rulesList.filter(r => (r.name || '').toLowerCase().includes(q))
-  }, [rulesList, ruleSearch])
+    return rulesList.filter(r => (r.name || '').toLowerCase().includes(q) && (
+      !channelFilter
+      || (channelFilter === 'all' ? r.channel_ids == null
+        : channelFilter === 'none' ? r.channel_ids?.length === 0
+          : r.channel_ids == null || r.channel_ids.includes(Number(channelFilter)))
+    ))
+  }, [rulesList, ruleSearch, channelFilter])
 
   // Drop bulk selection whenever the visible result set changes — we never
   // want a "ghost" id remaining selected from a previous filter.
@@ -837,8 +852,7 @@ export default function AlertStudio() {
       label: t('notifications.alertStudio.editor.alertBehaviorPlaceholder', '— Choose one —'),
       disabled: true,
     },
-    { value: 'repeat', label: t('notifications.alertStudio.editor.alertBehavior.repeatLabel', 'Re-alert until resolved') },
-    { value: 'once', label: t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event') },
+    ...getAlertBehaviorOptions(t),
   ], [t])
 
   // Derived recommendation. Pure derivation, no
@@ -1354,6 +1368,9 @@ export default function AlertStudio() {
       error={error ?? null}
       actions={
         <>
+          <UiButton variant="ghost" size="sm" onClick={() => setShowPacks(value => !value)}>
+            {t('alertPacks.title', 'Alert Packs')}
+          </UiButton>
           <UiButton variant="ghost" size="sm" icon={<Icons.sparkles className="h-3.5 w-3.5 text-amber-300" />} onClick={() => setShowTemplates(!showTemplates)}>
             {t('notifications.alertStudio.actions.templates', 'Templates')}
           </UiButton>
@@ -1416,6 +1433,12 @@ export default function AlertStudio() {
           />
         </section>
       </FadeIn>
+
+      {showPacks && <AlertPacksPanel onEditRule={id => {
+        const rule = rulesList.find(item => item.id === id)
+        if (rule) handleSelectRule(rule)
+        else setFormError(t('alertPacks.ruleMissing', 'This rule is no longer available. Refresh the rule list.'))
+      }} />}
 
       {showTemplates && (
         <FadeIn>
@@ -1507,16 +1530,28 @@ export default function AlertStudio() {
               <Caption>{rulesCountLabel}</Caption>
             </div>
 
-            {rulesList.length > 3 && (
-              <div className="mb-3">
-                <SearchInput
-                  value={ruleSearch}
-                  onChange={setRuleSearch}
-                  placeholder={t('notifications.alertStudio.rules.searchPlaceholder', 'Search rules...')}
-                  className="w-full"
-                />
-              </div>
-            )}
+            <RuleListTools rules={filteredRules} selected={bulkSelected} onSelect={setBulkSelected}
+              total={rulesList.length} search={ruleSearch} onSearch={setRuleSearch}
+              actions={bulkRulesActions} busy={bulkEnableMut.isPending || bulkDisableMut.isPending}
+              channels={channelsList} channelFilter={channelFilter} onChannelFilter={setChannelFilter}
+              beforeDelete={async ids => {
+                if (!isDirty || selectedId == null || !ids.includes(selectedId)) return true
+                return confirmDiscard({ title: dirtyStrings.title, message: dirtyStrings.message,
+                  confirmLabel: dirtyStrings.discardLabel, cancelLabel: dirtyStrings.keepEditingLabel, variant: 'warning' })
+              }}
+              onDeleted={ids => {
+                clearBulk()
+                if (selectedId != null && ids.includes(selectedId)) {
+                  discardDraft()
+                  const blank = freshEditor()
+                  pendingHydrationRef.current = blank
+                  setSelectedId(null)
+                  setEditor(blank)
+                  initialEditorRef.current = JSON.stringify(blank)
+                  setFormError(null)
+                }
+              }} />
+            {channelsError && <ErrorDisplay error={channelsError} compact />}
 
             {isLoading && (
               <div className="space-y-2">
@@ -1536,20 +1571,9 @@ export default function AlertStudio() {
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Icons.search className="h-8 w-8 text-[var(--text-muted)]" />}
                 title={t('notifications.alertStudio.rules.noMatchesTitle', 'No matching rules')}
-                message={t('notifications.alertStudio.rules.noMatches', 'No rules match "{{search}}"', { search: ruleSearch })}
+                message={t('alertPacks.noFilteredRules', 'No rules match the current search and channel filter.')}
               />
             )}
-
-            <BulkActionsToolbar
-              selectedIds={Array.from(bulkSelected)}
-              total={filteredRules.length}
-              onClear={clearBulk}
-              actions={bulkRulesActions}
-              itemNoun={{
-                one: t('bulk.noun.rule_one', 'alert rule'),
-                other: t('bulk.noun.rule_other', 'alert rules'),
-              }}
-            />
 
             <ul className="max-h-[36rem] space-y-2 overflow-y-auto pr-1">
               {filteredRules.map(rule => {
@@ -1656,6 +1680,16 @@ export default function AlertStudio() {
                           <Icons.delete className="h-3.5 w-3.5 text-[var(--text-muted)] hover:text-rose-300" aria-hidden="true" />
                         </UiButton>
                       </div>
+                      <UiButton variant="ghost" size="sm" className="mt-2 h-auto max-w-full whitespace-normal break-words text-start"
+                        disabled={channelsLoading || Boolean(channelsError)}
+                        onClick={() => setChannelRuleId(rule.id)}
+                        aria-label={t('alertPacks.ruleChannels', 'Channels for {{name}}', { name: rule.name })}>
+                        <Icons.send className="me-2 h-3.5 w-3.5 shrink-0" />
+                        {rule.channel_ids == null ? t('alertPacks.inheritChannels', 'All enabled channels')
+                          : rule.channel_ids.length === 0 ? t('alertPacks.noExternal', 'No external channels')
+                            : rule.channel_ids.map(id => channelsList.find(channel => channel.id === id)?.name
+                              ?? t('alertPacks.missingChannel', 'Unavailable channel #{{id}}', { id })).join(', ')}
+                      </UiButton>
                     </GlassPanel>
                   </li>
                 )
@@ -1720,7 +1754,7 @@ export default function AlertStudio() {
                 <DraftRecoveryBanner
                   hasDraft={hasDraft}
                   draftSavedAt={draftSavedAt}
-                  onDiscard={discardDraft}
+                  onDiscard={handleDiscardDraft}
                   itemNoun={t('draft.noun.rule', 'Alert rule')}
                 />
               </div>
@@ -2370,6 +2404,8 @@ export default function AlertStudio() {
           </div>
         )}
       </Modal>
+      {channelRuleId != null && rulesList.find(rule => rule.id === channelRuleId) && <RuleChannelDialog
+        key={channelRuleId} rule={rulesList.find(rule => rule.id === channelRuleId)!} channels={channelsList} onClose={() => setChannelRuleId(null)} />}
       {deleteDialogProps && <ConfirmDialog {...deleteDialogProps} loading={deleteRuleMut.isPending} />}
       {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
     </PageContainer>

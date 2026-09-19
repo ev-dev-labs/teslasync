@@ -34,7 +34,7 @@ const alertRuleColumns = `id, name, description, enabled, vehicle_id, all_vehicl
 	max_fires_per_resolution,
 	escalation_after_min, escalation_severity,
 	msg_template, include_title,
-	created_at, updated_at`
+	created_at, updated_at, channel_ids`
 
 func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *alertmodel.AlertRule) error {
 	return row.Scan(
@@ -47,6 +47,7 @@ func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *alertmodel.Aler
 		&ar.EscalationAfterMin, &ar.EscalationSeverity,
 		&ar.MsgTemplate, &ar.IncludeTitle,
 		&ar.CreatedAt, &ar.UpdatedAt,
+		&ar.ChannelIDs,
 	)
 }
 
@@ -253,7 +254,7 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *alertmodel.A
 			max_fires_per_resolution=$23,
 			escalation_after_min=$24, escalation_severity=$25,
 			msg_template=$26, include_title=$27,
-			updated_at=$28
+			updated_at=$28, channel_ids=$29
 			WHERE id=$1`,
 			id, rule.Name, rule.Description, rule.Enabled, rule.VehicleID,
 			rule.AllVehicles,
@@ -264,7 +265,7 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *alertmodel.A
 			rule.MaxFiresPerResolution,
 			rule.EscalationAfterMin, rule.EscalationSeverity,
 			rule.MsgTemplate, rule.IncludeTitle,
-			time.Now().UTC())
+			time.Now().UTC(), rule.ChannelIDs)
 		if err != nil {
 			return err
 		}
@@ -314,6 +315,15 @@ func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*alertmodel.Aler
 // Create inserts the rule and its junction rows in a single transaction.
 // It uses the same validation and legacy-column mirroring contract as Update.
 func (r *AlertRuleRepo) Create(ctx context.Context, rule *alertmodel.AlertRule) error {
+	if err := validateVehicleSelection(rule.AllVehicles, rule.VehicleIDs); err != nil {
+		return err
+	}
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		return createRuleTx(ctx, tx, rule)
+	})
+}
+
+func createRuleTx(ctx context.Context, tx pgx.Tx, rule *alertmodel.AlertRule) error {
 	if rule.Kind == "" {
 		rule.Kind = alertmodel.AlertRuleKindSignal
 	}
@@ -324,8 +334,7 @@ func (r *AlertRuleRepo) Create(ctx context.Context, rule *alertmodel.AlertRule) 
 	rule.VehicleIDs = vehicleIDs
 	rule.VehicleID = legacyVehicleIDFor(rule.AllVehicles, vehicleIDs)
 
-	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
-		query := `INSERT INTO alert_rules (name, description, enabled, vehicle_id,
+	query := `INSERT INTO alert_rules (name, description, enabled, vehicle_id,
 			all_vehicles,
 			signal_name, op,
 			value_num, value_text, value_bool, value_min, value_max,
@@ -334,50 +343,66 @@ func (r *AlertRuleRepo) Create(ctx context.Context, rule *alertmodel.AlertRule) 
 			max_fires_per_resolution,
 			escalation_after_min, escalation_severity,
 			msg_template, include_title,
-			created_at, updated_at)
+			created_at, updated_at, channel_ids)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-				$16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW())
+				$16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW(), $27)
 			RETURNING id, created_at, updated_at`
-		err := tx.QueryRow(ctx, query, rule.Name, rule.Description, rule.Enabled,
-			rule.VehicleID, rule.AllVehicles,
-			rule.SignalName, rule.Op, rule.ValueNum, rule.ValueText,
-			rule.ValueBool, rule.ValueMin, rule.ValueMax, rule.Severity, rule.CooldownMin,
-			rule.TriggerMode, rule.SnoozedUntil,
-			rule.Kind, rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp,
-			rule.MaxFiresPerResolution,
-			rule.EscalationAfterMin, rule.EscalationSeverity,
-			rule.MsgTemplate, rule.IncludeTitle).
-			Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
-		if err != nil {
-			return err
-		}
-		if !rule.AllVehicles && len(vehicleIDs) > 0 {
-			batch := &pgx.Batch{}
-			for _, vid := range vehicleIDs {
-				batch.Queue(
-					`INSERT INTO alert_rule_vehicles (rule_id, vehicle_id) VALUES ($1, $2)
+	err := tx.QueryRow(ctx, query, rule.Name, rule.Description, rule.Enabled,
+		rule.VehicleID, rule.AllVehicles,
+		rule.SignalName, rule.Op, rule.ValueNum, rule.ValueText,
+		rule.ValueBool, rule.ValueMin, rule.ValueMax, rule.Severity, rule.CooldownMin,
+		rule.TriggerMode, rule.SnoozedUntil,
+		rule.Kind, rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp,
+		rule.MaxFiresPerResolution,
+		rule.EscalationAfterMin, rule.EscalationSeverity,
+		rule.MsgTemplate, rule.IncludeTitle, rule.ChannelIDs).
+		Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
+	if err != nil {
+		return err
+	}
+	if !rule.AllVehicles && len(vehicleIDs) > 0 {
+		batch := &pgx.Batch{}
+		for _, vid := range vehicleIDs {
+			batch.Queue(
+				`INSERT INTO alert_rule_vehicles (rule_id, vehicle_id) VALUES ($1, $2)
 					 ON CONFLICT DO NOTHING`,
-					rule.ID, vid)
-			}
-			br := tx.SendBatch(ctx, batch)
-			defer br.Close()
-			for range vehicleIDs {
-				if _, err := br.Exec(); err != nil {
-					return err
-				}
-			}
-			if err := br.Close(); err != nil {
+				rule.ID, vid)
+		}
+		br := tx.SendBatch(ctx, batch)
+		defer br.Close()
+		for range vehicleIDs {
+			if _, err := br.Exec(); err != nil {
 				return err
 			}
 		}
-		return nil
-	})
+		if err := br.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *AlertRuleRepo) Delete(ctx context.Context, id int64) error {
 	// alert_rule_vehicles has ON DELETE CASCADE so junction rows clean up.
 	_, err := r.db.Pool.Exec(ctx, `DELETE FROM alert_rules WHERE id = $1`, id)
 	return err
+}
+
+func (r *AlertRuleRepo) BulkDelete(ctx context.Context, ids []int64) ([]int64, error) {
+	rows, err := r.db.Pool.Query(ctx, `DELETE FROM alert_rules WHERE id = ANY($1) RETURNING id`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	deleted := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		deleted = append(deleted, id)
+	}
+	return deleted, rows.Err()
 }
 
 // FilterExistingIDs returns the subset of `ids` that exist in alert_rules.

@@ -39,6 +39,10 @@ var (
 	// is false (e.g. Anthropic.Embed).
 	ErrCapabilityNotSupported = errors.New("ai/provider: capability not supported by this adapter")
 
+	// ErrStreamFinal prevents a caller from replaying a failed Stream as Chat
+	// after an adapter has already applied its protocol negotiation policy.
+	ErrStreamFinal = errors.New("ai/provider: stream failure must not be replayed")
+
 	// ErrUpstream is the catch-all for non-2xx responses or transport
 	// failures from the underlying provider. Wrapped with %w so the
 	// raw error remains inspectable; the message includes the HTTP

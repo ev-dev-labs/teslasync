@@ -9,6 +9,30 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
+func TestWritingBrief_StateVersusThreshold(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		severity string
+		want     string
+	}{
+		{"info", "State is not proof of movement"},
+		{"warn", "boolean and enum states"},
+		{"critical", "No jokes or invented danger"},
+	} {
+		t.Run(tc.severity, func(t *testing.T) {
+			rule, err := ruleFromTemplateDimensions(alertMessageTemplateInput{
+				Kind: "signal", SignalName: "Gear", Op: "=", Severity: tc.severity,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if brief := writingBrief(rule); !strings.Contains(brief, tc.want) {
+				t.Fatalf("brief %q missing %q", brief, tc.want)
+			}
+		})
+	}
+}
+
 func TestDraftAlertMessageTemplate_SignalDimensions(t *testing.T) {
 	t.Parallel()
 	tool := &draftAlertMessageTemplate{}
@@ -22,6 +46,7 @@ func TestDraftAlertMessageTemplate_SignalDimensions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
+
 	out, err := tool.Execute(context.Background(), in)
 	if err != nil {
 		t.Fatalf("Execute: %v", err)

@@ -16,7 +16,7 @@
  *   Cloud mode      : masked API key, dollars↔cents cost-cap conversion,
  *                     api_key omitted-when-blank payload rule, the
  *                     probed-model success message, and the Azure surface
- *                     (flavor switch hiding deployment inputs).
+ *                     (explicit Foundry protocol selection).
  *   Accessibility   : the panel's aria-label, the banner's role="status",
  *                     and the in-flight "Validating…" loading state.
  *
@@ -89,11 +89,8 @@ function makeDraft(overrides: Partial<AIProviderDraft> = {}): AIProviderDraft {
     model: '',
     api_key: '',
     cost_cap_cents: 0,
-    api_version: '',
-    flavor: '',
-    deployment: '',
+    api_protocol: 'auto',
     embedding_model: '',
-    embedding_deployment: '',
     ...overrides,
   }
 }
@@ -407,7 +404,7 @@ describe('AIProviderSection — cloud mode', () => {
 
     expect(screen.getByRole('option', { name: 'OpenAI' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Anthropic' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Azure AI' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Microsoft Foundry' })).toBeInTheDocument()
 
     const apiKey = screen.getByTestId('ai-provider-api-key') as HTMLInputElement
     expect(apiKey.type).toBe('password')
@@ -519,49 +516,51 @@ describe('AIProviderSection — cloud mode', () => {
   })
 })
 
-describe('AIProviderSection — Azure surface', () => {
-  it('reveals Azure fields and uses the Azure-specific model label', () => {
+describe('AIProviderSection — Foundry v1', () => {
+  it('shows only first-class Foundry controls', () => {
     renderSection({
       isCloud: true,
-      initial: makeDraft({ provider: 'azure', flavor: 'openai' }),
+      initial: makeDraft({ provider: 'azure' }),
     })
 
-    expect(screen.getByTestId('ai-provider-azure-flavor')).toBeInTheDocument()
-    expect(screen.getByTestId('ai-provider-azure-api-version')).toBeInTheDocument()
-    expect(screen.getByTestId('ai-provider-azure-deployment')).toBeInTheDocument()
-    expect(
-      screen.getByTestId('ai-provider-azure-embedding-deployment'),
-    ).toBeInTheDocument()
+    expect(screen.getByTestId('ai-provider-azure-protocol')).toHaveValue('auto')
+    expect(screen.queryByTestId('ai-provider-azure-flavor')).toBeNull()
+    expect(screen.queryByTestId('ai-provider-azure-api-version')).toBeNull()
+    expect(screen.queryByTestId('ai-provider-azure-deployment')).toBeNull()
+    expect(screen.getByTestId('ai-provider-azure-embedding-model')).toBeInTheDocument()
     expect(screen.getByTestId('ai-provider-azure-base-url')).toBeInTheDocument()
-
-    expect(screen.getByText('Deployment / model name')).toBeInTheDocument()
+    expect(screen.getByText('Deployment name')).toBeInTheDocument()
+    expect(screen.queryByText(/Used by classic/)).toBeNull()
   })
 
-  it('hides the deployment inputs when the Foundry flavor is selected', () => {
+  it.each(['auto', 'chat_completions', 'responses'])('validates the selected %s protocol and deployment', async (protocol) => {
+    mockedRequest.mockResolvedValue({
+      ok: true, mode: 'cloud', probed_model: 'custom-deployment',
+    })
     renderSection({
       isCloud: true,
-      initial: makeDraft({ provider: 'azure', flavor: 'openai' }),
+      initial: makeDraft({
+        provider: 'azure',
+        base_url: 'https://example.services.ai.azure.com/openai/v1',
+        model: 'custom-deployment',
+      }),
     })
-    // Precondition: deployment inputs visible for the OpenAI-Service flavor.
-    expect(screen.getByTestId('ai-provider-azure-deployment')).toBeInTheDocument()
-
-    fireEvent.change(screen.getByTestId('ai-provider-azure-flavor'), {
-      target: { value: 'foundry' },
+    fireEvent.change(screen.getByTestId('ai-provider-azure-protocol'), { target: { value: protocol } })
+    fireEvent.click(screen.getByTestId('ai-provider-validate-cloud'))
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-provider-validate-banner')).toHaveTextContent('custom-deployment')
     })
-
-    // Foundry routes the model in the body, so the deployment-name inputs
-    // collapse while api-version + endpoint stay.
-    expect(screen.queryByTestId('ai-provider-azure-deployment')).toBeNull()
-    expect(
-      screen.queryByTestId('ai-provider-azure-embedding-deployment'),
-    ).toBeNull()
-    expect(screen.getByTestId('ai-provider-azure-api-version')).toBeInTheDocument()
-    expect(screen.getByTestId('ai-provider-azure-base-url')).toBeInTheDocument()
+    expect(validateBody()).toMatchObject({
+      provider: 'azure', api_protocol: protocol, model: 'custom-deployment',
+    })
+    for (const key of ['flavor', 'api_version', 'deployment', 'embedding_deployment']) {
+      expect(validateBody()).not.toHaveProperty(key)
+    }
   })
 
   it('uses the plain "Model" label for a non-Azure cloud provider', () => {
     renderSection({ isCloud: true, initial: makeDraft({ provider: 'openai' }) })
-    expect(screen.queryByText('Deployment / model name')).toBeNull()
+    expect(screen.queryByText('Deployment name')).toBeNull()
     expect(screen.getByText('Model')).toBeInTheDocument()
   })
 })

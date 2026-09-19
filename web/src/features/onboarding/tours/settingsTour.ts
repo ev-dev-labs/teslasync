@@ -1,18 +1,18 @@
 import type { TourDefinition } from '@/lib/tourRegistry'
 import type { TourStep } from '@/hooks/useTour'
+import i18n from 'i18next'
 
 /**
  * Settings onboarding tour.
  *
  * Launcher-only walkthrough (no `autoStart`) of the four settings anchors:
- * appearance, units, notifications, and the tour-replay launcher. The first
- * step routes the user to `/settings` so the highlighted panels exist in the
- * DOM before the spotlight positions itself.
+ * appearance, units, workspace, and the tour-replay launcher. Each step
+ * opens its settings category before the spotlight positions itself.
  */
 
 function navigate(href: string) {
   if (typeof window === 'undefined') return
-  if (window.location.pathname === href) return
+  if (window.location.pathname + window.location.hash === href) return
   window.history.pushState({}, '', href)
   // pushState does not emit popstate, so dispatch it manually to notify the
   // client-side router that the location changed.
@@ -26,7 +26,7 @@ const STEPS: TourStep[] = [
     description:
       'Pick a colour theme, density, and motion preference. Changes preview live before you save.',
     placement: 'bottom',
-    onShow: () => navigate('/settings'),
+    onShow: () => navigate('/settings#appearance'),
   },
   {
     target: '[data-tour="settings-units"]',
@@ -34,13 +34,20 @@ const STEPS: TourStep[] = [
     description:
       'Distance, temperature, energy, and date format follow your preference everywhere — no per-page toggles. Pick imperial or metric once and forget about it.',
     placement: 'top',
+    onShow: () => navigate('/settings#general'),
   },
   {
-    target: '[data-tour="settings-notifications"]',
-    title: 'Notification channels',
-    description:
-      'Configure email, web push, ntfy, or webhook channels. Test each channel before relying on it for alerts.',
+    target: '[data-tour="settings-workspace"]',
+    get title() {
+      const fallback = 'Workspace preferences'
+      return i18n.isInitialized ? i18n.t('settings.organization.workspaceTourTitle', fallback) : fallback
+    },
+    get description() {
+      const fallback = 'Choose your landing page, default vehicle, and analysis window to make TeslaSync fit your everyday workflow.'
+      return i18n.isInitialized ? i18n.t('settings.organization.workspaceTourDescription', fallback) : fallback
+    },
     placement: 'top',
+    onShow: () => navigate('/settings#workspace'),
   },
   {
     target: '[data-tour="settings-tour"]',
@@ -48,6 +55,7 @@ const STEPS: TourStep[] = [
     description:
       'This block opens the Tour Launcher so you can re-run any walkthrough. The launcher also lives in the help shortcut at the top of the sidebar.',
     placement: 'top',
+    onShow: () => navigate('/settings#overview'),
   },
 ]
 
@@ -57,7 +65,7 @@ export const SETTINGS_TOUR: TourDefinition = {
   titleKey: 'tour.tours.settings.title',
   titleFallback: 'Settings',
   descriptionKey: 'tour.tours.settings.description',
-  descriptionFallback: 'Theme, units, notifications, and tours.',
-  version: 1,
+  descriptionFallback: 'Theme, units, workspace, and tours.',
+  version: 2,
   steps: STEPS,
 }

@@ -114,9 +114,26 @@ type AlertRule struct {
 	// body-only output; the canonical title is still persisted in
 	// notification_logs and broadcast over SSE so the in-app UI is unaffected.
 	IncludeTitle bool `db:"include_title" json:"include_title"`
+	// Nil preserves all-channel delivery; an empty selection disables external delivery.
+	ChannelIDs []int64 `db:"channel_ids" json:"channel_ids"`
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+func (r *AlertRule) DeliversToChannel(id int64) bool {
+	if r == nil {
+		return false
+	}
+	if r.ChannelIDs == nil {
+		return true
+	}
+	for _, channelID := range r.ChannelIDs {
+		if channelID == id {
+			return true
+		}
+	}
+	return false
 }
 
 // AppliesTo reports whether this rule should be evaluated against the

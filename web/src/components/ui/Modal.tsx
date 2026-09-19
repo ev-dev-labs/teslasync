@@ -15,6 +15,8 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
    */
   size?: 'sm' | 'md' | 'lg' | 'full';
   children: ReactNode;
+  /** Persistent actions outside the scrolling dialog body. */
+  footer?: ReactNode;
   /**
    * Accessible label for the dialog when no `title` is rendered. Required by
    * ARIA when the dialog has no visible heading.
@@ -50,7 +52,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  * Drawer, and Lightbox cannot drift apart.
  */
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
-  ({ open, onClose, title, size = 'md', className, children, ariaLabel, ...props }, ref) => {
+  ({ open, onClose, title, size = 'md', className, children, footer, ariaLabel, ...props }, ref) => {
     const { t } = useTranslation();
     const dialogRef = useRef<HTMLDivElement | null>(null);
     const titleId = useId();
@@ -116,6 +118,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
               // Below sm: bottom sheet that fills width, capped to viewport height.
               // From sm and up: rounded card, auto height up to 90vh, centered.
               'max-h-[100dvh] rounded-none sm:h-auto sm:max-h-[90vh] sm:rounded-lg',
+              footer && 'max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]',
               sizes[size],
               className,
             )}
@@ -145,6 +148,11 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             >
               {children}
             </div>
+            {footer && (
+              <div data-modal-footer="true" className="shrink-0 border-t border-[var(--glass-border)] bg-[var(--surface-1)] px-4 py-3 sm:px-6 safe-bottom">
+                {footer}
+              </div>
+            )}
           </div>
         </div>
       </div>

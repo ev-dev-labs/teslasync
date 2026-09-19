@@ -23,12 +23,15 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/httprate"
 	"github.com/rs/zerolog/log"
 )
 
@@ -67,6 +70,7 @@ type AIHandlers struct {
 	Anomaly                              http.Handler
 	Alert                                http.Handler
 	AlertMessageTemplate                 http.Handler
+	AlertPacks                           http.Handler
 	Automation                           http.Handler
 	Search                               http.Handler
 	DriveCoach                           http.Handler
@@ -928,6 +932,13 @@ func mountAIRoutes(
 			alertMessageTemplateHandler = h.AlertMessageTemplate.ServeHTTP
 		}
 		r.Post("/alerts/message-template/draft", g.Wrap("alert-message-template-suggestion", alertMessageTemplateHandler))
+		r.With(httprate.LimitByIP(10, time.Minute)).Post("/alerts/packs/draft", g.Wrap("alert-pack-builder", func(w http.ResponseWriter, r *http.Request) {
+			if h.AlertPacks == nil {
+				httpx.WriteError(w, http.StatusServiceUnavailable, "alert pack advisor unavailable")
+				return
+			}
+			h.AlertPacks.ServeHTTP(w, r)
+		}))
 
 		// inbox-auto-categorization (Phase-50 / A2, slice 0035).
 		// Opt-in LLM that reads recent notification_log rows

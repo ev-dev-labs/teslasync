@@ -40,6 +40,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { Input } from '@/components/ui'
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) + the freshness chip read it
 // at render for the reduced-motion preference.
@@ -117,13 +118,12 @@ vi.mock('../components', async () => {
   const actual = await vi.importActual<typeof import('../components/SettingsActionCard')>(
     '../components/SettingsActionCard',
   )
+  const search = await vi.importActual<typeof import('../components/SettingsSearch')>('../components/SettingsSearch')
   return {
     SettingsActionCard: actual.SettingsActionCard,
-    SettingsSearch: ({ className }: { className?: string }) => (
-      <div data-testid="stub-search" className={className} />
-    ),
+    SettingsSearch: search.SettingsSearch,
     WorkspacePreferencesSettings: () => <div data-testid="stub-workspace" />,
-    GeneralSettings: () => <div data-testid="stub-general" />,
+    GeneralSettings: () => <div data-testid="stub-general"><Input aria-label="Draft setting" defaultValue="Original" /></div>,
     AppearanceSettings: () => <div data-testid="stub-appearance" />,
     TypographySettings: () => <div data-testid="stub-typography" />,
     AdvancedSettings: () => <div data-testid="stub-advanced" />,
@@ -396,6 +396,49 @@ describe('SettingsPage — loading & empty placeholders', () => {
 // ── Hash-driven effects ─────────────────────────────────────────────────────
 
 describe('SettingsPage — deep-link effects', () => {
+  it.each([
+    ['general', 'stub-general'],
+    ['workspace', 'stub-workspace'],
+    ['appearance', 'stub-appearance'],
+    ['typography', 'stub-typography'],
+    ['advanced', 'stub-advanced'],
+    ['reset', 'stub-reset'],
+  ])('opens only the %s category through its existing deep link', (id, testId) => {
+    renderPage([`/settings#${id}`])
+    expect(screen.getByTestId(testId)).toBeVisible()
+    expect(screen.getByLabelText('Current preferences overview')).not.toBeVisible()
+    for (const other of ['stub-general', 'stub-workspace', 'stub-appearance', 'stub-typography', 'stub-advanced', 'stub-reset']) {
+      if (other !== testId) expect(screen.getByTestId(other)).not.toBeVisible()
+    }
+  })
+
+  it('preserves an edited form while switching categories', () => {
+    renderPage(['/settings#general'])
+    const draft = screen.getByRole('textbox', { name: 'Draft setting' })
+    fireEvent.change(draft, { target: { value: 'Unsaved preference' } })
+    fireEvent.click(screen.getByRole('button', { name: /Appearance & experience/ }))
+    expect(draft).not.toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: /Units, language & costs/ }))
+    expect(screen.getByRole('textbox', { name: 'Draft setting' })).toBe(draft)
+    expect(draft).toHaveValue('Unsaved preference')
+  })
+
+  it('selects categories through the mobile control and safely handles unknown hashes', async () => {
+    renderPage(['/settings#unknown-category'])
+    await waitFor(() => expect(screen.getByLabelText('Current preferences overview')).toBeVisible())
+    fireEvent.change(screen.getByRole('combobox', { name: 'Settings categories' }), { target: { value: 'reset' } })
+    expect(screen.getByTestId('stub-reset')).toBeVisible()
+    expect(screen.getByTestId('stub-general')).not.toBeVisible()
+  })
+
+  it('reveals a hidden category when a real search result is selected', async () => {
+    renderPage()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Search settings' }), { target: { value: 'Tire pressure unit' } })
+    fireEvent.click(await screen.findByRole('option', { name: /Tire pressure unit/ }))
+    expect(screen.getByTestId('stub-general')).toBeVisible()
+    expect(screen.getByLabelText('Current preferences overview')).not.toBeVisible()
+  })
+
   it('redirects the legacy #ai hash to /integrations/helix', async () => {
     renderPage(['/settings#ai'])
 

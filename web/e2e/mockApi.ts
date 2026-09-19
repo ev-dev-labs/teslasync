@@ -790,6 +790,27 @@ async function fulfill(
   }
 }
 
+// Per-test fixtures must participate in the same no-network-escape accounting.
+export async function fulfillApiMock(
+  route: Route,
+  controller: MockApiController | null,
+  response: Parameters<Route['fulfill']>[0],
+): Promise<void> {
+  if (!controller) throw new Error('Custom API fixtures require E2E mocks');
+  const request = route.request();
+  const record = requestRecord(controller, request);
+  const url = new URL(request.url());
+  controller.seen.add(`${request.method()} ${url.pathname.replace(/^\/api\/v1/, '')}${url.search}`);
+  controller.pending += 1;
+  try {
+    await route.fulfill(response);
+    if (record) record.disposition = 'fulfilled';
+  } finally {
+    controller.pending -= 1;
+    controller.lastActivityAt = Date.now();
+  }
+}
+
 export async function installApiMocks(
   page: Page,
   scenario: DataScenario = 'populated',

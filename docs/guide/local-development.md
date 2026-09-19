@@ -178,6 +178,47 @@ The docs config (`docs/.vitepress/config.ts`) controls navigation, sidebar, and 
 
 The pre-PR baseline is "everything in this table passes". CI runs the same set.
 
+### CI parallel execution
+
+CI scales out across hosted runners rather than oversubscribing one machine:
+
+- Go race tests use eight disjoint package shards, balanced by test-source size.
+  Packages without tests are retained. Each shard has its own TimescaleDB service.
+- Vitest uses eight native shards with two workers per runner. The merge job
+  checks all shard artifacts against full test-file discovery before merging
+  Vitest's coverage maps. Go profiles merge atomic block counts, not percentages.
+- Lint, architecture checks, individual Go binary builds, frontend builds, and
+  database replay/rollback start independently of unit tests. Docker image builds
+  wait for generated-artifact, backend, and frontend gates to pass; failed tests
+  or incomplete coverage merges skip Docker rather than spending build compute.
+- Browser jobs reuse one hermetic build. Chromium responsive/smoke tests and
+  Windows visual snapshots each use four shards. Accessibility and performance
+  run on separate runners with one worker each; Firefox and WebKit remain independent.
+
+The existing **Backend (lint + test + build)**, **Frontend (lint + test + build)**,
+Chromium quality, and Windows snapshot check names remain aggregate gates. Failed,
+cancelled, skipped, or incomplete required shards cannot turn those gates green.
+`backend-coverage` and `frontend-coverage` still contain the merged reports; raw
+shard artifacts remain available for diagnosis. The pre-existing telemetry replay
+`continue-on-error` exception is unchanged; this parallelization adds no new waivers
+and does not change coverage thresholds.
+
+To reproduce a frontend shard locally from `web/`:
+
+```bash
+npx vitest run --shard=1/8 --maxWorkers=2 --coverage --coverage.reporter=json --reporter=blob
+```
+
+To reproduce a browser shard using the existing build/preview wrapper:
+
+```bash
+npm run e2e:quality -- --shard=1/4
+```
+
+Changes to shard counts must update the workflow matrix and corresponding count
+together. The report validators deliberately reject missing artifacts rather than
+publishing partial coverage as a complete run.
+
 ## Debugging tips
 
 - **The backend isn't seeing my env change** — Go binaries snapshot the environment at startup. Restart the process.

@@ -66,7 +66,7 @@ async function stressVisibleCopy(page: Page): Promise<void> {
         copy.length >= 3 &&
         copy.length <= 80 &&
         parent &&
-        !parent.closest('[aria-hidden="true"], [role="contentinfo"], script, style, svg')
+        !parent.closest('[aria-hidden="true"], footer, [role="contentinfo"], script, style, svg')
       ) {
         nodes.push(node);
       }

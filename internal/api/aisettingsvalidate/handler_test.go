@@ -355,7 +355,7 @@ func TestHandler_Cloud_Probe404_NotFound(t *testing.T) {
 		}, nil
 	}
 	h := newTestValidateHandler(nil, "azure", build)
-	body := bytes.NewBufferString(`{"mode":"cloud","provider":"azure","flavor":"openai","base_url":"https://r.openai.azure.com","model":"gpt-4o","deployment":"missing","api_key":"k"}`)
+	body := bytes.NewBufferString(`{"mode":"cloud","provider":"azure","base_url":"https://r.services.ai.azure.com/openai/v1","model":"missing","api_protocol":"auto","api_key":"k"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings/ai/validate-config", body)
 	rec := httptest.NewRecorder()
 	h(rec, req)
@@ -424,13 +424,13 @@ func TestHandler_Cloud_UnknownProvider_Rejected(t *testing.T) {
 }
 
 func TestHandler_Cloud_AzureMissingDeployment_Rejected(t *testing.T) {
-	// Azure OpenAI Service flavor needs deployment OR model — when
+	// Foundry requires a deployment name in the model field — when
 	// both are empty the handler short-circuits with
 	// missing_deployment so the SPA can render a precise message.
 	h := newTestValidateHandler(nil, "azure", func(_ provider.ProviderConfig) (provider.Provider, error) {
 		return &fakeProvider{name: "azure"}, nil
 	})
-	body := bytes.NewBufferString(`{"mode":"cloud","provider":"azure","flavor":"openai","base_url":"https://r.openai.azure.com","api_key":"k"}`)
+	body := bytes.NewBufferString(`{"mode":"cloud","provider":"azure","base_url":"https://r.services.ai.azure.com/openai/v1","api_key":"k"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings/ai/validate-config", body)
 	rec := httptest.NewRecorder()
 	h(rec, req)

@@ -48,28 +48,27 @@ export function SettingsActionCard({
       hover={Boolean(href)}
       glow={href ? glow : 'none'}
       className={cn(
-        'flex h-full items-center gap-4 p-4 sm:p-5',
+        'flex h-full min-w-0 flex-col items-stretch gap-4 p-4 sm:p-5',
         href && 'cursor-pointer',
         className,
       )}
     >
-      <IconBox color={iconColor}>{icon}</IconBox>
-      <div className="min-w-0 flex-1">
-        <Heading level="panel" className="truncate" title={title}>
+      <div className="flex items-center justify-between gap-3">
+        <IconBox color={iconColor}>{icon}</IconBox>
+        {href && <ExternalLink
+          className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-[var(--text-primary)]"
+          aria-hidden="true"
+        />}
+      </div>
+      <div className="min-w-0 space-y-2">
+        <Heading level="panel" className="break-words">
           {title}
         </Heading>
-        <Text as="p" variant="caption" className="mt-0.5">
+        <Text as="p" variant="bodySm" className="break-words">
           {description}
         </Text>
       </div>
-      {href ? (
-        <ExternalLink
-          className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-[var(--text-primary)]"
-          aria-hidden="true"
-        />
-      ) : (
-        action
-      )}
+      {!href && action && <div className="mt-auto min-w-0 pt-1">{action}</div>}
     </GlassPanel>
   )
 

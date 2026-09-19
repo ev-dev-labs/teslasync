@@ -1,55 +1,7 @@
-// Package azure is the Azure AI [provider.Provider] adapter.
-//
-// Microsoft hosts AI inference behind two distinct surfaces and this
-// adapter supports both via the [provider.ProviderConfig.Flavor] knob.
-// A third URL shape — Azure AI Foundry's OpenAI v1 API — is detected
-// from the base URL (hostname services.ai.azure.com or a path of
-// /openai/v1) and overrides flavor-based routing so pasting the
-// Foundry portal snippet does not 404:
-//
-//  1. Azure OpenAI Service ([provider.AzureFlavorOpenAI], the default).
-//     Hosts the OpenAI model family (gpt-4o, gpt-4-turbo,
-//     text-embedding-3-*, etc.). Routes by *deployment name* in the URL
-//     path:
-//
-//     {base_url}/openai/deployments/{deployment}/chat/completions
-//     ?api-version={version}
-//
-//     where {base_url} is the resource endpoint
-//     (https://{resource}.openai.azure.com). The request body MUST
-//     omit the "model" field — Azure rejects requests where the body
-//     model disagrees with the deployment.
-//
-//  2. Azure AI Foundry / Inference API ([provider.AzureFlavorFoundry]).
-//     The older unified multi-vendor surface:
-//
-//     {base_url}/chat/completions?api-version={version}
-//     {base_url}/embeddings?api-version={version}
-//
-//     Routes by *model* in the request body.
-//
-//  3. Azure AI Foundry OpenAI v1 (auto-detected). Portal snippet:
-//
-//     base_url  https://{resource}.services.ai.azure.com/openai/v1
-//     model     {deployment_name}  (e.g. gpt-5.6-sol)
-//
-//     {base_url}/chat/completions   (no api-version query)
-//     {base_url}/embeddings
-//
-//     Body includes "model". Auth sends api-key and
-//     Authorization: Bearer (the OpenAI SDK path). Newer models
-//     use max_completion_tokens instead of max_tokens.
-//
-// Classic flavors still share:
-//   - Auth: "api-key: {key}" header (NOT Authorization Bearer; that
-//     reserved name is used by the Microsoft Entra ID auth path).
-//   - Required "?api-version=" query parameter.
-//   - The OpenAI Chat Completions JSON envelope (messages, tools,
-//     tool_calls, SSE streaming format).
-//
-// The wire types here mirror openai/openai.go because the JSON
-// envelope is identical. They are re-declared rather than imported so
-// either adapter can drift independently if Azure ever breaks parity.
+// Package azure implements Microsoft Foundry OpenAI v1.
+// Auto tries Chat Completions then one Responses fallback on a structured
+// unsupported-operation / not-found error. Explicit protocols never negotiate.
+// https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
 package azure
 
 import (
@@ -62,7 +14,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"time"
 
@@ -73,7 +24,7 @@ import (
 const (
 	defaultTimeout   = 120 * time.Second
 	streamSentinel   = "[DONE]"
-	streamPrefixData = "data: "
+	streamPrefixData = "data:"
 )
 
 // Adapter is the Azure AI [provider.Provider]. Construct via
@@ -101,10 +52,8 @@ func WithHTTPClient(c *http.Client) Option {
 //     error).
 //   - cfg.BaseURL fails to parse as a URL.
 //
-// Empty Flavor / APIVersion are filled from [provider.DefaultAzureFlavor]
-// and [provider.DefaultAzureAPIVersion] respectively. Flavor must be
-// one of [provider.AzureFlavorOpenAI] or [provider.AzureFlavorFoundry];
-// any other value is rejected.
+// Resource roots are normalized to /openai/v1. Other API paths are rejected,
+// rather than silently changing the target surface.
 func New(cfg provider.ProviderConfig, opts ...Option) (*Adapter, error) {
 	if strings.TrimSpace(cfg.BaseURL) == "" {
 		return nil, fmt.Errorf("azure: empty base_url")
@@ -112,21 +61,27 @@ func New(cfg provider.ProviderConfig, opts ...Option) (*Adapter, error) {
 	if strings.TrimSpace(cfg.APIKey) == "" {
 		return nil, fmt.Errorf("azure: empty api_key")
 	}
-	if _, err := url.Parse(cfg.BaseURL); err != nil {
+	u, err := url.Parse(strings.TrimSpace(cfg.BaseURL))
+	if err != nil {
 		return nil, fmt.Errorf("azure: parse base_url: %w", err)
 	}
-	if cfg.APIVersion == "" {
-		cfg.APIVersion = provider.DefaultAzureAPIVersion
+	if (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return nil, fmt.Errorf("azure: base_url must be a Foundry resource URL without credentials, query or fragment")
 	}
-	if cfg.Flavor == "" {
-		cfg.Flavor = provider.DefaultAzureFlavor
-	}
-	switch cfg.Flavor {
-	case provider.AzureFlavorOpenAI, provider.AzureFlavorFoundry:
-		// ok
+	switch strings.TrimRight(u.Path, "/") {
+	case "", "/openai/v1":
+		u.Path = "/openai/v1"
 	default:
-		return nil, fmt.Errorf("azure: unknown flavor %q (want %q or %q)",
-			cfg.Flavor, provider.AzureFlavorOpenAI, provider.AzureFlavorFoundry)
+		return nil, fmt.Errorf("azure: use the Foundry /openai/v1 base URL; other API paths are not supported")
+	}
+	cfg.BaseURL = u.String()
+	if cfg.APIProtocol == "" {
+		cfg.APIProtocol = provider.FoundryProtocolAuto
+	}
+	switch cfg.APIProtocol {
+	case provider.FoundryProtocolAuto, provider.FoundryProtocolChat, provider.FoundryProtocolResponses:
+	default:
+		return nil, fmt.Errorf("azure: unknown api_protocol %q", cfg.APIProtocol)
 	}
 	a := &Adapter{cfg: cfg}
 	for _, opt := range opts {
@@ -143,10 +98,7 @@ func Builder(cfg provider.ProviderConfig) (provider.Provider, error) { return Ne
 
 func (a *Adapter) Name() string { return provider.NameAzure }
 
-// Both Azure flavors support tools and streaming. Embeddings are
-// advertised true; the per-call
-// path returns an error when no embedding deployment / model is
-// configured.
+// Responses streaming is buffered; Chat Completions uses native SSE.
 func (a *Adapter) Capabilities() provider.Capabilities {
 	return provider.Capabilities{
 		Tools:      true,
@@ -157,11 +109,29 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 }
 
 func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
+	if a.cfg.APIProtocol == provider.FoundryProtocolResponses {
+		return a.chatViaResponses(ctx, req)
+	}
+	out, err := a.doChatCompletions(ctx, req)
+	if err == nil {
+		return out, nil
+	}
+	if a.cfg.APIProtocol == provider.FoundryProtocolAuto && canTryResponses(err) && ctx.Err() == nil {
+		fallback, fallbackErr := a.chatViaResponses(ctx, req)
+		if fallbackErr != nil {
+			return nil, errors.Join(err, fallbackErr)
+		}
+		return fallback, nil
+	}
+	return nil, err
+}
+
+func (a *Adapter) doChatCompletions(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
 		return nil, err
 	}
-	body, err := encodeChatRequest(req, modelInBody, false, a.usesOpenAIV1())
+	body, err := encodeChatRequest(req, modelInBody, false)
 	if err != nil {
 		return nil, err
 	}
@@ -171,26 +141,41 @@ func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider
 	}
 	resp, err := a.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("%w: azure chat: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure chat: %w", provider.ErrUpstream, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return nil, fmt.Errorf("%w: azure chat status %d: %s", provider.ErrUpstream, resp.StatusCode, string(raw))
+		raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		if readErr != nil {
+			return nil, fmt.Errorf("%w: azure chat error response: %w", provider.ErrUpstream, readErr)
+		}
+		return nil, newOperationError("chat", resp.StatusCode, raw)
 	}
 	var wire azureChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
-		return nil, fmt.Errorf("%w: azure chat decode: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure chat decode: %w", provider.ErrUpstream, err)
 	}
-	return wire.toChatResponse(), nil
+	return wire.toChatResponse()
 }
 
-func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan provider.Chunk, error) {
+func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (chunks <-chan provider.Chunk, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Join(provider.ErrStreamFinal, err)
+		}
+	}()
+	if a.cfg.APIProtocol == provider.FoundryProtocolResponses {
+		resp, err := a.chatViaResponses(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return chatResponseAsStream(ctx, resp), nil
+	}
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
 		return nil, err
 	}
-	body, err := encodeChatRequest(req, modelInBody, true, a.usesOpenAIV1())
+	body, err := encodeChatRequest(req, modelInBody, true)
 	if err != nil {
 		return nil, err
 	}
@@ -201,22 +186,21 @@ func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan 
 	httpReq.Header.Set("Accept", "text/event-stream")
 	resp, err := a.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("%w: azure stream: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure stream: %w", provider.ErrUpstream, err)
 	}
 	if resp.StatusCode/100 != 2 {
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		_ = resp.Body.Close()
-		streamErr := fmt.Errorf("%w: azure stream status %d: %s", provider.ErrUpstream, resp.StatusCode, string(raw))
-		// Foundry OpenAI v1 (especially model-router) accepts the
-		// same chat/completions URL for non-stream Chat that
-		// Validate uses, but returns 404 DeploymentNotFound when
-		// the body has stream:true. Retry as Chat and synthesize
-		// chunks so Helix still completes.
-		if resp.StatusCode == http.StatusNotFound {
-			chatResp, chatErr := a.Chat(ctx, req)
-			if chatErr == nil {
-				return chatResponseAsStream(ctx, chatResp), nil
+		if readErr != nil {
+			return nil, fmt.Errorf("%w: azure stream error response: %w", provider.ErrUpstream, readErr)
+		}
+		streamErr := newOperationError("stream", resp.StatusCode, raw)
+		if a.cfg.APIProtocol == provider.FoundryProtocolAuto && canTryResponses(streamErr) && ctx.Err() == nil {
+			chatResp, fallbackErr := a.chatViaResponses(ctx, req)
+			if fallbackErr != nil {
+				return nil, errors.Join(streamErr, fallbackErr)
 			}
+			return chatResponseAsStream(ctx, chatResp), nil
 		}
 		return nil, streamErr
 	}
@@ -251,34 +235,27 @@ func chatResponseAsStream(ctx context.Context, resp *provider.ChatResponse) <-ch
 			}
 		}
 		send(ctx, out, provider.Chunk{
-			Done:         true,
-			FinishReason: finish,
-			InputTokens:  resp.InputTokens,
-			OutputTokens: resp.OutputTokens,
+			Done:          true,
+			FinishReason:  finish,
+			InputTokens:   resp.InputTokens,
+			OutputTokens:  resp.OutputTokens,
+			ProviderState: resp.Message.ProviderState,
 		})
 	}()
 	return out
 }
 
-// Embed uses the Azure embeddings route. URL shape depends on flavor:
-//
-//   - OpenAI flavor:  {base}/openai/deployments/{depl}/embeddings?api-version=...
-//   - Foundry flavor: {base}/embeddings?api-version=... (model in body)
+// Embed always uses Foundry v1 embeddings, independently of the chat protocol.
 func (a *Adapter) Embed(ctx context.Context, req provider.EmbedRequest) (*provider.EmbedResponse, error) {
 	identity := a.embedIdentity(req)
 	if identity == "" {
 		return nil, fmt.Errorf("azure: empty embedding deployment / model")
 	}
-	endpoint, err := a.embedURL(identity)
+	endpoint, err := a.buildOpenAIV1URL("embeddings")
 	if err != nil {
 		return nil, err
 	}
-	payload := map[string]any{"input": req.Input}
-	if a.cfg.Flavor == provider.AzureFlavorFoundry || a.usesOpenAIV1() {
-		// Foundry and OpenAI v1 route embeddings by model in the
-		// request body, the same way OpenAI's public endpoint does.
-		payload["model"] = identity
-	}
+	payload := map[string]any{"input": req.Input, "model": identity}
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -289,7 +266,7 @@ func (a *Adapter) Embed(ctx context.Context, req provider.EmbedRequest) (*provid
 	}
 	resp, err := a.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("%w: azure embed: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure embed: %w", provider.ErrUpstream, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
@@ -306,7 +283,7 @@ func (a *Adapter) Embed(ctx context.Context, req provider.EmbedRequest) (*provid
 		} `json:"usage"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
-		return nil, fmt.Errorf("%w: azure embed decode: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure embed decode: %w", provider.ErrUpstream, err)
 	}
 	out := &provider.EmbedResponse{
 		Vectors:     make([][]float32, len(wire.Data)),
@@ -320,172 +297,33 @@ func (a *Adapter) Embed(ctx context.Context, req provider.EmbedRequest) (*provid
 	return out, nil
 }
 
-// chatEndpoint returns the absolute chat URL for this request and a
-// boolean indicating whether the request body should include the
-// "model" field. The body-model behaviour differs between flavors:
-//
-//   - OpenAI flavor: deployment encoded in URL → omit body model.
-//   - Foundry flavor: shared endpoint → include body model so the
-//     server can route to the right backing model.
 func (a *Adapter) chatEndpoint(req provider.ChatRequest) (endpoint string, modelInBody string, err error) {
-	if a.usesOpenAIV1() {
-		identity := a.chatDeployment(req)
-		if identity == "" {
-			return "", "", fmt.Errorf("azure: empty v1 model")
-		}
-		u, err := a.buildOpenAIV1URL("chat", "completions")
-		if err != nil {
-			return "", "", err
-		}
-		return u, identity, nil
+	identity := a.chatDeployment(req)
+	if identity == "" {
+		return "", "", fmt.Errorf("azure: empty Foundry deployment name")
 	}
-	switch a.cfg.Flavor {
-	case provider.AzureFlavorFoundry:
-		// Model identity for body — fall back to cfg.Model when the
-		// caller does not pin a model. dispatch currently does not
-		// pin one, so cfg.Model is the routing key in practice.
-		identity := req.Model
-		if identity == "" {
-			identity = a.cfg.Model
-		}
-		if identity == "" {
-			return "", "", fmt.Errorf("azure: empty foundry model")
-		}
-		u, err := a.buildURL("chat", "completions")
-		if err != nil {
-			return "", "", err
-		}
-		return u, identity, nil
-	default: // AzureFlavorOpenAI
-		deployment := a.chatDeployment(req)
-		if deployment == "" {
-			return "", "", fmt.Errorf("azure: empty chat deployment")
-		}
-		u, err := a.buildURL("openai", "deployments", deployment, "chat", "completions")
-		if err != nil {
-			return "", "", err
-		}
-		return u, "", nil
-	}
+	u, err := a.buildOpenAIV1URL("chat", "completions")
+	return u, identity, err
 }
 
-// chatDeployment picks the OpenAI-flavor chat deployment name for a
-// request. Per-request Model > cfg.Deployment > cfg.Model. The third
-// fallback honours the common case where the user named their Azure
-// deployment after the model identifier and stored it in the single
-// "model" field.
 func (a *Adapter) chatDeployment(req provider.ChatRequest) string {
 	if req.Model != "" {
 		return req.Model
 	}
-	if a.cfg.Deployment != "" {
-		return a.cfg.Deployment
-	}
 	return a.cfg.Model
 }
 
-// embedIdentity is the model-or-deployment string used by the embed
-// path. For the OpenAI flavor it becomes the URL deployment segment;
-// for Foundry it goes into the request body. Per-request Model >
-// cfg.EmbeddingDeployment > cfg.EmbeddingModel.
 func (a *Adapter) embedIdentity(req provider.EmbedRequest) string {
 	if req.Model != "" {
 		return req.Model
 	}
-	if a.cfg.EmbeddingDeployment != "" {
-		return a.cfg.EmbeddingDeployment
-	}
 	return a.cfg.EmbeddingModel
 }
 
-// embedURL builds the absolute embeddings URL for the configured
-// flavor. identity is only used by the OpenAI flavor (URL-routed).
-func (a *Adapter) embedURL(identity string) (string, error) {
-	if a.usesOpenAIV1() {
-		return a.buildOpenAIV1URL("embeddings")
-	}
-	switch a.cfg.Flavor {
-	case provider.AzureFlavorFoundry:
-		return a.buildURL("embeddings")
-	default:
-		return a.buildURL("openai", "deployments", identity, "embeddings")
-	}
-}
+const defaultMaxCompletionTokens = 8192
 
-// isAzureOpenAIV1 reports whether baseURL is Azure AI Foundry's
-// OpenAI-compatible v1 surface. Detected from:
-//   - path containing /openai/v1 (the portal "endpoint" field)
-//   - host *.services.ai.azure.com (Foundry AI Services resource)
-func isAzureOpenAIV1(baseURL string) bool {
-	u, err := url.Parse(strings.TrimSpace(baseURL))
-	if err != nil {
-		return false
-	}
-	p := strings.ToLower(path.Clean(u.Path))
-	if strings.Contains(p, "/openai/v1") {
-		return true
-	}
-	return strings.Contains(strings.ToLower(u.Hostname()), "services.ai.azure.com")
-}
-
-func (a *Adapter) usesOpenAIV1() bool {
-	return isAzureOpenAIV1(a.cfg.BaseURL)
-}
-
-// buildOpenAIV1URL joins BaseURL (ensuring /openai/v1) with extra
-// segments and omits api-version. Foundry's v1 GA API 404s when the
-// classic Azure OpenAI api-version (2024-10-21) is attached.
 func (a *Adapter) buildOpenAIV1URL(segments ...string) (string, error) {
-	u, err := url.Parse(a.cfg.BaseURL)
-	if err != nil {
-		return "", fmt.Errorf("azure: parse base_url: %w", err)
-	}
-	basePath := strings.TrimRight(u.Path, "/")
-	if !strings.Contains(strings.ToLower(path.Clean("/"+strings.TrimPrefix(basePath, "/"))), "/openai/v1") {
-		if basePath == "" || basePath == "/" {
-			basePath = "/openai/v1"
-		} else {
-			basePath = path.Join(basePath, "openai", "v1")
-		}
-	}
-	if !strings.HasPrefix(basePath, "/") {
-		basePath = "/" + basePath
-	}
-	parts := []string{basePath}
-	for _, s := range segments {
-		parts = append(parts, url.PathEscape(s))
-	}
-	u.Path = path.Join(parts...)
-	if !strings.HasPrefix(u.Path, "/") {
-		u.Path = "/" + u.Path
-	}
-	u.RawQuery = ""
-	return u.String(), nil
-}
-
-// buildURL composes BaseURL + path segments + the api-version query
-// parameter using net/url so deployment names with characters that
-// require percent-encoding (rare but legal: digits, dashes, dots,
-// underscores) round-trip correctly. The variadic segments are joined
-// with path.Join after PathEscape so a user-typed deployment name
-// containing a slash cannot escape the intended sub-tree.
-func (a *Adapter) buildURL(segments ...string) (string, error) {
-	u, err := url.Parse(a.cfg.BaseURL)
-	if err != nil {
-		return "", fmt.Errorf("azure: parse base_url: %w", err)
-	}
-	escaped := make([]string, 0, len(segments)+1)
-	if u.Path != "" {
-		escaped = append(escaped, u.Path)
-	}
-	for _, s := range segments {
-		escaped = append(escaped, url.PathEscape(s))
-	}
-	u.Path = path.Join(escaped...)
-	q := u.Query()
-	q.Set("api-version", a.cfg.APIVersion)
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return url.JoinPath(a.cfg.BaseURL, segments...)
 }
 
 func (a *Adapter) newRequest(ctx context.Context, method, urlStr string, body io.Reader) (*http.Request, error) {
@@ -494,13 +332,8 @@ func (a *Adapter) newRequest(ctx context.Context, method, urlStr string, body io
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	// Azure uses the case-sensitive "api-key" header. The "Authorization:
-	// Bearer …" form is reserved for Microsoft Entra ID token auth, which
-	// this adapter does not yet support (V1 is api-key only).
 	req.Header.Set("api-key", a.cfg.APIKey)
-	if a.usesOpenAIV1() {
-		req.Header.Set("Authorization", "Bearer "+a.cfg.APIKey)
-	}
+	req.Header.Set("Authorization", "Bearer "+a.cfg.APIKey)
 	return req, nil
 }
 
@@ -516,8 +349,6 @@ type azureChatRequest struct {
 	Messages            []azureWireMsg  `json:"messages"`
 	Tools               []azureWireTool `json:"tools,omitempty"`
 	Stream              bool            `json:"stream,omitempty"`
-	Temperature         float32         `json:"temperature,omitempty"`
-	MaxTokens           int             `json:"max_tokens,omitempty"`
 	MaxCompletionTokens int             `json:"max_completion_tokens,omitempty"`
 }
 
@@ -534,6 +365,7 @@ type azureWireMsg struct {
 	Name       string              `json:"name,omitempty"`
 	ToolCallID string              `json:"tool_call_id,omitempty"`
 	ToolCalls  []azureWireToolCall `json:"tool_calls,omitempty"`
+	Refusal    string              `json:"refusal,omitempty"`
 }
 
 type azureWireToolCall struct {
@@ -574,6 +406,7 @@ type azureStreamFrame struct {
 		Delta struct {
 			Content   string              `json:"content,omitempty"`
 			ToolCalls []azureWireToolCall `json:"tool_calls,omitempty"`
+			Refusal   string              `json:"refusal,omitempty"`
 		} `json:"delta"`
 		FinishReason string `json:"finish_reason,omitempty"`
 	} `json:"choices"`
@@ -591,11 +424,7 @@ type azureStreamFrame struct {
 	} `json:"error,omitempty"`
 }
 
-// encodeChatRequest serialises a [provider.ChatRequest] into the
-// Azure JSON envelope. modelInBody is non-empty only for the Foundry
-// flavor; for Azure OpenAI Service the body MUST omit the model
-// field (the deployment name in the URL is the routing key).
-func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool, v1 bool) ([]byte, error) {
+func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool) ([]byte, error) {
 	wireMsgs := make([]azureWireMsg, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		wm := azureWireMsg{Role: m.Role, Content: m.Content, Name: m.Name, ToolCallID: m.ToolID}
@@ -628,76 +457,88 @@ func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool
 		wireTools = append(wireTools, wt)
 	}
 	wire := azureChatRequest{
-		Model:       modelInBody,
-		Messages:    wireMsgs,
-		Tools:       wireTools,
-		Stream:      stream,
-		Temperature: req.Temperature,
+		Model:    modelInBody,
+		Messages: wireMsgs,
+		Tools:    wireTools,
+		Stream:   stream,
 	}
-	if v1 {
-		wire.MaxCompletionTokens = req.MaxTokens
-	} else {
-		wire.MaxTokens = req.MaxTokens
+	n := req.MaxTokens
+	if n <= 0 {
+		n = defaultMaxCompletionTokens
 	}
+	wire.MaxCompletionTokens = n
 	if len(wireTools) == 0 {
 		wire.Tools = nil
 	}
 	return json.Marshal(wire)
 }
 
-func (r *azureChatResponse) toChatResponse() *provider.ChatResponse {
+func (r *azureChatResponse) toChatResponse() (*provider.ChatResponse, error) {
 	out := &provider.ChatResponse{
 		InputTokens:  r.Usage.PromptTokens,
 		OutputTokens: r.Usage.CompletionTokens,
 		FinishReason: provider.FinishStop,
 	}
 	if len(r.Choices) == 0 {
-		return out
+		return nil, fmt.Errorf("%w: azure chat returned no choices", provider.ErrUpstream)
 	}
 	c := r.Choices[0]
+	if c.Message.Refusal != "" {
+		return nil, fmt.Errorf("%w: azure chat refusal: %s", provider.ErrUpstream, c.Message.Refusal)
+	}
 	out.Message = provider.Message{
 		Role:    c.Message.Role,
 		Content: c.Message.Content,
 		Name:    c.Message.Name,
 		ToolID:  c.Message.ToolCallID,
 	}
-	switch c.FinishReason {
-	case "stop":
-		out.FinishReason = provider.FinishStop
-	case "length":
-		out.FinishReason = provider.FinishLength
-	case "tool_calls":
-		out.FinishReason = provider.FinishToolCalls
-	case "content_filter":
-		out.FinishReason = provider.FinishContentFilter
+	out.FinishReason = provider.NormalizeFinishReason(c.FinishReason)
+	if out.FinishReason == "" {
+		return nil, fmt.Errorf("%w: azure chat returned unknown finish reason %q", provider.ErrUpstream, c.FinishReason)
 	}
 	for _, tc := range c.Message.ToolCalls {
+		if out.FinishReason == provider.FinishLength || out.FinishReason == provider.FinishContentFilter {
+			break
+		}
 		out.ToolCalls = append(out.ToolCalls, provider.ToolCall{
 			ID:        tc.ID,
 			Name:      tc.Function.Name,
 			Arguments: json.RawMessage(tc.Function.Arguments),
 		})
 	}
-	return out
+	if err := validateCompletedTools(out.ToolCalls, out.FinishReason); err != nil {
+		return nil, err
+	}
+	if out.FinishReason == provider.FinishStop && strings.TrimSpace(out.Message.Content) == "" {
+		return nil, fmt.Errorf("%w: azure chat completed without content", provider.ErrUpstream)
+	}
+	return out, nil
 }
 
 func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Chunk) {
 	defer close(out)
 	defer body.Close()
+	stopClose := context.AfterFunc(ctx, func() { _ = body.Close() })
+	defer stopClose()
 	var toolCalls provider.ToolCallAccumulator
 	var finishReason string
 	var inputTokens, outputTokens int
+	var hasContent bool
 	emitTerminal := func() {
 		calls := toolCalls.Calls()
 		if finishReason == "" {
-			if len(calls) > 0 {
-				send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream ended without a tool_calls finish reason", provider.ErrUpstream)})
-				return
-			}
-			finishReason = provider.FinishStop
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream ended without a finish reason", provider.ErrUpstream)})
+			return
 		}
-		if len(calls) > 0 && finishReason != provider.FinishToolCalls {
-			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure emitted tool fragments with finish reason %q", provider.ErrUpstream, finishReason)})
+		if finishReason == provider.FinishLength || finishReason == provider.FinishContentFilter {
+			calls = nil
+		}
+		if err := validateCompletedTools(calls, finishReason); err != nil {
+			send(ctx, out, provider.Chunk{Err: err})
+			return
+		}
+		if finishReason == provider.FinishStop && !hasContent {
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream completed without content", provider.ErrUpstream)})
 			return
 		}
 		if finishReason == provider.FinishToolCalls {
@@ -758,7 +599,12 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 			continue
 		}
 		ch := frame.Choices[0]
+		if ch.Delta.Refusal != "" {
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream refusal: %s", provider.ErrUpstream, ch.Delta.Refusal)})
+			return
+		}
 		if ch.Delta.Content != "" {
+			hasContent = hasContent || strings.TrimSpace(ch.Delta.Content) != ""
 			send(ctx, out, provider.Chunk{Delta: ch.Delta.Content})
 		}
 		for _, tc := range ch.Delta.ToolCalls {
@@ -773,19 +619,36 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 		}
 	}
 	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
-		send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream read: %v", provider.ErrUpstream, err)})
+		send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream read: %w", provider.ErrUpstream, err)})
 		return
 	}
-	if finishReason != "" {
-		emitTerminal()
-	}
+	emitTerminal()
 }
 
 func send(ctx context.Context, out chan<- provider.Chunk, c provider.Chunk) {
+	if ctx.Err() != nil {
+		return
+	}
 	select {
 	case <-ctx.Done():
 	case out <- c:
 	}
+}
+
+func validateCompletedTools(calls []provider.ToolCall, finish string) error {
+	if (len(calls) > 0) != (finish == provider.FinishToolCalls) {
+		return fmt.Errorf("%w: azure tool calls inconsistent with finish reason %q", provider.ErrUpstream, finish)
+	}
+	seen := make(map[string]bool, len(calls))
+	for _, call := range calls {
+		var args map[string]json.RawMessage
+		if strings.TrimSpace(call.ID) == "" || strings.TrimSpace(call.Name) == "" || seen[call.ID] ||
+			json.Unmarshal(call.Arguments, &args) != nil || args == nil {
+			return fmt.Errorf("%w: azure invalid or duplicate function call", provider.ErrUpstream)
+		}
+		seen[call.ID] = true
+	}
+	return nil
 }
 
 var _ provider.Provider = (*Adapter)(nil)

@@ -408,8 +408,8 @@ type turnResult struct {
 }
 
 // completeTurn uses the provider's real streaming path whenever advertised.
-// Any Stream failure that happens before a frame is consumed falls back
-// to Chat (capability drift, Foundry stream 404, etc.).
+// A failure before the first frame may fall back to Chat unless the adapter
+// has finalized protocol negotiation or the caller has cancelled.
 func (d *Dispatcher) completeTurn(
 	ctx context.Context,
 	req provider.ChatRequest,
@@ -420,10 +420,7 @@ func (d *Dispatcher) completeTurn(
 		if err == nil {
 			return turn, "stream", nil
 		}
-		// Fall back to Chat only when Stream refused before any
-		// frame — including Azure Foundry 404 DeploymentNotFound
-		// on stream:true while the same Chat probe succeeds.
-		if consumed {
+		if consumed || errors.Is(err, provider.ErrStreamFinal) || ctx.Err() != nil {
 			return turnResult{}, "stream", err
 		}
 	}
@@ -454,6 +451,8 @@ func (d *Dispatcher) streamTurn(
 	req provider.ChatRequest,
 	w StreamWriter,
 ) (turnResult, bool, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	chunks, err := d.provider.Stream(ctx, req)
 	if err != nil {
 		return turnResult{}, false, err
@@ -468,6 +467,7 @@ func (d *Dispatcher) streamTurn(
 	done := false
 	var finishReason string
 	var inputTokens, outputTokens int
+	var providerState json.RawMessage
 	for chunk := range chunks {
 		consumed = true
 		switch {
@@ -488,15 +488,20 @@ func (d *Dispatcher) streamTurn(
 			finishReason = chunk.FinishReason
 			inputTokens = chunk.InputTokens
 			outputTokens = chunk.OutputTokens
+			providerState = chunk.ProviderState
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return turnResult{}, consumed, err
 	}
 	if !done {
 		return turnResult{}, consumed, ErrStreamIncomplete
 	}
 	return turnResult{
 		message: provider.Message{
-			Role:    provider.RoleAssistant,
-			Content: content.String(),
+			Role:          provider.RoleAssistant,
+			Content:       content.String(),
+			ProviderState: providerState,
 		},
 		toolCalls:    toolCalls,
 		finishReason: finishReason,

@@ -145,7 +145,7 @@ export function BulkActionsToolbar({
       >
         <div className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
           <span
-            className="inline-flex items-center justify-center rounded-full bg-blue-500/15 px-2 py-0.5 font-semibold text-blue-200"
+            className="inline-flex items-center justify-center rounded-full bg-[var(--surface-3)] px-2 py-0.5 font-semibold text-[var(--text-primary)]"
             aria-live="polite"
           >
             {countLabel}
@@ -165,7 +165,7 @@ export function BulkActionsToolbar({
           )}
         </div>
 
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="ms-auto flex flex-wrap items-center gap-2">
           {items.map((action) => (
             <Button
               key={action.id}

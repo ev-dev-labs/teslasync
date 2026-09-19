@@ -52,6 +52,9 @@ type Message struct {
 	// encoder iterates over both [Tool] (legacy) and [ToolCalls]
 	// (new) so callers can use either; dispatch sets ToolCalls.
 	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
+	// ProviderState carries opaque, adapter-owned continuation items between
+	// tool turns. It is never serialized into API responses or stored history.
+	ProviderState json.RawMessage `json:"-"`
 }
 
 // ToolCall is the structural representation of a model-proposed tool
@@ -110,13 +113,14 @@ type ChatResponse struct {
 // before emitting it. The producer closes the channel after the terminal chunk
 // (Done or Err); consumers MUST drain on cancellation.
 type Chunk struct {
-	Delta        string
-	ToolDelta    *ToolCall
-	Done         bool
-	FinishReason string
-	InputTokens  int
-	OutputTokens int
-	Err          error
+	Delta         string
+	ToolDelta     *ToolCall
+	Done          bool
+	FinishReason  string
+	InputTokens   int
+	OutputTokens  int
+	Err           error
+	ProviderState json.RawMessage `json:"-"`
 }
 
 // EmbedRequest is the input to [Provider.Embed].

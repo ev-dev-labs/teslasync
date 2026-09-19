@@ -10,12 +10,12 @@ replies:
     tool_calls:
       - id: call_validate_alert_message_template_metric_1
         name: validate_alert_message_template
-        arguments: '{"kind":"computed_metric","metric_id":"charging_cost","metric_op":">","metric_threshold":5,"template":"{{VehicleName}}: {{MetricID}} is {{MetricValue}} (threshold {{MetricThreshold}})"}'
+        arguments: '{"kind":"computed_metric","metric_id":"charging_cost","metric_op":">","metric_threshold":5,"template":"{{VehicleName}} ordered another round of electrons. Charging cost: {{MetricValue}}, past your {{MetricThreshold}} marker."}'
     input_tokens: 96
     output_tokens: 48
   - finish_reason: stop
     content: |
-      Suggested template for charging_cost: {{VehicleName}}: {{MetricID}} is {{MetricValue}} (threshold {{MetricThreshold}}).
-      Apply it in Alert Studio, then Save if you want to keep it.
+      Suggested template for charging_cost: {{VehicleName}} ordered another round of electrons. Charging cost: {{MetricValue}}, past your {{MetricThreshold}} marker.
+      A charging-specific image keeps the spending threshold clear without inventing a currency or claiming a saving.
     input_tokens: 240
     output_tokens: 80

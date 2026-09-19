@@ -1352,6 +1352,8 @@ paths:
                   example: 20
                 vehicle_id:
                   type: integer
+                channel_ids:
+                  $ref: "#/components/schemas/AlertRuleChannels"
       responses:
         "201":
           description: Alert rule created
@@ -1359,6 +1361,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AlertRule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /alerts/rules/bulk/delete:
+    post:
+      operationId: bulkDeleteAlertRules
+      summary: Delete explicitly selected alert rules
+      description: Deletes the specified rules and their pack memberships. Unknown IDs are ignored. Rate limited.
+      tags: [Alerts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    type: integer
+                    format: int64
+                    minimum: 1
+      responses:
+        "200":
+          description: IDs of rules actually deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted_ids]
+                properties:
+                  deleted_ids:
+                    type: array
+                    items:
+                      type: integer
+                      format: int64
         "400":
           $ref: "#/components/responses/BadRequest"
         "500":
@@ -1391,6 +1435,8 @@ paths:
                   type: number
                 enabled:
                   type: boolean
+                channel_ids:
+                  $ref: "#/components/schemas/AlertRuleChannels"
       responses:
         "200":
           description: Alert rule updated
@@ -6471,6 +6517,17 @@ components:
           type: string
           format: date-time
 
+    AlertRuleChannels:
+      type: array
+      nullable: true
+      maxItems: 100
+      uniqueItems: true
+      description: Null selects all enabled external channels, including future channels. An empty array disables external delivery. An explicit list selects only those channels. Browser notifications are unchanged. Omission during update preserves the current selection.
+      items:
+        type: integer
+        format: int64
+        minimum: 1
+
     AlertRule:
       type: object
       properties:
@@ -6480,6 +6537,8 @@ components:
         name:
           type: string
           example: Low Battery Alert
+        channel_ids:
+          $ref: "#/components/schemas/AlertRuleChannels"
         type:
           type: string
           enum: [battery_low, speed_limit, geofence_enter, geofence_exit, sentry_mode]

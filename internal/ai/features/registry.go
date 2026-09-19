@@ -1610,6 +1610,22 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	"alert-pack-builder": {
+		ID:          "alert-pack-builder",
+		Name:        "Helix custom Alert Packs",
+		Description: "Proposes a goal-based group from supported alert templates. Review and edit the draft before explicit installation. Never changes rules autonomously.",
+		Tier:        "A",
+		DefaultOn:   false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/alerts/packs/draft"},
+			Frontend:  []string{"/notifications/studio"},
+			UITestIDs: []string{"ai-feature-alert-pack-builder-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Alert tuning suggestions.
 	//
 	// `alert-tuning-suggestions` is an opt-in LLM that proposes a

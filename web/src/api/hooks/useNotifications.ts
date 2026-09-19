@@ -94,6 +94,7 @@ export const notificationKeys = {
   alertHistory: (limit: number) => ['alerts', 'history', limit] as const,
   alertDetail: (id: number) => ['alerts', 'detail', id] as const,
   alertRules: ['alert-rules'] as const,
+  packInstallations: ['alert-pack-installations'] as const,
   alertMetrics: ['alert-metrics'] as const,
   channels: ['notification-channels'] as const,
   eventTypes: ['notification-event-types'] as const,
@@ -562,6 +563,7 @@ export function useSaveAlertRule() {
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
       success('toast.alerts.saveRule.success', 'Alert rule saved');
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.packInstallations });
     },
     onError: (e) => error(e, 'toast.alerts.saveRule.error', 'Failed to save alert rule'),
   });
@@ -576,12 +578,14 @@ export function useDeleteAlertRule() {
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
       success('toast.alerts.deleteRule.success', 'Alert rule deleted');
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.packInstallations });
     },
     onError: (e) => error(e, 'toast.alerts.deleteRule.error', 'Failed to delete alert rule'),
   });
 }
 
 export function useToggleAlertRule() {
+  const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useOptimisticMutation<
     AlertRule,
@@ -597,6 +601,7 @@ export function useToggleAlertRule() {
       });
     },
     queryKeys: [notificationKeys.alertRules],
+    onSettled: () => invalidateAndBroadcast(qc, { queryKey: notificationKeys.packInstallations }),
     updater: (prev, { id, enabled }) =>
       prev?.map((r) => (r.id === id ? { ...r, enabled } : r)),
     broadcast: true,
@@ -633,6 +638,7 @@ export function useBulkEnableRules() {
       success('toast.bulk.enable.success', '{{count}} enabled', {
         count: res.updated ?? 0,
       });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.packInstallations });
     },
     onError: (e) => error(e, 'toast.bulk.enable.error', 'Failed to enable selection'),
   });
@@ -653,6 +659,7 @@ export function useBulkDisableRules() {
       success('toast.bulk.disable.success', '{{count}} disabled', {
         count: res.updated ?? 0,
       });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.packInstallations });
     },
     onError: (e) => error(e, 'toast.bulk.disable.error', 'Failed to disable selection'),
   });

@@ -22,6 +22,7 @@ import (
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
 	aialert "github.com/ev-dev-labs/teslasync/internal/api/aialert"
 	aialertmsg "github.com/ev-dev-labs/teslasync/internal/api/aialertmsg"
+	"github.com/ev-dev-labs/teslasync/internal/api/aialertpacks"
 	aialerttune "github.com/ev-dev-labs/teslasync/internal/api/aialerttune"
 	aianomaly "github.com/ev-dev-labs/teslasync/internal/api/aianomaly"
 	aiautomation "github.com/ev-dev-labs/teslasync/internal/api/aiautomation"
@@ -1185,6 +1186,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Validator: aialert.NewRuleValidator(),
 	})
 	alert.RegisterAlertMessageTemplateTools(aiToolRegistry)
+	alert.RegisterAlertPackTools(aiToolRegistry)
+	aiAlertPackHandler := aialertpacks.NewHandler(aiRegistry, aiToolRegistry, cfg.Auth.ForwardAuthHeader)
 	aiAlertMessageTemplateHandler := aialertmsg.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
@@ -3744,6 +3747,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/{alertID}/read", alertHandler.MarkRead)
 			r.Get("/metrics", alertHandler.ListMetrics)
 			r.Get("/rules", alertHandler.ListRules)
+			// Alert Packs install ordinary rules without replacing existing rules.
+			r.Get("/packs", alertHandler.ListPacks)
+			r.Get("/pack-installations", alertHandler.ListPackInstallations)
+			r.With(httprate.LimitByIP(10, time.Minute)).Post("/packs/{packID}/install", alertHandler.InstallPack)
+			r.With(httprate.LimitByIP(10, time.Minute)).Post("/pack-installations/{installationID}/remove", alertHandler.RemovePack)
 			r.Post("/rules", alertHandler.CreateRule)
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
 			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
@@ -3751,6 +3759,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Bulk enable/disable
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/delete", alertHandler.BulkDeleteRules)
 			r.Post("/test", alertHandler.TestRule)
 			// alert message template helpers.
 			// These are static read paths registered BEFORE the
@@ -5024,6 +5033,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			Anomaly:                              aiAnomalyHandler,
 			Alert:                                aiAlertHandler,
 			AlertMessageTemplate:                 aiAlertMessageTemplateHandler,
+			AlertPacks:                           aiAlertPackHandler,
 			Automation:                           aiAutomationHandler,
 			Search:                               aiSearchHandler,
 			DriveCoach:                           aiDriveCoachHandler,

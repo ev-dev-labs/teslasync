@@ -297,6 +297,62 @@ describe('AISettings — validate endpoint exercised end-to-end', () => {
 })
 
 describe('AISettings — F1↔F2 provider config schema (namespaced shape)', () => {
+  it.each([
+    { oldFlavor: 'openai', effectiveModel: 'old-deployment' },
+    { oldFlavor: 'foundry', effectiveModel: 'visible-model' },
+  ])('migrates $oldFlavor identity, then validates and saves only Foundry settings', async ({ oldFlavor, effectiveModel }) => {
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path === '/settings/ai/validate-config') {
+        return { ok: true, mode: 'cloud', probed_model: 'edited-deployment' }
+      }
+      if (path === '/settings' && init?.method === 'PUT') {
+        return JSON.parse(String(init.body))
+      }
+      return undefined
+    })
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'cloud',
+      ai_provider_config: {
+        default: 'azure',
+        azure: {
+          base_url: 'https://example.openai.azure.com/openai/v1',
+          model: 'visible-model',
+          deployment: 'old-deployment',
+          flavor: oldFlavor,
+          api_version: '2024-10-21',
+          embedding_deployment: 'embedding-deployment',
+        },
+      },
+    })
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue(effectiveModel)
+    expect(screen.getByTestId('ai-provider-azure-embedding-model')).toHaveValue('embedding-deployment')
+    fireEvent.change(screen.getByTestId('ai-provider-model'), {
+      target: { value: 'edited-deployment' },
+    })
+    fireEvent.change(screen.getByTestId('ai-provider-azure-protocol'), { target: { value: 'responses' } })
+    fireEvent.click(screen.getByTestId('ai-provider-validate-cloud'))
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-provider-validate-banner')).toHaveAttribute('data-validate-kind', 'ok')
+    })
+    const probe = mockedRequest.mock.calls.find((call) => call[0] === '/settings/ai/validate-config')
+    expect(JSON.parse(String(probe![1].body))).toMatchObject({
+      model: 'edited-deployment', api_protocol: 'responses',
+    })
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+    await waitFor(() => {
+      const save = mockedRequest.mock.calls.find((call) => call[0] === '/settings' && call[1]?.method === 'PUT')
+      expect(save).toBeDefined()
+      const saved = JSON.parse(String(save![1].body)).ai_provider_config.azure
+      expect(saved).toMatchObject({
+        model: 'edited-deployment', api_protocol: 'responses', embedding_model: 'embedding-deployment',
+      })
+      for (const key of ['flavor', 'api_version', 'deployment', 'embedding_deployment']) {
+        expect(saved).not.toHaveProperty(key)
+      }
+    })
+  })
+
   // The backend parser (ParseProviderConfig in
   // internal/ai/provider/config.go) expects ai_provider_config in
   // the namespaced shape:
@@ -452,4 +508,3 @@ describe('AISettings — F1↔F2 provider config schema (namespaced shape)', () 
     ).toBe('http://legacy:11434')
   })
 })
-

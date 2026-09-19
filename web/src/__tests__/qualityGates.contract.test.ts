@@ -753,6 +753,17 @@ describe('dependency duplication: per package, not fungible totals', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('virtualization backlog: derived from a source scan', () => {
+  it('keeps rule-list rendering in the backlog when its bulk controls are extracted', () => {
+    const source = `
+      export default function RulesPage() {
+        return <div><RuleListTools />{rules.map(rule => <RuleRow key={rule.id} />)}</div>
+      }
+    `
+    const verdict = classifyLongListSource(source)
+    expect(verdict.isLongListSurface).toBe(true)
+    expect(verdict.reasons).toContain('bulk-actions')
+  })
+
   const LONG_LIST_PAGE = `
     import { Pagination } from '@/components/ui'
     export default function NewThingListPage() {

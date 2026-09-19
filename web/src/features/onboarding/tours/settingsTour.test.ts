@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import '@/i18n'
+import i18n from 'i18next'
 
 import { SETTINGS_TOUR } from './settingsTour'
 import { isRecommendedForRoute } from '@/lib/tourRegistry'
@@ -7,19 +9,30 @@ import { isRecommendedForRoute } from '@/lib/tourRegistry'
 const EXPECTED_TARGETS = [
   '[data-tour="settings-appearance"]',
   '[data-tour="settings-units"]',
-  '[data-tour="settings-notifications"]',
+  '[data-tour="settings-workspace"]',
   '[data-tour="settings-tour"]',
 ]
 
 const VALID_PLACEMENTS = new Set(['top', 'bottom', 'left', 'right'])
 
 describe('SETTINGS_TOUR definition', () => {
+  it('resolves the workspace copy from translations once initialized', () => {
+    const translate = vi.spyOn(i18n, 't')
+    try {
+      translate.mockReturnValueOnce('Localized workspace')
+      expect(SETTINGS_TOUR.steps[2].title).toBe('Localized workspace')
+      translate.mockReturnValueOnce('Localized workspace description')
+      expect(SETTINGS_TOUR.steps[2].description).toBe('Localized workspace description')
+    } finally {
+      translate.mockRestore()
+    }
+  })
   it('carries the settings identity + i18n metadata', () => {
     expect(SETTINGS_TOUR.id).toBe('settings')
     expect(SETTINGS_TOUR.titleKey).toBe('tour.tours.settings.title')
     expect(SETTINGS_TOUR.titleFallback).toBe('Settings')
     expect(SETTINGS_TOUR.descriptionKey).toBe('tour.tours.settings.description')
-    expect(SETTINGS_TOUR.descriptionFallback).toBe('Theme, units, notifications, and tours.')
+    expect(SETTINGS_TOUR.descriptionFallback).toBe('Theme, units, workspace, and tours.')
   })
 
   it('declares a positive integer version and stays launcher-only (no auto-start)', () => {
@@ -87,11 +100,12 @@ describe('SETTINGS_TOUR appearance-step navigation (onShow)', () => {
     window.history.replaceState({}, '', '/')
   })
 
-  it('wires onShow only on the first (appearance) step', () => {
-    expect(typeof SETTINGS_TOUR.steps[0].onShow).toBe('function')
-    expect(SETTINGS_TOUR.steps[1].onShow).toBeUndefined()
-    expect(SETTINGS_TOUR.steps[2].onShow).toBeUndefined()
-    expect(SETTINGS_TOUR.steps[3].onShow).toBeUndefined()
+  it('opens the correct category for every step', () => {
+    for (const [index, hash] of ['#appearance', '#general', '#workspace', '#overview'].entries()) {
+      SETTINGS_TOUR.steps[index].onShow?.()
+      expect(window.location.pathname).toBe('/settings')
+      expect(window.location.hash).toBe(hash)
+    }
   })
 
   it('pushes /settings and fires popstate when the user is elsewhere', () => {
@@ -106,13 +120,13 @@ describe('SETTINGS_TOUR appearance-step navigation (onShow)', () => {
     SETTINGS_TOUR.steps[0].onShow?.()
 
     window.removeEventListener('popstate', onPopstate)
-    expect(pushSpy).toHaveBeenCalledWith({}, '', '/settings')
+    expect(pushSpy).toHaveBeenCalledWith({}, '', '/settings#appearance')
     expect(window.location.pathname).toBe('/settings')
     expect(popstateCount).toBe(1)
   })
 
   it('is a no-op when the user is already on /settings (no history churn)', () => {
-    window.history.replaceState({}, '', '/settings')
+    window.history.replaceState({}, '', '/settings#appearance')
     const pushSpy = vi.spyOn(window.history, 'pushState')
     let popstateCount = 0
     const onPopstate = () => {

@@ -28,6 +28,7 @@ type AlertHandler struct {
 	db                *database.DB
 	alertRuleRepo     alertRuleRepository
 	bulkRuleRepo      alertRuleBulkRepository
+	packRepo          packRepository
 	notifRepo         notificationRepository
 	eventHub          EventBroadcaster
 	mqttClient        pahomqtt.Client
@@ -74,6 +75,7 @@ func NewAlertHandler(db *database.DB, hub EventBroadcaster, mc pahomqtt.Client, 
 		db:            db,
 		alertRuleRepo: repo,
 		bulkRuleRepo:  repo,
+		packRepo:      repo,
 		notifRepo:     dbnotif.NewNotificationRepo(db),
 		eventHub:      hub,
 		mqttClient:    mc,
