@@ -19,19 +19,31 @@ current and future vehicles or a specific subset, and review each trigger,
 severity, message and cooldown. Numeric operands use canonical units; temperature
 inputs are explicitly Celsius and the preview also displays your preferred unit.
 
-Desktop previews use a comparison table; phones and tablets use compact cards.
-Open a rule to edit its threshold, notification message or delivery settings.
-Only one rule editor opens at a time, and changing pages or layouts preserves edits.
+Desktop previews use an editable table; phones and tablets expose the same fields
+on cards. Edit operators, numeric thresholds, cooldowns, behavior, channels and
+notification messages directly, without expanding a rule. Message fields grow on
+focus. Changing pages, filters or layouts preserves edits.
 Use **All rules**, **Selected** or **Customized** to narrow the list. The persistent
 footer shows the selected count, whether new rules will start paused, and the
 explicit installation action.
 
-**Master settings** in the desktop sidebar or mobile disclosure set cooldown, once/repeat behavior and title
-inclusion for the whole pack. Each rule can switch to **individual delivery
-settings**. Later master changes affect inherited rules only; **Apply master
+**Master settings** above the table or in the mobile disclosure set cooldown, once/repeat behavior and title
+inclusion for the whole pack. Editing a row creates an override for that field;
+other fields still follow their master defaults. **Reset to master** clears that
+row's delivery overrides. Later master changes affect inherited fields only; **Apply master
 settings to all rules** explicitly clears the individual delivery overrides.
 Messages, thresholds and selection are preserved. Master settings are installation
 defaults, not a live link that subsequently changes installed rules.
+
+Each message has a small Helix action when message-template suggestions are
+enabled. Helix uses that row's current trigger and threshold. Review its proposal
+and choose **Apply to editor** to replace only that row's message; neither opening
+Helix nor generating a suggestion installs or saves rules. Manual editing remains
+available when AI is off or unavailable.
+
+Channel selectors support all enabled channels (including future channels), no
+external channels, or a fixed set. Channel routing is validated before any rules
+are installed. Existing matching rules are still reused without modification.
 
 Search and select/deselect matching rules while retaining selections outside the
 filter. Large packs are paginated in the preview; installation includes all selected
@@ -106,6 +118,10 @@ whole-minute increments), `trigger_mode` (`once` or `repeat`) and `include_title
 at both the request and individual-rule level. Rule-level values override master
 values; omitted values inherit. The preview displays minutes; the existing
 ordinary rule persistence contract is unchanged.
+Each selection also accepts an optional `op` compatible with its operand type
+and `channel_ids` (`null` or omitted for all enabled channels, `[]` for none,
+or up to 100 distinct positive channel IDs). Changed-value templates retain
+their `changed` operator.
 
 `TestPacksPostgres` requires `TESLASYNC_TEST_DB` pointing to a migrated test
 database. It clones the alert-rule schema without rows into a temporary schema,

@@ -57,6 +57,7 @@ beforeEach(() => {
     if (path === '/alerts/packs') return [pack]
     if (path.startsWith('/alerts/pack-installations?')) return []
     if (path === '/vehicles') return [{ id: 1, display_name: 'Roadster', model: 'Model 3' }]
+    if (path === '/notifications') return [{ id: 2, name: 'Phone', kind: 'ntfy', enabled: true }]
     if (path.endsWith('/install')) return installation
     if (path.endsWith('/remove')) return { status: 'removed' }
     throw new Error(`Unexpected request ${path}`)
@@ -64,6 +65,55 @@ beforeEach(() => {
 })
 
 describe('Alert Packs', () => {
+  it('keeps overrides field-specific and resetting delivery preserves messages, operators and channels', async () => {
+    setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getAllByLabelText('Channels')[0]).toBeEnabled())
+    fireEvent.change(screen.getAllByLabelText('Minimum minutes between notifications')[0], { target: { value: '120' } })
+    fireEvent.change(screen.getByLabelText('Master alert behavior'), { target: { value: 'repeat' } })
+    expect(screen.getAllByLabelText('Alert behavior')[0]).toHaveValue('')
+    fireEvent.change(screen.getAllByLabelText('Operator')[0], { target: { value: '>=' } })
+    fireEvent.change(screen.getAllByLabelText('Channels')[0], { target: { value: '2' } })
+    fireEvent.change(screen.getAllByLabelText('Notification message')[0], { target: { value: 'My reviewed message' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to master' }))
+    expect(screen.getAllByLabelText('Minimum minutes between notifications')[0]).toHaveValue(60)
+    expect(screen.getAllByLabelText('Operator')[0]).toHaveValue('>=')
+    expect(screen.getAllByLabelText('Channels')[0]).toHaveValue('custom')
+    expect(screen.getAllByLabelText('Notification message')[0]).toHaveValue('My reviewed message')
+    expect(screen.getAllByLabelText('Notification message')[1]).not.toHaveValue('My reviewed message')
+    fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
+    await waitFor(() => {
+      const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
+      const body = JSON.parse(String(call?.[1]?.body))
+      expect(body.trigger_mode).toBe('repeat')
+      expect(body.rules[0]).not.toHaveProperty('trigger_mode')
+      expect(body.rules[0]).not.toHaveProperty('cooldown_s')
+    })
+  })
+
+  it('treats all and no channels distinctly and undoing operator/channel changes leaves a pristine preview', async () => {
+    const close = vi.fn()
+    setup(<InstallPackDialog pack={pack} onClose={close} />)
+    await waitFor(() => expect(screen.getAllByLabelText('Channels')[0]).toBeEnabled())
+    fireEvent.change(screen.getAllByLabelText('Channels')[0], { target: { value: 'none' } })
+    expect(screen.getAllByLabelText('Channels')[0]).toHaveValue('none')
+    fireEvent.change(screen.getAllByLabelText('Operator')[0], { target: { value: '>=' } })
+    fireEvent.change(screen.getAllByLabelText('Operator')[0], { target: { value: '<' } })
+    fireEvent.change(screen.getAllByLabelText('Channels')[0], { target: { value: 'all' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(close).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: 'Discard configuration' })).not.toBeInTheDocument()
+  })
+
+  it('identifies an empty message in its row and prevents installation until repaired', async () => {
+    setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
+    fireEvent.change(screen.getAllByLabelText('Notification message')[0], { target: { value: ' ' } })
+    expect(screen.getByText('Enter a notification message.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeDisabled()
+    fireEvent.change(screen.getAllByLabelText('Notification message')[0], { target: { value: '{{VehicleName}} ready.' } })
+    expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled()
+  })
+
   it('paginates a 70-rule pack without dropping selections or installing just the visible page', async () => {
     const comprehensive: AlertPack = { ...pack, id: 'all', name: 'All alerts',
       rules: Array.from({ length: 70 }, (_, index) => ({
@@ -88,33 +138,33 @@ describe('Alert Packs', () => {
     })
   })
 
-  it('starts with a desktop comparison table, not repeated editors, and browsing is not a dirty edit', () => {
+  it('makes primary fields immediately editable and focusing them does not dirty the draft', () => {
     const close = vi.fn()
     setup(<InstallPackDialog pack={pack} onClose={close} />)
     expect(screen.getByRole('table', { name: 'Choose rules' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('Notification message')).not.toBeInTheDocument()
+    expect(screen.getAllByLabelText('Notification message')).toHaveLength(2)
+    expect(screen.getAllByLabelText('Minimum minutes between notifications')).toHaveLength(2)
+    expect(screen.getAllByLabelText('Alert behavior')).toHaveLength(2)
+    expect(screen.getAllByLabelText('Channels')).toHaveLength(2)
     expect(screen.queryByRole('button', { name: 'Apply master settings to all rules' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Battery running low' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Charging complete' }))
-    expect(screen.getAllByLabelText('Notification message')).toHaveLength(1)
-    expect(screen.queryByLabelText('Threshold (%)')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Customize/ })).not.toBeInTheDocument()
+    fireEvent.focus(screen.getAllByLabelText('Notification message')[0])
+    fireEvent.blur(screen.getAllByLabelText('Notification message')[0])
+    expect(screen.getByLabelText('Threshold (%)')).toHaveValue(20)
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(close).toHaveBeenCalledOnce()
   })
 
-  it('uses compact mobile cards and keeps edited values when changing the focused rule', () => {
+  it('edits mobile cards directly and keeps values through filtering', () => {
     vi.mocked(useMediaQuery).mockReturnValue(false)
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Master cooldown (minutes)')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Master settings/ })).toHaveAttribute('aria-expanded', 'false')
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Battery running low' }))
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '25' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Charging complete' }))
-    expect(screen.getAllByLabelText('Notification message')).toHaveLength(1)
+    expect(screen.getAllByLabelText('Notification message')).toHaveLength(2)
     fireEvent.change(screen.getByRole('combobox', { name: 'Show rules' }), { target: { value: 'customized' } })
     expect(screen.queryByRole('checkbox', { name: 'Charging complete' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Battery running low' }))
     expect(screen.getByLabelText('Threshold (%)')).toHaveValue(25)
     const footer = screen.getByRole('button', { name: 'Install selected rules' }).closest('[data-modal-footer]')
     expect(footer).toHaveTextContent('2 of 2 rules selected')
@@ -125,18 +175,14 @@ describe('Alert Packs', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
     fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value: '15' } })
     fireEvent.change(screen.getByLabelText('Master alert behavior'), { target: { value: 'repeat' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Battery running low' }))
-    expect(screen.getByText(/15 min cooldown/)).toBeInTheDocument()
-    expect(screen.queryByLabelText('Minimum minutes between notifications')).not.toBeInTheDocument()
-    fireEvent.click(screen.getAllByRole('switch', { name: 'Use individual delivery settings' })[0])
+    expect(screen.getAllByLabelText('Minimum minutes between notifications')[0]).toHaveValue(15)
     fireEvent.change(screen.getAllByLabelText('Minimum minutes between notifications')[0], { target: { value: '120' } })
     fireEvent.change(screen.getAllByLabelText('Alert behavior')[0], { target: { value: 'once' } })
     fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value: '30' } })
     expect(screen.getAllByLabelText('Minimum minutes between notifications')[0]).toHaveValue(120)
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Charging complete' }))
-    expect(screen.getByText(/30 min cooldown/)).toBeInTheDocument()
+    expect(screen.getAllByLabelText('Minimum minutes between notifications')[1]).toHaveValue(30)
     fireEvent.click(screen.getByRole('button', { name: 'Apply master settings to all rules' }))
-    expect(screen.getAllByRole('switch', { name: 'Use individual delivery settings' }).every(input => input.getAttribute('aria-checked') === 'false')).toBe(true)
+    expect(screen.getAllByLabelText('Minimum minutes between notifications').every(input => (input as HTMLInputElement).value === '30')).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
     await waitFor(() => {
       const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
@@ -178,25 +224,24 @@ describe('Alert Packs', () => {
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
     fireEvent.click(screen.getByRole('checkbox', { name: 'Charging complete' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Battery running low' }))
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '25' } })
-    fireEvent.click(screen.getByRole('switch', { name: 'Use individual delivery settings' }))
-    fireEvent.change(screen.getByLabelText('Minimum minutes between notifications'), { target: { value: '120' } })
-    fireEvent.change(screen.getByLabelText('Notification message'), { target: { value: '{{VehicleName}} needs a charge.' } })
+    fireEvent.change(screen.getAllByLabelText('Minimum minutes between notifications')[0], { target: { value: '120' } })
+    fireEvent.change(screen.getAllByLabelText('Operator')[0], { target: { value: '<=' } })
+    fireEvent.change(screen.getAllByLabelText('Channels')[0], { target: { value: '2' } })
+    fireEvent.change(screen.getAllByLabelText('Notification message')[0], { target: { value: '{{VehicleName}} needs a charge.' } })
     fireEvent.change(screen.getByLabelText('After installation'), { target: { value: 'enabled' } })
     fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
     await screen.findByText(/Pack installed. Created 2 rules; reused 1/)
     const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({
       version: 1, all_vehicles: true, vehicle_ids: [], enabled: true, cooldown_s: 3600, trigger_mode: 'once', include_title: true,
-      rules: [{ template_id: 'battery-low', value_num: 25, cooldown_s: 7200, trigger_mode: 'once', include_title: true, message: '{{VehicleName}} needs a charge.' }],
+      rules: [{ template_id: 'battery-low', op: '<=', channel_ids: [2], value_num: 25, cooldown_s: 7200, message: '{{VehicleName}} needs a charge.' }],
     })
   })
 
   it('keeps installation disabled for invalid threshold and zero selected rules', async () => {
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Battery running low' }))
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '101' } })
     expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeDisabled()
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '20' } })
@@ -208,11 +253,11 @@ describe('Alert Packs', () => {
   it('retains draft and shows errors when installation fails', async () => {
     vi.mocked(request).mockImplementation(async path => {
       if (path === '/vehicles') return []
+      if (path === '/notifications') return []
       throw new Error('Installation failed')
     })
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Battery running low' }))
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '30' } })
     fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
     await screen.findByText("Can't reach server")
@@ -226,7 +271,6 @@ describe('Alert Packs', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(close).toHaveBeenCalledOnce()
     close.mockClear()
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Battery running low' }))
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '30' } })
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(close).not.toHaveBeenCalled()
@@ -249,7 +293,6 @@ describe('Alert Packs', () => {
   it('clears the unsaved guard when edits are undone', async () => {
     const close = vi.fn()
     setup(<InstallPackDialog pack={pack} onClose={close} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Battery running low' }))
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '30' } })
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '20' } })
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))

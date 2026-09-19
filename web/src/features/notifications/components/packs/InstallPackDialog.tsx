@@ -2,6 +2,7 @@ import { useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type AlertPack, type PackSelection, type PackTemplate, useInstallAlertPack } from '@/api/hooks/useAlertPacks'
 import { useVehicles } from '@/api/hooks/useVehicles'
+import { useNotificationChannels } from '@/api/hooks/useNotifications'
 import { Accordion, Badge, Button, Caption, Checkbox, DataTable, Input, Modal, PanelTitle, Select, Text, type Column } from '@/components/ui'
 import { SearchInput, VehicleMultiSelect, type VehicleSelection } from '@/components/forms'
 import { SeverityBadge } from '@/components/data-display'
@@ -12,7 +13,10 @@ import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { Icons } from '@/lib/icons'
 import PackRulePreview from './PackRulePreview'
-import PackRuleCondition from './PackRuleCondition'
+import PackRuleTriggerEditor from './PackRuleTriggerEditor'
+import PackRuleDeliveryEditor from './PackRuleDeliveryEditor'
+import PackRuleMessageEditor from './PackRuleMessageEditor'
+import PackRuleChannels from './PackRuleChannels'
 import PackDeliveryControls, { type PackDelivery } from './PackDeliveryControls'
 
 interface Props {
@@ -24,6 +28,8 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
   const { t } = useTranslation()
   const vehicles = useVehicles()
   const state = useDataState(vehicles)
+  const channels = useNotificationChannels()
+  const channelState = useDataState(channels)
   const install = useInstallAlertPack()
   const desktop = useMediaQuery('(min-width: 1024px)')
   const vehicleId = useId()
@@ -35,10 +41,9 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
   const [search, setSearch] = useState('')
   const [view, setView] = useState('all')
   const [page, setPage] = useState(0)
-  const [expanded, setExpanded] = useState<string | null>(null)
   const [master, setMaster] = useState<PackDelivery>({ cooldown_s: 3600, trigger_mode: 'once', include_title: true })
   const [selections, setSelections] = useState<Record<string, PackSelection>>(() => Object.fromEntries(pack.rules.map(template => [
-    template.id, { template_id: template.id, value_num: template.rule.value_num ?? undefined,
+    template.id, { template_id: template.id, op: template.rule.op, channel_ids: template.rule.channel_ids ?? null, value_num: template.rule.value_num ?? undefined,
       message: t(`alertPacks.rules.${template.id}.message`, template.rule.msg_template ?? '') },
   ])))
   const initialSelections = useRef(selections)
@@ -77,8 +82,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
     setSelected(ids => checked ? [...new Set([...ids, id])] : ids.filter(value => value !== id))
   const ruleProps = (template: PackTemplate) => ({
     template, selection: selections[template.id], master, customized: customized.has(template.id),
-    selected: selected.includes(template.id), disabled: install.isPending, expanded: expanded === template.id,
-    onExpand: () => setExpanded(id => id === template.id ? null : template.id),
+    selected: selected.includes(template.id), disabled: install.isPending, channels: channels.data ?? [],
     onToggle: (checked: boolean) => toggleRule(template.id, checked),
     onChange: (choice: PackSelection) => setSelections(previous => ({ ...previous, [template.id]: choice })),
   })
@@ -86,30 +90,24 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
     { key: 'selection', header: t('alertPacks.selected', 'Selected'), className: 'w-12', render: template =>
       <Checkbox aria-label={t(`alertPacks.rules.${template.id}.name`, template.rule.name)}
         checked={selected.includes(template.id)} disabled={install.isPending} onChange={checked => toggleRule(template.id, checked)} /> },
-    { key: 'rule', header: t('alertPacks.rule', 'Rule'), className: 'whitespace-normal', render: template => <div className="min-w-0 space-y-1">
-      <Button variant="ghost" className="h-auto whitespace-normal px-0 text-start"
-        aria-label={t('alertPacks.customizeRule', 'Customize {{name}}', { name: t(`alertPacks.rules.${template.id}.name`, template.rule.name) })}
-        aria-expanded={expanded === template.id} disabled={install.isPending} onClick={ruleProps(template).onExpand}>
+    { key: 'rule', header: t('alertPacks.rule', 'Rule'), className: 'min-w-32 max-w-48 whitespace-normal', render: template => <div className="min-w-0 space-y-1">
+      <Text as="p" variant="bodySm" weight="medium">
         {t(`alertPacks.rules.${template.id}.name`, template.rule.name)}
-      </Button>
+      </Text>
       <div className="flex flex-wrap gap-1">
         <SeverityBadge severity={template.rule.severity} size="sm" />
         {customized.has(template.id) && <Badge variant="info" size="sm">{t('alertPacks.customized', 'Customized')}</Badge>}
       </div>
     </div> },
-    { key: 'condition', header: t('alertPacks.trigger', 'Trigger'), className: 'max-w-40 whitespace-normal break-all', render: template => <PackRuleCondition template={template} selection={selections[template.id]} /> },
-    { key: 'delivery', header: t('alertPacks.deliverySettings', 'Delivery'), className: 'whitespace-normal', render: template => <div className="space-y-1">
-      <Text as="p" variant="bodySm">{t('alertPacks.cooldownSummary', '{{minutes}} min', {
-        minutes: Number.isFinite(selections[template.id].cooldown_s ?? master.cooldown_s) ? (selections[template.id].cooldown_s ?? master.cooldown_s) / 60 : '—',
-      })}</Text>
-      <Caption className="block">{(selections[template.id].trigger_mode ?? master.trigger_mode) === 'once'
-        ? t('alertPacks.onceShort', 'Once per condition') : t('alertPacks.repeatShort', 'Repeat while active')}</Caption>
-      <Caption className="block">{selections[template.id].cooldown_s != null
-        ? t('alertPacks.individualShort', 'Individual') : t('alertPacks.masterShort', 'Master')}</Caption>
-    </div> },
+    { key: 'condition', header: t('alertPacks.trigger', 'Trigger'), className: 'min-w-44 max-w-56 whitespace-normal', render: template => <PackRuleTriggerEditor {...ruleProps(template)} /> },
+    { key: 'delivery', header: t('alertPacks.deliverySettings', 'Delivery'), className: 'min-w-48 max-w-56 whitespace-normal', render: template => <PackRuleDeliveryEditor {...ruleProps(template)} /> },
+    { key: 'channels', header: t('alertPacks.channels', 'Channels'), className: 'min-w-40 max-w-48 whitespace-normal', render: template => <PackRuleChannels
+      id={template.id} value={selections[template.id].channel_ids ?? null} channels={channels.data ?? []} disabled={install.isPending || channels.isLoading} compact
+      onChange={channel_ids => ruleProps(template).onChange({ ...selections[template.id], channel_ids })} /> },
+    { key: 'message', header: t('alertPacks.message', 'Notification message'), className: 'min-w-72 w-1/3 whitespace-normal', render: template => <PackRuleMessageEditor {...ruleProps(template)} compact /> },
   ]
-  const settings = <div className="space-y-4">
-    <Caption className="block">{t('alertPacks.masterBrief', 'Defaults for every selected rule. Customize a rule only when it needs different settings.')}</Caption>
+  const settings = <div className="grid gap-4 md:grid-cols-3">
+    <div className="space-y-2">
     <PackDeliveryControls value={master} onChange={setMaster} disabled={install.isPending} master compact />
     <Checkbox label={t('alertPacks.includeTitle', 'Include title in notifications')} checked={master.include_title} disabled={install.isPending}
       onChange={include_title => setMaster(previous => ({ ...previous, include_title }))} />
@@ -117,12 +115,14 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       onClick={() => setSelections(previous => Object.fromEntries(Object.entries(previous).map(
         ([id, { cooldown_s: _cooldown, trigger_mode: _mode, include_title: _title, ...choice }]) => [id, choice],
       )))}>{t('alertPacks.applyMaster', 'Apply master settings to all rules')}</Button>}
-    <div className="space-y-2 border-t border-[var(--border-default)] pt-4">
+    </div>
+    <div className="space-y-2">
       <label htmlFor={vehicleId}><Caption>{t('alertPacks.vehicles', 'Vehicles')}</Caption></label>
       {vehicles.isLoading ? <Spinner /> : state.fatalError ? <ErrorDisplay error={state.fatalError} onRetry={() => void vehicles.refetch()} />
         : <VehicleMultiSelect id={vehicleId} vehicles={vehicles.data ?? []} value={vehicleSelection} disabled={install.isPending} onChange={setVehicleSelection} />}
       <StaleRefreshWarning state={state} />
     </div>
+    <div className="space-y-2">
     <Select label={t('alertPacks.afterInstall', 'After installation')} value={enabled ? 'enabled' : 'paused'} disabled={install.isPending}
       options={[{ value: 'paused', label: t('alertPacks.keepPaused', 'Keep paused (recommended)') },
         { value: 'enabled', label: t('alertPacks.enableImmediately', 'Enable immediately') }]}
@@ -136,10 +136,11 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
         ? t('alertPacks.once', 'Fires once when the condition becomes true; resets when it becomes false. Changed-value rules fire on each change, subject to cooldown.')
         : t('alertPacks.repeat', 'Repeats while the condition remains true, no more often than the cooldown. Changed-value rules still require a new change.')}</Caption>
     </Accordion>
+    </div>
   </div>
   const result = install.data
   return (
-    <Modal open onClose={close} size="full" title={t('alertPacks.preview', 'Preview {{name}}', { name: pack.id === 'custom' ? name : t(`alertPacks.catalog.${pack.id}.name`, pack.name) })}
+    <Modal open onClose={close} size="full" className="sm:max-w-[96vw]" title={t('alertPacks.preview', 'Preview {{name}}', { name: pack.id === 'custom' ? name : t(`alertPacks.catalog.${pack.id}.name`, pack.name) })}
       footer={result ? <Button onClick={onClose}>{t('alertPacks.done', 'Done')}</Button> : <div className="space-y-2">
         {install.error && <ErrorDisplay error={install.error} compact />}
         {!valid && <Caption className="block">{t('alertPacks.invalid', 'Select at least one rule and a vehicle scope, and check message, threshold and cooldown values.')}</Caption>}
@@ -174,7 +175,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
           ? t('alertPacks.created', 'Created') : t('alertPacks.reused', 'Existing rule kept unchanged')}{!member.enabled ? ` (${t('alertPacks.disabled', 'disabled')})` : ''}</Text>)}
       </div> : <div className="space-y-4">
         {pack.id === 'custom' && <Input label={t('alertPacks.packName', 'Pack name')} value={name} maxLength={100} disabled={install.isPending} onChange={e => setName(e.target.value)} />}
-        <div className="grid min-w-0 gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-4">
           {desktop ? <section aria-label={t('alertPacks.masterSettings', 'Master settings')} className="space-y-3 self-start rounded-lg bg-[var(--surface-2)] p-4">
             <PanelTitle>{t('alertPacks.masterSettings', 'Master settings')}</PanelTitle>{settings}
           </section> : <Accordion title={t('alertPacks.masterSettings', 'Master settings')} icon={<Icons.settings className="h-4 w-4" />}
@@ -185,8 +186,12 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
           <section aria-label={t('alertPacks.chooseRules', 'Choose rules')} className="min-w-0 space-y-3">
             <div className="space-y-1">
               <PanelTitle>{t('alertPacks.chooseRules', 'Choose rules')}</PanelTitle>
-              <Caption className="block">{t('alertPacks.chooseBrief', 'Scan the triggers. Select what matters. Open a rule to tailor its message or settings.')}</Caption>
+              <Caption className="block">{t('alertPacks.chooseBrief', 'Edit each rule directly. Delivery settings follow the master until you change them. Nothing is saved until you install.')}</Caption>
             </div>
+            {channels.isLoading && <Spinner />}
+            {channelState.fatalError && <ErrorDisplay error={channelState.fatalError} onRetry={() => void channels.refetch()} />}
+            {!channels.isLoading && !channelState.fatalError && channels.data?.length === 0 && <Caption className="block">{t('alertPacks.noConfiguredChannels', 'No external channels configured.')}</Caption>}
+            <StaleRefreshWarning state={channelState} />
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
               <SearchInput value={search} onChange={value => { setSearch(value); setPage(0) }} placeholder={t('alertPacks.searchRules', 'Search pack rules...')} />
               <Select aria-label={t('alertPacks.showRules', 'Show rules')} value={view} onChange={event => { setView(event.target.value); setPage(0) }}
@@ -202,9 +207,8 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
               <Caption>{t('alertPacks.showingRules', '{{count}} matching rules', { count: filtered.length })}</Caption>
             </div>
             {desktop ? <DataTable tableId="notifications:pack-preview" caption={t('alertPacks.chooseRules', 'Choose rules')} columns={columns} density="compact"
-              data={visible} keyExtractor={template => template.id} mobileColumns={['selection', 'rule', 'condition', 'delivery']}
-              expandable expandedKeys={expanded ? [expanded] : []} onExpandedChange={keys => { if (!install.isPending) setExpanded(keys.length ? String(keys[keys.length - 1]) : null) }}
-              renderExpanded={template => <PackRulePreview {...ruleProps(template)} editorOnly />} />
+              data={visible} keyExtractor={template => template.id} className="[&_td]:align-top"
+              mobileColumns={['selection', 'rule', 'condition', 'delivery', 'channels', 'message']} />
               : <div className="space-y-2">{visible.map(template => <PackRulePreview key={template.id} {...ruleProps(template)} />)}</div>}
             {filtered.length === 0 && <div className="space-y-2 rounded-lg border border-[var(--border-default)] p-4">
               <Caption className="block">{t('alertPacks.noMatchingRules', 'No matching rules. Clear the search to see the full pack.')}</Caption>

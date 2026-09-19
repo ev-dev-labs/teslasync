@@ -14,5 +14,5 @@ export default function PackRuleCondition({ template, selection }: Props) {
   const operand = rule.value_num != null
     ? !Number.isFinite(value) ? '—' : template.unit === '°C' ? formatTemperature(value) : `${value} ${template.unit}`
     : String(rule.value_text ?? rule.value_bool ?? '')
-  return <Caption className="block break-words">{rule.signal_name} {rule.op} {operand}</Caption>
+  return <Caption className="block break-words">{rule.signal_name} {selection.op ?? rule.op} {operand}</Caption>
 }

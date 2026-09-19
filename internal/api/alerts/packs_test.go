@@ -31,7 +31,7 @@ func (f *packFake) InstallPack(_ context.Context, p alertpacks.Pack, scope strin
 func (f *packFake) RemovePack(context.Context, int64, []int64) error { f.calls++; return f.err }
 
 func packRouter(f *packFake) http.Handler {
-	h := &AlertHandler{packRepo: f}
+	h := &AlertHandler{packRepo: f, notifRepo: &channelsFake{}}
 	r := chi.NewRouter()
 	r.Get("/packs", h.ListPacks)
 	r.Get("/installations", h.ListPackInstallations)
@@ -94,11 +94,43 @@ func TestEveryPackInstallsValidOrdinaryRules(t *testing.T) {
 		for _, template := range pack.Rules {
 			request.Rules = append(request.Rules, alertpacks.Selection{TemplateID: template.ID})
 		}
+
 		body, _ := json.Marshal(request)
 		rec := httptest.NewRecorder()
 		packRouter(&packFake{}).ServeHTTP(rec, httptest.NewRequest("POST", "/packs/"+pack.ID+"/install", strings.NewReader(string(body))))
 		if rec.Code != 201 {
 			t.Fatalf("%s: %d %s", pack.ID, rec.Code, rec.Body.String())
 		}
+	}
+}
+
+func TestPackInlineChannelValidation(t *testing.T) {
+	for _, tt := range []struct {
+		name, channels string
+		status         int
+	}{
+		{"subset", "[2,3]", 201}, {"none", "[]", 201}, {"all", "null", 201},
+		{"missing", "[99]", 400}, {"duplicate", "[2,2]", 400},
+		{"negative", "[-1]", 400}, {"wrong type", `["2"]`, 400},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &packFake{}
+			body := `{"version":2,"all_vehicles":true,"rules":[{"template_id":"battery-low","op":">=","channel_ids":` + tt.channels + `}]}`
+			rec := httptest.NewRecorder()
+			packRouter(repo).ServeHTTP(rec, httptest.NewRequest("POST", "/packs/everyday/install", strings.NewReader(body)))
+			if rec.Code != tt.status {
+				t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+			}
+
+			if tt.status != 201 && repo.calls != 0 {
+				t.Fatal("invalid channel selection was persisted")
+			}
+			if tt.status == 201 && repo.templates[0].Rule.Op != ">=" {
+				t.Fatal("reviewed operator was not persisted")
+			}
+			if tt.name == "none" && repo.templates[0].Rule.ChannelIDs == nil {
+				t.Fatal("empty channels became all channels")
+			}
+		})
 	}
 }

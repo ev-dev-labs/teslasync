@@ -112,7 +112,7 @@ for (const width of [320, 390, 768, 1440]) {
       await page.route('**/api/v1/signals/*/available', route => fulfillApiMock(route, api, { json: { vehicle_id: 7, count: 0, signals: [] } }))
       await page.route('**/api/v1/settings', route => fulfillApiMock(route, api, { json: {
         mode: theme, language: 'en', unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',
-        ai_mode: 'hybrid', ai_features: { 'alert-pack-builder': true },
+        ai_mode: 'hybrid', ai_features: { 'alert-pack-builder': true, 'alert-message-template-suggestion': true },
       } }))
       await page.route('**/api/v1/alerts/packs', route => fulfillApiMock(route, api, { json: [pack, { ...pack, id: 'custom', name: 'Custom pack' }] }))
       await page.route('**/api/v1/ai/alerts/packs/draft', route => fulfillApiMock(route, api, {
@@ -128,6 +128,18 @@ for (const width of [320, 390, 768, 1440]) {
         ].map(event => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(''),
       }))
       const installations: unknown[] = []
+      const messageRequests: Record<string, unknown>[] = []
+      await page.route('**/api/v1/ai/alerts/message-template/draft', async route => {
+        messageRequests.push(route.request().postDataJSON())
+        await fulfillApiMock(route, api, {
+          contentType: 'text/event-stream',
+          body: [
+            { type: 'tool_result', id: 'message', name: 'validate_alert_message_template', ok: true,
+              data: { status: 'ok', template: '{{VehicleName}} is ready for its next charging chapter.', used_placeholders: ['VehicleName'] } },
+            { type: 'done', finish_reason: 'stop', usage: { in: 20, out: 20 } },
+          ].map(event => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(''),
+        })
+      })
       await page.route('**/api/v1/alerts/packs/*/install', async route => {
         installations.push(route.request().postDataJSON())
         await fulfillApiMock(route, api, { json: { id: 1, pack_id: 'all', name: 'All alerts', version: 2, scope_key: 'all', created_at: '', members: [] } })
@@ -152,29 +164,42 @@ for (const width of [320, 390, 768, 1440]) {
       await helix.screenshot({ path: test.info().outputPath('helix-proposal.png') })
       await review.click()
       const dialog = page.getByRole('dialog', { name: /^Preview Complete ownership watch/ })
-      await expect(dialog.getByLabel('Notification message')).toHaveCount(0)
+      await expect(dialog.getByLabel('Notification message', { exact: true })).toHaveCount(10)
       await expect(dialog.getByRole('table', { name: 'Choose rules' })).toHaveCount(width >= 1024 ? 1 : 0)
       const footer = dialog.locator('[data-modal-footer]')
       const footerBox = await footer.boundingBox()
       expect(footerBox!.y + footerBox!.height).toBeLessThanOrEqual(1001)
-      const thirdRuleBox = await dialog.getByRole('button', { name: 'Customize Battery reminder 3', exact: true }).boundingBox()
-      expect(thirdRuleBox!.y + thirdRuleBox!.height).toBeLessThanOrEqual(footerBox!.y)
+      await expect(dialog.getByRole('button', { name: /^Customize / })).toHaveCount(0)
       await dialog.screenshot({ path: test.info().outputPath('pack-overview.png') })
       if (width < 1024) await dialog.getByRole('button', { name: /Master settings/ }).click()
       await expect(dialog.getByLabel('Master cooldown (minutes)')).toBeVisible()
       await dialog.getByLabel('Master cooldown (minutes)').fill('15')
       await dialog.getByLabel('Master alert behavior').selectOption('repeat')
       if (width < 1024) await dialog.getByRole('button', { name: /Master settings/ }).click()
-      await dialog.getByRole('button', { name: 'Customize Battery reminder 1', exact: true }).click()
-      await dialog.getByRole('switch', { name: 'Use individual delivery settings', exact: true }).first().click()
       await dialog.getByLabel('Minimum minutes between notifications', { exact: true }).first().fill('120')
+      await dialog.getByLabel('Operator', { exact: true }).first().selectOption('<=')
+      await dialog.getByLabel('Threshold (%)', { exact: true }).first().fill('25')
+      await dialog.getByLabel('Notification message', { exact: true }).first().fill('{{VehicleName}} manual draft')
+      const secondMessage = await dialog.getByLabel('Notification message', { exact: true }).nth(1).inputValue()
+      await dialog.getByRole('button', { name: 'Suggest a message for Battery reminder 1', exact: true }).click()
+      const messageDialog = page.getByRole('dialog', { name: 'Suggest a message for Battery reminder 1', exact: true })
+      await messageDialog.getByTestId('ai-feature-alert-message-template-suggestion-suggest').click()
+      await expect(messageDialog.getByText('{{VehicleName}} is ready for its next charging chapter.', { exact: true })).toBeVisible()
+      expect(installations).toHaveLength(0)
+      expect(await dialog.getByLabel('Notification message', { exact: true }).first().inputValue()).toBe('{{VehicleName}} manual draft')
+      await messageDialog.getByTestId('ai-feature-alert-message-template-suggestion-apply').click()
+      await expect(messageDialog).toHaveCount(0)
+      expect(messageRequests).toHaveLength(1)
+      expect(messageRequests[0]).toMatchObject({ name: 'Battery reminder 1', op: '<=', value_num: 25 })
+      await expect(dialog.getByLabel('Notification message', { exact: true }).first()).toHaveValue('{{VehicleName}} is ready for its next charging chapter.')
+      await expect(dialog.getByLabel('Notification message', { exact: true }).nth(1)).toHaveValue(secondMessage)
       if (width >= 1024) {
         await page.setViewportSize({ width: 390, height: 1000 })
         await expect(dialog.getByRole('table')).toHaveCount(0)
-        await expect(dialog.getByLabel('Minimum minutes between notifications')).toHaveValue('120')
+        await expect(dialog.getByLabel('Minimum minutes between notifications').first()).toHaveValue('120')
         await page.setViewportSize({ width, height: 1000 })
         await expect(dialog.getByRole('table')).toBeVisible()
-        await expect(dialog.getByLabel('Minimum minutes between notifications')).toHaveValue('120')
+        await expect(dialog.getByLabel('Minimum minutes between notifications').first()).toHaveValue('120')
       }
       await dialog.getByRole('button', { name: 'Next', exact: true }).click()
       await expect(dialog.getByText('Page 2 of 2')).toBeVisible()
@@ -183,8 +208,7 @@ for (const width of [320, 390, 768, 1440]) {
       await dialog.screenshot({ path: test.info().outputPath('pack-rule-editor.png') })
       if (width < 1024) await dialog.getByRole('button', { name: /Master settings/ }).click()
       await dialog.getByRole('button', { name: 'Apply master settings to all rules' }).click()
-      await expect(dialog.getByLabel('Minimum minutes between notifications', { exact: true })).toHaveCount(0)
-      await expect(dialog.getByText(/15 min cooldown/)).toBeVisible()
+      await expect(dialog.getByLabel('Minimum minutes between notifications', { exact: true }).first()).toHaveValue('15')
       if (width < 1024) await dialog.getByRole('button', { name: /Master settings/ }).click()
       expect(await dialog.evaluate(el => el.scrollWidth > el.clientWidth + 1)).toBe(false)
       await dialog.screenshot({ path: test.info().outputPath('pack-controls.png') })
@@ -194,6 +218,9 @@ for (const width of [320, 390, 768, 1440]) {
       expect(installations).toHaveLength(1)
       expect(installations[0]).toMatchObject({ cooldown_s: 900, trigger_mode: 'repeat', enabled: false })
       expect((installations[0] as { rules: unknown[] }).rules).toHaveLength(12)
+      expect((installations[0] as { rules: unknown[] }).rules[0]).toMatchObject({
+        op: '<=', value_num: 25, message: '{{VehicleName}} is ready for its next charging chapter.',
+      })
       await assertMockApiComplete(page, api)
     })
   }

@@ -46,6 +46,55 @@ func validRequest() InstallRequest {
 	return InstallRequest{Version: 2, AllVehicles: true, Rules: []Selection{{TemplateID: "battery-low"}}}
 }
 
+func TestPrepareInlineOperatorsAndChannels(t *testing.T) {
+	pack := CustomCatalog()
+	for _, tt := range []struct {
+		template, op string
+		valid        bool
+	}{
+		{"battery-low", ">=", true}, {"battery-low", "!=", true},
+		{"battery-low", "between", false}, {"battery-low", "changed", false},
+		{"charge-complete", "!=", true}, {"charge-complete", ">", false},
+		{"unlocked", "=", true}, {"unlocked", "<", false},
+		{"software-version", "changed", true}, {"software-version", "=", false},
+	} {
+		t.Run(tt.template+tt.op, func(t *testing.T) {
+			req := validRequest()
+			req.Rules = []Selection{{TemplateID: tt.template, Op: &tt.op, ChannelIDs: []int64{2, 3}}}
+			out, _, err := Prepare(pack, req)
+			if (err == nil) != tt.valid {
+				t.Fatalf("valid=%v err=%v", tt.valid, err)
+			}
+			if err != nil {
+				return
+			}
+			if out[0].Rule.Op != tt.op || !reflect.DeepEqual(out[0].Rule.ChannelIDs, []int64{2, 3}) {
+				t.Fatal("inline overrides lost")
+			}
+			out[0].Rule.ChannelIDs[0] = 99
+			if req.Rules[0].ChannelIDs[0] != 2 {
+				t.Fatal("request channel slice was aliased")
+			}
+		})
+	}
+	for _, ids := range [][]int64{nil, {}} {
+		req := validRequest()
+		req.Rules[0].ChannelIDs = ids
+		body, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var decoded InstallRequest
+		if err := json.Unmarshal(body, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		out, _, err := Prepare(pack, decoded)
+		if err != nil || (out[0].Rule.ChannelIDs == nil) != (ids == nil) {
+			t.Fatalf("all/none channel semantics lost: %s (%v)", body, err)
+		}
+	}
+}
+
 func TestPrepare(t *testing.T) {
 	pack, _ := Find("everyday")
 	before, _ := json.Marshal(pack)

@@ -41,6 +41,8 @@ export interface PackInstallation {
 
 export interface PackSelection {
   template_id: string
+  op?: string
+  channel_ids?: number[] | null
   value_num?: number
   message?: string
   cooldown_s?: number

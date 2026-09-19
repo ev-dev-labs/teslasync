@@ -30,6 +30,8 @@ type Pack struct {
 
 type Selection struct {
 	TemplateID   string   `json:"template_id"`
+	Op           *string  `json:"op,omitempty"`
+	ChannelIDs   []int64  `json:"channel_ids"`
 	ValueNum     *float64 `json:"value_num,omitempty"`
 	Message      *string  `json:"message,omitempty"`
 	CooldownS    *int     `json:"cooldown_s,omitempty"`
@@ -223,6 +225,19 @@ func Prepare(pack Pack, req InstallRequest) ([]Template, string, error) {
 		}
 		seen[selection.TemplateID] = true
 		t := pack.Rules[index]
+		if selection.Op != nil {
+			allowed := []string{"=", "!="}
+			if t.Rule.ValueNum != nil {
+				allowed = []string{"<", "<=", ">", ">=", "=", "!="}
+			} else if t.Rule.Op == "changed" {
+				allowed = []string{"changed"}
+			}
+			if !slices.Contains(allowed, *selection.Op) {
+				return nil, "", errors.New("operator is not valid for this rule")
+			}
+			t.Rule.Op = *selection.Op
+		}
+		t.Rule.ChannelIDs = slices.Clone(selection.ChannelIDs)
 		t.Rule.AllVehicles, t.Rule.VehicleIDs, t.Rule.Enabled = req.AllVehicles, append([]int64{}, ids...), req.Enabled
 		if selection.ValueNum != nil {
 			if t.Rule.ValueNum == nil || math.IsNaN(*selection.ValueNum) || math.IsInf(*selection.ValueNum, 0) {

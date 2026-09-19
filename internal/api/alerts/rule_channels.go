@@ -8,22 +8,29 @@ import (
 )
 
 func (h *AlertHandler) checkRuleChannels(w http.ResponseWriter, r *http.Request, ids []int64) bool {
-	if len(ids) == 0 {
-		return true
-	}
+	return h.checkRuleChannelSets(w, r, ids)
+}
+
+func (h *AlertHandler) checkRuleChannelSets(w http.ResponseWriter, r *http.Request, sets ...[]int64) bool {
 	ctx, span := otel.Tracer("api").Start(r.Context(), "api.alerts.channels.validate")
 	defer span.End()
-	if len(ids) > 100 {
-		writeError(w, http.StatusBadRequest, "select at most 100 notification channels")
-		return false
-	}
-	seen := make(map[int64]bool, len(ids))
-	for _, id := range ids {
-		if id <= 0 || seen[id] {
-			writeError(w, http.StatusBadRequest, "channel IDs must be positive and unique")
+	seen := make(map[int64]bool)
+	for _, ids := range sets {
+		if len(ids) > 100 {
+			writeError(w, http.StatusBadRequest, "select at most 100 notification channels")
 			return false
 		}
-		seen[id] = true
+		ruleIDs := make(map[int64]bool, len(ids))
+		for _, id := range ids {
+			if id <= 0 || ruleIDs[id] {
+				writeError(w, http.StatusBadRequest, "channel IDs must be positive and unique")
+				return false
+			}
+			ruleIDs[id], seen[id] = true, true
+		}
+	}
+	if len(seen) == 0 {
+		return true
 	}
 	channels, err := h.notifRepo.GetAllChannels(ctx)
 	if err != nil {

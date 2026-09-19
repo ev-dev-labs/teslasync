@@ -15,10 +15,12 @@ import (
 
 type channelsFake struct {
 	fakeNotificationRepo
-	err error
+	err   error
+	calls int
 }
 
 func (f *channelsFake) GetAllChannels(context.Context) ([]*notificationmodel.NotificationChannel, error) {
+	f.calls++
 	return []*notificationmodel.NotificationChannel{{ID: 2}, {ID: 3}}, f.err
 }
 

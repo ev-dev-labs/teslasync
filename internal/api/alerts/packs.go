@@ -63,12 +63,17 @@ func (h *AlertHandler) InstallPack(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	channelSets := make([][]int64, 0, len(templates))
 	for _, t := range templates {
 		if err := validateAlertRule(&t.Rule); err != nil {
 			span.RecordError(err)
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		channelSets = append(channelSets, t.Rule.ChannelIDs)
+	}
+	if !h.checkRuleChannelSets(w, r.WithContext(ctx), channelSets...) {
+		return
 	}
 	if pack.ID == "custom" {
 		pack, err = alertpacks.NameCustom(pack, req.Name, templates)
