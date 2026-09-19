@@ -16,8 +16,8 @@ import {
 
 import { useSettings } from '@/api/hooks/useSettings'
 import { useFont } from '@/components/ui/FontProvider'
-import { PageContainer, Masonry } from '@/components/layout'
-import { Button, SectionTitle } from '@/components/ui'
+import { PageContainer } from '@/components/layout'
+import { Button, SectionTitle, Text } from '@/components/ui'
 import { StatCard } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
 import { EditConflictBanner } from '@/components/feedback'
@@ -36,9 +36,8 @@ import {
   SettingsSearch,
   SettingsActionCard,
 } from '../components'
-// ResetSection is imported directly because the components barrel is
-// outside the redesign prompt's allowed-files regex.
 import { ResetSection } from '../components/ResetSection'
+import { SettingsNavigation, type SettingsSection } from '../components/SettingsNavigation'
 
 // The Tesla integration redirect cluster (Tesla Account, Feature Flags,
 // Region & API, Active Orders, Gas Price Auto-Poll), the Fleet API link
@@ -94,6 +93,24 @@ export default function SettingsPage() {
   const toast = useToast()
   const location = useLocation()
   const navigate = useNavigate()
+  const sections: SettingsSection[] = [
+    { id: 'overview', title: t('settings.organization.overview', 'Overview'), description: t('settings.organization.overviewDescription', 'Current preferences and useful shortcuts') },
+    { id: 'general', title: t('settings.organization.general', 'Units, language & costs'), description: t('settings.organization.generalDescription', 'Measurements, regional formats and comparison costs') },
+    { id: 'workspace', title: t('settings.organization.workspace', 'Workspace'), description: t('settings.organization.workspaceDescription', 'Landing page, default vehicle and analysis window') },
+    { id: 'appearance', title: t('settings.organization.appearance', 'Appearance & experience'), description: t('settings.organization.appearanceDescription', 'Theme, layout, status bar and celebrations') },
+    { id: 'typography', title: t('settings.organization.typography', 'Fonts & readability'), description: t('settings.organization.typographyDescription', 'Font families, text size and spacing') },
+    { id: 'advanced', title: t('settings.organization.advanced', 'Confirmation prompts'), description: t('settings.organization.advancedDescription', 'Restore confirmations you previously silenced') },
+    { id: 'reset', title: t('settings.organization.reset', 'Reset & recovery'), description: t('settings.organization.resetDescription', 'Restore defaults and review destructive actions') },
+  ]
+  const activeSection = sections.find(section => section.id === location.hash.slice(1)) ?? sections[0]
+  const panels = [
+    { id: 'general', content: <GeneralSettings /> },
+    { id: 'workspace', content: <WorkspacePreferencesSettings /> },
+    { id: 'appearance', content: <AppearanceSettings /> },
+    { id: 'typography', content: <TypographySettings /> },
+    { id: 'advanced', content: <AdvancedSettings /> },
+    { id: 'reset', content: <ResetSection /> },
+  ]
 
   // Claim an edit lease for the whole settings page so a second tab editing
   // the same settings sees a banner before its save can silently overwrite
@@ -185,7 +202,7 @@ export default function SettingsPage() {
   return (
     <PageContainer
       title={t('title', 'Settings')}
-      subtitle={t('subtitle', 'Configure TeslaSync preferences and Tesla account connection')}
+      subtitle={t('settings.organization.subtitle', 'Find a category, adjust your preferences, and keep TeslaSync working your way.')}
       actions={<SettingsSearch className="w-full sm:w-72" />}
       query={settingsQuery}
     >
@@ -194,110 +211,106 @@ export default function SettingsPage() {
         resourceLabel={t('editConflict.resource.settings', 'Your settings')}
       />
 
-      {/* 1 — Preferences at a glance: full-width KPI band that reflows to
-          6 columns on wide screens. */}
-      <FadeIn>
-        <section
-          aria-label={t('overview.aria', 'Current preferences overview')}
-          className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
-        >
-          {overviewCards.map((card) => (
-            <StatCard
-              key={card.label}
-              label={card.label}
-              value={card.value}
-              sublabel={card.sublabel}
-              icon={card.icon}
-              loading={isLoading}
-            />
-          ))}
-        </section>
-      </FadeIn>
-
-      {/* 2 — Preference sections: full-width bento; each self-titled panel
-          owns its own loading/empty state and keeps its #anchor for the
-          settings search + onboarding deep links. Two columns on 2xl+. */}
-      <Masonry
-        as="section"
-        aria-label={t('preferences.aria', 'Preference sections')}
-        className="columns-1 2xl:columns-2"
-      >
-        <section id="workspace">
-          <WorkspacePreferencesSettings />
-        </section>
-        <section id="general">
-          <GeneralSettings />
-        </section>
-        <AppearanceSettings />
-        <section id="typography">
-          <TypographySettings />
-        </section>
-        <section id="advanced">
-          <AdvancedSettings />
-        </section>
-        <section id="reset">
-          <ResetSection />
-        </section>
-      </Masonry>
-
-      {/* 3 — Quick actions: equal-height utility cards that fill the width
-          (1 → 2 → 3 columns). */}
-      <FadeIn delay={0.1}>
-        <section aria-label={t('quickActions.aria', 'Settings shortcuts')} className="space-y-3">
-          <SectionTitle>{t('quickActions.title', 'Quick actions')}</SectionTitle>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <SettingsActionCard
-              href="/data-export"
-              iconColor="green"
-              icon={<Download className="h-5 w-5" aria-hidden="true" />}
-              title={t('export.title', 'Data Export')}
-              description={t(
-                'export.subtitle',
-                'Export drives, charging, analytics, or full backup as CSV/JSON',
-              )}
-            />
-            <SettingsActionCard
-              dataTour="settings-tour"
-              iconColor="cyan"
-              icon={<PlayCircle className="h-5 w-5" aria-hidden="true" />}
-              title={t('tour.title', 'Onboarding Tour')}
-              description={t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}
-              action={
-                <Button variant="ghost" onClick={() => dispatchTourLauncherOpen()}>
-                  <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
-                  {t('tour.restart', 'Open Tour Launcher')}
-                </Button>
-              }
-            />
-            <SettingsActionCard
-              iconColor="cyan"
-              icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
-              title={t('checklist.settings.title', 'Setup Checklist')}
-              description={t(
-                'checklist.settings.description',
-                'Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer.',
-              )}
-              action={
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    restartChecklist()
-                    toast.success(
-                      t(
-                        'checklist.settings.restarted',
-                        'Setup checklist restarted — re-add the widget from the dashboard customizer if needed.',
-                      ),
-                    )
-                  }}
-                >
-                  <Rocket className="mr-2 h-4 w-4" aria-hidden="true" />
-                  {t('checklist.settings.restart', 'Restart Checklist')}
-                </Button>
-              }
-            />
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <SettingsNavigation sections={sections} activeSection={activeSection.id}
+          onSelect={id => navigate({ pathname: location.pathname, search: location.search, hash: `#${id}` }, { replace: true })} />
+        <div className="min-w-0 space-y-5">
+          <div className="space-y-1">
+            <SectionTitle>{activeSection.title}</SectionTitle>
+            <Text as="p" variant="bodySm">{activeSection.description}</Text>
+            <Text as="p" variant="caption">{t('settings.organization.saveHint', 'Each section keeps its existing save controls. Switching categories keeps your unsaved edits.')}</Text>
           </div>
-        </section>
-      </FadeIn>
+          <div id="settings-category-overview" hidden={activeSection.id !== 'overview'} className="space-y-6">
+            <section id="overview" aria-label={t('settings.organization.overview', 'Overview')} className="space-y-6 scroll-mt-6">
+              <FadeIn>
+                <section
+                  aria-label={t('overview.aria', 'Current preferences overview')}
+                  className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-3"
+                >
+                  {overviewCards.map((card) => (
+                    <StatCard
+                      key={card.label}
+                      label={card.label}
+                      value={card.value}
+                      sublabel={card.sublabel}
+                      icon={card.icon}
+                      loading={isLoading}
+                    />
+                  ))}
+                </section>
+              </FadeIn>
+
+              <FadeIn delay={0.1}>
+                <section aria-label={t('quickActions.aria', 'Settings shortcuts')} className="space-y-3">
+                  <SectionTitle>{t('quickActions.title', 'Quick actions')}</SectionTitle>
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+                    <SettingsActionCard
+                      href="/data-export"
+                      iconColor="green"
+                      icon={<Download className="h-5 w-5" aria-hidden="true" />}
+                      title={t('export.title', 'Data Export')}
+                      description={t(
+                        'export.subtitle',
+                        'Export drives, charging, analytics, or full backup as CSV/JSON',
+                      )}
+                    />
+                    <SettingsActionCard
+                      dataTour="settings-tour"
+                      iconColor="cyan"
+                      icon={<PlayCircle className="h-5 w-5" aria-hidden="true" />}
+                      title={t('tour.title', 'Onboarding Tour')}
+                      description={t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}
+                      action={
+                        <Button variant="ghost" className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
+                          <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
+                          {t('tour.restart', 'Open Tour Launcher')}
+                        </Button>
+                      }
+                    />
+                    <SettingsActionCard
+                      iconColor="cyan"
+                      icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
+                      title={t('checklist.settings.title', 'Setup Checklist')}
+                      description={t(
+                        'checklist.settings.description',
+                        'Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer.',
+                      )}
+                      action={
+                        <Button
+                          variant="ghost"
+                          className="h-auto min-h-11 w-full whitespace-normal"
+                          onClick={() => {
+                            restartChecklist()
+                            toast.success(
+                              t(
+                                'checklist.settings.restarted',
+                                'Setup checklist restarted — re-add the widget from the dashboard customizer if needed.',
+                              ),
+                            )
+                          }}
+                        >
+                          <Rocket className="mr-2 h-4 w-4" aria-hidden="true" />
+                          {t('checklist.settings.restart', 'Restart Checklist')}
+                        </Button>
+                      }
+                    />
+                  </div>
+                </section>
+              </FadeIn>
+            </section>
+          </div>
+          {/* Keep forms mounted so category navigation never discards a draft. */}
+          {panels.map(panel => (
+            <div key={panel.id} id={`settings-category-${panel.id}`} hidden={activeSection.id !== panel.id}>
+              <section id={panel.id === 'appearance' ? undefined : panel.id} className="space-y-5 scroll-mt-6"
+                data-tour={panel.id === 'workspace' ? 'settings-workspace' : undefined}
+                aria-label={sections.find(section => section.id === panel.id)?.title}>
+                {panel.content}
+              </section>
+            </div>
+          ))}
+        </div>
+      </div>
     </PageContainer>
   )
 }

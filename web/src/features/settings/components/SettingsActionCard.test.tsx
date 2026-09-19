@@ -177,16 +177,15 @@ describe('SettingsActionCard — robustness + passthrough', () => {
   })
 })
 
-describe('SettingsActionCard — truncated title a11y', () => {
-  it('exposes the full title via a native title attribute for truncated headings', () => {
+describe('SettingsActionCard — readable titles', () => {
+  it('wraps long headings rather than truncating their content', () => {
     const title =
       'A very long Settings action card title that the panel heading visually truncates'
     renderCard({ title })
 
     const heading = screen.getByRole('heading', { name: title })
-    // The heading clips overflow with `truncate`, so the full text must remain
-    // reachable on hover / to assistive tech via the title attribute.
-    expect(heading.className).toContain('truncate')
-    expect(heading).toHaveAttribute('title', title)
+    expect(heading).toHaveTextContent(title)
+    expect(heading.className).toContain('break-words')
+    expect(heading.className).not.toContain('truncate')
   })
 })

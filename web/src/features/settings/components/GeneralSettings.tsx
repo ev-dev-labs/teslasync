@@ -235,172 +235,185 @@ export function GeneralSettings() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <Select
-                label={t('app.distanceUnit', 'Distance Unit')}
-                value={form.unit_of_length}
-                onChange={e => setForm({ ...form, unit_of_length: e.target.value })}
-                options={[{ value: 'km', label: t('app.kilometers', 'Kilometers') }, { value: 'mi', label: t('app.miles', 'Miles') }]}
-              />
-              <Select
-                label={t('app.temperatureUnit', 'Temperature Unit')}
-                value={form.unit_of_temp}
-                onChange={e => setForm({ ...form, unit_of_temp: e.target.value })}
-                options={[{ value: 'C', label: t('app.celsius', 'Celsius') }, { value: 'F', label: t('app.fahrenheit', 'Fahrenheit') }]}
-              />
-              <Select
-                label={t('app.pressureUnit', 'Pressure Unit')}
-                value={form.unit_of_pressure ?? 'bar'}
-                onChange={e => setForm({ ...form, unit_of_pressure: e.target.value })}
-                options={[{ value: 'bar', label: t('app.bar', 'Bar') }, { value: 'psi', label: t('app.psi', 'PSI') }]}
-              />
-              <Select
-                label={t('app.preferredRange', 'Preferred Range')}
-                value={form.preferred_range}
-                onChange={e => setForm({ ...form, preferred_range: e.target.value })}
-                options={[{ value: 'rated', label: t('app.rated', 'Rated') }, { value: 'ideal', label: t('app.ideal', 'Ideal') }]}
-              />
-
-              <div>
-                <Input
-                  label={t('app.decimalPrecision', 'Decimal Precision')}
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={String(form.decimal_precision ?? DEFAULT_FORM.decimal_precision)}
-                  onChange={e => setForm({ ...form, decimal_precision: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })}
-                  placeholder={t('app.decimalPrecisionPlaceholder', 'e.g. 2')}
+            <section aria-labelledby="settings-units-heading" className="space-y-4">
+              <Heading level="section" id="settings-units-heading">{t('settings.organization.units', 'Units & measurements')}</Heading>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <Select
+                  label={t('app.distanceUnit', 'Distance Unit')}
+                  value={form.unit_of_length}
+                  onChange={e => setForm({ ...form, unit_of_length: e.target.value })}
+                  options={[{ value: 'km', label: t('app.kilometers', 'Kilometers') }, { value: 'mi', label: t('app.miles', 'Miles') }]}
                 />
-                <HelperText className="mt-1">
-                  {t('app.preview', 'Preview')}: {(14.248539).toFixed(clampDecimals(form.decimal_precision))}
-                </HelperText>
+                <Select
+                  label={t('app.temperatureUnit', 'Temperature Unit')}
+                  value={form.unit_of_temp}
+                  onChange={e => setForm({ ...form, unit_of_temp: e.target.value })}
+                  options={[{ value: 'C', label: t('app.celsius', 'Celsius') }, { value: 'F', label: t('app.fahrenheit', 'Fahrenheit') }]}
+                />
+                <Select
+                  label={t('app.pressureUnit', 'Pressure Unit')}
+                  value={form.unit_of_pressure ?? 'bar'}
+                  onChange={e => setForm({ ...form, unit_of_pressure: e.target.value })}
+                  options={[{ value: 'bar', label: t('app.bar', 'Bar') }, { value: 'psi', label: t('app.psi', 'PSI') }]}
+                />
+                <Select
+                  label={t('app.preferredRange', 'Preferred Range')}
+                  value={form.preferred_range}
+                  onChange={e => setForm({ ...form, preferred_range: e.target.value })}
+                  options={[{ value: 'rated', label: t('app.rated', 'Rated') }, { value: 'ideal', label: t('app.ideal', 'Ideal') }]}
+                />
+
+                <div>
+                  <Input
+                    label={t('app.decimalPrecision', 'Decimal Precision')}
+                    type="number"
+                    min={0}
+                    max={20}
+                    value={String(form.decimal_precision ?? DEFAULT_FORM.decimal_precision)}
+                    onChange={e => setForm({ ...form, decimal_precision: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })}
+                    placeholder={t('app.decimalPrecisionPlaceholder', 'e.g. 2')}
+                  />
+                  <HelperText className="mt-1">
+                    {t('app.preview', 'Preview')}: {(14.248539).toFixed(clampDecimals(form.decimal_precision))}
+                  </HelperText>
+                </div>
+
               </div>
-
-              <Select
-                label={t('app.language', 'Language')}
-                value={form.language}
-                onChange={e => setForm({ ...form, language: e.target.value })}
-                options={[
-                  { value: 'en', label: 'English' },
-                  { value: 'de', label: 'Deutsch' },
-                  { value: 'fr', label: 'Français' },
-                  { value: 'es', label: 'Español' },
-                  { value: 'zh', label: '中文' },
-                ]}
-              />
-
-              <Select
-                label={t('app.currency', 'Currency')}
-                value={form.currency_symbol ?? '$'}
-                onChange={e => setForm({ ...form, currency_symbol: e.target.value })}
-                options={[
-                  { value: '$', label: 'USD ($)' },
-                  { value: '€', label: 'EUR (€)' },
-                  { value: '£', label: 'GBP (£)' },
-                  { value: 'C$', label: 'CAD (C$)' },
-                  { value: 'A$', label: 'AUD (A$)' },
-                  { value: '¥', label: 'JPY (¥)' },
-                  { value: '元', label: 'CNY (元)' },
-                  { value: 'CHF', label: 'CHF (CHF)' },
-                  { value: 'kr', label: 'SEK / NOK / DKK (kr)' },
-                  { value: '₹', label: 'INR (₹)' },
-                ]}
-              />
-
-              <Select
-                label={t('app.locale', 'Number & Date Locale')}
-                value={form.locale ?? 'en-US'}
-                onChange={e => setForm({ ...form, locale: e.target.value })}
-                options={[
-                  { value: 'en-US', label: 'English (US) — 1,234.56' },
-                  { value: 'en-GB', label: 'English (UK) — 1,234.56' },
-                  { value: 'de-DE', label: 'Deutsch (DE) — 1.234,56' },
-                  { value: 'fr-FR', label: 'Français (FR) — 1 234,56' },
-                  { value: 'es-ES', label: 'Español (ES) — 1.234,56' },
-                  { value: 'ja-JP', label: '日本語 (JP) — 1,234.56' },
-                  { value: 'zh-CN', label: '简体中文 (CN) — 1,234.56' },
-                ]}
-              />
-
-              <Select
-                label={t('app.tzDisplayDefault', 'Time Zone Display')}
-                value={form.tz_display_default ?? 'vehicle'}
-                onChange={e => setForm({ ...form, tz_display_default: e.target.value as 'vehicle' | 'user' | 'utc' })}
-                options={[
-                  { value: 'vehicle', label: t('app.tzVehicle', "Vehicle's local time (recommended)") },
-                  { value: 'user', label: t('app.tzUser', 'My local time') },
-                  { value: 'utc', label: t('app.tzUtc', 'UTC') },
-                ]}
-              />
-
-              <SettingField label={t('app.timezoneUser', 'My Time Zone Override')}>
-                <Input
-                  type="text"
-                  value={form.timezone_user ?? ''}
-                  onChange={e => setForm({ ...form, timezone_user: e.target.value })}
-                  placeholder={t('app.timezoneUserPlaceholder', 'e.g. America/Los_Angeles (leave blank for browser default)')}
-                  className="w-full px-3 py-2.5 text-sm"
+            </section>
+            <section aria-labelledby="settings-region-heading" className="space-y-4 border-t border-[var(--glass-border)] pt-6">
+              <Heading level="section" id="settings-region-heading">{t('settings.organization.region', 'Language, region & currency')}</Heading>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <Select
+                  label={t('app.language', 'Language')}
+                  value={form.language}
+                  onChange={e => setForm({ ...form, language: e.target.value })}
+                  options={[
+                    { value: 'en', label: 'English' },
+                    { value: 'de', label: 'Deutsch' },
+                    { value: 'fr', label: 'Français' },
+                    { value: 'es', label: 'Español' },
+                    { value: 'zh', label: '中文' },
+                  ]}
                 />
-                <HelperText className="mt-1">
-                  {t('app.timezoneUserHint', "IANA tz name. Useful when travelling but you'd rather see times in your home zone.")}
-                </HelperText>
-              </SettingField>
 
-              <SettingField
-                label={t('app.electricityCost', 'Electricity Cost (per kWh)')}
-                help={{
-                  i18nKey: 'help.fields.settings.electricityCost',
-                  content: 'Cost per kWh used to compute charging spend across drives, charging sessions, and TCO analytics. Currency follows the Currency setting above.',
-                  for: 'electricity-cost',
-                }}
-              >
-                <CurrencyInput
-                  ariaLabel={t('app.electricityCost', 'Electricity Cost (per kWh)')}
-                  currency={symbolToIsoCode(form.currency_symbol)}
-                  locale={form.locale ?? 'en-US'}
-                  precision={clampDecimals(form.decimal_precision)}
-                  valueMicro={valueToMicro(form.base_cost_per_kwh)}
-                  onChange={({ valueMicro }) =>
-                    setForm({ ...form, base_cost_per_kwh: microToValue(valueMicro) ?? 0 })
-                  }
+                <Select
+                  label={t('app.currency', 'Currency')}
+                  value={form.currency_symbol ?? '$'}
+                  onChange={e => setForm({ ...form, currency_symbol: e.target.value })}
+                  options={[
+                    { value: '$', label: 'USD ($)' },
+                    { value: '€', label: 'EUR (€)' },
+                    { value: '£', label: 'GBP (£)' },
+                    { value: 'C$', label: 'CAD (C$)' },
+                    { value: 'A$', label: 'AUD (A$)' },
+                    { value: '¥', label: 'JPY (¥)' },
+                    { value: '元', label: 'CNY (元)' },
+                    { value: 'CHF', label: 'CHF (CHF)' },
+                    { value: 'kr', label: 'SEK / NOK / DKK (kr)' },
+                    { value: '₹', label: 'INR (₹)' },
+                  ]}
                 />
-              </SettingField>
 
-              <SettingField label={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <CurrencyInput
-                      ariaLabel={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}
-                      currency={symbolToIsoCode(form.currency_symbol)}
-                      locale={form.locale ?? 'en-US'}
-                      precision={clampDecimals(form.decimal_precision)}
-                      valueMicro={valueToMicro(form.gas_price_per_unit)}
-                      onChange={({ valueMicro }) =>
-                        setForm({ ...form, gas_price_per_unit: microToValue(valueMicro) ?? 0 })
-                      }
+                <Select
+                  label={t('app.locale', 'Number & Date Locale')}
+                  value={form.locale ?? 'en-US'}
+                  onChange={e => setForm({ ...form, locale: e.target.value })}
+                  options={[
+                    { value: 'en-US', label: 'English (US) — 1,234.56' },
+                    { value: 'en-GB', label: 'English (UK) — 1,234.56' },
+                    { value: 'de-DE', label: 'Deutsch (DE) — 1.234,56' },
+                    { value: 'fr-FR', label: 'Français (FR) — 1 234,56' },
+                    { value: 'es-ES', label: 'Español (ES) — 1.234,56' },
+                    { value: 'ja-JP', label: '日本語 (JP) — 1,234.56' },
+                    { value: 'zh-CN', label: '简体中文 (CN) — 1,234.56' },
+                  ]}
+                />
+
+                <Select
+                  label={t('app.tzDisplayDefault', 'Time Zone Display')}
+                  value={form.tz_display_default ?? 'vehicle'}
+                  onChange={e => setForm({ ...form, tz_display_default: e.target.value as 'vehicle' | 'user' | 'utc' })}
+                  options={[
+                    { value: 'vehicle', label: t('app.tzVehicle', "Vehicle's local time (recommended)") },
+                    { value: 'user', label: t('app.tzUser', 'My local time') },
+                    { value: 'utc', label: t('app.tzUtc', 'UTC') },
+                  ]}
+                />
+
+                <SettingField label={t('app.timezoneUser', 'My Time Zone Override')}>
+                  <Input
+                    type="text"
+                    value={form.timezone_user ?? ''}
+                    onChange={e => setForm({ ...form, timezone_user: e.target.value })}
+                    placeholder={t('app.timezoneUserPlaceholder', 'e.g. America/Los_Angeles (leave blank for browser default)')}
+                    className="w-full px-3 py-2.5 text-sm"
+                  />
+                  <HelperText className="mt-1">
+                    {t('app.timezoneUserHint', "IANA tz name. Useful when travelling but you'd rather see times in your home zone.")}
+                  </HelperText>
+                </SettingField>
+
+              </div>
+            </section>
+            <section aria-labelledby="settings-costs-heading" className="space-y-4 border-t border-[var(--glass-border)] pt-6">
+              <Heading level="section" id="settings-costs-heading">{t('settings.organization.costs', 'Energy & comparison costs')}</Heading>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <SettingField
+                  label={t('app.electricityCost', 'Electricity Cost (per kWh)')}
+                  help={{
+                    i18nKey: 'help.fields.settings.electricityCost',
+                    content: 'Cost per kWh used to compute charging spend across drives, charging sessions, and TCO analytics. Currency follows the Currency setting above.',
+                    for: 'electricity-cost',
+                  }}
+                >
+                  <CurrencyInput
+                    ariaLabel={t('app.electricityCost', 'Electricity Cost (per kWh)')}
+                    currency={symbolToIsoCode(form.currency_symbol)}
+                    locale={form.locale ?? 'en-US'}
+                    precision={clampDecimals(form.decimal_precision)}
+                    valueMicro={valueToMicro(form.base_cost_per_kwh)}
+                    onChange={({ valueMicro }) =>
+                      setForm({ ...form, base_cost_per_kwh: microToValue(valueMicro) ?? 0 })
+                    }
+                  />
+                </SettingField>
+
+                <SettingField label={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <CurrencyInput
+                        ariaLabel={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}
+                        currency={symbolToIsoCode(form.currency_symbol)}
+                        locale={form.locale ?? 'en-US'}
+                        precision={clampDecimals(form.decimal_precision)}
+                        valueMicro={valueToMicro(form.gas_price_per_unit)}
+                        onChange={({ valueMicro }) =>
+                          setForm({ ...form, gas_price_per_unit: microToValue(valueMicro) ?? 0 })
+                        }
+                      />
+                    </div>
+                    <Select
+                      aria-label={t('app.gasVolumeUnit', 'Fuel volume unit')}
+                      value={form.gas_unit}
+                      onChange={e => setForm({ ...form, gas_unit: e.target.value })}
+                      options={[{ value: 'gallon', label: t('app.perGallon', '/ gallon') }, { value: 'liter', label: t('app.perLiter', '/ liter') }]}
+                      className="w-28"
                     />
                   </div>
-                  <Select
-                    aria-label={t('app.gasVolumeUnit', 'Fuel volume unit')}
-                    value={form.gas_unit}
-                    onChange={e => setForm({ ...form, gas_unit: e.target.value })}
-                    options={[{ value: 'gallon', label: t('app.perGallon', '/ gallon') }, { value: 'liter', label: t('app.perLiter', '/ liter') }]}
-                    className="w-28"
-                  />
-                </div>
-              </SettingField>
+                </SettingField>
 
-              <SettingField label={t('app.comparisonMPG', 'Comparison Vehicle MPG')}>
-                <Input
-                  type="number"
-                  step="0.5"
-                  value={form.gas_efficiency_mpg ?? ''}
-                  onChange={e => setForm({ ...form, gas_efficiency_mpg: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2.5 text-sm"
-                  placeholder={t('app.mpgPlaceholder', 'Average MPG of equivalent gas car')}
-                />
-              </SettingField>
-            </div>
+                <SettingField label={t('app.comparisonMPG', 'Comparison Vehicle MPG')}>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={form.gas_efficiency_mpg ?? ''}
+                    onChange={e => setForm({ ...form, gas_efficiency_mpg: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3 py-2.5 text-sm"
+                    placeholder={t('app.mpgPlaceholder', 'Average MPG of equivalent gas car')}
+                  />
+                </SettingField>
+              </div>
+            </section>
           </>
         )}
 
