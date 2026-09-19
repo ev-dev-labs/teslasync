@@ -53,6 +53,12 @@ describe('tour registry', () => {
     }
   })
 
+  it('provides settings workspace copy before the application initializes translations', () => {
+    const step = getTour('settings')!.steps[2]
+    expect(step.title).toBe('Workspace preferences')
+    expect(step.description).toBe('Choose your landing page, default vehicle, and analysis window to make TeslaSync fit your everyday workflow.')
+  })
+
   it('no tour declares an autoStart predicate — every tour is opt-in (HELP-01)', () => {
     // A tour that can start itself is a tour that can interrupt. Onboarding
     // that fires without being asked lives in `lib/onboardingTasks` instead:

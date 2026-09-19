@@ -38,9 +38,13 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-tour="settings-workspace"]',
-    get title() { return i18n.t('settings.organization.workspaceTourTitle', 'Workspace preferences') },
+    get title() {
+      const fallback = 'Workspace preferences'
+      return i18n.isInitialized ? i18n.t('settings.organization.workspaceTourTitle', fallback) : fallback
+    },
     get description() {
-      return i18n.t('settings.organization.workspaceTourDescription', 'Choose your landing page, default vehicle, and analysis window to make TeslaSync fit your everyday workflow.')
+      const fallback = 'Choose your landing page, default vehicle, and analysis window to make TeslaSync fit your everyday workflow.'
+      return i18n.isInitialized ? i18n.t('settings.organization.workspaceTourDescription', fallback) : fallback
     },
     placement: 'top',
     onShow: () => navigate('/settings#workspace'),

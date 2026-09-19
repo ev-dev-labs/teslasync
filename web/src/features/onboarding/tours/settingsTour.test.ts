@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import '@/i18n'
+import i18n from 'i18next'
 
 import { SETTINGS_TOUR } from './settingsTour'
 import { isRecommendedForRoute } from '@/lib/tourRegistry'
@@ -15,6 +16,17 @@ const EXPECTED_TARGETS = [
 const VALID_PLACEMENTS = new Set(['top', 'bottom', 'left', 'right'])
 
 describe('SETTINGS_TOUR definition', () => {
+  it('resolves the workspace copy from translations once initialized', () => {
+    const translate = vi.spyOn(i18n, 't')
+    try {
+      translate.mockReturnValueOnce('Localized workspace')
+      expect(SETTINGS_TOUR.steps[2].title).toBe('Localized workspace')
+      translate.mockReturnValueOnce('Localized workspace description')
+      expect(SETTINGS_TOUR.steps[2].description).toBe('Localized workspace description')
+    } finally {
+      translate.mockRestore()
+    }
+  })
   it('carries the settings identity + i18n metadata', () => {
     expect(SETTINGS_TOUR.id).toBe('settings')
     expect(SETTINGS_TOUR.titleKey).toBe('tour.tours.settings.title')
