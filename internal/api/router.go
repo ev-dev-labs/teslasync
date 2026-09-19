@@ -3759,6 +3759,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Bulk enable/disable
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/delete", alertHandler.BulkDeleteRules)
 			r.Post("/test", alertHandler.TestRule)
 			// alert message template helpers.
 			// These are static read paths registered BEFORE the

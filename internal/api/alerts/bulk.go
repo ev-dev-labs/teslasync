@@ -1,12 +1,62 @@
 package alerts
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
+
+func (h *AlertHandler) BulkDeleteRules(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.alerts.rules.bulk_delete")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	repo, ok := h.bulkRuleRepo.(interface {
+		BulkDelete(context.Context, []int64) ([]int64, error)
+	})
+	if !ok {
+		writeError(w, http.StatusServiceUnavailable, "bulk deletion not configured")
+		return
+	}
+	var body apibulk.IDsBody
+	_, err := decodeStrictAlertRequest(r, &body, nil)
+	if err != nil {
+		span.RecordError(err)
+		apibulk.WriteBadRequest(w, err)
+		return
+	}
+	if len(body.IDs) == 0 || len(body.IDs) > apibulk.MaxIDs {
+		writeError(w, http.StatusBadRequest, "select between 1 and 500 rule IDs")
+		return
+	}
+	for _, id := range body.IDs {
+		if id <= 0 {
+			writeError(w, http.StatusBadRequest, "rule IDs must be positive")
+			return
+		}
+	}
+	ids := apibulk.DedupeInt64s(body.IDs)
+	deleted, err := repo.BulkDelete(ctx, ids)
+	if err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("bulk delete alert rules failed")
+		writeError(w, http.StatusInternalServerError, "failed to delete alert rules")
+		return
+	}
+	if h.db != nil {
+		logAuditFromRequest(h.db, r, h.forwardAuthHeader, "bulk_delete", "alert_rule", nil,
+			fmt.Sprintf("requested=%d deleted=%d", len(ids), len(deleted)))
+	}
+	log.Info().Str("trace_id", span.SpanContext().TraceID().String()).Int("deleted", len(deleted)).Msg("alert rules deleted")
+	writeJSON(w, http.StatusOK, struct {
+		DeletedIDs []int64 `json:"deleted_ids"`
+	}{deleted})
+}
 
 // BulkEnableRules sets enabled=TRUE for every rule in the request body's
 // `ids` array.

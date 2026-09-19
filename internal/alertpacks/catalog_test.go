@@ -43,7 +43,7 @@ func TestCatalog(t *testing.T) {
 }
 
 func validRequest() InstallRequest {
-	return InstallRequest{Version: 1, AllVehicles: true, Rules: []Selection{{TemplateID: "battery-low"}}}
+	return InstallRequest{Version: 2, AllVehicles: true, Rules: []Selection{{TemplateID: "battery-low"}}}
 }
 
 func TestPrepare(t *testing.T) {
@@ -107,6 +107,59 @@ func TestCustomIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Run("comprehensive catalog and delivery overrides", func(t *testing.T) {
+		all, ok := Find("all")
+		if !ok || len(all.Rules) < 60 {
+			t.Fatalf("comprehensive pack is too thin: %d", len(all.Rules))
+		}
+		if len(Catalog()) < 14 {
+			t.Fatal("focused pack coverage regressed")
+		}
+		ids := map[string]bool{}
+		for _, rule := range all.Rules {
+			if ids[rule.ID] {
+				t.Fatalf("duplicate all-pack rule %s", rule.ID)
+			}
+			ids[rule.ID] = true
+		}
+		for _, pack := range Catalog() {
+			if len(pack.Rules) < 5 {
+				t.Fatalf("pack %s is too thin", pack.ID)
+			}
+			for _, rule := range pack.Rules {
+				if !ids[rule.ID] {
+					t.Fatalf("%s missing from all pack", rule.ID)
+				}
+			}
+		}
+		req := InstallRequest{Version: all.Version, AllVehicles: true, CooldownS: ptr(900), TriggerMode: ptr("repeat"), IncludeTitle: ptr(false),
+			Rules: []Selection{{TemplateID: "battery-low"}, {TemplateID: "charge-complete", CooldownS: ptr(7200), TriggerMode: ptr("once"), IncludeTitle: ptr(true)}}}
+		got, _, err := Prepare(all, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got[0].Rule.CooldownMin != 15 || got[0].Rule.TriggerMode != "repeat" || got[0].Rule.IncludeTitle {
+			t.Fatal("master defaults not applied")
+		}
+		if got[1].Rule.CooldownMin != 120 || got[1].Rule.TriggerMode != "once" || !got[1].Rule.IncludeTitle {
+			t.Fatal("individual settings did not override master")
+		}
+		for _, mutate := range []func(*InstallRequest){
+			func(r *InstallRequest) { r.TriggerMode = ptr("invalid") },
+			func(r *InstallRequest) { r.Rules[0].TriggerMode = ptr("") },
+			func(r *InstallRequest) { r.CooldownS = ptr(61) },
+			func(r *InstallRequest) { r.CooldownS = ptr(0) },
+			func(r *InstallRequest) { r.Rules[0].CooldownS = ptr(604860) },
+		} {
+			bad := req
+			bad.Rules = append([]Selection{}, req.Rules...)
+			mutate(&bad)
+			if _, _, err := Prepare(all, bad); err == nil {
+				t.Fatal("invalid delivery settings accepted")
+			}
+		}
+	})
 	b, _ := NameCustom(catalog, "weekend", []Template{rules[1], rules[0]})
 	if a.ID != b.ID || a.Name != "Weekend" {
 		t.Fatal("identity depends on case/order/whitespace")

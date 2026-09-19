@@ -1,7 +1,7 @@
 {
   "uid": "slo-alert_packs_availability",
   "title": "SLO: alert_packs_availability",
-  "description": "Alert pack catalog, installations and removal endpoints must avoid server errors.",
+  "description": "Alert pack catalog, installations, removal and bulk rule deletion endpoints must avoid server errors.",
   "tags": [
     "slo",
     "owner:notifications",
@@ -205,7 +205,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_red_http_request_duration_seconds_bucket{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_red_http_request_duration_seconds_bucket{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[5m])))",
           "legendFormat": "p99",
           "exemplar": true
         }

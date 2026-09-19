@@ -5,28 +5,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:alert_packs_availability:ratio_rate5m
-        expr: "(((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\",status_class!=\"5xx\"}[5m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[5m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[5m]))) > 0)) or on() vector(1)"
+        expr: "(((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\",status_class!=\"5xx\"}[5m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[5m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "alert_packs_availability"
           window: "5m"
           owner: "notifications"
           objective: "99.5"
       - record: slo:alert_packs_availability:ratio_rate1h
-        expr: "(((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\",status_class!=\"5xx\"}[1h]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[1h])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[1h]))) > 0)) or on() vector(1)"
+        expr: "(((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\",status_class!=\"5xx\"}[1h]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[1h])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "alert_packs_availability"
           window: "1h"
           owner: "notifications"
           objective: "99.5"
       - record: slo:alert_packs_availability:ratio_rate6h
-        expr: "(((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\",status_class!=\"5xx\"}[6h]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[6h])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[6h]))) > 0)) or on() vector(1)"
+        expr: "(((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\",status_class!=\"5xx\"}[6h]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[6h])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "alert_packs_availability"
           window: "6h"
           owner: "notifications"
           objective: "99.5"
       - record: slo:alert_packs_availability:ratio_rate30d
-        expr: "(((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\",status_class!=\"5xx\"}[30d]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[30d])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[30d]))) > 0)) or on() vector(1)"
+        expr: "(((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\",status_class!=\"5xx\"}[30d]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[30d])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "alert_packs_availability"
           window: "30d"

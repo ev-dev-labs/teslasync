@@ -718,6 +718,7 @@ export type AlertRuleKind = 'signal' | 'computed_metric'
 export type ComputedMetricOp = '>' | '>=' | '<' | '<=' | '=' | '!=' | '%_change_>' | '%_change_<'
 
 export interface AlertRule {
+  channel_ids?: number[] | null
   id: number
   name: string
   description?: string | null
@@ -793,6 +794,7 @@ export interface AlertRule {
 }
 
 export interface AlertRuleInput {
+  channel_ids?: number[] | null
   name: string
   description?: string | null
   enabled?: boolean

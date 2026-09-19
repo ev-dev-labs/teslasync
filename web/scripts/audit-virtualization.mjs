@@ -115,7 +115,7 @@ const WAIVER_RE = /\/\/\s*virtualize-audit:skip\b/;
 
 export const LONG_LIST_ADMISSIONS = [
   ['pagination', /<Pagination\b|\busePagination\b/],
-  ['bulk-actions', /<BulkActionsToolbar\b/],
+  ['bulk-actions', /<(?:BulkActionsToolbar|RuleListTools)\b/],
   ['list-export', /<ListExportMenu\b/],
 ];
 

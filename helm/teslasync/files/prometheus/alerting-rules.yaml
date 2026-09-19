@@ -19,7 +19,7 @@ groups:
           description: "Error budget for SLO \"alert_packs_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
       - alert: SLOAlertPacksAvailabilitySlowBurn
-        expr: "(1 - slo:alert_packs_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        expr: "(1 - slo:alert_packs_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
         for: 15m
         labels:
           severity: ticket

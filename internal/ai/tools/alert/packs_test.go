@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/alertpacks"
 )
 
 func TestPackProposalReadOnlyAndValidated(t *testing.T) {
@@ -13,6 +14,30 @@ func TestPackProposalReadOnlyAndValidated(t *testing.T) {
 	if tool.Mutates() || tool.RequiredScope() != "" {
 		t.Fatal("proposal must be read-only")
 	}
+
+	t.Run("comprehensive proposal is not capped at six", func(t *testing.T) {
+		catalog := alertpacks.CustomCatalog()
+		ids := make([]string, 0, len(catalog.Rules))
+		for _, rule := range catalog.Rules {
+			ids = append(ids, rule.ID)
+		}
+		raw, err := json.Marshal(packProposalInput{Name: "Complete coverage", TemplateIDs: ids, Rationale: "All supported catalog rules, ready for review."})
+		if err != nil {
+			t.Fatal(err)
+		}
+		tool := &proposeAlertPack{}
+		input, err := tool.Validate(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result, err := tool.Execute(context.Background(), input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := len(result.(packProposal).TemplateIDs); got != len(ids) || got <= 6 {
+			t.Fatalf("incomplete proposal: %d", got)
+		}
+	})
 	registry := tools.NewRegistry()
 	RegisterAlertPackTools(registry)
 	for _, tt := range []struct {

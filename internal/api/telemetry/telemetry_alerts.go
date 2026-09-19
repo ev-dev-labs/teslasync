@@ -227,7 +227,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 	if !quietSuppressed {
 		suppressTransportTitle := !rule.IncludeTitle
 		safeGo("notification-dispatch", func() {
-			e.dispatchNotifications(title, body, severity, rule.ID, suppressTransportTitle)
+			e.dispatchNotifications(title, body, severity, rule, suppressTransportTitle)
 		})
 	}
 
@@ -244,7 +244,8 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 // body-only output when the rule has IncludeTitle=false. Transports
 // that REQUIRE a title (WebPush, email Subject, Pushover) ignore the
 // flag and use the canonical title regardless.
-func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity string, ruleID int64, suppressTransportTitle bool) {
+func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity string, rule *alertmodel.AlertRule, suppressTransportTitle bool) {
+	ruleID := rule.ID
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -254,7 +255,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 		return
 	}
 	for _, ch := range channels {
-		if !ch.Enabled {
+		if !ch.Enabled || !rule.DeliversToChannel(ch.ID) {
 			continue
 		}
 		req := &notification.Request{

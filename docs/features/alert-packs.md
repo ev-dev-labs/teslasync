@@ -4,9 +4,13 @@ Open **Notifications → Studio → Alert Packs** to install a group of ordinary
 rules. The existing templates, rule editor, notification delivery and evaluation
 engine are unchanged.
 
-The initial catalog contains six curated packs built from 13 validated signal
-templates. Manual custom groups and Helix use this supported subset; the existing
-254 individual templates remain available separately in Studio.
+The catalog now includes expanded everyday, charging, security, road-trip, climate
+and battery packs, plus driving, places, software, media, Powershare, cold-weather
+and shared-vehicle handover packs. **All alerts** contains every unique rule from
+these supported packs in one installation. It does not mean every possible Tesla
+event: the existing 254 individual Studio templates remain a separate catalog.
+Some of those older templates use display-unit thresholds or unsupported shapes
+and are not blindly copied into the canonical pack catalog.
 
 ## Preview and install
 
@@ -14,6 +18,17 @@ Choose a curated pack or **Custom pack**. Select the rules you want, choose all
 current and future vehicles or a specific subset, and review each trigger,
 severity, message and cooldown. Numeric operands use canonical units; temperature
 inputs are explicitly Celsius and the preview also displays your preferred unit.
+
+**Master settings** at the top set cooldown, once/repeat behavior and title
+inclusion for the whole pack. Each rule can switch to **individual delivery
+settings**. Later master changes affect inherited rules only; **Apply master
+settings to all rules** explicitly clears the individual delivery overrides.
+Messages, thresholds and selection are preserved. Master settings are installation
+defaults, not a live link that subsequently changes installed rules.
+
+Search and select/deselect matching rules while retaining selections outside the
+filter. Large packs are paginated in the preview; installation includes all selected
+rules across pages, not just the visible page.
 
 New rules are **disabled by default**. Enable them during installation only if
 you are ready to receive notifications. They use your existing channel
@@ -44,10 +59,28 @@ be reused.
 ## Helix custom groups
 
 Enable **Helix custom Alert Packs** in AI settings to describe a goal in Studio.
-Helix proposes two to six rules from the same supported catalog as the manual
-composer. It cannot invent new conditions, install rules or execute commands.
+Helix proposes focused or comprehensive groups from the same supported catalog as
+the manual composer. There is no six-rule cap. It cannot invent new conditions,
+install rules or execute commands.
 Review the proposed group, adjust its name and settings, and explicitly install.
 Manual packs remain available when AI is disabled or the provider fails.
+
+## Rule-list actions and delivery channels
+
+Search and channel filters sit together above the rule list. Management controls
+are hidden when there are no rules. Selecting any rule reveals one contextual
+toolbar with Enable, Disable and Delete; **Select all** uses that same toolbar
+for all matching loaded rules, rather than showing a second delete action.
+Deletion requires confirmation showing the number of rules, and never includes
+rules outside the search/channel filter. **Clear filters** restores the full list.
+Failure leaves the remaining selection available for review and retry.
+
+Use the channel filter to find rules by their configured delivery selection.
+The channel button on each row opens a quick editor that changes only channel
+routing, not the condition, message or enabled state. **All enabled channels**
+includes future channels; explicit selections stay fixed; an empty selection
+turns off external-channel delivery. Browser delivery and quiet hours are unchanged.
+Disabled channels do not deliver, even if selected.
 
 ## Deployment
 
@@ -55,9 +88,17 @@ Migration `000245_alert_packs` adds installation and membership tables, without
 altering the existing alert-rule schema. Leave it applied when rolling back the
 application. Its down migration removes pack tracking only, not alert rules.
 
+Migration `000246_alert_rule_channels` adds nullable `channel_ids`. `null` preserves
+all-channel delivery, `[]` disables external channels, and explicit IDs restrict
+delivery. Leave the migration applied on rollback. Older application binaries
+ignore these selections and send to all channels: disable restricted rules before
+rolling back. The down migration discards saved channel selections.
+
 The pack installation request accepts `cooldown_s` (60 to 604800 seconds, in
-whole-minute increments). The preview displays minutes; the existing ordinary
-rule persistence contract is unchanged.
+whole-minute increments), `trigger_mode` (`once` or `repeat`) and `include_title`
+at both the request and individual-rule level. Rule-level values override master
+values; omitted values inherit. The preview displays minutes; the existing
+ordinary rule persistence contract is unchanged.
 
 `TestPacksPostgres` requires `TESLASYNC_TEST_DB` pointing to a migrated test
 database. It clones the alert-rule schema without rows into a temporary schema,

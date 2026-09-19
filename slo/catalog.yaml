@@ -15,10 +15,10 @@ version: 1
 
 slos:
   - name: alert_packs_availability
-    description: "Alert pack catalog, installations and removal endpoints must avoid server errors."
+    description: "Alert pack catalog, installations, removal and bulk rule deletion endpoints must avoid server errors."
     sli:
-      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\",status_class!=\"5xx\"}[5m]))"
-      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations).*\"}[5m]))"
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/alerts/(packs|pack-installations|rules/bulk/delete).*\"}[5m]))"
     objective: 99.5
     window: 30d
     owner: notifications

@@ -41,7 +41,7 @@ func packRouter(f *packFake) http.Handler {
 }
 
 func TestPackEndpoints(t *testing.T) {
-	valid := `{"version":1,"all_vehicles":true,"enabled":false,"rules":[{"template_id":"battery-low"}]}`
+	valid := `{"version":2,"all_vehicles":true,"enabled":false,"rules":[{"template_id":"battery-low"}]}`
 	for _, tt := range []struct {
 		name, method, path, body string
 		err                      error
@@ -63,7 +63,7 @@ func TestPackEndpoints(t *testing.T) {
 		{"remove invalid", "POST", "/installations/0/remove", `{}`, nil, 400, 0},
 		{"remove negative rule", "POST", "/installations/1/remove", `{"delete_rule_ids":[-1]}`, nil, 400, 0},
 		{"custom no name", "POST", "/packs/custom/install", valid, nil, 400, 0},
-		{"custom group", "POST", "/packs/custom/install", strings.Replace(valid, `"version":1`, `"version":1,"name":"My group"`, 1), nil, 201, 1},
+		{"custom group", "POST", "/packs/custom/install", strings.Replace(valid, `"version":2`, `"version":2,"name":"My group"`, 1), nil, 201, 1},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &packFake{err: tt.err}

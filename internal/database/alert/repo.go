@@ -34,7 +34,7 @@ const alertRuleColumns = `id, name, description, enabled, vehicle_id, all_vehicl
 	max_fires_per_resolution,
 	escalation_after_min, escalation_severity,
 	msg_template, include_title,
-	created_at, updated_at`
+	created_at, updated_at, channel_ids`
 
 func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *alertmodel.AlertRule) error {
 	return row.Scan(
@@ -47,6 +47,7 @@ func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *alertmodel.Aler
 		&ar.EscalationAfterMin, &ar.EscalationSeverity,
 		&ar.MsgTemplate, &ar.IncludeTitle,
 		&ar.CreatedAt, &ar.UpdatedAt,
+		&ar.ChannelIDs,
 	)
 }
 
@@ -253,7 +254,7 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *alertmodel.A
 			max_fires_per_resolution=$23,
 			escalation_after_min=$24, escalation_severity=$25,
 			msg_template=$26, include_title=$27,
-			updated_at=$28
+			updated_at=$28, channel_ids=$29
 			WHERE id=$1`,
 			id, rule.Name, rule.Description, rule.Enabled, rule.VehicleID,
 			rule.AllVehicles,
@@ -264,7 +265,7 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *alertmodel.A
 			rule.MaxFiresPerResolution,
 			rule.EscalationAfterMin, rule.EscalationSeverity,
 			rule.MsgTemplate, rule.IncludeTitle,
-			time.Now().UTC())
+			time.Now().UTC(), rule.ChannelIDs)
 		if err != nil {
 			return err
 		}
@@ -342,9 +343,9 @@ func createRuleTx(ctx context.Context, tx pgx.Tx, rule *alertmodel.AlertRule) er
 			max_fires_per_resolution,
 			escalation_after_min, escalation_severity,
 			msg_template, include_title,
-			created_at, updated_at)
+			created_at, updated_at, channel_ids)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-				$16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW())
+				$16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW(), $27)
 			RETURNING id, created_at, updated_at`
 	err := tx.QueryRow(ctx, query, rule.Name, rule.Description, rule.Enabled,
 		rule.VehicleID, rule.AllVehicles,
@@ -354,7 +355,7 @@ func createRuleTx(ctx context.Context, tx pgx.Tx, rule *alertmodel.AlertRule) er
 		rule.Kind, rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp,
 		rule.MaxFiresPerResolution,
 		rule.EscalationAfterMin, rule.EscalationSeverity,
-		rule.MsgTemplate, rule.IncludeTitle).
+		rule.MsgTemplate, rule.IncludeTitle, rule.ChannelIDs).
 		Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
 	if err != nil {
 		return err
@@ -385,6 +386,23 @@ func (r *AlertRuleRepo) Delete(ctx context.Context, id int64) error {
 	// alert_rule_vehicles has ON DELETE CASCADE so junction rows clean up.
 	_, err := r.db.Pool.Exec(ctx, `DELETE FROM alert_rules WHERE id = $1`, id)
 	return err
+}
+
+func (r *AlertRuleRepo) BulkDelete(ctx context.Context, ids []int64) ([]int64, error) {
+	rows, err := r.db.Pool.Query(ctx, `DELETE FROM alert_rules WHERE id = ANY($1) RETURNING id`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	deleted := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		deleted = append(deleted, id)
+	}
+	return deleted, rows.Err()
 }
 
 // FilterExistingIDs returns the subset of `ids` that exist in alert_rules.

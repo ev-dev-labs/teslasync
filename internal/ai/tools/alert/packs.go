@@ -11,7 +11,7 @@ import (
 
 type packProposalInput struct {
 	Name        string   `json:"name" validate:"required,max=100" desc:"Distinctive short group name without personal data."`
-	TemplateIDs []string `json:"template_ids" validate:"required,min=2,max=6,dive,required" desc:"Two to six unique template IDs from the supplied supported catalog."`
+	TemplateIDs []string `json:"template_ids" validate:"required,min=2,max=500,dive,required" desc:"Unique template IDs from the supplied supported catalog. Include every relevant rule for comprehensive requests; there is no six-rule limit."`
 	Rationale   string   `json:"rationale" validate:"required,max=1000" desc:"Explain why the group fits the goal and any limitations."`
 }
 
@@ -42,11 +42,11 @@ func (*proposeAlertPack) Execute(_ context.Context, input any) (any, error) {
 	if !ok {
 		return nil, fmt.Errorf("propose_alert_pack: unexpected input %T", input)
 	}
-	request := alertpacks.InstallRequest{Version: 1, AllVehicles: true}
+	catalog := alertpacks.CustomCatalog()
+	request := alertpacks.InstallRequest{Version: catalog.Version, AllVehicles: true}
 	for _, id := range in.TemplateIDs {
 		request.Rules = append(request.Rules, alertpacks.Selection{TemplateID: id})
 	}
-	catalog := alertpacks.CustomCatalog()
 	templates, _, err := alertpacks.Prepare(catalog, request)
 	if err != nil {
 		return nil, fmt.Errorf("propose_alert_pack: %w", err)

@@ -80,10 +80,17 @@ func TestPacksPostgres(t *testing.T) {
 	if _, err := pool.Exec(ctx, string(migration)); err != nil {
 		t.Fatal(err)
 	}
+	channelMigration, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "000246_alert_rule_channels.up.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, string(channelMigration)); err != nil {
+		t.Fatal(err)
+	}
 	repo := NewAlertRuleRepo(&database.DB{Pool: pool})
 	install := func(id string, ids []int64) (*alertpacks.Installation, error) {
 		pack, _ := alertpacks.Find(id)
-		req := alertpacks.InstallRequest{Version: 1, AllVehicles: ids == nil, VehicleIDs: ids}
+		req := alertpacks.InstallRequest{Version: pack.Version, AllVehicles: ids == nil, VehicleIDs: ids}
 		for _, rule := range pack.Rules {
 			req.Rules = append(req.Rules, alertpacks.Selection{TemplateID: rule.ID})
 		}
@@ -97,15 +104,37 @@ func TestPacksPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(first.Members) != 3 {
+	everyday, _ := alertpacks.Find("everyday")
+	if len(first.Members) != len(everyday.Rules) {
 		t.Fatal("missing members")
 	}
 	ruleID := *first.Members[0].RuleID
+	roundTrip, err := repo.GetByID(ctx, ruleID)
+	if err != nil || roundTrip == nil || roundTrip.ChannelIDs != nil {
+		t.Fatalf("default channels: rule=%+v err=%v", roundTrip, err)
+	}
+	for _, channelIDs := range [][]int64{{2, 3}, {}, nil} {
+		roundTrip.ChannelIDs = channelIDs
+		if err := repo.Update(ctx, ruleID, roundTrip); err != nil {
+			t.Fatal(err)
+		}
+		roundTrip, err = repo.GetByID(ctx, ruleID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if (roundTrip.ChannelIDs == nil) != (channelIDs == nil) || len(roundTrip.ChannelIDs) != len(channelIDs) {
+			t.Fatal("channel selection round trip lost all/none/subset distinction")
+		}
+	}
 	if _, err := pool.Exec(ctx, `UPDATE alert_rules SET name='User edited',msg_template='Keep me',enabled=true WHERE id=$1`, ruleID); err != nil {
 		t.Fatal(err)
 	}
 	second, err := install("trip", nil)
 	if err != nil {
+		t.Fatal(err)
+	}
+	var originalCount int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM alert_rules`).Scan(&originalCount); err != nil {
 		t.Fatal(err)
 	}
 	if second.Members[0].Owned || second.Members[0].Name != "User edited" || !second.Members[0].Enabled {
@@ -121,7 +150,7 @@ func TestPacksPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	var count int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM alert_rules`).Scan(&count); err != nil || count != 4 {
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM alert_rules`).Scan(&count); err != nil || count != originalCount-1 {
 		t.Fatalf("unselected rules lost count=%d err=%v", count, err)
 	}
 
@@ -154,11 +183,12 @@ func TestPacksPostgres(t *testing.T) {
 		t.Fatalf("concurrent results success=%d duplicate=%d", success, duplicate)
 	}
 	list, err := repo.ListPackInstallations(ctx, 20, 0)
-	if err != nil || len(list) != 1 || len(list[0].Members) != 3 || list[0].ScopeKey != "1,2" {
+	charging, _ := alertpacks.Find("charging")
+	if err != nil || len(list) != 1 || len(list[0].Members) != len(charging.Rules) || list[0].ScopeKey != "1,2" {
 		t.Fatalf("list=%+v err=%v", list, err)
 	}
 	deletedID := *list[0].Members[0].RuleID
-	if err := repo.Delete(ctx, deletedID); err != nil {
+	if deleted, err := repo.BulkDelete(ctx, []int64{deletedID, deletedID, -1}); err != nil || len(deleted) != 1 || deleted[0] != deletedID {
 		t.Fatal(err)
 	}
 	list, err = repo.ListPackInstallations(ctx, 20, 0)

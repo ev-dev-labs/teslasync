@@ -61,6 +61,49 @@ beforeEach(() => {
 })
 
 describe('Alert Packs', () => {
+  it('inherits master settings, preserves individual overrides, and explicitly reapplies master settings', async () => {
+    setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
+    fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value: '15' } })
+    fireEvent.change(screen.getByLabelText('Master alert behavior'), { target: { value: 'repeat' } })
+    expect(screen.getAllByLabelText('Minimum minutes between notifications').every(input => (input as HTMLInputElement).value === '15')).toBe(true)
+    expect(screen.getAllByLabelText('Alert behavior').every(input => (input as HTMLSelectElement).value === 'repeat')).toBe(true)
+    fireEvent.click(screen.getAllByRole('switch', { name: 'Use individual delivery settings' })[0])
+    fireEvent.change(screen.getAllByLabelText('Minimum minutes between notifications')[0], { target: { value: '120' } })
+    fireEvent.change(screen.getAllByLabelText('Alert behavior')[0], { target: { value: 'once' } })
+    fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value: '30' } })
+    expect(screen.getAllByLabelText('Minimum minutes between notifications')[0]).toHaveValue(120)
+    expect(screen.getAllByLabelText('Minimum minutes between notifications')[1]).toHaveValue(30)
+    fireEvent.click(screen.getByRole('button', { name: 'Apply master settings to all rules' }))
+    expect(screen.getAllByRole('switch', { name: 'Use individual delivery settings' }).every(input => input.getAttribute('aria-checked') === 'false')).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
+    await waitFor(() => {
+      const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
+      expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
+        cooldown_s: 1800, trigger_mode: 'repeat',
+        rules: [{ template_id: 'battery-low' }, { template_id: 'charge-complete' }],
+      })
+      expect(JSON.parse(String(call?.[1]?.body)).rules.every((rule: Record<string, unknown>) => !('cooldown_s' in rule) && !('trigger_mode' in rule))).toBe(true)
+    })
+  })
+
+  it('selects matching rules without dropping hidden choices and rejects invalid master cooldowns', async () => {
+    setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
+    fireEvent.change(screen.getByPlaceholderText('Search pack rules...'), { target: { value: 'Battery' } })
+    await waitFor(() => expect(screen.queryByRole('switch', { name: 'Charging complete' })).not.toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Deselect matching rules' }))
+    expect(screen.getByText('1 of 2 rules selected')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Select all matching rules' }))
+    expect(screen.getByText('2 of 2 rules selected')).toBeInTheDocument()
+    for (const value of ['', '0', '1.5', '10081']) {
+      fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value } })
+      expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeDisabled()
+    }
+    fireEvent.change(screen.getByLabelText('Master cooldown (minutes)'), { target: { value: '1' } })
+    expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled()
+  })
+
   it('browses and previews without installing or exposing Helix when AI is off', async () => {
     setup(<AlertPacksPanel onEditRule={vi.fn()} />)
     fireEvent.click(await screen.findByRole('button', { name: 'Preview Everyday essentials' }))
@@ -75,6 +118,7 @@ describe('Alert Packs', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
     fireEvent.click(screen.getByRole('switch', { name: 'Charging complete' }))
     fireEvent.change(screen.getByLabelText('Threshold (%)'), { target: { value: '25' } })
+    fireEvent.click(screen.getByRole('switch', { name: 'Use individual delivery settings' }))
     fireEvent.change(screen.getByLabelText('Minimum minutes between notifications'), { target: { value: '120' } })
     fireEvent.change(screen.getByLabelText('Notification message'), { target: { value: '{{VehicleName}} needs a charge.' } })
     fireEvent.click(screen.getByRole('switch', { name: 'Enable newly created rules immediately' }))
@@ -82,8 +126,8 @@ describe('Alert Packs', () => {
     await screen.findByText(/Pack installed. Created 2 rules; reused 1/)
     const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({
-      version: 1, all_vehicles: true, vehicle_ids: [], enabled: true,
-      rules: [{ template_id: 'battery-low', value_num: 25, cooldown_s: 7200, message: '{{VehicleName}} needs a charge.' }],
+      version: 1, all_vehicles: true, vehicle_ids: [], enabled: true, cooldown_s: 3600, trigger_mode: 'once', include_title: true,
+      rules: [{ template_id: 'battery-low', value_num: 25, cooldown_s: 7200, trigger_mode: 'once', include_title: true, message: '{{VehicleName}} needs a charge.' }],
     })
   })
 

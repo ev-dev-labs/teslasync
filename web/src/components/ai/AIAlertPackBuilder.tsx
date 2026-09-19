@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
-import { Button, Text, Textarea } from '@/components/ui'
+import { Badge, Button, Caption, GlassPanel, PanelTitle, Text, Textarea } from '@/components/ui'
 import { useAiStream, type AiStreamEvent } from '@/hooks/useAiStream'
 import type { AlertPack } from '@/api/hooks/useAlertPacks'
 
@@ -29,7 +29,7 @@ function Inner({ catalog, onApply }: Props) {
     const data = event.data as Record<string, unknown>
     if (data.status !== 'ok' || typeof data.name !== 'string' || typeof data.rationale !== 'string' || !Array.isArray(data.template_ids)) return
     const ids = data.template_ids.filter((id): id is string => typeof id === 'string')
-    if (ids.length < 2 || ids.length > 6 || ids.length !== data.template_ids.length || new Set(ids).size !== ids.length
+    if (ids.length < 2 || ids.length > catalog.rules.length || ids.length !== data.template_ids.length || new Set(ids).size !== ids.length
       || ids.some(id => !catalog.rules.some(template => template.id === id))) return
     setProposal({ name: data.name, rationale: data.rationale, template_ids: ids })
   }, [catalog.rules])
@@ -45,7 +45,7 @@ function Inner({ catalog, onApply }: Props) {
   return (
     <AIFeatureCard
       title={t('alertPacks.aiTitle', 'Build a custom pack with Helix')}
-      description={t('alertPacks.aiDescription', 'Describe your goal. Helix selects a small group from supported rules; you review the configuration and explicitly install it.')}
+      description={t('alertPacks.aiDescription', 'Describe your goal, from a focused group to comprehensive coverage. Helix selects supported rules; you review defaults and individual overrides before installing.')}
       buttonLabel={t('alertPacks.aiGenerate', 'Suggest an alert pack')}
       canStart={goal.trim().length >= 5 && goal.trim().length <= 2000 && !busy}
       stream={{ ...stream, start: () => { setProposal(null); stream.start() } }}
@@ -54,18 +54,24 @@ function Inner({ catalog, onApply }: Props) {
         placeholder={t('alertPacks.goalExample', 'For example: a low-noise group for charging and battery on longer trips')} />}
     >
       {proposal && (
-        <div className="space-y-3">
-          <Text>{proposal.name}</Text>
-          <Text variant="bodySm">{proposal.rationale}</Text>
-          <Text variant="bodySm">{proposal.template_ids.map(id => {
+        <GlassPanel className="min-w-0 space-y-4 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <PanelTitle className="break-words">{proposal.name}</PanelTitle>
+            <Caption>{t('alertPacks.proposedCount', '{{count}} proposed rules', { count: proposal.template_ids.length })}</Caption>
+          </div>
+          <Text as="p" variant="bodySm" className="break-words">{proposal.rationale}</Text>
+          <div className="flex max-h-64 flex-wrap gap-2 overflow-y-auto" aria-label={t('alertPacks.proposedRules', 'Proposed rules')}>
+            {proposal.template_ids.map(id => {
             const template = catalog.rules.find(rule => rule.id === id)
-            return t(`alertPacks.rules.${id}.name`, template?.rule.name ?? id)
-          }).join(', ')}</Text>
+            return <Badge key={id} className="max-w-full whitespace-normal break-words">{t(`alertPacks.rules.${id}.name`, template?.rule.name ?? id)}</Badge>
+          })}</div>
+          <div className="flex flex-wrap gap-2 border-t border-[var(--border-default)] pt-3">
           <Button disabled={busy || Boolean(stream.error)} onClick={() => onApply({
             ...catalog, name: proposal.name,
             rules: proposal.template_ids.flatMap(id => catalog.rules.filter(rule => rule.id === id)),
           })}>{t('alertPacks.aiReview', 'Review this proposed pack')}</Button>
-        </div>
+          </div>
+        </GlassPanel>
       )}
     </AIFeatureCard>
   )

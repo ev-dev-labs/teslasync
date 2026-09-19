@@ -206,6 +206,12 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "rule not found")
 		return
 	}
+	if fieldPresent(fields, "channel_ids") {
+		if !h.checkRuleChannels(w, r, body.ChannelIDs) {
+			return
+		}
+		existing.ChannelIDs = body.ChannelIDs
+	}
 
 	if fieldPresent(fields, "name") {
 		if body.Name == nil {
@@ -378,6 +384,9 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "enabled must be a boolean")
 		return
 	}
+	if !h.checkRuleChannels(w, r, body.ChannelIDs) {
+		return
+	}
 	if fieldPresent(fields, "severity") && body.Severity == nil {
 		writeError(w, http.StatusBadRequest, "severity must be info, warn, or critical")
 		return
@@ -426,6 +435,7 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rule := &alertmodel.AlertRule{
+		ChannelIDs:            body.ChannelIDs,
 		Name:                  name,
 		Description:           body.Description,
 		Enabled:               enabled,

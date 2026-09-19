@@ -3,6 +3,7 @@ package alerts
 import "time"
 
 type createAlertRuleRequest struct {
+	ChannelIDs  []int64 `json:"channel_ids"`
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	Enabled     *bool   `json:"enabled"`
@@ -60,6 +61,7 @@ type createAlertRuleRequest struct {
 }
 
 type updateAlertRuleRequest struct {
+	ChannelIDs  []int64 `json:"channel_ids"`
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	Enabled     *bool   `json:"enabled"`

@@ -19,6 +19,54 @@ type fakeAlertRuleBulkRepo struct {
 	setEnabledTo  bool
 }
 
+func (f *fakeAlertRuleBulkRepo) BulkDelete(_ context.Context, ids []int64) ([]int64, error) {
+	if f.updateErr != nil {
+		return nil, f.updateErr
+	}
+	f.setEnabledArg = append([]int64{}, ids...)
+	deleted := []int64{}
+	for _, id := range ids {
+		if f.existing[id] {
+			deleted = append(deleted, id)
+		}
+	}
+	return deleted, nil
+}
+
+func TestBulkRuleDelete(t *testing.T) {
+	for _, tt := range []struct {
+		body      string
+		status    int
+		wantCalls bool
+	}{
+		{`{"ids":[1,2,2,99]}`, 200, true},
+		{`{"ids":[]}`, 400, false},
+		{`{"ids":[0]}`, 400, false},
+		{`{"ids":[-1]}`, 400, false},
+		{`{"ids":[1],"unknown":true}`, 400, false},
+		{`{"ids":[1]} {"ids":[2]}`, 400, false},
+	} {
+		repo := &fakeAlertRuleBulkRepo{existing: map[int64]bool{1: true, 2: true}}
+		h := &AlertHandler{bulkRuleRepo: repo}
+		rec := httptest.NewRecorder()
+		h.BulkDeleteRules(rec, newBulkRequest(t, "POST", "/alerts/rules/bulk/delete", tt.body))
+		if rec.Code != tt.status || (len(repo.setEnabledArg) > 0) != tt.wantCalls {
+			t.Fatalf("body=%s status=%d result=%s", tt.body, rec.Code, rec.Body.String())
+		}
+		if tt.wantCalls {
+			var result struct {
+				DeletedIDs []int64 `json:"deleted_ids"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if len(result.DeletedIDs) != 2 || len(repo.setEnabledArg) != 3 {
+				t.Fatal("deletion did not deduplicate or accurately report affected rows")
+			}
+		}
+	}
+}
+
 func (f *fakeAlertRuleBulkRepo) FilterExistingIDs(_ context.Context, ids []int64) ([]int64, error) {
 	out := make([]int64, 0, len(ids))
 	for _, id := range ids {

@@ -29,19 +29,24 @@ type Pack struct {
 }
 
 type Selection struct {
-	TemplateID string   `json:"template_id"`
-	ValueNum   *float64 `json:"value_num,omitempty"`
-	Message    *string  `json:"message,omitempty"`
-	CooldownS  *int     `json:"cooldown_s,omitempty"`
+	TemplateID   string   `json:"template_id"`
+	ValueNum     *float64 `json:"value_num,omitempty"`
+	Message      *string  `json:"message,omitempty"`
+	CooldownS    *int     `json:"cooldown_s,omitempty"`
+	TriggerMode  *string  `json:"trigger_mode,omitempty"`
+	IncludeTitle *bool    `json:"include_title,omitempty"`
 }
 
 type InstallRequest struct {
-	Name        string      `json:"name,omitempty"`
-	Version     int         `json:"version"`
-	AllVehicles bool        `json:"all_vehicles"`
-	VehicleIDs  []int64     `json:"vehicle_ids"`
-	Enabled     bool        `json:"enabled"`
-	Rules       []Selection `json:"rules"`
+	Name         string      `json:"name,omitempty"`
+	Version      int         `json:"version"`
+	AllVehicles  bool        `json:"all_vehicles"`
+	VehicleIDs   []int64     `json:"vehicle_ids"`
+	Enabled      bool        `json:"enabled"`
+	CooldownS    *int        `json:"cooldown_s,omitempty"`
+	TriggerMode  *string     `json:"trigger_mode,omitempty"`
+	IncludeTitle *bool       `json:"include_title,omitempty"`
+	Rules        []Selection `json:"rules"`
 }
 
 type Member struct {
@@ -122,7 +127,7 @@ func Catalog() []Pack {
 		"{{VehicleName}} has a frosty cabin. Consider preconditioning before your next departure.")
 	update := state("software-version", "Software version changed", "Version", "changed", "", "info",
 		"{{VehicleName}} has a new software chapter: {{Value}}. Take a look at the release notes.")
-	return []Pack{
+	return expandCatalog([]Pack{
 		{"everyday", 1, "Everyday essentials", "A low-noise starting set for battery, charging and software changes.", []Template{low, complete, update}},
 		{"charging", 1, "Charging companion", "Follow charging state changes without assuming why a session stopped.", []Template{charge, stop, complete}},
 		{"security", 1, "Security settings", "Stay aware of lock and access-setting changes. These are not intrusion detection or parked-only rules.", []Template{
@@ -135,7 +140,7 @@ func Catalog() []Pack {
 		{"battery", 1, "Battery watch", "Battery thresholds and charge-limit changes with once-per-condition notifications.", []Template{low, critical,
 			state("charge-limit", "Charge limit changed", "ChargeLimitSoc", "changed", "", "info", "{{VehicleName}} has a new charging target: {{Value}}%. Check that it suits your next journey."),
 		}},
-	}
+	})
 }
 
 func Find(id string) (Pack, bool) {
@@ -153,7 +158,7 @@ func Find(id string) (Pack, bool) {
 
 // CustomCatalog is shared by the manual composer and the Helix proposal tool.
 func CustomCatalog() Pack {
-	p := Pack{ID: "custom", Version: 1, Name: "Custom pack", Description: "Choose supported rules to build your own group.", Rules: []Template{}}
+	p := Pack{ID: "custom", Version: 2, Name: "Custom pack", Description: "Choose supported rules to build your own group.", Rules: []Template{}}
 	seen := map[string]bool{}
 	for _, pack := range Catalog() {
 		for _, rule := range pack.Rules {
@@ -183,6 +188,9 @@ func NameCustom(pack Pack, name string, templates []Template) (Pack, error) {
 }
 
 func Prepare(pack Pack, req InstallRequest) ([]Template, string, error) {
+	if err := validateDelivery(req.CooldownS, req.TriggerMode); err != nil {
+		return nil, "", err
+	}
 	if req.Version != pack.Version {
 		return nil, "", errors.New("pack version changed; refresh the preview")
 	}
@@ -233,13 +241,40 @@ func Prepare(pack Pack, req InstallRequest) ([]Template, string, error) {
 			}
 			t.Rule.MsgTemplate = ptr(message)
 		}
+		cooldown, mode, title := req.CooldownS, req.TriggerMode, req.IncludeTitle
 		if selection.CooldownS != nil {
-			if *selection.CooldownS < 60 || *selection.CooldownS > 604800 || *selection.CooldownS%60 != 0 {
-				return nil, "", errors.New("cooldown must be whole minutes between 60 and 604800 seconds")
-			}
-			t.Rule.CooldownMin = *selection.CooldownS / 60
+			cooldown = selection.CooldownS
+		}
+		if selection.TriggerMode != nil {
+			mode = selection.TriggerMode
+		}
+		if selection.IncludeTitle != nil {
+			title = selection.IncludeTitle
+		}
+		if err := validateDelivery(cooldown, mode); err != nil {
+			return nil, "", err
+		}
+		if cooldown != nil {
+			t.Rule.CooldownMin = *cooldown / 60
+		}
+		if mode != nil {
+			t.Rule.TriggerMode = *mode
+		}
+		if title != nil {
+			t.Rule.IncludeTitle = *title
 		}
 		out = append(out, t)
 	}
+
 	return out, scope, nil
+}
+
+func validateDelivery(cooldown *int, mode *string) error {
+	if cooldown != nil && (*cooldown < 60 || *cooldown > 604800 || *cooldown%60 != 0) {
+		return errors.New("cooldown must be whole minutes between 60 and 604800 seconds")
+	}
+	if mode != nil && *mode != "once" && *mode != "repeat" {
+		return errors.New("alert behavior must be once or repeat")
+	}
+	return nil
 }

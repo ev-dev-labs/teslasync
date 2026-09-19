@@ -44,6 +44,8 @@ export interface PackSelection {
   value_num?: number
   message?: string
   cooldown_s?: number
+  trigger_mode?: 'once' | 'repeat'
+  include_title?: boolean
 }
 
 export interface InstallPackInput {
@@ -53,6 +55,9 @@ export interface InstallPackInput {
   all_vehicles: boolean
   vehicle_ids: number[]
   enabled: boolean
+  cooldown_s?: number
+  trigger_mode?: 'once' | 'repeat'
+  include_title?: boolean
   rules: PackSelection[]
 }
 

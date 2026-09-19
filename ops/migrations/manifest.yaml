@@ -386,3 +386,16 @@ migrations:
     reversible: true
     reviewed_by: "@Copilot"
     reviewed_on: "2026-09-18"
+
+  - version: 246
+    name: alert_rule_channels
+    forward_compatible: true
+    forward_compatibility_notes: Nullable channel selection preserves existing all-channel delivery.
+    rollback_notes: Leave applied on rollback. Older binaries ignore channel selections and deliver to all channels; disable restricted rules before rollback. Down removes selections.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Brief ACCESS EXCLUSIVE lock for nullable column addition; no table rewrite.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-18"
