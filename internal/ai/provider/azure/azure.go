@@ -24,7 +24,7 @@ import (
 const (
 	defaultTimeout   = 120 * time.Second
 	streamSentinel   = "[DONE]"
-	streamPrefixData = "data: "
+	streamPrefixData = "data:"
 )
 
 // Adapter is the Azure AI [provider.Provider]. Construct via
@@ -141,21 +141,29 @@ func (a *Adapter) doChatCompletions(ctx context.Context, req provider.ChatReques
 	}
 	resp, err := a.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("%w: azure chat: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure chat: %w", provider.ErrUpstream, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		if readErr != nil {
+			return nil, fmt.Errorf("%w: azure chat error response: %w", provider.ErrUpstream, readErr)
+		}
 		return nil, newOperationError("chat", resp.StatusCode, raw)
 	}
 	var wire azureChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
-		return nil, fmt.Errorf("%w: azure chat decode: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure chat decode: %w", provider.ErrUpstream, err)
 	}
-	return wire.toChatResponse(), nil
+	return wire.toChatResponse()
 }
 
-func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan provider.Chunk, error) {
+func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (chunks <-chan provider.Chunk, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Join(provider.ErrStreamFinal, err)
+		}
+	}()
 	if a.cfg.APIProtocol == provider.FoundryProtocolResponses {
 		resp, err := a.chatViaResponses(ctx, req)
 		if err != nil {
@@ -178,11 +186,14 @@ func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan 
 	httpReq.Header.Set("Accept", "text/event-stream")
 	resp, err := a.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("%w: azure stream: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure stream: %w", provider.ErrUpstream, err)
 	}
 	if resp.StatusCode/100 != 2 {
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		_ = resp.Body.Close()
+		if readErr != nil {
+			return nil, fmt.Errorf("%w: azure stream error response: %w", provider.ErrUpstream, readErr)
+		}
 		streamErr := newOperationError("stream", resp.StatusCode, raw)
 		if a.cfg.APIProtocol == provider.FoundryProtocolAuto && canTryResponses(streamErr) && ctx.Err() == nil {
 			chatResp, fallbackErr := a.chatViaResponses(ctx, req)
@@ -224,10 +235,11 @@ func chatResponseAsStream(ctx context.Context, resp *provider.ChatResponse) <-ch
 			}
 		}
 		send(ctx, out, provider.Chunk{
-			Done:         true,
-			FinishReason: finish,
-			InputTokens:  resp.InputTokens,
-			OutputTokens: resp.OutputTokens,
+			Done:          true,
+			FinishReason:  finish,
+			InputTokens:   resp.InputTokens,
+			OutputTokens:  resp.OutputTokens,
+			ProviderState: resp.Message.ProviderState,
 		})
 	}()
 	return out
@@ -254,7 +266,7 @@ func (a *Adapter) Embed(ctx context.Context, req provider.EmbedRequest) (*provid
 	}
 	resp, err := a.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("%w: azure embed: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure embed: %w", provider.ErrUpstream, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
@@ -271,7 +283,7 @@ func (a *Adapter) Embed(ctx context.Context, req provider.EmbedRequest) (*provid
 		} `json:"usage"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
-		return nil, fmt.Errorf("%w: azure embed decode: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure embed decode: %w", provider.ErrUpstream, err)
 	}
 	out := &provider.EmbedResponse{
 		Vectors:     make([][]float32, len(wire.Data)),
@@ -353,6 +365,7 @@ type azureWireMsg struct {
 	Name       string              `json:"name,omitempty"`
 	ToolCallID string              `json:"tool_call_id,omitempty"`
 	ToolCalls  []azureWireToolCall `json:"tool_calls,omitempty"`
+	Refusal    string              `json:"refusal,omitempty"`
 }
 
 type azureWireToolCall struct {
@@ -393,6 +406,7 @@ type azureStreamFrame struct {
 		Delta struct {
 			Content   string              `json:"content,omitempty"`
 			ToolCalls []azureWireToolCall `json:"tool_calls,omitempty"`
+			Refusal   string              `json:"refusal,omitempty"`
 		} `json:"delta"`
 		FinishReason string `json:"finish_reason,omitempty"`
 	} `json:"choices"`
@@ -459,59 +473,72 @@ func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool
 	return json.Marshal(wire)
 }
 
-func (r *azureChatResponse) toChatResponse() *provider.ChatResponse {
+func (r *azureChatResponse) toChatResponse() (*provider.ChatResponse, error) {
 	out := &provider.ChatResponse{
 		InputTokens:  r.Usage.PromptTokens,
 		OutputTokens: r.Usage.CompletionTokens,
 		FinishReason: provider.FinishStop,
 	}
 	if len(r.Choices) == 0 {
-		return out
+		return nil, fmt.Errorf("%w: azure chat returned no choices", provider.ErrUpstream)
 	}
 	c := r.Choices[0]
+	if c.Message.Refusal != "" {
+		return nil, fmt.Errorf("%w: azure chat refusal: %s", provider.ErrUpstream, c.Message.Refusal)
+	}
 	out.Message = provider.Message{
 		Role:    c.Message.Role,
 		Content: c.Message.Content,
 		Name:    c.Message.Name,
 		ToolID:  c.Message.ToolCallID,
 	}
-	switch c.FinishReason {
-	case "stop":
-		out.FinishReason = provider.FinishStop
-	case "length":
-		out.FinishReason = provider.FinishLength
-	case "tool_calls":
-		out.FinishReason = provider.FinishToolCalls
-	case "content_filter":
-		out.FinishReason = provider.FinishContentFilter
+	out.FinishReason = provider.NormalizeFinishReason(c.FinishReason)
+	if out.FinishReason == "" {
+		return nil, fmt.Errorf("%w: azure chat returned unknown finish reason %q", provider.ErrUpstream, c.FinishReason)
 	}
 	for _, tc := range c.Message.ToolCalls {
+		if out.FinishReason == provider.FinishLength || out.FinishReason == provider.FinishContentFilter {
+			break
+		}
 		out.ToolCalls = append(out.ToolCalls, provider.ToolCall{
 			ID:        tc.ID,
 			Name:      tc.Function.Name,
 			Arguments: json.RawMessage(tc.Function.Arguments),
 		})
 	}
-	return out
+	if err := validateCompletedTools(out.ToolCalls, out.FinishReason); err != nil {
+		return nil, err
+	}
+	if out.FinishReason == provider.FinishStop && strings.TrimSpace(out.Message.Content) == "" {
+		return nil, fmt.Errorf("%w: azure chat completed without content", provider.ErrUpstream)
+	}
+	return out, nil
 }
 
 func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Chunk) {
 	defer close(out)
 	defer body.Close()
+	stopClose := context.AfterFunc(ctx, func() { _ = body.Close() })
+	defer stopClose()
 	var toolCalls provider.ToolCallAccumulator
 	var finishReason string
 	var inputTokens, outputTokens int
+	var hasContent bool
 	emitTerminal := func() {
 		calls := toolCalls.Calls()
 		if finishReason == "" {
-			if len(calls) > 0 {
-				send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream ended without a tool_calls finish reason", provider.ErrUpstream)})
-				return
-			}
-			finishReason = provider.FinishStop
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream ended without a finish reason", provider.ErrUpstream)})
+			return
 		}
-		if len(calls) > 0 && finishReason != provider.FinishToolCalls {
-			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure emitted tool fragments with finish reason %q", provider.ErrUpstream, finishReason)})
+		if finishReason == provider.FinishLength || finishReason == provider.FinishContentFilter {
+			calls = nil
+		}
+		if err := validateCompletedTools(calls, finishReason); err != nil {
+			send(ctx, out, provider.Chunk{Err: err})
+			return
+		}
+		if finishReason == provider.FinishStop && !hasContent {
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream completed without content", provider.ErrUpstream)})
 			return
 		}
 		if finishReason == provider.FinishToolCalls {
@@ -572,7 +599,12 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 			continue
 		}
 		ch := frame.Choices[0]
+		if ch.Delta.Refusal != "" {
+			send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream refusal: %s", provider.ErrUpstream, ch.Delta.Refusal)})
+			return
+		}
 		if ch.Delta.Content != "" {
+			hasContent = hasContent || strings.TrimSpace(ch.Delta.Content) != ""
 			send(ctx, out, provider.Chunk{Delta: ch.Delta.Content})
 		}
 		for _, tc := range ch.Delta.ToolCalls {
@@ -587,19 +619,36 @@ func relayStream(ctx context.Context, body io.ReadCloser, out chan<- provider.Ch
 		}
 	}
 	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
-		send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream read: %v", provider.ErrUpstream, err)})
+		send(ctx, out, provider.Chunk{Err: fmt.Errorf("%w: azure stream read: %w", provider.ErrUpstream, err)})
 		return
 	}
-	if finishReason != "" {
-		emitTerminal()
-	}
+	emitTerminal()
 }
 
 func send(ctx context.Context, out chan<- provider.Chunk, c provider.Chunk) {
+	if ctx.Err() != nil {
+		return
+	}
 	select {
 	case <-ctx.Done():
 	case out <- c:
 	}
+}
+
+func validateCompletedTools(calls []provider.ToolCall, finish string) error {
+	if (len(calls) > 0) != (finish == provider.FinishToolCalls) {
+		return fmt.Errorf("%w: azure tool calls inconsistent with finish reason %q", provider.ErrUpstream, finish)
+	}
+	seen := make(map[string]bool, len(calls))
+	for _, call := range calls {
+		var args map[string]json.RawMessage
+		if strings.TrimSpace(call.ID) == "" || strings.TrimSpace(call.Name) == "" || seen[call.ID] ||
+			json.Unmarshal(call.Arguments, &args) != nil || args == nil {
+			return fmt.Errorf("%w: azure invalid or duplicate function call", provider.ErrUpstream)
+		}
+		seen[call.ID] = true
+	}
+	return nil
 }
 
 var _ provider.Provider = (*Adapter)(nil)

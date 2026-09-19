@@ -71,13 +71,22 @@ func TestAzureHelixDispatchRoundTrip(t *testing.T) {
 						if !strings.Contains(string(raw), "call_ping") || !strings.Contains(string(raw), `\"pong\":\"ok\"`) {
 							t.Errorf("dispatcher failed to replay tool result: %s", raw)
 						}
+						if responses && (!strings.Contains(string(raw), `"encrypted_content":"opaque-state"`) ||
+							!strings.Contains(string(raw), `"phase":"commentary"`) ||
+							strings.Count(string(raw), `"type":"function_call"`) != 1) {
+							t.Errorf("dispatcher lost or duplicated Responses continuation: %s", raw)
+						}
 					}
 					if responses {
+						if string(body["include"]) != `["reasoning.encrypted_content"]` || string(body["store"]) != "false" {
+							t.Errorf("stateless reasoning not requested: %s", raw)
+						}
 						if turn == 1 {
-							_, _ = io.WriteString(w, `{"status":"completed","output":[{"type":"function_call","call_id":"call_ping","name":"ping","arguments":"{}"}]}`)
+							_, _ = io.WriteString(w, `{"status":"completed","output":[{"type":"reasoning","id":"rs_1","summary":[],"encrypted_content":"opaque-state"},{"type":"message","id":"msg_1","role":"assistant","phase":"commentary","content":[{"type":"output_text","text":""}]},{"type":"function_call","call_id":"call_ping","name":"ping","arguments":"{}"}]}`)
 						} else {
 							_, _ = io.WriteString(w, `{"status":"completed","output_text":"Verified pong","usage":{"input_tokens":8,"output_tokens":2}}`)
 						}
+
 					} else if stream {
 						w.Header().Set("Content-Type", "text/event-stream")
 						if turn == 1 {

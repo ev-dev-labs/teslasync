@@ -22,6 +22,7 @@ type responsesCreate struct {
 	Tools           []responsesTool  `json:"tools,omitempty"`
 	MaxOutputTokens int              `json:"max_output_tokens,omitempty"`
 	Store           bool             `json:"store"`
+	Include         []string         `json:"include"`
 }
 
 type responsesTool struct {
@@ -29,6 +30,12 @@ type responsesTool struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description,omitempty"`
 	Parameters  json.RawMessage `json:"parameters,omitempty"`
+	Strict      bool            `json:"strict"`
+}
+
+type responsesReplay struct {
+	Model  string           `json:"model"`
+	Output []map[string]any `json:"output"`
 }
 
 type responsesResult struct {
@@ -40,6 +47,7 @@ type responsesResult struct {
 	} `json:"error"`
 	Output []struct {
 		Type      string `json:"type"`
+		Status    string `json:"status"`
 		Role      string `json:"role"`
 		CallID    string `json:"call_id"`
 		Name      string `json:"name"`
@@ -50,6 +58,9 @@ type responsesResult struct {
 			Refusal string `json:"refusal"`
 		} `json:"content"`
 	} `json:"output"`
+	ContentFilters []struct {
+		Blocked bool `json:"blocked"`
+	} `json:"content_filters"`
 	Usage struct {
 		InputTokens  int `json:"input_tokens"`
 		OutputTokens int `json:"output_tokens"`
@@ -78,17 +89,34 @@ func (a *Adapter) chatViaResponses(ctx context.Context, req provider.ChatRequest
 	}
 	resp, err := a.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("%w: azure responses: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure responses: %w", provider.ErrUpstream, err)
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return nil, fmt.Errorf("%w: azure responses read: %v", provider.ErrUpstream, err)
+		return nil, fmt.Errorf("%w: azure responses read: %w", provider.ErrUpstream, err)
 	}
 	if resp.StatusCode/100 != 2 {
 		return nil, newOperationError("responses", resp.StatusCode, raw)
 	}
-	return decodeResponses(raw)
+	out, err := decodeResponses(raw)
+	if err != nil {
+		return nil, err
+	}
+	if len(out.ToolCalls) > 0 {
+		// Stateless reasoning/tool continuations must replay the original output
+		// items, including encrypted reasoning and assistant message phases.
+		var replay responsesReplay
+		if err := json.Unmarshal(raw, &replay); err != nil {
+			return nil, fmt.Errorf("%w: azure responses replay: %w", provider.ErrUpstream, err)
+		}
+		replay.Model = model
+		out.Message.ProviderState, err = json.Marshal(replay)
+		if err != nil {
+			return nil, fmt.Errorf("%w: azure responses replay encode: %w", provider.ErrUpstream, err)
+		}
+	}
+	return out, nil
 }
 
 func encodeResponsesRequest(req provider.ChatRequest, model string) ([]byte, error) {
@@ -103,6 +131,18 @@ func encodeResponsesRequest(req provider.ChatRequest, model string) ([]byte, err
 		case provider.RoleUser:
 			input = append(input, map[string]any{"role": "user", "content": m.Content})
 		case provider.RoleAssistant:
+			if len(m.ProviderState) > 0 {
+				var replay responsesReplay
+				if err := json.Unmarshal(m.ProviderState, &replay); err != nil {
+					return nil, fmt.Errorf("azure: decode responses continuation: %w", err)
+				}
+				if replay.Model != model || len(replay.Output) == 0 {
+					return nil, fmt.Errorf("azure: responses continuation does not match deployment")
+				}
+				applyReplayContent(&replay, m.Content)
+				input = append(input, replay.Output...)
+				continue
+			}
 			if m.Content != "" {
 				input = append(input, map[string]any{"role": "assistant", "content": m.Content})
 			}
@@ -140,6 +180,7 @@ func encodeResponsesRequest(req provider.ChatRequest, model string) ([]byte, err
 		Instructions:    strings.Join(instructions, "\n\n"),
 		Input:           input,
 		MaxOutputTokens: n,
+		Include:         []string{"reasoning.encrypted_content"},
 	}
 	if len(tools) > 0 {
 		wire.Tools = tools
@@ -175,6 +216,11 @@ func decodeResponses(raw []byte) (*provider.ChatResponse, error) {
 		}
 		return nil, fmt.Errorf("%w: azure responses status %q: %s", provider.ErrUpstream, wire.Status, reason)
 	}
+	for _, filter := range wire.ContentFilters {
+		if filter.Blocked {
+			return nil, fmt.Errorf("%w: azure responses blocked by content filter", provider.ErrUpstream)
+		}
+	}
 	out := &provider.ChatResponse{
 		InputTokens:  wire.Usage.InputTokens,
 		OutputTokens: wire.Usage.OutputTokens,
@@ -189,6 +235,9 @@ func decodeResponses(raw []byte) (*provider.ChatResponse, error) {
 		text = append(text, out.Message.Content)
 	}
 	for _, item := range wire.Output {
+		if item.Status != "" && item.Status != "completed" {
+			return nil, fmt.Errorf("%w: azure responses output status %q", provider.ErrUpstream, item.Status)
+		}
 		switch item.Type {
 		case "function_call":
 			if item.CallID == "" || item.Name == "" || !json.Valid([]byte(item.Arguments)) {
@@ -216,8 +265,39 @@ func decodeResponses(raw []byte) (*provider.ChatResponse, error) {
 	if len(out.ToolCalls) > 0 {
 		out.FinishReason = provider.FinishToolCalls
 	}
-	if out.Message.Content == "" && len(out.ToolCalls) == 0 {
+	if err := validateCompletedTools(out.ToolCalls, out.FinishReason); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(out.Message.Content) == "" && len(out.ToolCalls) == 0 {
 		return nil, fmt.Errorf("%w: azure responses completed without text or tool calls", provider.ErrUpstream)
 	}
 	return out, nil
+}
+
+// Redaction decorators can replace Message.Content between tool turns. Do not
+// let the opaque replay's original text bypass that privacy boundary.
+func applyReplayContent(replay *responsesReplay, content string) {
+	var original strings.Builder
+	for _, item := range replay.Output {
+		if item["type"] != "message" {
+			continue
+		}
+		parts, _ := item["content"].([]any)
+		for _, part := range parts {
+			piece, _ := part.(map[string]any)
+			if piece["type"] == "output_text" {
+				text, _ := piece["text"].(string)
+				original.WriteString(text)
+			}
+		}
+	}
+	if original.String() == content {
+		return
+	}
+	for _, item := range replay.Output {
+		if item["type"] == "message" {
+			item["content"] = []map[string]any{{"type": "output_text", "text": content}}
+			content = ""
+		}
+	}
 }

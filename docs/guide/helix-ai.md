@@ -144,6 +144,8 @@ plus a `mock` adapter for tests:
 |---|---|
 | `openai` | OpenAI hosted models (gpt-4o, gpt-4o-mini, gpt-4.1, …) |
 | `azure` | Microsoft Foundry **OpenAI v1 only** (`{resource}.services.ai.azure.com/openai/v1` or `{resource}.openai.azure.com/openai/v1`). Select Auto, Chat Completions, or Responses. No model-name routing or older API surfaces. |
+| `anthropic` | Claude models (Sonnet, Opus, Haiku, …) |
+| `ollama` | Self-hosted models via [Ollama](https://ollama.com) — fully local |
 
 Set **Deployment name** to the exact portal deployment name. The optional
 **Embedding deployment name** is independent of the chat deployment. Both use
@@ -176,15 +178,20 @@ requests keep their caller-supplied token budget.
 Auto makes at most two attempts and never changes the configured API base.
 Authentication, rate-limit, server, and token-budget failures do not
 trigger fallback; if both protocols fail, both errors are retained.
-Responses requests send `store: false` and replay tool calls/results explicitly.
+The dispatcher does not replay a finalized Azure failure as another Chat call.
+Responses requests send `store: false` and replay tool calls/results, encrypted
+reasoning items, and assistant message phases explicitly between tool turns.
+Opaque continuation state is kept only in memory, not serialized into saved
+history or client responses. Existing content redaction still applies.
 Responses fallback streaming is **buffered**, not token-by-token SSE: Helix
 receives text/tool chunks followed by one terminal event after completion.
 Failed, incomplete, refused, and empty Responses results are errors, not success.
+Chat Completions also rejects malformed/empty completions and unfinished streams;
+truncated or filtered tool calls are never executed. Cancellation closes the
+upstream stream, including when the downstream client stops accepting output.
 
 Protocol references: [Azure Responses API](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses)
 and [Azure OpenAI v1 lifecycle](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle).
-| `anthropic` | Claude models (Sonnet, Opus, Haiku, …) |
-| `ollama` | Self-hosted models via [Ollama](https://ollama.com) — fully local |
 
 ### Per-feature provider selection
 
