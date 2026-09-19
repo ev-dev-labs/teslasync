@@ -7,6 +7,9 @@ Policy: `ops/release/supply-chain.yaml`
 Gate: `go run ./cmd/ops-gate -check supply-chain`
 Producer: `.github/workflows/release.yml`
 
+Published package lifetime and protected rollback versions are covered by the
+[package retention policy](./package-retention.md).
+
 ## What every published image carries
 
 | Artifact | Produced by | Proves |

@@ -12,35 +12,59 @@ on:
           - arc-runner
           - ubuntu-latest
         default: arc-runner
+      delete_packages:
+        description: 'Delete eligible versions (review a dry-run report first)'
+        type: boolean
+        default: false
+      protected_versions:
+        description: 'Deployed/rollback versions to preserve, comma-separated (in addition to policy pins)'
+        type: string
+        default: ''
 
 permissions:
-  packages: write
-  issues: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  maintenance:
-    name: Cleanup & Stale
+  package-retention:
+    name: Package retention
     runs-on: ${{ inputs.runner || 'arc-runner' }}
+    concurrency:
+      group: package-retention
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Cleanup backend images
-        uses: actions/delete-package-versions@v5
-        continue-on-error: true
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@v4
         with:
-          package-name: teslasync
-          package-type: container
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: true
-
-      - name: Cleanup web images
-        uses: actions/delete-package-versions@v5
-        continue-on-error: true
+          node-version: '22'
+      - name: Test retention policy
+        run: node --test scripts/package-retention.test.mjs
+      - name: Inventory and apply retention policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DELETE_PACKAGES: ${{ github.event_name == 'workflow_dispatch' && inputs.delete_packages == true }}
+          PROTECTED_VERSIONS: ${{ inputs.protected_versions }}
+        run: node scripts/package-retention.mjs
+      - name: Upload retention report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          package-name: teslasync-web
-          package-type: container
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: true
+          name: package-retention-report
+          path: |
+            package-retention-plan.json
+            package-retention-results.jsonl
+          retention-days: 90
+          if-no-files-found: warn
 
+  maintenance:
+    name: Stale issues and PRs
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
       - name: Mark stale issues and PRs
         uses: actions/stale@v9
         with:
