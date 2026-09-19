@@ -1,5 +1,6 @@
 {
   "alertPacks": {
+    "defaultChannels": "Default channels",
     "valueColumn": "Value",
     "titleColumn": "Include title",
     "defaultsColumn": "Defaults",

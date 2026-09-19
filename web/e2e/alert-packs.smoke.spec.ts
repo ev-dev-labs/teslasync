@@ -115,6 +115,10 @@ for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
         ai_mode: 'hybrid', ai_features: { 'alert-pack-builder': true, 'alert-message-template-suggestion': true },
       } }))
       await page.route('**/api/v1/alerts/packs', route => fulfillApiMock(route, api, { json: [pack, { ...pack, id: 'custom', name: 'Custom pack' }] }))
+      await page.route('**/api/v1/notifications', route => fulfillApiMock(route, api, { json: [
+        { id: 2, name: 'Phone', kind: 'ntfy', enabled: true, config: {}, created_at: '', updated_at: '' },
+        { id: 3, name: 'Team', kind: 'ntfy', enabled: true, config: {}, created_at: '', updated_at: '' },
+      ] }))
       await page.route('**/api/v1/ai/alerts/packs/draft', route => fulfillApiMock(route, api, {
         contentType: 'text/event-stream',
         body: [
@@ -173,14 +177,20 @@ for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
       await dialog.screenshot({ path: test.info().outputPath('pack-overview.png') })
       if (width < 1024) await dialog.getByRole('button', { name: /Pack defaults/ }).click()
       await expect(dialog.getByLabel('Default cooldown (minutes)')).toBeVisible()
+      await expect(dialog.getByLabel('Default cooldown (minutes)')).toHaveValue('15')
+      const controls = dialog.locator('[data-pack-default-controls]').locator('input, select, button[aria-haspopup="listbox"]')
+      await expect(controls).toHaveCount(6)
+      const positions = await controls.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().y))
+      const columns = width >= 1536 ? 6 : width >= 1024 ? 3 : width >= 640 ? 2 : 1
+      for (let start = 0; start < positions.length; start += columns) {
+        const row = positions.slice(start, start + columns)
+        expect(Math.max(...row) - Math.min(...row), 'Default controls must align within each responsive row').toBeLessThanOrEqual(2)
+      }
+      await expect(dialog.getByLabel('Default alert behavior').getByRole('option')).toHaveText(['Re-alert until resolved', 'Notify on event'])
       if (width >= 1024) {
-        const controls = dialog.locator('[data-pack-default-controls]').locator('input, select, button[aria-haspopup="listbox"]')
-        await expect(controls).toHaveCount(5)
-        const positions = await controls.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().y))
-        expect(Math.max(...positions) - Math.min(...positions), 'Default controls must share one aligned row').toBeLessThanOrEqual(2)
         const table = dialog.getByRole('table', { name: 'Choose rules' })
         await expect(table.getByRole('columnheader')).toHaveText([
-          'Selected', 'Rule', 'Operator', 'Value', 'Cooldown (min)', 'Alert behavior', 'Channels', 'Notification message', 'Include title', 'Defaults',
+          'Selected', 'Rule', 'Operator', 'Value', 'Cooldown (minutes)', 'Alert behavior', 'Channels', 'Notification message', 'Include title', 'Defaults',
         ])
         expect(await table.getByRole('columnheader').evaluateAll(headers => headers.every(header => getComputedStyle(header).textAlign === 'left'))).toBe(true)
         const row = table.locator('tbody tr').first()
@@ -191,7 +201,12 @@ for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
       }
       await dialog.getByLabel('Default cooldown (minutes)').fill('15')
       await dialog.getByLabel('Default alert behavior').selectOption('repeat')
+      await dialog.getByLabel('Default channels').selectOption('2')
+      await expect(dialog.getByLabel('Channels', { exact: true }).first()).toHaveValue('custom')
+      await dialog.locator('[data-pack-default-controls]').screenshot({ path: test.info().outputPath('pack-default-channels.png') })
       if (width < 1024) await dialog.getByRole('button', { name: /Pack defaults/ }).click()
+      await dialog.getByLabel('Channels', { exact: true }).first().selectOption('all')
+      await dialog.getByLabel('Channels', { exact: true }).nth(1).selectOption('none')
       await expect(dialog.getByLabel('Alert behavior', { exact: true }).first()).toHaveValue('repeat')
       await expect(dialog.getByRole('option', { name: /^Master:/ })).toHaveCount(0)
       await dialog.getByLabel('Minimum minutes between notifications', { exact: true }).first().fill('120')
@@ -227,6 +242,8 @@ for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
       if (width < 1024) await dialog.getByRole('button', { name: /Pack defaults/ }).click()
       await dialog.getByRole('button', { name: 'Apply defaults to all rules' }).click()
       await expect(dialog.getByLabel('Minimum minutes between notifications', { exact: true }).first()).toHaveValue('15')
+      await expect(dialog.getByLabel('Channels', { exact: true }).first()).toHaveValue('custom')
+      await expect(dialog.getByLabel('Channels', { exact: true }).nth(1)).toHaveValue('custom')
       if (width < 1024) await dialog.getByRole('button', { name: /Pack defaults/ }).click()
       expect(await dialog.evaluate(el => el.scrollWidth > el.clientWidth + 1)).toBe(false)
       await dialog.screenshot({ path: test.info().outputPath('pack-controls.png') })
@@ -235,6 +252,8 @@ for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
       await expect(dialog.getByText(/Pack installed/)).toBeVisible()
       expect(installations).toHaveLength(1)
       expect(installations[0]).toMatchObject({ cooldown_s: 900, trigger_mode: 'repeat', enabled: false })
+      expect(installations[0]).not.toHaveProperty('channel_ids')
+      expect(installations[0]).toMatchObject({ rules: pack.rules.map(() => ({ channel_ids: [2] })) })
       expect((installations[0] as { rules: unknown[] }).rules).toHaveLength(12)
       expect((installations[0] as { rules: unknown[] }).rules[0]).toMatchObject({
         op: '<=', value_num: 25, message: '{{VehicleName}} is ready for its next charging chapter.',

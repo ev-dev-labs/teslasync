@@ -3,7 +3,7 @@ import type { PackSelection, PackTemplate } from '@/api/hooks/useAlertPacks'
 import type { NotificationChannel } from '@/api/hooks/useNotifications'
 import { Badge, Checkbox, Text } from '@/components/ui'
 import { SeverityBadge } from '@/components/data-display'
-import type { PackDelivery } from './PackDeliveryControls'
+import { resolvePackChannels, withPackChannels, type PackDelivery } from './packDelivery'
 import PackRuleTriggerEditor from './PackRuleTriggerEditor'
 import PackRuleDeliveryEditor from './PackRuleDeliveryEditor'
 import PackRuleMessageEditor from './PackRuleMessageEditor'
@@ -24,7 +24,7 @@ interface Props {
 
 export default function PackRulePreview(props: Props) {
   const { t } = useTranslation()
-  const { template, selection, selected, disabled, customized, channels, onToggle, onChange } = props
+  const { template, selection, selected, disabled, customized, channels, master, onToggle, onChange } = props
   const name = t(`alertPacks.rules.${template.id}.name`, template.rule.name)
   return <section aria-label={name} className="space-y-3 rounded-lg border border-[var(--border-default)] p-3">
     <div className="flex items-start gap-3">
@@ -42,8 +42,8 @@ export default function PackRulePreview(props: Props) {
       <PackRuleTriggerEditor {...props} field="value" />
       <PackRuleDeliveryEditor {...props} field="cooldown" />
       <PackRuleDeliveryEditor {...props} field="behavior" />
-      <PackRuleChannels id={template.id} value={selection.channel_ids ?? null} channels={channels} disabled={disabled}
-        onChange={channel_ids => onChange({ ...selection, channel_ids })} />
+      <PackRuleChannels id={template.id} value={resolvePackChannels(selection, master)} channels={channels} disabled={disabled}
+        onChange={channel_ids => onChange(withPackChannels(selection, channel_ids, master))} />
     </div>
     <PackRuleMessageEditor {...props} />
     <div className="flex items-center justify-between gap-2">

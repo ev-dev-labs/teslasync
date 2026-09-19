@@ -57,7 +57,10 @@ beforeEach(() => {
     if (path === '/alerts/packs') return [pack]
     if (path.startsWith('/alerts/pack-installations?')) return []
     if (path === '/vehicles') return [{ id: 1, display_name: 'Roadster', model: 'Model 3' }]
-    if (path === '/notifications') return [{ id: 2, name: 'Phone', kind: 'ntfy', enabled: true }]
+    if (path === '/notifications') return [
+      { id: 2, name: 'Phone', kind: 'ntfy', enabled: true },
+      { id: 3, name: 'Team', kind: 'ntfy', enabled: true },
+    ]
     if (path.endsWith('/install')) return installation
     if (path.endsWith('/remove')) return { status: 'removed' }
     throw new Error(`Unexpected request ${path}`)
@@ -69,13 +72,16 @@ describe('Alert Packs', () => {
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     const table = screen.getByRole('table', { name: 'Choose rules' })
     expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
-      'Selected', 'Rule', 'Operator', 'Value', 'Cooldown (min)', 'Alert behavior', 'Channels', 'Notification message', 'Include title', 'Defaults',
+      'Selected', 'Rule', 'Operator', 'Value', 'Cooldown (minutes)', 'Alert behavior', 'Channels', 'Notification message', 'Include title', 'Defaults',
     ])
     for (const cell of within(table).getAllByRole('cell')) {
       expect(cell.querySelectorAll('input,select,textarea').length).toBeLessThanOrEqual(1)
     }
     const behavior = screen.getAllByLabelText('Alert behavior')[0]
-    expect(within(behavior).getAllByRole('option').map(option => option.textContent)).toEqual(['Once per condition', 'Repeat while active'])
+    expect(within(behavior).getAllByRole('option').map(option => option.textContent)).toEqual(['Re-alert until resolved', 'Notify on event'])
+    expect(within(screen.getByLabelText('Default alert behavior')).getAllByRole('option').map(option => option.textContent))
+      .toEqual(['Re-alert until resolved', 'Notify on event'])
+    expect(screen.getByLabelText('Default cooldown (minutes)')).toHaveValue(15)
     expect(behavior).toHaveValue('once')
     expect(screen.getByRole('region', { name: 'Pack defaults' })).toBeInTheDocument()
   })
@@ -93,7 +99,7 @@ describe('Alert Packs', () => {
     expect(title).not.toBeChecked()
   })
 
-  it('keeps overrides field-specific and resetting delivery preserves messages, operators and channels', async () => {
+  it('keeps overrides field-specific and resetting delivery preserves messages and operators, not channels', async () => {
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     await waitFor(() => expect(screen.getAllByLabelText('Channels')[0]).toBeEnabled())
     fireEvent.change(screen.getAllByLabelText('Minimum minutes between notifications')[0], { target: { value: '120' } })
@@ -103,9 +109,9 @@ describe('Alert Packs', () => {
     fireEvent.change(screen.getAllByLabelText('Channels')[0], { target: { value: '2' } })
     fireEvent.change(screen.getAllByLabelText('Notification message')[0], { target: { value: 'My reviewed message' } })
     fireEvent.click(screen.getAllByRole('button', { name: 'Reset delivery to pack defaults' })[0])
-    expect(screen.getAllByLabelText('Minimum minutes between notifications')[0]).toHaveValue(60)
+    expect(screen.getAllByLabelText('Minimum minutes between notifications')[0]).toHaveValue(15)
     expect(screen.getAllByLabelText('Operator')[0]).toHaveValue('>=')
-    expect(screen.getAllByLabelText('Channels')[0]).toHaveValue('custom')
+    expect(screen.getAllByLabelText('Channels')[0]).toHaveValue('all')
     expect(screen.getAllByLabelText('Notification message')[0]).toHaveValue('My reviewed message')
     expect(screen.getAllByLabelText('Notification message')[1]).not.toHaveValue('My reviewed message')
     fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
@@ -130,6 +136,83 @@ describe('Alert Packs', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(close).toHaveBeenCalledOnce()
     expect(screen.queryByRole('button', { name: 'Discard configuration' })).not.toBeInTheDocument()
+  })
+
+  it.each([true, false])('inherits channel defaults while preserving explicit all/none overrides (desktop=%s)', async desktop => {
+    vi.mocked(useMediaQuery).mockReturnValue(desktop)
+    const threeRules = { ...pack, rules: [...pack.rules, { ...pack.rules[0], id: 'another-rule' }] }
+    setup(<InstallPackDialog pack={threeRules} onClose={vi.fn()} />)
+    if (!desktop) fireEvent.click(screen.getByRole('button', { name: /Pack defaults/ }))
+    const defaults = screen.getByLabelText('Default channels')
+    await waitFor(() => expect(defaults).toBeEnabled())
+    fireEvent.change(defaults, { target: { value: 'none' } })
+    expect(screen.getAllByLabelText('Channels').every(element => (element as HTMLSelectElement).value === 'none')).toBe(true)
+    fireEvent.change(defaults, { target: { value: '2' } })
+    expect(screen.getAllByLabelText('Channels').every(element => (element as HTMLSelectElement).value === 'custom')).toBe(true)
+    fireEvent.change(screen.getAllByLabelText('Channels')[0], { target: { value: 'all' } })
+    fireEvent.change(screen.getAllByLabelText('Channels')[1], { target: { value: 'none' } })
+    fireEvent.change(defaults, { target: { value: '3' } })
+    expect(screen.getAllByLabelText('Channels')[0]).toHaveValue('all')
+    expect(screen.getAllByLabelText('Channels')[1]).toHaveValue('none')
+    expect(screen.getAllByLabelText('Channels')[2]).toHaveValue('custom')
+    fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
+    await waitFor(() => {
+      const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
+      const body = JSON.parse(String(call?.[1]?.body))
+      expect(body).not.toHaveProperty('channel_ids')
+      expect(body).toMatchObject({ cooldown_s: 900, trigger_mode: 'once',
+        rules: [{ channel_ids: null }, { channel_ids: [] }, { channel_ids: [2, 3] }] })
+    })
+  })
+
+  it('resets channel-only overrides individually and across filtered-out rules', async () => {
+    setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
+    const defaults = screen.getByLabelText('Default channels')
+    await waitFor(() => expect(defaults).toBeEnabled())
+    fireEvent.change(defaults, { target: { value: '2' } })
+    fireEvent.change(screen.getAllByLabelText('Channels')[0], { target: { value: 'all' } })
+    fireEvent.change(screen.getAllByLabelText('Channels')[1], { target: { value: 'none' } })
+    expect(screen.getAllByRole('button', { name: 'Reset delivery to pack defaults' })[0]).toBeEnabled()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Reset delivery to pack defaults' })[0])
+    expect(screen.getAllByLabelText('Channels')[0]).toHaveValue('custom')
+    expect(screen.getAllByRole('button', { name: 'Reset delivery to pack defaults' })[0]).toBeDisabled()
+    fireEvent.change(screen.getByPlaceholderText('Search pack rules...'), { target: { value: 'Battery' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply defaults to all rules' }))
+    fireEvent.change(defaults, { target: { value: 'none' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
+    await waitFor(() => {
+      const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
+      expect(JSON.parse(String(call?.[1]?.body)).rules).toMatchObject([{ channel_ids: [] }, { channel_ids: [] }])
+    })
+  })
+
+  it('guards default-channel edits and clears the guard after undoing them', async () => {
+    const close = vi.fn()
+    setup(<InstallPackDialog pack={pack} onClose={close} />)
+    const defaults = screen.getByLabelText('Default channels')
+    await waitFor(() => expect(defaults).toBeEnabled())
+    fireEvent.change(defaults, { target: { value: '2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(close).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    fireEvent.change(defaults, { target: { value: 'all' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('preserves explicit template channel selections until reset', async () => {
+    const preset = { ...pack, rules: pack.rules.map((template, index) => ({
+      ...template, rule: { ...template.rule, channel_ids: index === 0 ? [3] : [] },
+    })) }
+    setup(<InstallPackDialog pack={preset} onClose={vi.fn()} />)
+    const defaults = screen.getByLabelText('Default channels')
+    await waitFor(() => expect(defaults).toBeEnabled())
+    fireEvent.change(defaults, { target: { value: '2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Install selected rules' }))
+    await waitFor(() => {
+      const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
+      expect(JSON.parse(String(call?.[1]?.body)).rules).toMatchObject([{ channel_ids: [3] }, { channel_ids: [] }])
+    })
   })
 
   it('identifies an empty message in its row and prevents installation until repaired', async () => {
@@ -262,7 +345,7 @@ describe('Alert Packs', () => {
     await screen.findByText(/Pack installed. Created 2 rules; reused 1/)
     const call = vi.mocked(request).mock.calls.find(([path]) => path.endsWith('/install'))
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({
-      version: 1, all_vehicles: true, vehicle_ids: [], enabled: true, cooldown_s: 3600, trigger_mode: 'once', include_title: true,
+      version: 1, all_vehicles: true, vehicle_ids: [], enabled: true, cooldown_s: 900, trigger_mode: 'once', include_title: true,
       rules: [{ template_id: 'battery-low', op: '<=', channel_ids: [2], value_num: 25, cooldown_s: 7200, message: '{{VehicleName}} needs a charge.' }],
     })
   })

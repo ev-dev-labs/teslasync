@@ -29,13 +29,16 @@ footer shows the selected count, whether new rules will start paused, and the
 explicit installation action.
 
 **Pack defaults** above the table or in the mobile disclosure set cooldown,
-once/repeat behavior and title inclusion for the whole pack. Desktop controls
-share one aligned row. Each rule displays its effective settings, not a separate
+alert behavior, title inclusion and channels for the whole pack. Cooldown starts at
+**15 minutes**, matching the regular rule editor. Both editors offer **Re-alert
+until resolved** and **Notify on event**; packs retain **Notify on event** as their
+initial behavior. Controls share one aligned row on wide desktops and wrap into
+aligned rows on smaller screens. Each rule displays its effective settings, not a separate
 "Master" option in its behavior dropdown. Editing a cell creates an override for
 that field; other fields continue to follow the defaults.
 The reset icon in the **Defaults** column clears that rule's delivery overrides.
 **Apply defaults to all rules** explicitly clears every delivery override.
-Messages, operators, thresholds, channels and selection are preserved. Defaults are installation
+Messages, operators, thresholds and rule selection are preserved. Defaults are installation
 defaults, not a live link that subsequently changes installed rules.
 
 Each message has a small Helix action when message-template suggestions are
@@ -47,6 +50,11 @@ available when AI is off or unavailable.
 Channel selectors support all enabled channels (including future channels), no
 external channels, or a fixed set. Channel routing is validated before any rules
 are installed. Existing matching rules are still reused without modification.
+Untouched rules follow **Default channels**. A rule can explicitly choose all or
+no external channels even when the pack default is a fixed set. Changing pack
+defaults preserves those overrides; resetting a rule, or applying defaults to all
+rules, restores inheritance. Choosing the current default again also restores
+inheritance. Explicit channel selections supplied by a template are kept until reset.
 
 Search and select/deselect matching rules while retaining selections outside the
 filter. Large packs are paginated in the preview; installation includes all selected
@@ -125,6 +133,8 @@ Each selection also accepts an optional `op` compatible with its operand type
 and `channel_ids` (`null` or omitted for all enabled channels, `[]` for none,
 or up to 100 distinct positive channel IDs). Changed-value templates retain
 their `changed` operator.
+Pack-wide channel defaults are resolved into each selected rule's `channel_ids`
+before submission; there is no new top-level channel field in the API.
 
 `TestPacksPostgres` requires `TESLASYNC_TEST_DB` pointing to a migrated test
 database. It clones the alert-rule schema without rows into a temporary schema,

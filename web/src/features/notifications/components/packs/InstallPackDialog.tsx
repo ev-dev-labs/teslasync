@@ -18,7 +18,9 @@ import PackRuleDeliveryEditor from './PackRuleDeliveryEditor'
 import PackRuleMessageEditor from './PackRuleMessageEditor'
 import PackRuleChannels from './PackRuleChannels'
 import PackRuleResetButton from './PackRuleResetButton'
-import PackDeliveryControls, { type PackDelivery } from './PackDeliveryControls'
+import PackDeliveryControls from './PackDeliveryControls'
+import { DEFAULT_ALERT_COOLDOWN_S } from '../../lib/alertDelivery'
+import { hasPackDeliveryOverride, resetPackDelivery, resolvePackChannels, withPackChannels, type PackDelivery } from './packDelivery'
 
 interface Props {
   pack: AlertPack
@@ -42,16 +44,15 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
   const [search, setSearch] = useState('')
   const [view, setView] = useState('all')
   const [page, setPage] = useState(0)
-  const [master, setMaster] = useState<PackDelivery>({ cooldown_s: 3600, trigger_mode: 'once', include_title: true })
+  const [master, setMaster] = useState<PackDelivery>({ cooldown_s: DEFAULT_ALERT_COOLDOWN_S, trigger_mode: 'once', include_title: true, channel_ids: null })
   const [selections, setSelections] = useState<Record<string, PackSelection>>(() => Object.fromEntries(pack.rules.map(template => [
-    template.id, { template_id: template.id, op: template.rule.op, channel_ids: template.rule.channel_ids ?? null, value_num: template.rule.value_num ?? undefined,
+    template.id, { template_id: template.id, op: template.rule.op, channel_ids: template.rule.channel_ids ?? undefined, value_num: template.rule.value_num ?? undefined,
       message: t(`alertPacks.rules.${template.id}.message`, template.rule.msg_template ?? '') },
   ])))
   const initialSelections = useRef(selections)
   const customized = useMemo(() => new Set(Object.keys(selections).filter(id =>
     JSON.stringify(selections[id]) !== JSON.stringify(initialSelections.current[id]))), [selections])
-  const overrideCount = Object.values(selections).filter(choice =>
-    choice.cooldown_s != null || choice.trigger_mode != null || choice.include_title != null).length
+  const overrideCount = Object.values(selections).filter(hasPackDeliveryOverride).length
   const snapshot = JSON.stringify({ name, enabled, vehicleSelection, master, selected: [...selected].sort(), selections })
   const initialSnapshot = useRef(snapshot)
   const hasUnsaved = snapshot !== initialSnapshot.current && !install.isSuccess
@@ -104,13 +105,13 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       <PackRuleTriggerEditor {...ruleProps(template)} field="operator" compact /> },
     { key: 'value', header: t('alertPacks.valueColumn', 'Value'), align: 'left', className: 'min-w-32 w-32', render: template =>
       <PackRuleTriggerEditor {...ruleProps(template)} field="value" compact /> },
-    { key: 'cooldown', header: t('alertPacks.cooldownCompact', 'Cooldown (min)'), align: 'left', className: 'min-w-32 w-32', render: template =>
+    { key: 'cooldown', header: t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)'), align: 'left', className: 'min-w-40 w-40', render: template =>
       <PackRuleDeliveryEditor {...ruleProps(template)} field="cooldown" compact /> },
-    { key: 'behavior', header: t('alertPacks.behavior', 'Alert behavior'), align: 'left', className: 'min-w-48 w-48', render: template =>
+    { key: 'behavior', header: t('alertPacks.behavior', 'Alert behavior'), align: 'left', className: 'min-w-64 w-64', render: template =>
       <PackRuleDeliveryEditor {...ruleProps(template)} field="behavior" compact /> },
     { key: 'channels', header: t('alertPacks.channels', 'Channels'), align: 'left', className: 'min-w-56 w-56 whitespace-normal', render: template => <PackRuleChannels
-      id={template.id} value={selections[template.id].channel_ids ?? null} channels={channels.data ?? []} disabled={install.isPending || channels.isLoading} compact
-      onChange={channel_ids => ruleProps(template).onChange({ ...selections[template.id], channel_ids })} /> },
+      id={template.id} value={resolvePackChannels(selections[template.id], master)} channels={channels.data ?? []} disabled={install.isPending || channels.isLoading} compact
+      onChange={channel_ids => ruleProps(template).onChange(withPackChannels(selections[template.id], channel_ids, master))} /> },
     { key: 'message', header: t('alertPacks.message', 'Notification message'), align: 'left', className: 'min-w-80 whitespace-normal', render: template => <PackRuleMessageEditor {...ruleProps(template)} compact /> },
     { key: 'title', header: t('alertPacks.titleColumn', 'Include title'), align: 'left', className: 'w-24', render: template =>
       <PackRuleDeliveryEditor {...ruleProps(template)} field="title" compact /> },
@@ -118,8 +119,11 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       <PackRuleResetButton {...ruleProps(template)} /> },
   ]
   const settings = <div className="space-y-3">
-    <div data-pack-default-controls className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(7rem,1fr)_minmax(11rem,1.3fr)_minmax(7rem,1fr)_minmax(12rem,1.5fr)_minmax(13rem,1.5fr)]">
+    <div data-pack-default-controls className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(9rem,1fr)_minmax(14rem,1.3fr)_minmax(7rem,.7fr)_minmax(14rem,1.3fr)_minmax(12rem,1.2fr)_minmax(14rem,1.3fr)]">
     <PackDeliveryControls value={master} onChange={setMaster} disabled={install.isPending} />
+    <PackRuleChannels id="defaults" label={t('alertPacks.defaultChannels', 'Default channels')}
+      value={master.channel_ids} channels={channels.data ?? []} disabled={install.isPending || channels.isLoading}
+      onChange={channel_ids => setMaster(previous => ({ ...previous, channel_ids }))} />
     <div className="space-y-1">
       <label htmlFor={vehicleId} className="flex items-center"><Text size="sm" weight="medium" color="secondary">{t('alertPacks.vehicles', 'Vehicles')}</Text></label>
       {vehicles.isLoading ? <Spinner /> : state.fatalError ? <ErrorDisplay error={state.fatalError} onRetry={() => void vehicles.refetch()} />
@@ -136,7 +140,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       <Caption className="min-w-48 flex-1">{t('alertPacks.masterHelp', 'Rows follow these defaults until you edit them. Reset delivery to follow the defaults again.')}</Caption>
       {overrideCount > 0 && <Button variant="secondary" size="sm" className="h-auto min-h-11 whitespace-normal" disabled={install.isPending}
         onClick={() => setSelections(previous => Object.fromEntries(Object.entries(previous).map(
-          ([id, { cooldown_s: _cooldown, trigger_mode: _mode, include_title: _title, ...choice }]) => [id, choice],
+          ([id, choice]) => [id, resetPackDelivery(choice)],
         )))}>{t('alertPacks.applyMaster', 'Apply defaults to all rules')}</Button>}
     <Accordion title={t('alertPacks.howInstallWorks', 'How installation works')} className="max-w-full" headerClassName="px-2 py-1" bodyClassName="max-w-prose space-y-3 p-3">
       <Text as="p" variant="bodySm">{t(`alertPacks.catalog.${pack.id}.description`, pack.description)}</Text>
@@ -170,10 +174,12 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
             <Button variant="ghost" onClick={close} disabled={install.isPending}>{t('alertPacks.cancel', 'Cancel')}</Button>
             <Button aria-label={t('alertPacks.install', 'Install selected rules')} disabled={!valid || vehicles.isLoading || Boolean(state.fatalError) || install.isPending}
               loading={install.isPending} onClick={() => install.mutate({
-                pack_id: pack.id, version: pack.version, enabled, ...master, name: pack.id === 'custom' ? name.trim() : undefined,
+                pack_id: pack.id, version: pack.version, enabled,
+                cooldown_s: master.cooldown_s, trigger_mode: master.trigger_mode, include_title: master.include_title,
+                name: pack.id === 'custom' ? name.trim() : undefined,
                 all_vehicles: vehicleSelection.kind === 'all_sticky',
                 vehicle_ids: vehicleSelection.kind === 'specific' ? vehicleSelection.vehicle_ids : [],
-                rules: selected.map(id => selections[id]),
+                rules: selected.map(id => ({ ...selections[id], channel_ids: resolvePackChannels(selections[id], master) })),
               })}>{t('alertPacks.installCount', 'Install {{count}} rules', { count: selected.length })}</Button>
           </div>
         </div>}

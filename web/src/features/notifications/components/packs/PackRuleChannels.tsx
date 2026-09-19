@@ -9,14 +9,16 @@ interface Props {
   value: number[] | null
   disabled: boolean
   compact?: boolean
+  label?: string
   onChange: (value: number[] | null) => void
 }
 
-export default function PackRuleChannels({ id, channels, value, disabled, onChange, compact = false }: Props) {
+export default function PackRuleChannels({ id, channels, value, disabled, onChange, compact = false, label }: Props) {
   const { t } = useTranslation()
+  const fieldLabel = label ?? t('alertPacks.channels', 'Channels')
   return <div className="space-y-2">
-    <Select id={`pack-${id}-channels`} label={compact ? undefined : t('alertPacks.channels', 'Channels')}
-      aria-label={t('alertPacks.channels', 'Channels')} className="h-11"
+    <Select id={`pack-${id}-channels`} label={compact ? undefined : fieldLabel}
+      aria-label={fieldLabel} className="h-11"
       disabled={disabled} value={value === null ? 'all' : value.length ? 'custom' : 'none'}
       options={[
         { value: 'all', label: t('alertPacks.inheritChannels', 'All enabled channels') },

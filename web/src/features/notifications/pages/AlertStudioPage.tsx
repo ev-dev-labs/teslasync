@@ -52,6 +52,7 @@ import AlertPacksPanel from '../components/packs/AlertPacksPanel'
 import RuleListTools from '../components/RuleListTools'
 import RuleChannelDialog from '../components/RuleChannelDialog'
 import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
+import { DEFAULT_ALERT_COOLDOWN_S, getAlertBehaviorOptions } from '../lib/alertDelivery'
 import { Icons } from '@/lib/icons';
 import { AINLAlertBuilder } from '@/components/ai/AINLAlertBuilder'
 import {
@@ -172,7 +173,7 @@ function freshEditor(): EditorState {
     value_min: '',
     value_max: '',
     severity: 'warn',
-    cooldown_min: 15,
+    cooldown_min: DEFAULT_ALERT_COOLDOWN_S / 60,
     // The default was 'repeat'. The
     // user-reported "locked vehicle alert spam" was caused by every
     // new rule silently inheriting 'repeat'. Now the editor opens
@@ -851,8 +852,7 @@ export default function AlertStudio() {
       label: t('notifications.alertStudio.editor.alertBehaviorPlaceholder', '— Choose one —'),
       disabled: true,
     },
-    { value: 'repeat', label: t('notifications.alertStudio.editor.alertBehavior.repeatLabel', 'Re-alert until resolved') },
-    { value: 'once', label: t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event') },
+    ...getAlertBehaviorOptions(t),
   ], [t])
 
   // Derived recommendation. Pure derivation, no
