@@ -1,6 +1,6 @@
 module github.com/ev-dev-labs/teslasync
 
-go 1.25.0
+go 1.27.1
 
 require (
 	cloud.google.com/go/storage v1.61.3

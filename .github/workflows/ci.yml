@@ -315,6 +315,7 @@ jobs:
         if: matrix.check == 'lint'
         run: |
           node --test ../.github/scripts/check_vitest_blobs.test.mjs ../.github/scripts/ci_workflows.test.mjs
+          node --test ../scripts/i18n-validate-keys.test.mjs
           node ../.github/scripts/frontend_coverage_summary.mjs --self-test
       - name: Build
         if: matrix.check == 'build'

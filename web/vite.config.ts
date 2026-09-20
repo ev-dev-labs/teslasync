@@ -312,6 +312,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Let jsdom own browser storage instead of Node 26's process-wide getter.
+    execArgv: ['--no-experimental-webstorage'],
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
