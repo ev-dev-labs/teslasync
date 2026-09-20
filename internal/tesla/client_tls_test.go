@@ -38,6 +38,7 @@ func TestCommandProxyVerifiesTrustAndHostname(t *testing.T) {
 		{"trusted", file.Name(), server.URL, false},
 		{"wrong hostname", file.Name(), strings.Replace(server.URL, "127.0.0.1", "localhost", 1), true},
 		{"missing CA", file.Name() + ".missing", server.URL, true},
+		{"invalid PEM", "client_tls_test.go", server.URL, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			client := NewClient(config.TeslaConfig{CommandProxyCAFile: tc.ca, Timeout: 5 * time.Second})

@@ -110,7 +110,7 @@ const buildIdentity = resolveBuildIdentity({
   packageVersion: pkg.version,
   readGitSha: () => {
     try {
-      return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { stdio: ['ignore', 'pipe', 'ignore'] })
         .toString()
         .trim()
     } catch {

@@ -660,11 +660,6 @@
     "install": "Install",
     "dismiss": "Dismiss install prompt"
   },
-  "kiosk": {
-    "exit": "Exit kiosk mode",
-    "exitLabel": "Exit Kiosk",
-    "rotationPosition": "Dashboard {{current}} of {{total}}"
-  },
   "lifetime": {
     "unlocked": "✓ Unlocked"
   },
@@ -914,7 +909,6 @@
       "viewAll": "View all"
     }
   },
-  "onboarding": {},
   "operationalMode": {
     "asOf": {
       "description": "Historical state reconstructed at {{when}}. Operational changes are disabled.",
@@ -1053,23 +1047,17 @@
     "pinned": "Pinned"
   },
   "presentation": {
-    "exit": "Exit presentation mode",
-    "exitShort": "Exit",
     "kiosk": {
       "help": "Fullscreen monitoring with idle cursor and screen dimming.",
       "open": "Open kiosk view"
     },
     "report": {
-      "active": "Report view",
       "copyHelp": "Preserves the current route and filter query.",
       "copyLink": "Copy report link",
-      "description": "Operational report generated from the active TeslaSync view.",
-      "generated": "Generated",
       "help": "Clean navigation-free layout for printing and review.",
       "linkCopied": "Report link copied",
       "linkError": "Could not copy report link",
-      "open": "Open report view",
-      "scope": "Scope"
+      "open": "Open report view"
     }
   },
   "productPreferences": {

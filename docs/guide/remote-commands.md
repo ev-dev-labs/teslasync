@@ -44,6 +44,23 @@ certificate must contain `DNS:vehicle-command-proxy` in its subjectAltName when
 using `https://vehicle-command-proxy:4443`. Keep TLS and command signing private
 keys in the proxy's existing data directory, never the API's trust directory.
 
+For a new local installation, provision a self-signed certificate before starting
+the `commands` profile (do not overwrite an existing deployment's keys):
+
+```bash
+install -d -m 700 data/vehicle-command certs/command-proxy-trust
+openssl req -x509 -newkey rsa:3072 -nodes -days 365 \
+  -subj '/CN=vehicle-command-proxy' \
+  -addext 'subjectAltName=DNS:vehicle-command-proxy,DNS:localhost' \
+  -keyout data/vehicle-command/tls-key.pem \
+  -out certs/command-proxy-trust/ca.pem
+chmod 600 data/vehicle-command/tls-key.pem
+cp certs/command-proxy-trust/ca.pem data/vehicle-command/tls-cert.pem
+```
+
+This is the TLS key, **not** the Tesla partner command-signing key; provision
+`private-key.pem` and pair the vehicle separately as before.
+
 For Helm, create a separate secret containing `ca.pem`, set
 `commandProxy.caSecretName` to its name and `commandProxy.caFile` to
 `/etc/teslasync/command-proxy/ca.pem`. Issue the proxy certificate with the actual

@@ -412,6 +412,6 @@ describe('TripReplayMap — height prop', () => {
 
   it('passes a string height through verbatim', () => {
     renderMap({ height: '60vh' });
-    expect(screen.getByTestId('trip-replay-map')).toHaveStyle({ height: '60vh' });
+    expect(screen.getByTestId('trip-replay-map').style.height).toBe('60vh');
   });
 });

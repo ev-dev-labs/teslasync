@@ -61,7 +61,7 @@ func (e *ValidationError) Error() string {
 // walks the value alongside its type and applies every rule it finds
 // in `validate:"..."` tags. Returns the first error encountered.
 func validateValue(v reflect.Value, t reflect.Type, path string) error {
-	for v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
 		}
@@ -146,7 +146,7 @@ func applyRulesRuntime(v reflect.Value, t reflect.Type, tag, path string) error 
 		if t.Kind() != reflect.Slice && t.Kind() != reflect.Array {
 			return nil
 		}
-		for v.Kind() == reflect.Ptr {
+		for v.Kind() == reflect.Pointer {
 			if v.IsNil() {
 				return nil
 			}
@@ -235,7 +235,7 @@ func checkRule(v reflect.Value, t reflect.Type, r validateRule, path string) err
 // it is the zero value of its type — the same convention go-playground/
 // validator uses.
 func isZero(v reflect.Value) bool {
-	for v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return true
 		}
@@ -245,7 +245,7 @@ func isZero(v reflect.Value) bool {
 }
 
 func isNumericKind(t reflect.Type) bool {
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	switch t.Kind() {

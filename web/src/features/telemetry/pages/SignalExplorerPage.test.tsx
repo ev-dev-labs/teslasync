@@ -311,7 +311,7 @@ describe('SignalExplorerPage', () => {
 
     // Before the fix the second (page) setter clobbered the size setter, so
     // the controlled select snapped back to 25. It must now stick at 100.
-    await waitFor(() => expect(perPage).toHaveValue('100'));
+    await waitFor(() => expect(screen.getByLabelText('Per Page')).toHaveValue('100'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Explore' }));
 

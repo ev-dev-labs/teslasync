@@ -1,6 +1,7 @@
 package webvitals
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,7 +19,7 @@ import (
 // forgets to regenerate, this fails and the drift is caught before an opaque
 // slug can reach a Prometheus label.
 
-var webRoutePathRE = regexp.MustCompile(`\bpath:\s*'([^']+)'`)
+var webRoutePathRE = regexp.MustCompile(`\bpath:\s*("(?:\\.|[^"\\])*")`)
 
 func webRegistryPath(t *testing.T) string {
 	t.Helper()
@@ -38,11 +39,15 @@ func parseWebRoutePaths(t *testing.T) []string {
 	seen := map[string]struct{}{}
 	out := make([]string, 0, len(matches))
 	for _, m := range matches {
-		if _, dup := seen[m[1]]; dup {
+		var path string
+		if err := json.Unmarshal([]byte(m[1]), &path); err != nil {
+			t.Fatalf("decode route path: %v", err)
+		}
+		if _, dup := seen[path]; dup {
 			continue
 		}
-		seen[m[1]] = struct{}{}
-		out = append(out, m[1])
+		seen[path] = struct{}{}
+		out = append(out, path)
 	}
 	sort.Strings(out)
 	return out

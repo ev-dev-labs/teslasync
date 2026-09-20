@@ -210,7 +210,7 @@ func scanRow(values ...any) func(dest ...any) error {
 // into (e.g. *int64, *string, *time.Time, **time.Time).
 func assign(dest any, val any) error {
 	dv := reflect.ValueOf(dest)
-	if dv.Kind() != reflect.Ptr || dv.IsNil() {
+	if dv.Kind() != reflect.Pointer || dv.IsNil() {
 		return fmt.Errorf("assign: dest is not a non-nil pointer: %T", dest)
 	}
 	target := dv.Elem()

@@ -11,7 +11,7 @@
  * Network is never touched: widget bodies are lazy + Suspense-gated, so the
  * skeleton fallback renders and the real (data-fetching) widget never mounts
  * synchronously. Assertions only target the chrome DashboardGrid renders
- * itself. Breakpoint is driven by window.innerWidth + an offsetWidth/
+ * itself. Breakpoint is driven by window.innerWidth + a clientWidth/
  * ResizeObserver shim, mirroring DashboardGrid.mobile.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -80,7 +80,7 @@ function renderGrid(opts: RenderOpts) {
   );
 }
 
-// jsdom has no real layout: offsetWidth is always 0 and ResizeObserver never
+// jsdom has no real layout: clientWidth is always 0 and ResizeObserver never
 // fires. Mirror window.innerWidth so react-grid-layout's useContainerWidth
 // reports the viewport each test configures and picks the right breakpoint.
 class MockResizeObserver {
@@ -98,7 +98,7 @@ class MockResizeObserver {
   disconnect() {}
 }
 
-let originalOffsetWidth: PropertyDescriptor | undefined;
+let originalClientWidth: PropertyDescriptor | undefined;
 const announcementListener = vi.fn();
 
 function setViewport(px: number) {
@@ -110,8 +110,8 @@ beforeEach(() => {
   announcementListener.mockReset();
   subscribeAnnouncer(announcementListener);
   vi.stubGlobal('ResizeObserver', MockResizeObserver);
-  originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-  Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+  originalClientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+  Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
     configurable: true,
     get() { return window.innerWidth; },
   });
@@ -121,11 +121,11 @@ afterEach(() => {
   cleanup();
   __resetAnnouncerForTests();
   vi.unstubAllGlobals();
-  if (originalOffsetWidth) {
-    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidth);
+  if (originalClientWidth) {
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', originalClientWidth);
   } else {
     // @ts-expect-error — restore jsdom default (no descriptor)
-    delete HTMLElement.prototype.offsetWidth;
+    delete HTMLElement.prototype.clientWidth;
   }
 });
 

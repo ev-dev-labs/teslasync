@@ -1,4 +1,4 @@
-import { lazy, useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
@@ -7,7 +7,6 @@ import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { VitalsConsentPolicyGate } from './components/feedback/VitalsConsentPolicyGate'
 import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgressBoundary'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
-import { TaskOnboardingHost } from '@/features/onboarding/components/TaskOnboardingHost'
 import { DemoModeBanner } from '@/components/feedback/DemoModeBanner'
 import { DensityApplier } from '@/components/ui/DensityApplier'
 import { ContextMenuRoot } from '@/components/ui/ContextMenu'
@@ -20,6 +19,11 @@ import {
 } from '@/lib/productPreferences'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
+
+const TaskOnboardingHost = lazy(async () => {
+  const module = await import('@/features/onboarding/components/TaskOnboardingHost')
+  return { default: module.TaskOnboardingHost }
+})
 
 // Dashboard
 const Dashboard = lazy(() => import('./features/dashboard/pages/DashboardPage'))
@@ -510,7 +514,9 @@ export default function App() {
           hint. Replaces the automatic dashboard tour: it never takes focus,
           never blocks, and is suppressed entirely for experienced users and
           for anyone who opted out. */}
-      <TaskOnboardingHost />
+      <Suspense fallback={null}>
+        <TaskOnboardingHost />
+      </Suspense>
       {/* Publishes the live `require_cookie_consent` policy into the optional
           reporters. Mounted ABOVE <Routes> so it also covers the standalone
           routes that never mount <Layout> (/s/:token, /watch, /onboarding).

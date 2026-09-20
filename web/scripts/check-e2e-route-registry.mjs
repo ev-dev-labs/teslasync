@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const production = readFileSync(resolve(root, 'src', 'lib', 'routeRegistry.ts'), 'utf8');
 const quality = readFileSync(resolve(root, 'e2e', 'routeRegistry.ts'), 'utf8');
-const productionPaths = new Set([...production.matchAll(/\{\s*path:\s*'([^']+)'/g)].map((match) => match[1]));
+const productionPaths = new Set([...production.matchAll(/\{\s*path:\s*("(?:\\.|[^"\\])*")/g)].map((match) => JSON.parse(match[1])));
 const qualityPaths = [...quality.matchAll(/path:\s*'([^']+)'/g)].map((match) => match[1]);
 const missing = qualityPaths.filter((path) => !productionPaths.has(path));
 const duplicates = qualityPaths.filter((path, index) => qualityPaths.indexOf(path) !== index);
