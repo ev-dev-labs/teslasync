@@ -114,7 +114,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
       - run: npx playwright install --with-deps chromium
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: e2e-app
           path: web/e2e/.app-dist
@@ -166,7 +166,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
       - run: npx playwright install --with-deps ${{ matrix.browser }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: e2e-app
           path: web/e2e/.app-dist
@@ -203,7 +203,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
       - run: npx playwright install chromium
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: e2e-app
           path: web/e2e/.app-dist
