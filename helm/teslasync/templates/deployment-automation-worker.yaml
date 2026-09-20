@@ -81,6 +81,21 @@ spec:
                 name: {{ include "teslasync.secretName" . }}
           resources:
             {{- toYaml .Values.automationWorker.resources | nindent 12 }}
+          {{- if .Values.commandProxy.caSecretName }}
+          volumeMounts:
+            - name: command-proxy-ca
+              mountPath: /etc/teslasync/command-proxy
+              readOnly: true
+          {{- end }}
+      {{- if .Values.commandProxy.caSecretName }}
+      volumes:
+        - name: command-proxy-ca
+          secret:
+            secretName: {{ .Values.commandProxy.caSecretName }}
+            items:
+              - key: ca.pem
+                path: ca.pem
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

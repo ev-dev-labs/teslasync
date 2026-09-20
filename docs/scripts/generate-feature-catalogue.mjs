@@ -86,7 +86,7 @@ function slug(title) {
 }
 
 function escapeCell(s) {
-  return String(s).replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  return String(s).replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/[\r\n]/g, ' ');
 }
 
 function emptyHint(to, description) {

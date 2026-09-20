@@ -924,6 +924,15 @@ describe('virtualization discovery: chained collection idioms', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('virtualization discovery: JSX context must be genuine', () => {
+  it('treats metacharacters in callback names as literals', () => {
+    expect(localDefinitionBody('const render$Row = () => <Row />;', 'render$Row')).toContain('<Row')
+    expect(localDefinitionBody('const other = () => <Row />;', '.*')).toBeNull()
+  })
+
+  it('scans long comment sequences without regexp backtracking', () => {
+    expect(containsJsxInExpressionPosition(`return ${'/* comment */ '.repeat(20000)}<Row />`)).toBe(true)
+    expect(containsJsxInExpressionPosition(`return ${'/* comment */ '.repeat(20000)}value`)).toBe(false)
+  })
   // The scan used to accept `{ & ? :` immediately left of the chain root as
   // proof of a JSX expression container. Those are also the ternary operator,
   // an object-property separator and `&&` in ordinary logic, which is how a

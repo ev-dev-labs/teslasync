@@ -452,14 +452,7 @@ export default function ChatbotPage() {
 
   /* ─── handlers ─────────────────────────────────────────────────────── */
 
-  // newAiSessionId mints a client-side session id when none exists,
-  // following the server's `s_<unix-ns>` style closely enough that
-  // server-side logs/joins remain readable. Server accepts any
-  // non-empty string per ai_chatbot_handler.go.
-  const newAiSessionId = () =>
-    `s_${Date.now()}${Math.floor(Math.random() * 1e6)
-      .toString()
-      .padStart(6, '0')}`;
+  const newAiSessionId = () => `s_${crypto.randomUUID()}`;
 
   const submitMessage = useCallback(
     (text: string) => {

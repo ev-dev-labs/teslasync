@@ -2,7 +2,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import path from 'path'
 // @ts-expect-error — plain .mjs helper shared with scripts/ and the contract
@@ -15,7 +15,7 @@ const mockedE2eBuild =
   && process.env.E2E_MOCKS !== '0'
 
 // ── CLEAN-02: transform-plugin ownership across two Vite majors ──────────────
-// `vite build` / `vite dev` run on the Vite in devDependencies (5.x), where
+// `vite build` / `vite dev` run on the Vite in devDependencies (6.x), where
 // `@vitejs/plugin-react` configures the automatic JSX runtime through Vite's
 // `esbuild` option. Vitest 4 does NOT use that Vite — it resolves its own
 // nested Vite 8 (rolldown/OXC), where `esbuild` and `optimizeDeps.esbuildOptions`
@@ -32,7 +32,7 @@ const mockedE2eBuild =
 // `"jsx": "react-jsx"` from tsconfig.json, so the OXC pipeline already emits the
 // automatic runtime. Skipping the plugin under Vitest removes the deprecated
 // options at their source without pinning plugin-react to a major that drops
-// Vite 5 support. `scripts/check-vite-deprecations.mjs` is the executable
+// Vite 6 support. `scripts/check-vite-deprecations.mjs` is the executable
 // regression gate; `src/__tests__/viteTransformConfig.test.ts` is the fast one.
 const isVitest = process.env.VITEST !== undefined
 
@@ -59,11 +59,11 @@ const sourcemap: 'hidden' | false = sourcemapMode === 'private' ? 'hidden' : fal
 const verifyEnglishCatalogSplit = {
   name: 'verify-english-catalog-split',
   buildStart() {
-    execSync(`${JSON.stringify(process.execPath)} scripts/split-i18n-catalog.mjs --check`, {
+    execFileSync(process.execPath, ['scripts/split-i18n-catalog.mjs', '--check'], {
       cwd: __dirname,
       stdio: 'inherit',
     })
-    execSync(`${JSON.stringify(process.execPath)} scripts/audit-i18n-namespaces.mjs --strict`, {
+    execFileSync(process.execPath, ['scripts/audit-i18n-namespaces.mjs', '--strict'], {
       cwd: __dirname,
       stdio: 'inherit',
     })

@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -32,6 +33,10 @@ type DB struct {
 // connectivity with a 10-second ping, and returns the wrapped pool. The caller
 // should defer DB.Close to release connections on shutdown.
 func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
+	if cfg.MaxConns <= 0 || cfg.MaxConns > math.MaxInt32 ||
+		cfg.MinConns < 0 || cfg.MinConns > math.MaxInt32 || cfg.MinConns > cfg.MaxConns {
+		return nil, fmt.Errorf("invalid database pool bounds: min=%d max=%d", cfg.MinConns, cfg.MaxConns)
+	}
 	poolCfg, err := pgxpool.ParseConfig(cfg.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("parse dsn: %w", err)

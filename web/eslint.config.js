@@ -226,7 +226,7 @@ export default [
         'warn',
         {
           default: 'allow',
-          rules: [],
+          policies: [],
         },
       ],
     },

@@ -410,6 +410,10 @@ automationWorker:
 # ─────────────────────────────────────────────────────────────────────────────
 commandProxy:
   enabled: false
+  # PEM CA file inside the API container; empty uses system trust.
+  caFile: ""
+  # Optional secret with ca.pem only (never the proxy private key).
+  caSecretName: ""
 
   image:
     repository: tesla/vehicle-command

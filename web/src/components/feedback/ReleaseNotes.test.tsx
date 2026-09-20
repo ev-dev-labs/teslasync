@@ -67,10 +67,10 @@ vi.mock('@/generated/changelog', () => ({
 }))
 
 const trigger = (version: string) =>
-  screen.getByRole('button', { name: new RegExp(`v${version.replace(/\./g, '\\.')}`, 'i') })
+  screen.getByRole('button', { name: new RegExp(`v${version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i') })
 
 const queryTrigger = (version: string) =>
-  screen.queryByRole('button', { name: new RegExp(`v${version.replace(/\./g, '\\.')}`, 'i') })
+  screen.queryByRole('button', { name: new RegExp(`v${version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i') })
 
 describe('ReleaseNotes', () => {
   it('renders the newest `limit` releases (default 3) and omits the rest', () => {

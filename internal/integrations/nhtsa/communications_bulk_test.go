@@ -171,6 +171,10 @@ func TestCommunicationsBulkClientProductionAllowlist(t *testing.T) {
 	}
 	for _, raw := range []string{
 		"https://static.nhtsa.gov.evil.example/odi/ffdd/tsbs/TSBS_RECEIVED_2025.zip",
+		"https://user@static.nhtsa.gov/odi/ffdd/tsbs/TSBS_RECEIVED_2025.zip",
+		"https://static.nhtsa.gov/odi/ffdd/tsbs/TSBS_RECEIVED_2025.zip#fragment",
+		"https://static.nhtsa.gov/odi/ffdd/tsbs/%2e%2e/TSBS_RECEIVED_2025.zip",
+		"https://static.nhtsa.gov:8443/odi/ffdd/tsbs/TSBS_RECEIVED_2025.zip",
 		"http://static.nhtsa.gov/odi/ffdd/tsbs/TSBS_RECEIVED_2025.zip",
 		"https://static.nhtsa.gov/odi/ffdd/tsbs/../../secret.zip",
 	} {

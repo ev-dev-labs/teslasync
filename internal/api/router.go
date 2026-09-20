@@ -5168,10 +5168,13 @@ func spaFallback(dir string, fs http.Handler) http.HandlerFunc {
 		}
 
 		// If the file exists on disk, serve it directly
-		path := filepath.Join(dir, filepath.Clean(r.URL.Path))
-		if info, err := os.Stat(path); err == nil && !info.IsDir() {
-			fs.ServeHTTP(w, r)
-			return
+		if file, err := http.Dir(dir).Open(r.URL.Path); err == nil {
+			info, statErr := file.Stat()
+			_ = file.Close()
+			if statErr == nil && !info.IsDir() {
+				fs.ServeHTTP(w, r)
+				return
+			}
 		}
 
 		// SPA fallback ╬ô├ç├╢ serve index.html for client-side routing

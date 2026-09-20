@@ -131,7 +131,7 @@ export function buildRegistrySource(appSrc) {
     routes
       .map(
         (r) =>
-          `  { path: '${r.path}', name: '${r.name}', label: '${r.label.replace(/'/g, "\\'")}', i18nKey: '${r.i18nKey}'${r.hidden ? ', hidden: true' : ''} },`,
+          `  { path: ${JSON.stringify(r.path)}, name: ${JSON.stringify(r.name)}, label: ${JSON.stringify(r.label)}, i18nKey: ${JSON.stringify(r.i18nKey)}${r.hidden ? ', hidden: true' : ''} },`,
       )
       .join('\n') +
     `\n] as const\n`
