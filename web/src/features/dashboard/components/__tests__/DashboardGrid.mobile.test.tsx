@@ -38,12 +38,12 @@ class MockResizeObserver {
   disconnect() {}
 }
 
-// jsdom's `offsetWidth` is always 0 — useContainerWidth's first
+// jsdom's `clientWidth` is always 0 — useContainerWidth's first
 // `measureWidth()` call would otherwise stomp the initial-width guess
 // down to 0, forcing the component into the smallest breakpoint.
 // Mirror `window.innerWidth` so layout-time measurements match the
 // viewport configured by each test.
-let originalOffsetWidth: PropertyDescriptor | undefined;
+let originalClientWidth: PropertyDescriptor | undefined;
 
 const baseLayouts: RGLLayouts = {
   lg: [
@@ -94,8 +94,8 @@ function renderGrid() {
 
 beforeEach(() => {
   vi.stubGlobal('ResizeObserver', MockResizeObserver);
-  originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-  Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+  originalClientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+  Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
     configurable: true,
     get() { return window.innerWidth; },
   });
@@ -104,11 +104,11 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  if (originalOffsetWidth) {
-    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidth);
+  if (originalClientWidth) {
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', originalClientWidth);
   } else {
     // @ts-expect-error — restore jsdom default (no descriptor)
-    delete HTMLElement.prototype.offsetWidth;
+    delete HTMLElement.prototype.clientWidth;
   }
 });
 

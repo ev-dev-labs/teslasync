@@ -1,5 +1,5 @@
 # Build stage — Go binary
-FROM golang:1.25-alpine AS go-builder
+FROM golang:1.27-alpine AS go-builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 
@@ -31,7 +31,7 @@ RUN GOMEMLIMIT=2GiB CGO_ENABLED=0 GOOS=linux go build \
     -o /bin/teslasync ./cmd/teslasync
 
 # Build stage — frontend assets
-FROM node:20-alpine AS web-builder
+FROM node:26-alpine AS web-builder
 
 WORKDIR /app
 

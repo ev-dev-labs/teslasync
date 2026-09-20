@@ -1,3 +1,24 @@
+{{- define "teslasync.commandProxy.trustMounts" -}}
+{{- if .Values.commandProxy.caSecretName }}
+volumeMounts:
+  - name: command-proxy-ca
+    mountPath: /etc/teslasync/command-proxy
+    readOnly: true
+{{- end }}
+{{- end }}
+
+{{- define "teslasync.commandProxy.trustVolumes" -}}
+{{- if .Values.commandProxy.caSecretName }}
+volumes:
+  - name: command-proxy-ca
+    secret:
+      secretName: {{ .Values.commandProxy.caSecretName }}
+      items:
+        - key: ca.pem
+          path: ca.pem
+{{- end }}
+{{- end }}
+
 {{/*
 Expand the name of the chart.
 */}}

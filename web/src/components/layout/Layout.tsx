@@ -16,7 +16,6 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
-import { TourOverlay } from '../feedback/TourOverlay'
 import { ChangelogModal } from '../feedback/ChangelogModal'
 import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
 import { SkipToContent } from '../feedback/SkipToContent'
@@ -39,7 +38,6 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
-import { LinearSidebar } from './sidebar/LinearSidebar'
 import {
   buildCompactNavTree,
   findMostSpecificNavEntry,
@@ -47,11 +45,10 @@ import {
   prioritizeCanonicalNavSections,
   prioritizeCompactNavTree,
 } from './sidebar/compactNav'
-import { NotionSidebar } from './sidebar/NotionSidebar'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
-import { RuntimeHealthBanner } from '@/components/feedback/runtime'
+import { RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
 import {
   Button,
   CommandPaletteTrigger,
@@ -101,12 +98,34 @@ import {
   setRecentNavPaths,
   subscribeNavPins,
 } from '@/lib/navPins';
-import { PresentationOverlay } from './presentation/PresentationOverlay';
-import { ReportMasthead } from './presentation/ReportMasthead';
+const PresentationOverlay = lazy(async () => {
+  const module = await import('./presentation/PresentationOverlay')
+  return { default: module.PresentationOverlay }
+})
+
+const ReportMasthead = lazy(async () => {
+  const module = await import('./presentation/ReportMasthead')
+  return { default: module.ReportMasthead }
+})
 
 const LazyFeedbackModal = lazy(async () => {
   const module = await import('../feedback/FeedbackModal')
   return { default: module.FeedbackModal }
+})
+
+const TourOverlay = lazy(async () => {
+  const module = await import('../feedback/TourOverlay')
+  return { default: module.TourOverlay }
+})
+
+const NotionSidebar = lazy(async () => {
+  const module = await import('./sidebar/NotionSidebar')
+  return { default: module.NotionSidebar }
+})
+
+const LinearSidebar = lazy(async () => {
+  const module = await import('./sidebar/LinearSidebar')
+  return { default: module.LinearSidebar }
 })
 
 const LazyKeyboardShortcutsModal = lazy(async () => {
@@ -1567,33 +1586,37 @@ export default function Layout() {
 
         {/* Navigation */}
         {sidebarStyle === 'linear' ? (
-          <LinearSidebar
-            sections={compactNav.sections}
-            pinnedItems={pinnedNavItems}
-            pathname={location.pathname}
-            navLabel={navLabel}
-            onPin={pinNavPath}
-            onUnpin={unpinNavPath}
-            onItemSelect={() => setSidebarOpen(false)}
-            activeSectionTitle={compactNav.activeSectionTitle}
-            alertCount={unreadAlerts}
-            vehicleCount={vehicleCount}
-            staleCount={staleCount}
-          />
+          <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
+            <LinearSidebar
+              sections={compactNav.sections}
+              pinnedItems={pinnedNavItems}
+              pathname={location.pathname}
+              navLabel={navLabel}
+              onPin={pinNavPath}
+              onUnpin={unpinNavPath}
+              onItemSelect={() => setSidebarOpen(false)}
+              activeSectionTitle={compactNav.activeSectionTitle}
+              alertCount={unreadAlerts}
+              vehicleCount={vehicleCount}
+              staleCount={staleCount}
+            />
+          </Suspense>
         ) : sidebarStyle === 'notion' ? (
-          <NotionSidebar
-            sections={visibleNavSections}
-            pinnedItems={pinnedNavItems}
-            pathname={location.pathname}
-            navLabel={navLabel}
-            onPin={pinNavPath}
-            onUnpin={unpinNavPath}
-            onItemSelect={() => setSidebarOpen(false)}
-            activeSectionTitle={activeSectionTitle}
-            alertCount={unreadAlerts}
-            vehicleCount={vehicleCount}
-            staleCount={staleCount}
-          />
+          <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
+            <NotionSidebar
+              sections={visibleNavSections}
+              pinnedItems={pinnedNavItems}
+              pathname={location.pathname}
+              navLabel={navLabel}
+              onPin={pinNavPath}
+              onUnpin={unpinNavPath}
+              onItemSelect={() => setSidebarOpen(false)}
+              activeSectionTitle={activeSectionTitle}
+              alertCount={unreadAlerts}
+              vehicleCount={vehicleCount}
+              staleCount={staleCount}
+            />
+          </Suspense>
         ) : (
         <nav
           aria-label={t('a11y.navSections', 'Navigation sections')}
@@ -1889,7 +1912,11 @@ export default function Layout() {
               presentation.mode === 'kiosk' && 'p-0',
             )}
           >
-            {presentation.mode === 'report' && <ReportMasthead />}
+            {presentation.mode === 'report' && (
+              <Suspense fallback={<Skeleton className="h-24" />}>
+                <ReportMasthead />
+              </Suspense>
+            )}
             {presentation.mode === 'standard' && (
               <div data-role="compact-breadcrumbs" className="xl:hidden">
                 <LayoutBreadcrumbs className="min-w-0 text-sm" />
@@ -1910,16 +1937,20 @@ export default function Layout() {
           user toggles it off in Settings → Appearance. */}
       {presentation.mode === 'standard' && <StatusBar />}
 
-      <PresentationOverlay
-        mode={presentation.mode}
-        config={presentation.config}
-        isDimmed={presentation.isDimmed}
-        isCursorHidden={presentation.isCursorHidden}
-        dashboardCount={presentation.rotation.dashboardCount}
-        currentIndex={presentation.rotation.currentIndex}
-        showRotation={presentation.rotation.enabled}
-        onExit={presentation.exitPresentation}
-      />
+      {presentation.mode !== 'standard' && (
+        <Suspense fallback={null}>
+          <PresentationOverlay
+            mode={presentation.mode}
+            config={presentation.config}
+            isDimmed={presentation.isDimmed}
+            isCursorHidden={presentation.isCursorHidden}
+            dashboardCount={presentation.rotation.dashboardCount}
+            currentIndex={presentation.rotation.currentIndex}
+            showRotation={presentation.rotation.enabled}
+            onExit={presentation.exitPresentation}
+          />
+        </Suspense>
+      )}
 
       {/* Command Palette */}
       {presentation.mode === 'standard' && (
@@ -2010,15 +2041,17 @@ export default function Layout() {
 
       {/* Onboarding tour */}
       {tour.isActive && tour.step && (
-        <TourOverlay
-          step={tour.step}
-          targetRect={tour.targetRect}
-          currentStep={tour.currentStep}
-          totalSteps={tour.totalSteps}
-          onNext={tour.next}
-          onPrev={tour.prev}
-          onSkip={tour.skip}
-        />
+        <Suspense fallback={null}>
+          <TourOverlay
+            step={tour.step}
+            targetRect={tour.targetRect}
+            currentStep={tour.currentStep}
+            totalSteps={tour.totalSteps}
+            onNext={tour.next}
+            onPrev={tour.prev}
+            onSkip={tour.skip}
+          />
+        </Suspense>
       )}
 
       {/* Tour launcher — opens via TOUR_OPEN_LAUNCHER_EVENT */}

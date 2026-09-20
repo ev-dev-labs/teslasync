@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -64,9 +66,19 @@ func NewClient(cfg config.TeslaConfig) *Client {
 	// durable request budget below is the account-wide cost control.
 	limiter := rate.NewLimiter(rate.Every(100*time.Millisecond), 5)
 
-	// HTTP client for the Vehicle Command Proxy (self-signed TLS in Docker)
+	// A private proxy CA is scoped to this transport, never Fleet API traffic.
+	proxyTLS := &tls.Config{MinVersion: tls.VersionTLS12}
+	if cfg.CommandProxyCAFile != "" {
+		proxyTLS.RootCAs = x509.NewCertPool()
+		pem, err := os.ReadFile(cfg.CommandProxyCAFile)
+		if err != nil {
+			log.Error().Err(err).Msg("command proxy CA unavailable; proxy TLS will fail closed")
+		} else if !proxyTLS.RootCAs.AppendCertsFromPEM(pem) {
+			log.Error().Msg("command proxy CA invalid; proxy TLS will fail closed")
+		}
+	}
 	proxyTransport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: proxyTLS,
 	}
 	proxyClient := &http.Client{
 		Timeout:   cfg.Timeout,

@@ -18,8 +18,8 @@ We deliberately do not use a "rebuild everything on every change" workflow becau
 
 ## Requirements
 
-- **Go 1.25.0** — match the `toolchain` in `go.mod`. Older Go works for some changes but the build pipeline expects 1.25.
-- **Node 20+** — the frontend and docs both expect a modern Node.
+- **Go 1.27.1+** — match the minimum in `go.mod`; this includes required standard-library security fixes.
+- **Node 26+** — matches the frontend engine requirement, CI, and container builds. Vitest workers use jsdom's browser storage rather than Node's process-wide Web Storage.
 - **Docker + Compose v2** — for the data plane (postgres, redis, mosquitto) and the optional service profiles.
 - **psql** (optional but useful) — for inspecting the database while developing
 - **gh** (optional) — for the GitHub CLI workflow we use for PRs

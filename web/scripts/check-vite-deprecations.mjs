@@ -36,7 +36,7 @@ const DEPRECATION_PATTERNS = [
 function main() {
   const result = spawnSync(
     process.execPath,
-    ['node_modules/vitest/vitest.mjs', 'run', PROBE_TEST, '--reporter=dot'],
+    ['--no-experimental-webstorage', 'node_modules/vitest/vitest.mjs', 'run', PROBE_TEST, '--reporter=dot'],
     { cwd: WEB_ROOT, encoding: 'utf8', env: { ...process.env, CI: '1' } },
   )
 

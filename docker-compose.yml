@@ -44,6 +44,8 @@ services:
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_REDIRECT_URI=${TESLA_REDIRECT_URI:-http://localhost:8080/api/v1/auth/callback}
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
+      - TESLA_COMMAND_PROXY_URL=${TESLA_COMMAND_PROXY_URL:-}
+      - TESLA_COMMAND_PROXY_CA_FILE=${TESLA_COMMAND_PROXY_CA_FILE:-}
       - TESLA_API_DAILY_BUDGET_USD=${TESLA_API_DAILY_BUDGET_USD:-0.30}
       - TESLA_API_COMMAND_RESERVE_USD=${TESLA_API_COMMAND_RESERVE_USD:-0.05}
       - TESLASYNC_VEHICLE_MASS_KG=${TESLASYNC_VEHICLE_MASS_KG:-}
@@ -176,6 +178,7 @@ services:
       - TESLASYNC_REQUIRE_COOKIE_CONSENT=${TESLASYNC_REQUIRE_COOKIE_CONSENT:-false}
     volumes:
       - vehicle_photos:/var/lib/teslasync/photos
+      - ${COMMAND_PROXY_TRUST_DIR:-./certs/command-proxy-trust}:/etc/teslasync/command-proxy:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -531,6 +534,8 @@ services:
       - TESLA_API_COMMAND_RESERVE_USD=${TESLA_API_COMMAND_RESERVE_USD:-0.05}
       - TESLASYNC_LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8083
+      - TESLA_COMMAND_PROXY_URL=${TESLA_COMMAND_PROXY_URL:-}
+      - TESLA_COMMAND_PROXY_CA_FILE=${TESLA_COMMAND_PROXY_CA_FILE:-}
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-automation-worker}
@@ -538,6 +543,8 @@ services:
       - PYROSCOPE_ENABLED=${PYROSCOPE_ENABLED:-false}
       - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-http://pyroscope:4040}
       - PYROSCOPE_UPLOAD_RATE=${PYROSCOPE_UPLOAD_RATE:-15s}
+    volumes:
+      - ${COMMAND_PROXY_TRUST_DIR:-./certs/command-proxy-trust}:/etc/teslasync/command-proxy:ro
     depends_on:
       postgres:
         condition: service_healthy

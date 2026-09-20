@@ -593,7 +593,7 @@ function checkManifest() {
     const registry = readFile(registryPath)
     for (const shortcut of manifest.shortcuts ?? []) {
       const url = String(shortcut.url ?? '')
-      if (!registry.includes(`path: '${url}'`)) {
+      if (!registry.includes(`path: ${JSON.stringify(url)}`)) {
         fail(`manifest shortcut "${shortcut.name}" points at ${url}, which is not in routeRegistry.ts`)
       }
     }

@@ -88,7 +88,7 @@ describe('generate-route-registry — freshness gate', () => {
     const generated = readFileSync(outPath, 'utf8')
     // `hidden: true` is how the generator flags a parameterised route.
     expect(generated).toContain(
-      "{ path: '/acceptance-probe/:token', name: 'AcceptanceProbe', label: 'Acceptance Probe', i18nKey: 'routes.acceptanceProbe', hidden: true },",
+      '{ path: "/acceptance-probe/:token", name: "AcceptanceProbe", label: "Acceptance Probe", i18nKey: "routes.acceptanceProbe", hidden: true },',
     )
     expect(generated).not.toBe(readFileSync(REGISTRY_PATH, 'utf8'))
   })

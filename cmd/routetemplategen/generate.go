@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -8,10 +9,10 @@ import (
 )
 
 // routePathRE extracts the `path:` field from every ROUTE_REGISTRY entry.
-// The source file is itself generated with a fixed shape (single-quoted
+// The source file is itself generated with a fixed shape (JSON-quoted
 // values, one entry per line), so a targeted regex is stable and avoids
 // pulling a TypeScript parser into the toolchain.
-var routePathRE = regexp.MustCompile(`\bpath:\s*'([^']+)'`)
+var routePathRE = regexp.MustCompile(`\bpath:\s*(?:'([^']+)'|("(?:\\.|[^"\\])*"))`)
 
 // ParseRoutePaths returns the sorted, de-duplicated set of route paths declared
 // in a routeRegistry.ts source. Sorting makes the generated artifact
@@ -26,10 +27,15 @@ func ParseRoutePaths(source string) ([]string, error) {
 	paths := make([]string, 0, len(matches))
 	for _, m := range matches {
 		p := m[1]
+		if m[2] != "" {
+			if err := json.Unmarshal([]byte(m[2]), &p); err != nil {
+				return nil, fmt.Errorf("decode route path: %w", err)
+			}
+		}
 		if !strings.HasPrefix(p, "/") {
 			return nil, fmt.Errorf("route %q does not start with '/'", p)
 		}
-		if strings.ContainsAny(p, "?# ") {
+		if strings.ContainsAny(p, "?# \r\n\t") {
 			return nil, fmt.Errorf("route %q contains a query, fragment or space", p)
 		}
 		if _, dup := seen[p]; dup {

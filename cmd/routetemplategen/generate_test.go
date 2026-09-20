@@ -10,10 +10,10 @@ import (
 func TestParseRoutePaths_SortsAndDeduplicates(t *testing.T) {
 	src := `
 export const ROUTE_REGISTRY: readonly RouteEntry[] = [
-  { path: '/vehicles/:id', name: 'VehicleDetail' },
+  { path: "/vehicles/:id", name: "VehicleDetail" },
   { path: '/', name: 'Dashboard' },
   { path: '/s/:token', name: 'SharedDrive' },
-  { path: '/', name: 'DashboardDuplicate' },
+  { path: "\u002f", name: "DashboardDuplicate" },
 ];
 `
 	got, err := ParseRoutePaths(src)
@@ -40,6 +40,9 @@ func TestParseRoutePaths_RejectsMalformedSources(t *testing.T) {
 		{"relative path", `{ path: 'vehicles/:id' }`},
 		{"query in path", `{ path: '/vehicles?x=1' }`},
 		{"space in path", `{ path: '/vehicles /:id' }`},
+		{"JSON escaped query", `{ path: "/vehicles\u003fx=1" }`},
+		{"JSON escaped newline", `{ path: "/vehicles\n/:id" }`},
+		{"invalid JSON escape", `{ path: "/vehicles\q" }`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

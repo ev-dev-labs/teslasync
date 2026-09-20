@@ -110,7 +110,7 @@ function persistTranscriptDraft(value: string): void {
 // internal/ai/tools/voice_mode.go).
 // ---------------------------------------------------------------
 function newVoiceSessionId(): string {
-  return `voice_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+  return `voice_${crypto.randomUUID()}`
 }
 
 // ---------------------------------------------------------------

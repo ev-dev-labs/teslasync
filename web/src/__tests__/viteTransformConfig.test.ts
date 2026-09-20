@@ -63,7 +63,7 @@ describe('vite transform configuration (CLEAN-02)', () => {
   it('keeps the React plugin on the build/dev path', () => {
     expect(viteConfig).toMatch(/^import react from '@vitejs\/plugin-react'$/m)
     expect(pkg.devDependencies['@vitejs/plugin-react']).toBeTruthy()
-    expect(pkg.devDependencies.vite).toMatch(/\^5\./)
+    expect(pkg.devDependencies.vite).toMatch(/\^6\./)
   })
 
   it('relies on the automatic JSX runtime being configured in tsconfig', () => {

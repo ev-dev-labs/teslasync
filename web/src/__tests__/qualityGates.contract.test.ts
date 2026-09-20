@@ -924,6 +924,15 @@ describe('virtualization discovery: chained collection idioms', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('virtualization discovery: JSX context must be genuine', () => {
+  it('treats metacharacters in callback names as literals', () => {
+    expect(localDefinitionBody('const render$Row = () => <Row />;', 'render$Row')).toContain('<Row')
+    expect(localDefinitionBody('const other = () => <Row />;', '.*')).toBeNull()
+  })
+
+  it('scans long comment sequences without regexp backtracking', () => {
+    expect(containsJsxInExpressionPosition(`return ${'/* comment */ '.repeat(20000)}<Row />`)).toBe(true)
+    expect(containsJsxInExpressionPosition(`return ${'/* comment */ '.repeat(20000)}value`)).toBe(false)
+  })
   // The scan used to accept `{ & ? :` immediately left of the chain root as
   // proof of a JSX expression container. Those are also the ternary operator,
   // an object-property separator and `&&` in ordinary logic, which is how a
@@ -939,14 +948,16 @@ describe('virtualization discovery: JSX context must be genuine', () => {
     ['call argument', 'setState(rows.slice(0, 5).map((r) => r.id));'],
     [
       'the real ChargingListPage narrativeEvidence transform',
-      `const narrativeEvidence: OperationalNarrative['evidence'] = (
-         anomalies.length > 0 ? anomalies.map((anomaly) => anomaly.session) : dateFilteredSessions
-       )
-         .slice(0, 5)
-         .map((session) => {
-           const anomaly = anomalyById.get(session.id);
-           return { id: \`charging-session-\${session.id}\`, summary: anomaly?.message ?? '' };
-         });`,
+      [
+        "const narrativeEvidence: OperationalNarrative['evidence'] = (",
+        '  anomalies.length > 0 ? anomalies.map((anomaly) => anomaly.session) : dateFilteredSessions',
+        ')',
+        '  .slice(0, 5)',
+        '  .map((session) => {',
+        '    const anomaly = anomalyById.get(session.id);',
+        '    return { id: `charging-session-${session.id}`, summary: anomaly?.message ?? "" };',
+        '  });',
+      ].join('\n'),
     ],
   ]
 

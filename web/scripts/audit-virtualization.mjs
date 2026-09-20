@@ -307,11 +307,22 @@ export function isJsxExpressionContainer(source, braceIndex) {
  * fragment shorthand (`<>`).
  */
 const JSX_IN_EXPRESSION_POSITION =
-  /(?:^|[=(\[{,;:?]|=>|&&|\|\||\breturn\b)\s*(?:(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*\n)\s*)*<\s*(?:[A-Za-z][\w.$:-]*(?=[\s/>])|>)/
+  /(?:^|[=(\[{,;:?]|=>|&&|\|\||\breturn\b)\s*<\s*(?:[A-Za-z][\w.$:-]*(?=[\s/>])|>)/
 
 /** True when `body` contains JSX in an expression position. */
 export function containsJsxInExpressionPosition(body) {
-  return JSX_IN_EXPRESSION_POSITION.test(body)
+  const pieces = []
+  let start = 0
+  for (let i = 0; i < body.length; i++) {
+    if (body[i] !== '/' || (body[i + 1] !== '*' && body[i + 1] !== '/')) continue
+    const block = body[i + 1] === '*'
+    const end = body.indexOf(block ? '*/' : '\n', i + 2)
+    pieces.push(body.slice(start, i), ' ')
+    i = end === -1 ? body.length : end + (block ? 1 : 0)
+    start = i + 1
+  }
+  pieces.push(body.slice(start))
+  return JSX_IN_EXPRESSION_POSITION.test(pieces.join(''))
 }
 
 /**
@@ -322,8 +333,9 @@ export function containsJsxInExpressionPosition(body) {
  *   `const name = (…) => …;`  /  `function name(…) { … }`
  */
 export function localDefinitionBody(source, name) {
+  const literalName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const declaration = new RegExp(
-    `(?:^|[\\s;{])(?:export\\s+)?(?:const|let|var)\\s+${name}\\s*(?::[^=\\n]*)?=`,
+    `(?:^|[\\s;{])(?:export\\s+)?(?:const|let|var)\\s+${literalName}\\s*(?::[^=\\n]*)?=`,
     'm',
   ).exec(source);
   if (declaration) {
@@ -342,7 +354,7 @@ export function localDefinitionBody(source, name) {
     return source.slice(start);
   }
 
-  const fn = new RegExp(`(?:^|[\\s;{])(?:export\\s+)?function\\s+${name}\\s*[<(]`, 'm').exec(source);
+  const fn = new RegExp(`(?:^|[\\s;{])(?:export\\s+)?function\\s+${literalName}\\s*[<(]`, 'm').exec(source);
   if (!fn) return null;
   const braceStart = source.indexOf('{', fn.index + fn[0].length - 1);
   if (braceStart === -1) return null;

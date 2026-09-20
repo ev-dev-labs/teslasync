@@ -128,20 +128,26 @@ function collectUsedKeys(files) {
 //   setNested(obj, 'foo.bar.baz', 'Hi') -> obj.foo.bar.baz = 'Hi'
 // If a path collision occurs (e.g. existing string at obj.foo when we try to
 // set obj.foo.bar), the function returns false and leaves the tree untouched.
-function setNested(obj, dottedKey, value) {
+export function setNested(obj, dottedKey, value) {
   const parts = dottedKey.split('.');
+  if (parts.some((part) => ['__proto__', 'prototype', 'constructor'].includes(part))) {
+    return false;
+  }
   let node = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const p = parts[i];
-    if (node[p] === undefined) {
-      node[p] = {};
-    } else if (typeof node[p] !== 'object' || Array.isArray(node[p])) {
+    // Keep the boundary explicit at the dynamic dereference, not just in preflight.
+    if (p === '__proto__' || p === 'constructor' || p === 'prototype') return false;
+    if (!Object.hasOwn(node, p)) {
+      node[p] = Object.create(null);
+    } else if (node[p] === null || typeof node[p] !== 'object' || Array.isArray(node[p])) {
       return false; // collision with an existing leaf
     }
     node = node[p];
   }
   const last = parts[parts.length - 1];
-  if (node[last] !== undefined) {
+  if (last === '__proto__' || last === 'constructor' || last === 'prototype') return false;
+  if (Object.hasOwn(node, last)) {
     // Existing leaf — leave it as-is. Caller checks definedKeys first.
     return false;
   }
@@ -259,4 +265,6 @@ function main() {
   process.exit(0);
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === url.fileURLToPath(import.meta.url)) {
+  main();
+}

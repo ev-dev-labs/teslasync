@@ -123,6 +123,8 @@ spec:
                 command: ["/usr/local/bin/teslasync", "drain"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- include "teslasync.commandProxy.trustMounts" . | nindent 10 }}
+      {{- include "teslasync.commandProxy.trustVolumes" . | nindent 6 }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

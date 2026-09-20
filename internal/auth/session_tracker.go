@@ -78,11 +78,8 @@ type SessionTrackerOptions struct {
 	// rare.
 	CookieName string
 
-	// CookieSecure forces the Secure flag on the issued cookie. When
-	// false the cookie is set Secure only when the inbound request was
-	// observed over TLS (X-Forwarded-Proto=https or r.TLS != nil).
-	// Production deployments behind a TLS-terminating reverse proxy
-	// should set this to true to be defensive against misconfiguration.
+	// CookieSecure is retained for source compatibility. Session cookies
+	// are always Secure; use HTTPS for authenticated development too.
 	CookieSecure bool
 
 	// CookieDomain pins the cookie to a specific domain. Empty means
@@ -206,7 +203,7 @@ func mintAndAttach(ctx context.Context, store SessionStore, subject string, r *h
 		Value:    token,
 		Path:     "/",
 		Domain:   opts.CookieDomain,
-		Secure:   opts.CookieSecure || requestIsTLS(r),
+		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(CookieMaxAge.Seconds()),
@@ -222,7 +219,7 @@ func clearCookie(w http.ResponseWriter, cookieName string, opts SessionTrackerOp
 		Value:    "",
 		Path:     "/",
 		Domain:   opts.CookieDomain,
-		Secure:   opts.CookieSecure || requestIsTLS(r),
+		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
@@ -283,17 +280,4 @@ func requestClientIP(r *http.Request) string {
 		return strings.TrimSpace(r.RemoteAddr)
 	}
 	return host
-}
-
-// requestIsTLS reports whether the inbound request was observed over
-// TLS — directly via r.TLS or via the X-Forwarded-Proto header set by a
-// terminating reverse proxy.
-func requestIsTLS(r *http.Request) bool {
-	if r.TLS != nil {
-		return true
-	}
-	if proto := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto"))); proto == "https" {
-		return true
-	}
-	return false
 }

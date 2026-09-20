@@ -68,7 +68,7 @@ func Generate(t reflect.Type) json.RawMessage {
 // "properties" and "required"; array types include "items"; primitive
 // types include only "type".
 func schemaFor(t reflect.Type) map[string]any {
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 
@@ -304,14 +304,14 @@ func descriptionOf(f reflect.StructField) string {
 }
 
 func isStringKind(t reflect.Type) bool {
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	return t.Kind() == reflect.String
 }
 
 func isArrayKind(t reflect.Type) bool {
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	return t.Kind() == reflect.Slice || t.Kind() == reflect.Array

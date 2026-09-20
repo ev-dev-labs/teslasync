@@ -11,10 +11,9 @@ package aichatbot
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/google/uuid"
 	"net/http"
 	"strings"
-	"time"
 
 	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 
@@ -110,7 +109,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if body.SessionID == "" {
-		body.SessionID = fmt.Sprintf("s_%d", time.Now().UnixNano())
+		body.SessionID = "s_" + uuid.NewString()
 	}
 
 	// 2) Persist the user turn BEFORE calling the LLM. If the LLM

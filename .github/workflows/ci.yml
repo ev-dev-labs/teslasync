@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "26"
           cache: npm
           cache-dependency-path: web/package-lock.json
       - uses: actions/setup-go@v5
@@ -80,7 +80,7 @@ jobs:
       - name: Lint
         if: matrix.check == 'lint'
         run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
           golangci-lint run ./...
       - name: Architecture tests and metrics
         if: matrix.check == 'architecture'
@@ -158,7 +158,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: backend-test-*
           path: backend-shards
@@ -301,7 +301,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "26"
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
@@ -315,6 +315,7 @@ jobs:
         if: matrix.check == 'lint'
         run: |
           node --test ../.github/scripts/check_vitest_blobs.test.mjs ../.github/scripts/ci_workflows.test.mjs
+          node --test ../scripts/i18n-validate-keys.test.mjs
           node ../.github/scripts/frontend_coverage_summary.mjs --self-test
       - name: Build
         if: matrix.check == 'build'
@@ -338,11 +339,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "26"
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
       - name: Test shard with native coverage blob
+        env:
+          NODE_OPTIONS: '--no-experimental-webstorage'
         run: |
           npx vitest run --shard=${{ matrix.shard }}/"$FRONTEND_SHARDS" --maxWorkers=2 \
             --coverage --coverage.reporter=json --coverage.reportOnFailure \
@@ -370,17 +373,19 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "26"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
       - run: npm ci --legacy-peer-deps
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: frontend-test-*
           path: web/.vitest-reports
           merge-multiple: true
       - name: Reject missing tests and merge native coverage maps
+        env:
+          NODE_OPTIONS: '--no-experimental-webstorage'
         run: |
           npx vitest list --filesOnly --json=vitest-discovery.json
           node ../.github/scripts/check_vitest_blobs.mjs .vitest-reports "$FRONTEND_SHARDS" vitest-discovery.json

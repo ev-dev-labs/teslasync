@@ -915,12 +915,13 @@ export async function expectThemeApplied(page: Page, theme: 'dark' | 'light'): P
       light: root.classList.contains('light-mode'),
       colorScheme: style.colorScheme,
       appBackground: style.getPropertyValue('--bg-app').trim().toLowerCase(),
+      forcedColors: matchMedia('(forced-colors: active)').matches,
     };
   });
   expect(state.dark).toBe(theme === 'dark');
   expect(state.light).toBe(theme === 'light');
   expect(state.colorScheme).toContain(theme);
-  expect(state.appBackground).toBe(theme === 'light' ? '#f8fafc' : '#0b0d12');
+  expect(state.appBackground).toBe(state.forcedColors ? 'canvas' : theme === 'light' ? '#f8fafc' : '#0b0d12');
 }
 
 export async function assertMockApiComplete(

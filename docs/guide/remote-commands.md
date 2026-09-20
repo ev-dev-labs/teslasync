@@ -24,11 +24,52 @@ Frontend → POST /api/v1/vehicles/{vin}/command
 
 - **`wake_up`** always goes directly to Fleet API — it does not require signing.
 - **Every other command** is routed through the Vehicle Command Proxy when
-  one is configured (set `VEHICLE_COMMAND_PROXY_URL`). The proxy signs the
+  one is configured (set `TESLA_COMMAND_PROXY_URL`). The proxy signs the
   request with your partner key for vehicles that require it (Model 3/Y from
   2021+, Model S/X refresh, Cybertruck).
 - If no proxy is configured, the command is sent directly. This works only for
   vehicles that don't require signing.
+
+## Command proxy TLS trust
+
+The API verifies the proxy certificate and hostname before sending credentials.
+Publicly trusted certificates need no extra configuration. For a private CA or
+self-signed certificate, set `TESLA_COMMAND_PROXY_CA_FILE` to a PEM trust anchor.
+Missing or invalid configured trust fails closed; there is no insecure bypass.
+
+For Compose, put **only** the public CA/certificate in
+`certs/command-proxy-trust/ca.pem` (or set `COMMAND_PROXY_TRUST_DIR`) and set
+`TESLA_COMMAND_PROXY_CA_FILE=/etc/teslasync/command-proxy/ca.pem`. The server
+certificate must contain `DNS:vehicle-command-proxy` in its subjectAltName when
+using `https://vehicle-command-proxy:4443`. Keep TLS and command signing private
+keys in the proxy's existing data directory, never the API's trust directory.
+
+For a new local installation, provision a self-signed certificate before starting
+the `commands` profile (do not overwrite an existing deployment's keys):
+
+```bash
+install -d -m 700 data/vehicle-command certs/command-proxy-trust
+openssl req -x509 -newkey rsa:3072 -nodes -days 365 \
+  -subj '/CN=vehicle-command-proxy' \
+  -addext 'subjectAltName=DNS:vehicle-command-proxy,DNS:localhost' \
+  -keyout data/vehicle-command/tls-key.pem \
+  -out certs/command-proxy-trust/ca.pem
+chmod 600 data/vehicle-command/tls-key.pem
+cp certs/command-proxy-trust/ca.pem data/vehicle-command/tls-cert.pem
+```
+
+This is the TLS key, **not** the Tesla partner command-signing key; provision
+`private-key.pem` and pair the vehicle separately as before.
+
+For Helm, create a separate secret containing `ca.pem`, set
+`commandProxy.caSecretName` to its name and `commandProxy.caFile` to
+`/etc/teslasync/command-proxy/ca.pem`. Issue the proxy certificate with the actual
+service hostname (for example `teslasync-command-proxy`) as a DNS SAN. External
+proxy certificates must match the hostname in `commandProxy.external.url`.
+Renew the server certificate and trust anchor together and restart API/worker
+pods after rotating the CA. Authenticated development also requires HTTPS:
+session and impersonation cookies are always `Secure`, independent of forwarded
+headers.
 
 ## API surface
 

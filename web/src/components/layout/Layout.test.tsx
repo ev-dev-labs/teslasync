@@ -555,17 +555,17 @@ describe('navSearchKeywords (data export)', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — sidebar style selection', () => {
-  it('renders the LinearSidebar when the style preference is "linear"', () => {
+  it('renders the LinearSidebar when the style preference is "linear"', async () => {
     H.sidebarStyle.value = 'linear'
     renderLayout('/')
-    expect(screen.getByTestId('linear-sidebar')).toBeInTheDocument()
+    expect(await screen.findByTestId('linear-sidebar')).toBeInTheDocument()
     expect(screen.queryByTestId('notion-sidebar')).toBeNull()
   })
 
-  it('renders the NotionSidebar when the style preference is "notion"', () => {
+  it('renders the NotionSidebar when the style preference is "notion"', async () => {
     H.sidebarStyle.value = 'notion'
     renderLayout('/')
-    expect(screen.getByTestId('notion-sidebar')).toBeInTheDocument()
+    expect(await screen.findByTestId('notion-sidebar')).toBeInTheDocument()
     expect(screen.queryByTestId('linear-sidebar')).toBeNull()
   })
 
@@ -832,15 +832,15 @@ describe('Layout — global page chrome', () => {
     expect(viewport).not.toHaveClass('mx-auto', 'max-w-[1920px]')
   })
 
-  it('switches the shell to a print-ready report view', () => {
+  it('switches the shell to a print-ready report view', async () => {
     H.presentation.mode = 'report'
     const { container } = renderLayout('/battery')
 
     expect(
       container.querySelector('[data-presentation-mode="report"]'),
     ).toBeInTheDocument()
-    expect(screen.getByTestId('report-masthead')).toBeInTheDocument()
-    expect(screen.getByTestId('presentation-overlay')).toHaveAttribute(
+    expect(await screen.findByTestId('report-masthead')).toBeInTheDocument()
+    expect(await screen.findByTestId('presentation-overlay')).toHaveAttribute(
       'data-mode',
       'report',
     )
@@ -852,7 +852,7 @@ describe('Layout — global page chrome', () => {
     )
   })
 
-  it('switches the shell to a full-viewport kiosk view', () => {
+  it('switches the shell to a full-viewport kiosk view', async () => {
     H.presentation.mode = 'kiosk'
     const { container } = renderLayout('/')
 
@@ -860,7 +860,7 @@ describe('Layout — global page chrome', () => {
       container.querySelector('[data-presentation-mode="kiosk"]'),
     ).toBeInTheDocument()
     expect(screen.queryByTestId('report-masthead')).toBeNull()
-    expect(screen.getByTestId('presentation-overlay')).toHaveAttribute(
+    expect(await screen.findByTestId('presentation-overlay')).toHaveAttribute(
       'data-mode',
       'kiosk',
     )
