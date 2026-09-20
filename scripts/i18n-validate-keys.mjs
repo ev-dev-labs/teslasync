@@ -136,6 +136,8 @@ export function setNested(obj, dottedKey, value) {
   let node = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const p = parts[i];
+    // Keep the boundary explicit at the dynamic dereference, not just in preflight.
+    if (p === '__proto__' || p === 'constructor' || p === 'prototype') return false;
     if (!Object.hasOwn(node, p)) {
       node[p] = Object.create(null);
     } else if (node[p] === null || typeof node[p] !== 'object' || Array.isArray(node[p])) {
@@ -144,6 +146,7 @@ export function setNested(obj, dottedKey, value) {
     node = node[p];
   }
   const last = parts[parts.length - 1];
+  if (last === '__proto__' || last === 'constructor' || last === 'prototype') return false;
   if (Object.hasOwn(node, last)) {
     // Existing leaf — leave it as-is. Caller checks definedKeys first.
     return false;

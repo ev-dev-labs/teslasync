@@ -66,6 +66,7 @@ const APP_GLOBAL_MOUNTS: Record<string, string> = {
   DemoModeBanner: 'Self-gating synthetic-data label; must be the topmost element of any screenshot.',
   OnboardingGate: 'First-run gate; must decide before a route renders.',
   TaskOnboardingHost: 'Route-scoped onboarding hint host; must observe every navigation.',
+  Suspense: 'React loading boundary for the on-demand onboarding hint UI; no subscriptions or feature imports.',
   VitalsConsentPolicyGate: 'Publishes cookie-consent policy into RUM before any beacon is sent.',
   ScrollRestoration: 'Scroll position across navigations.',
   DensityApplier: 'Syncs UI density to <body> once settings resolve.',

@@ -171,6 +171,7 @@
     "vitest": "^4.1.11"
   },
   "overrides": {
+    "import-in-the-middle": "3.4.0",
     "react-grid-layout": {
       "fast-equals": "^5.4.0"
     },

@@ -948,14 +948,16 @@ describe('virtualization discovery: JSX context must be genuine', () => {
     ['call argument', 'setState(rows.slice(0, 5).map((r) => r.id));'],
     [
       'the real ChargingListPage narrativeEvidence transform',
-      `const narrativeEvidence: OperationalNarrative['evidence'] = (
-         anomalies.length > 0 ? anomalies.map((anomaly) => anomaly.session) : dateFilteredSessions
-       )
-         .slice(0, 5)
-         .map((session) => {
-           const anomaly = anomalyById.get(session.id);
-           return { id: \`charging-session-\${session.id}\`, summary: anomaly?.message ?? '' };
-         });`,
+      [
+        "const narrativeEvidence: OperationalNarrative['evidence'] = (",
+        '  anomalies.length > 0 ? anomalies.map((anomaly) => anomaly.session) : dateFilteredSessions',
+        ')',
+        '  .slice(0, 5)',
+        '  .map((session) => {',
+        '    const anomaly = anomalyById.get(session.id);',
+        '    return { id: `charging-session-${session.id}`, summary: anomaly?.message ?? "" };',
+        '  });',
+      ].join('\n'),
     ],
   ]
 
