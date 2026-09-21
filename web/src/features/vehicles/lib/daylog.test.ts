@@ -43,6 +43,11 @@ describe('daylog lib', () => {
     expect(categoryOf('drive_start')).toBe('driving');
     expect(categoryOf('turn_signal')).toBe('turn');
     expect(categoryOf('gear')).toBe('gear');
+    expect(categoryOf('destination_changed')).toBe('navigation');
+    expect(categoryOf('charge_port_opened')).toBe('charging');
+    expect(categoryOf('preconditioning_on')).toBe('hvac');
+    expect(categoryOf('pin_to_drive_on')).toBe('lock');
+    expect(categoryOf('tire_warning_on')).toBe('tires');
     expect(categoryOf('something_from_the_future')).toBe('other');
   });
 
@@ -57,6 +62,9 @@ describe('daylog lib', () => {
 
   it('falls back to neutral styling for unknown types', () => {
     expect(eventAccent('drive_start')).toBe('#0891b2');
+    expect(eventAccent('tire_warning_on')).toBe('#f87171');
+    expect(eventAccent('tire_warning_off')).toBe('#34d399');
+    expect(eventAccent('destination_changed')).toBe('#94a3b8');
     expect(eventAccent('nope')).toBe('#94a3b8');
   });
 

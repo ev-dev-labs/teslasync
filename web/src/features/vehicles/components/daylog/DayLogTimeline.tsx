@@ -53,7 +53,7 @@ export function DayLogTimeline({
   onRetry,
 }: DayLogTimelineProps) {
   const { t } = useTranslation();
-  const { formatDistance, formatEnergy } = useUnits();
+  const { formatDistance, formatEnergy, formatDuration } = useUnits();
   const [search, setSearch] = useState('');
   const [hidden, setHidden] = useState<ReadonlySet<DayLogCategory>>(new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -244,6 +244,7 @@ export function DayLogTimeline({
                               t={t}
                               formatDistance={formatDistance}
                               formatEnergy={formatEnergy}
+                              formatDuration={formatDuration}
                             />
                           )}
                         </div>
@@ -280,9 +281,10 @@ interface EventRowProps {
   t: TFunction;
   formatDistance: (v: number | null | undefined) => string;
   formatEnergy: (v: number | null | undefined) => string;
+  formatDuration: (v: number | null | undefined) => string;
 }
 
-function EventRow({ event, timezone, expanded, onToggle, t, formatDistance, formatEnergy }: EventRowProps) {
+function EventRow({ event, timezone, expanded, onToggle, t, formatDistance, formatEnergy, formatDuration }: EventRowProps) {
   const Icon = eventIcon(event.type);
   const href = eventHref(event);
   const { title, detail } = describeEvent(t, event, { formatDistance, formatEnergy });
@@ -345,9 +347,7 @@ function EventRow({ event, timezone, expanded, onToggle, t, formatDistance, form
             <Text variant="caption" className="font-medium">
               {t('dayLog.list.detailPayload', 'Recorded details')}
             </Text>
-            <Code className="mt-1 block max-h-40 overflow-auto whitespace-pre-wrap break-all text-xs">
-              {JSON.stringify(event.payload ?? {}, null, 2)}
-            </Code>
+            <PayloadDetails event={event} subtitle={detail} t={t} formatDistance={formatDistance} formatEnergy={formatEnergy} formatDuration={formatDuration} />
           </div>
         </div>
       )}
@@ -366,6 +366,138 @@ function DetailLine({ label, value, mono }: { label: string; value: string; mono
       ) : (
         <Text variant="caption">{value}</Text>
       )}
+    </div>
+  );
+}
+
+interface PayloadDetailsProps {
+  event: DayLogEvent;
+  /** Full untruncated subtitle from describeEvent; null when the type has none. */
+  subtitle: string | null;
+  t: TFunction;
+  formatDistance: (v: number | null | undefined) => string;
+  formatEnergy: (v: number | null | undefined) => string;
+  formatDuration: (v: number | null | undefined) => string;
+}
+
+/** snake_case key → Title Words for payload keys with no catalog label. */
+function labelize(key: string): string {
+  return key
+    .split('_')
+    .filter((w) => w.length > 0)
+    .map((w) => w.slice(0, 1).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+function scalarText(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  return null;
+}
+
+/**
+ * Structured "Recorded details": every payload key renders as a labeled
+ * row — transitions, measurements in display units, named references —
+ * and unknown future keys fall back to verbatim scalar rows. Nothing is
+ * dropped silently and nothing renders as raw JSON.
+ */
+function PayloadDetails({ event, subtitle, t, formatDistance, formatEnergy, formatDuration }: PayloadDetailsProps) {
+  const p = event.payload ?? {};
+  const rows: { label: string; value: string; mono?: boolean }[] = [];
+  const seen = new Set<string>();
+  const take = (...keys: string[]) => {
+    for (const k of keys) seen.add(k);
+  };
+
+  // Change row: the full subtitle when the type has one, else the raw
+  // from/to transition (bool-aware labels, verbatim fallback).
+  const hasFrom = 'from' in p;
+  const hasTo = 'to' in p;
+  if (hasFrom || hasTo) {
+    take('from', 'to');
+    const onOff = (v: unknown): string | null => {
+      if (v === true) return t('dayLog.state.on', 'On');
+      if (v === false) return t('dayLog.state.off', 'Off');
+      return scalarText(v);
+    };
+    const from = hasFrom ? onOff(p.from) : null;
+    const to = hasTo ? onOff(p.to) : null;
+    const rawJoin = from != null && to != null ? `${from} → ${to}` : (to ?? from);
+    const value = subtitle ?? rawJoin;
+    if (value != null) rows.push({ label: t('dayLog.list.detailChange', 'Change'), value });
+  }
+
+  // Named references with catalog labels; unknown tokens verbatim.
+  const labeled: { key: string; label: string; render: (v: string) => string }[] = [
+    { key: 'component', label: t('dayLog.list.detailComponent', 'Component'), render: (v) => t(`dayLog.turnSignal.${v}`, v) },
+    { key: 'door', label: t('dayLog.list.detailDoor', 'Door'), render: (v) => t(`dayLog.doors.${v}`, v) },
+    { key: 'window', label: t('dayLog.list.detailWindow', 'Window'), render: (v) => t(`dayLog.windows.${v}`, v) },
+    { key: 'wheel', label: t('dayLog.list.detailWheel', 'Wheel'), render: (v) => t(`dayLog.wheels.${v}`, v) },
+    { key: 'severity', label: t('dayLog.list.detailSeverity', 'Severity'), render: (v) => t(`dayLog.tireSeverity.${v}`, v) },
+    { key: 'field', label: t('dayLog.list.detailField', 'Field'), render: (v) => v },
+    { key: 'event_type', label: t('dayLog.list.detailEventType', 'Event type'), render: (v) => v },
+    { key: 'version', label: t('dayLog.list.detailVersion', 'Version'), render: (v) => v },
+    { key: 'status', label: t('dayLog.list.detailStatus', 'Status'), render: (v) => v },
+    { key: 'start_place', label: t('dayLog.list.detailStartPlace', 'Start place'), render: (v) => v },
+    { key: 'end_place', label: t('dayLog.list.detailEndPlace', 'End place'), render: (v) => v },
+  ];
+  for (const { key, label, render } of labeled) {
+    const v = payloadString(p, key);
+    take(key);
+    if (v != null) rows.push({ label, value: render(v), mono: key === 'field' });
+  }
+
+  // SI measurements in display units.
+  const measures: { key: string; label: string; render: (v: number) => string }[] = [
+    { key: 'distance_m', label: t('dayLog.list.detailDistance', 'Distance'), render: (v) => formatDistance(v) },
+    { key: 'duration_s', label: t('dayLog.list.detailDuration', 'Duration'), render: (v) => formatDuration(v) },
+    { key: 'energy_added_wh', label: t('dayLog.list.detailEnergyAdded', 'Energy added'), render: (v) => formatEnergy(v) },
+    { key: 'energy_used_wh', label: t('dayLog.list.detailEnergyUsed', 'Energy used'), render: (v) => formatEnergy(v) },
+    { key: 'start_soc_pct', label: t('dayLog.list.detailStartCharge', 'Start charge'), render: (v) => `${v}%` },
+    { key: 'end_soc_pct', label: t('dayLog.list.detailEndCharge', 'End charge'), render: (v) => `${v}%` },
+  ];
+  for (const { key, label, render } of measures) {
+    const v = payloadNumber(p, key);
+    take(key);
+    if (v != null) rows.push({ label, value: render(v) });
+  }
+
+  // Stored raw representations (enum numbers, proto tokens) as one
+  // compact mono row for diagnostics — never the whole payload.
+  const storedKeys = ['from_value', 'to_value', 'from_raw', 'to_raw'];
+  const storedPresent = storedKeys.filter((k) => k in p);
+  take(...storedKeys);
+  if (storedPresent.length > 0) {
+    const side = (...keys: string[]) => {
+      for (const k of keys) {
+        const v = scalarText(p[k]);
+        if (v != null) return v;
+      }
+      return null;
+    };
+    const from = side('from_value', 'from_raw');
+    const to = side('to_value', 'to_raw');
+    const value = from != null && to != null ? `${from} → ${to}` : (to ?? from ?? '');
+    if (value !== '') rows.push({ label: t('dayLog.list.detailStoredValues', 'Stored values'), value, mono: true });
+  }
+
+  // Anything else: verbatim scalar rows with prettified labels. Objects
+  // never occur from this API; skipped rather than JSON-dumped.
+  for (const key of Object.keys(p)) {
+    if (seen.has(key)) continue;
+    const v = scalarText(p[key]);
+    if (v != null) rows.push({ label: labelize(key), value: v });
+  }
+
+  if (rows.length === 0) {
+    return <Text variant="caption">{t('dayLog.list.detailEmpty', 'No further details recorded.')}</Text>;
+  }
+  return (
+    <div className="mt-1 space-y-1">
+      {rows.map((r) => (
+        <DetailLine key={r.label} label={r.label} value={r.value} mono={r.mono} />
+      ))}
     </div>
   );
 }
@@ -536,6 +668,41 @@ function describeEvent(t: TFunction, event: DayLogEvent, fmt: Formatters): { tit
       return {
         title: title(),
         detail: [field, transition].filter((s): s is string => s != null).join(' · ') || null,
+      };
+    }
+    case 'destination_changed': {
+      // Places are user data, never translated: render verbatim.
+      const from = payloadString(p, 'from');
+      const to = payloadString(p, 'to');
+      const detail = from != null && to != null ? `${from} → ${to}` : (to ?? from);
+      return { title: title(), detail };
+    }
+    case 'charge_port_opened':
+    case 'charge_port_closed':
+    case 'fast_charger_connected':
+    case 'fast_charger_disconnected':
+    case 'preconditioning_on':
+    case 'preconditioning_off':
+    case 'pin_to_drive_on':
+    case 'pin_to_drive_off':
+    case 'guest_mode_on':
+    case 'guest_mode_off':
+      return { title: title(), detail: fromTo(onOff) };
+    case 'charge_limit_changed': {
+      const pct = (v: unknown): string | null => {
+        if (typeof v === 'number' && Number.isFinite(v)) return `${v}%`;
+        return raw(v);
+      };
+      return { title: title(), detail: fromTo(pct) };
+    }
+    case 'tire_warning_on':
+    case 'tire_warning_off': {
+      const wheel = payloadString(p, 'wheel');
+      const name = wheel != null ? t(`dayLog.wheels.${wheel}`, wheel) : null;
+      const transition = fromTo(onOff);
+      return {
+        title: title(),
+        detail: [name, transition].filter((s): s is string => s != null).join(' · ') || null,
       };
     }
     default:

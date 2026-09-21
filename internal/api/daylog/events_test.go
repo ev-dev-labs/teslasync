@@ -409,6 +409,121 @@ func TestBuildTimeline_SignalPayloads(t *testing.T) {
 	}
 }
 
+func TestBuildTimeline_CompleteCoverageLayers(t *testing.T) {
+	t.Parallel()
+	in := dlBaseInput()
+	in.FieldLayers = FieldLayersForLayers(AllLayers)
+	in.Signals = []daylogdb.DaySignalRow{
+		dlSignalRow(8, 0, "DestinationName", nil, nil, nil, dlStr("Home")),
+		dlSignalRow(9, 0, "DestinationName", nil, nil, nil, dlStr("Office")),
+		dlSignalRow(8, 0, "ChargePortDoorOpen", dlBool(false), nil, nil, nil),
+		dlSignalRow(9, 5, "ChargePortDoorOpen", dlBool(true), nil, nil, nil),
+		dlSignalRow(8, 0, "ChargeLimitSoc", nil, dlInt(80), nil, nil),
+		dlSignalRow(9, 10, "ChargeLimitSoc", nil, dlInt(90), nil, nil),
+		dlSignalRow(8, 0, "FastChargerPresent", dlBool(false), nil, nil, nil),
+		dlSignalRow(9, 15, "FastChargerPresent", dlBool(true), nil, nil, nil),
+		dlSignalRow(8, 0, "PreconditioningEnabled", dlBool(false), nil, nil, nil),
+		dlSignalRow(9, 20, "PreconditioningEnabled", dlBool(true), nil, nil, nil),
+		dlSignalRow(8, 0, "PinToDriveEnabled", dlBool(true), nil, nil, nil),
+		dlSignalRow(9, 25, "PinToDriveEnabled", dlBool(false), nil, nil, nil),
+		dlSignalRow(8, 0, "GuestModeEnabled", dlBool(false), nil, nil, nil),
+		dlSignalRow(9, 30, "GuestModeEnabled", dlBool(true), nil, nil, nil),
+		dlSignalRow(8, 0, "TpmsHardWarningsFrontLeft", dlBool(false), nil, nil, nil),
+		dlSignalRow(9, 35, "TpmsHardWarningsFrontLeft", dlBool(true), nil, nil, nil),
+		dlSignalRow(8, 0, "TpmsSoftWarningsRearRight", dlBool(true), nil, nil, nil),
+		dlSignalRow(9, 40, "TpmsSoftWarningsRearRight", dlBool(false), nil, nil, nil),
+		dlSignalRow(8, 0, "ScheduledChargingPending", dlBool(false), nil, nil, nil),
+		dlSignalRow(9, 45, "ScheduledChargingPending", dlBool(true), nil, nil, nil),
+	}
+	out := BuildTimeline(in)
+	if e := findEvent(out.Events, "destination_changed"); e == nil {
+		t.Errorf("destination_changed missing: %v", eventTypes(out.Events))
+	} else {
+		if e.Payload["from"] != "Home" || e.Payload["to"] != "Office" {
+			t.Errorf("destination_changed payload = %v", e.Payload)
+		}
+		if e.Layer != LayerNavigation {
+			t.Errorf("destination_changed layer = %q", e.Layer)
+		}
+	}
+	if e := findEvent(out.Events, "charge_port_opened"); e == nil || e.Layer != LayerChargePort {
+		t.Errorf("charge_port_opened = %+v", e)
+	}
+	if e := findEvent(out.Events, "charge_limit_changed"); e == nil {
+		t.Errorf("charge_limit_changed missing: %v", eventTypes(out.Events))
+	} else if e.Payload["from"] != int64(80) || e.Payload["to"] != int64(90) {
+		t.Errorf("charge_limit_changed payload = %v", e.Payload)
+	}
+	if e := findEvent(out.Events, "fast_charger_connected"); e == nil || e.Layer != LayerChargePort {
+		t.Errorf("fast_charger_connected = %+v", e)
+	}
+	if e := findEvent(out.Events, "preconditioning_on"); e == nil || e.Layer != LayerHVAC {
+		t.Errorf("preconditioning_on = %+v", e)
+	}
+	if e := findEvent(out.Events, "pin_to_drive_off"); e == nil || e.Layer != LayerAccess {
+		t.Errorf("pin_to_drive_off = %+v", e)
+	}
+	if e := findEvent(out.Events, "guest_mode_on"); e == nil || e.Layer != LayerAccess {
+		t.Errorf("guest_mode_on = %+v", e)
+	}
+	if e := findEvent(out.Events, "tire_warning_on"); e == nil {
+		t.Errorf("tire_warning_on missing: %v", eventTypes(out.Events))
+	} else {
+		if e.Payload["wheel"] != "front_left" || e.Payload["severity"] != "hard" {
+			t.Errorf("tire_warning_on payload = %v", e.Payload)
+		}
+		if e.Layer != LayerTires {
+			t.Errorf("tire_warning_on layer = %q", e.Layer)
+		}
+	}
+	if e := findEvent(out.Events, "tire_warning_off"); e == nil {
+		t.Errorf("tire_warning_off missing: %v", eventTypes(out.Events))
+	} else if e.Payload["wheel"] != "rear_right" || e.Payload["severity"] != "soft" {
+		t.Errorf("tire_warning_off payload = %v", e.Payload)
+	}
+	// ScheduledChargingPending has no dedicated type: the generic
+	// fallback must surface it on the layer that queried it.
+	sched := 0
+	for i := range out.Events {
+		if out.Events[i].Type == "signal" && out.Events[i].Payload["field"] == "ScheduledChargingPending" {
+			sched++
+			if out.Events[i].Layer != LayerChargePort {
+				t.Errorf("scheduled fallback layer = %q", out.Events[i].Layer)
+			}
+		}
+	}
+	if sched != 1 {
+		t.Errorf("scheduled fallback events = %d, want 1", sched)
+	}
+}
+
+func TestSignalFieldsForLayers_CoverageLayers(t *testing.T) {
+	t.Parallel()
+	has := func(fields []string, want string) bool {
+		for _, f := range fields {
+			if f == want {
+				return true
+			}
+		}
+		return false
+	}
+	if got := SignalFieldsForLayers([]string{"navigation"}); !has(got, "DestinationName") {
+		t.Errorf("navigation fields = %v", got)
+	}
+	if got := SignalFieldsForLayers([]string{"charge_port"}); !has(got, "ChargePortDoorOpen") || !has(got, "ChargeLimitSoc") || !has(got, "FastChargerPresent") {
+		t.Errorf("charge_port fields = %v", got)
+	}
+	if got := SignalFieldsForLayers([]string{"access"}); !has(got, "PinToDriveEnabled") || !has(got, "GuestModeEnabled") {
+		t.Errorf("access fields = %v", got)
+	}
+	if got := SignalFieldsForLayers([]string{"tires"}); !has(got, "TpmsHardWarningsFrontLeft") || !has(got, "TpmsSoftWarningsRearRight") {
+		t.Errorf("tires fields = %v", got)
+	}
+	if got := SignalFieldsForLayers([]string{"hvac"}); !has(got, "HvacPower") || !has(got, "PreconditioningEnabled") {
+		t.Errorf("hvac fields = %v", got)
+	}
+}
+
 func TestBuildTimeline_GenericSignalKeepsLayer(t *testing.T) {
 	t.Parallel()
 	in := dlBaseInput()

@@ -3644,6 +3644,10 @@ export type DayLogLayer =
   | 'hvac'
   | 'gear'
   | 'homelink'
+  | 'navigation'
+  | 'charge_port'
+  | 'access'
+  | 'tires'
 
 /** One ledger line: value plus provenance. Mirrors Go physics.Term. */
 export interface PhysicsTerm {

@@ -49,10 +49,20 @@
 //	lights        hazards_on/off, high_beams_on/off {from, to}            LightsHazardsActive, LightsHighBeams
 //	doors_windows door_open/closed {door, from, to},                      DoorState* (bool), Fd/Fp/Rd/RpWindow
 //	              window {window, from, to, from/to_value}                (WindowState enum)
-//	hvac          hvac_on/off {from, to, from/to_value}                   HvacPower (HvacPowerState enum, not watts)
+//	hvac          hvac_on/off {from, to, from/to_value},                  HvacPower (HvacPowerState enum, not watts),
+//	              preconditioning_on/off {from, to}                       PreconditioningEnabled (bool)
 //	gear          gear {from, to, from/to_raw}                            drive_telemetry.gear ("ShiftStateD"/"D")
 //	homelink      homelink_nearby_on/off, arrived/left_{home,              HomelinkNearby, LocatedAtHome,
 //	              work,favorite} {from, to}                               LocatedAtWork, LocatedAtFavorite
+//	navigation    destination_changed {from, to}                          DestinationName (string)
+//	charge_port   charge_port_opened/closed {from, to},                   ChargePortDoorOpen, ChargeLimitSoc,
+//	              charge_limit_changed {from, to},                        ScheduledChargingMode/Pending,
+//	              fast_charger_connected/disconnected {from, to};         BmsFullchargecomplete, FastChargerPresent,
+//	              scheduled/mode fields fall back to generic signal       FastChargerType
+//	access        pin_to_drive_on/off, guest_mode_on/off {from, to};      PinToDriveEnabled, GuestModeEnabled,
+//	              mobile-access/speed-limit fields fall back to           GuestModeMobileAccessState,
+//	              generic signal                                          SpeedLimitMode, SpeedLimitWarning
+//	tires         tire_warning_on/off {wheel, severity, from, to}        Tpms{Hard,Soft}Warnings* (20 bools)
 //
 // Unmapped signal fields surface as generic signal events
 // {field, from, to} on the layer that queried them.
