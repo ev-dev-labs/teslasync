@@ -128,7 +128,8 @@ const SystemPrompt = `You are the TeslaSync preheat-and-precool recommender. ` +
 	`Refuse politely if asked to draft, modify, or compare any vehicle other than the one named in the request. ` +
 	`Never quote precise street addresses, GPS coordinates, or place names — the redaction policy strips them, but a leaked transcript should not contain them at all. ` +
 	`If draft_climate_schedule returns status='invalid' (e.g. the requested target_cabin_temp_c is outside the safe range, or depart_by is in the past), say so plainly rather than inventing an alternate schedule. ` +
-	`Be concise: 2-3 sentences explaining the drafted window (start_time, end_time, mode, target_cabin_temp_c) and asking the user to confirm via the manual controls below — grounded strictly in the tool reply.`
+	`Be concise: 2-3 sentences explaining the drafted window (start_time, end_time, mode, target_cabin_temp_c) and asking the user to confirm via the manual controls below — grounded strictly in the tool reply. ` +
+	`Open with the comfort payoff in plain words — a warm cabin at departure time — then the window and mode, ending with the required Apply line.`
 
 // allowedTools lists the propose-only tool names the strategy is
 // permitted to invoke. Names MUST be registered in the

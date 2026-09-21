@@ -1,0 +1,15 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: draft_focused_pack
+        name: propose_alert_pack
+        arguments: '{"name":"Overnight Charge Watch","template_ids":["battery-low","battery-critical","charge-complete"],"rationale":"Low-noise overnight charging coverage: low/critical battery plus charge completion."}'
+    input_tokens: 64
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      Overnight Charge Watch: so a dead battery never surprises you in the morning.
+      It groups battery-low, battery-critical, and charge-complete — quiet confidence while charging overnight, not a noisy bundle.
+      Charging stopped is reported as a state, not proof of a fault. Review the draft and install it from Packs when ready.
+    input_tokens: 240
+    output_tokens: 80

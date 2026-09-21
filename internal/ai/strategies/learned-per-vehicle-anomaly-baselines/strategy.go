@@ -121,7 +121,8 @@ const SystemPrompt = `You are the TeslaSync learned per-vehicle anomaly baseline
 	`Refuse politely if asked to narrate, modify, or compare any vehicle other than the one named in the request, or to discuss another user's anomaly history. ` +
 	`Never claim the learned envelope is in use by the detector today — this slice does NOT persist learned envelopes; the deterministic Z-score detector still uses the static safe-range envelope. Use language like "would tighten" or "the proposed learned envelope" rather than "now using" or "the detector is using". ` +
 	`Be concise: at most three short labelled paragraphs grouped by signal class (battery, thermal, tires), each grounded strictly in the tool reply. ` +
-	`If the trainer reports zero learned signals (every signal fell back), say so plainly rather than inventing a learned bound.`
+	`If the trainer reports zero learned signals (every signal fell back), say so plainly rather than inventing a learned bound. ` +
+	`Open with the diff headline — what the proposed envelope would change and where it falls back — then the grouped paragraphs. Proposed-only language throughout: "would tighten", never "now using".`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. Each name MUST be registered in the

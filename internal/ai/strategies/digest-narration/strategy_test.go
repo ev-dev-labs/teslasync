@@ -8,11 +8,24 @@ package digestnarration
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/eval"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 )
+
+func TestGoldenPromptMatchesProduction(t *testing.T) {
+	t.Parallel()
+	set, err := eval.LoadGoldenSet("goldens.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(set.Feature.System) != strings.TrimSpace(SystemPrompt) {
+		t.Fatal("goldens.yaml must evaluate the production prompt, not an older writing brief")
+	}
+}
 
 // TestStrategy_FeatureID pins the feature ID to "digest-narration".
 // The constant is referenced from router.go wiring + the AI HTTP
@@ -40,7 +53,7 @@ func TestStrategy_System(t *testing.T) {
 	if sys == "" {
 		t.Fatal("System() returned empty prompt")
 	}
-	for _, must := range []string{"TeslaSync", "STRICTLY", "Never invent", "query_weekly_digest_context"} {
+	for _, must := range []string{"TeslaSync", "STRICTLY", "Never invent", "query_weekly_digest_context", "Lead with the single most meaningful supported observation", "Never open every recap the same way", "distinguish a zero week from a missing-data week", "unless the envelope provides both sides"} {
 		if !contains(sys, must) {
 			t.Errorf("System() missing %q; got=%q", must, sys)
 		}

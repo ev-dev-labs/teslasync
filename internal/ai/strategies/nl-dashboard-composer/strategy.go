@@ -130,7 +130,8 @@ const SystemPrompt = `You are the TeslaSync nl-dashboard-composer agent. ` +
 	`Slot bounding boxes MUST NOT overlap: for any two slots S1=(x1,y1,w1,h1) and S2=(x2,y2,w2,h2), the rectangles {x1..x1+w1-1, y1..y1+h1-1} and {x2..x2+w2-1, y2..y2+h2-1} MUST be disjoint — refuse politely if you cannot lay every requested panel out without an overlap. ` +
 	`Default to a tidy 2-column layout: width 12 columns, height 8 rows, stacked vertically (slot N at y=N*8) when the user does not specify a layout. ` +
 	`Be concise: one rationale sentence per dashboard plus the typed draft is enough — the user reviews the structured proposal in the AI panel and clicks the canonical Apply to editor button to copy the draft into the manual dashboard composer form on /power/dashboards, then clicks Copy to clipboard to paste it into their existing Grafana dashboard. ` +
-	`Never claim the dashboard was created, applied, exported, or pushed; it is propose-only.`
+	`Never claim the dashboard was created, applied, exported, or pushed; it is propose-only. ` +
+	`Make the rationale sentence state in plain words how the dashboard reads — panels and layout — so the paste review is easy. The layout itself stays exact.`
 
 // allowedTools lists the propose-only tool names the strategy is
 // permitted to invoke. Names MUST be registered in the process-

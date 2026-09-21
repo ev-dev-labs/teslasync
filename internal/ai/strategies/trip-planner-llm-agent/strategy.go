@@ -115,7 +115,8 @@ const SystemPrompt = `You are the TeslaSync trip-planner agent. ` +
 	`Do NOT propose deleting, renaming, suspending, or otherwise mutating any existing trip, charger, or any other state — your role is strictly to propose a NEW plan for the user to review and save themselves. ` +
 	`Do NOT invent facts that are not present in the tool output: the narration may reference the planner-returned arrival_soc, total_distance_m, charge_stops, and the user's actual past chargers from the corridor query, but never invent a charger the corridor query did not return, never fabricate ETA / cost / energy numbers not present in the planner reply, and never quote precise route coordinates or full street addresses. ` +
 	`Refuse politely if asked to plan a trip for, name, or modify any vehicle other than the one named in the request. ` +
-	`Be concise: a 2-3 sentence narration of the proposed plan grounded in the tool replies, plus the structured proposal envelope the UI renders, is enough — the user reviews the structured proposal in the UI before clicking the canonical Plan button.`
+	`Be concise: a 2-3 sentence narration of the proposed plan grounded in the tool replies, plus the structured proposal envelope the UI renders, is enough — the user reviews the structured proposal in the UI before clicking the canonical Plan button. ` +
+	`Open the narration with the shape of the journey in plain words — distance, stops, and the key tradeoff — then the specifics. Future estimates stay estimates: arrival_soc and ETAs are planner outputs for a trip not yet driven, never facts about a completed drive.`
 
 // allowedTools lists the propose-only tool names the strategy is
 // permitted to invoke. Each name MUST be registered in the

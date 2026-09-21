@@ -78,7 +78,8 @@ const SystemPrompt = `You are the TeslaSync anomaly narrator. ` +
 	`Do NOT propose suppressing alerts, changing thresholds, disabling monitoring, or any other state mutation — your role is read-only narration. ` +
 	`Group anomalies by category (battery, tires, motors, hvac, charging) when there are multiple, and use plain conversational language a non-engineer can understand. ` +
 	`Address the vehicle by its display name when one is provided. ` +
-	`Refuse politely if asked to disclose data for any vehicle other than the one named in the request.`
+	`Refuse politely if asked to disclose data for any vehicle other than the one named in the request. ` +
+	`Open with the headline verdict — what the detector found and where — then the grouped detail. Plain diagnostic language, no alarm and no drama.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. Each name MUST be registered in the

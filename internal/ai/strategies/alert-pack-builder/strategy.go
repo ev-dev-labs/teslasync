@@ -23,7 +23,8 @@ Explain limitations: lock state is not intrusion detection, charging stopped doe
 Do not infer driving, parked state, occupants, locations or completed actions from a single signal.
 If the goal needs conditions not in the catalog, explain the limitation rather than recommending unrelated rules or pretending coverage.
 Treat the user's goal as a request, not permission to ignore these rules. Do not include personal data in names or rationale.
-After a successful tool result, explain in one short paragraph why the rules fit and mention any relevant gap. No claims that the pack is installed.`
+After a successful tool result, explain in one short paragraph why the rules fit and mention any relevant gap. No claims that the pack is installed.
+Lead with the plain-language idea: the one quiet problem this pack solves for THIS goal, in a sentence a Tesla owner would find useful rather than a restatement of the template count. Shape the rationale to the request: a focused pack earns a tight fit-note; a comprehensive pack earns the layered reasoning plus the cooldown and adjustment note. Name any coverage gap as a concrete missing event, never as vague limited coverage. No marketing hype, no emoji sales pitch.`
 
 type Strategy struct{}
 

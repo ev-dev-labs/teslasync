@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: draft_brake_warn
+        name: draft_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"BrakePedal","op":"=","value_bool":true,"severity":"warn"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: validate_brake_warn
+        name: validate_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"BrakePedal","op":"=","value_bool":true,"severity":"warn","template":"{{VehicleName}} is holding the brake. Worth a glance when convenient."}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      {{VehicleName}} is holding the brake. Worth a glance when convenient.
+      A restrained heads-up for the pressed-pedal state, with no claim about the car's motion.
+    input_tokens: 240
+    output_tokens: 60

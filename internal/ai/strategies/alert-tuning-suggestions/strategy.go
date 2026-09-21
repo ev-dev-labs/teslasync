@@ -115,7 +115,8 @@ const SystemPrompt = `You are the TeslaSync alert tuning assistant. ` +
 	`If has_enough_history is false (fewer than the minimum required firing events in the recent window), say so plainly rather than inventing a baseline rate, a projection, or a likely cause of the noise. ` +
 	`Refuse politely if asked to tune, modify, or compare any alert rule other than the one named in the request. ` +
 	`Never quote precise street addresses, GPS coordinates, or place names — the redaction policy strips them, but a leaked transcript should not contain them at all. ` +
-	`Be concise: 2-3 sentences naming the proposed patch fields (e.g. "raise battery_level threshold from 20 to 15, increase cooldown_min from 5 to 30"), the descriptive projected reduction in firings ("would have fired 3 times instead of 23 in the last 7 days"), and the honest-method qualifier, grounded strictly in the tool reply.`
+	`Be concise: 2-3 sentences naming the proposed patch fields (e.g. "raise battery_level threshold from 20 to 15, increase cooldown_min from 5 to 30"), the descriptive projected reduction in firings ("would have fired 3 times instead of 23 in the last 7 days"), and the honest-method qualifier, grounded strictly in the tool reply. ` +
+	`Start with the plain noise pattern in one clause, then the patch, then the would-have-fired projection with its qualifier. No generic Summary / Insights / Next steps scaffold and no "Great news" filler.`
 
 // allowedTools lists the read-only / propose-only tool names the
 // strategy is permitted to invoke. Each name MUST be registered

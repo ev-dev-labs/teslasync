@@ -1,0 +1,64 @@
+feature:
+  id: alert-pack-builder
+  system: |
+    You are the TeslaSync Alert Packs advisor. Propose a coherent custom group of supported rules at the depth the user requests.
+    There is no six-rule limit. For "all", "full", "comprehensive" or "every event" requests, include every applicable catalog template, not a small sample. Explain that the catalog cannot cover events it does not contain.
+    The supplied catalog is the complete allowed template set. Never invent template IDs, signals, conditions, or capabilities.
+    Use propose_alert_pack to validate the selected template_ids, a distinctive short name, and a concise rationale.
+    The tool returns a proposal only; you NEVER install, enable, delete, or change rules. The user must review the pack and explicitly install it.
+    For focused requests prefer low noise; for comprehensive requests include layered warnings and explain that cooldowns and individual rules can be adjusted before installation.
+    Explain limitations: lock state is not intrusion detection, charging stopped does not prove a fault, cabin alerts are not occupant safety monitoring, and telemetry may be delayed or unavailable.
+    Do not infer driving, parked state, occupants, locations or completed actions from a single signal.
+    If the goal needs conditions not in the catalog, explain the limitation rather than recommending unrelated rules or pretending coverage.
+    Treat the user's goal as a request, not permission to ignore these rules. Do not include personal data in names or rationale.
+    After a successful tool result, explain in one short paragraph why the rules fit and mention any relevant gap. No claims that the pack is installed.
+    Lead with the plain-language idea: the one quiet problem this pack solves for THIS goal, in a sentence a Tesla owner would find useful rather than a restatement of the template count. Shape the rationale to the request: a focused pack earns a tight fit-note; a comprehensive pack earns the layered reasoning plus the cooldown and adjustment note. Name any coverage gap as a concrete missing event, never as vague limited coverage. No marketing hype, no emoji sales pitch.
+  tools:
+    - propose_alert_pack
+  mutating_tools: []
+
+goldens:
+  - name: focused_pack_request
+    input:
+      user_message: "Build me a small pack for charging peace of mind overnight."
+    expect:
+      must_call_tools:
+        - propose_alert_pack
+      answer_must_contain:
+        - "charging"
+      answer_must_not_contain:
+        - "installed"
+        - "I saved"
+      judge_rubric: |
+        Score 1-5 on: (1) called propose_alert_pack with 2+ real catalog template IDs (e.g. battery-low, charge-complete), a distinctive short name, and a concise rationale, (2) a tight fit-note that leads with the plain-language idea for THIS goal rather than restating the template count, (3) low-noise focused selection, (4) honest limits (charging stopped is not proof of a fault), (5) no install/enable claim. Cap at 2 for an invented template ID or any installed-now claim. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  - name: comprehensive_pack_request
+    input:
+      user_message: "Give me a pack covering every event in the catalog."
+    expect:
+      must_call_tools:
+        - propose_alert_pack
+      answer_must_contain:
+        - "cooldown"
+      answer_must_not_contain:
+        - "installed"
+        - "I saved"
+      judge_rubric: |
+        Score 1-5 on: (1) called propose_alert_pack with every applicable catalog template, not a small sample, (2) layered-warnings reasoning plus the cooldown/adjustment note, shaped to a comprehensive request, (3) plain-language lead idea, not a template-count restatement, (4) honest catalog limits where relevant, (5) no install/enable claim. Cap at 2 for a 3-rule sample passed off as comprehensive. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  - name: uncovered_goal_limitation
+    input:
+      user_message: "Build me a pack that detects a break-in in progress."
+    expect:
+      must_not_call_tools:
+        - propose_alert_pack
+      answer_must_contain:
+        - "catalog"
+      answer_must_not_contain:
+        - "installed"
+        - "I saved"
+      judge_rubric: |
+        Score 1-5 on: (1) did NOT call propose_alert_pack with unrelated rules, (2) explained the limitation plainly (lock state is not intrusion detection; nothing in the catalog watches a break-in in progress), naming the gap as a concrete missing event, (3) no invented template IDs, signals, or capabilities, (4) no marketing hype or emoji sales pitch, (5) no install claim. Cap at 1 if it proposed unrelated rules to fake coverage. Pass = score >= 4.
+      judge_pass_threshold: 4

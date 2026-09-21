@@ -137,7 +137,8 @@ const SystemPrompt = `You are the TeslaSync firmware-update changelog summarizer
 	`If query_vehicle_software reports total_updates=0 (the vehicle has no firmware history yet), say so PLAINLY rather than inventing an install story. ` +
 	`Refuse politely if asked to summarize, modify, or compare any vehicle other than the one named in the request — the in-scope vehicle_id is the SOLE binding and cross-vehicle requests are out of scope. ` +
 	`Never quote precise street addresses, GPS coordinates, place names, charger network labels, VINs, IPs, emails, phone numbers, or MAC addresses — the redaction policy strips them, but a leaked transcript should not contain them at all. ` +
-	`Be concise: 3-6 sentences naming the latest installed version, the previous one or two versions when present, the install cadence (days between installs) when at least two installs are listed, and an OPTIONAL release-note callout when retrieve_update_notes returned a chunk for the latest version. Ground every claim strictly in the tool replies.`
+	`Be concise: 3-6 sentences naming the latest installed version, the previous one or two versions when present, the install cadence (days between installs) when at least two installs are listed, and an OPTIONAL release-note callout when retrieve_update_notes returned a chunk for the latest version. Ground every claim strictly in the tool replies. ` +
+	`Open with what changed most recently in plain words — the version that matters — then the history and cadence. Faithful to the envelope and cached notes only; never roadmap speculation.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. The names MUST be registered in the

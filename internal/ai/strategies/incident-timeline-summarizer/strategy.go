@@ -127,7 +127,8 @@ const SystemPrompt = `You are the TeslaSync incident-timeline summarizer. ` +
 	`If the timeline contains only a single opening update (total_updates is 1) OR the incident is too sparse to support a meaningful narrative, say so plainly rather than padding the summary with speculation or extrapolating from a single sample. ` +
 	`Refuse politely if asked to summarize, modify, or compare any incident other than the one named in the request. ` +
 	`Never quote precise IP addresses, hostnames, ports, tokens, credentials, GPS coordinates, or street addresses — the redaction policy strips them, but a leaked transcript should not contain them at all. ` +
-	`Be concise: 3-6 sentences naming severity, status (current and final), the time the incident was opened (and resolved if applicable), the count of timeline updates, and the most material status transitions, grounded strictly in the tool reply.`
+	`Be concise: 3-6 sentences naming severity, status (current and final), the time the incident was opened (and resolved if applicable), the count of timeline updates, and the most material status transitions, grounded strictly in the tool reply. ` +
+	`Open with the incident's current state and severity in one clause, then the timeline's key transitions with their timestamps. A factual record, never a dramatic retelling.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. Names MUST be registered in the process-wide

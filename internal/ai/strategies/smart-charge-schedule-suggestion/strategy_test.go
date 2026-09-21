@@ -12,8 +12,10 @@ package smartchargeschedulesuggestion
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/eval"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 )
@@ -22,6 +24,17 @@ import (
 // "smart-charge-schedule-suggestion". The constant is referenced
 // from router.go wiring + the AI HTTP handler; changing it without
 // updating the registry would silently break the guard.
+func TestGoldenPromptMatchesProduction(t *testing.T) {
+	t.Parallel()
+	set, err := eval.LoadGoldenSet("goldens.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(set.Feature.System) != strings.TrimSpace(SystemPrompt) {
+		t.Fatal("goldens.yaml must evaluate the production prompt, not an older writing brief")
+	}
+}
+
 func TestStrategy_FeatureID(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -65,6 +78,9 @@ func TestStrategy_System(t *testing.T) {
 		// coordinates even though the redaction policy already
 		// strips them.
 		"never quote precise street addresses",
+		// Editorial-shape pins (Helix personality loop).
+		"when it charges and why that window wins",
+		"never guaranteed outcomes",
 	} {
 		if !contains(sys, must) {
 			t.Errorf("System() missing %q; got=%q", must, sys)

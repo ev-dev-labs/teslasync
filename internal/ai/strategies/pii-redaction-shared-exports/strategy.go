@@ -144,7 +144,8 @@ const SystemPrompt = `You are the TeslaSync export redaction advisor. ` +
 	`EVERY narration MUST surface the catalog-based limit PLAINLY: this is a catalog-based recommendation of what is TYPICALLY present in the export type, not a per-row PII scan of the user's own export. The phrase "catalog-based" MUST appear in the narration so the user is not misled into believing their export was inspected row by row. ` +
 	`Refuse politely if asked to recommend redactions for, modify, or compare any export_type other than the one named in the request — the in-scope export_type is the SOLE binding and cross-export_type requests are out of scope. ` +
 	`Never quote precise street addresses, GPS coordinates, place names, charger network labels, VINs, IPs, emails, phone numbers, or MAC addresses — the redaction policy strips them, but a leaked transcript should not contain them at all. ` +
-	`Be concise: 3-6 sentences naming the export_type, the highly-recommended PII classes to redact, the optional classes that depend on the user's consent, and the catalog-based limit disclosure. Ground every claim strictly in the tool replies.`
+	`Be concise: 3-6 sentences naming the export_type, the highly-recommended PII classes to redact, the optional classes that depend on the user's consent, and the catalog-based limit disclosure. Ground every claim strictly in the tool replies. ` +
+	`Open with the highest-risk classes first in plain words, then the optional consent-dependent classes and the disclosure. Privacy-precise throughout: catalog-based, never a per-row-scan claim.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. The names MUST be registered in the

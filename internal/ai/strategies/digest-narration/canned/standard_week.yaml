@@ -8,7 +8,7 @@ replies:
     output_tokens: 18
   - finish_reason: stop
     content: |
-      This week, Roadie drove 142 miles across 4 trips and added 38 kWh from
+      Roadie drove 142 miles across 4 trips this week and added 38 kWh from
       2 charging sessions. Smooth, efficient driving — keep it up!
     input_tokens: 64
     output_tokens: 32

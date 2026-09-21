@@ -11,8 +11,10 @@ package logtracesummarization
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/eval"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 )
@@ -20,6 +22,17 @@ import (
 // TestStrategy_FeatureID pins the feature ID. The constant is
 // referenced from router.go wiring + the AI HTTP handler; changing
 // it without updating the registry would silently break the guard.
+func TestGoldenPromptMatchesProduction(t *testing.T) {
+	t.Parallel()
+	set, err := eval.LoadGoldenSet("goldens.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(set.Feature.System) != strings.TrimSpace(SystemPrompt) {
+		t.Fatal("goldens.yaml must evaluate the production prompt, not an older writing brief")
+	}
+}
+
 func TestStrategy_FeatureID(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -56,6 +69,9 @@ func TestStrategy_System(t *testing.T) {
 		"degenerate (zero log events AND zero trace spans)",
 		// Refusal directive — out-of-scope windows are forbidden.
 		"Refuse politely",
+		// Editorial-shape pins (Helix personality loop).
+		"Open with the signal in the noise",
+		"no incident drama",
 	} {
 		if !contains(sys, must) {
 			t.Errorf("System() missing %q; got=%q", must, sys)
