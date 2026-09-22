@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { request } from '../client';
-import { useToast } from '@/components/feedback';
+import { useToast } from '../../components/feedback/Toast';
 import { vehicleKeys } from './useVehicles';
 import { commandKeys } from './useCommands';
 import { isTeslaAuthExpiredError } from '@/lib/resilience';

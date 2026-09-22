@@ -51,6 +51,10 @@ const MAIN_GLOBAL_MOUNTS: Record<string, string> = {
   NavigationGuardProvider: 'Unsaved-changes guard for in-app navigation; must outlive any route.',
   ThemeProvider: 'Applies theme CSS vars. Deferring flashes the wrong palette.',
   FontProvider: 'Applies typography CSS vars. Deferring reflows the first paint.',
+  TypographyAgentProvider:
+    'Applies the connected-typography token layer (:root fluid type vars) and hosts '
+    + 'the ambient HUD mount point. Deferring flashes unscaled type; the HUD itself '
+    + 'renders only when toggled.',
   SelectedVehicleProvider: 'Global vehicle selection read by the shell header on frame one.',
   ToastProvider: 'Global toast portal host used by every surface.',
   OperationalModeProvider: 'Global read-only/degraded mode banner + write gating.',

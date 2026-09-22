@@ -1,0 +1,15 @@
+{
+  "tagInput": {
+    "addedOne": "Tag added",
+    "added": "{{count}} tags added",
+    "duplicate": "{{tag}} is already added",
+    "maxReachedAnnounce": "Tag limit reached",
+    "removed": "Removed {{tag}}",
+    "removeTag": "Remove {{tag}}",
+    "maxReached": "Tag limit reached",
+    "placeholder": "Add a tag…",
+    "tagsNone": "No tags yet",
+    "tagsList": "Tags: {{tags}}",
+    "maxReachedHint": "Maximum {{count}} tags"
+  }
+}

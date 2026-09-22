@@ -11,6 +11,7 @@ import { QueryBroadcastBridge } from './components/QueryBroadcastBridge'
 import { FormatterPrefsBridge } from './components/FormatterPrefsBridge'
 import { ThemeProvider } from './components/ui/ThemeProvider'
 import { FontProvider, applyFontCSS, readStoredFontPrefs } from './components/ui/FontProvider'
+import { TypographyAgentProvider } from './components/typography-agent'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
 import { OperationalModeProvider } from './hooks/useOperationalMode'
@@ -134,7 +135,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <SelectedVehicleProvider>
                   <ToastProvider>
                     <OperationalModeProvider>
-                      <App />
+                      <TypographyAgentProvider>
+                        <App />
+                      </TypographyAgentProvider>
                       <ReloadPrompt />
                       {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
                           with a transient toast + confetti. Mounted alongside the

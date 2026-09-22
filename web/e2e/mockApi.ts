@@ -712,6 +712,21 @@ async function fulfill(
   const url = new URL(request.url());
   const record = requestRecord(controller, request);
   if (!url.pathname.startsWith('/api/v1/')) {
+    // Vite-dev module graph: source requests such as /src/api/* match the
+    // '**/api/**' intercept glob but are same-origin static assets, not API
+    // escapes. Let them through unrecorded (preview builds issue no such
+    // requests, so this is a no-op for the standard suite).
+    if (
+      url.pathname.startsWith('/src/') ||
+      url.pathname.startsWith('/@') ||
+      url.pathname.startsWith('/node_modules/')
+    ) {
+      if (record) record.disposition = 'continued';
+      await route.continue();
+      controller.pending -= 1;
+      controller.lastActivityAt = Date.now();
+      return;
+    }
     controller.unmatched.add(`${request.method()} ${url.pathname}`);
     if (record) record.disposition = 'aborted';
     await route.abort('blockedbyclient');

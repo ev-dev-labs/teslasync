@@ -1,6 +1,6 @@
 import { Database, History, Radio } from 'lucide-react';
 import { Button, Tooltip } from '@/components/ui/runtime';
-import { TIME_MACHINE_OPEN_PICKER_EVENT } from '@/components/feedback';
+import { TIME_MACHINE_OPEN_PICKER_EVENT } from '../../feedback/TimeMachineBanner';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { cn } from '@/lib/cn';
 

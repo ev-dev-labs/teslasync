@@ -4,16 +4,10 @@
     "breadcrumbHome": "Dashboard",
     "dataFreshness": "Data freshness: {{state}}",
     "helpFor": "Help for {{field}}",
-    "loading": "Loading",
     "pagination": "Pagination",
     "primaryHeader": "Site header",
     "primaryNav": "Primary",
     "skipToContent": "Skip to main content"
-  },
-  "achievements": {
-    "dismiss": "Dismiss achievement notification",
-    "toastEyebrow": "Achievement Unlocked",
-    "view": "View"
   },
   "alerts": {
     "ack": {
@@ -94,12 +88,9 @@
     "clearAria": "Clear selection",
     "closeListAria": "Hide options",
     "loading": "Loading",
-    "maxReached": "Maximum reached",
     "moreHidden": "{{count}} more — refine search",
     "noResults": "No results",
     "openListAria": "Show options",
-    "removeChip": "Remove {{label}}",
-    "removedChip": "Removed {{label}}",
     "resultsCount": "{{count}} results",
     "resultsCountOne": "1 result"
   },
@@ -291,8 +282,6 @@
   },
   "common": {
     "actions": "Actions",
-    "cancel": "Cancel",
-    "clear": "Clear",
     "close": "Close",
     "copyButton": {
       "copied": "Copied",
@@ -316,8 +305,7 @@
     "loading": "Loading...",
     "printButton": {
       "print": "Print"
-    },
-    "refresh": "Refresh"
+    }
   },
   "compat": {
     "banner": {
@@ -392,7 +380,6 @@
   "date": {
     "preset": {
       "all": "All time",
-      "label": "Quick date range",
       "last1y": "Last year",
       "last24h": "Last 24 hours",
       "last30": "Last 30 days",
@@ -407,16 +394,9 @@
       "ytd": "Year to date"
     },
     "range": {
-      "apply": "Apply",
-      "cancel": "Cancel",
       "compare": "Compare to previous period",
       "end": "End date",
-      "pickRange": "Custom range",
-      "popoverLabel": "Date range picker",
-      "start": "Start date",
-      "summaryDays_one": "{{count}} day",
-      "summaryDays_other": "{{count}} days",
-      "trigger": "Date range"
+      "start": "Start date"
     }
   },
   "density": {
@@ -427,7 +407,6 @@
     "groupLabel": "List density"
   },
   "draft": {
-    "discardDraft": "Discard draft",
     "recovery": {
       "close": "Close",
       "discard": "Discard",
@@ -443,19 +422,6 @@
       "resume": "Resume",
       "review": "Review",
       "savedAt": "Saved {{when}}"
-    },
-    "restored": "Draft restored from {{when}}.",
-    "restoredItem": "{{noun}} draft restored from {{when}}.",
-    "unknownTime": "a moment ago",
-    "useDraft": "Use draft"
-  },
-  "editConflict": {
-    "banner": {
-      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "switchHint": "Or switch to your other tab to keep editing there.",
-      "takeOver": "Take over editing",
-      "title": "Another browser tab is editing this"
     }
   },
   "editableText": {
@@ -470,12 +436,6 @@
     "rename": {
       "geofence": "Rename geofence {{name}}",
       "alertRule": "Rename alert rule {{name}}"
-    }
-  },
-  "emptyState": {
-    "threshold": {
-      "defaultItem": "items",
-      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
     }
   },
   "error": {
@@ -515,54 +475,6 @@
       "tableTitle": "This table failed to render",
       "widgetTitle": "Widget failed to load"
     }
-  },
-  "export": {
-    "jobDrawer": {
-      "activeCount": "{{count}} export running",
-      "activeCount_other": "{{count}} exports running",
-      "activeEmpty": "No active exports",
-      "activeHeading": "In progress",
-      "activePill": "{{count}} active",
-      "close": "Dismiss",
-      "completedLine": "{{size}} · {{relative}}",
-      "download": "Download",
-      "expand": "Show export jobs ({{count}} active)",
-      "label": "Export job progress",
-      "loading": "Loading export jobs…",
-      "minimize": "Minimize",
-      "recentEmpty": "No recent exports",
-      "recentHeading": "Recent",
-      "recentLabel": "Exports",
-      "statusLine": "{{status}} · started {{relative}}",
-      "title": "Export jobs"
-    },
-    "status": {
-      "expired": "Expired",
-      "failed": "Failed",
-      "processing": "Processing",
-      "queued": "Queued",
-      "ready": "Ready"
-    },
-    "types": {
-      "account": "Account export",
-      "analytics": "Analytics",
-      "backup": "Backup",
-      "charging": "Charging",
-      "drives": "Drives",
-      "importCharging": "Import charging",
-      "importDrives": "Import drives"
-    }
-  },
-  "feedback": {},
-  "filters": {
-    "reset": "Reset filters",
-    "activeLabel": "Active filters",
-    "clearAll": "Clear all",
-    "clearedAll": "All filters cleared",
-    "moreCount": "+{{count}} more",
-    "moreLabel": "Additional active filters",
-    "removed": "Filter removed",
-    "removeAria": "Remove filter {{label}}"
   },
   "form": {
     "required": "required"
@@ -660,9 +572,6 @@
     "install": "Install",
     "dismiss": "Dismiss install prompt"
   },
-  "lifetime": {
-    "unlocked": "✓ Unlocked"
-  },
   "lightbox": {
     "counter": "{{current}} / {{total}}",
     "close": "Close image viewer",
@@ -672,25 +581,6 @@
     "zoomOut": "Zoom out",
     "zoomReset": "Reset zoom",
     "zoomPercent": "{{value}}%"
-  },
-  "listExport": {
-    "button": "Export",
-    "csv": "Download as CSV",
-    "disabledTooltip": "No data to export",
-    "exporting": "Preparing {{format}} export…",
-    "failed": "Could not prepare the {{format}} export.",
-    "json": "Download as JSON",
-    "menuLabel": "Export list",
-    "scopeLegend": "Export scope",
-    "selectedWithCount": "Selected ({{count}})",
-    "visible": "Visible",
-    "visibleWithCount": "Visible ({{count}})"
-  },
-  "live": {
-    "staleBanner": {
-      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
-      "title": "Live data unavailable"
-    }
   },
   "mask": {
     "reveal": "Reveal value",
@@ -883,19 +773,6 @@
     "suggestionsLabel": "Suggested pages"
   },
   "notifications": {
-    "alertStudio": {
-      "editor": {
-        "vehiclesAllOption": "All vehicles (current + future)",
-        "vehiclesEmptyFleetHelp": "Add a vehicle in Settings → Vehicles to use this rule.",
-        "vehiclesSummaryAll": "All vehicles",
-        "vehiclesSummaryCount": "{{count}} vehicles",
-        "vehiclesSummaryNone": "No vehicles selected",
-        "vehiclesSummaryOne": "{{name}}",
-        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
-        "vehiclesUnknownBadge": "Unknown",
-        "vehiclesUnknownLabel": "Vehicle #{{id}}"
-      }
-    },
     "bellPopover": {
       "allRead": "All caught up",
       "emptyMessage": "No unread notifications right now.",
@@ -926,10 +803,6 @@
       "description": "Current data with live actions available.",
       "label": "Live",
       "shortLabel": "Live"
-    },
-    "writeBlocked": "Return to live mode before making operational changes.",
-    "writeNotice": {
-      "title": "Operational changes are read-only"
     }
   },
   "operations": {
@@ -1060,29 +933,6 @@
       "open": "Open report view"
     }
   },
-  "productPreferences": {
-    "persona": {
-      "label": "Workspace profile"
-    },
-    "personas": {
-      "administrator": {
-        "description": "Prioritize system administration and operational controls.",
-        "label": "Administrator"
-      },
-      "analyst": {
-        "description": "Prioritize trends, reports, and historical analysis.",
-        "label": "Analyst"
-      },
-      "fleetOperator": {
-        "description": "Prioritize active fleet operations and current vehicle state.",
-        "label": "Fleet operator"
-      },
-      "owner": {
-        "description": "Keep the most useful everyday vehicle information close at hand.",
-        "label": "Owner"
-      }
-    }
-  },
   "pwa": {
     "newVersion": "New version available",
     "reloadingIn": "Reloading in {{seconds}}s...",
@@ -1136,9 +986,6 @@
       "title": "Trip replay shortcuts"
     }
   },
-  "requiresAuth": {
-    "title": "{{feature}} requires authentication mode"
-  },
   "routes": {
     "behavioralSentinel": "Behavioral Sentinel",
     "causalExperimentLab": "Causal Experiment Lab",
@@ -1157,11 +1004,6 @@
     "vehicleManagement": "Vehicle Management"
   },
   "search": {
-    "history": {
-      "clear": "Clear history",
-      "removeAria": "Remove \"{{query}}\" from search history",
-      "title": "Recent searches"
-    },
     "palette": {
       "viewAll": "View all results for \"{{query}}\""
     },
@@ -1206,15 +1048,35 @@
       "unsavedTitle": "Unsaved drafts"
     }
   },
+  "settings": {
+    "typographyAgent": {
+      "baseSize": "Base text size ({{size}}px)",
+      "density": "Density",
+      "densityHint": "Density tunes type leading only; workspace spacing stays in Display settings.",
+      "density_comfortable": "Comfortable",
+      "density_compact": "Compact",
+      "density_relaxed": "Relaxed",
+      "findings": "Loop findings ({{count}})",
+      "healing": "Self-healing engaged",
+      "hudLabel": "Typography agent controller",
+      "ratio": "Harmonic ratio",
+      "ratio_goldenRatio": "Golden Ratio",
+      "ratio_majorSecond": "Major Second",
+      "ratio_majorThird": "Major Third",
+      "ratio_minorSecond": "Minor Second",
+      "ratio_minorThird": "Minor Third",
+      "ratio_perfectFourth": "Perfect Fourth",
+      "score": "Score: {{score}}/100",
+      "specimen": "Live specimen",
+      "specimenBody": "Body copy follows the modular ratio across viewports.",
+      "specimenHeading": "Harmonized headings scale fluidly",
+      "subtitle": "Connected harmonic runtime",
+      "title": "Typography Agent",
+      "verified": "Harmony verified"
+    }
+  },
   "shortcuts": {
     "close": "Close modal / cancel",
-    "empty": "No shortcuts match your search.",
-    "filter": {
-      "all": "All",
-      "global": "Global",
-      "label": "Filter shortcuts",
-      "page": "This page"
-    },
     "goto": "Go to {{label}}",
     "gotoPrompt": "Go to…",
     "groups": {
@@ -1225,9 +1087,7 @@
     },
     "openPalette": "Open command palette",
     "openPaletteAlt": "Open command palette",
-    "openShortcuts": "Show keyboard shortcuts",
-    "search": "Search shortcuts…",
-    "title": "Keyboard Shortcuts"
+    "openShortcuts": "Show keyboard shortcuts"
   },
   "slider": {
     "thumbMin": "{{label}} minimum",
@@ -1395,19 +1255,6 @@
       "selectRow": "Select row"
     }
   },
-  "tagInput": {
-    "added": "{{count}} tags added",
-    "addedOne": "Tag added",
-    "duplicate": "{{tag}} is already added",
-    "maxReached": "Tag limit reached",
-    "maxReachedAnnounce": "Tag limit reached",
-    "maxReachedHint": "Maximum {{count}} tags",
-    "placeholder": "Add a tag…",
-    "removeTag": "Remove {{tag}}",
-    "removed": "Removed {{tag}}",
-    "tagsList": "Tags: {{tags}}",
-    "tagsNone": "No tags yet"
-  },
   "tesla": {
     "reauth": {
       "body": "Reconnect to resume live data and commands.",
@@ -1444,8 +1291,6 @@
   },
   "toast": {},
   "tour": {
-    "close": "Close tour",
-    "finish": "Get Started!",
     "launcher": {
       "close": "Close",
       "completed": "Completed",
@@ -1458,9 +1303,6 @@
       "subtitle": "Guided walkthroughs for every major feature.",
       "title": "Take a tour"
     },
-    "next": "Next",
-    "prev": "Back",
-    "skip": "Skip tour",
     "tours": {
       "alerts": {
         "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",
@@ -1504,9 +1346,6 @@
     "label": "Vehicle",
     "fallbackName": "Vehicle {{id}}"
   },
-  "vehicleSelect": {
-    "aria": "Select vehicle"
-  },
   "workspace": {
     "analysis": {
       "activeRange": "{{start}} to {{end}}",
@@ -1533,6 +1372,22 @@
     "statusOnline": "Online",
     "statusIdle": "Idle",
     "statusOffline": "Offline"
+  },
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
+    }
+  },
+  "filters": {
+    "reset": "Reset filters",
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removed": "Filter removed",
+    "removeAria": "Remove filter {{label}}"
   },
   "mobile": {
     "refresh": {
@@ -1577,6 +1432,9 @@
     }
   },
   "vehicle": "vehicle",
+  "vehicleSelect": {
+    "aria": "Select vehicle"
+  },
   "watch": {
     "noVehicle": "No vehicle found",
     "timeToFull": "{{minutes}}m to full",

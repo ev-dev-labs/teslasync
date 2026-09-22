@@ -47,9 +47,9 @@ vi.mock('../client', async () => {
   return { ...actual, request: vi.fn() };
 });
 
-vi.mock('@/components/feedback', async () => {
-  const actual = await vi.importActual<typeof import('@/components/feedback')>(
-    '@/components/feedback',
+vi.mock('@/components/feedback/Toast', async () => {
+  const actual = await vi.importActual<typeof import('@/components/feedback/Toast')>(
+    '@/components/feedback/Toast',
   );
   return {
     ...actual,

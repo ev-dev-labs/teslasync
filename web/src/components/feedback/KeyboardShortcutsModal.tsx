@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import { Modal } from '@/components/ui'
-import { SearchInput } from '@/components/forms'
+import { SearchInput } from '../forms/SearchInput'
 import { useAllShortcuts, type ShortcutDefinition } from '@/hooks/useShortcutRegistry'
 
 /**

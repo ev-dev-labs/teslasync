@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Check } from 'lucide-react';
-import { Combobox } from '@/components/forms';
+import { Combobox } from '../forms/Combobox';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePinned } from '@/api/hooks/usePinned';
 import { cn } from '@/lib/cn';

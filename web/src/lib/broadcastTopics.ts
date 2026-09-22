@@ -60,6 +60,12 @@ export const TOPICS = {
    * {@link FORMATTER_AFFECTING_TOPICS}.
    */
   FONT_CHANGED: 'font.changed',
+  /**
+   * Connected-typography agent spec changed (ratio / scale / density).
+   * Emitted by `<TypographyAgentProvider />`; peer tabs reload the
+   * persisted spec and re-run the loop. Payload is a hint only.
+   */
+  TYPOGRAPHY_SPEC_CHANGED: 'typography.spec.changed',
   // ── Auth ─────────────────────────────────────────────────────────────────
   AUTH_LOGOUT: 'auth.logout',
   // ── Notifications ────────────────────────────────────────────────────────

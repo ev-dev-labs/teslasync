@@ -15937,7 +15937,36 @@
         "backupRegenerated": "Backup codes regenerated."
       }
     },
-    "electricityCost": "Electricity Cost (per kWh)"
+    "electricityCost": "Electricity Cost (per kWh)",
+    "typographyAgent": {
+      "hudLabel": "Typography agent controller",
+      "title": "Typography Agent",
+      "subtitle": "Connected harmonic runtime",
+      "verified": "Harmony verified",
+      "healing": "Self-healing engaged",
+      "score": "Score: {{score}}/100",
+      "ratio": "Harmonic ratio",
+      "ratio_minorSecond": "Minor Second",
+      "ratio_majorSecond": "Major Second",
+      "ratio_minorThird": "Minor Third",
+      "ratio_majorThird": "Major Third",
+      "ratio_perfectFourth": "Perfect Fourth",
+      "ratio_goldenRatio": "Golden Ratio",
+      "baseSize": "Base text size ({{size}}px)",
+      "density": "Density",
+      "density_compact": "Compact",
+      "density_comfortable": "Comfortable",
+      "density_relaxed": "Relaxed",
+      "densityHint": "Density tunes type leading only; workspace spacing stays in Display settings.",
+      "specimen": "Live specimen",
+      "specimenHeading": "Harmonized headings scale fluidly",
+      "specimenBody": "Body copy follows the modular ratio across viewports.",
+      "findings": "Loop findings ({{count}})",
+      "sectionTitle": "Harmonic scale",
+      "sectionSubtitle": "A modular-ratio fluid scale compiled to live tokens. Same store as the ambient HUD (Ctrl/⌘+Shift+T).",
+      "loopStatus": "Loop verified · score {{score}}/100",
+      "loopPending": "Loop calibrating…"
+    }
   },
   "confirm": {
     "silence": {
