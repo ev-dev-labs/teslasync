@@ -11,7 +11,8 @@ import sys
 def command(args, timeout=35):
     print("+", " ".join(args), flush=True)
     try:
-        result = subprocess.run(args, timeout=timeout, check=False)
+        result = subprocess.run(
+            args, stdin=subprocess.DEVNULL, timeout=timeout, check=False)
         print("exit:", result.returncode, flush=True)
         return result.returncode
     except (OSError, subprocess.TimeoutExpired) as error:
@@ -56,10 +57,30 @@ def main():
                           f"https://{host}{path}"])
             if not family and rc:
                 failed = True
+        for version in ("1.2", "1.3"):
+            command(["curl", "--tlsv" + version, "--tls-max", version,
+                     "--fail", "--silent", "--show-error",
+                     "--connect-timeout", "10", "--max-time", "20",
+                     "--output", "/dev/null", "--write-out",
+                     "remote_ip=%{remote_ip} http_code=%{http_code} "
+                     "ssl_verify_result=%{ssl_verify_result}\n",
+                     f"https://{host}{path}"])
         command(["timeout", "20", "openssl", "s_client",
                  "-connect", f"{host}:443", "-servername", host,
                  "-verify_hostname", host, "-verify_return_error",
-                 "-debug", "-state"], timeout=25)
+                 "-brief", "-state"], timeout=25)
+        # A public, credential-free HEAD can reveal an HTTP rejection/redirect.
+        # Do not follow redirects or use this transport for release operations.
+        for port in (80, 443):
+            try:
+                with socket.create_connection((host, port), timeout=10) as stream:
+                    stream.sendall(
+                        f"HEAD / HTTP/1.1\r\nHost: {host}\r\n"
+                        "Connection: close\r\n\r\n".encode("ascii"))
+                    print(f"HTTP HEAD port {port} response:",
+                          repr(stream.recv(1024)), flush=True)
+            except OSError as error:
+                print(f"HTTP HEAD port {port}:", error, flush=True)
         # Capture only a TLS record header / short plaintext rejection from
         # the normal route. No application data, credentials, or HTTP request.
         context = ssl.create_default_context()
@@ -73,7 +94,10 @@ def main():
             with socket.create_connection((host, 443), timeout=10) as stream:
                 stream.sendall(outgoing.read())
                 response = stream.recv(256)
-                print("TLS ClientHello response prefix:", repr(response), flush=True)
+                print("TLS ClientHello response:",
+                      f"bytes={len(response)} prefix={response[:32].hex()} "
+                      f"all_ff={bool(response) and set(response) == {255}}",
+                      flush=True)
         except OSError as error:
             print("TLS prefix probe:", error, flush=True)
     return int(failed)
