@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -195,6 +195,21 @@ beforeEach(() => {
 });
 
 describe('DayLogPage', () => {
+  it('keeps day selection, freshness, and copy link in the page header', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse() }));
+    renderPage();
+
+    const header = screen.getByRole('heading', { name: 'Day log' }).closest('header');
+    expect(header).not.toBeNull();
+    if (!header) throw new Error('Day log header is missing');
+    expect(within(header).getByTestId('daylog-controls')).toBeInTheDocument();
+    expect(within(header).getByTestId('daylog-date')).toHaveValue('2026-09-14');
+    expect(within(header).getByRole('button', { name: /copy link/i })).toBeInTheDocument();
+    expect(header.querySelector('[data-action-group="metadata"]')).not.toBeNull();
+    expect(within(header).getByText(/Day boundaries in/)).toBeInTheDocument();
+    expect(screen.getAllByTestId('daylog-controls')).toHaveLength(1);
+  });
+
   it('shows per-section loading states while pending', () => {
     useDayLogMock.mockReturnValue(
       queryState({ data: undefined, isPending: true, isLoading: true, isFetching: true, isSuccess: false, status: 'pending', fetchStatus: 'fetching' }),

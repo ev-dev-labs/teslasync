@@ -70,11 +70,8 @@ export default function DayLogPage() {
       subtitle={t('dayLog.subtitle', 'What happened to this vehicle today')}
       query={dayLogQuery}
       copyLink
+      contextActions={<DayLogControls date={date} timezone={timezone} onDateChange={setDate} />}
     >
-      <FadeIn>
-        <DayLogControls date={date} timezone={timezone} onDateChange={setDate} />
-      </FadeIn>
-
       <FadeIn delay={0.05}>
         <DayLogSummary summary={data?.summary ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
       </FadeIn>

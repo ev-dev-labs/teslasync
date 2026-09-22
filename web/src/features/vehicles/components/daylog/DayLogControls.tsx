@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Button, GlassPanel, Input, PanelTitle, Text } from '@/components/ui';
+import { Button, Input, Text } from '@/components/ui';
 import { VehicleSelect } from '@/components/forms';
 import { Icons } from '@/lib/icons';
 import { addDaysYmd, isValidYmd, todayYmd } from '../../lib/daylog';
@@ -11,7 +11,7 @@ export interface DayLogControlsProps {
 }
 
 /**
- * Section 1 — day scope controls. The date is a plain `YYYY-MM-DD`
+ * Header day scope controls. The date is a plain `YYYY-MM-DD`
  * calendar string end to end: the native date input, the URL param, and
  * the API `date` field all carry the same string, so there is no
  * UTC-midnight footgun anywhere in the chain. Category filtering lives
@@ -29,18 +29,9 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
   };
 
   return (
-    <GlassPanel className="p-6" data-testid="daylog-controls">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <PanelTitle>{t('dayLog.controls.title', 'Day')}</PanelTitle>
-          <Text variant="caption">
-            {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
-          </Text>
-        </div>
+    <div className="flex min-w-0 flex-col gap-2" data-testid="daylog-controls">
+      <div className="flex flex-wrap items-center gap-2">
         <VehicleSelect withIcon data-testid="daylog-vehicle" />
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
         <Button
           variant="secondary"
           aria-label={t('dayLog.controls.prevDay', 'Previous day')}
@@ -70,6 +61,9 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
           {t('dayLog.controls.today', 'Today')}
         </Button>
       </div>
-    </GlassPanel>
+      <Text variant="caption">
+        {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
+      </Text>
+    </div>
   );
 }
