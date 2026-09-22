@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Car } from 'lucide-react';
+import { Car, ChevronDown } from 'lucide-react';
 import { Select } from '@/components/ui/runtime';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePinned } from '@/api/hooks/usePinned';
@@ -74,20 +74,27 @@ export function VehiclePicker({
         className,
       )}
     >
-      <Car
-        aria-hidden="true"
-        className="h-4 w-4 shrink-0 text-[var(--text-muted)]"
-      />
-      <Select
-        aria-label={t('vehiclePicker.aria', 'Select vehicle')}
-        className="flex-1 !py-1.5 text-xs"
-        value={vehicleId != null ? String(vehicleId) : ''}
-        onChange={(e) => {
-          const next = Number(e.target.value);
-          setVehicleId(Number.isFinite(next) && next > 0 ? next : null);
-        }}
-        options={options}
-      />
+      <div className="relative min-w-0 flex-1" data-role="vehicle-picker-control">
+        <Car
+          aria-hidden="true"
+          className="pointer-events-none absolute start-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]"
+        />
+        <Select
+          aria-label={t('vehiclePicker.aria', 'Select vehicle')}
+          size="sm"
+          className="h-11 min-w-0 appearance-none truncate rounded-pill ps-10 pe-9 font-medium shadow-e1 hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)] sm:h-9"
+          value={vehicleId != null ? String(vehicleId) : ''}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            setVehicleId(Number.isFinite(next) && next > 0 ? next : null);
+          }}
+          options={options}
+        />
+        <ChevronDown
+          aria-hidden="true"
+          className="pointer-events-none absolute end-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]"
+        />
+      </div>
     </div>
   );
 }

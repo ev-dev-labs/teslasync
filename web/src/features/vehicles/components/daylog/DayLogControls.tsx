@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Text } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { VehicleSelect } from '@/components/forms';
 import { Icons } from '@/lib/icons';
 import { addDaysYmd, isValidYmd, todayYmd } from '../../lib/daylog';
@@ -21,7 +21,6 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
   const { t } = useTranslation();
   const PrevIcon = Icons.previous;
   const NextIcon = Icons.next;
-  const CalendarIcon = Icons.calendar;
 
   const stepDay = (delta: number) => {
     const next = addDaysYmd(isValidYmd(date) ? date : todayYmd(timezone), delta);
@@ -29,11 +28,12 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-2" data-testid="daylog-controls">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2" data-testid="daylog-controls">
         <VehicleSelect withIcon data-testid="daylog-vehicle" />
         <Button
-          variant="secondary"
+          variant="ghost"
+          size="sm"
+          className="h-11 w-11 shrink-0 p-0 sm:h-9 sm:w-9"
           aria-label={t('dayLog.controls.prevDay', 'Previous day')}
           onClick={() => stepDay(-1)}
           data-testid="daylog-prev"
@@ -42,28 +42,28 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
         </Button>
         <Input
           type="date"
+          size="sm"
+          className="h-11 sm:h-9"
           aria-label={t('dayLog.controls.dateLabel', 'Day')}
+          aria-describedby="daylog-timezone"
           value={isValidYmd(date) ? date : ''}
           max={todayYmd(timezone)}
           onChange={(e) => onDateChange(e.target.value)}
-          icon={<CalendarIcon className="h-4 w-4" />}
           data-testid="daylog-date"
         />
         <Button
-          variant="secondary"
+          variant="ghost"
+          size="sm"
+          className="h-11 w-11 shrink-0 p-0 sm:h-9 sm:w-9"
           aria-label={t('dayLog.controls.nextDay', 'Next day')}
           onClick={() => stepDay(1)}
           data-testid="daylog-next"
         >
           <NextIcon className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" onClick={() => onDateChange(todayYmd(timezone))} data-testid="daylog-today">
+        <Button variant="ghost" size="sm" className="h-11 sm:h-9" onClick={() => onDateChange(todayYmd(timezone))} data-testid="daylog-today">
           {t('dayLog.controls.today', 'Today')}
         </Button>
-      </div>
-      <Text variant="caption">
-        {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
-      </Text>
     </div>
   );
 }

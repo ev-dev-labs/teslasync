@@ -209,5 +209,12 @@ describe('VehiclePicker', () => {
     const icon = container.querySelector('svg');
     expect(icon).not.toBeNull();
     expect(icon).toHaveAttribute('aria-hidden', 'true');
+    const control = container.querySelector('[data-role="vehicle-picker-control"]');
+    expect(control).toContainElement(screen.getByRole('combobox'));
+    expect(control?.querySelectorAll('svg')).toHaveLength(2);
+    control?.querySelectorAll('svg').forEach((decoration) => {
+      expect(decoration).toHaveAttribute('aria-hidden', 'true');
+      expect(decoration).toHaveClass('pointer-events-none');
+    });
   });
 });

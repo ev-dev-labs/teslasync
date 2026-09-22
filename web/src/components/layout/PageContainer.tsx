@@ -47,7 +47,7 @@ function pickWorstQuery(queries: readonly FreshnessQuery[]): FreshnessQuery {
 
 export interface PageContainerProps {
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   /** @deprecated Use the semantic action slots below for new or touched pages. */
   actions?: ReactNode;
   /** Vehicle, time-range, and other scope controls. */

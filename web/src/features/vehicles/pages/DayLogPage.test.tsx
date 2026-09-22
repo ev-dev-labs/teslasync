@@ -207,6 +207,8 @@ describe('DayLogPage', () => {
     expect(within(header).getByRole('button', { name: /copy link/i })).toBeInTheDocument();
     expect(header.querySelector('[data-action-group="metadata"]')).not.toBeNull();
     expect(within(header).getByText(/Day boundaries in/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('daylog-controls')).queryByText(/Day boundaries in/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-date')).toHaveAccessibleDescription(/Day boundaries in/);
     expect(screen.getAllByTestId('daylog-controls')).toHaveLength(1);
   });
 
