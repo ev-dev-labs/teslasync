@@ -82,7 +82,7 @@ export function VehiclePicker({
           noClearButton
           icon={<Car aria-hidden="true" className="h-4 w-4" />}
           inputClassName="h-11 min-w-0 cursor-pointer truncate rounded-pill border-[var(--control-border)] bg-[var(--control-bg)] ps-10 pe-9 font-medium shadow-e1 hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)] sm:h-9"
-          listboxClassName="mt-2 rounded-2xl p-1.5 shadow-e3 sm:left-auto sm:w-72"
+          listboxClassName="mt-2 rounded-2xl p-1.5 shadow-e3 sm:start-auto sm:w-72"
           optionClassName="rounded-xl min-h-11 sm:min-h-9"
           value={options.find((option) => option.value === String(vehicleId)) ?? null}
           onChange={(option) => {

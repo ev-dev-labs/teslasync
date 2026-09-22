@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 
+test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [375, 390, 550, 1440]) {
     test(`day log header stays aligned at ${width}px in ${theme}`, async ({ page }, testInfo) => {
@@ -90,6 +92,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(date).toHaveValue(await date.getAttribute('max') ?? '');
       await header.getByRole('button', { name: /copy link/i }).click();
       await expect(header.getByRole('button', { name: /copy link/i })).toHaveText('Copied');
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(page.url());
     });
   }
 }

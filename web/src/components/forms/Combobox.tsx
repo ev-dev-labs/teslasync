@@ -578,7 +578,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
         {icon && (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+            className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
           >
             {icon}
           </span>
@@ -618,12 +618,12 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           className={cn(
             INPUT_BASE,
             'text-ellipsis',
-            icon && 'pl-10',
-            (showClear || !noChevron || loading) && (selectOnly ? 'pr-9' : 'pr-16'),
+            icon && 'ps-10',
+            (showClear || !noChevron || loading) && (selectOnly ? 'pe-9' : 'pe-16'),
             inputClassName,
           )}
         />
-        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+        <div className="absolute end-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
           {loading && (
             <span
               className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-transparent"
@@ -688,7 +688,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           id={listboxId}
           role="listbox"
           aria-label={label}
-          className={cn('absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] py-1 shadow-lg', listboxClassName)}
+          className={cn('absolute start-0 end-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] py-1 shadow-lg', listboxClassName)}
         >
           {visibleOptions.length === 0 && !loading && (
             <li
