@@ -387,36 +387,7 @@ func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Reque
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get telemetry")
 		return
 	}
-	rows := timelineRowsToFlat(timelineRows)
-	// The signal change feed is canonical W/Wh. Preserve this endpoint's
-	// established legacy chart contract (power_kw / energy_added in kW/kWh)
-	// strictly at the HTTP boundary; session summaries remain Wh/W.
-	for _, row := range rows {
-		acPowerW, acPowerOK := signal.Float64(row["power_kw"])
-		dcPowerW, dcPowerOK := signal.Float64(row["dc_power_w"])
-		if dcPowerOK && dcPowerW > 0 {
-			row["power_kw"] = safeFloat(dcPowerW / 1000.0)
-		} else if acPowerOK {
-			row["power_kw"] = safeFloat(acPowerW / 1000.0)
-		}
-
-		acEnergyWh, acEnergyOK := signal.Float64(row["energy_added"])
-		dcEnergyWh, dcEnergyOK := signal.Float64(row["dc_energy_wh"])
-		if dcEnergyOK && dcEnergyWh > 0 {
-			row["energy_added"] = safeFloat(dcEnergyWh / 1000.0)
-		} else if acEnergyOK {
-			row["energy_added"] = safeFloat(acEnergyWh / 1000.0)
-		}
-		delete(row, "dc_power_w")
-		delete(row, "dc_energy_wh")
-	}
-	// Rename "ts" → "created_at" to match old ChargeTelemetryReading JSON shape
-	for _, row := range rows {
-		if ts, ok := row["ts"]; ok {
-			row["created_at"] = ts
-			delete(row, "ts")
-		}
-	}
+	rows := timelineRowsToChargeRows(timelineRows)
 	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
@@ -447,15 +418,66 @@ func stateToSignalMap(s signal.State) map[string]interface{} {
 	return out
 }
 
-func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(rows))
-	for _, tr := range rows {
-		row := make(map[string]interface{}, len(tr.Fields)+1)
-		for k, v := range tr.Fields {
-			row[k] = v
+// chargeTelemetryRow is the typed equivalent of one flat telemetry map: the
+// legacy ChargeTelemetryReading JSON shape (battery_level, voltage,
+// power_kw, ...) with "ts" renamed to "created_at" and the intermediate
+// dc_power_w / dc_energy_wh merge inputs omitted. Fields stay `any` so a
+// missing signal still marshals as an explicit null exactly like the map
+// version did. Struct fields are declared in alphabetical JSON-key order to
+// match encoding/json's sorted map output key-for-key.
+//
+// A struct row avoids three per-row map allocations plus encoding/json's
+// per-row key sort — the dominant cost on long (48-100h) home-charging
+// sessions where this endpoint returns hundreds of thousands of rows.
+type chargeTelemetryRow struct {
+	BatteryHeaterOn any       `json:"battery_heater_on"`
+	BatteryLevel    any       `json:"battery_level"`
+	BatteryTemp     any       `json:"battery_temp"`
+	CreatedAt       time.Time `json:"created_at"`
+	CurrentAmps     any       `json:"current_amps"`
+	EnergyAdded     any       `json:"energy_added"`
+	InsideTemp      any       `json:"inside_temp"`
+	OutsideTemp     any       `json:"outside_temp"`
+	PowerKW         any       `json:"power_kw"`
+	RangeAdded      any       `json:"range_added_meters_per_hour"`
+	Voltage         any       `json:"voltage"`
+}
+
+// timelineRowsToChargeRows converts ordered TimelineRows into the legacy
+// flat-pivot response shape in a single pass. The signal change feed is
+// canonical W/Wh; this endpoint's established legacy chart contract
+// (power_kw / energy_added in kW/kWh) is preserved strictly at the HTTP
+// boundary — session summaries remain Wh/W. DC readings win over AC when
+// positive; otherwise the AC value is used; when neither converts, the
+// folded value passes through untouched.
+func timelineRowsToChargeRows(rows []signal.TimelineRow) []chargeTelemetryRow {
+	out := make([]chargeTelemetryRow, len(rows))
+	for i, tr := range rows {
+		f := tr.Fields
+		row := chargeTelemetryRow{
+			BatteryHeaterOn: f["battery_heater_on"],
+			BatteryLevel:    f["battery_level"],
+			BatteryTemp:     f["battery_temp"],
+			CreatedAt:       tr.Timestamp,
+			CurrentAmps:     f["current_amps"],
+			EnergyAdded:     f["energy_added"],
+			InsideTemp:      f["inside_temp"],
+			OutsideTemp:     f["outside_temp"],
+			PowerKW:         f["power_kw"],
+			RangeAdded:      f["range_added_meters_per_hour"],
+			Voltage:         f["voltage"],
 		}
-		row["ts"] = tr.Timestamp
-		out = append(out, row)
+		if dcPowerW, ok := signal.Float64(f["dc_power_w"]); ok && dcPowerW > 0 {
+			row.PowerKW = safeFloat(dcPowerW / 1000.0)
+		} else if acPowerW, ok := signal.Float64(f["power_kw"]); ok {
+			row.PowerKW = safeFloat(acPowerW / 1000.0)
+		}
+		if dcEnergyWh, ok := signal.Float64(f["dc_energy_wh"]); ok && dcEnergyWh > 0 {
+			row.EnergyAdded = safeFloat(dcEnergyWh / 1000.0)
+		} else if acEnergyWh, ok := signal.Float64(f["energy_added"]); ok {
+			row.EnergyAdded = safeFloat(acEnergyWh / 1000.0)
+		}
+		out[i] = row
 	}
 	return out
 }

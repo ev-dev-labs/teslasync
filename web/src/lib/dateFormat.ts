@@ -81,13 +81,39 @@ export function formatDateShort(iso: string | Date | null | undefined, opts?: Fo
   }, opts))
 }
 
+/**
+ * Cached time-only Intl formatters keyed by locale + timezone.
+ *
+ * `Date#toLocaleTimeString` builds a new Intl formatter on every call
+ * (~70µs) — chart datasets with hundreds of thousands of rows (a 48-100h
+ * home charge) spent 40+s in `formatTime` alone. A cached
+ * `Intl.DateTimeFormat` formats the identical string in well under a
+ * microsecond. The key space (locales × timezones) is tiny, so no eviction
+ * is needed. Output is unchanged: `toLocaleTimeString(l, o)` is defined as
+ * `new Intl.DateTimeFormat(l, o).format(d)` with the same arguments.
+ */
+const timeFormatterCache = new Map<string, Intl.DateTimeFormat>()
+
+function cachedTimeFormatter(opts?: FormatOptions): Intl.DateTimeFormat {
+  const locale = intlLocale(opts)
+  const key = `${locale ?? ''}|${opts?.tz ?? ''}`
+  let formatter = timeFormatterCache.get(key)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(
+      locale === undefined ? [] : locale,
+      intlOpts({ hour: '2-digit', minute: '2-digit' }, opts),
+    )
+    timeFormatterCache.set(key, formatter)
+  }
+  return formatter
+}
+
 /** Time only: "02:30" (24h) or "2:30 AM" (based on locale) */
 export function formatTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
-  const localeArg = intlLocale(opts)
-  return d.toLocaleTimeString(localeArg ? localeArg : [], intlOpts({ hour: '2-digit', minute: '2-digit' }, opts))
+  return cachedTimeFormatter(opts).format(d)
 }
 
 /** Relative time: "3 min ago", "2 hours ago", "yesterday" */

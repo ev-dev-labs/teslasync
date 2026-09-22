@@ -513,7 +513,9 @@
         "generateButton": "Generate diagnosis",
         "emptyHint": "Waiting for a charging session…"
       },
-      "time": "Time"
+      "time": "Time",
+      "ongoing": "now",
+      "fullResolutionTableOmitted": "Full-resolution data: {{samples}} samples from {{start}} to {{end}}. The screen-reader data table is omitted for very long sessions; every sample is drawn in the chart."
     },
     "heatmap": {
       "title": "Charging Patterns",

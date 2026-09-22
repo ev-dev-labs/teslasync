@@ -31,6 +31,10 @@
  *   - ongoing session (no ended_at): duration collapses to 0, the Ended slot
  *     renders the em-dash placeholder, an absent vehicle falls back to "ID N",
  *     and a placeless session shows the location empty state.
+ *   - long sessions: small telemetry renders a full screen-reader table per
+ *     chart; past the row cap the tables are omitted (no-table pattern) while
+ *     all four charts still render every sample, each announcing a
+ *     full-resolution summary instead.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
@@ -39,6 +43,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import { ApiError } from '@/lib/resilience';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { ChargingSession, ChargeTelemetryReading, ChargingTelemetry } from '@/api/types';
 
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
@@ -616,6 +621,45 @@ describe('ChargingDetailPage — telemetry error isolation', () => {
     // Retrying one panel calls the telemetry refetch.
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ChargingDetailPage — long-session fallback tables', () => {
+  it('renders a full screen-reader table per chart for small telemetry', () => {
+    renderPage();
+
+    // 3 telemetry rows → all four chart frames tabulate every row.
+    expect(screen.getAllByRole('table')).toHaveLength(4);
+    expect(screen.queryByText(/Full-resolution data:/)).toBeNull();
+  });
+
+  it('omits the fallback tables but keeps every chart for very long sessions', () => {
+    // 2,500 rows clears the 2,000-row table cap the way a 48-100h home
+    // session (hundreds of thousands of rows) does: tabulating every row
+    // would build millions of hidden DOM nodes and kill the tab.
+    const bigTelemetry = Array.from({ length: 2500 }, (_, i) =>
+      makeReading({
+        created_at: `2024-03-${String(10 + Math.floor(i / 1440)).padStart(2, '0')}T${String(Math.floor(i / 60) % 24).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:00Z`,
+        battery_level: 20 + (i % 70),
+        power_kw: 11 + (i % 5),
+      }),
+    );
+    mockTelemetry.mockReturnValue(makeQuery({ data: bigTelemetry }));
+    renderPage();
+
+    // No fallback table anywhere — but all four charts still render with
+    // their full datasets (chart doubles are passthroughs; the headings
+    // prove the panels took the populated branch, not an empty state).
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.getByText('Charge Curve')).toBeInTheDocument();
+    expect(screen.getByText('SoC, Energy & Range over Time')).toBeInTheDocument();
+    expect(screen.getByText('Temperature')).toBeInTheDocument();
+    expect(screen.getByText('Voltage & Current')).toBeInTheDocument();
+    // Each chart announces the honest full-data summary instead.
+    const summaries = screen.getAllByText(/Full-resolution data:/);
+    expect(summaries).toHaveLength(4);
+    expect(summaries[0].textContent).toContain(fmtNumber(2500, 0));
+    expect(summaries[0].textContent).toContain('every sample is drawn');
   });
 });
 

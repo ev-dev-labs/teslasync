@@ -56,6 +56,17 @@ function isDC(session: ChargingSession): boolean {
   return ft !== '' && ft !== '<invalid>' && ft !== 'unknown';
 }
 
+/**
+ * Row cap for the screen-reader fallback `<table>` rendered by each chart
+ * frame. A 48-100h home session returns hundreds of thousands of telemetry
+ * rows; tabulating every row (4 charts × ~200k `<tr>`) builds hundreds of
+ * megabytes of hidden DOM and kills the tab. Above the cap the table is
+ * omitted (the documented `no-table` pattern for dense series — the visual
+ * chart still draws every sample) and `ariaDescription` carries an honest
+ * summary instead. At or under the cap the full table renders as before.
+ */
+const A11Y_TABLE_ROW_CAP = 2000;
+
 /** Synthesize a plausible charge curve when telemetry is absent. */
 function synthesizeCurve(session: ChargingSession): { soc: number; power: number }[] {
   const startSoc = session.start_soc_pct ?? 0;
@@ -207,6 +218,13 @@ export default function ChargingDetailPage() {
   };
 
   const hasTelemetry = !!telemetry && telemetry.length > 0;
+  const telemetryCount = telemetry?.length ?? 0;
+  // Large datasets draw every sample but skip per-frame series animation:
+  // interpolating ~200k-point paths at 60fps hangs the tab, while the
+  // settled frame is pixel-identical with animation off. Small sessions
+  // keep the exact props they always had.
+  const isLargeDataset = telemetryCount > A11Y_TABLE_ROW_CAP;
+  const seriesPerfProps = isLargeDataset ? { isAnimationActive: false as const } : null;
   const dc = session ? isDC(session) : false;
   const chargingState = liveCharging?.charging_state;
 
@@ -310,6 +328,20 @@ export default function ChargingDetailPage() {
         : '—';
 
   const chargerLabel = session.charger_type ?? (dc ? 'DC' : 'AC');
+  // Spoken summary replacing the omitted fallback table on very long
+  // sessions (see A11Y_TABLE_ROW_CAP). All samples remain in the API
+  // response and every one is drawn in the chart.
+  const fullDataAriaDescription = isLargeDataset
+    ? t(
+        'charging.detail.fullResolutionTableOmitted',
+        'Full-resolution data: {{samples}} samples from {{start}} to {{end}}. The screen-reader data table is omitted for very long sessions; every sample is drawn in the chart.',
+        {
+          samples: fmtNumber(telemetryCount, 0),
+          start: formatDate(session.started_at),
+          end: session.ended_at ? formatDate(session.ended_at) : t('charging.detail.ongoing', 'now'),
+        },
+      )
+    : undefined;
   const subtitle = [
     formatDate(session.started_at),
     vehicle?.display_name,
@@ -659,7 +691,10 @@ export default function ChargingDetailPage() {
                     'charging.detail.chargeCurveAria',
                     'Charging power by battery state of charge',
                   )}
-                  data={chargeCurve}
+                  ariaDescription={fullDataAriaDescription}
+                  // Dense series above the cap omit the SR table (no-table
+                  // pattern) — the chart itself still draws every sample.
+                  data={isLargeDataset ? undefined : chargeCurve}
                   dataColumns={[
                     { key: 'soc', label: t('charging.detail.soc', 'SoC') },
                     { key: 'power', label: t('charging.detail.power', 'Power') },
@@ -684,6 +719,7 @@ export default function ChargingDetailPage() {
                       <Tooltip content={<ChartTooltip />} />
                       <Area
                         {...AREA_DEFAULTS}
+                        {...seriesPerfProps}
                         dataKey="power"
                         stroke="#a855f7"
                         fill="url(#powerGrad)"
@@ -770,7 +806,10 @@ export default function ChargingDetailPage() {
                           'charging.detail.socOverTimeAria',
                           'Battery level, energy, and range throughout the charging session',
                         )}
-                        data={timeSeriesData}
+                        ariaDescription={fullDataAriaDescription}
+                        // Dense series above the cap omit the SR table (no-table
+                        // pattern) — the chart itself still draws every sample.
+                        data={isLargeDataset ? undefined : timeSeriesData}
                         dataColumns={[
                           { key: 'time', label: t('charging.detail.time', 'Time') },
                           { key: 'soc', label: t('charging.detail.soc', 'SoC') },
@@ -800,6 +839,7 @@ export default function ChargingDetailPage() {
                             <ChartLegend />
                             <Area
                               {...AREA_DEFAULTS}
+                              {...seriesPerfProps}
                               yAxisId="left"
                               dataKey="soc"
                               stroke="#10b981"
@@ -810,6 +850,7 @@ export default function ChargingDetailPage() {
                             />
                             <Line
                               {...AREA_DEFAULTS}
+                              {...seriesPerfProps}
                               yAxisId="right"
                               dataKey="energy"
                               stroke="#00f0ff"
@@ -819,6 +860,7 @@ export default function ChargingDetailPage() {
                             />
                             <Line
                               {...AREA_DEFAULTS}
+                              {...seriesPerfProps}
                               yAxisId="right"
                               dataKey="range"
                               stroke="#f59e0b"
@@ -881,7 +923,10 @@ export default function ChargingDetailPage() {
                             'charging.detail.temperatureAria',
                             'Battery, cabin, and ambient temperature throughout the charging session',
                           )}
-                          data={tempData}
+                          ariaDescription={fullDataAriaDescription}
+                          // Dense series above the cap omit the SR table (no-table
+                          // pattern) — the chart itself still draws every sample.
+                          data={isLargeDataset ? undefined : tempData}
                           dataColumns={[
                             { key: 'time', label: t('charging.detail.time', 'Time') },
                             { key: 'battery', label: t('charging.detail.batteryTemp', 'Battery') },
@@ -909,6 +954,7 @@ export default function ChargingDetailPage() {
                               <ChartLegend />
                               <Line
                                 {...AREA_DEFAULTS}
+                                {...seriesPerfProps}
                                 dataKey="battery"
                                 stroke="#ef4444"
                                 name={t('charging.detail.batteryTemp', 'Battery')}
@@ -917,6 +963,7 @@ export default function ChargingDetailPage() {
                               />
                               <Line
                                 {...AREA_DEFAULTS}
+                                {...seriesPerfProps}
                                 dataKey="inside"
                                 stroke="#f59e0b"
                                 name={t('charging.detail.insideTemp', 'Inside')}
@@ -925,6 +972,7 @@ export default function ChargingDetailPage() {
                               />
                               <Line
                                 {...AREA_DEFAULTS}
+                                {...seriesPerfProps}
                                 dataKey="outside"
                                 stroke="#3b82f6"
                                 name={t('charging.detail.outsideTemp', 'Outside')}
@@ -979,7 +1027,10 @@ export default function ChargingDetailPage() {
                             'charging.detail.voltageCurrentAria',
                             'Charging voltage and current throughout the session',
                           )}
-                          data={voltCurrentData}
+                          ariaDescription={fullDataAriaDescription}
+                          // Dense series above the cap omit the SR table (no-table
+                          // pattern) — the chart itself still draws every sample.
+                          data={isLargeDataset ? undefined : voltCurrentData}
                           dataColumns={[
                             { key: 'time', label: t('charging.detail.time', 'Time') },
                             { key: 'voltage', label: t('charging.detail.voltage', 'Voltage') },
@@ -1007,6 +1058,7 @@ export default function ChargingDetailPage() {
                               <ChartLegend />
                               <Line
                                 {...AREA_DEFAULTS}
+                                {...seriesPerfProps}
                                 yAxisId="v"
                                 dataKey="voltage"
                                 stroke="#f59e0b"
@@ -1016,6 +1068,7 @@ export default function ChargingDetailPage() {
                               />
                               <Line
                                 {...AREA_DEFAULTS}
+                                {...seriesPerfProps}
                                 yAxisId="a"
                                 dataKey="current"
                                 stroke="#06b6d4"
