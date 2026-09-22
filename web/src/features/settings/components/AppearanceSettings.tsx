@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon, Heading, Text, HelperText, Label } from '@/components/ui'
+import { GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
+import { PrefetchLink } from '@/components/layout'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
 import { useStatusBarPrefs, setStatusBarPrefs } from '@/components/layout'
@@ -8,7 +9,7 @@ import {
   setAchievementCelebrationPrefs,
 } from '@/hooks/useAchievementCelebrationPrefs'
 import { cn } from '@/lib/cn'
-import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw, Sidebar } from 'lucide-react'
+import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw, Sidebar, Tv } from 'lucide-react'
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
 import { startTour } from '@/lib/tourLauncher'
 import { resetAllTours } from '@/lib/tourRegistry'
@@ -630,6 +631,34 @@ export function AppearanceSettings() {
                 {t('settings.tours.resetAll', 'Reset all tours')}
               </Button>
             </div>
+          </div>
+        </div>
+
+        {/* Kiosk mode lives on the dashboard; deep-link to its settings. */}
+        <div data-testid="kiosk-mode-section">
+          <div className="flex items-center gap-2 mb-3">
+            <Tv className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <Label>
+              {t('settings.appearance.kioskLabel', 'Kiosk mode')}
+            </Label>
+          </div>
+          <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
+            <div>
+              <Text as="p" variant="body" className="font-medium">
+                {t('settings.appearance.kioskTitle', 'Wall-display dashboard')}
+              </Text>
+              <HelperText>
+                {t('settings.appearance.kioskBody', 'Full-screen rotation for shared screens. Layout, dwell time, and idle behavior are configured on the dashboard.')}
+              </HelperText>
+            </div>
+            <PrefetchLink
+              to="/?kiosk=settings"
+              className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-10 px-4 text-sm')}
+              data-testid="kiosk-settings-link"
+            >
+              <Tv className="h-4 w-4" aria-hidden="true" />
+              {t('settings.appearance.kioskLink', 'Open kiosk settings')}
+            </PrefetchLink>
           </div>
         </div>
       </GlassPanel>

@@ -291,7 +291,14 @@ export default function DashboardPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importJson, setImportJson] = useState<string | null>(null);
-  const [showKioskSettings, setShowKioskSettings] = useState(false);
+  // Deep-link affordance: /?kiosk=settings (linked from Appearance settings;
+  // the dashboard is the index route) opens kiosk settings on load. Read
+  // from window.location directly so no router context is required.
+  const [showKioskSettings, setShowKioskSettings] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('kiosk') === 'settings',
+  );
   const [showDashSettings, setShowDashSettings] = useState<string | null>(null);
   useLayoutKeyboard({
     editMode, setEditMode, canUndo, canRedo, onUndo: undo, onRedo: redo,

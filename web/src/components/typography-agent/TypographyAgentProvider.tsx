@@ -119,7 +119,6 @@ export function TypographyAgentProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void agent.refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agent]);
 
   // Seed the agent density from workspace settings until the user picks
@@ -148,17 +147,52 @@ export function TypographyAgentProvider({ children }: { children: ReactNode }) {
     ),
   );
 
+  // Opener capture must happen in the toggle handler, not in an effect:
+  // with a warm lazy chunk the HUD mounts in the same commit, and child
+  // effects (the panel's autofocus) run before the parent's — an effect
+  // would capture the panel itself instead of the opener.
+  const lastFocused = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+
   // Global hotkey: Cmd/Ctrl+Shift+T toggles the ambient HUD.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 't') {
         e.preventDefault();
-        setHudOpen((prev) => !prev);
+        if (!hudOpen) {
+          lastFocused.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          wasOpen.current = true;
+        }
+        setHudOpen(!hudOpen);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [hudOpen]);
+
+  // Escape closes an open HUD (hotkey, X button, and Escape all funnel
+  // through hudOpen, so focus restoration below covers every path).
+  useEffect(() => {
+    if (!hudOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setHudOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [hudOpen]);
+
+  // Return focus to the opener on close, however the HUD was dismissed.
+  // (Deep-link opens never captured an opener, so there is nothing to restore.)
+  useEffect(() => {
+    if (!hudOpen && wasOpen.current) {
+      wasOpen.current = false;
+      lastFocused.current?.focus();
+    }
+  }, [hudOpen]);
 
   const value = useMemo<TypographyAgentContextValue>(
     () => ({ agent, spec, verification, hudOpen, setHudOpen, dispatch }),

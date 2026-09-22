@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { Input } from '@/components/ui'
+import { Input } from './Input'
 import { cn } from '@/lib/cn'
 import { navSearchKeywords, navSections } from '@/components/layout/Layout'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'

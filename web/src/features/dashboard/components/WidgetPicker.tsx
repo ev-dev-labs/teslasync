@@ -14,7 +14,22 @@ import { Drawer, Badge, Button as UiButton, Input as UiInput } from '@/component
 import { VisuallyHidden } from '@/components/a11y';
 import { WIDGET_REGISTRY } from '../widgets/registry';
 import { DASHBOARD_PRESETS } from '../hooks/useDashboardLayout';
-import type { WidgetCategory, WidgetDef } from '../widgets/types';
+import type { SavedDashboard, WidgetCategory, WidgetDef } from '../widgets/types';
+import { MiniGridPreview } from './MiniGridPreview';
+
+/** Single-widget dashboard so MiniGridPreview can render a footprint chip. */
+function previewDashboardFor(w: WidgetDef): SavedDashboard {
+  return {
+    id: `preview-${w.id}`,
+    name: w.name,
+    widgets: [{ id: 'preview-tile', widgetId: w.id }],
+    layouts: {
+      lg: [{ i: 'preview-tile', x: 0, y: 0, w: w.defaultSize.cols, h: w.defaultSize.rows }],
+    },
+    createdAt: '',
+    updatedAt: '',
+  };
+}
 
 const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   vehicle: 'Vehicle',
@@ -321,13 +336,22 @@ export function WidgetPicker({
         onClick={() => handleAdd(w)}
         onKeyDown={(event) => handleWidgetKeyDown(event, w)}
         className={cn(
-          'h-auto w-full flex-col items-stretch justify-start gap-0 rounded-xl border p-3 text-left transition-all',
+          'group relative h-auto w-full flex-col items-stretch justify-start gap-0 rounded-xl border p-3 text-left transition-all',
           'bg-white/[0.03] border-white/[0.06]',
           isAdded
             ? 'opacity-40 cursor-not-allowed'
             : 'hover:bg-white/[0.06] hover:border-white/[0.12] cursor-pointer',
         )}
       >
+        {!isAdded && (
+          <div
+            aria-hidden="true"
+            data-testid={`widget-footprint-preview-${w.id}`}
+            className="pointer-events-none absolute right-3 top-3 hidden w-28 group-hover:block group-focus-within:block"
+          >
+            <MiniGridPreview dashboard={previewDashboardFor(w)} />
+          </div>
+        )}
         <div className="flex items-start gap-3">
           <div className="rounded-lg p-2 bg-white/[0.04] shrink-0">
             <w.icon className="h-4 w-4 text-[var(--theme-primary)]" />

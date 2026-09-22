@@ -50,9 +50,13 @@ export class TypographyObserver {
 
     const style = window.getComputedStyle(node);
 
-    // 2. Horizontal scroll truncation under overflow hidden.
+    // 2. Horizontal scroll truncation under overflow hidden — except where
+    // truncation is declared author intent (truncate / line-clamp utilities).
     const text = node.innerText ?? '';
-    if (node.scrollWidth > node.clientWidth + 1 && style.overflow === 'hidden') {
+    const declaresTruncation =
+      node.classList.contains('truncate') ||
+      Array.from(node.classList).some((cls) => cls.startsWith('line-clamp'));
+    if (!declaresTruncation && node.scrollWidth > node.clientWidth + 1 && style.overflow === 'hidden') {
       anomalies.push({
         selector,
         type: 'TEXT_OVERFLOW',
@@ -79,6 +83,8 @@ export class TypographyObserver {
     while (node) {
       if (node.id === 'typography-hud-root') return true;
       if (node.tagName === 'SCRIPT' || node.tagName === 'STYLE') return true;
+      // Visually-hidden (1px clipped) subtrees always "overflow" by design.
+      if (node.classList?.contains('sr-only')) return true;
       if (node.id !== '' && extra.includes(node.id)) return true;
       node = node.parentElement;
     }

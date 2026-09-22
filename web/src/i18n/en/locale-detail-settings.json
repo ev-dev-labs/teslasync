@@ -10,6 +10,12 @@
       "resetAll": "Reset all tours",
       "resetDone": "All tours reset — they will play next time you open the matching page"
     },
+    "appearance": {
+      "kioskLabel": "Kiosk mode",
+      "kioskTitle": "Wall-display dashboard",
+      "kioskBody": "Full-screen rotation for shared screens. Layout, dwell time, and idle behavior are configured on the dashboard.",
+      "kioskLink": "Open kiosk settings"
+    },
     "organization": {
       "navigation": "Settings categories",
       "subtitle": "Find a category, adjust your preferences, and keep TeslaSync working your way.",
@@ -284,7 +290,9 @@
       "sectionTitle": "Harmonic scale",
       "sectionSubtitle": "A modular-ratio fluid scale compiled to live tokens. Same store as the ambient HUD (Ctrl/⌘+Shift+T).",
       "loopStatus": "Loop verified · score {{score}}/100",
-      "loopPending": "Loop calibrating…"
+      "loopPending": "Loop calibrating…",
+      "reset": "Reset to defaults",
+      "openHud": "Open ambient HUD"
     }
   }
 }

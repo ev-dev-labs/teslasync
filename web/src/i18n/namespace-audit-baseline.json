@@ -43,7 +43,7 @@
       "src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx"
     ],
     "dataUnavailable": [
-      "src\\components\\feedback\\DataUnavailableNotice.tsx"
+      "src\\components\\feedback\\DataStateNotice.tsx"
     ],
     "demoMode": [
       "src\\components\\feedback\\DemoModeBanner.tsx"
@@ -121,9 +121,6 @@
       "src\\components\\ai\\AINLSqlPlayground.tsx",
       "src\\components\\ai\\AINLSqlPlayground.tsx"
     ],
-    "preferences": [
-      "src\\features\\settings\\pages\\SettingsPage.tsx"
-    ],
     "preview": [
       "src\\features\\dashboard\\components\\MiniGridPreview.tsx",
       "src\\features\\dashboard\\components\\MiniGridPreview.tsx"
@@ -190,11 +187,6 @@
       "src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
       "src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
       "src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx"
-    ],
-    "signalLog": [
-      "src\\features\\telemetry\\components\\SignalLogBreakdownPanel.tsx",
-      "src\\features\\telemetry\\components\\SignalLogBreakdownPanel.tsx",
-      "src\\features\\telemetry\\components\\SignalLogBreakdownPanel.tsx"
     ],
     "signals": [
       "src\\features\\telemetry\\components\\SignalCategoryTree.tsx",
@@ -757,8 +749,7 @@
       "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
     ],
     "subtitle": [
-      "src\\features\\dashboard\\pages\\DashboardPage.tsx",
-      "src\\features\\settings\\pages\\SettingsPage.tsx"
+      "src\\features\\dashboard\\pages\\DashboardPage.tsx"
     ],
     "Success": [
       "src\\features\\system\\components\\status\\OperationsSection.tsx"

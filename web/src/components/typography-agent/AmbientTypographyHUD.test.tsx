@@ -78,4 +78,43 @@ describe('AmbientTypographyHUD', () => {
     });
     expect(screen.queryByLabelText('Typography agent controller')).toBeNull();
   });
+
+  it('resets the spec to defaults from the reset button', async () => {
+    renderHUD();
+    await openHUD();
+
+    await act(async () => {
+      fireEvent.change(await screen.findByLabelText('Harmonic ratio'), {
+        target: { value: 'goldenRatio' },
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText('Harmonic ratio')).toHaveValue('goldenRatio');
+    });
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Reset to defaults' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText('Harmonic ratio')).toHaveValue('majorThird');
+    });
+  });
+
+  it('closes on Escape and returns focus to the opener', async () => {
+    renderHUD();
+    const opener = document.createElement('button');
+    opener.textContent = 'opener';
+    document.body.appendChild(opener);
+    opener.focus();
+
+    await openHUD();
+    expect(document.activeElement?.getAttribute('id')).toBe('typography-hud-root');
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Escape' });
+    });
+    expect(screen.queryByLabelText('Typography agent controller')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
 });

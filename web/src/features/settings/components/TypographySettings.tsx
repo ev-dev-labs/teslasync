@@ -370,13 +370,19 @@ export function TypographySettings() {
                 />
               </div>
             </div>
-            <HelperText>
-              {agentCtx.verification
-                ? tAgent('settings.typographyAgent.loopStatus', 'Loop verified · score {{score}}/100', {
-                    score: agentCtx.verification.score,
-                  })
-                : tAgent('settings.typographyAgent.loopPending', 'Loop calibrating…')}
-            </HelperText>
+            <div className="flex items-center justify-between gap-3">
+              <HelperText>
+                {agentCtx.verification
+                  ? tAgent('settings.typographyAgent.loopStatus', 'Loop verified · score {{score}}/100', {
+                      score: agentCtx.verification.score,
+                    })
+                  : tAgent('settings.typographyAgent.loopPending', 'Loop calibrating…')}
+              </HelperText>
+              <Button variant="ghost" size="sm" onClick={() => agentCtx.setHudOpen(true)}>
+                <Type className="mr-2 h-4 w-4" aria-hidden="true" />
+                {tAgent('settings.typographyAgent.openHud', 'Open ambient HUD')}
+              </Button>
+            </div>
           </div>
         )}
 

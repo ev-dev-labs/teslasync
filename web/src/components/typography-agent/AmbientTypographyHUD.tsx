@@ -1,5 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Type, X } from 'lucide-react';
+import { RotateCcw, Type, X } from 'lucide-react';
 import {
   Badge,
   Button,
@@ -12,6 +13,7 @@ import {
   type SelectOption,
 } from '@/components/ui';
 import { RATIO_VALUES } from '@/lib/typography-agent/harmonizer';
+import { DEFAULT_TYPOGRAPHY_SPEC } from '@/lib/typography-agent/orchestrator';
 import type { DensityMode, ModularRatio } from '@/lib/typography-agent/types';
 import { useTypographyAgent } from './TypographyAgentProvider';
 
@@ -63,8 +65,17 @@ export function AmbientTypographyHUD() {
   const score = verification?.score ?? 100;
   const anomalies = verification?.anomalies ?? [];
 
+  // Move keyboard focus into the panel on open (the provider returns it to
+  // the opener on close).
+  const panelRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    panelRef.current?.focus({ preventScroll: true });
+  }, []);
+
   return (
     <aside
+      ref={panelRef}
+      tabIndex={-1}
       id="typography-hud-root"
       aria-label={t('settings.typographyAgent.hudLabel', 'Typography agent controller')}
       className="fixed bottom-6 right-6 z-[9999] w-[22rem] max-w-[calc(100vw-3rem)]"
@@ -188,6 +199,17 @@ export function AmbientTypographyHUD() {
               </ul>
             </div>
           )}
+
+          <div className="pt-1">
+            <Button
+              variant="ghost"
+              onClick={() => void dispatch({ ...DEFAULT_TYPOGRAPHY_SPEC })}
+              className="w-full justify-center"
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              {t('settings.typographyAgent.reset', 'Reset to defaults')}
+            </Button>
+          </div>
         </div>
       </GlassPanel>
     </aside>

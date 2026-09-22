@@ -835,3 +835,18 @@ describe('DashboardPage — URL import', () => {
     expect(screen.queryByTestId('import-modal')).toBeNull();
   });
 });
+
+describe('DashboardPage — kiosk deep-link', () => {
+  it('opens kiosk settings from ?kiosk=settings', () => {
+    window.history.replaceState({}, '', '/?kiosk=settings');
+    renderPage();
+    expect(screen.getByTestId('kiosk-settings')).toBeInTheDocument();
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('does not open kiosk settings without the query param', () => {
+    window.history.replaceState({}, '', '/');
+    renderPage();
+    expect(screen.queryByTestId('kiosk-settings')).toBeNull();
+  });
+});

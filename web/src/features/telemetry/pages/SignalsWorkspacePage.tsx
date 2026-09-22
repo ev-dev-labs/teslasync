@@ -518,7 +518,7 @@ export default function SignalsWorkspacePage() {
                 >
                   {isLive ? (
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                      <span aria-hidden="true" className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                       {t('signalsWorkspace.stopLive', 'Stop live')}
                     </span>
                   ) : t('signalsWorkspace.live', 'Live')}

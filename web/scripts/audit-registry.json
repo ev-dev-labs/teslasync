@@ -36,6 +36,7 @@
     { "script": "audit-forced-colors.mjs", "npmScript": "audit:forced-colors", "status": "active", "enforcement": "zero-violations", "asserts": "Windows High Contrast / forced-colors survivability." },
     { "script": "audit-sr-only.mjs", "npmScript": "audit:sr-only", "status": "active", "enforcement": "zero-violations", "asserts": "sr-only text uses the shared VisuallyHidden primitive." },
     { "script": "audit-accessible-name.mjs", "npmScript": "audit:accessible-name", "status": "active", "enforcement": "zero-violations", "asserts": "Interactive controls have a computable accessible name." },
+    { "script": "audit-chunk-cycles.mjs", "npmScript": "audit:chunk-cycles", "status": "active", "enforcement": "zero-violations", "asserts": "No shell-closure file imports a category barrel it cycles with (CYCLIC_CROSS_CHUNK_REEXPORT risk)." },
     { "script": "audit-landmarks.mjs", "npmScript": "audit:landmarks", "status": "active", "enforcement": "zero-violations", "asserts": "Page structure exposes the required ARIA landmarks." },
     { "script": "audit-reduced-motion.mjs", "npmScript": "audit:reduced-motion", "status": "active", "enforcement": "zero-violations", "asserts": "Animation respects prefers-reduced-motion." },
     { "script": "audit-chart-a11y.mjs", "npmScript": "audit:chart-a11y", "status": "active", "enforcement": "zero-violations", "asserts": "Charts expose an accessible description/table alternative." },

@@ -1066,6 +1066,7 @@
       "ratio_minorSecond": "Minor Second",
       "ratio_minorThird": "Minor Third",
       "ratio_perfectFourth": "Perfect Fourth",
+      "reset": "Reset to defaults",
       "score": "Score: {{score}}/100",
       "specimen": "Live specimen",
       "specimenBody": "Body copy follows the modular ratio across viewports.",

@@ -284,4 +284,17 @@ describe('WidgetPicker', () => {
     renderPicker({ activeWidgetIds: ['range-estimate'] });
     expect(screen.queryByText('Recently Added')).toBeNull();
   });
+
+  it('renders a hover-revealed footprint preview per addable card', () => {
+    renderPicker();
+    const preview = screen.getByTestId('widget-footprint-preview-range-estimate');
+    expect(preview).toHaveClass('hidden');
+    expect(preview).toHaveClass('group-hover:block');
+    expect(preview).toHaveClass('group-focus-within:block');
+  });
+
+  it('omits the footprint preview for already-added widgets', () => {
+    renderPicker({ activeWidgetIds: ['range-estimate'] });
+    expect(screen.queryByTestId('widget-footprint-preview-range-estimate')).toBeNull();
+  });
 });

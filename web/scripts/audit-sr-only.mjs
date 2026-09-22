@@ -48,12 +48,17 @@ const ROOT = join('src');
  * - `RadioCard.tsx` is the same pattern for `<input type="radio">`: the
  * card body reads `peer-checked:` / `peer-focus-visible:` off the native
  * input, so the input has to stay a direct `peer` sibling.
+ * - `typography-agent/observer.ts` (and its test) only *detect* the class
+ * via `classList.contains` so the live-DOM scan can skip visually-hidden
+ * subtrees that overflow by design. They never render `sr-only` markup.
  */
 const ALLOWED_FILES = new Set([
   toAllowKey(join('src', 'components', 'a11y', 'VisuallyHidden.tsx')),
   toAllowKey(join('src', 'components', 'a11y', '__tests__', 'VisuallyHidden.test.tsx')),
   toAllowKey(join('src', 'components', 'ui', 'Checkbox.tsx')),
   toAllowKey(join('src', 'components', 'ui', 'RadioCard.tsx')),
+  toAllowKey(join('src', 'lib', 'typography-agent', 'observer.ts')),
+  toAllowKey(join('src', 'lib', 'typography-agent', 'observer.test.ts')),
 ]);
 
 function toAllowKey(p) {
