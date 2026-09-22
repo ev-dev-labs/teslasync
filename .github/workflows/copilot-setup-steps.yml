@@ -46,6 +46,11 @@ jobs:
         run: go build ./...
 
       # ── Node.js toolchain ─────────────────────────────────────
+      - name: Install Node.js runtime prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libatomic1
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
