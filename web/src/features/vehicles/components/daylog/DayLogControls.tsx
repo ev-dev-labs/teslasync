@@ -28,8 +28,9 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
   };
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2" data-testid="daylog-controls">
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-1 sm:gap-2 xl:w-auto" data-testid="daylog-controls">
         <VehicleSelect withIcon data-testid="daylog-vehicle" />
+        <div className="grid min-w-0 flex-1 grid-cols-[44px_minmax(0,1fr)_44px_auto] items-center gap-1 sm:grid-cols-[36px_minmax(0,1fr)_36px_auto] xl:w-[320px]" data-testid="daylog-date-navigation">
         <Button
           variant="ghost"
           size="sm"
@@ -43,7 +44,7 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
         <Input
           type="date"
           size="sm"
-          className="h-11 sm:h-9"
+          className="h-11 min-w-0 px-2 sm:h-9"
           aria-label={t('dayLog.controls.dateLabel', 'Day')}
           aria-describedby="daylog-timezone"
           value={isValidYmd(date) ? date : ''}
@@ -64,6 +65,7 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
         <Button variant="ghost" size="sm" className="h-11 sm:h-9" onClick={() => onDateChange(todayYmd(timezone))} data-testid="daylog-today">
           {t('dayLog.controls.today', 'Today')}
         </Button>
+        </div>
     </div>
   );
 }

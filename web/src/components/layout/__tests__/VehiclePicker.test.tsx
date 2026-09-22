@@ -4,7 +4,7 @@ import type { Vehicle } from '@/types/vehicle';
 import type { PinnedItem } from '@/api/types';
 
 // ── Controllable mock state ───────────────────────────────────────────────
-// VehiclePicker is a thin orchestrator over two hooks + <Select>. We isolate
+// VehiclePicker is a thin orchestrator over two hooks + <Combobox>. We isolate
 // it by mocking its data sources so every branch (hide guard, pin ordering,
 // label fallbacks, selection dispatch) is driven deterministically without a
 // QueryClient/Router or any network. This mirrors the repo convention of
@@ -97,7 +97,7 @@ describe('VehiclePicker', () => {
     mockVehicles = [makeVehicle({ id: 1, display_name: 'Solo' })];
     mockVehicleId = 1;
     render(<VehiclePicker hideWhenSingle={false} />);
-    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toHaveValue('1');
+    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toHaveValue('Solo');
   });
 
   it('renders an accessible select with one option per vehicle for a multi-vehicle fleet', () => {
@@ -110,11 +110,12 @@ describe('VehiclePicker', () => {
 
     const select = screen.getByRole('combobox', { name: 'Select vehicle' });
     expect(select).toBeInTheDocument();
+    fireEvent.focus(select);
     const options = screen.getAllByRole('option');
     expect(options).toHaveLength(2);
     expect(options.map((o) => o.textContent)).toEqual(['Roadster', 'Cybertruck']);
-    // Each option's value is the stringified vehicle id.
-    expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual(['1', '2']);
+    expect(options[0]).toHaveAttribute('aria-selected', 'true');
+    expect(options[1]).toHaveAttribute('aria-selected', 'false');
   });
 
   it('labels fall back from display_name → vin → "Vehicle {id}"', () => {
@@ -126,6 +127,7 @@ describe('VehiclePicker', () => {
     mockVehicleId = 1;
     render(<VehiclePicker />);
 
+    fireEvent.focus(screen.getByRole('combobox'));
     const labels = screen.getAllByRole('option').map((o) => o.textContent);
     expect(labels).toEqual(['Named Car', 'VIN-XYZ', 'Vehicle 3']);
   });
@@ -141,6 +143,7 @@ describe('VehiclePicker', () => {
     mockVehicleId = 1;
     render(<VehiclePicker />);
 
+    fireEvent.focus(screen.getByRole('combobox'));
     const labels = screen.getAllByRole('option').map((o) => o.textContent);
     expect(labels).toEqual(['📌 Model S', '📌 Roadster', 'Cybertruck']);
   });
@@ -154,6 +157,7 @@ describe('VehiclePicker', () => {
     mockVehicleId = 1;
     render(<VehiclePicker />);
 
+    fireEvent.focus(screen.getByRole('combobox'));
     const options = screen.getAllByRole('option');
     expect(options).toHaveLength(2);
     // No phantom option, no 📌 applied to real vehicles, original order kept.
@@ -167,7 +171,7 @@ describe('VehiclePicker', () => {
     ];
     mockVehicleId = 2;
     render(<VehiclePicker />);
-    expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('2');
+    expect(screen.getByRole('combobox')).toHaveValue('Cybertruck');
   });
 
   it('dispatches the numeric id when the user picks a vehicle', () => {
@@ -178,12 +182,13 @@ describe('VehiclePicker', () => {
     mockVehicleId = 1;
     render(<VehiclePicker />);
 
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '2' } });
+    fireEvent.focus(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('option', { name: 'Cybertruck' }));
     expect(setVehicleId).toHaveBeenCalledTimes(1);
     expect(setVehicleId).toHaveBeenCalledWith(2);
   });
 
-  it('dispatches null when the selected value is not a positive id', () => {
+  it('navigates with arrows, Home/End and typeahead, and cancels without changing selection', () => {
     mockVehicles = [
       makeVehicle({ id: 1, display_name: 'Roadster' }),
       makeVehicle({ id: 2, display_name: 'Cybertruck' }),
@@ -191,9 +196,28 @@ describe('VehiclePicker', () => {
     mockVehicleId = 1;
     render(<VehiclePicker />);
 
-    // An empty value coerces to 0 → guarded to null (never NaN/0 leaking through).
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '' } });
-    expect(setVehicleId).toHaveBeenCalledWith(null);
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    const active = () => document.getElementById(input.getAttribute('aria-activedescendant') ?? '')?.textContent;
+    expect(active()).toBe('Roadster');
+    fireEvent.keyDown(input, { key: 'End' });
+    expect(active()).toBe('Cybertruck');
+    fireEvent.keyDown(input, { key: 'Home' });
+    expect(active()).toBe('Roadster');
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(active()).toBe('Cybertruck');
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(active()).toBe('Roadster');
+    fireEvent.keyDown(input, { key: 'c' });
+    expect(active()).toBe('Cybertruck');
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(input).toHaveValue('Roadster');
+    expect(setVehicleId).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.keyDown(input, { key: 'End' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(setVehicleId).toHaveBeenCalledWith(2);
   });
 
   it('applies a custom className to the wrapper and hides the decorative icon from a11y', () => {
@@ -214,7 +238,6 @@ describe('VehiclePicker', () => {
     expect(control?.querySelectorAll('svg')).toHaveLength(2);
     control?.querySelectorAll('svg').forEach((decoration) => {
       expect(decoration).toHaveAttribute('aria-hidden', 'true');
-      expect(decoration).toHaveClass('pointer-events-none');
     });
   });
 });

@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { CopyLinkButton } from './CopyLinkButton';
-import { PageActions } from './PageActions';
+import { PageActions, type PageActionsProps } from './PageActions';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorDisplay } from '@/components/feedback/ErrorDisplay';
 import { PageErrorBoundary } from '@/components/feedback/PageErrorBoundary';
@@ -46,6 +46,7 @@ function pickWorstQuery(queries: readonly FreshnessQuery[]): FreshnessQuery {
 }
 
 export interface PageContainerProps {
+  actionLayout?: PageActionsProps['layout'];
   title: string;
   subtitle?: ReactNode;
   /** @deprecated Use the semantic action slots below for new or touched pages. */
@@ -116,6 +117,7 @@ export function PageContainer({
   breadcrumbLabels,
   children, className, copyLink, query, dataSources,
   announce = true,
+  actionLayout,
 }: PageContainerProps) {
   const operationalMode = useOperationalMode();
   // A11Y-06: every page funnels through here, so the "your data finished
@@ -155,7 +157,7 @@ export function PageContainer({
       aria-busy={loading || busy || undefined}
     >
       <header
-        className="relative flex flex-col gap-5 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-5 shadow-e1 sm:px-6 xl:flex-row xl:items-center xl:justify-between"
+        className={cn('relative flex flex-col gap-5 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-5 shadow-e1 sm:px-6 xl:flex-row xl:items-center xl:justify-between', actionLayout === 'scope-first' && 'gap-3 px-4 py-4 sm:px-6 sm:py-5')}
         data-role="page-header"
       >
         <div className="flex min-w-0 max-w-4xl gap-4 xl:flex-1">
@@ -186,6 +188,7 @@ export function PageContainer({
           </div>
         </div>
         <PageActions
+          layout={actionLayout}
           metadata={
             resolvedQuery || metadataActions || operationalMode.isReadOnly
               ? <>
@@ -204,7 +207,7 @@ export function PageContainer({
           destructive={destructiveActions}
           overflow={
             copyLink || overflowActions
-              ? <>{overflowActions}{copyLink && <CopyLinkButton />}</>
+              ? <>{overflowActions}{copyLink && <CopyLinkButton className={actionLayout === 'scope-first' ? 'h-11 sm:h-9' : undefined} />}</>
               : undefined
           }
           primary={primaryAction}

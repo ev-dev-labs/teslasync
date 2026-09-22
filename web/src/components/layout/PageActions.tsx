@@ -16,6 +16,8 @@ import {
 } from '@/lib/workspaceScope';
 
 export interface PageActionsProps {
+  /** Unboxed scope row above a shared metadata/commands row on small screens. */
+  layout?: 'rail' | 'scope-first';
   metadata?: ReactNode;
   context?: ReactNode;
   secondary?: ReactNode;
@@ -72,7 +74,9 @@ export function PageActions({
   overflow,
   primary,
   className,
+  layout = 'rail',
 }: PageActionsProps) {
+  const scopeFirst = layout === 'scope-first';
   const { t } = useTranslation();
   const workspaceScope = useWorkspaceScope();
   const hiddenKinds = new Set<WorkspaceScopedControlKind>();
@@ -104,6 +108,7 @@ export function PageActions({
       aria-label={t('common.actions', 'Actions')}
       className={cn(
         'flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-1.5 sm:w-fit xl:justify-end',
+        scopeFirst && 'grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 rounded-none border-0 bg-transparent p-0 sm:w-full xl:flex xl:w-fit xl:gap-3',
         className,
       )}
       data-role="page-actions"
@@ -111,16 +116,16 @@ export function PageActions({
     >
       {hasContext && (
         <div
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-initial"
+          className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-initial', scopeFirst && 'contents')}
           data-action-zone="context"
         >
           {hasActionContent(visibleMetadata) && (
-            <div className="flex items-center gap-2" data-action-group="metadata">
+            <div className={cn('flex items-center gap-2', scopeFirst && 'order-2 min-w-0 flex-wrap xl:order-1')} data-action-group="metadata">
               {visibleMetadata}
             </div>
           )}
           {hasActionContent(visibleContext) && (
-            <div className="flex min-w-0 flex-wrap items-center gap-2" data-action-group="context">
+            <div className={cn('flex min-w-0 flex-wrap items-center gap-2', scopeFirst && 'order-1 col-span-2 xl:order-2')} data-action-group="context">
               {visibleContext}
             </div>
           )}
@@ -129,7 +134,7 @@ export function PageActions({
 
       {hasCommands && (
         <div
-          className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2"
+          className={cn('ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2', scopeFirst && 'order-3')}
           data-action-zone="commands"
         >
           {hasActionContent(visibleSecondary) && (

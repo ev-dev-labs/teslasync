@@ -454,6 +454,101 @@ func TestDriveDetail_Telemetry_DerivesPowerKw(t *testing.T) {
 	}
 }
 
+// TestDriveDetail_RowShapesPreserveLegacyWireContract locks the exact JSON
+// keys of one telemetry row and one position row: the legacy frontend
+// shapes with "ts" renamed to "created_at", speed_mph aliased to "speed",
+// and per-row "power" present only when derivable (omitted — never null —
+// otherwise). Missing signals surface as explicit nulls (never missing
+// keys) so the frontend's stable-shape decoding keeps working.
+func TestDriveDetail_RowShapesPreserveLegacyWireContract(t *testing.T) {
+	t0 := time.Date(2026, 8, 9, 10, 0, 0, 0, time.UTC)
+	t1 := t0.Add(15 * time.Minute)
+	fake := &fakeStateReader{
+		timelineFn: func(_ context.Context, _ int64, mappings []signal.FieldMapping, _, _ time.Time, _ signal.TimelineOptions) ([]signal.TimelineRow, error) {
+			if len(mappings) == len(drivePositionFieldMappings) {
+				return []signal.TimelineRow{{
+					Timestamp: t0,
+					Fields: map[string]signal.SignalValue{
+						"latitude": 47.6, "longitude": -122.2, "speed_mph": 28.5,
+					},
+				}}, nil
+			}
+			return []signal.TimelineRow{{
+				Timestamp: t0,
+				Fields: map[string]signal.SignalValue{
+					"speed": 28.5, "pack_voltage": 400.0, "pack_current": 10.0,
+				},
+			}}, nil
+		},
+	}
+	drives := &fakeDriveByIDFetcher{drive: completedDrive(7, 42, t0, t1)}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake, drives: drives}
+
+	teleRec := httptest.NewRecorder()
+	h.TelemetryReadings(teleRec, newDriveDetailRequest(t, "7", ""))
+	if teleRec.Code != http.StatusOK {
+		t.Fatalf("telemetry status = %d, want 200", teleRec.Code)
+	}
+	var teleRows []map[string]any
+	if err := json.Unmarshal(teleRec.Body.Bytes(), &teleRows); err != nil {
+		t.Fatalf("decode telemetry: %v", err)
+	}
+	if len(teleRows) != 1 {
+		t.Fatalf("telemetry row count = %d, want 1", len(teleRows))
+	}
+	teleRow := teleRows[0]
+	wantTeleKeys := []string{
+		"battery_level", "created_at", "driver_temp", "est_range", "fan_status",
+		"ideal_range", "inside_temp", "latitude", "longitude", "odometer",
+		"outside_temp", "pack_current", "pack_voltage", "passenger_temp",
+		"power", "rated_range", "soc", "speed",
+		"tire_pressure_fl", "tire_pressure_fr", "tire_pressure_rl", "tire_pressure_rr",
+	}
+	if len(teleRow) != len(wantTeleKeys) {
+		t.Fatalf("telemetry keys = %d, want %d", len(teleRow), len(wantTeleKeys))
+	}
+	for _, k := range wantTeleKeys {
+		if _, ok := teleRow[k]; !ok {
+			t.Fatalf("telemetry row missing key %q", k)
+		}
+	}
+	if got := teleRow["power"]; got != 4.0 {
+		t.Fatalf("power = %v, want 4.0", got)
+	}
+	if teleRow["latitude"] != nil {
+		t.Fatalf("latitude = %v, want explicit null", teleRow["latitude"])
+	}
+
+	posRec := httptest.NewRecorder()
+	h.Positions(posRec, newDriveDetailRequest(t, "7", ""))
+	if posRec.Code != http.StatusOK {
+		t.Fatalf("positions status = %d, want 200", posRec.Code)
+	}
+	var posRows []map[string]any
+	if err := json.Unmarshal(posRec.Body.Bytes(), &posRows); err != nil {
+		t.Fatalf("decode positions: %v", err)
+	}
+	if len(posRows) != 1 {
+		t.Fatalf("positions row count = %d, want 1", len(posRows))
+	}
+	posRow := posRows[0]
+	wantPosKeys := []string{"created_at", "heading", "id", "latitude", "longitude", "speed"}
+	if len(posRow) != len(wantPosKeys) {
+		t.Fatalf("positions keys = %v, want exactly %v", posRow, wantPosKeys)
+	}
+	for _, k := range wantPosKeys {
+		if _, ok := posRow[k]; !ok {
+			t.Fatalf("positions row missing key %q", k)
+		}
+	}
+	if got := posRow["speed"]; got != 28.5 {
+		t.Fatalf("speed = %v, want 28.5 (aliased from speed_mph)", got)
+	}
+	if posRow["heading"] != nil {
+		t.Fatalf("heading = %v, want explicit null", posRow["heading"])
+	}
+}
+
 // TestDriveDetail_Telemetry_FieldMappingsCoverPageFields locks in that the
 // telemetry projection includes every signal the frontend Drive Detail
 // page reads via its chartData mapper (useDriveDetailData.ts). Without

@@ -35,6 +35,9 @@
  *
  * For async option fetching, every new keystroke cancels the previous
  * in-flight request.
+ *
+ * `selectOnly` reuses the listbox with a read-only trigger: typeahead
+ * navigates instead of filtering, Space selects, and Tab cancels.
  */
 
 import {
@@ -136,6 +139,10 @@ export interface ComboboxProps<T> {
   noChevron?: boolean;
   /** When true, the input's clear (×) button is hidden. */
   noClearButton?: boolean;
+  /** Select-only picker: typing navigates options without editing the label. */
+  selectOnly?: boolean;
+  listboxClassName?: string;
+  optionClassName?: string;
 }
 
 /* ── Static-array filter (default behaviour) ──────────────────── */
@@ -187,6 +194,9 @@ export function Combobox<T>(props: ComboboxProps<T>) {
     icon,
     noChevron = false,
     noClearButton = false,
+    selectOnly = false,
+    listboxClassName,
+    optionClassName,
   } = props;
 
   const { t } = useTranslation();
@@ -208,6 +218,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
   const [asyncOptions, setAsyncOptions] = useState<readonly T[] | null>(null);
   const [asyncLoading, setAsyncLoading] = useState(false);
   const lastAnnouncedRef = useRef<string>('');
+  const typeaheadRef = useRef({ text: '', time: 0 });
 
   /* Controlled vs uncontrolled input text. */
   const isInputControlled = inputValueProp !== undefined;
@@ -272,8 +283,9 @@ export function Combobox<T>(props: ComboboxProps<T>) {
    * whatever the loader returned (loaders own their own filtering). */
   const filteredOptions = useMemo<readonly T[]>(() => {
     if (isAsync) return asyncOptions ?? [];
+    if (selectOnly) return options as readonly T[];
     return defaultFilter(options as readonly T[], inputValue, getOptionLabel);
-  }, [isAsync, asyncOptions, options, inputValue, getOptionLabel]);
+  }, [isAsync, asyncOptions, options, inputValue, getOptionLabel, selectOnly]);
 
   const visibleOptions = useMemo<readonly T[]>(
     () => filteredOptions.slice(0, maxVisibleOptions),
@@ -316,9 +328,20 @@ export function Combobox<T>(props: ComboboxProps<T>) {
     }
     setActiveIndex((prev) => {
       if (prev >= 0 && prev < visibleOptions.length) return prev;
-      return 0;
+      const selectedIndex = selectOnly && value !== null
+        ? visibleOptions.findIndex((option) => eq(option, value))
+        : -1;
+      return selectedIndex >= 0 ? selectedIndex : 0;
     });
-  }, [open, visibleOptions]);
+  }, [open, visibleOptions, selectOnly, value, eq]);
+
+  useEffect(() => {
+    if (selectOnly && open && activeIndex >= 0 && activeIndex < visibleOptions.length) {
+      document.getElementById(
+        `${listboxId}-opt-${getOptionKey(visibleOptions[activeIndex])}`,
+      )?.scrollIntoView?.({ block: 'nearest' });
+    }
+  }, [selectOnly, open, activeIndex, listboxId, visibleOptions, getOptionKey]);
 
   /* ── Imperative helpers ────────────────────────────────────── */
 
@@ -399,6 +422,13 @@ export function Combobox<T>(props: ComboboxProps<T>) {
     (e: ReactKeyboardEvent<HTMLInputElement>) => {
       if (disabled) return;
       switch (e.key) {
+        case ' ': {
+          if (!selectOnly) return;
+          e.preventDefault();
+          if (!open) setOpen(true);
+          else if (activeIndex >= 0) commitOption(visibleOptions[activeIndex]);
+          return;
+        }
         case 'ArrowDown': {
           e.preventDefault();
           if (!open) {
@@ -436,6 +466,11 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           return;
         }
         case 'Enter': {
+          if (selectOnly && !open) {
+            e.preventDefault();
+            setOpen(true);
+            return;
+          }
           if (open && activeIndex >= 0 && activeIndex < visibleOptions.length) {
             e.preventDefault();
             commitOption(visibleOptions[activeIndex]);
@@ -454,7 +489,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
         case 'Tab': {
           // Commit a highlighted option on Tab so the user can keep
           // moving through the form without losing their pick.
-          if (open && activeIndex >= 0 && activeIndex < visibleOptions.length) {
+          if (!selectOnly && open && activeIndex >= 0 && activeIndex < visibleOptions.length) {
             commitOption(visibleOptions[activeIndex]);
           } else {
             closeWithoutCommit();
@@ -462,6 +497,23 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           return;
         }
         default:
+          if (selectOnly && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            const now = Date.now();
+            const previous = typeaheadRef.current;
+            const text = (now - previous.time < 700 ? previous.text : '') + e.key.toLocaleLowerCase();
+            typeaheadRef.current = { text, time: now };
+            const query = [...text].every((char) => char === text[0]) ? text[0] : text;
+            const start = query.length === 1 ? activeIndex + 1 : activeIndex;
+            for (let offset = 0; offset < visibleOptions.length; offset++) {
+              const index = (Math.max(0, start) + offset) % visibleOptions.length;
+              if (getOptionLabel(visibleOptions[index]).replace(/^📌\s*/, '').toLocaleLowerCase().startsWith(query)) {
+                setActiveIndex(index);
+                setOpen(true);
+                break;
+              }
+            }
+          }
           return;
       }
     },
@@ -475,6 +527,8 @@ export function Combobox<T>(props: ComboboxProps<T>) {
       inputValue,
       commitFreeText,
       closeWithoutCommit,
+      selectOnly,
+      getOptionLabel,
     ],
   );
 
@@ -534,7 +588,8 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           id={inputId}
           type="text"
           role="combobox"
-          aria-autocomplete="list"
+          aria-autocomplete={selectOnly ? 'none' : 'list'}
+          readOnly={selectOnly}
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={open ? listboxId : undefined}
@@ -564,7 +619,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
             INPUT_BASE,
             'text-ellipsis',
             icon && 'pl-10',
-            (showClear || !noChevron || loading) && 'pr-16',
+            (showClear || !noChevron || loading) && (selectOnly ? 'pr-9' : 'pr-16'),
             inputClassName,
           )}
         />
@@ -612,7 +667,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
             >
               <ChevronDown
                 className={cn(
-                  'h-4 w-4 transition-transform',
+                  'h-4 w-4 transition-transform motion-reduce:transition-none',
                   open && 'rotate-180',
                 )}
                 aria-hidden="true"
@@ -633,7 +688,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           id={listboxId}
           role="listbox"
           aria-label={label}
-          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] py-1 shadow-lg"
+          className={cn('absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] py-1 shadow-lg', listboxClassName)}
         >
           {visibleOptions.length === 0 && !loading && (
             <li
@@ -684,6 +739,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
                   !renderOption && 'truncate',
                   isActive && 'bg-[var(--surface-2)]',
                   isSelected && 'font-semibold',
+                  optionClassName,
                 )}
               >
                 {renderOption

@@ -18,7 +18,7 @@ import { useOptionalToast } from '../feedback/Toast';
  * gracefully (no crash) when rendered outside a `<ToastProvider>` — the copy
  * still succeeds, only the transient confirmation toast is skipped.
  */
-export function CopyLinkButton() {
+export function CopyLinkButton({ className }: { className?: string } = {}) {
   const { t } = useTranslation();
   const toast = useOptionalToast();
   const [copied, setCopied] = useState(false);
@@ -71,6 +71,7 @@ export function CopyLinkButton() {
       type="button"
       variant="ghost"
       size="sm"
+      className={className}
       icon={copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
       onClick={handleClick}
       aria-label={t('common.copyLink.label', 'Copy link to this view')}

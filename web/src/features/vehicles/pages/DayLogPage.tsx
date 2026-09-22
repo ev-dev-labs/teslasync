@@ -67,12 +67,12 @@ export default function DayLogPage() {
 
   return (
     <PageContainer
-      className="[&_[data-action-zone=context]]:basis-full sm:[&_[data-action-zone=context]]:basis-auto"
+      actionLayout="scope-first"
       title={title}
       subtitle={
         <>
           {t('dayLog.subtitle', 'What happened to this vehicle today')}
-          <Text as="span" variant="caption" className="mt-1 block" id="daylog-timezone">
+          <Text as="span" variant="caption" className="mt-1 block [overflow-wrap:anywhere]" id="daylog-timezone">
             {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
           </Text>
         </>

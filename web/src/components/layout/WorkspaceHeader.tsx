@@ -56,7 +56,7 @@ export function WorkspaceHeader({
         {showVehicle && (
           <VehiclePicker
             hideWhenSingle={false}
-            className="w-40 border-b-0 px-0 py-0 2xl:w-44 2xl:px-0 2xl:py-0"
+            className="w-40 border-b-0 px-0 py-0 lg:px-0 lg:py-0 2xl:w-44"
           />
         )}
         {notifications}
