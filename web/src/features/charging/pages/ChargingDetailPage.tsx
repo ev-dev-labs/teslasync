@@ -233,10 +233,10 @@ export default function ChargingDetailPage() {
     if (!session) return [];
     if (hasTelemetry) {
       return telemetry
-        .filter((r: ChargeTelemetryReading) => r.battery_level != null && r.power_kw != null)
+        .filter((r: ChargeTelemetryReading) => r.battery_level != null && r.power_w != null)
         .map((r: ChargeTelemetryReading) => ({
           soc: r.battery_level!,
-          power: Math.abs(r.power_kw!),
+          power: convertPowerFromSI(Math.abs(r.power_w!), 'kW'),
         }));
     }
     return synthesizeCurve(session);
@@ -249,7 +249,7 @@ export default function ChargingDetailPage() {
       soc: r.battery_level ?? r.soc,
       energy: r.energy_added,
       range: r.rated_range != null ? toDistanceDisplay(r.rated_range) : null,
-      power: r.power_kw != null ? Math.abs(r.power_kw) : null,
+      power: r.power_w != null ? convertPowerFromSI(Math.abs(r.power_w), 'kW') : null,
     }));
   }, [telemetry, hasTelemetry, toDistanceDisplay]);
 
@@ -730,7 +730,7 @@ export default function ChargingDetailPage() {
                   </ResponsiveContainer>
                 </EmbeddedChart>
               ) : (
-                // no-action: data-quality edge case — telemetry rows exist but lack usable battery_level/power_kw pairs; synthesizeCurve covers the no-telemetry case.
+                // no-action: data-quality edge case — telemetry rows exist but lack usable battery_level/power_w pairs; synthesizeCurve covers the no-telemetry case.
                 <EmptyState
                   icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
                   message={t(

@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/feedback';
 import { useChargingSessions, useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtNumber } from '@/lib/numberFormat';
-import { convertEnergyFromSI } from '@/lib/unitConversion';
+import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
@@ -92,7 +92,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       const ts = new Date(p.created_at);
       return {
         time: `${String(ts.getHours()).padStart(2, '0')}:${String(ts.getMinutes()).padStart(2, '0')}`,
-        power: p.power_kw ?? null,
+        power: p.power_w != null ? convertPowerFromSI(p.power_w, 'kW') : null,
         soc: p.battery_level ?? p.soc ?? null,
       };
     });
@@ -109,7 +109,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
 
   const peakPower = useMemo(() => {
     const points = telemetry ?? [];
-    return points.reduce((max, p) => Math.max(max, p.power_kw ?? 0), 0);
+    return convertPowerFromSI(points.reduce((max, p) => Math.max(max, p.power_w ?? 0), 0), 'kW');
   }, [telemetry]);
 
   const charger = useMemo(

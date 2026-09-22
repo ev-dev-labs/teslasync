@@ -103,15 +103,13 @@ func (h *ChargingHandler) WithForwardAuthHeader(name string) *ChargingHandler {
 }
 
 // chargeTelemetryFieldMappings projects the signal_log change feed into the
-// legacy ChargeTelemetryReading JSON shape. Field names match the old
-// pivot-mapping signal/field pairs so the wire contract is unchanged.
-// AC/DC power is merged into the existing "power_kw" chart field by the
-// TelemetryReadings handler post-processing.
+// ChargeTelemetryReading response. AC/DC power remains in canonical watts
+// and is merged into power_w by the TelemetryReadings post-processing.
 var chargeTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "BatteryLevel", Field: "battery_level"},
 	{Signal: "ChargerVoltage", Field: "voltage"},
 	{Signal: "ChargerActualCurrent", Field: "current_amps"},
-	{Signal: "ACChargingPower", Field: "power_kw"},
+	{Signal: "ACChargingPower", Field: "ac_power_w"},
 	{Signal: "DCChargingPower", Field: "dc_power_w"},
 	{Signal: "ACChargingEnergyIn", Field: "energy_added"},
 	{Signal: "DCChargingEnergyIn", Field: "dc_energy_wh"},
@@ -419,8 +417,8 @@ func stateToSignalMap(s signal.State) map[string]interface{} {
 }
 
 // chargeTelemetryRow is the typed equivalent of one flat telemetry map: the
-// legacy ChargeTelemetryReading JSON shape (battery_level, voltage,
-// power_kw, ...) with "ts" renamed to "created_at" and the intermediate
+// ChargeTelemetryReading JSON shape (battery_level, voltage,
+// power_w, ...) with "ts" renamed to "created_at" and the intermediate
 // dc_power_w / dc_energy_wh merge inputs omitted. Fields stay `any` so a
 // missing signal still marshals as an explicit null exactly like the map
 // version did. Struct fields are declared in alphabetical JSON-key order to
@@ -438,17 +436,17 @@ type chargeTelemetryRow struct {
 	EnergyAdded     any       `json:"energy_added"`
 	InsideTemp      any       `json:"inside_temp"`
 	OutsideTemp     any       `json:"outside_temp"`
-	PowerKW         any       `json:"power_kw"`
+	PowerW          any       `json:"power_w"`
 	RangeAdded      any       `json:"range_added_meters_per_hour"`
 	Voltage         any       `json:"voltage"`
 }
 
 // timelineRowsToChargeRows converts ordered TimelineRows into the legacy
 // flat-pivot response shape in a single pass. The signal change feed is
-// canonical W/Wh; this endpoint's established legacy chart contract
-// (power_kw / energy_added in kW/kWh) is preserved strictly at the HTTP
-// boundary — session summaries remain Wh/W. DC readings win over AC when
-// positive; otherwise the AC value is used; when neither converts, the
+// canonical W/Wh; power remains in watts through the HTTP boundary.
+// Energy retains the existing energy_added chart contract in kWh.
+// DC readings win over AC when positive; otherwise the AC value is used.
+// When neither converts, the
 // folded value passes through untouched.
 func timelineRowsToChargeRows(rows []signal.TimelineRow) []chargeTelemetryRow {
 	out := make([]chargeTelemetryRow, len(rows))
@@ -463,14 +461,14 @@ func timelineRowsToChargeRows(rows []signal.TimelineRow) []chargeTelemetryRow {
 			EnergyAdded:     f["energy_added"],
 			InsideTemp:      f["inside_temp"],
 			OutsideTemp:     f["outside_temp"],
-			PowerKW:         f["power_kw"],
+			PowerW:          f["ac_power_w"],
 			RangeAdded:      f["range_added_meters_per_hour"],
 			Voltage:         f["voltage"],
 		}
 		if dcPowerW, ok := signal.Float64(f["dc_power_w"]); ok && dcPowerW > 0 {
-			row.PowerKW = safeFloat(dcPowerW / 1000.0)
-		} else if acPowerW, ok := signal.Float64(f["power_kw"]); ok {
-			row.PowerKW = safeFloat(acPowerW / 1000.0)
+			row.PowerW = safeFloat(dcPowerW)
+		} else if acPowerW, ok := signal.Float64(f["ac_power_w"]); ok {
+			row.PowerW = safeFloat(acPowerW)
 		}
 		if dcEnergyWh, ok := signal.Float64(f["dc_energy_wh"]); ok && dcEnergyWh > 0 {
 			row.EnergyAdded = safeFloat(dcEnergyWh / 1000.0)

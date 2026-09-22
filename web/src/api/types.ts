@@ -248,7 +248,7 @@ export interface ChargeTelemetryReading {
   created_at: string
   battery_level?: number | null
   soc?: number | null
-  power_kw?: number | null
+  power_w?: number | null
   energy_added?: number | null
   rated_range?: number | null
   battery_temp?: number | null
