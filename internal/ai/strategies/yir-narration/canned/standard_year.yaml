@@ -8,7 +8,7 @@ replies:
     output_tokens: 22
   - finish_reason: stop
     content: |
-      This year, Roadie drove 412 trips covering 12,500 km. You used 2,180 kWh
+      Roadie drove 412 trips covering 12,500 km this year. You used 2,180 kWh
       of energy across the road. Charging summary: 96 sessions adding 2,310 kWh
       total. A great year on the road — keep it rolling!
     input_tokens: 80

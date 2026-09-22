@@ -48,7 +48,7 @@ export function WorkspaceHeader({
         <CommandPaletteTrigger />
       </div>
 
-      <div className="flex min-w-0 items-center justify-self-end gap-1.5 border-s border-[var(--border-default)] ps-3">
+      <div className="flex min-w-0 items-center justify-self-end gap-2">
         <WorkspaceContextControl
           hidden={!showRange}
           className="max-w-32 px-2 2xl:max-w-40 2xl:px-3"
@@ -56,7 +56,7 @@ export function WorkspaceHeader({
         {showVehicle && (
           <VehiclePicker
             hideWhenSingle={false}
-            className="w-40 border-b-0 px-0 py-0 2xl:w-44 2xl:px-0 2xl:py-0"
+            className="w-40 border-b-0 px-0 py-0 lg:px-0 lg:py-0 2xl:w-44"
           />
         )}
         {notifications}

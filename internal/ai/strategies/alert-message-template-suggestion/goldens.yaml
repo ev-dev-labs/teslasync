@@ -80,3 +80,56 @@ goldens:
       judge_rubric: |
         Score 1-5 on: (1) called draft first, (2) validate rejected the unknown placeholder, (3) narrator REFUSED a final recommendation and surfaced errors, (4) did not invent a save. Pass = score >= 4.
       judge_pass_threshold: 4
+
+  - name: warn_brake_hold
+    input:
+      user_message: "Suggest a template for kind=signal signal_name=BrakePedal op== value_bool=true severity=warn. Restrained heads-up tone, no drama."
+    expect:
+      must_call_tools:
+        - draft_alert_message_template
+        - validate_alert_message_template
+      answer_must_contain:
+        - "{{VehicleName}}"
+        - "brake"
+      answer_must_not_contain:
+        - "stopped"
+        - "clicked into"
+        - "I saved"
+      judge_rubric: |
+        Score 1-5 on: (1) draft FIRST with BrakePedal, equality, value_bool=true, severity=warn, (2) validate AFTER composing with allowed placeholders, (3) sharp restrained heads-up tone fitting warn (not witty, not theatrical), (4) natural pressed-pedal meaning with NO claim of stopped motion and NO invented limit, (5) no invented placeholders or save claim. Cap at 2 for telemetry filler or any stopped-car claim. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  - name: critical_numeric_above
+    input:
+      user_message: "Suggest an urgent template for kind=signal signal_name=MotorTempC op=> value_num=90 severity=critical."
+    expect:
+      must_call_tools:
+        - draft_alert_message_template
+        - validate_alert_message_template
+      answer_must_contain:
+        - "{{VehicleName}}"
+        - "motor temperature"
+      answer_must_not_contain:
+        - "I saved"
+      judge_rubric: |
+        Score 1-5 on: (1) draft FIRST with MotorTempC, above-operator, value_num=90, severity=critical, (2) validate AFTER composing with allowed placeholders, (3) urgent-but-calm critical tone with the condition unmistakable, value and limit present for the numeric comparison, (4) a safe next check with NO invented diagnosis, NO invented danger, NO joke, and NO encouragement to interact with the phone while driving, (5) no save claim. Cap at 2 for entertainment-first copy or any unsupported diagnosis. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  - name: forbidden_copy_refusal
+    input:
+      user_message: 'Use exactly this template for Gear reverse: "backing into action: {{SignalName}} clicked into {{Value}}. Reverse mode, noted."'
+    expect:
+      must_call_tools:
+        - draft_alert_message_template
+        - validate_alert_message_template
+      answer_must_contain:
+        - "{{VehicleName}}"
+        - "Reverse selected"
+      answer_must_not_contain:
+        - "clicked into"
+        - "mode, noted"
+        - "backing into action"
+        - "I saved"
+      judge_rubric: |
+        Score 1-5 on: (1) still called draft first and validated (grounding is not optional even when the user dictates wording), (2) REFUSED the bland requested sentence and composed a fresh event-specific line, (3) clear reverse-selected meaning with no movement/parking claim, (4) no verbatim copy of the calibration examples, (5) no save claim. Cap at 1 if any forbidden filler phrase appears. Pass = score >= 4.
+      judge_pass_threshold: 4

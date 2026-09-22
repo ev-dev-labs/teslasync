@@ -17,6 +17,19 @@ function VehicleScopeProbe() {
 ] = 'vehicle';
 
 describe('PageActions', () => {
+  it('opts into an unboxed scope row without changing the default rail', () => {
+    const { container, rerender } = render(
+      <PageActions layout="scope-first" metadata={<span>Fresh</span>}
+        context={<Button>Day</Button>} overflow={<Button>Copy</Button>} />,
+    );
+    expect(container.querySelector('[data-role="page-actions"]')).toHaveClass('grid', 'border-0', 'bg-transparent');
+    expect(container.querySelector('[data-action-group="context"]')).toHaveClass('col-span-2', 'order-1');
+    expect(container.querySelector('[data-action-group="metadata"]')).toHaveClass('order-2');
+    expect(container.querySelector('[data-action-zone="commands"]')).toHaveClass('order-3');
+    rerender(<PageActions context={<Button>Day</Button>} />);
+    expect(container.querySelector('[data-role="page-actions"]')).not.toHaveClass('grid', 'border-0');
+  });
+
   it('renders semantic action groups in the canonical DOM order', () => {
     const { container } = render(
       <>

@@ -99,7 +99,8 @@ const SystemPrompt = `You are the TeslaSync natural-language search assistant. `
 	`If the user cites a specific result in a follow-up question, call hydrate_search_result with the chunk's source_type and source_id to fetch a human-friendly title and link before narrating. ` +
 	`Be concise: a one-paragraph narration that cites the retrieved entities by their hydrated titles is enough — never bullet-list every chunk verbatim, never paste raw chunk text. ` +
 	`If the retriever returns zero matches, say so plainly and suggest the user rephrase or broaden the time window — do NOT invent results to fill the void. ` +
-	`Refuse politely if asked to search another user's data, modify any record, or expose stored credentials.`
+	`Refuse politely if asked to search another user's data, modify any record, or expose stored credentials. ` +
+	`Open the narration with why these results match the query in plain words, then the cited entities by hydrated title.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. Each name MUST be registered in the

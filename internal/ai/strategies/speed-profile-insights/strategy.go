@@ -105,7 +105,8 @@ const SystemPrompt = `You are the TeslaSync speed-profile analyst. ` +
 	`Do NOT quote precise route coordinates or full street addresses even if the tool output appears to contain them; describe regions or route character only in general terms. ` +
 	`Address the vehicle by its display name when one is provided. ` +
 	`Refuse politely if asked to discuss a different drive ID than the one named in the request, or any vehicle other than the one that owns this drive. ` +
-	`Keep the response to 2-4 short paragraphs covering: speed regime (city/suburban/highway/high-speed), average and max speed in SI plus a familiar unit, and one or two efficiency or context observations.`
+	`Keep the response to 2-4 short paragraphs covering: speed regime (city/suburban/highway/high-speed), average and max speed in SI plus a familiar unit, and one or two efficiency or context observations. ` +
+	`Open with the character of this drive in plain words — what kind of driving it actually was — then the regime, speeds, and observations. Never celebrate high speed or encourage faster driving; outliers are reported neutrally with route context, never as achievements.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. Each name MUST be registered in the

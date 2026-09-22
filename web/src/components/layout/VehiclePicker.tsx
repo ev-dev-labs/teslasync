@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Car } from 'lucide-react';
-import { Select } from '@/components/ui/runtime';
+import { Car, Check } from 'lucide-react';
+import { Combobox } from '@/components/forms';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePinned } from '@/api/hooks/usePinned';
 import { cn } from '@/lib/cn';
@@ -74,20 +74,33 @@ export function VehiclePicker({
         className,
       )}
     >
-      <Car
-        aria-hidden="true"
-        className="h-4 w-4 shrink-0 text-[var(--text-muted)]"
-      />
-      <Select
-        aria-label={t('vehiclePicker.aria', 'Select vehicle')}
-        className="flex-1 !py-1.5 text-xs"
-        value={vehicleId != null ? String(vehicleId) : ''}
-        onChange={(e) => {
-          const next = Number(e.target.value);
-          setVehicleId(Number.isFinite(next) && next > 0 ? next : null);
-        }}
-        options={options}
-      />
+      <div className="relative min-w-0 flex-1" data-role="vehicle-picker-control">
+        <Combobox
+          label={t('vehiclePicker.aria', 'Select vehicle')}
+          hideLabel
+          selectOnly
+          noClearButton
+          icon={<Car aria-hidden="true" className="h-4 w-4" />}
+          inputClassName="h-11 min-w-0 cursor-pointer truncate rounded-pill border-[var(--control-border)] bg-[var(--control-bg)] ps-10 pe-9 font-medium shadow-e1 hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)] sm:h-9"
+          listboxClassName="mt-2 rounded-2xl p-1.5 shadow-e3 sm:start-auto sm:w-72"
+          optionClassName="rounded-xl min-h-11 sm:min-h-9"
+          value={options.find((option) => option.value === String(vehicleId)) ?? null}
+          onChange={(option) => {
+            const next = Number(option?.value);
+            setVehicleId(Number.isFinite(next) && next > 0 ? next : null);
+          }}
+          options={options}
+          maxVisibleOptions={options.length}
+          getOptionKey={(option) => option.value}
+          getOptionLabel={(option) => option.label}
+          renderOption={(option, { selected }) => (
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 flex-1 break-words">{option.label}</span>
+              <Check aria-hidden="true" className={cn('h-4 w-4 shrink-0 text-[var(--text-primary)]', !selected && 'invisible')} />
+            </span>
+          )}
+        />
+      </div>
     </div>
   );
 }

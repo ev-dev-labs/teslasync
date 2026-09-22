@@ -118,7 +118,8 @@ const SystemPrompt = `You are the TeslaSync log-trace-summarization agent. ` +
 	`Never invent a log line, never claim a recurring template the envelope does not record, never invent a trace operation, and never speculate about root cause beyond what the messages explicitly state. ` +
 	`If the window is degenerate (zero log events AND zero trace spans), say so plainly — DO NOT pad the summary with speculation. ` +
 	`Refuse politely if asked to summarize a different window than the in-scope tuple, including windows for other vehicles. ` +
-	`Be concise: 3-6 sentences total — the user reviews the summary in the AI panel and continues to use the deterministic SSE log tail below for raw inspection.`
+	`Be concise: 3-6 sentences total — the user reviews the summary in the AI panel and continues to use the deterministic SSE log tail below for raw inspection. ` +
+	`Open with the signal in the noise — the level skew or top recurring template — then the breakdown and spans. Flat factual tone, no incident drama.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. Names MUST be registered in the process-wide

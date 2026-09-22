@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -195,6 +195,23 @@ beforeEach(() => {
 });
 
 describe('DayLogPage', () => {
+  it('keeps day selection, freshness, and copy link in the page header', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse() }));
+    renderPage();
+
+    const header = screen.getByRole('heading', { name: 'Day log' }).closest('header');
+    expect(header).not.toBeNull();
+    if (!header) throw new Error('Day log header is missing');
+    expect(within(header).getByTestId('daylog-controls')).toBeInTheDocument();
+    expect(within(header).getByTestId('daylog-date')).toHaveValue('2026-09-14');
+    expect(within(header).getByRole('button', { name: /copy link/i })).toBeInTheDocument();
+    expect(header.querySelector('[data-action-group="metadata"]')).not.toBeNull();
+    expect(within(header).getByText(/Day boundaries in/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('daylog-controls')).queryByText(/Day boundaries in/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-date')).toHaveAccessibleDescription(/Day boundaries in/);
+    expect(screen.getAllByTestId('daylog-controls')).toHaveLength(1);
+  });
+
   it('shows per-section loading states while pending', () => {
     useDayLogMock.mockReturnValue(
       queryState({ data: undefined, isPending: true, isLoading: true, isFetching: true, isSuccess: false, status: 'pending', fetchStatus: 'fetching' }),
@@ -269,18 +286,61 @@ describe('DayLogPage', () => {
     expect(screen.getByText('P → D')).toBeInTheDocument();
   });
 
-  it('expands a row to raw recorded details without losing list identity', () => {
+  it('expands a row to structured recorded details without losing list identity', () => {
     useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
     renderPage();
 
     const expanders = screen.getAllByRole('button', { name: 'Show details' });
     fireEvent.click(expanders[0]);
 
-    // Raw payload JSON + provenance visible; the row title stays put.
+    // Labeled rows + provenance visible; the row title stays put; no raw JSON.
     expect(screen.getByText('Drive started')).toBeInTheDocument();
-    expect(screen.getByText(/"start_place": "Home"/)).toBeInTheDocument();
+    expect(screen.getByText('Start place:')).toBeInTheDocument();
+    expect(screen.getAllByText('Home').length).toBe(2);
     expect(screen.getByText('drives')).toBeInTheDocument();
+    expect(screen.queryByText(/"start_place"/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Hide details' })).toBeInTheDocument();
+  });
+
+  it('shows change and stored-value rows for signal transitions', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
+    renderPage();
+
+    const expanders = screen.getAllByRole('button', { name: 'Show details' });
+    fireEvent.click(expanders[3]);
+
+    // Turn-signal transition: full change line, labeled component, raw values.
+    // (i18n is mocked to fallbacks: token labels render lowercase here.)
+    expect(screen.getAllByText('off → left').length).toBe(2);
+    expect(screen.getByText('Component:')).toBeInTheDocument();
+    expect(screen.getByText('Stored values:')).toBeInTheDocument();
+    expect(screen.getByText('1 → 2')).toBeInTheDocument();
+  });
+
+  it('renders complete-coverage event types with titles and categories', () => {
+    const coverageEvents: DayLogEvent[] = [
+      { id: 'sig:DestinationName:1', ts: '2026-09-14T08:00:00Z', type: 'destination_changed', layer: 'navigation', source: 'signal_log', vehicle_id: 1, payload: { from: 'Home', to: 'Office' } },
+      { id: 'sig:Tpms:1', ts: '2026-09-14T09:00:00Z', type: 'tire_warning_on', layer: 'tires', source: 'signal_log', vehicle_id: 1, payload: { wheel: 'front_left', severity: 'hard', from: false, to: true } },
+      { id: 'sig:ChargePort:1', ts: '2026-09-14T10:00:00Z', type: 'charge_port_opened', layer: 'charge_port', source: 'signal_log', vehicle_id: 1, payload: { from: false, to: true } },
+      { id: 'sig:Pin:1', ts: '2026-09-14T11:00:00Z', type: 'pin_to_drive_on', layer: 'access', source: 'signal_log', vehicle_id: 1, payload: { from: false, to: true } },
+      { id: 'sig:Precon:1', ts: '2026-09-14T12:00:00Z', type: 'preconditioning_on', layer: 'hvac', source: 'signal_log', vehicle_id: 1, payload: { from: false, to: true } },
+      { id: 'sig:Sched:1', ts: '2026-09-14T13:00:00Z', type: 'signal', layer: 'charge_port', source: 'signal_log', vehicle_id: 1, payload: { field: 'ScheduledChargingPending', from: false, to: true } },
+    ];
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(coverageEvents) }));
+    renderPage();
+
+    expect(screen.getByText('Destination changed')).toBeInTheDocument();
+    expect(screen.getByText('Home → Office')).toBeInTheDocument();
+    expect(screen.getByText('Tire warning')).toBeInTheDocument();
+    // (i18n is mocked to fallbacks: wheel id and category chips render raw here.)
+    expect(screen.getByText('front_left · Off → On')).toBeInTheDocument();
+    expect(screen.getByText('Charge port opened')).toBeInTheDocument();
+    expect(screen.getByText('PIN to drive on')).toBeInTheDocument();
+    expect(screen.getByText('Preconditioning on')).toBeInTheDocument();
+    expect(screen.getByText('Signal change')).toBeInTheDocument();
+    expect(screen.getByText('6 events')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-filter-navigation')).toHaveTextContent('navigation (1)');
+    expect(screen.getByTestId('daylog-filter-tires')).toHaveTextContent('tires (1)');
   });
 
   it('filters by search text and declares the subset', () => {

@@ -31,6 +31,10 @@
  *   - ongoing session (no ended_at): duration collapses to 0, the Ended slot
  *     renders the em-dash placeholder, an absent vehicle falls back to "ID N",
  *     and a placeless session shows the location empty state.
+ *   - long sessions: small telemetry renders a full screen-reader table per
+ *     chart; past the row cap the tables are omitted (no-table pattern) while
+ *     all four charts still render every sample, each announcing a
+ *     full-resolution summary instead.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
@@ -39,6 +43,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import { ApiError } from '@/lib/resilience';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { ChargingSession, ChargeTelemetryReading, ChargingTelemetry } from '@/api/types';
 
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
@@ -102,13 +107,16 @@ vi.mock('framer-motion', () => {
 
 // ── charts: deterministic doubles. The page renders raw recharts through the
 //    shared barrel; recharts needs a sized container that jsdom can't give it,
-//    so we swap the whole module for inert passthroughs. LinearGauge surfaces
+//    so we swap the plot primitives for inert passthroughs, keeping the real
+//    EmbeddedChart frame to exercise its accessibility contract. LinearGauge surfaces
 //    its label/value/max as data-* so gauge maths stays assertable. ───────────
 vi.mock('@/components/charts', async () => {
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  const { EmbeddedChart } = await import('@/components/charts/EmbeddedChart');
   const Passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   return {
     ...chartTestDoubles,
+    EmbeddedChart,
     LinearGauge: ({
       label,
       value,
@@ -267,7 +275,7 @@ function makeReading(over: Partial<ChargeTelemetryReading> = {}): ChargeTelemetr
     created_at: '2024-03-10T08:15:00Z',
     battery_level: 40,
     soc: 40,
-    power_kw: 120,
+    power_w: 120_000,
     energy_added: 10,
     rated_range: 200_000,
     battery_temp: 25,
@@ -280,9 +288,9 @@ function makeReading(over: Partial<ChargeTelemetryReading> = {}): ChargeTelemetr
 }
 
 const TELEMETRY: ChargeTelemetryReading[] = [
-  makeReading({ created_at: '2024-03-10T08:05:00Z', battery_level: 30, power_kw: 150 }),
-  makeReading({ created_at: '2024-03-10T08:30:00Z', battery_level: 55, power_kw: 110 }),
-  makeReading({ created_at: '2024-03-10T08:55:00Z', battery_level: 79, power_kw: 45 }),
+  makeReading({ created_at: '2024-03-10T08:05:00Z', battery_level: 30, power_w: 150_000 }),
+  makeReading({ created_at: '2024-03-10T08:30:00Z', battery_level: 55, power_w: 110_000 }),
+  makeReading({ created_at: '2024-03-10T08:55:00Z', battery_level: 79, power_w: 45_000 }),
 ];
 
 function makeLive(over: Partial<ChargingTelemetry> = {}): ChargingTelemetry {
@@ -541,7 +549,7 @@ describe('ChargingDetailPage — populated DC session', () => {
 
   it('does not tag the charge curve as estimated when real telemetry exists', () => {
     renderPage();
-    expect(screen.getByText('Charge Curve')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charge Curve' })).toBeInTheDocument();
     expect(screen.queryByText('(estimated)')).toBeNull();
   });
 });
@@ -616,6 +624,51 @@ describe('ChargingDetailPage — telemetry error isolation', () => {
     // Retrying one panel calls the telemetry refetch.
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ChargingDetailPage — long-session fallback tables', () => {
+  it('renders a full screen-reader table per chart for small telemetry', () => {
+    renderPage();
+
+    // 3 telemetry rows → all four chart frames tabulate every row.
+    expect(screen.getAllByRole('table')).toHaveLength(4);
+    const curve = screen.getByRole('table', { name: 'Charge Curve — data table' });
+    expect(within(curve).getAllByRole('row')).toHaveLength(4);
+    // Canonical watts are converted exactly once at the chart display boundary.
+    expect(within(curve).getByRole('cell', { name: '150', exact: true })).toBeInTheDocument();
+    expect(within(curve).queryByRole('cell', { name: '150000', exact: true })).toBeNull();
+    expect(screen.queryByText(/Full-resolution data:/)).toBeNull();
+  });
+
+  it('omits the fallback tables but keeps every chart for very long sessions', () => {
+    // 2,500 rows clears the 2,000-row table cap the way a 48-100h home
+    // session (hundreds of thousands of rows) does: tabulating every row
+    // would build millions of hidden DOM nodes and kill the tab.
+    const bigTelemetry = Array.from({ length: 2500 }, (_, i) =>
+      makeReading({
+        created_at: `2024-03-${String(10 + Math.floor(i / 1440)).padStart(2, '0')}T${String(Math.floor(i / 60) % 24).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:00Z`,
+        battery_level: 20 + (i % 70),
+        power_w: 11_000 + (i % 5) * 1000,
+      }),
+    );
+    mockTelemetry.mockReturnValue(makeQuery({ data: bigTelemetry }));
+    renderPage();
+
+    // No fallback table anywhere — but all four charts still render with
+    // their full datasets (chart doubles are passthroughs; the headings
+    // prove the panels took the populated branch, not an empty state).
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Charge Curve' })).toBeInTheDocument();
+    // Each time-axis panel has a visible heading and the real chart frame's SR heading.
+    expect(screen.getAllByRole('heading', { name: 'SoC, Energy & Range over Time' })).toHaveLength(2);
+    expect(screen.getAllByRole('heading', { name: 'Temperature' })).toHaveLength(2);
+    expect(screen.getAllByRole('heading', { name: 'Voltage & Current' })).toHaveLength(2);
+    // Each chart announces the honest full-data summary instead.
+    const summaries = screen.getAllByText(/Full-resolution data:/);
+    expect(summaries).toHaveLength(4);
+    expect(summaries[0].textContent).toContain(fmtNumber(2500, 0));
+    expect(summaries[0].textContent).toContain('every sample is drawn');
   });
 });
 

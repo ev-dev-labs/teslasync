@@ -10,11 +10,24 @@ package yirnarration
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/eval"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 )
+
+func TestGoldenPromptMatchesProduction(t *testing.T) {
+	t.Parallel()
+	set, err := eval.LoadGoldenSet("goldens.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(set.Feature.System) != strings.TrimSpace(SystemPrompt) {
+		t.Fatal("goldens.yaml must evaluate the production prompt, not an older writing brief")
+	}
+}
 
 // TestStrategy_FeatureID pins the feature ID to "yir-narration".
 // The constant is referenced from router.go wiring + the AI HTTP
@@ -42,7 +55,7 @@ func TestStrategy_System(t *testing.T) {
 	if sys == "" {
 		t.Fatal("System() returned empty prompt")
 	}
-	for _, must := range []string{"TeslaSync", "STRICTLY", "Never invent", "query_year_in_review_context"} {
+	for _, must := range []string{"TeslaSync", "STRICTLY", "Never invent", "query_year_in_review_context", "slide captions", "single most meaningful supported observation of the year", "distinguish a zero year from a missing-data year", "unless the envelope provides both sides"} {
 		if !contains(sys, must) {
 			t.Errorf("System() missing %q; got=%q", must, sys)
 		}

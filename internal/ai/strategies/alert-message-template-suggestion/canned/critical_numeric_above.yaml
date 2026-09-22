@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: draft_motor_critical
+        name: draft_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"MotorTempC","op":">","value_num":90,"severity":"critical"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: validate_motor_critical
+        name: validate_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"MotorTempC","op":">","value_num":90,"severity":"critical","template":"{{VehicleName}} motor temperature is above {{Threshold}}: {{Value}}. Check it before driving on."}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      {{VehicleName}} motor temperature is above {{Threshold}}: {{Value}}. Check it before driving on.
+      An urgent-but-calm critical line: unmistakable condition with value and limit, plus a safe next check.
+    input_tokens: 240
+    output_tokens: 60

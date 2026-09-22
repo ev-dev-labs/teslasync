@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: draft_forbidden_copy
+        name: draft_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"Gear","op":"=","value_text":"R","severity":"info"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: validate_forbidden_copy
+        name: validate_alert_message_template
+        arguments: '{"kind":"signal","signal_name":"Gear","op":"=","value_text":"R","severity":"info","template":"{{VehicleName}} has filed a formal request to go backwards. Reverse selected."}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      {{VehicleName}} has filed a formal request to go backwards. Reverse selected.
+      A fresh line for the selected gear, declining the bland requested wording.
+    input_tokens: 240
+    output_tokens: 60

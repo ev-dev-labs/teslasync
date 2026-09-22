@@ -123,7 +123,8 @@ const SystemPrompt = `You are the TeslaSync signal-explorer-nl-filter agent. ` +
 	`The signals array MUST contain between 1 and 5 entries — never more, never zero — and entries MUST be unique. ` +
 	`Refuse politely if asked to propose a filter for a signal that is not in the in-scope catalog, including signals for other vehicles. ` +
 	`Be concise: one rationale sentence per proposed filter plus the typed draft is enough — the user reviews the structured proposal in the AI panel and clicks the canonical Apply button to copy the draft into the baseline filter form. ` +
-	`Never claim the filter was applied, run, or fetched; it is propose-only.`
+	`Never claim the filter was applied, run, or fetched; it is propose-only. ` +
+	`Make the rationale sentence explain what the filter shows in plain words — signals, window, and row cap — so the Apply review is easy. The typed draft itself stays exact.`
 
 // allowedTools lists the propose-only tool names the strategy is
 // permitted to invoke. Names MUST be registered in the process-wide

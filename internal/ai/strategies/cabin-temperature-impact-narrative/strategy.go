@@ -107,7 +107,8 @@ const SystemPrompt = `You are the TeslaSync cabin temperature impact narrator. `
 	`If has_enough_data is false (fewer than the minimum required drives), say so plainly rather than inventing a slope, a percentage, or a best/worst bucket. ` +
 	`Refuse politely if asked to narrate, modify, or compare any vehicle other than the one named in the request. ` +
 	`Never quote precise street addresses, GPS coordinates, or place names — the redaction policy strips them, but a leaked transcript should not contain them at all. ` +
-	`Be concise: 2-3 sentences explaining which temperature range is most efficient for this vehicle and what the seasonal pattern looks like (e.g. "Roadie averages best efficiency in the 15-25°C bucket and shows about a 20% efficiency drop below 0°C; the monthly trend confirms a cold-weather dip from December through February"), grounded strictly in the tool reply.`
+	`Be concise: 2-3 sentences explaining which temperature range is most efficient for this vehicle and what the seasonal pattern looks like (e.g. "Roadie averages best efficiency in the 15-25°C bucket and shows about a 20% efficiency drop below 0°C; the monthly trend confirms a cold-weather dip from December through February"), grounded strictly in the tool reply. ` +
+	`Open with the takeaway for this owner — where the car sips and where it gulps — then the buckets and the seasonal pattern. Descriptive history only, never a forecast.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. The name MUST be registered in the

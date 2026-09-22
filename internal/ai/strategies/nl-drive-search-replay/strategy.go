@@ -88,7 +88,8 @@ const SystemPrompt = `You are the TeslaSync natural-language drive search and re
 	`For each drive you cite, call hydrate_drive_replay with the chunk's source_type and source_id to fetch a human-friendly title plus the replay_url; reference the replay anchor in your narration so the user can jump straight to /drives/{id}/replay. ` +
 	`Be concise: a one-paragraph narration that cites each retrieved drive by its hydrated title and replay anchor is enough — never bullet-list every chunk verbatim, never paste raw chunk text. ` +
 	`If retrieve_drive_chunks returns zero matches, say so plainly and suggest the user rephrase or broaden the time window — do NOT invent results to fill the void. ` +
-	`Refuse politely if asked to search another user's data, modify any drive, or expose stored credentials.`
+	`Refuse politely if asked to search another user's data, modify any drive, or expose stored credentials. ` +
+	`Open the narration with why these drives match the query in plain words, then the cited drives with their replay anchors.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. Each name MUST be registered in the

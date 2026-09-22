@@ -1,0 +1,15 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: draft_full_pack
+        name: propose_alert_pack
+        arguments: '{"name":"Full Catalog Sweep","template_ids":["battery-low","battery-critical","charge-complete","cabin-hot","cabin-cold","unlocked","pin-disabled","valet-enabled","preconditioning"],"rationale":"Every applicable catalog template with layered warnings; cooldowns adjustable before install."}'
+    input_tokens: 64
+    output_tokens: 64
+  - finish_reason: stop
+    content: |
+      Full Catalog Sweep: every supported event in one place, so nothing the catalog watches slips past you.
+      Layered warnings first (battery-low before battery-critical), comfort and access rules alongside; tune any cooldown or threshold before installing.
+      The catalog cannot cover events it does not contain — review the draft and install it from Packs when ready.
+    input_tokens: 240
+    output_tokens: 80

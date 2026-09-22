@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { PageContainer } from '@/components/layout';
+import { Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useDayLog } from '@/api/hooks/useDayLog';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -66,15 +67,20 @@ export default function DayLogPage() {
 
   return (
     <PageContainer
+      actionLayout="scope-first"
       title={title}
-      subtitle={t('dayLog.subtitle', 'What happened to this vehicle today')}
+      subtitle={
+        <>
+          {t('dayLog.subtitle', 'What happened to this vehicle today')}
+          <Text as="span" variant="caption" className="mt-1 block [overflow-wrap:anywhere]" id="daylog-timezone">
+            {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
+          </Text>
+        </>
+      }
       query={dayLogQuery}
       copyLink
+      contextActions={<DayLogControls date={date} timezone={timezone} onDateChange={setDate} />}
     >
-      <FadeIn>
-        <DayLogControls date={date} timezone={timezone} onDateChange={setDate} />
-      </FadeIn>
-
       <FadeIn delay={0.05}>
         <DayLogSummary summary={data?.summary ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
       </FadeIn>

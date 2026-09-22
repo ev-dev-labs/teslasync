@@ -34,7 +34,7 @@ walks every feature in the registry and asserts each off-mode contract.
 | AI Settings | `/settings/ai` | Per-feature toggles, provider config, usage card, redaction controls, restore panel |
 | Inline widgets | various pages | 55+ `AI*.tsx` widgets, each gated by `withAiFeature` |
 
-## The 54 user features
+## The 56 user features
 
 Grouped by intent. Every feature has a stable kebab-case ID; toggle each in
 Settings → AI.
@@ -108,6 +108,8 @@ Settings → AI.
 | `suggest-new-geofences` | Suggest new geofences from clusters |
 | `auto-name-unnamed-locations` | Name locations from context |
 | `auto-trip-naming` | Name trips from route + endpoints |
+| `alert-message-template-suggestion` | Propose a notification message template for Alert Studio |
+| `alert-pack-builder` | Propose a goal-based custom Alert Pack |
 
 ### Multimodal & misc
 
@@ -260,6 +262,49 @@ geofences, and period efficiency. It can chain these sources for cross-domain
 analysis. Questions about TeslaSync itself use the chatbot-scoped application
 knowledge retriever and cite only sources returned by retrieval.
 
+## Response voice and evaluations
+
+Every language-producing Helix surface follows one voice contract: warm,
+observant, and precise. Responses lead with the most useful supported
+observation, fit their shape to the question, and stay honest about what
+TeslaSync knows. Grounded semantics always win over style — a pretty sentence
+with an invented fact fails review, and so does technically valid monotony.
+
+Severity and surface set the tone, never the other way around:
+
+- Informational moments may be memorable and specific to the event.
+- Warnings stay sharp and restrained; critical conditions stay urgent but calm,
+  with the condition unmistakable and a safe next step where one exists.
+- Safety, compact (voice/watch), and privacy-control surfaces keep their exact
+  meaning and length contracts; no jokes soften warnings and no desktop
+  narrative formatting leaks into glanceable surfaces.
+- Builders and other proposal surfaces put personality in the explanation only:
+  the structured draft the user reviews stays exact.
+
+When AI is off or a feature is disabled, the deterministic baseline remains the
+product: template digests, manual Alert Studio forms, typed search filters, and
+the existing CRUD pages. AI panels are absent from the DOM; AI routes return
+404; background jobs and push fan-out stay gated.
+
+Response quality is verified two ways. Deterministic checks (always runnable
+offline) assert tool sequencing, schema/placeholder validity, scope bindings,
+redaction, and that each `goldens.yaml` evaluates the production prompt it is
+pinned to (see `TestGoldenPromptMatchesProduction` in every strategy test):
+
+```bash
+go test ./internal/ai/... ./cmd/ai-eval/...
+go run ./cmd/ai-eval --all            # canned mock provider, zero network egress
+go run ./cmd/ai-eval --feature digest-narration
+go run ./tools/aivet                  # registry / route / guard coverage
+```
+
+Editorial quality (grounding, relevance, tone, concision, creative variety) is
+scored per-feature by the `judge_rubric` blocks in each `goldens.yaml`, either
+by the LLM judge (`ai-eval --all --judge`, needs `JUDGE_PROVIDER` +
+`JUDGE_API_KEY`) or by human review of before/after outputs on the same
+fixture. Canned fixtures prove deterministic contracts only — hand-authored
+fixture prose is never evidence that a live model writes well.
+
 ## Tools (function calling)
 
 Features marked `NeedsTools=true` can invoke functions on the server. The tool
@@ -320,8 +365,10 @@ The contract is:
 2. Implement the backend strategy under
    `internal/ai/strategies/<feature-id>/strategy.go` with a `goldens.yaml`
    fixture set.
-3. Wire the handler under `internal/api/ai_<feature_id>_handler.go` and
-   mount it inside `internal/api/ai_routes.go` using
+3. Wire the handler in its carved subpackage at
+   `internal/api/ai<slug>/handler.go` (one directory per feature, e.g.
+   `internal/api/aialerttune/handler.go`) and mount it inside
+   `internal/api/ai_routes.go` using
    `g.Wrap("<feature-id>", handler)`.
 4. Add the React component under `web/src/components/ai/AI<FeatureName>.tsx`
    wrapped with `withAiFeature('<feature-id>')`.

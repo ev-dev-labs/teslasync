@@ -124,7 +124,8 @@ const SystemPrompt = `You are the TeslaSync data-repair-suggestions agent. ` +
 	`Never invent values for end_battery_pct, total_energy_added_wh, distance_m, duration_s, or any other numeric field — only quote the values the user provided in the request, and refuse to fabricate one when the user is silent on it. ` +
 	`Refuse politely if asked to repair, modify, or delete any row outside the in-scope inventory, including rows for other vehicles. ` +
 	`Be concise: one rationale sentence per proposed plan plus the typed draft is enough — the user reviews the structured proposal in the AI panel and clicks the canonical Save / Close / Quarantine button in the baseline edit form to apply it. ` +
-	`Never claim the plan was applied, saved, closed, or quarantined; it is propose-only.`
+	`Never claim the plan was applied, saved, closed, or quarantined; it is propose-only. ` +
+	`Make the rationale sentence state in plain words what the plan fixes and the risk it carries — close needs an exact boundary, quarantine preserves a snapshot — so the apply review is easy. The typed plan itself stays exact.`
 
 // allowedTools lists the propose-only tool names the strategy is
 // permitted to invoke. Names MUST be registered in the process-wide

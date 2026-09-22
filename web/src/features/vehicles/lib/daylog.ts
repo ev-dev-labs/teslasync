@@ -11,6 +11,10 @@ export const DAY_LOG_LAYER_LABEL: Record<DayLogLayer, string> = {
   hvac: 'HVAC on/off',
   gear: 'Gear changes',
   homelink: 'Homelink / home/work',
+  navigation: 'Navigation',
+  charge_port: 'Charge port',
+  access: 'Access controls',
+  tires: 'Tire pressure',
 };
 
 export const DAY_LOG_EVENT_TITLE: Record<string, string> = {
@@ -56,6 +60,20 @@ export const DAY_LOG_EVENT_TITLE: Record<string, string> = {
   left_work: 'Left work',
   arrived_favorite: 'Arrived at favorite',
   left_favorite: 'Left favorite',
+  destination_changed: 'Destination changed',
+  charge_port_opened: 'Charge port opened',
+  charge_port_closed: 'Charge port closed',
+  charge_limit_changed: 'Charge limit changed',
+  fast_charger_connected: 'Fast charger connected',
+  fast_charger_disconnected: 'Fast charger disconnected',
+  preconditioning_on: 'Preconditioning on',
+  preconditioning_off: 'Preconditioning off',
+  pin_to_drive_on: 'PIN to drive on',
+  pin_to_drive_off: 'PIN to drive off',
+  guest_mode_on: 'Guest mode on',
+  guest_mode_off: 'Guest mode off',
+  tire_warning_on: 'Tire warning',
+  tire_warning_off: 'Tire warning cleared',
   signal: 'Signal change',
 };
 
@@ -117,6 +135,8 @@ export type DayLogCategory =
   | 'hvac'
   | 'gear'
   | 'homelink'
+  | 'navigation'
+  | 'tires'
   | 'security'
   | 'other';
 
@@ -163,6 +183,20 @@ const DAY_LOG_CATEGORY_BY_TYPE: Record<string, DayLogCategory> = {
   left_work: 'homelink',
   arrived_favorite: 'homelink',
   left_favorite: 'homelink',
+  destination_changed: 'navigation',
+  charge_port_opened: 'charging',
+  charge_port_closed: 'charging',
+  charge_limit_changed: 'charging',
+  fast_charger_connected: 'charging',
+  fast_charger_disconnected: 'charging',
+  preconditioning_on: 'hvac',
+  preconditioning_off: 'hvac',
+  pin_to_drive_on: 'lock',
+  pin_to_drive_off: 'lock',
+  guest_mode_on: 'lock',
+  guest_mode_off: 'lock',
+  tire_warning_on: 'tires',
+  tire_warning_off: 'tires',
   signal: 'other',
 };
 
@@ -183,6 +217,8 @@ export const DAY_LOG_CATEGORIES: readonly DayLogCategory[] = [
   'hvac',
   'gear',
   'homelink',
+  'navigation',
+  'tires',
   'security',
   'other',
 ] as const;
@@ -235,7 +271,7 @@ export function hourKeyInTz(iso: string, tz?: string): string {
 export function eventKeywords(event: DayLogEvent): string {
   const parts: string[] = [event.type, event.source, event.layer, categoryOf(event.type)];
   const payload = event.payload ?? {};
-  for (const key of ['door', 'window', 'component', 'field', 'event_type', 'from', 'to', 'gear', 'version', 'status', 'start_place', 'end_place']) {
+  for (const key of ['door', 'window', 'wheel', 'severity', 'component', 'field', 'event_type', 'from', 'to', 'gear', 'version', 'status', 'start_place', 'end_place']) {
     const v = payload[key];
     if (typeof v === 'string' && v !== '') parts.push(v);
     else if (typeof v === 'number' || typeof v === 'boolean') parts.push(String(v));
@@ -288,6 +324,20 @@ export const DAY_LOG_ICON: Record<string, ComponentType<{ className?: string }>>
   left_work: Icons.location,
   arrived_favorite: Icons.location,
   left_favorite: Icons.location,
+  destination_changed: Icons.navigation,
+  charge_port_opened: Icons.charger,
+  charge_port_closed: Icons.charger,
+  charge_limit_changed: Icons.charging,
+  fast_charger_connected: Icons.charging,
+  fast_charger_disconnected: Icons.charging,
+  preconditioning_on: Icons.climate,
+  preconditioning_off: Icons.climate,
+  pin_to_drive_on: Icons.key,
+  pin_to_drive_off: Icons.key,
+  guest_mode_on: Icons.user,
+  guest_mode_off: Icons.user,
+  tire_warning_on: Icons.warning,
+  tire_warning_off: Icons.warning,
 };
 
 export function eventIcon(type: string): ComponentType<{ className?: string }> {
@@ -320,6 +370,10 @@ export const DAY_LOG_ACCENT: Record<string, string> = {
   remote_start_off: '#64748b',
   sw_update: '#38bdf8',
   sw_update_installed: '#34d399',
+  // Tire warnings are the only optional-layer types with accents:
+  // safety severity needs the red/green signal, mirroring sentry.
+  tire_warning_on: '#f87171',
+  tire_warning_off: '#34d399',
 };
 
 export function eventAccent(type: string): string {

@@ -15,10 +15,15 @@ import (
 
 // Input caps. signal_log rows feed edge detection, so the cap applies
 // to raw rows, not events; hitting it sets truncated=true because
-// later edges may be lost. Gear ticks arrive at ~1 Hz while driving,
-// hence the larger allowance (a full day of driving stays under it).
+// later edges may be lost. Rows are periodic samples (5s–60s cadence
+// per internal/tesla/config/intervals.go), so the cap scales with the
+// queried field count: 53 fields across 10 optional layers. Typical
+// days (a few streaming hours) fit comfortably; marathon streaming
+// days can still exceed it, and truncated=true reports that honestly
+// instead of silently dropping late-day edges. Gear ticks arrive at
+// ~1 Hz while driving, hence the matching allowance.
 const (
-	dayLogSignalRowCap = 10000
+	dayLogSignalRowCap = 50000
 	dayLogGearTickCap  = 50000
 	// dayLogMaxSpan bounds explicit ?start=&end= windows. Local days
 	// across DST are 23–25h; 48h admits any single day plus skew while

@@ -100,7 +100,8 @@ const SystemPrompt = `You are the TeslaSync route-efficiency advisor. ` +
 	`Do NOT quote precise route coordinates or full street addresses even if the tool output appears to contain them; describe the route by its start_place to end_place pair or by general region only. ` +
 	`Address the vehicle by its display name when one is provided. ` +
 	`Refuse politely if asked to discuss another user's drives or routes, or to suggest changes to a vehicle other than the one named in the request. ` +
-	`Keep the response to 2-4 short paragraphs covering: the dominant route the suggestions are about, the kWh/100mi or kWh/100km figure the data shows, a comparison to the user's other routes when relevant, and one or two concrete, non-mutating suggestions (e.g. "try this alternate route on cold mornings" or "the best run on this corridor was X% better — consider those conditions") grounded in the tool output.`
+	`Keep the response to 2-4 short paragraphs covering: the dominant route the suggestions are about, the kWh/100mi or kWh/100km figure the data shows, a comparison to the user's other routes when relevant, and one or two concrete, non-mutating suggestions (e.g. "try this alternate route on cold mornings" or "the best run on this corridor was X% better — consider those conditions") grounded in the tool output. ` +
+	`Open with the single most actionable pattern for this route, then the figures and the concrete suggestions. Comparisons across the user's own routes stay strictly inside the returned aggregates; no invented savings, no promised outcomes.`
 
 // allowedTools lists the read-only tool names the strategy is
 // permitted to invoke. Each name MUST be registered in the

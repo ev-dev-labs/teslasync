@@ -29,6 +29,10 @@ const (
 	LayerHVAC        = "hvac"
 	LayerGear        = "gear"
 	LayerHomelink    = "homelink"
+	LayerNavigation  = "navigation"
+	LayerChargePort  = "charge_port"
+	LayerAccess      = "access"
+	LayerTires       = "tires"
 )
 
 // ValidLayers is the allowlist for the ?layers= query param.
@@ -39,6 +43,10 @@ var ValidLayers = map[string]bool{
 	LayerHVAC:        true,
 	LayerGear:        true,
 	LayerHomelink:    true,
+	LayerNavigation:  true,
+	LayerChargePort:  true,
+	LayerAccess:      true,
+	LayerTires:       true,
 }
 
 // AllLayers is every optional layer, in stable order. An omitted or
@@ -51,6 +59,10 @@ var AllLayers = []string{
 	LayerHVAC,
 	LayerGear,
 	LayerHomelink,
+	LayerNavigation,
+	LayerChargePort,
+	LayerAccess,
+	LayerTires,
 }
 
 // Event sources, one per backing table. Served on every event so the
@@ -80,8 +92,42 @@ var layerSignalFields = map[string][]string{
 		"DoorStatePassengerRear", "DoorStateRearTrunk",
 		"FdWindow", "FpWindow", "RdWindow", "RpWindow",
 	},
-	LayerHVAC:     {"HvacPower"},
+	LayerHVAC:     {"HvacPower", "PreconditioningEnabled"},
 	LayerHomelink: {"HomelinkNearby", "LocatedAtHome", "LocatedAtWork", "LocatedAtFavorite"},
+	// Navigation, charge port, access, and tire layers cover the
+	// discrete signal_log fields a day log must not miss. Every field
+	// here routes dest: signal_log (or dual-writes it) in
+	// internal/tesla/router/routing.yaml. Rows are periodic samples,
+	// not change-only, so Go edge detection (signalEdges) stays the
+	// filter and the signal row cap scales with the field count (see
+	// dayLogSignalRowCap). Deliberately NOT queried: media metadata
+	// (noisy), seat fields and ChargePortLatch (hot tables, not
+	// signal_log — a future batch can add repo queries), SentryMode /
+	// valet / lock signals (already covered by security_events —
+	// querying both would double count), software signals
+	// (software_updates table), and high-rate numerics.
+	LayerNavigation: {"DestinationName"},
+	LayerChargePort: {
+		"ChargePortDoorOpen", "ChargeLimitSoc",
+		"ScheduledChargingMode", "ScheduledChargingPending",
+		"BmsFullchargecomplete", "FastChargerPresent", "FastChargerType",
+	},
+	LayerAccess: {
+		"PinToDriveEnabled", "GuestModeEnabled",
+		"GuestModeMobileAccessState", "SpeedLimitMode", "SpeedLimitWarning",
+	},
+	LayerTires: {
+		"TpmsHardWarningsFrontLeft", "TpmsHardWarningsFrontRight",
+		"TpmsHardWarningsRearLeft", "TpmsHardWarningsRearRight",
+		"TpmsHardWarningsSemiMiddleAxleLeft2", "TpmsHardWarningsSemiMiddleAxleRight2",
+		"TpmsHardWarningsSemiRearAxleLeft", "TpmsHardWarningsSemiRearAxleLeft2",
+		"TpmsHardWarningsSemiRearAxleRight", "TpmsHardWarningsSemiRearAxleRight2",
+		"TpmsSoftWarningsFrontLeft", "TpmsSoftWarningsFrontRight",
+		"TpmsSoftWarningsRearLeft", "TpmsSoftWarningsRearRight",
+		"TpmsSoftWarningsSemiMiddleAxleLeft2", "TpmsSoftWarningsSemiMiddleAxleRight2",
+		"TpmsSoftWarningsSemiRearAxleLeft", "TpmsSoftWarningsSemiRearAxleLeft2",
+		"TpmsSoftWarningsSemiRearAxleRight", "TpmsSoftWarningsSemiRearAxleRight2",
+	},
 }
 
 // SignalFieldsForLayers returns the deduplicated signal_log field list
@@ -657,6 +703,39 @@ var windowFieldSuffix = map[string]string{
 	"RpWindow": "rp",
 }
 
+// tpmsMeta is the wheel + severity identity of one TPMS warning field.
+// Explicit table, not prefix surgery, so the reviewer sees every token.
+type tpmsMeta struct {
+	wheel    string
+	severity string
+}
+
+// tpmsFieldMeta maps all 20 Tpms{Hard,Soft}Warnings* fields. Hard and
+// soft are distinct severities from the car; both surface so a cleared
+// hard warning that lingers as soft stays visible.
+var tpmsFieldMeta = map[string]tpmsMeta{
+	"TpmsHardWarningsFrontLeft":            {wheel: "front_left", severity: "hard"},
+	"TpmsHardWarningsFrontRight":           {wheel: "front_right", severity: "hard"},
+	"TpmsHardWarningsRearLeft":             {wheel: "rear_left", severity: "hard"},
+	"TpmsHardWarningsRearRight":            {wheel: "rear_right", severity: "hard"},
+	"TpmsHardWarningsSemiMiddleAxleLeft2":  {wheel: "semi_middle_axle_left2", severity: "hard"},
+	"TpmsHardWarningsSemiMiddleAxleRight2": {wheel: "semi_middle_axle_right2", severity: "hard"},
+	"TpmsHardWarningsSemiRearAxleLeft":     {wheel: "semi_rear_axle_left", severity: "hard"},
+	"TpmsHardWarningsSemiRearAxleLeft2":    {wheel: "semi_rear_axle_left2", severity: "hard"},
+	"TpmsHardWarningsSemiRearAxleRight":    {wheel: "semi_rear_axle_right", severity: "hard"},
+	"TpmsHardWarningsSemiRearAxleRight2":   {wheel: "semi_rear_axle_right2", severity: "hard"},
+	"TpmsSoftWarningsFrontLeft":            {wheel: "front_left", severity: "soft"},
+	"TpmsSoftWarningsFrontRight":           {wheel: "front_right", severity: "soft"},
+	"TpmsSoftWarningsRearLeft":             {wheel: "rear_left", severity: "soft"},
+	"TpmsSoftWarningsRearRight":            {wheel: "rear_right", severity: "soft"},
+	"TpmsSoftWarningsSemiMiddleAxleLeft2":  {wheel: "semi_middle_axle_left2", severity: "soft"},
+	"TpmsSoftWarningsSemiMiddleAxleRight2": {wheel: "semi_middle_axle_right2", severity: "soft"},
+	"TpmsSoftWarningsSemiRearAxleLeft":     {wheel: "semi_rear_axle_left", severity: "soft"},
+	"TpmsSoftWarningsSemiRearAxleLeft2":    {wheel: "semi_rear_axle_left2", severity: "soft"},
+	"TpmsSoftWarningsSemiRearAxleRight":    {wheel: "semi_rear_axle_right", severity: "soft"},
+	"TpmsSoftWarningsSemiRearAxleRight2":   {wheel: "semi_rear_axle_right2", severity: "soft"},
+}
+
 // typedSignalValue returns the row's non-nil typed value for payloads.
 func typedSignalValue(r daylogdb.DaySignalRow) any {
 	switch {
@@ -807,7 +886,88 @@ func signalEdgeEvents(vehicleID int64, edge signalEdge, fieldLayers map[string]s
 			setBoolFromTo(&e)
 			return []Event{e}
 		}
+	case "DestinationName":
+		{
+			e := mk("destination_changed", LayerNavigation)
+			e.Payload["from"] = typedSignalValue(edge.From)
+			e.Payload["to"] = typedSignalValue(edge.To)
+			return []Event{e}
+		}
+	case "ChargePortDoorOpen":
+		{
+			var e Event
+			if toBool {
+				e = mk("charge_port_opened", LayerChargePort)
+			} else {
+				e = mk("charge_port_closed", LayerChargePort)
+			}
+			setBoolFromTo(&e)
+			return []Event{e}
+		}
+	case "ChargeLimitSoc":
+		{
+			e := mk("charge_limit_changed", LayerChargePort)
+			e.Payload["from"] = typedSignalValue(edge.From)
+			e.Payload["to"] = typedSignalValue(edge.To)
+			return []Event{e}
+		}
+	case "FastChargerPresent":
+		{
+			var e Event
+			if toBool {
+				e = mk("fast_charger_connected", LayerChargePort)
+			} else {
+				e = mk("fast_charger_disconnected", LayerChargePort)
+			}
+			setBoolFromTo(&e)
+			return []Event{e}
+		}
+	case "PreconditioningEnabled":
+		{
+			var e Event
+			if toBool {
+				e = mk("preconditioning_on", LayerHVAC)
+			} else {
+				e = mk("preconditioning_off", LayerHVAC)
+			}
+			setBoolFromTo(&e)
+			return []Event{e}
+		}
+	case "PinToDriveEnabled":
+		{
+			var e Event
+			if toBool {
+				e = mk("pin_to_drive_on", LayerAccess)
+			} else {
+				e = mk("pin_to_drive_off", LayerAccess)
+			}
+			setBoolFromTo(&e)
+			return []Event{e}
+		}
+	case "GuestModeEnabled":
+		{
+			var e Event
+			if toBool {
+				e = mk("guest_mode_on", LayerAccess)
+			} else {
+				e = mk("guest_mode_off", LayerAccess)
+			}
+			setBoolFromTo(&e)
+			return []Event{e}
+		}
 	default:
+		if tpms, ok := tpmsFieldMeta[edge.Field]; ok {
+			var e Event
+			if toBool {
+				e = mk("tire_warning_on", LayerTires)
+			} else {
+				e = mk("tire_warning_off", LayerTires)
+			}
+			e.Payload["wheel"] = tpms.wheel
+			e.Payload["severity"] = tpms.severity
+			setBoolFromTo(&e)
+			return []Event{e}
+		}
 		if door, ok := doorFieldSuffix[edge.Field]; ok {
 			var e Event
 			if toBool {

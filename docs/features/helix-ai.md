@@ -18,7 +18,7 @@ Helix is a separate layer with its own:
 
 If you never enable a Helix feature, the platform is unchanged from how it worked before AI was added. That is a feature, not an accident.
 
-## The 54 features, grouped
+## The 56 features, grouped
 
 Rather than list them alphabetically, here is what they actually do:
 
@@ -48,7 +48,7 @@ Log summarisation, trace summarisation, feedback queue prioritisation, data-repa
 
 ### The chatbot
 
-A single feature ID — `chatbot-llm` — wires the **Helix** sidebar entry to a chat surface that has access to a curated tool set (fleet lookup, drive lookup, charging lookup, alert lookup, automation lookup, RAG over the docs corpus). The chatbot is the most visible Helix feature but it is also just one of the 54.
+A single feature ID — `chatbot-llm` — wires the **Helix** sidebar entry to a chat surface that has access to a curated tool set (fleet lookup, drive lookup, charging lookup, alert lookup, automation lookup, RAG over the docs corpus). The chatbot is the most visible Helix feature but it is also just one of the 56.
 
 Plus 3 ops-only registry entries (`__usage__`, `__redaction_bypass__`, `ai-provider-health`) that aren't user-toggleable — they exist so the platform itself can call the AI infrastructure without violating the off-by-default contract.
 

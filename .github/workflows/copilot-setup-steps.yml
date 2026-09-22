@@ -33,7 +33,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version-file: go.mod
           cache: true
 
       - name: Install Go dependencies
@@ -46,10 +46,15 @@ jobs:
         run: go build ./...
 
       # ── Node.js toolchain ─────────────────────────────────────
+      - name: Install Node.js runtime prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libatomic1
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "26"
           cache: "npm"
           cache-dependency-path: web/package-lock.json
 
@@ -62,6 +67,8 @@ jobs:
 
       - name: Verify TypeScript build
         working-directory: web
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npx tsc --noEmit
 
       # ── Linters ───────────────────────────────────────────────

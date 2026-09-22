@@ -14,7 +14,7 @@
  *   2. The derivations:
  *        - energy: `convertEnergyFromSI(total_energy_added_wh, 'kWh')`
  *        - duration: minutes → "45m" / "1h 30m" / "2h" (no dangling "0m")
- *        - peak power: `max(power_kw)` across telemetry, null-tolerant
+ *        - peak power: `max(power_w)` across telemetry converted to kW, null-tolerant
  *        - charger classification: null/'' → AC / Home, supercharger|tesla →
  *          Supercharger, '<invalid>' → AC / Home, anything else → DC Fast
  *   3. The four query states every data source must handle: loading (skeleton —
@@ -125,7 +125,7 @@ function makeDetail(overrides: Partial<ApiChargingSession> = {}): ApiChargingSes
 function makeReading(overrides: Partial<ChargeTelemetryReading> = {}): ChargeTelemetryReading {
   return {
     created_at: '2024-01-01T12:00:00Z',
-    power_kw: 0,
+    power_w: 0,
     battery_level: null,
     soc: null,
     ...overrides,
@@ -202,9 +202,9 @@ describe('ChargingSessionDetailWidget — standard layout', () => {
     useChargeTelemetryMock.mockReturnValue(
       makeTelemetryQuery({
         data: [
-          makeReading({ power_kw: 50 }),
-          makeReading({ power_kw: 72 }),
-          makeReading({ power_kw: 60 }),
+          makeReading({ power_w: 50_000 }),
+          makeReading({ power_w: 72_000 }),
+          makeReading({ power_w: 60_000 }),
         ],
       }),
     );
@@ -222,7 +222,7 @@ describe('ChargingSessionDetailWidget — standard layout', () => {
     expect(screen.getByText('Duration')).toBeInTheDocument();
     expect(screen.getByText('45m')).toBeInTheDocument();
 
-    // Peak Power is the max power_kw across the telemetry series.
+    // Peak Power is the max power_w across the telemetry series, displayed in kW.
     expect(screen.getByText('Peak Power')).toBeInTheDocument();
     expect(screen.getByText('72.0')).toBeInTheDocument();
     expect(screen.getByText('kW')).toBeInTheDocument();
@@ -311,16 +311,16 @@ describe('ChargingSessionDetailWidget — charger classification', () => {
 });
 
 describe('ChargingSessionDetailWidget — peak power derivation', () => {
-  it('takes the maximum power_kw and ignores null readings', () => {
+  it('takes the maximum power_w, converts to kW and ignores null readings', () => {
     useChargingSessionDetailMock.mockReturnValue(
       makeDetailQuery({ data: makeDetail({ total_energy_added_wh: 1000 }) }),
     );
     useChargeTelemetryMock.mockReturnValue(
       makeTelemetryQuery({
         data: [
-          makeReading({ power_kw: null }),
-          makeReading({ power_kw: 33.3 }),
-          makeReading({ power_kw: 12 }),
+          makeReading({ power_w: null }),
+          makeReading({ power_w: 33_300 }),
+          makeReading({ power_w: 12_000 }),
         ],
       }),
     );

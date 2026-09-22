@@ -7,6 +7,11 @@ import type { Vehicle } from '@/types/vehicle';
 import { VehicleSelect } from '@/components/forms';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import { ActiveVehicleSegment } from './ActiveVehicleSegment';
+import { VehiclePicker } from '../VehiclePicker';
+
+vi.mock('@/api/hooks/usePinned', () => ({
+  usePinned: () => ({ data: [] }),
+}));
 
 const fleet: Vehicle[] = [
   {
@@ -62,6 +67,7 @@ function renderSelectionSurfaces() {
       <MemoryRouter initialEntries={['/battery?range=30d']}>
         <SelectedVehicleProvider>
           <ActiveVehicleSegment />
+          <VehiclePicker />
           <VehicleSelect />
           <LocationProbe />
         </SelectedVehicleProvider>
@@ -86,6 +92,9 @@ describe('global vehicle selection surfaces', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: /Model Y/ }));
 
     await waitFor(() => expect(pageSelect.value).toBe('2'));
+    const headerPicker = screen.getAllByRole('combobox', { name: 'Select vehicle' })
+      .find((element) => element.tagName === 'INPUT')!;
+    expect(headerPicker).toHaveValue('Model Y');
     expect(screen.getByRole('button', { name: /Switch vehicle \(Model Y\)/ })).toBeInTheDocument();
     const selectedParams = new URLSearchParams(
       screen.getByTestId('location-search').textContent ?? '',
@@ -94,7 +103,9 @@ describe('global vehicle selection surfaces', () => {
     expect(selectedParams.get('range')).toBe('30d');
     expect(window.localStorage.getItem('teslasync-selected-vehicle')).toBe('2');
 
-    fireEvent.change(pageSelect, { target: { value: '1' } });
+    fireEvent.focus(headerPicker);
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Model 3' }));
+    await waitFor(() => expect(pageSelect.value).toBe('1'));
 
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /Switch vehicle \(Model 3\)/ })).toBeInTheDocument(),

@@ -91,22 +91,85 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "LocationLongitude", Field: "longitude"},
 }
 
-// derivePowerKw populates a "power" field on each telemetry row by
-// computing PackVoltage × PackCurrent / 1000.0 (kW). Rows without both
-// pack_voltage and pack_current are left untouched. Sign is preserved so
-// downstream chart consumers can distinguish drive (+) from regen (−).
+// driveTelemetryRow is the typed equivalent of one flat drive-telemetry map:
+// the legacy DriveTelemetryReading JSON shape with "ts" renamed to
+// "created_at" and per-row "power" derived from PackVoltage × PackCurrent.
+// Fields stay `any` so a missing signal still marshals as an explicit null
+// exactly like the map version did; "power" is omitempty so rows without
+// both pack readings omit the key rather than emitting null. Struct fields
+// are declared in alphabetical JSON-key order to match encoding/json's
+// sorted map output key-for-key.
 //
-// This mirrors the formula used by enrichLiveDrive() for live drive
-// average-power and by signalPowerKW() in telemetry_sessions_signal_helpers.go
-// — Tesla Fleet Telemetry does not emit a per-row PackPower signal.
-func derivePowerKw(rows []map[string]interface{}) {
-	for _, row := range rows {
-		v, vOk := toFloatOk(row["pack_voltage"])
-		c, cOk := toFloatOk(row["pack_current"])
-		if vOk && cOk {
-			row["power"] = safeFloat(v * c / 1000.0)
+// A struct row avoids the per-row map allocations plus encoding/json's
+// per-row key sort — the dominant cost on long drives where these
+// endpoints return tens of thousands of rows.
+type driveTelemetryRow struct {
+	BatteryLevel  any       `json:"battery_level"`
+	CreatedAt     time.Time `json:"created_at"`
+	DriverTemp    any       `json:"driver_temp"`
+	EstRange      any       `json:"est_range"`
+	FanStatus     any       `json:"fan_status"`
+	IdealRange    any       `json:"ideal_range"`
+	InsideTemp    any       `json:"inside_temp"`
+	Latitude      any       `json:"latitude"`
+	Longitude     any       `json:"longitude"`
+	Odometer      any       `json:"odometer"`
+	OutsideTemp   any       `json:"outside_temp"`
+	PackCurrent   any       `json:"pack_current"`
+	PackVoltage   any       `json:"pack_voltage"`
+	PassengerTemp any       `json:"passenger_temp"`
+	Power         any       `json:"power,omitempty"`
+	RatedRange    any       `json:"rated_range"`
+	Soc           any       `json:"soc"`
+	Speed         any       `json:"speed"`
+	TireFL        any       `json:"tire_pressure_fl"`
+	TireFR        any       `json:"tire_pressure_fr"`
+	TireRL        any       `json:"tire_pressure_rl"`
+	TireRR        any       `json:"tire_pressure_rr"`
+}
+
+// timelineRowsToDriveTelemetry converts ordered TimelineRows into the legacy
+// flat-pivot telemetry shape in a single pass, deriving per-row power (kW)
+// as PackVoltage × PackCurrent / 1000.0. Sign is preserved so downstream
+// chart consumers can distinguish drive (+) from regen (−); rows without
+// both pack readings carry no "power" key. This mirrors the formula used by
+// enrichLiveDrive() for live drive average-power — Tesla Fleet Telemetry
+// does not emit a per-row PackPower signal.
+func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow {
+	out := make([]driveTelemetryRow, len(rows))
+	for i, tr := range rows {
+		f := tr.Fields
+		row := driveTelemetryRow{
+			BatteryLevel:  f["battery_level"],
+			CreatedAt:     tr.Timestamp,
+			DriverTemp:    f["driver_temp"],
+			EstRange:      f["est_range"],
+			FanStatus:     f["fan_status"],
+			IdealRange:    f["ideal_range"],
+			InsideTemp:    f["inside_temp"],
+			Latitude:      f["latitude"],
+			Longitude:     f["longitude"],
+			Odometer:      f["odometer"],
+			OutsideTemp:   f["outside_temp"],
+			PackCurrent:   f["pack_current"],
+			PackVoltage:   f["pack_voltage"],
+			PassengerTemp: f["passenger_temp"],
+			RatedRange:    f["rated_range"],
+			Soc:           f["soc"],
+			Speed:         f["speed"],
+			TireFL:        f["tire_pressure_fl"],
+			TireFR:        f["tire_pressure_fr"],
+			TireRL:        f["tire_pressure_rl"],
+			TireRR:        f["tire_pressure_rr"],
 		}
+		if v, vOk := toFloatOk(f["pack_voltage"]); vOk {
+			if c, cOk := toFloatOk(f["pack_current"]); cOk {
+				row.Power = safeFloat(v * c / 1000.0)
+			}
+		}
+		out[i] = row
 	}
+	return out
 }
 
 // drivePositionFieldMappings projects the signal_log change feed into the
@@ -128,20 +191,46 @@ var drivePositionFieldMappings = []signal.FieldMapping{
 	{Signal: "VehicleSpeed", Field: "speed_mph"},
 }
 
-// timelineRowsToFlat converts ordered TimelineRows into the legacy
-// []map[string]interface{} flat-pivot shape ({"ts": ts, "<field>": value, ...})
-// that the drive endpoints emit. The output preserves StateReader's
-// chronological order; downstream callers that need newest-first or
-// alias-renaming (created_at, id, speed) layer that on top.
-func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(rows))
-	for _, tr := range rows {
-		row := make(map[string]interface{}, len(tr.Fields)+1)
-		for k, v := range tr.Fields {
-			row[k] = v
+// drivePositionRow is the typed equivalent of one flat position map: the
+// legacy frontend Position contract with the raw signal_log names aliased
+// (ts → created_at, speed_mph → speed). Without the created_at alias
+// TripReplay's duration formatter blows up to "NaN:NaN" because the
+// frontend can't find a parseable timestamp on each position row. Fields
+// stay `any` so a missing signal still marshals as an explicit null
+// exactly like the map version did; "id" is omitempty because only the
+// standalone /positions endpoint exposes the legacy per-row id while the
+// array embedded in Get() stays narrowly typed. Struct fields are declared
+// in alphabetical JSON-key order to match encoding/json's sorted map
+// output key-for-key.
+type drivePositionRow struct {
+	CreatedAt time.Time `json:"created_at"`
+	Heading   any       `json:"heading"`
+	ID        string    `json:"id,omitempty"`
+	Latitude  any       `json:"latitude"`
+	Longitude any       `json:"longitude"`
+	Speed     any       `json:"speed"`
+}
+
+// timelineRowsToDrivePositions converts ordered TimelineRows into the legacy
+// flat-pivot position shape in a single pass, preserving StateReader's
+// chronological order. withID adds the stable per-row id (fmt %v of the
+// timestamp) exposed by the standalone /positions endpoint for legacy
+// frontend list helpers.
+func timelineRowsToDrivePositions(rows []signal.TimelineRow, withID bool) []drivePositionRow {
+	out := make([]drivePositionRow, len(rows))
+	for i, tr := range rows {
+		f := tr.Fields
+		row := drivePositionRow{
+			CreatedAt: tr.Timestamp,
+			Heading:   f["heading"],
+			Latitude:  f["latitude"],
+			Longitude: f["longitude"],
+			Speed:     f["speed_mph"],
 		}
-		row["ts"] = tr.Timestamp
-		out = append(out, row)
+		if withID {
+			row.ID = fmt.Sprintf("%v", tr.Timestamp)
+		}
+		out[i] = row
 	}
 	return out
 }
@@ -204,18 +293,7 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to load drive telemetry")
 		return
 	}
-	telemetry := timelineRowsToFlat(telemetryRows)
-	// Preserve the old DriveTelemetryReading timestamp key.
-	for _, row := range telemetry {
-		if ts, ok := row["ts"]; ok {
-			row["created_at"] = ts
-			delete(row, "ts")
-		}
-	}
-	// Derive per-row power (kW) from PackVoltage × PackCurrent. Tesla Fleet
-	// Telemetry does not emit a PackPower signal, so the Power Profile chart
-	// would render a flat line at 0 without this step.
-	derivePowerKw(telemetry)
+	telemetry := timelineRowsToDriveTelemetry(telemetryRows)
 
 	positionRows, err := h.state.Timeline(ctx,
 		drive.VehicleID, drivePositionFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
@@ -224,8 +302,7 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to load drive positions")
 		return
 	}
-	positions := timelineRowsToFlat(positionRows)
-	aliasPositionFields(positions)
+	positions := timelineRowsToDrivePositions(positionRows, false)
 
 	// Repair degenerate stored endpoints (end == start, or missing) from the
 	// real GPS track so the Journey Details panel matches the rendered route.
@@ -362,36 +439,15 @@ func (h *driveDetailHandler) currentSignals(ctx context.Context, vehicleID int64
 	return stateToSignalMap(state)
 }
 
-// aliasPositionFields rewrites the raw signal_log column names produced by
-// drivePositionFieldMappings into the legacy frontend Position contract:
-//
-//	ts        → created_at   (frontend reads p.created_at as the timestamp)
-//	speed_mph → speed         (frontend speed chart reads p.speed)
-//
-// Used by both the embedded `positions` array in Get() and the standalone
-// /drives/{id}/positions endpoint so the two stay in lock-step. Without this
-// alias, TripReplay's duration formatter blows up to "NaN:NaN" because the
-// frontend can't find a parseable timestamp on each position row.
-func aliasPositionFields(rows []map[string]interface{}) {
+// firstLastLatLon scans chronologically-ordered typed rows for the first and
+// last entries carrying a usable, non-zero latitude/longitude pair. Returns
+// nil when no row has coordinates. Generic over the row type so telemetry
+// and position rows share the scan via a lat/lon accessor.
+func firstLastLatLon[T any](rows []T, latLon func(T) (any, any)) (first, last *[2]float64) {
 	for _, row := range rows {
-		if ts, ok := row["ts"]; ok {
-			row["created_at"] = ts
-			delete(row, "ts")
-		}
-		if v, ok := row["speed_mph"]; ok {
-			row["speed"] = v
-			delete(row, "speed_mph")
-		}
-	}
-}
-
-// firstLastLatLon scans chronologically-ordered flat rows (as produced by
-// timelineRowsToFlat) for the first and last entries carrying a usable,
-// non-zero latitude/longitude pair. Returns nil when no row has coordinates.
-func firstLastLatLon(rows []map[string]interface{}) (first, last *[2]float64) {
-	for _, row := range rows {
-		lat, latOk := toFloatOk(row["latitude"])
-		lon, lonOk := toFloatOk(row["longitude"])
+		latValue, lonValue := latLon(row)
+		lat, latOk := toFloatOk(latValue)
+		lon, lonOk := toFloatOk(lonValue)
 		if !latOk || !lonOk || (lat == 0 && lon == 0) {
 			continue
 		}
@@ -414,10 +470,14 @@ func firstLastLatLon(rows []map[string]interface{}) (first, last *[2]float64) {
 // identical start and destination. Telemetry is preferred over the position
 // track so the repaired endpoints match the polyline the frontend draws (it
 // uses the same precedence).
-func repairDriveEndpoints(drive *drivemodel.Drive, telemetry, positions []map[string]interface{}) {
-	first, last := firstLastLatLon(telemetry)
+func repairDriveEndpoints(drive *drivemodel.Drive, telemetry []driveTelemetryRow, positions []drivePositionRow) {
+	first, last := firstLastLatLon(telemetry, func(r driveTelemetryRow) (any, any) {
+		return r.Latitude, r.Longitude
+	})
 	if first == nil {
-		first, last = firstLastLatLon(positions)
+		first, last = firstLastLatLon(positions, func(r drivePositionRow) (any, any) {
+			return r.Latitude, r.Longitude
+		})
 	}
 	if first == nil || last == nil {
 		return
@@ -471,16 +531,7 @@ func (h *driveDetailHandler) Positions(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to get positions")
 		return
 	}
-	rows := timelineRowsToFlat(rowsTL)
-	aliasPositionFields(rows)
-	// Standalone Positions endpoint also exposes a stable per-row id used by
-	// some legacy frontend list helpers. Keep that here so the embedded array
-	// in Get() stays narrowly typed (chart consumers don't need an id).
-	for _, row := range rows {
-		if ts, ok := row["created_at"]; ok {
-			row["id"] = fmt.Sprintf("%v", ts)
-		}
-	}
+	rows := timelineRowsToDrivePositions(rowsTL, true)
 	writeJSON(w, http.StatusOK, rows)
 }
 
@@ -514,15 +565,6 @@ func (h *driveDetailHandler) TelemetryReadings(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusInternalServerError, "failed to get telemetry")
 		return
 	}
-	rows := timelineRowsToFlat(rowsTL)
-	// Preserve the old DriveTelemetryReading timestamp key.
-	for _, row := range rows {
-		if ts, ok := row["ts"]; ok {
-			row["created_at"] = ts
-			delete(row, "ts")
-		}
-	}
-
-	derivePowerKw(rows)
+	rows := timelineRowsToDriveTelemetry(rowsTL)
 	writeJSON(w, http.StatusOK, rows)
 }

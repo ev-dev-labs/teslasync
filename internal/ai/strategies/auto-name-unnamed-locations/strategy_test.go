@@ -6,8 +6,10 @@ package autonameunnamedlocations
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/eval"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 )
@@ -16,6 +18,17 @@ import (
 // "auto-name-unnamed-locations". The constant is referenced from
 // router.go wiring + the AI HTTP handler; changing it without
 // updating the registry would silently break the guard.
+func TestGoldenPromptMatchesProduction(t *testing.T) {
+	t.Parallel()
+	set, err := eval.LoadGoldenSet("goldens.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(set.Feature.System) != strings.TrimSpace(SystemPrompt) {
+		t.Fatal("goldens.yaml must evaluate the production prompt, not an older writing brief")
+	}
+}
+
 func TestStrategy_FeatureID(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -53,6 +66,9 @@ func TestStrategy_System(t *testing.T) {
 		// policy-in-depth posture documented in the strategy
 		// doc-comment.
 		"never quote precise coordinates or full street addresses",
+		// Editorial-shape pins (Helix personality loop).
+		"genuinely evocative of THIS place",
+		"No invented routines",
 	} {
 		if !contains(sys, must) {
 			t.Errorf("System() missing %q; got=%q", must, sys)

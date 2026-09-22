@@ -340,7 +340,7 @@ func (f fakeTeslaBills) FindBestMatch(_ context.Context, _ string, _ time.Time) 
 	return f.entry, nil
 }
 
-func strPtr(v string) *string { return &v }
+func strPtr(v string) *string     { return &v }
 func floatPtr(v float64) *float64 { return &v }
 
 // TestChargingHandler_Telemetry_ChartMode locks in the chart-mode contract:
@@ -373,14 +373,14 @@ func TestChargingHandler_Telemetry_ChartMode(t *testing.T) {
 		t.Fatalf("Timeline call count = %d, want 1", fake.gotTimelineCalls)
 	}
 	// The mappings passed in must be the canonical charge telemetry set so
-	// the frontend wire shape (battery_level, voltage, power_kw, ...) is
+	// the frontend wire shape (battery_level, voltage, power_w, ...) is
 	// preserved.
 	if len(fake.gotTimelineFields) != len(chargeTelemetryFieldMappings) {
 		t.Fatalf("Timeline fields count = %d, want %d", len(fake.gotTimelineFields), len(chargeTelemetryFieldMappings))
 	}
 }
 
-func TestChargingHandler_Telemetry_ConvertsCanonicalSIToLegacyChartUnits(t *testing.T) {
+func TestChargingHandler_Telemetry_PreservesPowerWattsAndConvertsEnergy(t *testing.T) {
 	t0 := time.Date(2026, 8, 9, 10, 0, 0, 0, time.UTC)
 	t1 := t0.Add(15 * time.Minute)
 	fake := &fakeStateReader{
@@ -388,7 +388,7 @@ func TestChargingHandler_Telemetry_ConvertsCanonicalSIToLegacyChartUnits(t *test
 			return []signal.TimelineRow{{
 				Timestamp: t0,
 				Fields: map[string]signal.SignalValue{
-					"power_kw":      7200.0,
+					"ac_power_w":    7200.0,
 					"dc_power_w":    0.0,
 					"energy_added":  15089.164733886719,
 					"battery_level": 65.0,
@@ -412,12 +412,91 @@ func TestChargingHandler_Telemetry_ConvertsCanonicalSIToLegacyChartUnits(t *test
 	if len(rows) != 1 {
 		t.Fatalf("row count = %d, want 1", len(rows))
 	}
-	if got := rows[0]["power_kw"]; got != 7.2 {
-		t.Fatalf("power_kw = %v, want 7.2", got)
+	if got := rows[0]["power_w"]; got != 7200.0 {
+		t.Fatalf("power_w = %v, want 7200", got)
 	}
 	if got := rows[0]["energy_added"]; got != 15.089164733886718 {
 		t.Fatalf("energy_added = %v, want 15.089164733886718", got)
 	}
+}
+
+// TestChargingHandler_Telemetry_RowShapeUsesCanonicalPower locks the
+// exact JSON keys of one telemetry row: the 10 chart fields plus
+// created_at (renamed from ts), with the dc_power_w / dc_energy_wh merge
+// inputs omitted. Missing signals surface as explicit nulls (never missing
+// keys) so the frontend's stable-shape decoding keeps working, and a
+// positive DC reading wins over AC for both power and energy.
+func TestChargingHandler_Telemetry_RowShapeUsesCanonicalPower(t *testing.T) {
+	t0 := time.Date(2026, 8, 9, 10, 0, 0, 0, time.UTC)
+	t1 := t0.Add(15 * time.Minute)
+	fake := &fakeStateReader{
+		timelineFn: func(_ context.Context, _ int64, _ []signal.FieldMapping, _, _ time.Time, _ signal.TimelineOptions) ([]signal.TimelineRow, error) {
+			return []signal.TimelineRow{{
+				Timestamp: t0,
+				Fields: map[string]signal.SignalValue{
+					"battery_level": 65.0,
+					"voltage":       402.5,
+					"ac_power_w":    7200.0,
+					"dc_power_w":    51000.0,
+					"energy_added":  nil,
+					"dc_energy_wh":  0.0,
+					// current_amps, range, heater and temps absent: must read as null.
+				},
+			}}, nil
+		},
+	}
+	charging := &fakeChargingByIDFetcher{session: completedChargingSession(7, 42, t0, t1)}
+	h := &ChargingHandler{state: fake, live: newTestLiveStateReader(fake), charging: charging}
+
+	rec := httptest.NewRecorder()
+	h.TelemetryReadings(rec, newChargingRequest(t, "7", "/charging/7/telemetry"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+
+	var rows []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &rows); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("row count = %d, want 1", len(rows))
+	}
+	row := rows[0]
+	wantKeys := []string{
+		"battery_heater_on", "battery_level", "battery_temp", "created_at",
+		"current_amps", "energy_added", "inside_temp", "outside_temp",
+		"power_w", "range_added_meters_per_hour", "voltage",
+	}
+	if len(row) != len(wantKeys) {
+		t.Fatalf("row keys = %v, want exactly %v", keysOf(row), wantKeys)
+	}
+	for _, k := range wantKeys {
+		if _, ok := row[k]; !ok {
+			t.Fatalf("row missing key %q (keys=%v)", k, keysOf(row))
+		}
+	}
+	if got := row["power_w"]; got != 51000.0 {
+		t.Fatalf("power_w = %v, want 51000 (positive DC wins over AC)", got)
+	}
+	if got := row["energy_added"]; got != nil {
+		t.Fatalf("energy_added = %v, want nil (zero DC + nil AC pass through)", got)
+	}
+	if got := row["created_at"]; got != "2026-08-09T10:00:00Z" {
+		t.Fatalf("created_at = %v, want RFC3339 ts rename", got)
+	}
+	for _, k := range []string{"current_amps", "battery_heater_on", "inside_temp"} {
+		if row[k] != nil {
+			t.Fatalf("%s = %v, want explicit null", k, row[k])
+		}
+	}
+}
+
+func keysOf(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // TestChargingHandler_Telemetry_PropagatesError verifies that a Timeline

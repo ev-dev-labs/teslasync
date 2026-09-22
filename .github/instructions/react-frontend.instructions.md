@@ -282,6 +282,14 @@ When Go model fields change, frontend types MUST be updated in the same PR.
 - All animations via Framer Motion through `@/components/motion/`
 - Icons from `lucide-react` (import individually)
 
+### Visual Modernization Completion
+
+- Modernize the complete interaction, not just the closed trigger: inspect open dropdowns and selected, hover, focus, and disabled states.
+- Align control sizes, spacing, iconography, corner radii, and light/dark colors with the shared design system.
+- Inspect existing shared primitives first. Reuse an accessible custom picker/listbox/combobox when a native browser popup cannot match the required styling; do not replace unrelated native controls globally.
+- Preserve keyboard and focus behavior, including arrows, Home/End, typeahead, selection, Escape cancellation, and focus retention/restoration.
+- Before declaring visual completion, render and review desktop/mobile screenshots in both light and dark themes, including open interactive states. Relocation, a styled trigger, passing tests, or successful compilation alone is not evidence of visual completion.
+
 ## Performance Best Practices
 
 ### Memoization Rules

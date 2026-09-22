@@ -12,8 +12,10 @@ package statemachinedebuggernarrator
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/eval"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 )
@@ -22,6 +24,17 @@ import (
 // referenced from router.go wiring + the AI HTTP handler;
 // changing it without updating the registry would silently break
 // the guard.
+func TestGoldenPromptMatchesProduction(t *testing.T) {
+	t.Parallel()
+	set, err := eval.LoadGoldenSet("goldens.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(set.Feature.System) != strings.TrimSpace(SystemPrompt) {
+		t.Fatal("goldens.yaml must evaluate the production prompt, not an older writing brief")
+	}
+}
+
 func TestStrategy_FeatureID(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -58,6 +71,9 @@ func TestStrategy_System(t *testing.T) {
 		"degenerate (zero transitions in the window)",
 		// Refusal directive — out-of-scope tuples are forbidden.
 		"Refuse politely",
+		// Editorial-shape pins (Helix personality loop).
+		"Open with the trace's story",
+		"never invented states",
 	} {
 		if !contains(sys, must) {
 			t.Errorf("System() missing %q; got=%q", must, sys)

@@ -1,0 +1,7 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot build that pack: nothing in the catalog watches a break-in in progress — lock state is not intrusion detection.
+      Recommending unrelated rules would fake coverage, so I am not proposing any. Tell me which supported events matter most and I will draft from those.
+    input_tokens: 120
+    output_tokens: 80

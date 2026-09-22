@@ -8,37 +8,43 @@ import (
 
 func f64(v float64) *float64 { return &v }
 
-func row(lat, lon float64) map[string]interface{} {
-	return map[string]interface{}{"latitude": lat, "longitude": lon}
+func trow(lat, lon float64) driveTelemetryRow {
+	return driveTelemetryRow{Latitude: lat, Longitude: lon}
+}
+
+func prow(lat, lon float64) drivePositionRow {
+	return drivePositionRow{Latitude: lat, Longitude: lon}
 }
 
 func TestRepairDriveEndpoints(t *testing.T) {
-	track := []map[string]interface{}{row(47.86, -121.97), row(47.78, -121.5), row(47.71, -121.13)}
+	teleTrack := []driveTelemetryRow{trow(47.86, -121.97), trow(47.78, -121.5), trow(47.71, -121.13)}
+	posTrack := []drivePositionRow{prow(47.86, -121.97), prow(47.78, -121.5), prow(47.71, -121.13)}
 
 	tests := []struct {
 		name                     string
 		drive                    *drivemodel.Drive
-		telemetry, positions     []map[string]interface{}
+		telemetry                []driveTelemetryRow
+		positions                []drivePositionRow
 		wantStartLat, wantEndLat *float64
 	}{
 		{
 			name:         "end equals start is repaired from track end",
 			drive:        &drivemodel.Drive{StartLat: f64(47.86), StartLon: f64(-121.97), EndLat: f64(47.86), EndLon: f64(-121.97)},
-			telemetry:    track,
+			telemetry:    teleTrack,
 			wantStartLat: f64(47.86),
 			wantEndLat:   f64(47.71),
 		},
 		{
 			name:         "nil endpoints are filled from track",
 			drive:        &drivemodel.Drive{},
-			telemetry:    track,
+			telemetry:    teleTrack,
 			wantStartLat: f64(47.86),
 			wantEndLat:   f64(47.71),
 		},
 		{
 			name:         "zero endpoints are filled from track",
 			drive:        &drivemodel.Drive{StartLat: f64(0), StartLon: f64(0), EndLat: f64(0), EndLon: f64(0)},
-			telemetry:    track,
+			telemetry:    teleTrack,
 			wantStartLat: f64(47.86),
 			wantEndLat:   f64(47.71),
 		},
@@ -46,14 +52,14 @@ func TestRepairDriveEndpoints(t *testing.T) {
 			name:         "falls back to positions when telemetry has no coords",
 			drive:        &drivemodel.Drive{},
 			telemetry:    nil,
-			positions:    track,
+			positions:    posTrack,
 			wantStartLat: f64(47.86),
 			wantEndLat:   f64(47.71),
 		},
 		{
 			name:         "valid distinct endpoints are left untouched",
 			drive:        &drivemodel.Drive{StartLat: f64(40.0), StartLon: f64(-70.0), EndLat: f64(41.0), EndLon: f64(-71.0)},
-			telemetry:    track,
+			telemetry:    teleTrack,
 			wantStartLat: f64(40.0),
 			wantEndLat:   f64(41.0),
 		},

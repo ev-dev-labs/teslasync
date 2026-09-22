@@ -9,8 +9,10 @@ package speedprofileinsights
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/eval"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 )
@@ -19,6 +21,17 @@ import (
 // "speed-profile-insights". The constant is referenced from
 // router.go wiring + the AI HTTP handler; changing it without
 // updating the registry would silently break the guard.
+func TestGoldenPromptMatchesProduction(t *testing.T) {
+	t.Parallel()
+	set, err := eval.LoadGoldenSet("goldens.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(set.Feature.System) != strings.TrimSpace(SystemPrompt) {
+		t.Fatal("goldens.yaml must evaluate the production prompt, not an older writing brief")
+	}
+}
+
 func TestStrategy_FeatureID(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -54,6 +67,9 @@ func TestStrategy_System(t *testing.T) {
 		// degrades the policy-in-depth posture documented in the
 		// strategy doc-comment.
 		"Do NOT quote precise route coordinates",
+		// Editorial-shape pins (Helix personality loop).
+		"Open with the character of this drive in plain words",
+		"Never celebrate high speed or encourage faster driving",
 	} {
 		if !contains(sys, must) {
 			t.Errorf("System() missing %q; got=%q", must, sys)

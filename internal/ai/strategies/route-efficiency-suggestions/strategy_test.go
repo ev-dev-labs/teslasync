@@ -15,9 +15,21 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/eval"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 )
+
+func TestGoldenPromptMatchesProduction(t *testing.T) {
+	t.Parallel()
+	set, err := eval.LoadGoldenSet("goldens.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(set.Feature.System) != strings.TrimSpace(SystemPrompt) {
+		t.Fatal("goldens.yaml must evaluate the production prompt, not an older writing brief")
+	}
+}
 
 // TestStrategy_FeatureID pins the feature ID to
 // "route-efficiency-suggestions". The constant is referenced from
@@ -59,6 +71,9 @@ func TestStrategy_System(t *testing.T) {
 		// degrades the policy-in-depth posture documented in the
 		// strategy doc-comment.
 		"Do NOT quote precise route coordinates",
+		// Editorial-shape pins (Helix personality loop).
+		"Open with the single most actionable pattern for this route",
+		"no invented savings, no promised outcomes",
 	} {
 		if !strings.Contains(sys, must) {
 			t.Errorf("System() missing %q; got=%q", must, sys)

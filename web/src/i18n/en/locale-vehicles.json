@@ -108,7 +108,21 @@
       "valet_off": "Valet off",
       "valet_unknown": "Valet state unknown",
       "security": "Security event",
-      "signal": "Signal change"
+      "signal": "Signal change",
+      "destination_changed": "Destination changed",
+      "charge_port_opened": "Charge port opened",
+      "charge_port_closed": "Charge port closed",
+      "charge_limit_changed": "Charge limit changed",
+      "fast_charger_connected": "Fast charger connected",
+      "fast_charger_disconnected": "Fast charger disconnected",
+      "preconditioning_on": "Preconditioning on",
+      "preconditioning_off": "Preconditioning off",
+      "pin_to_drive_on": "PIN to drive on",
+      "pin_to_drive_off": "PIN to drive off",
+      "guest_mode_on": "Guest mode on",
+      "guest_mode_off": "Guest mode off",
+      "tire_warning_on": "Tire warning",
+      "tire_warning_off": "Tire warning cleared"
     },
     "doors": {
       "driver_front": "Driver front",
@@ -146,7 +160,27 @@
       "detailId": "Event",
       "detailLayer": "Layer",
       "detailTime": "Timestamp",
-      "detailPayload": "Recorded details"
+      "detailPayload": "Recorded details",
+      "detailChange": "Change",
+      "detailStoredValues": "Stored values",
+      "detailEmpty": "No further details recorded.",
+      "detailComponent": "Component",
+      "detailDoor": "Door",
+      "detailWindow": "Window",
+      "detailWheel": "Wheel",
+      "detailSeverity": "Severity",
+      "detailField": "Field",
+      "detailEventType": "Event type",
+      "detailVersion": "Version",
+      "detailStatus": "Status",
+      "detailStartPlace": "Start place",
+      "detailEndPlace": "End place",
+      "detailDistance": "Distance",
+      "detailDuration": "Duration",
+      "detailEnergyAdded": "Energy added",
+      "detailEnergyUsed": "Energy used",
+      "detailStartCharge": "Start charge",
+      "detailEndCharge": "End charge"
     },
     "categories": {
       "driving": "Driving",
@@ -164,6 +198,8 @@
       "hvac": "HVAC",
       "gear": "Gear",
       "homelink": "Homelink / location",
+      "navigation": "Navigation",
+      "tires": "Tires",
       "security": "Security",
       "other": "Other"
     },
@@ -221,6 +257,22 @@
       "SentryModeStateAware": "Aware",
       "SentryModeStatePanic": "Panic",
       "SentryModeStateQuiet": "Quiet"
+    },
+    "wheels": {
+      "front_left": "Front left",
+      "front_right": "Front right",
+      "rear_left": "Rear left",
+      "rear_right": "Rear right",
+      "semi_middle_axle_left2": "Semi middle axle left 2",
+      "semi_middle_axle_right2": "Semi middle axle right 2",
+      "semi_rear_axle_left": "Semi rear axle left",
+      "semi_rear_axle_left2": "Semi rear axle left 2",
+      "semi_rear_axle_right": "Semi rear axle right",
+      "semi_rear_axle_right2": "Semi rear axle right 2"
+    },
+    "tireSeverity": {
+      "hard": "Hard",
+      "soft": "Soft"
     }
   },
   "digitalTwin": {
