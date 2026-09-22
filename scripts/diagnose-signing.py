@@ -6,6 +6,20 @@ import socket
 import ssl
 import subprocess
 import sys
+from urllib.parse import urlsplit
+
+
+def http_summary(response):
+    """Keep protocol evidence without logging redirect tokens or cookies."""
+    lines = response.decode("ascii", errors="replace").splitlines()
+    summary = lines[:1]
+    for line in lines[1:]:
+        if line.lower().startswith("location:"):
+            target = urlsplit(line.split(":", 1)[1].strip())
+            summary.append(f"Location: {target.scheme}://{target.netloc}{target.path}")
+        elif line.lower().startswith("server:"):
+            summary.append(line)
+    return summary
 
 
 def command(args, timeout=35):
@@ -78,7 +92,7 @@ def main():
                         f"HEAD / HTTP/1.1\r\nHost: {host}\r\n"
                         "Connection: close\r\n\r\n".encode("ascii"))
                     print(f"HTTP HEAD port {port} response:",
-                          repr(stream.recv(1024)), flush=True)
+                          http_summary(stream.recv(1024)), flush=True)
             except OSError as error:
                 print(f"HTTP HEAD port {port}:", error, flush=True)
         # Capture only a TLS record header / short plaintext rejection from

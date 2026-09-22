@@ -75,8 +75,14 @@ jobs:
           done
           for endpoint in https://fulcio.sigstore.dev/api/v1/rootCert https://rekor.sigstore.dev/api/v1/log/publicKey; do
             echo "Checking verified TLS connectivity to ${endpoint}"
-            curl --fail --silent --show-error --connect-timeout 15 --max-time 30 \
-              --output /dev/null "${endpoint}"
+            if curl --fail --silent --show-error --connect-timeout 15 --max-time 30 \
+              --output /dev/null "${endpoint}"; then
+              echo "Verified signing endpoint: ${endpoint}"
+            else
+              status=$?
+              echo "::error::Signing connectivity failed (curl ${status}); release is blocked before publication. See docs/guide/release-signing-connectivity.md; dispatch with diagnose_signing=true for read-only ARC/hosted evidence."
+              exit "${status}"
+            fi
           done
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
