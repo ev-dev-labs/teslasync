@@ -10,6 +10,9 @@
 // count delivery attempts. Daily counts are UTC and include zero-filled days.
 // Rows without trigger_id remain historical deliveries only and are separately
 // reported as uncorrelated_deliveries: historical fan-out cannot be inferred.
+// GET /notifications/logs?view=deliveries returns channel attempts for
+// latency and burn-rate analysis; the default view returns one inbox row per
+// recorded event plus older uncorrelated deliveries.
 //
 // This package owns three handler types, all wired from the parent router:
 //

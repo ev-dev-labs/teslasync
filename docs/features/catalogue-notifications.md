@@ -12,8 +12,8 @@ Sidebar group **Notifications**. In the app, expand this section in the left nav
 | Browser Notifications | `/notifications/browser` | Enable browser push notifications for this device. | Renders an empty state when no data is available — the page is not hidden. |
 | Quiet Hours | `/notifications/quiet-hours` | Mute non-critical alerts during set times. | Renders an empty state when no data is available — the page is not hidden. |
 | Alert Fatigue | `/alert-fatigue` | Identify noisy alert rules and reduce repetitive notifications. | Renders an empty state when no data is available — the page is not hidden. |
-| Notification Burn Rate | `/notification-burn-rate` | Track notification reliability against its error budget. | Renders an empty state when no data is available — the page is not hidden. |
-| Notification Latency | `/notification-latency` | Measure delivery speed and tail latency by channel. | Renders an empty state when no data is available — the page is not hidden. |
+| Notification Burn Rate | `/notification-burn-rate` | Track up to 1,000 recent channel-delivery attempts against its error budget. | Renders an empty state when no data is available — the page is not hidden. |
+| Notification Latency | `/notification-latency` | Measure speed and tail latency from up to 1,000 recent channel-delivery attempts; trigger-only inbox rows are not measurements. | Renders an empty state when no data is available — the page is not hidden. |
 
 The overview's date range includes historical periods. **Triggers** count recorded
 notification events once, even when no delivery channel is configured; **channel

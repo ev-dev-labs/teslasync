@@ -350,6 +350,14 @@ func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	switch r.URL.Query().Get("view") {
+	case "", "inbox":
+	case "deliveries":
+		filters.DeliveryOnly = true
+	default:
+		httpx.WriteError(w, http.StatusBadRequest, "view must be inbox or deliveries")
+		return
+	}
 	// ?grouped=true switches the response shape
 	// from a flat NotificationLog list to a list of NotificationLogGroup
 	// (latest member + count + unread + vehicle ids). Mutually exclusive
@@ -357,6 +365,10 @@ func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 	// group AND requesting them grouped is a contradiction (and would
 	// return at most one bucket on success).
 	groupedRequested := strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("grouped")), "true")
+	if groupedRequested && filters.DeliveryOnly {
+		httpx.WriteError(w, http.StatusBadRequest, "grouped=true is not supported for deliveries")
+		return
+	}
 	if groupedRequested && filters.GroupKey != "" {
 		httpx.WriteError(w, http.StatusBadRequest, "grouped=true and group_key are mutually exclusive")
 		return

@@ -1,5 +1,6 @@
 import { expect, type Page, type Request as PlaywrightRequest, type Route } from '@playwright/test';
 import type { FsdInsights } from '../src/types/fsd';
+import type { NotificationLog, NotificationReport } from '../src/api/types';
 import { ensureMockSseServer } from './mockSseServer';
 import type { DataScenario } from './routeRegistry';
 
@@ -35,6 +36,27 @@ const vehicle = {
   wheel_type: 'Gemini', state: 'online', healthy: true, timezone: 'UTC',
   created_at: NOW, updated_at: NOW,
 };
+
+const notificationEvents = [
+  {
+    id: 501, channel_id: null, alert_id: null, title: 'Fleet connection restored',
+    message: 'Live telemetry is connected again.', status: 'triggered', severity: 'info',
+    event_type: 'system.telemetry_recovered', error: '', created_at: '2026-08-26T15:45:00.000Z',
+    sent_at: null, read_at: null, archived_at: null,
+  },
+  {
+    id: 502, channel_id: null, alert_id: null, title: 'Charging schedule changed',
+    message: 'Charging will start at 10:00 PM.', status: 'triggered', severity: 'warn',
+    event_type: 'automation.charging_schedule', error: '', created_at: '2026-08-26T15:30:00.000Z',
+    sent_at: null, read_at: null, archived_at: null,
+  },
+  {
+    id: 503, channel_id: null, alert_id: null, title: 'Battery alert',
+    message: 'Battery is below the configured threshold.', status: 'triggered', severity: 'critical',
+    event_type: 'alert.battery_low', error: '', created_at: '2026-08-26T15:15:00.000Z',
+    sent_at: null, read_at: null, archived_at: null,
+  },
+] satisfies NotificationLog[];
 
 const LARGE_FLEET_SIZE = 120;
 
@@ -604,6 +626,34 @@ export function resolveApiFixture(
   if (path.startsWith('/data-repair/suggestions')) return matched({ suggestions: [], generated_at: observedAt });
   if (path.startsWith('/fleet-ops/work-orders')) return matched({ items: [], total: 0, limit: 100, offset: 0 });
   if (path.startsWith('/pinned')) return matched([]);
+  if (path.startsWith('/notifications/logs')) {
+    const events = scenario === 'empty' ? [] : notificationEvents;
+    if (new URLSearchParams(path.split('?')[1]).get('grouped') === 'true') {
+      return matched(events.map(latest => ({
+        group_key: null, latest, count: 1, unread_count: 1, vehicle_ids: [],
+      })));
+    }
+    return matched(events);
+  }
+  if (path.startsWith('/notifications/report?')) {
+    const params = new URLSearchParams(path.split('?')[1]);
+    const from = params.get('from') ?? '';
+    const to = params.get('to') ?? '';
+    const populated = scenario !== 'empty' && from <= '2026-08-26' && to >= '2026-08-26';
+    const report: NotificationReport = {
+      from, to, triggered: populated ? 3 : 0, deliveries: populated ? 2 : 0,
+      uncorrelated_deliveries: 0,
+      by_source: populated ? [
+        { key: 'system', count: 1 }, { key: 'automation', count: 1 }, { key: 'alert', count: 1 },
+      ] : [],
+      by_type: populated ? notificationEvents.map(event => ({ key: event.event_type, count: 1 })) : [],
+      by_severity: populated ? ['info', 'warn', 'critical'].map(key => ({ key, count: 1 })) : [],
+      by_channel: populated ? [{ key: 'email', count: 1 }, { key: 'webpush', count: 1 }] : [],
+      by_status: populated ? [{ key: 'sent', count: 2 }] : [],
+      daily: populated ? [{ day: '2026-08-26', triggered: 3, deliveries: 2 }] : [],
+    };
+    return matched(report);
+  }
   if (/^\/(?:alerts|notifications)(?:\/|\?|$)/.test(path)) return matched([]);
   if (path.startsWith('/system/health')) return matched({ status: 'healthy', timestamp: observedAt, checks: {} });
   if (path.startsWith('/system/version')) return matched({ version: 'e2e', commit: 'fixture', build_time: NOW });

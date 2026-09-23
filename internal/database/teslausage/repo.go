@@ -1,4 +1,4 @@
-package database
+package teslausage
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TeslaUsageRepo keeps only source evidence; pricing is applied at read time.
-type TeslaUsageRepo struct{ db *DB }
+type TeslaUsageRepo struct{ db *database.DB }
 
-func NewTeslaUsageRepo(db *DB) *TeslaUsageRepo { return &TeslaUsageRepo{db: db} }
+func NewTeslaUsageRepo(db *database.DB) *TeslaUsageRepo { return &TeslaUsageRepo{db: db} }
 
 // RecordSignal is best effort at the MQTT receive boundary. Deduplication
 // covers QoS1 retransmissions, not distinct emissions with identical evidence.

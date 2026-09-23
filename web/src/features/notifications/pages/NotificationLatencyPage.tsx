@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BellRing, Gauge, Hourglass, Rabbit, TimerReset } from 'lucide-react';
 
-import { useNotificationLogs } from '@/api/hooks/useNotifications';
+import { useNotificationDeliveryLogs } from '@/api/hooks/useNotifications';
 import {
   Bar, BarChart, CartesianGrid, ChartContainer, ChartTooltip,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -22,7 +22,7 @@ import { analyzeNotificationLatency } from '../lib/notificationLatency';
 export default function NotificationLatencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('notificationLatency.title', 'Notification Latency'));
-  const logsQuery = useNotificationLogs();
+  const logsQuery = useNotificationDeliveryLogs();
   const summary = useMemo(
     () => analyzeNotificationLatency(logsQuery.data ?? []),
     [logsQuery.data],
@@ -52,7 +52,7 @@ export default function NotificationLatencyPage() {
       title={t('notificationLatency.title', 'Notification Latency')}
       subtitle={t(
         'notificationLatency.subtitle',
-        'Measure delivery speed from backend latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records',
+        'Measure up to 1,000 recent delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records',
       )}
       query={logsQuery}
     >
@@ -166,12 +166,13 @@ export default function NotificationLatencyPage() {
           {isLoading ? (
             <Skeleton height={96} />
           ) : summary.count === 0 ? (
-            <EmptyState /* no-action: latency cohorts populate automatically from measured deliveries. */
+            <EmptyState
               icon={<BellRing className="h-8 w-8" />}
               message={t(
                 'notificationLatency.cohorts.empty',
-                'No notification records include a usable delivery latency yet.',
+                'No measured channel deliveries yet. Configure a channel and send a test notification to measure latency.',
               )}
+              actionTo={{ label: t('notificationLatency.cohorts.configure', 'Manage delivery channels'), to: '/notifications/channels' }}
             />
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">

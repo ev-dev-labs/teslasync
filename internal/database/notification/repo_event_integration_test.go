@@ -39,7 +39,8 @@ func eventFixture(t *testing.T) (*NotificationRepo, context.Context) {
 			id bigserial PRIMARY KEY, channel_id bigint, alert_id bigint,
 			title text NOT NULL, message text NOT NULL, status text NOT NULL,
 			severity text, error text, created_at timestamptz NOT NULL DEFAULT now(),
-			sent_at timestamptz, read_at timestamptz, archived_at timestamptz,
+			sent_at timestamptz, scheduled_at timestamptz, latency_ms integer,
+			read_at timestamptz, archived_at timestamptz,
 			acknowledged_at timestamptz, acknowledged_by text, acknowledgement_note text,
 			trigger_id uuid, event_type text, group_key text,
 			CHECK ((status = 'triggered' AND channel_id IS NULL AND trigger_id IS NOT NULL AND event_type IS NOT NULL)
@@ -102,6 +103,24 @@ func TestEventInboxReportTwoChannelFanout(t *testing.T) {
 	logs, err := repo.GetLogsFiltered(ctx, NotificationLogFilters{})
 	if err != nil || len(logs) != 1 || logs[0].ID != event.ID || logs[0].ChannelID != 0 {
 		t.Fatalf("inbox logs=%+v err=%v, want only zero-channel event %d", logs, err, event.ID)
+	}
+	if _, err := repo.db.Pool.Exec(ctx,
+		`UPDATE notification_logs SET latency_ms = 123, sent_at = created_at + interval '123 milliseconds'
+		 WHERE channel_id = 1`); err != nil {
+		t.Fatal(err)
+	}
+	deliveries, err := repo.GetLogsFiltered(ctx, NotificationLogFilters{DeliveryOnly: true})
+	if err != nil || len(deliveries) != 2 || deliveries[0].Status != "sent" {
+		t.Fatalf("delivery analytics logs=%+v err=%v, want two channel attempts", deliveries, err)
+	}
+	var measured bool
+	for _, delivery := range deliveries {
+		if delivery.ChannelID == 1 && delivery.LatencyMs != nil && *delivery.LatencyMs == 123 && delivery.SentAt != nil {
+			measured = true
+		}
+	}
+	if !measured {
+		t.Fatalf("delivery latency was not returned: %+v", deliveries)
 	}
 	groups, err := repo.ListGrouped(ctx, NotificationLogFilters{})
 	if err != nil || len(groups) != 1 || groups[0].Count != 1 ||

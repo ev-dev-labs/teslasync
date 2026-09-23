@@ -39,6 +39,7 @@ import (
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	teslabudgetdb "github.com/ev-dev-labs/teslasync/internal/database/teslabudget"
+	dbteslausage "github.com/ev-dev-labs/teslasync/internal/database/teslausage"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
@@ -1084,7 +1085,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 			PersistenceQueueCapacity: a.Cfg.FleetTelemetry.PersistenceQueueCapacity,
 			PersistenceTimeout:       a.Cfg.FleetTelemetry.PersistenceTimeout,
 			StreamingRecorder:        a.TelemetryHandler,
-			UsageRecorder:            database.NewTeslaUsageRepo(a.DB),
+			UsageRecorder:            dbteslausage.NewTeslaUsageRepo(a.DB),
 		},
 		pipelineLogger,
 	)

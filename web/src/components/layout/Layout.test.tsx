@@ -749,6 +749,15 @@ describe('Layout — compact Linear sidebar wiring', () => {
     expect(props.sections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
     expect(props.activeSectionTitle).toBe('Diagnostics')
   })
+
+  it('uses distinct icons for system status and Tesla API usage', () => {
+    const diagnostics = navSections.find((section) => section.title === 'Diagnostics')
+    const status = diagnostics?.items.find((item) => item.to === '/system-status')
+    const usage = diagnostics?.items.find((item) => item.to === '/tesla-api-usage')
+    expect(status?.icon).toBeDefined()
+    expect(usage?.icon).toBeDefined()
+    expect(status?.icon).not.toBe(usage?.icon)
+  })
 })
 
 describe('Layout — global page chrome', () => {

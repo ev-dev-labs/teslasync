@@ -101,6 +101,7 @@ export const notificationKeys = {
   eventTypes: ['notification-event-types'] as const,
   preferences: (channelId: number) => ['notification-preferences', channelId] as const,
   logs: ['notification-logs'] as const,
+  deliveryLogs: ['notification-logs', 'delivery-history'] as const,
   logsFiltered: (filters?: NotificationFilters) =>
     ['notification-logs', 'filtered', filters ?? {}] as const,
   // Grouped/threaded inbox cache sits beside `logsFiltered` so a
@@ -835,6 +836,15 @@ export function useNotificationLogs(
     queryKey: notificationKeys.logsFiltered(filters),
     queryFn: ({ signal }) => request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`, { signal }),
     enabled: options?.enabled ?? true,
+    select: safeArray,
+  });
+}
+
+/** Bounded recent delivery attempts for latency and reliability analysis; inbox rows are trigger events. */
+export function useNotificationDeliveryLogs() {
+  return useQuery({
+    queryKey: notificationKeys.deliveryLogs,
+    queryFn: ({ signal }) => request<NotificationLog[]>('/notifications/logs?view=deliveries&limit=1000', { signal }),
     select: safeArray,
   });
 }

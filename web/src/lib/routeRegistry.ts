@@ -165,7 +165,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: "/navigation", name: "NavigationRoute", label: "Navigation Route", i18nKey: "routes.navigationRoute" },
   { path: "/notification-burn-rate", name: "NotificationBurnRate", label: "Notification Burn Rate", i18nKey: "routes.notificationBurnRate" },
   { path: "/notification-latency", name: "NotificationLatency", label: "Notification Latency", i18nKey: "routes.notificationLatency" },
-  { path: "/notifications", name: "NotificationsInbox", label: "Notifications", i18nKey: "routes.notificationsInbox" },
+  { path: "/notifications", name: "NotificationsInbox", label: "Notifications Inbox", i18nKey: "routes.notificationsInbox" },
   { path: "/notifications/archived", name: "NotificationsArchived", label: "Notifications Archived", i18nKey: "routes.notificationsArchived" },
   { path: "/notifications/audit", name: "NotificationsAudit", label: "Notifications Audit", i18nKey: "routes.notificationsAudit" },
   { path: "/notifications/browser", name: "NotificationsBrowser", label: "Notifications Browser", i18nKey: "routes.notificationsBrowser" },

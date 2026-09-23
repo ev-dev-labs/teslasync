@@ -1,4 +1,4 @@
-package database
+package teslausage
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -33,7 +34,7 @@ func TestTeslaUsageSQLIsolatedTimescale(t *testing.T) {
 	if _, err := pool.Exec(ctx, `TRUNCATE api_call_logs, tesla_stream_usage`); err != nil {
 		t.Fatalf("clear isolated fixtures: %v", err)
 	}
-	db := &DB{Pool: pool}
+	db := &database.DB{Pool: pool}
 	repo := NewTeslaUsageRepo(db)
 	boundary := TeslaCycleStart(time.Now().UTC())
 	old := boundary.Add(-3 * teslaCycle)

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, BellRing, Clock3, Flame, ShieldCheck } from 'lucide-react';
 
-import { useNotificationLogs } from '@/api/hooks/useNotifications';
+import { useNotificationDeliveryLogs } from '@/api/hooks/useNotifications';
 import {
   Bar, BarChart, CartesianGrid, ChartContainer, ChartLegend, ChartTooltip,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -32,7 +32,7 @@ const STATUS_FALLBACK: Record<BurnBreachStatus, string> = {
 export default function NotificationBurnRatePage() {
   const { t } = useTranslation();
   usePageTitle(t('notificationBurnRate.title', 'Notification Burn Rate'));
-  const logsQuery = useNotificationLogs();
+  const logsQuery = useNotificationDeliveryLogs();
   const summary = useMemo(
     () => analyzeNotificationBurnRate(logsQuery.data ?? []),
     [logsQuery.data],
@@ -63,7 +63,7 @@ export default function NotificationBurnRatePage() {
       title={t('notificationBurnRate.title', 'Notification Burn Rate')}
       subtitle={t(
         'notificationBurnRate.subtitle',
-        'Track notification delivery reliability against a 99% SLO with short and long error-budget windows',
+        'Track up to 1,000 recent notification delivery attempts against a 99% SLO with short and long error-budget windows',
       )}
       query={logsQuery}
     >

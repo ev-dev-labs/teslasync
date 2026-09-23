@@ -192,6 +192,7 @@ import (
 	apiteslaenergyhist "github.com/ev-dev-labs/teslasync/internal/api/teslaenergyhist"
 	apitels "github.com/ev-dev-labs/teslasync/internal/api/teslaenergylivestatus"
 	apiphysics "github.com/ev-dev-labs/teslasync/internal/api/teslaphysics"
+	apiteslausage "github.com/ev-dev-labs/teslasync/internal/api/teslausage"
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
@@ -4354,8 +4355,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/auth-mode", systemAuthModeHandler.ServeHTTP)
 
-			r.Get("/api-usage", NewTeslaUsageHandler(db).Get)
-			r.Get("/api-usage/history", NewTeslaUsageHandler(db).History)
+			r.Get("/api-usage", apiteslausage.NewTeslaUsageHandler(db).Get)
+			r.Get("/api-usage/history", apiteslausage.NewTeslaUsageHandler(db).History)
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
 			r.Get("/backup/stats", backupHandler.BackupStats)

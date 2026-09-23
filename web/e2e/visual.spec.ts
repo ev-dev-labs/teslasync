@@ -110,6 +110,12 @@ for (const route of VISUAL_ROUTES) {
     }
     await page.evaluate(() => window.scrollTo(0, 0));
     await waitForHarnessReady(page, mockApi);
+    if (route.name === 'notifications' && scenario === 'populated') {
+      await expect(page.getByRole('region', { name: 'Notification activity' }).locator('[data-role="metric-value"]').first()).toHaveText('3');
+      await expect(page.getByText('Fleet connection restored')).toBeAttached();
+      await expect(page.getByText('Charging schedule changed')).toBeAttached();
+      await expect(page.getByText('Battery alert', { exact: true })).toBeAttached();
+    }
     const sidebar = page.getByRole('navigation', { name: /sidebar navigation/i });
     if (await sidebar.count()) {
       await sidebar.evaluate((element) => { element.scrollTop = 0; });

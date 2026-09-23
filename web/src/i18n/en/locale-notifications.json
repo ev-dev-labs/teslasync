@@ -567,7 +567,7 @@
   },
   "notificationBurnRate": {
     "title": "Notification Burn Rate",
-    "subtitle": "Track notification delivery reliability against a 99% SLO with short and long error-budget windows",
+    "subtitle": "Track up to 1,000 recent notification delivery attempts against a 99% SLO with short and long error-budget windows",
     "kpis": {
       "label": "Delivery SLO metrics",
       "delivery": "24h Delivery SLO",
@@ -612,7 +612,7 @@
       "subtitle": "Apdex bands are anchored to the documented 1-second satisfied threshold",
       "aria": "Bar chart of notification deliveries grouped into latency ranges"
     },
-    "subtitle": "Measure delivery speed from backend latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records",
+    "subtitle": "Measure up to 1,000 recent delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records",
     "kpis": {
       "label": "Notification latency metrics",
       "p50": "p50 Latency",
@@ -631,7 +631,8 @@
     },
     "cohorts": {
       "title": "Severity and Status Cohorts",
-      "empty": "No notification records include a usable delivery latency yet.",
+      "empty": "No measured channel deliveries yet. Configure a channel and send a test notification to measure latency.",
+      "configure": "Manage delivery channels",
       "severity": "By severity",
       "status": "By status",
       "samples": "{{count}} samples · {{tail}} tail"

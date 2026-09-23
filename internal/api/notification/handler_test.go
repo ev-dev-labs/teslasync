@@ -330,6 +330,23 @@ func TestGetLogsHandler(t *testing.T) {
 	}
 }
 
+func TestGetLogsHandlerDeliveryView(t *testing.T) {
+	store := &fakeInboxStore{rows: []*notificationmodel.NotificationLog{{ID: 2, ChannelID: 1, Status: "sent"}}}
+	h := newTestHandler(store)
+	rec := httptest.NewRecorder()
+	h.GetLogs(rec, httptest.NewRequest(http.MethodGet, "/notifications/logs?view=deliveries&limit=1000", nil))
+	if rec.Code != http.StatusOK || !store.lastFilters.DeliveryOnly || store.lastFilters.Limit != 1000 {
+		t.Fatalf("delivery view: status=%d filters=%+v", rec.Code, store.lastFilters)
+	}
+	for _, query := range []string{"view=unknown", "view=deliveries&grouped=true"} {
+		rec = httptest.NewRecorder()
+		h.GetLogs(rec, httptest.NewRequest(http.MethodGet, "/notifications/logs?"+query, nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: got %d, want 400", query, rec.Code)
+		}
+	}
+}
+
 func TestGetLogsHandlerFilterValidation(t *testing.T) {
 	h := newTestHandler(&fakeInboxStore{})
 	req := httptest.NewRequest(http.MethodGet, "/notifications?severity=garbage", nil)

@@ -531,12 +531,12 @@ func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg s
 // `severity` and `error` are nullable in the DB but the model uses non-pointer
 // `string` fields, so both columns must be COALESCEd to ” to avoid pgx
 // "cannot scan NULL into *string" failures on rows with no error message.
-const notificationLogColumns = `id, COALESCE(channel_id, 0), alert_id, title, message, status, COALESCE(severity, ''), COALESCE(error, ''), created_at, sent_at, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note, trigger_id, event_type`
+const notificationLogColumns = `id, COALESCE(channel_id, 0), alert_id, title, message, status, COALESCE(severity, ''), COALESCE(error, ''), created_at, sent_at, scheduled_at, latency_ms, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note, trigger_id, event_type`
 
 func scanNotificationLog(rows pgx.Row, l *notificationmodel.NotificationLog) error {
 	return rows.Scan(
 		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Severity, &l.Error,
-		&l.CreatedAt, &l.SentAt, &l.ReadAt, &l.ArchivedAt,
+		&l.CreatedAt, &l.SentAt, &l.ScheduledAt, &l.LatencyMs, &l.ReadAt, &l.ArchivedAt,
 		&l.AcknowledgedAt, &l.AcknowledgedBy, &l.AcknowledgementNote, &l.TriggerID, &l.EventType,
 	)
 }
@@ -656,6 +656,7 @@ func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*noti
 // = inbox only, true = archived only) because the inbox view defaults to the
 // non-archived list.
 type NotificationLogFilters struct {
+	DeliveryOnly               bool      // delivery analytics include attempts, not canonical event rows
 	Severities                 []string  // wire severities as stored on alert_rules: info, warn, critical
 	IncludeFailedInfoAsWarning bool      // match the /alerts DTO warning floor for failed info deliveries
 	VehicleIDs                 []int64   // rule applies to any requested vehicle; unscoped system rows remain visible
@@ -777,12 +778,16 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 	}
 
 	w := buildNotificationLogWhere(f)
-	w.clauses = append(w.clauses, "(nl.status = 'triggered' OR nl.trigger_id IS NULL)")
+	if f.DeliveryOnly {
+		w.clauses = append(w.clauses, "nl.status <> 'triggered'")
+	} else {
+		w.clauses = append(w.clauses, "(nl.status = 'triggered' OR nl.trigger_id IS NULL)")
+	}
 	args := w.args
 	ph := func(offset int) string { return fmt.Sprintf("$%d", len(args)+offset) }
 
 	const aliasedCols = `nl.id, COALESCE(nl.channel_id, 0), nl.alert_id, nl.title, nl.message, nl.status, COALESCE(nl.severity, ''), COALESCE(nl.error, ''),
-		nl.created_at, nl.sent_at, nl.read_at, nl.archived_at,
+		nl.created_at, nl.sent_at, nl.scheduled_at, nl.latency_ms, nl.read_at, nl.archived_at,
 		nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note, nl.trigger_id, nl.event_type`
 
 	query := "SELECT " + aliasedCols + " FROM notification_logs nl"

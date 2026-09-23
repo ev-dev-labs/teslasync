@@ -348,7 +348,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Integrations:   { accent: 'text-pink-700 dark:text-pink-300',       surface: 'bg-pink-400/10',    ring: 'ring-pink-400/20',    dot: 'bg-pink-400',    icon: Icons.link,            gradient: 'from-pink-500/20 via-pink-400/5 to-transparent' },
   Settings:       { accent: 'text-slate-700 dark:text-slate-300',     surface: 'bg-slate-400/10',   ring: 'ring-slate-400/20',   dot: 'bg-slate-400',   icon: Icons.settings,        gradient: 'from-slate-500/20 via-slate-400/5 to-transparent' },
   Data:           { accent: 'text-teal-700 dark:text-teal-300',       surface: 'bg-teal-400/10',    ring: 'ring-teal-400/20',    dot: 'bg-teal-400',    icon: Icons.database,        gradient: 'from-teal-500/20 via-teal-400/5 to-transparent' },
-  Diagnostics:    { accent: 'text-cyan-700 dark:text-neon-cyan',      surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-neon-cyan',   icon: Icons.activity,        gradient: 'from-cyan-500/25 via-cyan-400/8 to-transparent' },
+  Diagnostics:    { accent: 'text-cyan-700 dark:text-neon-cyan',      surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',     dot: 'bg-neon-cyan',   icon: Icons.stethoscope,     gradient: 'from-cyan-500/25 via-cyan-400/8 to-transparent' },
   'Advanced Intelligence': { accent: 'text-indigo-700 dark:text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400', icon: Icons.network, gradient: 'from-indigo-500/25 via-indigo-400/8 to-transparent' },
   'Ownership Intelligence': { accent: 'text-teal-700 dark:text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400', icon: Icons.wallet, gradient: 'from-teal-500/25 via-teal-400/8 to-transparent' },
   About:          { accent: 'text-slate-600 dark:text-[var(--text-secondary)]', surface: 'bg-[var(--surface-2)]', ring: 'ring-white/10', dot: 'bg-[var(--surface-2)]', icon: Icons.info, gradient: 'from-white/[0.06] via-white/[0.02] to-transparent' },
@@ -667,7 +667,7 @@ export const navSections = [
   {
     title: 'Diagnostics',
     items: [
-      { to: '/system-status', icon: Icons.efficiency, label: 'System Status', color: 'text-emerald-400' },
+      { to: '/system-status', icon: Icons.speedCircle, label: 'System Status', color: 'text-emerald-400' },
       { to: '/tesla-api-usage', icon: Icons.activity, label: 'Tesla API Usage', color: 'text-cyan-400' },
       { to: '/outage', icon: Icons.history, label: 'Outage Autobiography', color: 'text-indigo-400' },
       { to: '/db-health', icon: Icons.hardDrive, label: 'Database Health', color: 'text-emerald-400' },

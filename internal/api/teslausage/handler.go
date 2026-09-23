@@ -1,4 +1,4 @@
-package api
+package teslausage
 
 import (
 	"context"
@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbteslausage "github.com/ev-dev-labs/teslasync/internal/database/teslausage"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -20,7 +22,7 @@ type teslaUsageReader interface {
 type TeslaUsageHandler struct{ repo teslaUsageReader }
 
 func NewTeslaUsageHandler(db *database.DB) *TeslaUsageHandler {
-	return &TeslaUsageHandler{repo: database.NewTeslaUsageRepo(db)}
+	return &TeslaUsageHandler{repo: dbteslausage.NewTeslaUsageRepo(db)}
 }
 
 func (h *TeslaUsageHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -31,14 +33,14 @@ func (h *TeslaUsageHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("limit"); v != "" {
 		limit, err = strconv.Atoi(v)
 		if err != nil || limit < 1 || limit > 24 {
-			writeError(w, http.StatusBadRequest, "limit must be between 1 and 24")
+			httpx.WriteError(w, http.StatusBadRequest, "limit must be between 1 and 24")
 			return
 		}
 	}
 	if v := r.URL.Query().Get("offset"); v != "" {
 		offset, err = strconv.Atoi(v)
 		if err != nil || offset < 0 || offset > 120 {
-			writeError(w, http.StatusBadRequest, "offset must be between 0 and 120")
+			httpx.WriteError(w, http.StatusBadRequest, "offset must be between 0 and 120")
 			return
 		}
 	}
@@ -48,10 +50,10 @@ func (h *TeslaUsageHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		span.RecordError(err)
 		log.Ctx(ctx).Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("Tesla usage read failed")
-		writeError(w, http.StatusInternalServerError, "Tesla usage unavailable")
+		httpx.WriteError(w, http.StatusInternalServerError, "Tesla usage unavailable")
 		return
 	}
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
 // History exposes actual daily/weekly observations in a bounded half-open UTC interval.
@@ -63,12 +65,12 @@ func (h *TeslaUsageHandler) History(w http.ResponseWriter, r *http.Request) {
 	end, endErr := time.Parse(time.RFC3339, q.Get("end"))
 	if startErr != nil || endErr != nil || !start.Before(end) ||
 		end.Sub(start) > 366*24*time.Hour || end.After(time.Now().UTC().Add(24*time.Hour)) {
-		writeError(w, http.StatusBadRequest, "start and end must be RFC3339 timestamps defining at most 366 days, ending no later than tomorrow")
+		httpx.WriteError(w, http.StatusBadRequest, "start and end must be RFC3339 timestamps defining at most 366 days, ending no later than tomorrow")
 		return
 	}
 	bucket := q.Get("bucket")
 	if bucket != "day" && bucket != "week" {
-		writeError(w, http.StatusBadRequest, "bucket must be day or week")
+		httpx.WriteError(w, http.StatusBadRequest, "bucket must be day or week")
 		return
 	}
 	limit, offset := 366, 0
@@ -76,14 +78,14 @@ func (h *TeslaUsageHandler) History(w http.ResponseWriter, r *http.Request) {
 	if q.Has("limit") {
 		limit, err = strconv.Atoi(q.Get("limit"))
 		if err != nil || limit < 1 || limit > 366 {
-			writeError(w, http.StatusBadRequest, "limit must be between 1 and 366")
+			httpx.WriteError(w, http.StatusBadRequest, "limit must be between 1 and 366")
 			return
 		}
 	}
 	if q.Has("offset") {
 		offset, err = strconv.Atoi(q.Get("offset"))
 		if err != nil || offset < 0 || offset > 366 {
-			writeError(w, http.StatusBadRequest, "offset must be between 0 and 366")
+			httpx.WriteError(w, http.StatusBadRequest, "offset must be between 0 and 366")
 			return
 		}
 	}
@@ -93,8 +95,8 @@ func (h *TeslaUsageHandler) History(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		span.RecordError(err)
 		log.Ctx(ctx).Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("Tesla usage history read failed")
-		writeError(w, http.StatusInternalServerError, "Tesla usage history unavailable")
+		httpx.WriteError(w, http.StatusInternalServerError, "Tesla usage history unavailable")
 		return
 	}
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
 }

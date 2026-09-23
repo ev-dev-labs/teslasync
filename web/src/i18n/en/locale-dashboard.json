@@ -237,6 +237,7 @@
       }
     },
     "shortcuts": {
+      "group": "Dashboard",
       "toggleEdit": "Toggle edit mode",
       "exitEdit": "Exit edit mode",
       "undo": "Undo layout change",
