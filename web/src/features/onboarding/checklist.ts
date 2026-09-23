@@ -292,7 +292,7 @@ export function useChecklistTasks(): ChecklistState {
         descriptionFallback: 'Get notified when something changes — battery low, charge complete, etc.',
         ctaKey: 'checklist.tasks.firstAlert.cta',
         ctaFallback: 'Create',
-        ctaTo: '/notifications/alerts',
+        ctaTo: '/notifications/inbox',
         complete: (alertRules?.length ?? 0) > 0,
         icon: BellRing,
       },

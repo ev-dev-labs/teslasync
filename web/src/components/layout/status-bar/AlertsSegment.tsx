@@ -271,7 +271,7 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
 
         <div className="border-t border-[var(--border-subtle)] px-2 pt-2">
           <PrefetchLink
-            to="/notifications/alerts"
+            to="/notifications/inbox?read=unread"
             onClick={close}
             className="text-xs font-medium text-[var(--theme-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
           >

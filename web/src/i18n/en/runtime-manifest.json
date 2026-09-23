@@ -195,7 +195,6 @@
       "notificationBurnRate",
       "notificationLatency",
       "notificationSounds",
-      "pinned",
       "severity",
       "webpush"
     ],
@@ -489,6 +488,7 @@
       "miles",
       "online",
       "physicsCockpit",
+      "pinned",
       "points",
       "pressure",
       "privacy",

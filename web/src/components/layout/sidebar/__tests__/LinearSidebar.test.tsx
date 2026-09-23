@@ -25,7 +25,7 @@ function makeSections(): LinearSidebarSectionInput[] {
       title: 'Insights',
       items: [
         { to: '/analytics', icon: Icons.analytics, label: 'Analytics' },
-        { to: '/notifications/alerts', icon: Icons.notifications, label: 'Alerts' },
+        { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts' },
       ],
     },
   ]
@@ -219,7 +219,7 @@ describe('LinearSidebar', () => {
         title: 'All',
         items: [
           { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' },
-          { to: '/notifications/alerts', icon: Icons.notifications, label: 'Alerts' },
+          { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts' },
           { to: '/data-repair', icon: Icons.database, label: 'Repair' },
         ],
       },
@@ -250,7 +250,7 @@ describe('LinearSidebar', () => {
       {
         title: 'All',
         items: [
-          { to: '/notifications/alerts', icon: Icons.notifications, label: 'Alerts' },
+          { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts' },
           { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' },
         ],
       },

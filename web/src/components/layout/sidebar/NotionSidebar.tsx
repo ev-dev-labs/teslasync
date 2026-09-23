@@ -311,7 +311,7 @@ export function NotionSidebar({
 
   // ── Trailing badges ────────────────────────────────────────────────────
   const trailingFor = (to: string): React.ReactNode => {
-    if (to === '/notifications/alerts' && alertCount > 0) return <NotificationDot />
+    if (to === '/notifications/inbox' && alertCount > 0) return <NotificationDot />
     if (to === '/vehicles' && vehicleCount > 0) {
       return (
         <CountChip

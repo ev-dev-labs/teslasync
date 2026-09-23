@@ -19,6 +19,7 @@ import {
   useMemo,
   useRef,
   useCallback,
+  useState,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +41,8 @@ import {
   Button,
   Checkbox,
   GlassPanel,
+  Modal,
+  Text,
   useContextMenu,
   type ContextMenuItem,
 } from '@/components/ui';
@@ -62,6 +65,9 @@ import {
   useMarkNotificationsUnread,
   useBulkMarkRead,
   useDeleteNotifications,
+  useAlertDetail,
+  useAcknowledgeAlert,
+  useReopenAlert,
   type NotificationFilters,
 } from '@/api/hooks/useNotifications';
 import type { NotificationLog, AlertRule, Vehicle, Alert } from '@/api/types';
@@ -70,6 +76,7 @@ import { NotificationFilterBar } from './NotificationFilterBar';
 import { AIInboxAutoCategorization } from '@/components/ai/AIInboxAutoCategorization';
 import { NotificationRow } from './NotificationRow';
 import { NotificationGroupRow } from './NotificationGroupRow';
+import { AlertDetailDrawer } from './AlertDetailDrawer';
 import { PullToRefresh, SwipeRow } from '@/components/mobile';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 
@@ -85,6 +92,7 @@ type ReadValue = (typeof READ_VALUES)[number];
 // for users who want to see every individual delivery.
 const VIEW_VALUES = ['grouped', 'flat'] as const;
 type ViewValue = (typeof VIEW_VALUES)[number];
+const INBOX_PAGE_SIZE = 50;
 
 function notificationExportRow(log: NotificationLog): Record<string, unknown> {
   return {
@@ -189,6 +197,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   // View mode is URL-backed too so a deep link can
   // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
   const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'grouped');
+  const [page, setPage] = useState(1);
   const setFiltersBatch = useUrlBatch();
   const isGrouped = view === 'grouped' && !archived;
 
@@ -218,7 +227,14 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     from: from || undefined,
     to: to || undefined,
     read: readState === 'all' ? undefined : readState === 'read',
-  }), [archived, severity, vehicleIds, ruleIds, search, from, to, readState]);
+    limit: INBOX_PAGE_SIZE,
+    offset: (page - 1) * INBOX_PAGE_SIZE,
+  }), [archived, severity, vehicleIds, ruleIds, search, from, to, readState, page]);
+
+  const severityKey = severityRaw.join(',');
+  const vehicleKey = vehicleIdsRaw.join(',');
+  const ruleKey = ruleIdsRaw.join(',');
+  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, search, from, to, readState, view]);
 
   const handleFiltersChange = useCallback((next: NotificationFilters) => {
     // Bridge the existing controlled-component contract back into the
@@ -273,6 +289,10 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
 
   const { data: rawRows, isLoading, error, refetch } = useNotificationLogs(filters, { enabled: !isGrouped });
   const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);
+  const [openedLog, setOpenedLog] = useState<NotificationLog | null>(null);
+  const alertDetail = useAlertDetail(openedLog?.alert_id != null ? openedLog.id : null);
+  const acknowledgeAlert = useAcknowledgeAlert();
+  const reopenAlert = useReopenAlert();
 
   // Grouped/threaded fetch. Only enabled in
   // grouped mode AND on the inbox tab (archived doesn't group; the
@@ -284,7 +304,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     refetch: groupsRefetch,
   } = useNotificationGroups(filters, { enabled: isGrouped });
   const groups = useMemo(() => rawGroups ?? [], [rawGroups]);
-  const groupedDeliveryCount = useMemo(
+  const groupedNotificationCount = useMemo(
     () => groups.reduce((total, group) => total + Math.max(0, group.count), 0),
     [groups],
   );
@@ -516,10 +536,25 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   }, [archived, t, handleBulkArchive, handleBulkUnarchive, handleBulkMarkRead, handleBulkDelete]);
 
   const handleRowActivate = (log: NotificationLog) => {
-    if (log.read_at) return;
-    if (!readPref(PREF_MARK_ON_CLICK)) return;
-    markReadMut.mutate([log.id]);
+    setOpenedLog(log);
+    if (!log.read_at && readPref(PREF_MARK_ON_CLICK)) markReadMut.mutate([log.id]);
   };
+
+  const openedRule = openedLog?.alert_id != null ? ruleMap[openedLog.alert_id] : undefined;
+  const openedVehicle = openedRule?.vehicle_id != null ? vehicleMap[openedRule.vehicle_id] : undefined;
+  const openedAlert: Alert | null = openedLog?.alert_id != null ? {
+    id: openedLog.id,
+    vehicle_id: openedVehicle?.id ?? openedRule?.vehicle_id ?? 0,
+    type: openedRule?.name ?? openedLog.event_type ?? openedLog.title,
+    severity: (openedRule?.severity ?? openedLog.severity ?? 'info') as Alert['severity'],
+    title: openedLog.title,
+    message: openedLog.message,
+    is_read: !!openedLog.read_at,
+    created_at: openedLog.created_at,
+    rule_id: openedRule?.id,
+    rule_signal: openedRule?.signal_name,
+    acknowledged_at: alertDetail.data?.acknowledged_at ?? null,
+  } : null;
 
   const navigate = useNavigate();
   const { openMenu: openRowContextMenu } = useContextMenu();
@@ -611,9 +646,33 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   );
 
   return (
+    <>
+    <AlertDetailDrawer
+      alert={openedAlert}
+      detail={alertDetail.data}
+      isLoading={alertDetail.isLoading}
+      error={alertDetail.error}
+      vehicleName={openedVehicle?.display_name}
+      onClose={() => setOpenedLog(null)}
+      onAcknowledge={id => acknowledgeAlert.mutate({ id })}
+      onReopen={id => reopenAlert.mutate(id)}
+      onRetry={() => { void alertDetail.refetch(); }}
+    />
+    <Modal
+      open={openedLog !== null && openedLog.alert_id == null}
+      onClose={() => setOpenedLog(null)}
+      title={openedLog?.title || t('notifications.inbox.detail.title', 'Notification details')}
+    >
+      <div className="space-y-3">
+        <Text variant="body">{openedLog?.message ?? ''}</Text>
+        <Text variant="caption">{openedLog?.event_type ?? t('notifications.report.values.unknown', 'Unattributed')}</Text>
+        <Text variant="caption">{openedLog?.created_at ? new Date(openedLog.created_at).toLocaleString() : ''}</Text>
+      </div>
+    </Modal>
     <PullToRefresh onRefresh={async () => { await (isGrouped ? groupsRefetch() : refetch()); }}>
     <div className="space-y-4">
       <FadeIn>
+        <div data-tour="alerts-filters">
         <NotificationFilterBar
           filters={filters}
           onChange={handleFiltersChange}
@@ -621,6 +680,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           vehicles={vehicles}
           rules={rules}
         />
+        </div>
       </FadeIn>
 
       {/* Inbox auto-categorization. The
@@ -647,7 +707,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         }}
       />
 
-      <GlassPanel className="p-3 sm:p-4">
+      <GlassPanel className="p-3 sm:p-4" data-tour="alerts-list">
         <div className="mb-2 flex items-center gap-3 px-1 pb-2 border-b border-white/[0.04]">
           {!isGrouped && (
             <Checkbox
@@ -667,8 +727,8 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                   count: groups.length,
                 })}
                 <span aria-hidden="true"> · </span>
-                {t('notifications.inbox.deliveryCountLabel', '{{count}} deliveries', {
-                  count: groupedDeliveryCount,
+                {t('notifications.inbox.notificationCountLabel', '{{count}} notifications', {
+                  count: groupedNotificationCount,
                 })}
               </>
             ) : (
@@ -789,7 +849,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
               : t('notifications.inbox.empty.title', 'No notifications')}
             message={archived
               ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
-              : t('notifications.inbox.empty.message', 'When alert rules fire, the resulting notifications appear here.')}
+              : t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}
             actionTo={archived ? undefined : {
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
               to: '/notifications/studio',
@@ -801,7 +861,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           <EmptyState
             icon={<Bell className="h-8 w-8" />}
             title={t('notifications.group.emptyTitle', 'No notification threads')}
-            message={t('notifications.group.emptyMessage', 'When alert rules fire repeatedly, related notifications will be grouped here.')}
+            message={t('notifications.group.emptyMessage', 'Related notifications are grouped here when they occur repeatedly.')}
             actionTo={{
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
               to: '/notifications/studio',
@@ -886,8 +946,25 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           </div>
         )}
       </GlassPanel>
+      {(page > 1 || (isGrouped ? groups.length : rows.length) === INBOX_PAGE_SIZE) && (
+        <div className="flex items-center justify-end gap-3">
+          <Button size="sm" variant="ghost" disabled={page === 1} onClick={() => setPage(page - 1)}>
+            {t('notifications.inbox.previousPage', 'Previous')}
+          </Button>
+          <Text variant="caption">{t('notifications.inbox.pageNumber', 'Page {{page}}', { page })}</Text>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={(isGrouped ? groups.length : rows.length) < INBOX_PAGE_SIZE}
+            onClick={() => setPage(page + 1)}
+          >
+            {t('notifications.inbox.nextPage', 'Next')}
+          </Button>
+        </div>
+      )}
     </div>
     </PullToRefresh>
+    </>
   );
 }
 

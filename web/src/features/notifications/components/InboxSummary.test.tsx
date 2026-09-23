@@ -104,7 +104,7 @@ describe('InboxSummary — loading & error states', () => {
     );
 
     // Cached data wins over the skeleton — the band stays populated.
-    expect(cardValue('Total')).toBe('1');
+    expect(cardValue('Recent notifications')).toBe('1');
     expect(screen.queryByTestId('stat-grid-skeleton')).not.toBeInTheDocument();
   });
 
@@ -115,7 +115,7 @@ describe('InboxSummary — loading & error states', () => {
     expect(getRegion()).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // Error branch replaces the KPI cards entirely.
-    expect(screen.queryByText('Total')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /retry/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
@@ -128,7 +128,7 @@ describe('InboxSummary — empty states', () => {
 
     expect(getRegion()).toBeInTheDocument();
     expect(screen.getByText('No notifications yet')).toBeInTheDocument();
-    expect(screen.queryByText('Total')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
   });
 
   it('treats an idle query with undefined data as empty (null-safety)', () => {
@@ -153,7 +153,7 @@ describe('InboxSummary — populated aggregation', () => {
     ];
     renderSummary(makeQuery({ isSuccess: true, data }));
 
-    expect(cardValue('Total')).toBe('5');
+    expect(cardValue('Recent notifications')).toBe('5');
     expect(cardValue('Unread')).toBe('3');
     expect(cardValue('Critical')).toBe('1');
     expect(cardValue('Warnings')).toBe('2');
@@ -172,7 +172,7 @@ describe('InboxSummary — populated aggregation', () => {
     ];
     renderSummary(makeQuery({ isSuccess: true, data }));
 
-    expect(cardValue('Total')).toBe('2');
+    expect(cardValue('Recent notifications')).toBe('2');
     expect(cardValue('Unread')).toBe('0');
     expect(screen.getByText('0 of 2')).toBeInTheDocument();
   });
@@ -186,7 +186,7 @@ describe('InboxSummary — null-safety & accessibility', () => {
     ];
     renderSummary(makeQuery({ isSuccess: true, data }));
 
-    expect(cardValue('Total')).toBe('2');
+    expect(cardValue('Recent notifications')).toBe('2');
     // Neither row lands in a severity bucket.
     expect(cardValue('Critical')).toBe('0');
     expect(cardValue('Warnings')).toBe('0');
@@ -206,6 +206,6 @@ describe('InboxSummary — null-safety & accessibility', () => {
     // Card icons are purely decorative — hidden from the a11y tree so the
     // metric label + value carry the meaning.
     expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThan(0);
-    expect(cardValue('Total')).toBe('1');
+    expect(cardValue('Recent notifications')).toBe('1');
   });
 });

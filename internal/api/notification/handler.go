@@ -13,6 +13,7 @@ import (
 	"time"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+	"github.com/ev-dev-labs/teslasync/internal/notification"
 
 	"github.com/rs/zerolog/log"
 
@@ -56,8 +57,13 @@ func notifyOutboundClient(name string) *http.Client {
 
 // Handler handles notification channel CRUD and test delivery.
 type Handler struct {
-	repo  *dbnotif.NotificationRepo
-	inbox notificationInboxStore
+	repo   *dbnotif.NotificationRepo
+	inbox  notificationInboxStore
+	report notificationReportStore
+}
+
+type notificationReportStore interface {
+	GetReport(ctx context.Context, from, until time.Time) (*dbnotif.Report, error)
 }
 
 // notificationInboxStore is the slice of NotificationRepo used by the inbox
@@ -75,7 +81,7 @@ type notificationInboxStore interface {
 
 func NewHandler(db *database.DB) *Handler {
 	repo := dbnotif.NewNotificationRepo(db)
-	return &Handler{repo: repo, inbox: repo}
+	return &Handler{repo: repo, inbox: repo, report: repo}
 }
 
 func (h *Handler) ListChannels(w http.ResponseWriter, r *http.Request) {
@@ -294,6 +300,16 @@ func (h *Handler) TestChannel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	testMsg := "TeslaSync test notification — your channel is configured correctly!"
+	triggerID := notification.NewTriggerID()
+	eventType := "test.channel"
+	if _, err := notification.RecordTrigger(r.Context(), h.repo, &notification.Request{
+		Title: "TeslaSync Test", Message: testMsg, TriggerID: triggerID, EventType: eventType,
+		Severity: "info",
+	}); err != nil {
+		log.Error().Err(err).Msg("channel test: event persistence failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to record test notification")
+		return
+	}
 	sendErr := sendNotification(ch, "TeslaSync Test", testMsg)
 
 	status := "sent"
@@ -311,15 +327,20 @@ func (h *Handler) TestChannel(w http.ResponseWriter, r *http.Request) {
 		Status:    status,
 		Error:     errStr,
 	}
+	logEntry.TriggerID = &triggerID
+	logEntry.EventType = &eventType
+	logEntry.Severity = "info"
 	if status == "sent" {
 		logEntry.SentAt = &now
 	}
+
 	_ = h.repo.CreateLog(r.Context(), logEntry)
 
 	if sendErr != nil {
 		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"success": false, "error": sendErr.Error()})
 		return
 	}
+
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Test notification sent"})
 }
 

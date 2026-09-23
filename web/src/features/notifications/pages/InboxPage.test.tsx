@@ -102,6 +102,9 @@ vi.mock('../components/InboxBody', () => ({
     </div>
   ),
 }));
+vi.mock('../components/NotificationReportPanel', () => ({
+  NotificationReportPanel: () => <div data-testid="notification-report">Notification activity</div>,
+}));
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import InboxPage from './InboxPage';
@@ -179,7 +182,7 @@ describe('InboxPage — page shell & composition', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Inbox' })).toBeInTheDocument();
     expect(
-      screen.getByText('Recent notifications from your alert rules.'),
+      screen.getByText('All system, alert, automation, and scheduled notifications in one place.'),
     ).toBeInTheDocument();
     expect(document.title).toBe('Inbox — TeslaSync');
   });
@@ -197,6 +200,7 @@ describe('InboxPage — page shell & composition', () => {
 
   it('passes archived=false plus the fetched vehicles & rules to InboxBody', () => {
     renderPage();
+    expect(screen.getByTestId('notification-report')).toBeInTheDocument();
     expect(screen.getByTestId('inbox-body-archived')).toHaveTextContent('false');
     expect(screen.getByTestId('inbox-body-vehicles')).toHaveTextContent('2');
     expect(screen.getByTestId('inbox-body-rules')).toHaveTextContent('3');
@@ -207,7 +211,7 @@ describe('InboxPage — summary KPI derivation (happy path)', () => {
   it('renders the labelled summary landmark with every metric card', () => {
     renderPage();
     const summary = summaryScope();
-    for (const label of ['Total', 'Unread', 'Critical', 'Warnings', 'Info', 'Last received']) {
+    for (const label of ['Recent notifications', 'Unread', 'Critical', 'Warnings', 'Info', 'Last received']) {
       expect(summary.getByText(label)).toBeInTheDocument();
     }
   });
@@ -230,7 +234,7 @@ describe('InboxPage — summary states', () => {
     // Page shell is still present around the skeleton.
     expect(screen.getByRole('heading', { level: 1, name: 'Inbox' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading stat cards' })).toBeInTheDocument();
-    expect(screen.queryByText('Total')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
   });
 
   it('surfaces a retryable error state and invokes refetch on retry', () => {
@@ -240,7 +244,7 @@ describe('InboxPage — summary states', () => {
     );
     renderPage();
 
-    expect(screen.queryByText('Total')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
     const retry = screen.getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
     expect(refetch).toHaveBeenCalledTimes(1);
@@ -250,7 +254,7 @@ describe('InboxPage — summary states', () => {
     mockLogs.mockReturnValue(qr({ data: [] }));
     renderPage();
     expect(screen.getByText('No notifications yet')).toBeInTheDocument();
-    expect(screen.queryByText('Total')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
     // The detail surface still mounts below the empty summary.
     expect(screen.getByTestId('inbox-body')).toBeInTheDocument();
   });

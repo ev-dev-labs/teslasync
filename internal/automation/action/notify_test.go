@@ -19,13 +19,20 @@ import (
 type mockChannelRepo struct {
 	channels []*notificationmodel.NotificationChannel
 	err      error
+	events   []*notificationmodel.NotificationLog
 }
 
 func (m *mockChannelRepo) GetAllChannels(_ context.Context) ([]*notificationmodel.NotificationChannel, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
+
 	return m.channels, nil
+}
+
+func (m *mockChannelRepo) CreateEvent(_ context.Context, event *notificationmodel.NotificationLog) error {
+	m.events = append(m.events, event)
+	return nil
 }
 
 // capturedRequest records what was sent for test assertions.

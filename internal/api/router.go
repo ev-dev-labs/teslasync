@@ -4008,6 +4008,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", notificationHandler.CreateChannel)
 			r.Get("/logs", notificationHandler.GetLogs)
 			r.Get("/stats", notificationHandler.GetStats)
+			r.Get("/report", notificationHandler.GetReport)
 			r.Get("/unread-count", notificationHandler.UnreadCount)
 			r.Post("/mark-read", notificationHandler.MarkRead)
 			r.Post("/mark-unread", notificationHandler.MarkUnread)

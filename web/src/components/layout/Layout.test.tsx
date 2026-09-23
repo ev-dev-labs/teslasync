@@ -913,10 +913,10 @@ describe('Layout — live nav badges', () => {
     })
   })
 
-  it('shows the unread-alert badge on the "Alert Center" link', async () => {
-    renderLayout('/notifications/alerts')
+  it('shows the unread-alert badge on the inbox link', async () => {
+    renderLayout('/notifications/inbox')
     await waitFor(() => {
-      const link = screen.getByRole('link', { name: 'Alert Center' })
+      const link = screen.getByRole('link', { name: 'All Notifications' })
       // ALERTS fixture has exactly one unread entry.
       expect(within(link).getByText('1')).toBeInTheDocument()
     })

@@ -109,7 +109,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'AutomationBuilderPage', load: () => import('../features/automations/pages/AutomationBuilderPage') },
 
   // Notifications
-  { name: 'AlertsListPage', load: () => import('../features/notifications/pages/AlertsListPage') },
   { name: 'AlertStudio', load: () => import('../features/notifications/pages/AlertStudioPage') },
   { name: 'AlertRulesPage', load: () => import('../features/notifications/pages/AlertRulesPage') },
   { name: 'InboxPage', load: () => import('../features/notifications/pages/InboxPage') },
@@ -145,6 +144,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
 
   // System
   { name: 'SystemStatus', load: () => import('../features/system/pages/SystemStatusPage') },
+  { name: 'TeslaApiUsage', load: () => import('../features/system/pages/TeslaApiUsagePage') },
   { name: 'DataExport', load: () => import('../features/system/pages/DataExportPage') },
   { name: 'ExportsPage', load: () => import('../features/exports/pages/ExportsPage') },
   { name: 'DataRepair', load: () => import('../features/system/pages/DataRepairPage') },
@@ -167,8 +167,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'WatchFace', load: () => import('../features/watch/pages/WatchFacePage') },
 
   // Additional routes — kept in App.tsx order so the parity counter stays honest.
-  { name: 'LegacyAlertsRedirect', load: () => import('../features/notifications/components/LegacyAlertsRedirect') },
-  { name: 'LegacyNotificationsRedirect', load: () => import('../features/notifications/components/LegacyNotificationsRedirect') },
   { name: 'LegacyAlertRulesRedirect', load: () => import('../features/notifications/components/LegacyAlertRulesRedirect') },
   { name: 'LegacyAlertStudioRedirect', load: () => import('../features/notifications/components/LegacyAlertStudioRedirect') },
   { name: 'SignalsWorkspace', load: () => import('../features/telemetry/pages/SignalsWorkspacePage') },

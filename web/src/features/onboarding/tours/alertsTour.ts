@@ -3,7 +3,7 @@ import type { TourStep } from '@/hooks/useTour'
 
 /**
  * Alerts tour — covers the alerts inbox and the Alert Studio rule builder.
- * Navigates between `/notifications/alerts` and `/notifications/studio` via
+ * Navigates between `/notifications/inbox` and `/notifications/studio` via
  * `onShow` so each step lands on the right page before the spotlight
  * measures its target.
  */
@@ -30,7 +30,7 @@ const STEPS: TourStep[] = [
     description:
       'All triggered alerts land here, newest first. Click a row to open the source — a vehicle event, a drive, or the rule that fired.',
     placement: 'bottom',
-    onShow: () => navigate('/notifications/alerts'),
+    onShow: () => navigate('/notifications/inbox'),
   },
   {
     target: '[data-tour="alerts-filters"]',
@@ -58,7 +58,7 @@ const STEPS: TourStep[] = [
 
 export const ALERTS_TOUR: TourDefinition = {
   id: 'alerts',
-  routeMatch: /^\/notifications\/(alerts|studio)/,
+  routeMatch: /^\/notifications\/(inbox|studio)(?:\/|$)/,
   titleKey: 'tour.tours.alerts.title',
   titleFallback: 'Alerts & Alert Studio',
   descriptionKey: 'tour.tours.alerts.description',

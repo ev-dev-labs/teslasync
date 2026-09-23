@@ -16,12 +16,12 @@ import (
 	"github.com/rs/zerolog"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
+	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
-	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 )
 
 // ── shared helpers ────────────────────────────────────────────────────
@@ -147,10 +147,16 @@ func (f *fakeVehicleLister) GetAll(context.Context) ([]*vehiclemodel.Vehicle, er
 type fakeChannelLister struct {
 	channels []*notificationmodel.NotificationChannel
 	err      error
+	events   []*notificationmodel.NotificationLog
 }
 
 func (f *fakeChannelLister) GetAllChannels(context.Context) ([]*notificationmodel.NotificationChannel, error) {
 	return f.channels, f.err
+}
+
+func (f *fakeChannelLister) CreateEvent(_ context.Context, event *notificationmodel.NotificationLog) error {
+	f.events = append(f.events, event)
+	return nil
 }
 
 type fakeEvaluator struct {
@@ -575,7 +581,7 @@ func TestDispatchComputedMetricNotification(t *testing.T) {
 	result := computed.Result{Triggered: true, Value: 321.5, PreviousValue: 300, PercentChange: 7.1}
 	client := connectedClient()
 
-	dispatchComputedMetricNotification(context.Background(), rule, 1, "Model 3", result, channels, client)
+	dispatchComputedMetricNotification(context.Background(), rule, 1, "Model 3", result, channels, client, &fakeChannelLister{})
 
 	reqs := client.requests(t)
 	if len(reqs) != 2 {
@@ -615,7 +621,7 @@ func TestDispatchComputedMetricNotification_TitleSuppressed(t *testing.T) {
 	client := connectedClient()
 
 	dispatchComputedMetricNotification(context.Background(), rule, 1, "Model 3",
-		computed.Result{Triggered: true, Value: 1}, []*notificationmodel.NotificationChannel{enabledChannel(10, "discord")}, client)
+		computed.Result{Triggered: true, Value: 1}, []*notificationmodel.NotificationChannel{enabledChannel(10, "discord")}, client, &fakeChannelLister{})
 
 	reqs := client.requests(t)
 	if len(reqs) != 1 {
@@ -644,7 +650,7 @@ func TestDispatchComputedMetricNotification_PublishErrorContinues(t *testing.T) 
 		enabledChannel(11, "slack"),
 	}
 	dispatchComputedMetricNotification(context.Background(), computedRule(9), 1, "Model 3",
-		computed.Result{Triggered: true, Value: 5}, channels, client)
+		computed.Result{Triggered: true, Value: 5}, channels, client, &fakeChannelLister{})
 
 	// Both channels were attempted despite the publish error.
 	if got := client.count(); got != 2 {
@@ -660,10 +666,14 @@ func TestDispatchComputedMetricNotification_NoEnabledChannels(t *testing.T) {
 		{ID: 1, Type: "discord", Enabled: false},
 		nil,
 	}
+	logs := &fakeChannelLister{}
 	dispatchComputedMetricNotification(context.Background(), computedRule(1), 1, "Model 3",
-		computed.Result{Triggered: true, Value: 5}, channels, client)
+		computed.Result{Triggered: true, Value: 5}, channels, client, logs)
 
 	if got := client.count(); got != 0 {
 		t.Fatalf("expected 0 publishes, got %d", got)
+	}
+	if len(logs.events) != 1 || logs.events[0].Status != "triggered" {
+		t.Fatalf("zero-channel firing must persist one event, got %+v", logs.events)
 	}
 }

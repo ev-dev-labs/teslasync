@@ -89,8 +89,6 @@ const ACKNOWLEDGED_LONG_LIST_SURFACES = [
   // "Refactor/filters"). Rows are mapped into <NotificationRow> here, so this
   // is the file that must migrate.
   'features/notifications/components/InboxBody.tsx',
-  // Successor to the deleted AlertsPage.tsx (same PR).
-  'features/notifications/pages/AlertsListPage.tsx',
   'features/notifications/pages/AlertStudioPage.tsx',
   'features/system/pages/CommandHistoryPage.tsx',
   // `Array.from(pinnedSignals).sort().map(...)` — a chained render the old

@@ -507,7 +507,7 @@ export default function LocationsPage() {
                 {
                   key: 'alerts',
                   label: t('entityContext.alerts', 'Alerts'),
-                  to: buildContextHref('/notifications/alerts', { from: start, to: end }),
+                  to: buildContextHref('/notifications/inbox', { from: start, to: end }),
                   icon: <Bell className="h-4 w-4" aria-hidden="true" />,
                 },
                 {

@@ -12,6 +12,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/fsdweekly"
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/fsddigest"
@@ -25,6 +26,7 @@ type fsdWeeklyLoader = fsdweekly.Loader
 // titleDeduper skips a vehicle/week that already has a non-failed log row.
 type titleDeduper interface {
 	ExistsTitleSince(ctx context.Context, title string, since time.Time) (bool, error)
+	notification.EventRecorder
 }
 
 // digestDeduper also remembers titles in-process. Web Push is a synthetic
@@ -32,6 +34,10 @@ type titleDeduper interface {
 type digestDeduper interface {
 	titleDeduper
 	Remember(title string)
+}
+
+func (d *fsdDigestDeduper) CreateEvent(ctx context.Context, event *notificationmodel.NotificationLog) error {
+	return d.logs.CreateEvent(ctx, event)
 }
 
 type fsdDigestDeduper struct {
@@ -148,9 +154,16 @@ func sendFsdWeeklyDigest(
 			"url":       fsddigest.DrillURL,
 			"alert_tag": fsddigest.AlertTag(vehicle.ID, weekStart, loc),
 		},
-		Title:    title,
-		Message:  fsddigest.Body(snapshot),
-		Severity: fsddigest.Severity,
+		Title:     title,
+		Message:   fsddigest.Body(snapshot),
+		Severity:  fsddigest.Severity,
+		TriggerID: notification.NewTriggerID(),
+		EventType: "digest.fsd_weekly",
+	}
+	if _, err := notification.RecordTrigger(ctx, deduper, req); err != nil {
+		log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).
+			Int64("vehicle_id", vehicle.ID).Msg("fsd-weekly: event persistence failed")
+		return "error"
 	}
 	if pubErr := notification.PublishCtx(ctx, mqttClient, req); pubErr != nil {
 		log.Error().Err(pubErr).Int64("vehicle_id", vehicle.ID).Msg("fsd-weekly: publish failed")
@@ -163,4 +176,3 @@ func sendFsdWeeklyDigest(
 		Msg("fsd-weekly: digest published")
 	return "sent"
 }
-

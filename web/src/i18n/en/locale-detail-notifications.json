@@ -1,21 +1,60 @@
 {
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Inbox of fired alerts plus delivery channels.",
+    "subtitle": "All notification sources and delivery channels.",
+    "report": {
+      "title": "Notification activity",
+      "description": "Explore triggers and delivery outcomes across every notification source. Historical periods remain available.",
+      "triggered": "Triggers recorded",
+      "deliveries": "Channel deliveries",
+      "fanout": "Attributed deliveries per trigger",
+      "uncorrelated": "Unattributed deliveries",
+      "countNote": "Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.",
+      "timeline": "Daily activity",
+      "day": "Day",
+      "timelineAria": "Daily notification triggers and channel deliveries",
+      "sources": "Trigger sources",
+      "types": "Event types",
+      "severities": "Severities",
+      "channels": "Delivery channels",
+      "statuses": "Delivery outcomes",
+      "noActivity": "No activity in this period",
+      "inbox": "Open inbox",
+      "values": {
+        "system": "System",
+        "alert": "Alert rules",
+        "automation": "Automation",
+        "schedule": "Schedules",
+        "test": "Tests",
+        "other": "Other",
+        "unknown": "Unattributed"
+      }
+    },
     "tab": {
       "inbox": "Inbox",
       "archived": "Archived",
       "channels": "Channels"
     },
     "inbox": {
+      "title": "Inbox",
+      "subtitle": "All system, alert, automation, and scheduled notifications in one place.",
+      "detail": {
+        "title": "Notification details"
+      },
+      "previousPage": "Previous",
+      "nextPage": "Next",
+      "pageNumber": "Page {{page}}",
+      "summary": {
+        "total": "Recent notifications"
+      },
       "selectAll": "Select all visible",
       "countLabel": "{{count}} notifications",
       "threadCountLabel": "{{count}} threads",
       "threadCountLabel_one": "{{count}} thread",
       "threadCountLabel_other": "{{count}} threads",
-      "deliveryCountLabel": "{{count}} deliveries",
-      "deliveryCountLabel_one": "{{count}} delivery",
-      "deliveryCountLabel_other": "{{count}} deliveries",
+      "notificationCountLabel": "{{count}} notifications",
+      "notificationCountLabel_one": "{{count}} notification",
+      "notificationCountLabel_other": "{{count}} notifications",
       "filter": {
         "severity": "Severity",
         "vehicle": "Vehicle",
@@ -53,7 +92,7 @@
       },
       "empty": {
         "title": "No notifications",
-        "message": "When alert rules fire, the resulting notifications appear here.",
+        "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
         "archivedTitle": "No archived notifications",
         "archivedMessage": "Archived notifications will appear here.",
         "cta": "Configure alert rules"
@@ -112,7 +151,7 @@
       "membersError": "Could not load thread members",
       "noMembers": "No thread members found",
       "emptyTitle": "No notification threads",
-      "emptyMessage": "When alert rules fire repeatedly, related notifications will be grouped here."
+      "emptyMessage": "Related notifications are grouped here when they occur repeatedly."
     },
     "stats": {
       "sent": "Total Sent",

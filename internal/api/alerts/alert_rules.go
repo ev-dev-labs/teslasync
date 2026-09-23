@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
-
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/rs/zerolog/log"
@@ -633,27 +631,26 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	// + the SSE toast, matching the production dispatch path.
 	suppressTransportTitle := body.IncludeTitle != nil && !*body.IncludeTitle
 
-	// Create a notification log entry
-	nlog := &notificationmodel.NotificationLog{
-		Title:   title,
-		Message: message,
-		Status:  "sent",
-	}
-	if err := h.notifRepo.CreateLog(r.Context(), nlog); err != nil {
-		log.Error().Err(err).Msg("failed to create test notification log")
-		writeError(w, http.StatusInternalServerError, "failed to create test notification")
+	triggerID := notification.NewTriggerID()
+	eventRow, err := notification.RecordTrigger(r.Context(), h.notifRepo, &notification.Request{
+		Title: title, Message: message, EventType: "test.alert_rule",
+		Severity: severity, TriggerID: triggerID,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("alert test: event persistence failed")
+		writeError(w, http.StatusInternalServerError, "failed to record test notification")
 		return
 	}
 
 	// Broadcast via SSE
 	if h.eventHub != nil {
 		h.eventHub.BroadcastWithContext(r.Context(), "alert", map[string]interface{}{
-			"id":        nlog.ID,
+			"id":        eventRow.ID,
 			"type":      "test",
 			"severity":  severity,
 			"title":     title,
 			"message":   message,
-			"timestamp": nlog.CreatedAt,
+			"timestamp": time.Now().UTC(),
 			"is_test":   true,
 		})
 	}
@@ -672,6 +669,9 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 				Title:                  title,
 				Message:                message,
 				ChannelID:              ch.ID,
+				TriggerID:              triggerID,
+				EventType:              "test.alert_rule",
+				Severity:               severity,
 				SuppressTransportTitle: suppressTransportTitle,
 			}
 			if pubErr := notification.PublishCtx(r.Context(), h.mqttClient, req); pubErr == nil {
@@ -691,6 +691,9 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 					Title:                  title,
 					Message:                message,
 					ChannelID:              ch.ID,
+					TriggerID:              triggerID,
+					EventType:              "test.alert_rule",
+					Severity:               severity,
 					SuppressTransportTitle: suppressTransportTitle,
 				}
 				if pubErr := notification.PublishCtx(r.Context(), h.mqttClient, req); pubErr == nil {
@@ -715,8 +718,11 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 				"url":       "/notifications",
 				"alert_tag": "alert-test",
 			},
-			Title:   title,
-			Message: message,
+			Title:     title,
+			Message:   message,
+			TriggerID: triggerID,
+			EventType: "test.alert_rule",
+			Severity:  severity,
 		}
 		if pubErr := notification.PublishCtx(r.Context(), h.mqttClient, pushReq); pubErr == nil {
 			dispatched++

@@ -12,6 +12,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -32,6 +33,7 @@ var validNotifyChannels = map[string]bool{
 // ChannelRepo is the subset of dbnotif.NotificationRepo needed by NotifyExecutor.
 type ChannelRepo interface {
 	GetAllChannels(ctx context.Context) ([]*notificationmodel.NotificationChannel, error)
+	notification.EventRecorder
 }
 
 // NotifySender abstracts notification delivery for testability.
@@ -158,6 +160,12 @@ func (e *NotifyExecutor) executeNotifyConfig(ctx context.Context, vehicleID *int
 
 	title := resolveTemplate(cfg.Title, vars)
 	message := resolveTemplate(cfg.Message, vars)
+	triggerID := notification.NewTriggerID()
+	if _, err := notification.RecordTrigger(ctx, e.channelRepo, &notification.Request{
+		Title: title, Message: message, EventType: "automation.notify", TriggerID: triggerID,
+	}); err != nil {
+		return nil, err
+	}
 
 	// Load enabled notification channels matching the requested type.
 	channels, err := e.channelRepo.GetAllChannels(ctx)
@@ -192,9 +200,29 @@ func (e *NotifyExecutor) executeNotifyConfig(ctx context.Context, vehicleID *int
 			Title:       title,
 			Message:     message,
 			ChannelID:   ch.ID,
+			TriggerID:   triggerID,
+			EventType:   "automation.notify",
 		}
 
-		if sendErr := e.sender(req); sendErr != nil {
+		sendErr := e.sender(req)
+		if logs, ok := e.channelRepo.(interface {
+			CreateLog(context.Context, *notificationmodel.NotificationLog) error
+		}); ok {
+			status := "sent"
+			errText := ""
+			if sendErr != nil {
+				status, errText = "failed", sendErr.Error()
+			}
+			eventType := req.EventType
+			entry := &notificationmodel.NotificationLog{
+				ChannelID: ch.ID, Title: title, Message: message, Status: status,
+				Error: errText, TriggerID: &triggerID, EventType: &eventType,
+			}
+			if err := logs.CreateLog(ctx, entry); err != nil {
+				e.logger.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).Int64("channel_id", ch.ID).Msg("notify action log failed")
+			}
+		}
+		if sendErr != nil {
 			detail.Error = sendErr.Error()
 			result.ChannelsFailed++
 

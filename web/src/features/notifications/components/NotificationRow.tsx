@@ -53,7 +53,7 @@ export function NotificationRow({
   const { t } = useTranslation();
   const isRead = !!log.read_at;
   const isArchived = !!log.archived_at;
-  const severity = rule?.severity ?? 'info';
+  const severity = rule?.severity ?? log.severity ?? 'info';
   // A blank/absent title would otherwise render an empty primary line. Degrade
   // to an em-dash so the row never collapses to a headless body (matches the
   // sibling AlertCard behavior). `||` (not `??`) so empty strings degrade too.
@@ -129,6 +129,11 @@ export function NotificationRow({
           {rule?.name && (
             <span className="truncate text-xs text-[var(--text-muted)]">
               · {rule.name}
+            </span>
+          )}
+          {log.event_type && (
+            <span className="truncate text-xs text-[var(--text-muted)]">
+              · {log.event_type}
             </span>
           )}
         </div>

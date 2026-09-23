@@ -185,7 +185,6 @@ const AutomationListPage = lazy(() => import('./features/automations/pages/Autom
 const AutomationBuilderPage = lazy(() => import('./features/automations/pages/AutomationBuilderPage'))
 
 // Notifications & Alerts
-const AlertsListPage = lazy(() => import('./features/notifications/pages/AlertsListPage'))
 const AlertStudio = lazy(() => import('./features/notifications/pages/AlertStudioPage'))
 const AlertRulesPage = lazy(() => import('./features/notifications/pages/AlertRulesPage'))
 const InboxPage = lazy(() => import('./features/notifications/pages/InboxPage'))
@@ -194,8 +193,6 @@ const ChannelsPage = lazy(() => import('./features/notifications/pages/ChannelsP
 const WebhooksPage = lazy(() => import('./features/notifications/pages/WebhooksPage'))
 const BrowserNotificationsPage = lazy(() => import('./features/notifications/pages/BrowserNotificationsPage'))
 const QuietHoursPage = lazy(() => import('./features/notifications/pages/QuietHoursPage'))
-const LegacyAlertsRedirect = lazy(() => import('./features/notifications/components/LegacyAlertsRedirect'))
-const LegacyNotificationsRedirect = lazy(() => import('./features/notifications/components/LegacyNotificationsRedirect'))
 const LegacyAlertRulesRedirect = lazy(() => import('./features/notifications/components/LegacyAlertRulesRedirect'))
 const LegacyAlertStudioRedirect = lazy(() => import('./features/notifications/components/LegacyAlertStudioRedirect'))
 
@@ -589,13 +586,11 @@ export default function App() {
         <Route path="automations/list" element={<SafeRoute name="AutomationList"><AutomationListPage /></SafeRoute>} />
         <Route path="automations/new" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="automations/:id/edit" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
-        <Route path="alerts" element={<SafeRoute name="LegacyAlertsRedirect"><LegacyAlertsRedirect /></SafeRoute>} />
         <Route path="alert-studio" element={<SafeRoute name="LegacyAlertStudioRedirect"><LegacyAlertStudioRedirect /></SafeRoute>} />
         <Route path="alert-rules" element={<SafeRoute name="LegacyAlertRulesRedirect"><LegacyAlertRulesRedirect /></SafeRoute>} />
-        <Route path="notifications" element={<SafeRoute name="LegacyNotificationsRedirect"><LegacyNotificationsRedirect /></SafeRoute>} />
+        <Route path="notifications" element={<SafeRoute name="NotificationsInbox"><InboxPage /></SafeRoute>} />
         <Route path="notifications/inbox" element={<SafeRoute name="NotificationsInbox"><InboxPage /></SafeRoute>} />
         <Route path="notifications/archived" element={<SafeRoute name="NotificationsArchived"><ArchivedPage /></SafeRoute>} />
-        <Route path="notifications/alerts" element={<SafeRoute name="NotificationsAlerts"><AlertsListPage /></SafeRoute>} />
         <Route path="notifications/channels" element={<SafeRoute name="NotificationsChannels"><ChannelsPage /></SafeRoute>} />
         <Route path="notifications/webhooks" element={<SafeRoute name="NotificationsWebhooks"><WebhooksPage /></SafeRoute>} />
         <Route path="notifications/browser" element={<SafeRoute name="NotificationsBrowser"><BrowserNotificationsPage /></SafeRoute>} />

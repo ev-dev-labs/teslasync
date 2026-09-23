@@ -11,6 +11,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 )
@@ -19,6 +20,7 @@ import (
 // Implementations should return only enabled channels.
 type ChannelLoader interface {
 	GetAllChannels(ctx context.Context) ([]*notificationmodel.NotificationChannel, error)
+	notification.EventRecorder
 }
 
 // NotifySender dispatches a single notification request.
@@ -93,6 +95,14 @@ func (fa *FailureAlerter) Send(ctx context.Context, event FailureEvent) error {
 	if ctx.Err() != nil {
 		return fmt.Errorf("failure alert for automation %d: %w", event.AutomationID, ctx.Err())
 	}
+	title := fa.formatTitle(event)
+	message := fa.formatMessage(event)
+	triggerID := notification.NewTriggerID()
+	if _, err := notification.RecordTrigger(ctx, fa.channels, &notification.Request{
+		Title: title, Message: message, EventType: "automation.failure", TriggerID: triggerID,
+	}); err != nil {
+		return err
+	}
 
 	allChannels, err := fa.channels.GetAllChannels(ctx)
 	if err != nil {
@@ -110,9 +120,6 @@ func (fa *FailureAlerter) Send(ctx context.Context, event FailureEvent) error {
 	if len(enabled) == 0 {
 		return fmt.Errorf("no enabled notification channels for failure alert (automation %d)", event.AutomationID)
 	}
-
-	title := fa.formatTitle(event)
-	message := fa.formatMessage(event)
 
 	var (
 		successes int
@@ -133,9 +140,29 @@ func (fa *FailureAlerter) Send(ctx context.Context, event FailureEvent) error {
 			Title:       title,
 			Message:     message,
 			ChannelID:   ch.ID,
+			TriggerID:   triggerID,
+			EventType:   "automation.failure",
 		}
 
-		if sendErr := fa.sender(req); sendErr != nil {
+		sendErr := fa.sender(req)
+		if logs, ok := fa.channels.(interface {
+			CreateLog(context.Context, *notificationmodel.NotificationLog) error
+		}); ok {
+			status := "sent"
+			errText := ""
+			if sendErr != nil {
+				status, errText = "failed", sendErr.Error()
+			}
+			eventType := req.EventType
+			entry := &notificationmodel.NotificationLog{
+				ChannelID: ch.ID, Title: title, Message: message, Status: status,
+				Error: errText, TriggerID: &triggerID, EventType: &eventType,
+			}
+			if err := logs.CreateLog(ctx, entry); err != nil {
+				fa.logger.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).Int64("channel_id", ch.ID).Msg("failure alert log failed")
+			}
+		}
+		if sendErr != nil {
 			lastErr = sendErr
 			fa.logger.Warn().Err(sendErr).
 				Int64("automation_id", event.AutomationID).

@@ -226,7 +226,6 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/notifications': ['notifications', 'messages', 'inbox'],
   '/notifications/inbox': ['inbox', 'notifications', 'messages'],
   '/notifications/archived': ['archived', 'notifications'],
-  '/notifications/alerts': ['alerts', 'warnings', 'critical'],
   '/notifications/channels': ['channels', 'discord', 'slack', 'telegram', 'email', 'ntfy', 'pushover', 'webhook'],
   '/notifications/webhooks': ['webhooks', 'hmac', 'http endpoint'],
   '/notifications/browser': ['browser notifications', 'desktop push', 'permission'],
@@ -575,8 +574,7 @@ export const navSections = [
   {
     title: 'Notifications',
     items: [
-      { to: '/notifications/inbox', icon: Icons.notifications, label: 'Notification Inbox', color: 'text-purple-400' },
-      { to: '/notifications/alerts', icon: Icons.notificationsActive, label: 'Alert Center', color: 'text-red-400' },
+      { to: '/notifications/inbox', icon: Icons.notifications, label: 'All Notifications', color: 'text-purple-400' },
       { to: '/notifications/channels', icon: Icons.send, label: 'Notification Channels', color: 'text-cyan-400' },
       { to: '/notifications/webhooks', icon: Icons.cloud, label: 'Webhooks', color: 'text-sky-400' },
       { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser Notifications', color: 'text-fuchsia-400' },
@@ -1463,7 +1461,7 @@ export default function Layout() {
         <span className={cn('relative z-10 min-w-0 truncate transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
           {navLabel(label)}
         </span>
-        {to === '/notifications/alerts' && unreadAlerts > 0 && (
+        {to === '/notifications/inbox' && unreadAlerts > 0 && (
           <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-rose-500/20 bg-rose-500/10 px-1.5 text-2xs font-semibold text-rose-300">
             {unreadAlerts > 9 ? '9+' : unreadAlerts}
           </span>

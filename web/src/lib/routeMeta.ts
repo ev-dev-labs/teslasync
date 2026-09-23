@@ -95,7 +95,6 @@ const PARENT_OVERRIDES: Record<string, string> = {
   // ── Notifications workspace ────────────────────────────────────────────
   '/notifications/studio': '/notifications/inbox',
   '/notifications/archived': '/notifications/inbox',
-  '/notifications/alerts': '/notifications/inbox',
   '/notifications/audit': '/notifications/inbox',
   '/notifications/browser': '/notifications/inbox',
   '/notifications/channels': '/notifications/inbox',

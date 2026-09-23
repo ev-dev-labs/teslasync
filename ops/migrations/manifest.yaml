@@ -412,3 +412,31 @@ migrations:
     reversible: true
     reviewed_by: "@Copilot"
     reviewed_on: "2026-09-22"
+
+  - version: 248
+    name: notification_trigger_reporting
+    forward_compatible: true
+    forward_compatibility_notes: Nullable trigger correlation and event type do not change old writers or readers.
+    rollback_notes: Leave applied on binary rollback to preserve attribution. Down removes newly collected metadata only if explicitly approved.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Two nullable columns take a brief ACCESS EXCLUSIVE metadata lock; no table rewrite or backfill.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-22"
+
+  - version: 249
+    name: notification_event_rows
+    forward_compatible: false
+    forward_compatibility_notes: Old binaries scan channel_id into non-nullable Go ints and cannot read new event rows.
+    requires_downtime: true
+    rollback_notes: Leave migration applied on binary rollback to retain event/inbox rows. Down fails safely while event rows exist; export and remove them only with explicit operator approval.
+    expected_duration: <10s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Brief ACCESS EXCLUSIVE lock for nullable channel and constraint changes; partial unique index scans the existing delivery log without CONCURRENTLY.
+    reversible: false
+    irreversible_justification: Rolling back after storing event-only rows would erase real inbox history; leave the additive schema in place on binary rollback.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-22"

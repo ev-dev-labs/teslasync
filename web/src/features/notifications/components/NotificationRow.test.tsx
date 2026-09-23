@@ -117,6 +117,22 @@ function renderRow(opts: RenderOpts = {}) {
 }
 
 describe('NotificationRow', () => {
+  it('renders a Web-Push-only event without a channel delivery row', () => {
+    renderRow({
+      log: makeLog({
+        channel_id: null,
+        alert_id: null,
+        status: 'triggered',
+        event_type: 'system.web_push',
+        title: 'Push received',
+      }),
+      rule: undefined,
+      vehicle: undefined,
+    });
+    expect(screen.getByText('Push received')).toBeInTheDocument();
+    expect(screen.getByText(/system\.web_push/)).toBeInTheDocument();
+  });
+
   it('renders severity, title, message, vehicle name, and rule name', () => {
     renderRow();
     expect(screen.getByText('warn')).toBeInTheDocument();
@@ -254,8 +270,8 @@ describe('NotificationRow', () => {
     renderRow({ rule: undefined });
     expect(screen.queryByRole('link', { name: /view context/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Tire Pressure Low/)).not.toBeInTheDocument();
-    // With no rule the severity falls back to the neutral "info" default.
-    expect(screen.getByText('info')).toBeInTheDocument();
+    // The persisted severity remains visible even without a rule.
+    expect(screen.getByText('warn')).toBeInTheDocument();
   });
 
   it('hides the vehicle chip when the row has no vehicle', () => {

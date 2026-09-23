@@ -21,6 +21,10 @@ type mockChannelLoader struct {
 	err      error
 }
 
+func (m *mockChannelLoader) CreateEvent(_ context.Context, _ *notificationmodel.NotificationLog) error {
+	return nil
+}
+
 func (m *mockChannelLoader) GetAllChannels(_ context.Context) ([]*notificationmodel.NotificationChannel, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

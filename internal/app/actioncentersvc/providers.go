@@ -44,7 +44,7 @@ func (p alertsProvider) Recommendations(
 			vehicleKey = row.Vehicle.ID
 		}
 		severity, priority := alertUrgency(row.Severity, row.DeliveryStatus)
-		nav := "/alerts"
+		nav := "/notifications/inbox"
 		observedAt := row.CreatedAt.UTC()
 		items = append(items, domain.Candidate{
 			SourceFeature:   domain.SourceActiveAlerts,

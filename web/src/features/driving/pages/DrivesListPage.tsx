@@ -1747,7 +1747,7 @@ export default function DrivesListPage() {
                   {
                     key: 'alerts',
                     label: t('entityContext.alerts', 'Alerts'),
-                    to: buildContextHref('/notifications/alerts', {
+                    to: buildContextHref('/notifications/inbox', {
                       from: previewFrom,
                       to: previewTo,
                     }),

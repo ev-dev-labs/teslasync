@@ -8,13 +8,17 @@ package notification
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
@@ -32,6 +36,10 @@ type Request struct {
 	// from alert toast to context page and for computed-metric alerts to surface
 	// as alert-backed notifications.
 	AlertID int64 `json:"alert_id,omitempty"`
+	// TriggerID identifies one firing across all its delivery channels.
+	TriggerID string `json:"trigger_id,omitempty"`
+	// EventType is a stable producer-defined classification, not a channel kind.
+	EventType string `json:"event_type,omitempty"`
 	// Severity is the wire-level severity ('info' | 'warn' | 'critical')
 	// used by the quiet-hours dispatcher to decide whether to bypass an
 	// active Do-Not-Disturb window. Empty values are treated as 'info'.
@@ -43,6 +51,54 @@ type Request struct {
 	// one (WebPush, email Subject, Pushover) and for notification_logs
 	// persistence. See ADR-005.
 	SuppressTransportTitle bool `json:"suppress_transport_title,omitempty"`
+}
+
+// NewTriggerID creates a correlation ID once per producer event, before fan-out.
+func NewTriggerID() string { return uuid.NewString() }
+
+// EventRecorder persists the one inbox row associated with a producer firing.
+type EventRecorder interface {
+	CreateEvent(context.Context, *notificationmodel.NotificationLog) error
+}
+
+// RecordTrigger must run before fan-out, so events without delivery channels
+// (including WebPush-only events) are still durable and user-visible.
+func RecordTrigger(ctx context.Context, store EventRecorder, req *Request) (*notificationmodel.NotificationLog, error) {
+	if store == nil || req == nil || req.TriggerID == "" || req.EventType == "" {
+		return nil, fmt.Errorf("record notification trigger: event store, trigger_id and event_type required")
+	}
+	entry := &notificationmodel.NotificationLog{
+		Title: req.Title, Message: req.Message, Status: "triggered",
+		Severity: req.Severity, TriggerID: &req.TriggerID, EventType: &req.EventType,
+	}
+	if req.AlertID > 0 {
+		entry.AlertID = &req.AlertID
+	}
+	if err := store.CreateEvent(ctx, entry); err != nil {
+		return nil, fmt.Errorf("record notification trigger: %w", err)
+	}
+	return entry, nil
+}
+
+// SourceFor returns the producer family. Empty legacy event types are unknown,
+// even when a historical alert ID happens to be present.
+func SourceFor(eventType string) string {
+	switch {
+	case eventType == "":
+		return "unknown"
+	case strings.HasPrefix(eventType, "alert."):
+		return "alert"
+	case strings.HasPrefix(eventType, "system."):
+		return "system"
+	case strings.HasPrefix(eventType, "schedule."):
+		return "schedule"
+	case strings.HasPrefix(eventType, "automation."):
+		return "automation"
+	case strings.HasPrefix(eventType, "test."):
+		return "test"
+	default:
+		return "other"
+	}
 }
 
 // InternalTopic is the MQTT topic used for internal notification dispatch.

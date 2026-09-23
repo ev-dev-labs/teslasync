@@ -317,7 +317,7 @@ export function LinearSidebar({
 
   // ── Trailing-badge logic per item ──────────────────────────────────────
   const trailingFor = (to: string): React.ReactNode => {
-    if (to === '/notifications/alerts' && alertCount > 0) {
+    if (to === '/notifications/inbox' && alertCount > 0) {
       return <NotificationDot />
     }
     if (to === '/vehicles' && vehicleCount > 0) {

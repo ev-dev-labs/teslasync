@@ -263,6 +263,44 @@ beforeEach(() => {
 /* ── 1. Flat view ─────────────────────────────────────── */
 
 describe('InboxBody — flat view', () => {
+  it('pages through older notifications instead of stopping at the first 50', async () => {
+    installRequest({
+      logs: () => Promise.resolve(Array.from({ length: 50 }, (_, index) => makeLog({
+        id: index + 1,
+        title: `Message ${index + 1}`,
+      }))),
+    });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Next' }));
+    await waitFor(() => {
+      expect(flatCalls().some(([path]) => String(path).includes('offset=50'))).toBe(true);
+    });
+    expect(screen.getByText('Page 2')).toBeInTheDocument();
+  });
+
+  it('opens and marks read a channel-less system event without a rule', async () => {
+    installRequest({
+      logs: () => Promise.resolve([
+        makeLog({
+          id: 23,
+          channel_id: null,
+          alert_id: null,
+          status: 'triggered',
+          title: 'MQTT recovered',
+          message: 'The message broker is receiving telemetry again.',
+          event_type: 'system.mqtt.recovery',
+        }),
+      ]),
+    });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+    fireEvent.click(await screen.findByText('MQTT recovered'));
+    expect(screen.getByRole('dialog', { name: 'MQTT recovered' })).toHaveTextContent(
+      'The message broker is receiving telemetry again.',
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent('system.mqtt.recovery');
+    await waitFor(() => expect(markReadPosts().some(call => JSON.stringify(bodyOf(call)).includes('23'))).toBe(true));
+  });
+
   it('renders day-grouped rows, the count label, and fetches the SI-clean flat path', async () => {
     installRequest({
       logs: () =>
@@ -340,7 +378,7 @@ describe('InboxBody — grouped view', () => {
     expect(screen.getByText('Battery thread')).toBeInTheDocument();
     expect(screen.getByText('One-off ping')).toBeInTheDocument();
     expect(screen.getByTestId('inbox-result-count')).toHaveTextContent(
-      '2 threads · 4 deliveries',
+      '2 threads · 4 notifications',
     );
 
     // Grouped endpoint used; the flat endpoint stays untouched.

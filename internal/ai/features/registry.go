@@ -425,11 +425,10 @@ var Registry = map[string]Feature{
 	// canonical alerts handler. No state is mutated by this route.
 	//
 	// Frontend: the canonical host route declared by the feature spec
-	// is `/alerts/studio` — the AI section actually renders inside
-	// the existing /notifications/studio page (the only AlertStudio
-	// page in the SPA today; lives under `web/src/features/notifications/...`
-	// because the legacy `alert-studio` and `alerts` paths redirect
-	// to it). The off-mode invariant test
+	// is `/notifications/studio` — the AI section actually renders inside
+	// the existing /notifications/studio page (the AlertStudio
+	// page in the SPA today; lives under `web/src/features/notifications/...`).
+	// The off-mode invariant test
 	// (`TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks.test.tsx`)
 	// proves that the wrapped component carrying
 	// `ai-feature-nl-alert-builder-root` is absent from the DOM in
@@ -453,7 +452,7 @@ var Registry = map[string]Feature{
 		NeedsStream: true,
 		Routes: RouteSet{
 			Backend:   []string{"POST /api/v1/ai/alerts/rules/draft"},
-			Frontend:  []string{"/alerts/studio"},
+			Frontend:  []string{"/notifications/studio"},
 			UITestIDs: []string{"ai-feature-nl-alert-builder-root"},
 			JobNames:  []string{},
 			PushKinds: []string{},
@@ -1591,7 +1590,7 @@ var Registry = map[string]Feature{
 	//
 	// Backend: POST /api/v1/ai/alerts/message-template/draft is
 	// guard-wrapped (ADR-015 §I6 + §I7).
-	// Frontend: /notifications/studio (legacy /alerts/studio redirect).
+	// Frontend: /notifications/studio.
 	// UI test ID: ai-feature-alert-message-template-suggestion-root.
 	"alert-message-template-suggestion": {
 		ID:          "alert-message-template-suggestion",
@@ -1604,7 +1603,7 @@ var Registry = map[string]Feature{
 		NeedsStream: true,
 		Routes: RouteSet{
 			Backend:   []string{"POST /api/v1/ai/alerts/message-template/draft"},
-			Frontend:  []string{"/alerts/studio"},
+			Frontend:  []string{"/notifications/studio"},
 			UITestIDs: []string{"ai-feature-alert-message-template-suggestion-root"},
 			JobNames:  []string{},
 			PushKinds: []string{},
@@ -1648,7 +1647,7 @@ var Registry = map[string]Feature{
 	// guard.Wrap so it returns 404 when ai_mode='off' OR the
 	// per-feature toggle is off (ADR-015 §I6 + §I7).
 	//
-	// Frontend: /alerts/studio is the canonical AlertStudio page.
+	// Frontend: /notifications/studio is the canonical AlertStudio page.
 	// The AI side panel is rendered next to the editor via
 	// withAiFeature('alert-tuning-suggestions',...) so it is
 	// completely absent from the DOM when the toggle is off
@@ -1695,7 +1694,7 @@ var Registry = map[string]Feature{
 		NeedsStream: true,
 		Routes: RouteSet{
 			Backend:   []string{"POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft"},
-			Frontend:  []string{"/alerts/studio"},
+			Frontend:  []string{"/notifications/studio"},
 			UITestIDs: []string{"ai-feature-alert-tuning-suggestions-root"},
 			JobNames:  []string{},
 			PushKinds: []string{},
@@ -1714,7 +1713,7 @@ var Registry = map[string]Feature{
 	// copy the suggested rule_id set into the existing baseline
 	// inbox filter — the AI never writes to notification_logs,
 	// never assigns labels to rows, never bypasses the canonical
-	// /api/v1/alerts/notifications inbox listing handler (ADR-015
+	// /api/v1/notifications/logs inbox listing handler (ADR-015
 	// §I3). The deterministic NotificationFilterBar +
 	// user-driven category filters remain the canonical baseline
 	// when AI is off.
@@ -1727,11 +1726,8 @@ var Registry = map[string]Feature{
 	// under guard.Wrap so it returns 404 when ai_mode='off' OR
 	// the per-feature toggle is off (ADR-015 §I6 + §I7).
 	//
-	// Frontend: /alerts/inbox is the canonical inbox host route
-	// in the registry metadata; the page actually mounts at
-	// /notifications/inbox (the legacy /alerts/inbox path is a
-	// no-op redirect) — same convention the existing feature uses for
-	// /alerts/studio vs /notifications/studio. The AI side panel
+	// Frontend: /notifications/inbox is the canonical inbox host route.
+	// The AI side panel
 	// is rendered above the filter bar via
 	// withAiFeature('inbox-auto-categorization',...) so it is
 	// completely absent from the DOM when the toggle is off
@@ -1787,7 +1783,7 @@ var Registry = map[string]Feature{
 		NeedsStream: true,
 		Routes: RouteSet{
 			Backend:   []string{"POST /api/v1/ai/alerts/inbox/categorize"},
-			Frontend:  []string{"/alerts/inbox"},
+			Frontend:  []string{"/notifications/inbox"},
 			UITestIDs: []string{"ai-feature-inbox-auto-categorization-root"},
 			JobNames:  []string{"ai_alert_inbox_categorizer"},
 			PushKinds: []string{"ai_alert_category_suggested"},
@@ -1823,11 +1819,8 @@ var Registry = map[string]Feature{
 	// guard.Wrap so it returns 404 when ai_mode='off' OR the
 	// per-feature toggle is off (ADR-015 §I6 + §I7).
 	//
-	// Frontend: /alerts/studio is the canonical AlertStudio host
-	// route in the registry metadata; the page actually mounts
-	// at /notifications/studio (the legacy /alerts/studio path
-	// is a no-op redirect) — same convention the existing feature +
-	// 0035 use. The AI conflict panel is rendered above the
+	// Frontend: /notifications/studio is the canonical AlertStudio host.
+	// The AI conflict panel is rendered above the
 	// rule editor via withAiFeature('cross-rule-conflict-
 	// detection',...) so it is completely absent from the DOM
 	// when the toggle is off (ADR-015 §I5).
@@ -1879,7 +1872,7 @@ var Registry = map[string]Feature{
 		NeedsStream: true,
 		Routes: RouteSet{
 			Backend:   []string{"POST /api/v1/ai/alerts/rules/conflicts"},
-			Frontend:  []string{"/alerts/studio"},
+			Frontend:  []string{"/notifications/studio"},
 			UITestIDs: []string{"ai-feature-cross-rule-conflict-detection-root"},
 			JobNames:  []string{},
 			PushKinds: []string{},

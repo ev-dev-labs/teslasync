@@ -670,7 +670,7 @@ export default function TimelinePage() {
                 {
                   key: 'alerts',
                   label: t('entityContext.alerts', 'Alerts'),
-                  to: buildContextHref('/notifications/alerts', {
+                  to: buildContextHref('/notifications/inbox', {
                     from: previewDay,
                     to: previewDay,
                   }),

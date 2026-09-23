@@ -66,7 +66,6 @@ describe('accepted deep links', () => {
     '/charging/9',
     '/data-repair',
     '/notifications/inbox',
-    '/notifications/alerts',
     '/action-center',
   ])('accepts the exact route %s', (path) => {
     const result = sanitize(path)
@@ -92,9 +91,9 @@ describe('accepted deep links', () => {
 
 describe('query-parameter allowlist', () => {
   it('keeps the vetted context parameters', () => {
-    const result = sanitize('/notifications/alerts?alert=42&vehicle_id=3&signal=BatteryLevel')
+    const result = sanitize('/notifications/inbox?alert=42&vehicle_id=3&signal=BatteryLevel')
     expect(result.accepted).toBe(true)
-    expect(result.url).toBe('/notifications/alerts?alert=42&vehicle_id=3&signal=BatteryLevel')
+    expect(result.url).toBe('/notifications/inbox?alert=42&vehicle_id=3&signal=BatteryLevel')
     expect(result.droppedParams).toEqual([])
   })
 

@@ -8,6 +8,7 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
@@ -224,6 +225,7 @@ func (t *componentHealthTracker) Observe(name string, comp resilience.Component,
 type componentNotificationChannelSource interface {
 	GetAllChannels(ctx context.Context) ([]*notificationmodel.NotificationChannel, error)
 	CreateLog(ctx context.Context, l *notificationmodel.NotificationLog) error
+	CreateEvent(ctx context.Context, l *notificationmodel.NotificationLog) error
 }
 
 // componentNotificationPreferenceSource is the narrow surface
@@ -314,6 +316,13 @@ func (c *componentNotificationCache) CreateLog(ctx context.Context, entry *notif
 	return c.channelRepo.CreateLog(ctx, entry)
 }
 
+func (c *componentNotificationCache) CreateEvent(ctx context.Context, entry *notificationmodel.NotificationLog) error {
+	if c == nil || c.channelRepo == nil {
+		return fmt.Errorf("component notification cache is not configured")
+	}
+	return c.channelRepo.CreateEvent(ctx, entry)
+}
+
 func (c *componentNotificationCache) IsEnabled(_ context.Context, channelID int64, eventType string) bool {
 	if c == nil {
 		return false
@@ -362,6 +371,14 @@ func dispatchComponentNotification(
 	if channels == nil || publish == nil {
 		return
 	}
+	triggerID := notification.NewTriggerID()
+	if _, err := notification.RecordTrigger(ctx, channels, &notification.Request{
+		Title: evt.Title, Message: evt.Message, Severity: evt.Severity,
+		TriggerID: triggerID, EventType: evt.EventType,
+	}); err != nil {
+		log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).
+			Str("event_type", evt.EventType).Msg("component health notification: event persistence failed")
+	}
 	chList, err := channels.GetAllChannels(ctx)
 	if err != nil {
 		log.Error().Err(err).Str("event_type", evt.EventType).Msg("component health notification: failed to list channels")
@@ -389,6 +406,8 @@ func dispatchComponentNotification(
 			Message:     evt.Message,
 			ChannelID:   ch.ID,
 			Severity:    evt.Severity,
+			TriggerID:   triggerID,
+			EventType:   evt.EventType,
 		}
 
 		started := time.Now()
@@ -409,6 +428,8 @@ func dispatchComponentNotification(
 				Status:    "failed",
 				Error:     pubErr.Error(),
 				Severity:  evt.Severity,
+				TriggerID: &triggerID,
+				EventType: &evt.EventType,
 			}); logErr != nil {
 				log.Warn().Err(logErr).Int64("channel_id", ch.ID).Msg("component health notification: failed to persist failure log")
 			}
@@ -428,6 +449,8 @@ func dispatchComponentNotification(
 				Message:   evt.Message,
 				Status:    "sent",
 				Severity:  evt.Severity,
+				TriggerID: &triggerID,
+				EventType: &evt.EventType,
 			}); logErr != nil {
 				log.Warn().Err(logErr).Int64("channel_id", ch.ID).Msg("component health notification: failed to persist success log")
 			}

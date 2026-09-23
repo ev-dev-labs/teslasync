@@ -174,7 +174,6 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
     paths: [
       '/automations',
       '/notifications/inbox',
-      '/notifications/alerts',
       '/notifications/rules',
       '/notifications/channels',
       '/security-access',

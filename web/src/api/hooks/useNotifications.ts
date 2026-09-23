@@ -24,6 +24,7 @@ import type {
   NotificationEventType,
   NotificationPreference,
   NotificationStats,
+  NotificationReport,
   QuietHoursWindow,
   QuietHoursWindowInput,
 } from '@/api/types';
@@ -114,6 +115,7 @@ export const notificationKeys = {
   bellUnread: (limit: number) => ['notification-logs', 'bell-unread', limit] as const,
   unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
+  report: (from: string, to: string) => ['notification-report', from, to] as const,
   quietHours: ['notification-quiet-hours'] as const,
 };
 
@@ -1196,6 +1198,15 @@ export function useNotificationStats() {
     queryKey: notificationKeys.stats,
     queryFn: ({ signal }) => request<NotificationStats>('/notifications/stats', { signal }),
     refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+export function useNotificationReport(from: string, to: string) {
+  const params = new URLSearchParams({ from, to });
+  return useQuery({
+    queryKey: notificationKeys.report(from, to),
+    queryFn: ({ signal }) => request<NotificationReport>(`/notifications/report?${params}`, { signal }),
+    enabled: Boolean(from && to),
   });
 }
 

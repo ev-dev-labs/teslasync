@@ -14,6 +14,16 @@
 version: 1
 
 slos:
+  - name: notification_report_availability
+    description: "Bounded UTC notification report reads must not return server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/notifications/report\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/notifications/report\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
   - name: tesla_usage_availability
     description: "The read-only Tesla usage estimate must not return server errors."
     sli:

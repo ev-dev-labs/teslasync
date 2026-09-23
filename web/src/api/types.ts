@@ -1053,12 +1053,13 @@ export interface WebhookSignaturePreviewResult {
 
 export interface NotificationLog {
   id: number
-  channel_id: number
+  channel_id: number | null
   alert_id: number | null
   title: string
   message: string
-  status: 'pending' | 'sent' | 'failed' | 'deferred_dnd'
+  status: 'triggered' | 'pending' | 'sent' | 'failed' | 'deferred_dnd'
   severity?: string
+  event_type?: string
   error: string
   created_at: string
   sent_at: string | null
@@ -1066,6 +1067,20 @@ export interface NotificationLog {
   latency_ms?: number
   read_at?: string | null
   archived_at?: string | null
+}
+
+export interface NotificationReport {
+  from: string
+  to: string
+  triggered: number
+  deliveries: number
+  uncorrelated_deliveries: number
+  by_source: { key: string; count: number }[]
+  by_type: { key: string; count: number }[]
+  by_severity: { key: string; count: number }[]
+  by_channel: { key: string; count: number }[]
+  by_status: { key: string; count: number }[]
+  daily: { day: string; triggered: number; deliveries: number }[]
 }
 
 // server-aggregated notification "thread".

@@ -67,7 +67,7 @@ const vehiclesItem = {
   label: 'Vehicles',
   dataTour: 'vehicles-tour',
 }
-const alertsItem = { to: '/notifications/alerts', icon: Icons.notifications, label: 'Alerts' }
+const alertsItem = { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts' }
 const chargingItem = { to: '/charging', icon: Icons.charging, label: 'Charging', color: 'text-emerald-300' }
 const dataRepairItem = { to: '/data-repair', icon: Icons.database, label: 'Data Repair' }
 
