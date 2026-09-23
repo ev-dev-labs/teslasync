@@ -341,9 +341,11 @@ export default function VehicleAccessPage() {
               <DataTable
                 tableId="vehicles:access-drivers"
                 columns={driverColumns}
+                mobileColumns={['name', 'role', 'actions']}
                 data={driversList}
                 keyExtractor={(row) => row.id}
                 emptyMessage={t('vehicleAccess.drivers.empty', 'No drivers found')}
+                pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
                 compact
               />
             )}
@@ -411,9 +413,11 @@ export default function VehicleAccessPage() {
             <DataTable
               tableId="vehicles:access-invitations"
               columns={invitationColumns}
+              mobileColumns={['status', 'expires', 'actions']}
               data={invitationsList}
               keyExtractor={(row) => row.id}
               emptyMessage={t('vehicleAccess.invitations.empty', 'No invitations found')}
+              pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
               compact
             />
           )}

@@ -28,6 +28,30 @@ import type { Alert, AlertDetail, SavedView, SearchResponse } from '@/api/types'
 import type { ReactNode } from 'react'
 import { StrictMode } from 'react'
 
+const locale = vi.hoisted(() => ({
+  translations: {} as Record<string, string>,
+}))
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, second?: unknown, third?: unknown) => {
+      const fallback = typeof second === 'string' ? second :
+        second && typeof second === 'object' && 'defaultValue' in second
+          ? String(second.defaultValue) : key
+      const template = locale.translations[key] ?? fallback
+      const values = typeof third === 'object' && third !== null ? third :
+        typeof second === 'object' && second !== null ? second : {}
+      return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, name: string) =>
+        String((values as Record<string, unknown>)[name] ?? ''),
+      )
+    },
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+  Trans: ({ children }: { children?: ReactNode }) => children,
+  I18nextProvider: ({ children }: { children?: ReactNode }) => children,
+  initReactI18next: { type: '3rdParty', init: () => undefined },
+}))
+
 const { requestMock } = vi.hoisted(() => ({
   requestMock: vi.fn(),
 }))
@@ -130,6 +154,7 @@ function openPaletteViaEvent() {
 }
 
 beforeEach(() => {
+  locale.translations = {}
   localStorage.clear()
   sessionStorage.clear()
   __resetNavPinsSessionOverridesForTests()
@@ -287,6 +312,20 @@ describe('CommandPalette keyboard shortcut', () => {
 // ─── Search & sections ──────────────────────────────────────────────────────
 
 describe('CommandPalette search', () => {
+  it('finds a translated page by both its visible name and authored English label', async () => {
+    locale.translations['nav.items.chatbot'] = 'Asistente virtual'
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+
+    fireEvent.change(input, { target: { value: 'Asistente virtual' } })
+    expect(await screen.findByRole('option', { name: /Asistente virtual/i })).toBeInTheDocument()
+
+    fireEvent.change(input, { target: { value: 'Helix Chat' } })
+    expect(await screen.findByRole('option', { name: /Asistente virtual/i })).toBeInTheDocument()
+  })
+
   it('matches "btr" → "Battery Health" via fuzzy subsequence', async () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })

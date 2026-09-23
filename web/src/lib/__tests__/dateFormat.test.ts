@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   formatDateTime, formatDate, formatTime, formatDateShort, tzAbbreviation,
   formatRelativeDays, formatRelativeDayKey, formatDayKey, ymdInTz,
+  isoUtcToLocalDatetimeInput, localDatetimeInputToIso,
 } from '../dateFormat';
 
 const ISO = '2026-04-04T14:30:00Z'; // 2026-04-04 14:30 UTC
@@ -234,5 +235,52 @@ describe('formatDayKey', () => {
     // This is the whole reason formatDayKey exists vs round-tripping
     // through Date in some tz that might cross midnight.
     expect(formatDayKey('2026-04-24', { style: 'long', locale: 'en-US' })).toBe('Apr 24, 2026');
+  });
+});
+
+describe('isoUtcToLocalDatetimeInput', () => {
+  it('emits a minute-precision datetime-local value', () => {
+    expect(isoUtcToLocalDatetimeInput(ISO)).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+  });
+
+  it('round-trips without shifting the instant in any timezone', () => {
+    // The input parses the value as LOCAL wall time; parsing it back must
+    // recover the original instant (TZ-independent: true in every zone).
+    const input = isoUtcToLocalDatetimeInput(ISO);
+    expect(new Date(input).getTime()).toBe(new Date(ISO).getTime());
+  });
+
+  it('differs from a naive UTC slice whenever off-UTC', () => {
+    // Naive slicing is the bug this helper replaces: it only coincides with
+    // the correct local value when the runner is exactly UTC.
+    const naive = ISO.slice(0, 16);
+    const correct = isoUtcToLocalDatetimeInput(ISO);
+    const offsetMin = new Date(ISO).getTimezoneOffset();
+    if (offsetMin === 0) {
+      expect(correct).toBe(naive);
+    } else {
+      expect(correct).not.toBe(naive);
+    }
+  });
+
+  it("returns '' for missing or invalid input", () => {
+    expect(isoUtcToLocalDatetimeInput(null)).toBe('');
+    expect(isoUtcToLocalDatetimeInput(undefined)).toBe('');
+    expect(isoUtcToLocalDatetimeInput('')).toBe('');
+    expect(isoUtcToLocalDatetimeInput('not-a-date')).toBe('');
+  });
+});
+
+describe('localDatetimeInputToIso', () => {
+  it('parses local wall time back to the UTC instant', () => {
+    const input = isoUtcToLocalDatetimeInput(ISO);
+    expect(localDatetimeInputToIso(input)).toBe(new Date(ISO).toISOString());
+  });
+
+  it('returns null for empty or invalid input instead of throwing', () => {
+    expect(localDatetimeInputToIso(null)).toBeNull();
+    expect(localDatetimeInputToIso(undefined)).toBeNull();
+    expect(localDatetimeInputToIso('')).toBeNull();
+    expect(localDatetimeInputToIso('not-a-date')).toBeNull();
   });
 });

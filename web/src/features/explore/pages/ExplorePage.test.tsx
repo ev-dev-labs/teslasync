@@ -41,12 +41,13 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 const state = vi.hoisted(() => ({
   vehicles: [{ id: 1 }, { id: 2 }] as Array<{ id: number }> | undefined,
   forwardAuth: true,
+  translations: {} as Record<string, string>,
 }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, arg2?: unknown, arg3?: unknown) => {
-      const template = typeof arg2 === 'string' ? arg2 : _key;
+      const template = state.translations[_key] ?? (typeof arg2 === 'string' ? arg2 : _key);
       const params =
         arg3 && typeof arg3 === 'object'
           ? (arg3 as Record<string, unknown>)
@@ -113,6 +114,7 @@ function kpiValue(label: string): string {
 beforeEach(() => {
   state.vehicles = [{ id: 1 }, { id: 2 }];
   state.forwardAuth = true;
+  state.translations = {};
   vi.mocked(usePageTitle).mockClear();
   // jsdom doesn't lay out, so scrollIntoView is a no-op stub.
   Element.prototype.scrollIntoView = vi.fn();
@@ -177,6 +179,25 @@ describe('ExplorePage — results layout', () => {
 });
 
 describe('ExplorePage — filtering', () => {
+  it('finds visible translated labels and section names without losing English matches', () => {
+    const charging = ALL.find((entry) => entry.to === '/charging')!;
+    state.translations[charging.labelKey] = 'Recarga';
+    state.translations[charging.sectionKey] = 'Carga eléctrica';
+    const { getLocation } = renderPage();
+    const input = screen.getByTestId('explore-search');
+
+    fireEvent.change(input, { target: { value: 'recarga' } });
+    expect(screen.getByTestId('explore-card-/charging')).toHaveTextContent('Recarga');
+    expect(getLocation().search).toBe('?q=recarga');
+
+    fireEvent.change(input, { target: { value: 'carga eléctrica' } });
+    expect(screen.getByRole('heading', { level: 2, name: 'Carga eléctrica' })).toBeInTheDocument();
+    expect(screen.getByTestId('explore-card-/charging')).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: charging.label } });
+    expect(screen.getByTestId('explore-card-/charging')).toHaveTextContent('Recarga');
+  });
+
   it('filters cards, reflects the query in the URL, and updates the "Showing" KPI only', () => {
     const { getLocation } = renderPage();
     const input = screen.getByTestId('explore-search') as HTMLInputElement;

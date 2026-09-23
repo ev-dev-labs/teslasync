@@ -81,7 +81,7 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
       <div className="flex items-center justify-between gap-3 px-2 pb-2">
         <h3 className="text-sm font-semibold text-amber-200 inline-flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" aria-hidden />
-          {t('Active incidents')}
+          {t('systemStatus.incidents.active', 'Active incidents')}
           <Badge variant="warning">{incidents.length}</Badge>
         </h3>
         <Button
@@ -92,10 +92,10 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
           onClick={openForm}
         >
           <Plus className="h-3.5 w-3.5" aria-hidden />
-          {t('Log incident')}
+          {t('systemStatus.incidents.logAction', 'Log incident')}
         </Button>
       </div>
-      <ul className="space-y-1" aria-label={t('Active incidents')}>
+      <ul className="space-y-1" aria-label={t('systemStatus.incidents.active', 'Active incidents')}>
         {incidents.map((inc) => {
           const tone = SEVERITY_TONE[inc.severity] ?? FALLBACK_TONE
           const { Icon } = tone
@@ -110,17 +110,17 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
                 <Icon className={cn('h-4 w-4 mt-0.5 shrink-0', tone.cls)} aria-hidden />
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-[var(--text-primary)] truncate">{inc.title || t('Untitled incident')}</span>
+                    <span className="font-medium text-[var(--text-primary)] truncate">{inc.title || t('systemStatus.incidentHistory.untitled', 'Untitled incident')}</span>
                     <Badge variant={STATUS_BADGE[inc.status] ?? 'neutral'}>{inc.status}</Badge>
                     <span className={cn('text-xs', tone.cls)}>{tone.label}</span>
                   </div>
                   {components.length > 0 && (
                     <div className="text-xs text-[var(--text-muted)] mt-0.5">
-                      {t('Affects')}: {components.join(', ')}
+                      {t('systemStatus.incidents.affects', 'Affects')}: {components.join(', ')}
                     </div>
                   )}
                   <div className="text-xs text-[var(--text-muted)] mt-0.5">
-                    {t('Started')} {relativeFrom(now, inc.started_at)}
+                    {t('systemStatus.incidents.started', 'Started')} {relativeFrom(now, inc.started_at)}
                     {updateCount > 1 && ` · ${updateCount} ${t('updates')}`}
                   </div>
                 </div>

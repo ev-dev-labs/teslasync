@@ -880,6 +880,7 @@ export default function FleetComparePage() {
               <DataTable
                 tableId="analytics:fleet-compare"
                 columns={tableColumns}
+                mobileColumns={['metric', 'valueA', 'valueB']}
                 data={comparisonRows}
                 keyExtractor={(r) => r.metric}
                 compact

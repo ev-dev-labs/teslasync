@@ -861,7 +861,20 @@
       "badge": "Helix",
       "noVehicleHint": "Pick a vehicle to enable Helix narration."
     },
-    "chartAria": "Comparison of selected metrics between two periods"
+    "chartAria": "Comparison of selected metrics between two periods",
+    "deltaChartTitle": "Change vs Period B (%)",
+    "deltaChartAria": "Percent change of each metric in Period A relative to Period B",
+    "noChartBaseline": "Percent change requires a nonzero Period B baseline. Try another window.",
+    "omittedBaseline": "One metric with no Period B baseline is omitted from the chart.",
+    "omittedBaselines": "{{count}} metrics with no Period B baseline are omitted from the chart.",
+    "distanceNoBaseline": "Distance change is unavailable: Period B has no baseline.",
+    "efficiencyNoBaseline": "Efficiency change is unavailable: Period B has no baseline.",
+    "costNoBaseline": "Cost change is unavailable: Period B has no baseline.",
+    "increasedBy": "Increased by {{value}}",
+    "decreasedBy": "Decreased by {{value}}",
+    "noChange": "No change",
+    "changed": "changed",
+    "unchanged": "unchanged"
   },
   "comparison": {
     "selectVehicle": "Select a vehicle",

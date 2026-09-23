@@ -530,6 +530,28 @@ describe('navSections (data export)', () => {
     const twoFactor = allItems.find((i) => i.to === '/account/2fa') as { requiresAuth?: boolean }
     expect(twoFactor?.requiresAuth).toBe(true)
   })
+
+  it('gives every item a unique stable labelKey and every section a titleKey', () => {
+    const labelKeys = allItems.map((i) => i.labelKey)
+    expect(labelKeys.every((k) => typeof k === 'string' && k.startsWith('nav.items.'))).toBe(true)
+    expect(new Set(labelKeys).size).toBe(labelKeys.length)
+    const titleKeys = navSections.map((s) => s.titleKey)
+    expect(titleKeys.every((k) => typeof k === 'string' && (k as string).startsWith('nav.groups.'))).toBe(true)
+    expect(new Set(titleKeys).size).toBe(titleKeys.length)
+  })
+
+  it('resolves every nav labelKey/titleKey in the en catalog with the authored label', async () => {
+    const en = (await import('@/i18n/en.json')).default as Record<string, any>
+    const nav = en.nav as { items: Record<string, string>; groups: Record<string, string> }
+    for (const item of allItems) {
+      const slug = item.labelKey.slice('nav.items.'.length)
+      expect(nav.items[slug]).toBe(item.label)
+    }
+    for (const section of navSections) {
+      const slug = (section.titleKey as string).slice('nav.groups.'.length)
+      expect(nav.groups[slug]).toBe(section.title)
+    }
+  })
 })
 
 describe('navSearchKeywords (data export)', () => {

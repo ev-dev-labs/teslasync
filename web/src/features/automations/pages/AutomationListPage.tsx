@@ -6,7 +6,7 @@ import { Button, Input, Select, type SelectOption } from '@/components/ui';
 import { BulkActionToolbar, MetricCard } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { OperationalWriteNotice, Skeleton } from '@/components/feedback';
+import { OperationalWriteNotice, QueryError, Skeleton } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
@@ -191,6 +191,12 @@ export default function AutomationListPage() {
             Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
             ))
+          ) : error ? (
+            <QueryError
+              error={error}
+              onRetry={() => refetch()}
+              className="col-span-2 lg:col-span-3 3xl:col-span-6"
+            />
           ) : (
             <>
               <MetricCard

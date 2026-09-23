@@ -27,8 +27,8 @@ export function HealthProbesSection() {
     return (
       <AccordionSection
         icon={<HeartPulse className="h-5 w-5" />}
-        title={t('Health Probes')}
-        description={t('Liveness and readiness checks')}
+        title={t('systemStatus.probes.title', 'Health Probes')}
+        description={t('systemStatus.probes.desc', 'Liveness and readiness checks')}
         defaultOpen
       >
         <Grid cols={{ default: 1, md: 2 }} gap={4}>
@@ -46,8 +46,8 @@ export function HealthProbesSection() {
     return (
       <AccordionSection
         icon={<HeartPulse className="h-5 w-5" />}
-        title={t('Health Probes')}
-        description={t('Liveness and readiness checks')}
+        title={t('systemStatus.probes.title', 'Health Probes')}
+        description={t('systemStatus.probes.desc', 'Liveness and readiness checks')}
         defaultOpen
       >
         <QueryError error={error} onRetry={handleRetry} />
@@ -65,12 +65,12 @@ export function HealthProbesSection() {
   return (
     <AccordionSection
       icon={<HeartPulse className="h-5 w-5" />}
-      title={t('Health Probes')}
-      description={t('Liveness and readiness checks')}
+      title={t('systemStatus.probes.title', 'Health Probes')}
+      description={t('systemStatus.probes.desc', 'Liveness and readiness checks')}
       badges={
         <>
-          <Badge variant={statusToBadgeVariant(livenessStatus)} size="sm" dot>{t('Live')}</Badge>
-          <Badge variant={statusToBadgeVariant(dbStatus)} size="sm" dot>{t('Ready')}</Badge>
+          <Badge variant={statusToBadgeVariant(livenessStatus)} size="sm" dot>{t('systemStatus.probes.live', 'Live')}</Badge>
+          <Badge variant={statusToBadgeVariant(dbStatus)} size="sm" dot>{t('systemStatus.probes.ready', 'Ready')}</Badge>
         </>
       }
       defaultOpen
@@ -78,28 +78,28 @@ export function HealthProbesSection() {
       <Grid cols={{ default: 1, md: 2 }} gap={4}>
         <Card>
           <CardHeader
-            title={t('Liveness — /healthz')}
+            title={t('systemStatus.probes.liveTitle', 'Liveness — /healthz')}
             action={<Badge variant={statusToBadgeVariant(livenessStatus)} size="sm">{livenessStatus}</Badge>}
           />
           <KVList
             items={[
-              { label: t('Status'), value: livenessStatus },
-              { label: t('Goroutines'), value: fmtInt(system?.goroutines ?? 0) },
-              { label: t('Uptime'), value: formatUptime(system?.uptime_seconds ?? 0) },
+              { label: t('common.status', 'Status'), value: livenessStatus },
+              { label: t('systemStatus.goroutines', 'Goroutines'), value: fmtInt(system?.goroutines ?? 0) },
+              { label: t('systemStatus.uptime', 'Uptime'), value: formatUptime(system?.uptime_seconds ?? 0) },
             ]}
           />
         </Card>
 
         <Card>
           <CardHeader
-            title={t('Readiness — /readyz')}
+            title={t('systemStatus.probes.readyTitle', 'Readiness — /readyz')}
             action={<Badge variant={statusToBadgeVariant(dbStatus)} size="sm">{dbStatus}</Badge>}
           />
           <KVList
             items={[
-              { label: t('Database'), value: dbStatus },
-              { label: t('Latency'), value: dbLatency != null ? `${fmtNumber(dbLatency, 1)} ms` : '—' },
-              { label: t('Pool Connections'), value: fmtInt(pool?.total_conns ?? 0) },
+              { label: t('systemStatus.database', 'Database'), value: dbStatus },
+              { label: t('systemStatus.latency', 'Latency'), value: dbLatency != null ? `${fmtNumber(dbLatency, 1)} ms` : '—' },
+              { label: t('systemStatus.probes.poolConns', 'Pool Connections'), value: fmtInt(pool?.total_conns ?? 0) },
             ]}
           />
         </Card>

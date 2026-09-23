@@ -62,8 +62,8 @@ export function SignalSelector({
       <Label className="flex items-center gap-1 mb-2">
         {labelOverride ??
           (max != null
-            ? `${t('Signals')} (${safeValue.length} / ${max})`
-            : `${t('Signals')} (${safeValue.length})`)}
+            ? `${t('signalExplorer.signals', 'Signals')} (${safeValue.length} / ${max})`
+            : `${t('signalExplorer.signals', 'Signals')} (${safeValue.length})`)}
         {showLayerHelp ? (
           <HelpTooltip
             i18nKey="help.signal.layers"
@@ -74,9 +74,9 @@ export function SignalSelector({
         ) : null}
       </Label>
       <ComboboxMulti<string>
-        label={t('Signals')}
+        label={t('signalExplorer.signals', 'Signals')}
         hideLabel
-        placeholder={t('Search signals…')}
+        placeholder={t('signalExplorer.searchSignals', 'Search signals…')}
         icon={<Search className="h-3.5 w-3.5" aria-hidden="true" />}
         value={safeValue}
         onChange={handleChange}

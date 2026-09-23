@@ -6,7 +6,7 @@ Sidebar group **Reports**. In the app, expand this section in the left nav (or s
 | ------ | ---- | ------------ | ---------- |
 | Statistics | `/statistics` | Bar and pie charts across every metric in the system. | Renders an empty state when no data is available — the page is not hidden. |
 | Analytics | `/analytics` | Long-range trends and correlations you can drill into. | Renders an empty state when no data is available — the page is not hidden. |
-| Period Comparison | `/period-compare` | Pick two date ranges and see what changed. | Renders an empty state when no data is available — the page is not hidden. |
+| Period Comparison | `/period-compare` | Compare two windows with per-metric values and a unitless percentage-change chart relative to Period B. | Metrics without a nonzero Period B baseline remain in the details table but are omitted from the percent chart rather than shown as 0%. |
 | Efficiency | `/efficiency` | Wh/mile broken down by speed, climate, and elevation. | Renders an empty state when no data is available — the page is not hidden. |
 | Temperature Impact | `/temperature-impact` | How outside temperature affects range and efficiency. | Renders an empty state when no data is available — the page is not hidden. |
 | Cost Analysis | `/cost-analysis` | Electricity cost per drive and per mile. | Renders an empty state when no data is available — the page is not hidden. |

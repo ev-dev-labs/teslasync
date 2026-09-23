@@ -503,26 +503,26 @@ function StatsRow({
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <MetricCard
-        label={t('Total Exports')}
+        label={t('dataExport.totalExports', 'Total Exports')}
         value={totalExports}
         icon={<Icons.package className="h-4 w-4" />}
         color="cyan"
       />
       <MetricCard
-        label={t('Total Size')}
+        label={t('dataExport.totalSize', 'Total Size')}
         value={formatBytes(totalSize, { zeroAsEmpty: true, gbDecimals: 2 })}
         icon={<Icons.hardDrive className="h-4 w-4" />}
         color="blue"
       />
       <MetricCard
-        label={t('Most Exported')}
+        label={t('dataExport.mostExported', 'Most Exported')}
         value={mostExportedType}
         icon={<Icons.analytics className="h-4 w-4" />}
         color="purple"
-        subtitle={t('By Count')}
+        subtitle={t('dataExport.byCount', 'By Count')}
       />
       <MetricCard
-        label={t('Last Export')}
+        label={t('dataExport.lastExport', 'Last Export')}
         value={lastExport}
         icon={<Icons.clock className="h-4 w-4" />}
         color="green"
@@ -613,7 +613,7 @@ function ExportWizard({
   }, [exportType, exportFormat, vehicleId, presetDays, customStart, customEnd, useCustomRange, selectedColumns, onSubmit]);
 
   const vehicleOptions = useMemo(() => {
-    const opts = [{ value: '', label: t('All Vehicles') }];
+    const opts = [{ value: '', label: t('dataExport.allVehicles', 'All Vehicles') }];
     if (vehicles) {
       for (const v of vehicles) {
         opts.push({ value: String(v.id), label: v.display_name || v.vin });
@@ -696,7 +696,7 @@ function ExportWizard({
         icon={<Icons.download className="h-4 w-4" aria-hidden="true" />}
         onClick={handleSubmit}
       >
-        {t('Start Export')}
+        {t('dataExport.startExport', 'Start Export')}
       </Button>
     </GlassPanel>
   );
@@ -909,24 +909,24 @@ function ExportHistoryTable({
     () => [
       {
         key: 'type',
-        header: t('Type'),
+        header: t('dataExport.type', 'Type'),
         sortable: true,
         render: (row) => <TypeBadge type={row.type} />,
       },
       {
         key: 'format',
-        header: t('Format'),
+        header: t('dataExport.format', 'Format'),
         render: (row) => <FormatBadge format={row.format} />,
       },
       {
         key: 'status',
-        header: t('Status'),
+        header: t('common.status', 'Status'),
         sortable: true,
         render: (row) => <StatusBadge status={row.status} />,
       },
       {
         key: 'vehicle',
-        header: t('Vehicle'),
+        header: t('common.vehicle', 'Vehicle'),
         render: (row) => (
           <Text size="xs" color="secondary">
             {row.vehicle_id ? vehicleMap.get(row.vehicle_id) ?? `#${row.vehicle_id}` : '—'}
@@ -935,7 +935,7 @@ function ExportHistoryTable({
       },
       {
         key: 'records',
-        header: t('Records'),
+        header: t('dataExport.records', 'Records'),
         sortable: true,
         render: (row) => (
           <Text size="xs" color="secondary">
@@ -945,7 +945,7 @@ function ExportHistoryTable({
       },
       {
         key: 'size',
-        header: t('Size'),
+        header: t('dataExport.size', 'Size'),
         sortable: true,
         render: (row) => (
           <Text size="xs" color="secondary">
@@ -955,7 +955,7 @@ function ExportHistoryTable({
       },
       {
         key: 'duration',
-        header: t('Duration'),
+        header: t('common.duration', 'Duration'),
         render: (row) => (
           <Text size="xs" color="muted">
             {formatDurationMsLong(row.duration_ms)}
@@ -964,7 +964,7 @@ function ExportHistoryTable({
       },
       {
         key: 'time',
-        header: t('Time'),
+        header: t('dataExport.time', 'Time'),
         sortable: true,
         render: (row) => (
           <TimeStamp value={row.created_at} className="text-xs text-[var(--text-muted)]" />
@@ -982,7 +982,7 @@ function ExportHistoryTable({
               icon={<Icons.download className="h-3.5 w-3.5" aria-hidden="true" />}
               onClick={() => onDownload(row)}
             >
-              {t('Download')}
+              {t('dataExport.download', 'Download')}
             </Button>
           ) : row.status === 'failed' && row.error_message ? (
             <Text
@@ -1039,6 +1039,7 @@ function ExportHistoryTable({
         <DataTable
           tableId="system:data-export-jobs"
           columns={columns}
+          mobileColumns={['type', 'status', 'time']}
           data={jobs}
           keyExtractor={(row) => row.id}
           emptyMessage={t('dataExport.noJobs', 'No export jobs')}
@@ -1209,11 +1210,11 @@ export default function DataExportPage() {
         body: JSON.stringify(payload),
       }),
     onSuccess: () => {
-      toast.success(t('Export Started'), t('Export Started Msg'));
+      toast.success(t('dataExport.exportStarted', 'Export Started'), t('dataExport.exportStartedMsg', 'Your export has started.'));
       queryClient.invalidateQueries({ queryKey: ['export-jobs'] });
     },
     onError: () => {
-      toast.error(t('Export Failed'), t('Export Failed Msg'));
+      toast.error(t('dataExport.exportFailed', 'Export Failed'), t('dataExport.exportFailedMsg', 'The export could not be started. Please try again.'));
     },
   });
 

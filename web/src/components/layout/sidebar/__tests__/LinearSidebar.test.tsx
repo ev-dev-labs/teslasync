@@ -10,22 +10,22 @@ import LinearSidebar, {
 
 // navLabel is the caller's i18n mapper; default to identity so the rendered
 // link text is exactly the string we feed in (keeps role-name queries stable).
-const identity = (label: string) => label
+const identity = (item: { label: string }) => item.label
 
 function makeSections(): LinearSidebarSectionInput[] {
   return [
     {
       title: 'Fleet',
       items: [
-        { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' },
-        { to: '/drives', icon: Icons.drive, label: 'Drives', dataTour: 'drives-tour' },
+        { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'nav.items.vehicles' },
+        { to: '/drives', icon: Icons.drive, label: 'Drives', labelKey: 'nav.items.drives', dataTour: 'drives-tour' },
       ],
     },
     {
       title: 'Insights',
       items: [
-        { to: '/analytics', icon: Icons.analytics, label: 'Analytics' },
-        { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts' },
+        { to: '/analytics', icon: Icons.analytics, label: 'Analytics', labelKey: 'nav.items.analytics' },
+        { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts', labelKey: 'nav.items.notifications_inbox' },
       ],
     },
   ]
@@ -88,8 +88,8 @@ describe('LinearSidebar', () => {
       {
         title: 'Nav',
         items: [
-          { to: '/', icon: Icons.home, label: 'Home' },
-          { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' },
+          { to: '/', icon: Icons.home, label: 'Home', labelKey: 'nav.items.home' },
+          { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'nav.items.vehicles' },
         ],
       },
     ]
@@ -112,8 +112,8 @@ describe('LinearSidebar', () => {
       {
         title: 'Settings',
         items: [
-          { to: '/settings', icon: Icons.settings, label: 'General Settings' },
-          { to: '/settings/fleet-setup', icon: Icons.radio, label: 'Fleet Setup' },
+          { to: '/settings', icon: Icons.settings, label: 'General Settings', labelKey: 'nav.items.general-settings' },
+          { to: '/settings/fleet-setup', icon: Icons.radio, label: 'Fleet Setup', labelKey: 'nav.items.fleet-setup' },
         ],
       },
     ]
@@ -131,8 +131,8 @@ describe('LinearSidebar', () => {
       {
         title: 'Tesla Physics',
         items: [
-          { to: '/tesla-only', icon: Icons.sparkles, label: 'Physics hub' },
-          { to: '/tesla-only/clocks', icon: Icons.clock, label: 'Three Clocks' },
+          { to: '/tesla-only', icon: Icons.sparkles, label: 'Physics hub', labelKey: 'nav.items.physics-hub' },
+          { to: '/tesla-only/clocks', icon: Icons.clock, label: 'Three Clocks', labelKey: 'nav.items.three-clocks' },
         ],
       },
     ]
@@ -170,7 +170,7 @@ describe('LinearSidebar', () => {
   it('renders the Quick access group with an accessible unpin action', () => {
     const onUnpin = vi.fn()
     renderSidebar({
-      pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' }],
+      pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'nav.items.vehicles' }],
       onUnpin,
       activeSectionTitle: 'Fleet',
     })
@@ -189,7 +189,7 @@ describe('LinearSidebar', () => {
   it('offers a pin action for un-pinned items and hides it for pinned ones', () => {
     const onPin = vi.fn()
     renderSidebar({
-      pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' }],
+      pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'nav.items.vehicles' }],
       onPin,
       activeSectionTitle: 'Fleet',
     })
@@ -203,7 +203,7 @@ describe('LinearSidebar', () => {
 
   it('keeps one canonical active row when the current page is also a favorite', () => {
     renderSidebar({
-      pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' }],
+      pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'nav.items.vehicles' }],
       activeSectionTitle: 'Fleet',
       pathname: '/vehicles',
     })
@@ -218,9 +218,9 @@ describe('LinearSidebar', () => {
       {
         title: 'All',
         items: [
-          { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' },
-          { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts' },
-          { to: '/data-repair', icon: Icons.database, label: 'Repair' },
+          { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'nav.items.vehicles' },
+          { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts', labelKey: 'nav.items.alerts' },
+          { to: '/data-repair', icon: Icons.database, label: 'Repair', labelKey: 'nav.items.repair' },
         ],
       },
     ]
@@ -250,8 +250,8 @@ describe('LinearSidebar', () => {
       {
         title: 'All',
         items: [
-          { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts' },
-          { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' },
+          { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts', labelKey: 'nav.items.alerts' },
+          { to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'nav.items.vehicles' },
         ],
       },
     ]
@@ -275,9 +275,10 @@ describe('LinearSidebar', () => {
   })
 
   it('applies navLabel to translate item label keys', () => {
-    const navLabel = (key: string) => (key === 'key.vehicles' ? 'Fahrzeuge' : key)
+    const navLabel = (item: { label: string; labelKey: string }) =>
+      item.labelKey === 'key.vehicles' ? 'Fahrzeuge' : item.label
     const sections: LinearSidebarSectionInput[] = [
-      { title: 'Fleet', items: [{ to: '/vehicles', icon: Icons.vehicle, label: 'key.vehicles' }] },
+      { title: 'Fleet', items: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'key.vehicles' }] },
     ]
     renderSidebar({ sections, navLabel, activeSectionTitle: 'Fleet' })
 
@@ -287,7 +288,7 @@ describe('LinearSidebar', () => {
 
   it('labels the navigation landmark and skips empty sections', () => {
     const sections: LinearSidebarSectionInput[] = [
-      { title: 'Fleet', items: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' }] },
+      { title: 'Fleet', items: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'nav.items.vehicles' }] },
       { title: 'Empty', items: [] },
     ]
     renderSidebar({ sections, activeSectionTitle: 'Fleet' })
@@ -326,13 +327,13 @@ describe('LinearSidebar — Feature Hub escape hatch', () => {
     {
       title: 'Overview',
       items: [
-        { to: '/', icon: Icons.home, label: 'Dashboard' },
-        { to: '/explore', icon: Icons.sparkles, label: 'Explore Features' },
+        { to: '/', icon: Icons.home, label: 'Dashboard', labelKey: 'nav.items.dashboard' },
+        { to: '/explore', icon: Icons.sparkles, label: 'Explore Features', labelKey: 'nav.items.explore-features' },
       ],
     },
     {
       title: 'Driving',
-      items: [{ to: '/drives', icon: Icons.drive, label: 'Drives' }],
+      items: [{ to: '/drives', icon: Icons.drive, label: 'Drives', labelKey: 'nav.items.drives' }],
     },
   ]
 
@@ -386,25 +387,25 @@ describe('LinearSidebar — advanced tier', () => {
         title: 'Overview',
         tier: 'primary',
         restricted: false,
-        items: [{ to: '/', icon: Icons.home, label: 'Dashboard' }],
+        items: [{ to: '/', icon: Icons.home, label: 'Dashboard', labelKey: 'nav.items.dashboard' }],
       },
       {
         title: 'Drives',
         tier: 'primary',
         restricted: false,
-        items: [{ to: '/drives', icon: Icons.drive, label: 'Drives' }],
+        items: [{ to: '/drives', icon: Icons.drive, label: 'Drives', labelKey: 'nav.items.drives' }],
       },
       {
         title: 'Administration',
         tier: 'advanced',
         restricted: false,
-        items: [{ to: '/backup', icon: Icons.database, label: 'Backup' }],
+        items: [{ to: '/backup', icon: Icons.database, label: 'Backup', labelKey: 'nav.items.backup' }],
       },
       {
         title: 'Developer',
         tier: 'advanced',
         restricted: true,
-        items: [{ to: '/dev-tools', icon: Icons.hammer, label: 'Developer Tools' }],
+        items: [{ to: '/dev-tools', icon: Icons.hammer, label: 'Developer Tools', labelKey: 'nav.items.developer-tools' }],
       },
     ]
   }
@@ -459,10 +460,10 @@ describe('LinearSidebar — advanced tier', () => {
   it('falls back to the blueprint tier when the caller omits it', () => {
     renderSidebar({
       sections: [
-        { title: 'Overview', items: [{ to: '/', icon: Icons.home, label: 'Dashboard' }] },
+        { title: 'Overview', items: [{ to: '/', icon: Icons.home, label: 'Dashboard', labelKey: 'nav.items.dashboard' }] },
         {
           title: 'Settings & Account',
-          items: [{ to: '/settings', icon: Icons.settings, label: 'Settings' }],
+          items: [{ to: '/settings', icon: Icons.settings, label: 'Settings', labelKey: 'nav.items.settings' }],
         },
       ],
       pathname: '/',

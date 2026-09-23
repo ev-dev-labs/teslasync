@@ -33,7 +33,7 @@ export function VinDecoderTool() {
     // the correct character positions instead of shifting every field.
     const normalized = vin.replace(/\s+/g, '').toUpperCase()
     if (normalized.length < MIN_VIN_LENGTH) return null
-    const unknown = t('Unknown', 'Unknown')
+    const unknown = t('common.unknown', 'Unknown')
     return {
       mfr: VIN_MANUFACTURERS[normalized.slice(0, 3)] ?? unknown,
       model: VIN_MODELS[normalized[3]] ?? unknown,
@@ -57,10 +57,10 @@ export function VinDecoderTool() {
       : undefined
 
   return (
-    <ToolCard icon={Car} color="cyan" title={t('Vin Decoder')} description={t('Vin Decoder Desc')}>
+    <ToolCard icon={Car} color="cyan" title={t('devtools.utils.vin', 'Vin Decoder')} description={t('devtools.utils.vinDesc', 'Vin Decoder Desc')}>
       <div className="space-y-3">
         <Input
-          label={t('Vin')}
+          label={t('devtools.utils.vinInput', 'Vin')}
           placeholder="5YJ3E1EA1NF000001"
           value={vin}
           onChange={handleChange}

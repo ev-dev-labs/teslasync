@@ -1321,6 +1321,9 @@
       "title": "Vehicle Detail",
       "wakeSuccess": "Wake command sent",
       "wakeFailed": "Failed to wake vehicle",
+      "invalidIdTitle": "Vehicle not found",
+      "invalidIdBody": "That vehicle link looks wrong. Check the URL or pick a vehicle from the list.",
+      "backToVehicles": "Back to Vehicles",
       "section": {
         "headerFailed": "Vehicle header failed to load",
         "batteryRangeFailed": "Battery & range section failed to load",

@@ -229,6 +229,7 @@ export function SignalDiffTable({
       <DataTable<SignalDiffRow>
         tableId="signal-diff-table"
         columns={columns}
+        mobileColumns={['name', 'delta', 'value_b']}
         data={sortedRows}
         keyExtractor={(row) => row.name}
         emptyMessage={emptyMessage}

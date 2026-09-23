@@ -502,6 +502,7 @@ export default function DBHealthPage() {
               <DataTable<TableInfo>
                 tableId="system:db-health-tables"
                 columns={tableColumns}
+                mobileColumns={['name', 'size', 'rows']}
                 data={sortedTables}
                 keyExtractor={(tbl) => tbl.name}
                 compact

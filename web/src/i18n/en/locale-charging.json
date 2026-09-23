@@ -111,6 +111,10 @@
     "batteryCapacity": "Battery Capacity (kWh)",
     "optimize": "Find Cheapest Window",
     "optimizeError": "Optimization failed",
+    "invalidDepartBy": "Enter a valid departure date and time.",
+    "invalidMaxAmps": "Enter an amperage between 8 and 80.",
+    "invalidCapacity": "Enter a battery capacity greater than 0.",
+    "ratePlansResource": "rate plans",
     "rateTimeline": "24-Hour Rate Timeline",
     "windowInfo": "Optimal window: {{start}} — {{end}}",
     "chargeNowCost": "Charge Now",
@@ -682,7 +686,8 @@
       "lowerBound": "Lower bound",
       "month": "Month",
       "share": "Share (%)",
-      "upperBound": "Upper bound"
+      "upperBound": "Upper bound",
+      "home": "Home"
     },
     "stats": {
       "totalCost": "Total Cost",

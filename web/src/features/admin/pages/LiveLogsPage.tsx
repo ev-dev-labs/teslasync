@@ -899,6 +899,7 @@ export default function LiveLogsPage({
             tableId="admin:live-logs"
             data={filteredEvents}
             columns={columns}
+            mobileColumns={['time', 'level', 'message']}
             keyExtractor={(row) => row.seq}
             virtualized={filteredEvents.length > 200}
             rowHeight={36}

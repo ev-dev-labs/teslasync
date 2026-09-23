@@ -283,6 +283,7 @@ function ClocksPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
         <DataTable
           tableId="physics:clocks"
           columns={columns}
+          mobileColumns={['event', 'ingest', 'display']}
           data={newestFirst(report.clocks.samples)}
           keyExtractor={(row) => row.event_time}
           emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
@@ -324,6 +325,7 @@ function LifeTapePanel({ report, t }: { report: ExclusiveReport; t: Translate })
           <DataTable
             tableId="physics:life-tape"
             columns={columns}
+            mobileColumns={['state', 'duration', 'started']}
             data={newestFirst(segments)}
             keyExtractor={(row) => `${row.state}-${row.started_at}`}
             emptyMessage={unknownText(t)}
@@ -352,6 +354,7 @@ function ContradictionPanel({ report, t }: { report: ExclusiveReport; t: Transla
         <DataTable
           tableId="physics:contradictions"
           columns={columns}
+          mobileColumns={['at', 'kind', 'detail']}
           data={newestFirst(findings)}
           keyExtractor={(row) => `${row.kind}-${row.at}`}
           emptyMessage={t('teslaOnly.noContradictions', 'No contradictions in the window. Complete still latched is expected.')}
@@ -386,6 +389,7 @@ function MetersPanel({
         <DataTable
           tableId="physics:meters"
           columns={columns}
+          mobileColumns={['meter', 'cause', 'at']}
           data={newestFirst(meters.resets)}
           keyExtractor={(row) => `${row.meter}-${row.at}`}
           emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
@@ -464,6 +468,7 @@ function LogbookPanel({ report, t }: { report: ExclusiveReport; t: Translate }) 
       <DataTable
         tableId="physics:logbook"
         columns={columns}
+        mobileColumns={['word', 'kind', 'at']}
         data={newestFirst(entries)}
         keyExtractor={(row) => `${row.kind}-${row.id}-${row.word}-${row.at}`}
         emptyMessage={unknownText(t)}
@@ -497,6 +502,7 @@ function EpochsPanel({
       <DataTable
         tableId="physics:firmware-epochs"
         columns={columns}
+        mobileColumns={['version', 'fsd', 'started']}
         data={epochs}
         keyExtractor={(row) => `${row.version}-${row.started_at}`}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
@@ -523,6 +529,7 @@ function PortPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
       <DataTable
         tableId="physics:charge-port"
         columns={columns}
+        mobileColumns={['at', 'state', 'latch']}
         data={newestFirst(evidence)}
         keyExtractor={(row) => row.at}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
@@ -554,6 +561,7 @@ function BlackBoxPanel({ report, t }: { report: ExclusiveReport; t: Translate })
       <DataTable
         tableId="physics:black-box"
         columns={columns}
+        mobileColumns={['at', 'state', 'current']}
         data={box.frames}
         keyExtractor={(row) => row.at}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
@@ -617,6 +625,7 @@ function VaultPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
       <DataTable
         tableId="physics:vault-drives"
         columns={driveColumns}
+        mobileColumns={['id', 'started', 'rule']}
         data={newestFirst(vault.certificate.drives)}
         keyExtractor={(row) => `drive-${row.id}-${row.started_at}`}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
@@ -626,6 +635,7 @@ function VaultPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
       <DataTable
         tableId="physics:vault-charges"
         columns={chargeColumns}
+        mobileColumns={['id', 'started', 'rule']}
         data={newestFirst(vault.certificate.charges)}
         keyExtractor={(row) => `charge-${row.id}-${row.started_at}`}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
@@ -694,6 +704,7 @@ function NervousPanel({ report, t }: { report: ExclusiveReport; t: Translate }) 
       <DataTable
         tableId="physics:nervous-system"
         columns={columns}
+        mobileColumns={['field', 'status', 'detail']}
         data={nerves}
         keyExtractor={(row) => row.field}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}

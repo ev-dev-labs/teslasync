@@ -221,6 +221,7 @@ const flatCalls = () =>
   );
 const groupedCalls = () => callsFor((p, m) => !m && p.includes('grouped=true'));
 const markReadPosts = () => callsFor((p, m) => m === 'POST' && p.includes('mark-read'));
+const deleteCalls = () => callsFor((p, m) => m === 'DELETE' && p.startsWith('/notifications/logs'));
 
 function bodyOf(call: unknown[]): Record<string, unknown> {
   const opts = call[1] as { body?: string } | undefined;
@@ -669,5 +670,46 @@ describe('InboxBody — row context menu', () => {
     const menu = await screen.findByTestId('context-menu');
     expect(within(menu).getByText('Mark as read')).toBeInTheDocument();
     expect(within(menu).getByText('Delete')).toBeInTheDocument();
+  });
+
+  it('confirm-gates the single-row delete from the context menu', async () => {
+    installRequest({
+      logs: () => Promise.resolve([makeLog({ id: 1, title: 'Context row', read_at: null })]),
+    });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+
+    const rowEl = (await screen.findByText('Context row')).closest('[role="group"]');
+    fireEvent.contextMenu(rowEl as Element);
+    const menu = await screen.findByTestId('context-menu');
+    fireEvent.click(within(menu).getByText('Delete'));
+
+    // A danger confirm naming the notification — no DELETE yet.
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Delete this notification?')).toBeInTheDocument();
+    expect(dialog.textContent).toContain('Context row');
+    expect(deleteCalls().length).toBe(0);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(deleteCalls().length).toBe(1));
+    expect(bodyOf(deleteCalls()[0] ?? [])).toEqual({ ids: [1] });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('does not delete when the single-row confirm is cancelled', async () => {
+    installRequest({
+      logs: () => Promise.resolve([makeLog({ id: 1, title: 'Context row', read_at: null })]),
+    });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+
+    const rowEl = (await screen.findByText('Context row')).closest('[role="group"]');
+    fireEvent.contextMenu(rowEl as Element);
+    const menu = await screen.findByTestId('context-menu');
+    fireEvent.click(within(menu).getByText('Delete'));
+
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(deleteCalls().length).toBe(0);
   });
 });

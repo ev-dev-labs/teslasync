@@ -86,6 +86,20 @@ describe('featureCatalog', () => {
       expect(out.length).toBeGreaterThan(0);
     });
 
+    it('matches translated labels and sections while retaining English search', () => {
+      const charging = catalog.find((entry) => entry.to === '/charging')!;
+      const translate = (key: string, fallback: string) =>
+        key === charging.labelKey ? 'Recarga' :
+        key === charging.sectionKey ? 'Carga eléctrica' : fallback;
+
+      expect(filterFeatureCatalog(catalog, 'recarga', translate)).toContain(charging);
+      expect(filterFeatureCatalog(catalog, charging.label, translate)).toContain(charging);
+      const localizedSection = filterFeatureCatalog(catalog, 'carga eléctrica', translate);
+      expect(localizedSection.length).toBeGreaterThan(1);
+      expect(localizedSection.every((entry) => entry.section === charging.section)).toBe(true);
+      expect(filterFeatureCatalog(catalog, charging.section, translate)).toEqual(localizedSection);
+    });
+
     it('uses AND-token matching across multiple words', () => {
       // "tire" matches /tire-pressure; "pressure" also matches. Both
       // tokens must be present in the haystack — partial-only matches

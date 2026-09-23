@@ -348,8 +348,8 @@ export function NotionSidebar({
         size="sm"
         aria-label={
           pinned
-            ? t('nav.unpinPage', { page: navLabel(item.label), defaultValue: 'Unpin {{page}}' })
-            : t('nav.pinPage', { page: navLabel(item.label), defaultValue: 'Pin {{page}}' })
+            ? t('nav.unpinPage', { page: navLabel(item), defaultValue: 'Unpin {{page}}' })
+            : t('nav.pinPage', { page: navLabel(item), defaultValue: 'Pin {{page}}' })
         }
         onClick={(e: React.MouseEvent) => {
           e.preventDefault()
@@ -385,7 +385,7 @@ export function NotionSidebar({
                   <NotionRow
                     key={`fav-${item.to}`}
                     to={item.to}
-                    label={navLabel(item.label)}
+                    label={navLabel(item)}
                     icon={item.icon}
                     iconColor={item.color}
                     active={false}
@@ -397,7 +397,7 @@ export function NotionSidebar({
                         variant="ghost"
                         size="sm"
                         aria-label={t('nav.unpinPage', {
-                          page: navLabel(item.label),
+                          page: navLabel(item),
                           defaultValue: 'Unpin {{page}}',
                         })}
                         onClick={(e: React.MouseEvent) => {
@@ -424,7 +424,7 @@ export function NotionSidebar({
             return (
               <div key={section.title} className="space-y-0.5">
                 <NotionSectionRow
-                  title={section.title}
+                  title={section.titleKey ? t(section.titleKey, section.title) : section.title}
                   icon={glyph.icon}
                   iconColor={glyph.color}
                   expanded={expanded}
@@ -433,12 +433,12 @@ export function NotionSidebar({
                   count={section.items.length}
                 />
                 {expanded && (
-                  <div className="space-y-0.5" role="group" aria-label={section.title}>
+                  <div className="space-y-0.5" role="group" aria-label={section.titleKey ? t(section.titleKey, section.title) : section.title}>
                     {section.items.map(item => (
                       <NotionRow
                         key={item.to}
                         to={item.to}
-                        label={navLabel(item.label)}
+                        label={navLabel(item)}
                         icon={item.icon}
                         iconColor={item.color}
                         active={itemIsActive(item.to)}

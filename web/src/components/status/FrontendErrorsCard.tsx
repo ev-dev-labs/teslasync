@@ -14,7 +14,7 @@ export function FrontendErrorsCard() {
       <div
         role="status"
         aria-busy="true"
-        aria-label={t('Loading frontend error summary')}
+        aria-label={t('apiLogs.frontendErrors.loading', 'Loading frontend error summary')}
         className="space-y-2 mt-4"
       >
         <Skeleton className="h-6" />
@@ -26,14 +26,14 @@ export function FrontendErrorsCard() {
   if (!data) {
     return (
       <div role="status" className="mt-4 text-xs text-[var(--text-muted)]">
-        {t('Unable to load frontend error summary.')}
+        {t('apiLogs.frontendErrors.loadError', 'Unable to load frontend error summary.')}
       </div>
     )
   }
 
   const total = data.total ?? 0
   const top = Array.isArray(data.top) ? data.top : []
-  const heading = t('Frontend errors (last hour)')
+  const heading = t('apiLogs.frontendErrors.title', 'Frontend errors (last hour)')
 
   return (
     <section
@@ -49,7 +49,7 @@ export function FrontendErrorsCard() {
           {fmtInt(total)}
         </span>
         <span className="text-xs text-[var(--text-muted)]">
-          {t('reported by browser sessions')}
+          {t('apiLogs.frontendErrors.reportedBy', 'reported by browser sessions')}
         </span>
       </div>
 
@@ -76,11 +76,11 @@ export function FrontendErrorsCard() {
         // Non-zero total but no per-source rows: don't claim "no errors" — that
         // contradicts the count rendered above. Surface the honest state instead.
         <p className="mt-2 text-xs text-[var(--text-muted)]">
-          {t('No per-source breakdown available for the reported errors.')}
+          {t('apiLogs.frontendErrors.noBreakdown', 'No per-source breakdown available for the reported errors.')}
         </p>
       ) : (
         <p className="mt-2 text-xs text-[var(--text-muted)]">
-          {t('No frontend errors reported in the last hour.')}
+          {t('apiLogs.frontendErrors.noErrors', 'No frontend errors reported in the last hour.')}
         </p>
       )}
     </section>

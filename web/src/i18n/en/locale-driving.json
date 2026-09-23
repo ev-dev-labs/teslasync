@@ -1554,7 +1554,10 @@
       "noRecs": "Recommendations will appear after more drives.",
       "perDriveScores": "Per-Drive Scores",
       "noDrives": "No drives found.",
-      "weeklyTrendAria": "Line chart of weekly driving score over time"
+      "weeklyTrendAria": "Line chart of weekly driving score over time",
+      "score": "Score",
+      "style": "Style",
+      "whPerKm": "Wh/km"
     },
     "tipNoData": "Drive your vehicle to start collecting dynamics data.",
     "tipEaseAccel": "Ease into the accelerator — gradual inputs save energy and tire wear.",

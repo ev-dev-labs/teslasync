@@ -334,6 +334,23 @@ describe('VehicleDetailPage', () => {
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
   })
 
+  it.each(['/vehicles/abc', '/vehicles/0', '/vehicles/-4'])(
+    'renders not-found (never an empty shell or /vehicles/NaN request) for %s',
+    async (route) => {
+      renderPage(route)
+
+      expect(await screen.findByText('Vehicle not found')).toBeInTheDocument()
+      expect(
+        screen.getByRole('link', { name: 'Back to Vehicles' }),
+      ).toHaveAttribute('href', '/vehicles')
+      // Queries stay disabled: no record fetch, no skeleton, no sections.
+      const paths = H.requestMock.mock.calls.map((c: unknown[]) => String(c[0]))
+      expect(paths.some((p: string) => p.includes('NaN'))).toBe(false)
+      expect(screen.queryByTestId('vehicle-detail-skeleton')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
+    },
+  )
+
   it('mounts every section and wires the derived props once state resolves', async () => {
     renderPage()
 

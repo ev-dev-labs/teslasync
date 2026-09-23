@@ -15,7 +15,7 @@ export function TeslaApiRefTool() {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
 
-  const searchLabel = t('Search Endpoints')
+  const searchLabel = t('devtools.utils.teslaApiRefSearch', 'Search Endpoints')
 
   const filtered = useMemo(() => {
     // Trim before matching so stray leading/trailing whitespace in the query
@@ -34,7 +34,7 @@ export function TeslaApiRefTool() {
     () => [
       {
         key: 'method',
-        header: t('Method'),
+        header: t('devtools.utils.teslaApiRefMethod', 'Method'),
         render: (r) => (
           <Badge variant={r.method === 'GET' ? 'info' : 'warning'} size="sm">
             {r.method}
@@ -43,7 +43,7 @@ export function TeslaApiRefTool() {
       },
       {
         key: 'path',
-        header: t('Path'),
+        header: t('devtools.utils.teslaApiRefPath', 'Path'),
         render: (r) => (
           <div className="flex items-center gap-1">
             <code className="text-xs font-mono text-cyan-300">{r.path}</code>
@@ -51,13 +51,13 @@ export function TeslaApiRefTool() {
           </div>
         ),
       },
-      { key: 'desc', header: t('Endpoint Desc'), render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.desc}</span> },
+      { key: 'desc', header: t('devtools.utils.teslaApiRefEndpointDesc', 'Endpoint Desc'), render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.desc}</span> },
     ],
     [t],
   )
 
   return (
-    <ToolCard icon={BookOpen} color="cyan" title={t('Tesla Api Ref')} description={t('Tesla Api Ref Desc')}>
+    <ToolCard icon={BookOpen} color="cyan" title={t('devtools.utils.teslaApiRef', 'Tesla Api Ref')} description={t('devtools.utils.teslaApiRefDesc', 'Tesla Api Ref Desc')}>
       <div className="space-y-3">
         <Input
           type="search"
@@ -70,6 +70,7 @@ export function TeslaApiRefTool() {
         <DataTable
           tableId="admin:tesla-api-ref"
           columns={columns}
+          mobileColumns={['method', 'path']}
           data={filtered}
           keyExtractor={(r) => r.path}
           emptyMessage={t('devtools.teslaApiRef.noResults', 'No endpoints match your search')}

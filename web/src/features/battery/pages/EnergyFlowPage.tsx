@@ -885,6 +885,7 @@ export default function EnergyFlowPage() {
             <DataTable
               tableId="battery:energy-flow-history"
               columns={historyColumns}
+              mobileColumns={['date', 'energy_wh', 'efficiency_wh_per_m']}
               data={sortedDailyRows}
               keyExtractor={(row) => row.date}
               sortKey={sortKey}

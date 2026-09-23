@@ -565,6 +565,24 @@
     },
     "openStudio": "Open Alert Studio"
   },
+  "audit": {
+    "title": "Audit Log",
+    "time": "Time",
+    "action": "Action",
+    "resource": "Resource",
+    "details": "Details",
+    "subtitle": "Recent system-level changes recorded by the audit subsystem",
+    "recentActivity": "Recent Activity",
+    "loadFailed": "Failed to load audit logs",
+    "noEntries": "No audit entries found",
+    "noMatches": "No audit entries match your search.",
+    "loadError": {
+      "unknown": "Unknown error"
+    },
+    "filterLabel": {
+      "search": "Search"
+    }
+  },
   "notificationBurnRate": {
     "title": "Notification Burn Rate",
     "subtitle": "Track up to 1,000 recent notification delivery attempts against a 99% SLO with short and long error-budget windows",

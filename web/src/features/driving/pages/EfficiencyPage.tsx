@@ -570,6 +570,7 @@ export default function EfficiencyPage() {
                       render: (b) => <Text color="secondary">{fmtInt(toSpeedDisplay(b.avgSpeed))} {speedUnit}</Text>,
                     },
                   ]}
+                  mobileColumns={['range', 'count', 'avgEff']}
                 />
               )}
             </GlassPanel>

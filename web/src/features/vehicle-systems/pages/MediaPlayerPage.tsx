@@ -156,9 +156,16 @@ export default function MediaPlayerPage() {
 
   const volumeChartData = useMemo(() => {
     if (!filtered.length) return [];
+    // Drop snapshots without a volume reading (same predicate as the Avg
+    // Volume KPI above): charting a missing field as 0 drew phantom drops to
+    // silence that the KPI deliberately excludes.
     return [...filtered]
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-      .map((s) => ({ time: formatDateTime(s.created_at), volume: s.audio_volume ?? 0 }));
+      .filter(
+        (s): s is MediaSnapshot & { audio_volume: number } =>
+          typeof s.audio_volume === 'number' && Number.isFinite(s.audio_volume),
+      )
+      .map((s) => ({ time: formatDateTime(s.created_at), volume: s.audio_volume }));
   }, [filtered]);
 
   /* ── Volume axis ceiling ──────────────────────────────────── */
@@ -672,6 +679,7 @@ export default function MediaPlayerPage() {
             <DataTable<MediaSnapshot>
               tableId="vehicle-systems:media-history"
               columns={columns}
+              mobileColumns={['now_playing_title', 'playback_status', 'created_at']}
               data={sortedHistory}
               keyExtractor={(row) => row.id}
               sortKey={tableSortKey}

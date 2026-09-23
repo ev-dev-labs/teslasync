@@ -57,6 +57,8 @@ const COMPACT_GROUP_I18N_KEYS: Readonly<Record<string, string>> = {
 // on a circular import or duplicating the literal.
 export type LinearSidebarSectionInput = {
   title: string
+  /** Catalog key for the section title (`nav.groups.*`) — canonical sections only. */
+  titleKey?: string
   /** Compact tier — `advanced` groups render under the "Advanced" divider. */
   tier?: CompactGroupTier
   /** True when the current principal lacks the capability that promotes the group. */
@@ -65,6 +67,8 @@ export type LinearSidebarSectionInput = {
     to: string
     icon: typeof Icons.home
     label: string
+    /** Stable catalog key (`nav.items.*`) — every canonical nav item has one. */
+    labelKey: string
     color?: string
     dataTour?: string
     minVehicles?: number
@@ -78,8 +82,8 @@ export interface LinearSidebarProps {
   pinnedItems: LinearSidebarSectionInput['items']
   /** Active path (usually `useLocation().pathname`). */
   pathname: string
-  /** Translate a nav label key/value. Caller already knows the i18n map. */
-  navLabel: (label: string) => string
+  /** Translate a nav item via its stable `labelKey` (label = fallback). */
+  navLabel: (item: { label: string; labelKey: string }) => string
   /** Pin / unpin callbacks — already exposed by Layout. */
   onPin: (to: string) => void
   onUnpin: (to: string) => void
@@ -340,8 +344,8 @@ export function LinearSidebar({
         type="button"
         variant="ghost"
         size="sm"
-        aria-label={t('nav.pinPage', { page: navLabel(item.label), defaultValue: 'Pin {{page}} to favorites' })}
-        title={t('nav.pinPage', { page: navLabel(item.label), defaultValue: 'Pin {{page}} to favorites' })}
+        aria-label={t('nav.pinPage', { page: navLabel(item), defaultValue: 'Pin {{page}} to favorites' })}
+        title={t('nav.pinPage', { page: navLabel(item), defaultValue: 'Pin {{page}} to favorites' })}
         onClick={() => onPin(item.to)}
         className="h-6 w-6 rounded-shape-sm p-0 text-[var(--text-muted)] hover:bg-[var(--control-bg)] hover:text-[var(--theme-primary)]"
         data-testid={`linear-sidebar-pin-${item.to}`}
@@ -400,7 +404,7 @@ export function LinearSidebar({
                   <LinearNavLink
                     key={`pinned-${item.to}`}
                     to={item.to}
-                    label={navLabel(item.label)}
+                    label={navLabel(item)}
                     icon={item.icon}
                     active={false}
                     onSelect={onItemSelect}
@@ -410,8 +414,8 @@ export function LinearSidebar({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        aria-label={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: 'Unpin {{page}}' })}
-                        title={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: 'Unpin {{page}}' })}
+                        aria-label={t('nav.unpinPage', { page: navLabel(item), defaultValue: 'Unpin {{page}}' })}
+                        title={t('nav.unpinPage', { page: navLabel(item), defaultValue: 'Unpin {{page}}' })}
                         onClick={() => onUnpin(item.to)}
                         className="h-6 w-6 rounded-shape-sm p-0 text-[var(--text-muted)] hover:bg-[var(--control-bg)] hover:text-[var(--text-secondary)]"
                         data-testid={`linear-sidebar-unpin-${item.to}`}
@@ -471,7 +475,7 @@ export function LinearSidebar({
                       <LinearNavLink
                         key={item.to}
                         to={item.to}
-                        label={navLabel(item.label)}
+                        label={navLabel(item)}
                         icon={item.icon}
                         active={itemIsActive(item.to)}
                         onSelect={onItemSelect}

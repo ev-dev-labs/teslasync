@@ -244,7 +244,7 @@ export function toChartData(history: SafetySnapshot[]): ChartPoint[] {
 
 export function buildFeatureCards(
   snap: SafetySnapshot,
-  t: (key: string) => string,
+  t: (key: string, fallback: string) => string,
 ): FeatureCardDef[] {
   const aebOn = isAebEnabled(snap.automatic_emergency_braking_off ?? false);
   const fcwVal = cleanEnum(snap.forward_collision_warning, 'forward_collision_warning');
@@ -258,66 +258,66 @@ export function buildFeatureCards(
   return [
     {
       key: 'aeb',
-      label: t('Auto Emergency Braking'),
-      description: t('Automatic collision mitigation'),
+      label: t('safety.aeb', 'Auto Emergency Braking'),
+      description: t('safety.aebDesc', 'Automatic collision mitigation'),
       enabled: aebOn,
-      valueText: aebOn ? t('Enabled') : t('Disabled'),
+      valueText: aebOn ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
     },
     {
       key: 'bsc',
-      label: t('Blind Spot Camera'),
-      description: t('Camera view when signaling'),
+      label: t('safety.blindSpotCamera', 'Blind Spot Camera'),
+      description: t('safety.blindSpotCameraDesc', 'Camera view when signaling'),
       enabled: snap.automatic_blind_spot_camera ?? false,
-      valueText: (snap.automatic_blind_spot_camera ?? false) ? t('Enabled') : t('Disabled'),
+      valueText: (snap.automatic_blind_spot_camera ?? false) ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
     },
     {
       key: 'fcw',
-      label: t('Forward Collision Warning'),
-      description: t('Warns of potential frontal collisions'),
+      label: t('safety.fcw', 'Forward Collision Warning'),
+      description: t('safety.fcwDesc', 'Warns of potential frontal collisions'),
       enabled: fcwOn,
       valueText: fcwVal,
     },
     {
       key: 'lda',
-      label: t('Lane Departure Avoidance'),
-      description: t('Prevents unintentional lane changes'),
+      label: t('safety.lda', 'Lane Departure Avoidance'),
+      description: t('safety.ldaDesc', 'Prevents unintentional lane changes'),
       enabled: ldaOn,
       valueText: ldaVal,
     },
     {
       key: 'cfd',
-      label: t('Cruise Follow Distance'),
-      description: t('Adaptive cruise headway setting'),
+      label: t('safety.cfd', 'Cruise Follow Distance'),
+      description: t('safety.cfdDesc', 'Adaptive cruise headway setting'),
       enabled: isSafetyEnumActive(snap.cruise_follow_distance, 'cruise_follow_distance'),
       valueText: cfdVal,
     },
     {
       key: 'slw',
-      label: t('Speed Limit Warning'),
-      description: t('Alerts when exceeding speed limit'),
+      label: t('safety.slw', 'Speed Limit Warning'),
+      description: t('safety.slwDesc', 'Alerts when exceeding speed limit'),
       enabled: slwOn,
       valueText: slwVal,
     },
     {
       key: 'ptd',
-      label: t('Pin to Drive'),
-      description: t('Requires PIN before driving'),
+      label: t('safety.pinToDrive', 'Pin to Drive'),
+      description: t('safety.pinToDriveDesc', 'Requires PIN before driving'),
       enabled: snap.pin_to_drive_enabled ?? false,
-      valueText: (snap.pin_to_drive_enabled ?? false) ? t('Enabled') : t('Disabled'),
+      valueText: (snap.pin_to_drive_enabled ?? false) ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
     },
     {
       key: 'bscw',
-      label: t('Blind Spot Collision Warning'),
-      description: t('Alerts for blind-spot hazards'),
+      label: t('safety.bscw', 'Blind Spot Collision Warning'),
+      description: t('safety.bscwDesc', 'Alerts for blind-spot hazards'),
       enabled: snap.blind_spot_collision_warning ?? false,
-      valueText: (snap.blind_spot_collision_warning ?? false) ? t('Enabled') : t('Disabled'),
+      valueText: (snap.blind_spot_collision_warning ?? false) ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
     },
     {
       key: 'elda',
-      label: t('Emergency Lane Departure Avoidance'),
-      description: t('Steers back on unintentional departure'),
+      label: t('safety.elda', 'Emergency Lane Departure Avoidance'),
+      description: t('safety.eldaDesc', 'Steers back on unintentional departure'),
       enabled: snap.emergency_lane_departure_avoidance ?? false,
-      valueText: (snap.emergency_lane_departure_avoidance ?? false) ? t('Enabled') : t('Disabled'),
+      valueText: (snap.emergency_lane_departure_avoidance ?? false) ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
     },
   ];
 }
@@ -326,10 +326,10 @@ export function buildFeatureCards(
 /*  Table columns                                                      */
 /* ------------------------------------------------------------------ */
 
-function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[] {
+function buildHistoryColumns(t: (k: string, fallback: string) => string): Column<SafetySnapshot>[] {
   const boolCell = (val: boolean): ReactNode => (
     <Badge variant={val ? 'success' : 'danger'} size="sm">
-      {val ? t('On') : t('Off')}
+      {val ? t('common.on', 'On') : t('common.off', 'Off')}
     </Badge>
   );
 
@@ -342,7 +342,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
   return [
     {
       key: 'time',
-      header: t('Time'),
+      header: t('safety.hdrTime', 'Time'),
       sortable: true,
       render: (row) => (
         <TimeStamp value={row.created_at} className={cn(typography.role.caption, 'whitespace-nowrap')} />
@@ -350,47 +350,47 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
     },
     {
       key: 'aeb',
-      header: t('AEB'),
+      header: t('safety.hdrAeb', 'AEB'),
       render: (row) => boolCell(isAebEnabled(row.automatic_emergency_braking_off ?? false)),
     },
     {
       key: 'bsc',
-      header: t('BSC'),
+      header: t('safety.hdrBsc', 'BSC'),
       render: (row) => boolCell(row.automatic_blind_spot_camera ?? false),
     },
     {
       key: 'bscw',
-      header: t('BSCW'),
+      header: t('safety.hdrBscw', 'BSCW'),
       render: (row) => boolCell(row.blind_spot_collision_warning ?? false),
     },
     {
       key: 'fcw',
-      header: t('FCW'),
+      header: t('safety.hdrFcw', 'FCW'),
       render: (row) => enumCell(row.forward_collision_warning, 'forward_collision_warning'),
     },
     {
       key: 'lda',
-      header: t('LDA'),
+      header: t('safety.hdrLda', 'LDA'),
       render: (row) => enumCell(row.lane_departure_avoidance, 'lane_departure_avoidance'),
     },
     {
       key: 'elda',
-      header: t('ELDA'),
+      header: t('safety.hdrElda', 'ELDA'),
       render: (row) => boolCell(row.emergency_lane_departure_avoidance ?? false),
     },
     {
       key: 'cfd',
-      header: t('CFD'),
+      header: t('safety.hdrCfd', 'CFD'),
       render: (row) => enumCell(row.cruise_follow_distance, 'cruise_follow_distance'),
     },
     {
       key: 'slw',
-      header: t('SLW'),
+      header: t('safety.hdrSlw', 'SLW'),
       render: (row) => enumCell(row.speed_limit_warning, 'speed_limit_warning'),
     },
     {
       key: 'pin',
-      header: t('PIN'),
+      header: t('safety.hdrPin', 'PIN'),
       render: (row) => boolCell(row.pin_to_drive_enabled ?? false),
     },
   ];
@@ -410,7 +410,7 @@ function KpiSkeleton() {
 
 export default function SafetySettingsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Safety Settings'));
+  usePageTitle(t('safety.title', 'Safety Settings'));
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
@@ -480,7 +480,7 @@ export default function SafetySettingsPage() {
   /* --- render --- */
   return (
     <PageContainer
-      title={t('Safety Settings')}
+      title={t('safety.title', 'Safety Settings')}
       subtitle={t('safety.subtitle', 'ADAS features, safety score, and driving stats')}
       actions={actions}
     >
@@ -521,15 +521,15 @@ export default function SafetySettingsPage() {
           ) : (
             <>
               <MetricCard
-                label={t('Safety Score')}
+                label={t('safety.scoreTitle', 'Safety Score')}
                 value={`${fmtInt(scorePct)}%`}
                 icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
                 color={scorePct >= 80 ? 'green' : scorePct >= 50 ? 'amber' : 'red'}
               />
-              <MetricCard label={t('Total Features')} value={TOTAL_FEATURES} color="cyan" />
-              <MetricCard label={t('Enabled')} value={enabled} color="green" />
+              <MetricCard label={t('safety.totalFeatures', 'Total Features')} value={TOTAL_FEATURES} color="cyan" />
+              <MetricCard label={t('common.enabled', 'Enabled')} value={enabled} color="green" />
               <MetricCard
-                label={t('Disabled')}
+                label={t('common.disabled', 'Disabled')}
                 value={disabled}
                 color={disabled > 0 ? 'red' : 'green'}
               />
@@ -568,7 +568,7 @@ export default function SafetySettingsPage() {
                 <LinearGauge
                   value={enabled}
                   max={TOTAL_FEATURES}
-                  label={t('Safety Score')}
+                  label={t('safety.scoreTitle', 'Safety Score')}
                   color={scoreColor(scorePct)}
                   size={140}
                 />
@@ -660,7 +660,7 @@ export default function SafetySettingsPage() {
         >
           {/* ADAS feature grid — spans the wide column */}
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3">{t('ADAS Features')}</PanelTitle>
+            <PanelTitle className="mb-3">{t('safety.adasFeatures', 'ADAS Features')}</PanelTitle>
             {noVehicle ? (
               <EmptyState
                 icon={<Car className="h-8 w-8" aria-hidden="true" />}
@@ -766,7 +766,7 @@ export default function SafetySettingsPage() {
       {/* 4 — Detail band: safety states over time */}
       <FadeIn delay={0.15}>
         <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3">{t('Safety States Over Time')}</PanelTitle>
+          <PanelTitle className="mb-3">{t('safety.statesOverTime', 'Safety States Over Time')}</PanelTitle>
           {noVehicle ? (
             <EmptyState
               icon={<Car className="h-8 w-8" aria-hidden="true" />}
@@ -801,7 +801,7 @@ export default function SafetySettingsPage() {
                         tick={axisTick}
                         domain={[0, 1]}
                         ticks={[0, 1]}
-                        tickFormatter={(v: number) => (v === 1 ? t('On') : t('Off'))}
+                        tickFormatter={(v: number) => (v === 1 ? t('common.on', 'On') : t('common.off', 'Off'))}
                       />
                       <Tooltip content={<ChartTooltip />} />
                       <ChartLegend />
@@ -809,7 +809,7 @@ export default function SafetySettingsPage() {
                         {...AREA_DEFAULTS}
                         type="stepAfter"
                         dataKey="aeb"
-                        name={t('AEB')}
+                        name={t('safety.hdrAeb', 'AEB')}
                         stroke={CHART_COLORS[0]}
                         isAnimationActive={false}
                         hide={hiddenSeries?.isHidden('aeb') ?? false}
@@ -818,7 +818,7 @@ export default function SafetySettingsPage() {
                         {...AREA_DEFAULTS}
                         type="stepAfter"
                         dataKey="bscw"
-                        name={t('BSCW')}
+                        name={t('safety.hdrBscw', 'BSCW')}
                         stroke={CHART_COLORS[1]}
                         isAnimationActive={false}
                         hide={hiddenSeries?.isHidden('bscw') ?? false}
@@ -827,7 +827,7 @@ export default function SafetySettingsPage() {
                         {...AREA_DEFAULTS}
                         type="stepAfter"
                         dataKey="elda"
-                        name={t('ELDA')}
+                        name={t('safety.hdrElda', 'ELDA')}
                         stroke={CHART_COLORS[2]}
                         isAnimationActive={false}
                         hide={hiddenSeries?.isHidden('elda') ?? false}
@@ -844,7 +844,7 @@ export default function SafetySettingsPage() {
       {/* 5 — Detail band: full history table */}
       <FadeIn delay={0.2}>
         <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3">{t('Safety Settings History')}</PanelTitle>
+          <PanelTitle className="mb-3">{t('safety.historyTitle', 'Safety Settings History')}</PanelTitle>
           {noVehicle ? (
             <EmptyState
               icon={<Car className="h-8 w-8" aria-hidden="true" />}
@@ -869,6 +869,7 @@ export default function SafetySettingsPage() {
             <DataTable<SafetySnapshot>
               tableId="vehicle-systems:safety-history"
               columns={historyColumns}
+              mobileColumns={['time', 'aeb', 'fcw']}
               data={sortedHistory}
               keyExtractor={(row) => row.id ?? 0}
               compact

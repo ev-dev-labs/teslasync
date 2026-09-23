@@ -458,6 +458,7 @@ export default function MileagePage() {
             <DataTable<MonthRow>
               tableId="analytics:mileage-monthly"
               columns={monthColumns}
+              mobileColumns={['month', 'distance', 'drives']}
               data={monthlyRows}
               keyExtractor={(r) => r.month}
               emptyMessage={t('mileage.noMonthly', 'No monthly distance yet')}

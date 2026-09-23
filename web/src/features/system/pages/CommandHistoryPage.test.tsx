@@ -60,13 +60,20 @@ vi.hoisted(() => {
   }
 });
 
-const { mockRequest } = vi.hoisted(() => ({ mockRequest: vi.fn() }));
+const { mockRequest, tzMock } = vi.hoisted(() => ({ mockRequest: vi.fn(), tzMock: vi.fn() }));
 
 // Only `request` is replaced; the real `isApiError` / `ApiError` exports stay so
 // <QueryError> classifies the injected ApiError(500) into its "Server error" branch.
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: mockRequest };
+});
+
+// Controllable timezone (overrides the global UTC stub) so the bucketing spec
+// can pin the vehicle to America/New_York without affecting other specs.
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual, useTimezone: (...args: unknown[]) => tzMock(...args) };
 });
 
 // i18n → return the developer fallback, interpolating {{vars}} so assertions can
@@ -228,6 +235,7 @@ async function waitForCount(n: number) {
 
 beforeEach(() => {
   mockRequest.mockReset();
+  tzMock.mockReturnValue('UTC');
   window.localStorage.clear();
 });
 
@@ -325,6 +333,8 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     // Panels stay mounted; the KPI band is present even while the feed loads.
     expect(screen.getAllByRole('heading', { level: 3, name: 'Daily Activity' }).length).toBeGreaterThan(0);
     expect(kpiBand()).toBeInTheDocument();
+    // … but its cards wait for data: skeletons, never fabricated zeros.
+    expect(within(kpiBand()).queryByText('Total Commands')).not.toBeInTheDocument();
     // No analytics empty copy while genuinely loading.
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
   });
@@ -334,7 +344,10 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     renderPage();
 
     // Every data panel surfaces the error rather than blanking.
-    await waitFor(() => expect(screen.getAllByText('Server error').length).toBeGreaterThanOrEqual(3));
+    await waitFor(() => expect(screen.getAllByText('Server error').length).toBeGreaterThanOrEqual(4));
+    // The KPI band joins the error states (no fabricated zeros) …
+    expect(within(kpiBand()).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(within(kpiBand()).queryByText('Total Commands')).not.toBeInTheDocument();
 
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries.length).toBeGreaterThan(0);
@@ -367,6 +380,21 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     expect(screen.getByText('Select a vehicle to view command history')).toBeInTheDocument();
     // The command feed is gated off — enabled:!!vehicleId — so it never fires.
     expect(historyCalls().length).toBe(0);
+  });
+});
+
+describe('CommandHistoryPage — daily bucketing timezone', () => {
+  it('buckets daily activity by the vehicle calendar day, not UTC', async () => {
+    tzMock.mockReturnValue('America/New_York');
+    // 00:30 UTC Jan 15 = 19:30 ET Jan 14 → the activity lands on 01-14
+    // (the old UTC slice filed it under 01-15).
+    installRequest({ commands: [mkCmd({ created_at: '2026-01-15T00:30:00Z' })] });
+    renderPage();
+
+    const caption = await screen.findByText('Daily Activity — data table');
+    const table = caption.closest('table') as HTMLElement;
+    expect(within(table).getByText('01-14')).toBeInTheDocument();
+    expect(within(table).queryByText('01-15')).not.toBeInTheDocument();
   });
 });
 

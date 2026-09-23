@@ -171,6 +171,7 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
           <DataTable
             tableId="analytics:tco-fixed-ledger"
             columns={columns}
+            mobileColumns={['incurred_on', 'category', 'amount']}
             data={entries}
             keyExtractor={(e) => e.id}
             emptyMessage={t(

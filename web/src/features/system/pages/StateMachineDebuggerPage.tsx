@@ -8,7 +8,7 @@ import { RangePicker, VehicleSelect } from '@/components/forms';
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import {
   ChartContainer, PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   ChartTooltip, CHART_COLORS,
@@ -18,6 +18,7 @@ import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useSignalSnapshot } from '@/api/hooks/useTelemetry';
 import type { VehicleState } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useTimezone } from '@/lib/timezone';
@@ -145,21 +146,42 @@ export default function StateMachineDebuggerPage() {
   const [bufferClearedAt, setBufferClearedAt] = useState<Date | null>(null);
 
   /* ─── Data hooks ─── */
+  const stateQuery = useVehicleStateMachine(activeId);
+  const stateTrust = useDataState(stateQuery, { provenance: 'live' });
   const {
     data: stateData,
     isLoading: stateLoading,
     isFetching: stateFetching,
-  } = useVehicleStateMachine(activeId);
+    refetch: refetchState,
+  } = stateQuery;
+  const stateError = stateTrust.fatalError;
 
+  const statsQuery = useFSMStats(activeId);
+  const statsTrust = useDataState(statsQuery, { provenance: 'historical' });
   const {
     data: statsData,
     isLoading: statsLoading,
-  } = useFSMStats(activeId);
+    refetch: refetchStats,
+  } = statsQuery;
+  const statsError = statsTrust.fatalError;
 
+  const transQuery = useFSMTransitions(activeId, fsmType, hours, serverPage, perPage, startInstant, endInstantExclusive);
+  const transTrust = useDataState(transQuery, { provenance: 'historical' });
   const {
     data: transData,
     isLoading: transLoading,
-  } = useFSMTransitions(activeId, fsmType, hours, serverPage, perPage, startInstant, endInstantExclusive);
+    refetch: refetchTrans,
+  } = transQuery;
+  const transError = transTrust.fatalError;
+
+  // The KPI band mixes transition-derived cards with the live-state card, so
+  // either query failing poisons it; retry refetches both sources.
+  const kpiError = transError ?? stateError;
+  const kpiLoading = (stateLoading || transLoading) && !kpiError;
+  const retryKpiQueries = useCallback(() => {
+    refetchTrans();
+    refetchState();
+  }, [refetchTrans, refetchState]);
 
   /* ─── Derived data ─── */
   const stateResponse = stateData as unknown as StateResponse | undefined;
@@ -517,12 +539,27 @@ export default function StateMachineDebuggerPage() {
         </div>
       }
     >
+      <StaleRefreshWarning state={stateTrust} label={t('fsm.vehicleLiveState', 'Vehicle Live State')} />
+      <StaleRefreshWarning state={statsTrust} label={t('fsm.subFsms', 'Active sub-FSMs')} />
+      <StaleRefreshWarning state={transTrust} label={t('fsm.timelineTitle', 'Transition Log')} />
       {/* ──── 1 — KPI band: full-width responsive metric grid ──── */}
       <FadeIn>
         <section
           aria-label={t('fsm.kpis', 'FSM summary metrics')}
           className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         >
+          {kpiLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
+            ))
+          ) : kpiError ? (
+            <QueryError
+              error={kpiError}
+              onRetry={retryKpiQueries}
+              className="col-span-2 lg:col-span-4"
+            />
+          ) : (
+            <>
           <StatCard
             label={t('fsm.totalOnPage', 'Transitions (Page)')}
             value={`${fmtInt(totalTransitionsOnPage)} / ${fmtInt(totalRows)}`}
@@ -543,6 +580,8 @@ export default function StateMachineDebuggerPage() {
             value={stateName ?? '—'}
             icon={<Zap className="h-4 w-4" aria-hidden="true" />}
           />
+            </>
+          )}
         </section>
       </FadeIn>
 
@@ -589,7 +628,15 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── 3 — FSM Health Indicators (full-width alert band) ──── */}
       <FadeIn delay={0.06}>
-        <FSMHealthPanel transitions={transitions} />
+        {transLoading ? (
+          <GlassPanel className="p-4">
+            <Skeleton height={24} />
+          </GlassPanel>
+        ) : transError ? (
+          <QueryError error={transError} onRetry={() => refetchTrans()} />
+        ) : (
+          <FSMHealthPanel transitions={transitions} />
+        )}
       </FadeIn>
 
       {/* ──── 4 — AI FSM narrator ────
@@ -632,6 +679,8 @@ export default function StateMachineDebuggerPage() {
             </PanelTitle>
             {stateLoading ? (
               <Skeleton height={80} />
+            ) : stateError ? (
+              <QueryError error={stateError} onRetry={() => refetchState()} />
             ) : currentState ? (
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-8">
                 <div
@@ -685,13 +734,27 @@ export default function StateMachineDebuggerPage() {
             )}
           </GlassPanel>
 
-          <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={subFsmType} />
+          {subFsmType === 'vehicle' && statsLoading ? (
+            <GlassPanel className="p-4">
+              <Skeleton height={80} />
+            </GlassPanel>
+          ) : statsError && subFsmType === 'vehicle' ? (
+            <GlassPanel className="p-4">
+              <QueryError error={statsError} onRetry={() => refetchStats()} compact />
+            </GlassPanel>
+          ) : (
+            <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={subFsmType} />
+          )}
         </section>
       </FadeIn>
 
       {/* ──── 6 — Live controls + state timeline + inspector ──── */}
       <FadeIn delay={0.15}>
         <GlassPanel className="space-y-4 p-4 sm:p-5" data-tour="debugger-timeline">
+          {transError ? (
+            <QueryError error={transError} onRetry={() => refetchTrans()} />
+          ) : (
+            <>
           <div data-tour="debugger-controls">
             <LiveControls
               isLive={isLive}
@@ -736,6 +799,8 @@ export default function StateMachineDebuggerPage() {
               onJumpToLast={handleJumpToLast}
             />
           </div>
+            </>
+          )}
         </GlassPanel>
       </FadeIn>
 
@@ -759,6 +824,8 @@ export default function StateMachineDebuggerPage() {
               { key: 'value', label: t('fsm.col.count', 'Count') },
             ]}
             loading={transLoading}
+            error={transError}
+            onRetry={() => refetchTrans()}
             height={280}
           >
             {pieData.length > 0 ? (
@@ -806,10 +873,13 @@ export default function StateMachineDebuggerPage() {
             </PanelTitle>
             {transLoading ? (
               <Skeleton height={200} />
+            ) : transError ? (
+              <QueryError error={transError} onRetry={() => refetchTrans()} />
             ) : summaryRows.length > 0 ? (
               <DataTable<StatSummaryRow>
                 tableId="system:fsm-summary"
                 columns={summaryColumns}
+                mobileColumns={['to_state', 'count', 'avg_interval']}
                 data={summaryRows}
                 keyExtractor={(row) => row.to_state}
               />
@@ -822,7 +892,11 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── 9 — Transition Timeline Chart (full-width) ──── */}
       <FadeIn delay={0.24}>
-        <FSMTimelineChart transitions={timelineTransitions} hours={Number(hours)} emptyMessage={emptyRangeMessage} />
+        {transError ? (
+          <QueryError error={transError} onRetry={() => refetchTrans()} />
+        ) : (
+          <FSMTimelineChart transitions={timelineTransitions} hours={Number(hours)} emptyMessage={emptyRangeMessage} />
+        )}
       </FadeIn>
 
       {/* ──── 10 — Transition Log (full-width detail band) ──── */}
@@ -842,11 +916,14 @@ export default function StateMachineDebuggerPage() {
                 <Skeleton key={i} height={48} />
               ))}
             </div>
+          ) : transError ? (
+            <QueryError error={transError} onRetry={() => refetchTrans()} />
           ) : transitions.length > 0 ? (
             <>
               <DataTable<FSMTransition>
                 tableId="system:fsm-transitions"
                 columns={timelineColumns}
+                mobileColumns={['time', 'from_state', 'to_state']}
                 data={transitions}
                 keyExtractor={(tr) => String(tr.id)}
                 compact

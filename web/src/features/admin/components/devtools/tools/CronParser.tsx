@@ -24,11 +24,11 @@ export function CronParserTool() {
 
   const presets = useMemo(
     () => [
-      { label: t('Every Minute'), value: '* * * * *' },
-      { label: t('Every Hour'), value: '0 * * * *' },
-      { label: t('Every Day'), value: '0 0 * * *' },
-      { label: t('Every Week'), value: '0 0 * * 0' },
-      { label: t('Every Month'), value: '0 0 1 * *' },
+      { label: t('devtools.utils.cronEveryMinute', 'Every Minute'), value: '* * * * *' },
+      { label: t('devtools.utils.cronEveryHour', 'Every Hour'), value: '0 * * * *' },
+      { label: t('devtools.utils.cronEveryDay', 'Every Day'), value: '0 0 * * *' },
+      { label: t('devtools.utils.cronEveryWeek', 'Every Week'), value: '0 0 * * 0' },
+      { label: t('devtools.utils.cronEveryMonth', 'Every Month'), value: '0 0 1 * *' },
     ],
     [t],
   )
@@ -36,10 +36,10 @@ export function CronParserTool() {
   const applyPreset = useCallback((value: string) => setExpr(value), [])
 
   return (
-    <ToolCard icon={Timer} color="green" title={t('Cron Parser')} description={t('Cron Parser Desc')}>
+    <ToolCard icon={Timer} color="green" title={t('devtools.utils.cron', 'Cron Parser')} description={t('devtools.utils.cronDesc', 'Cron Parser Desc')}>
       <div className="space-y-3">
         <Input
-          label={t('Cron Expression')}
+          label={t('devtools.utils.cronExpression', 'Cron Expression')}
           placeholder="*/5 * * * *"
           value={expr}
           onChange={(e) => setExpr(e.target.value)}
@@ -55,14 +55,14 @@ export function CronParserTool() {
 
         {trimmed === '' && (
           <p className="text-xs text-[var(--text-secondary)]">
-            {t('Enter a cron expression or pick a preset to preview its schedule')}
+            {t('devtools.utils.cronEmptyHint', 'Enter a cron expression or pick a preset to preview its schedule')}
           </p>
         )}
 
         {trimmed !== '' && !isValid && (
           <div role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
             <p className="text-sm text-amber-300">
-              {t('Enter all 5 cron fields: minute, hour, day, month, weekday')}
+              {t('devtools.utils.cronFieldsHint', 'Enter all 5 cron fields: minute, hour, day, month, weekday')}
             </p>
           </div>
         )}
@@ -70,11 +70,11 @@ export function CronParserTool() {
         {isValid && (
           <>
             <div className="rounded bg-[var(--surface-overlay)] px-3 py-2">
-              <span className="text-xs text-[var(--text-secondary)]">{t('Description')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronDescription', 'Description')}</span>
               <p className="text-sm text-emerald-300">{description || '—'}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-xs text-[var(--text-secondary)]">{t('Next Runs')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronNextRuns', 'Next Runs')}</span>
               {nextRuns.length > 0 ? (
                 nextRuns.map((d, i) => (
                   <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
@@ -84,7 +84,7 @@ export function CronParserTool() {
                 ))
               ) : (
                 <p className="text-xs text-[var(--text-secondary)]">
-                  {t('No upcoming runs in the next year')}
+                  {t('devtools.utils.cronNoRuns', 'No upcoming runs in the next year')}
                 </p>
               )}
             </div>

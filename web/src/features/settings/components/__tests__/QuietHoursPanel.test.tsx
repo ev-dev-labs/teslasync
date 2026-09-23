@@ -24,6 +24,8 @@ vi.mock('@/api/client', () => ({
   request: vi.fn(),
 }))
 
+
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   return {
@@ -178,6 +180,8 @@ describe('QuietHoursPanel', () => {
       expect(screen.getByTestId('quiet-hours-row-1')).toBeInTheDocument()
     })
     fireEvent.click(screen.getByText('Delete'))
+    const confirm = await screen.findByRole('dialog', { name: 'Delete this quiet-hours window?' })
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }))
     await waitFor(() => {
       expect(mockedRequest).toHaveBeenCalledWith(
         '/notifications/quiet-hours/1',

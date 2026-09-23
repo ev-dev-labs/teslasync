@@ -518,6 +518,7 @@ export default function RedisSignalViewerPage() {
                   tableId="admin:redis-signals"
                   data={filteredRows}
                   columns={columns}
+                  mobileColumns={['name', 'value', 'type']}
                   keyExtractor={(row) => row.name}
                   sortKey={sortKey}
                   sortDir={sortDir}

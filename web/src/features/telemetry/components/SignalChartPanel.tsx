@@ -132,7 +132,7 @@ export function SignalChartPanel({
     return selectedSignals.length > gridAutoThreshold ? 'grid' : 'overlay';
   }, [chartMode, selectedSignals.length, gridAutoThreshold]);
 
-  const resolvedTitle = title ?? (isLive ? t('Live Signal Stream') : t('Signal Chart'));
+  const resolvedTitle = title ?? (isLive ? t('signalChart.liveTitle', 'Live Signal Stream') : t('signalChart.histTitle', 'Signal Chart'));
   const accessibleRows = useMemo(
     () => data.map((point) => {
       const row: Record<string, AccessibleChartValue> = {
@@ -176,13 +176,13 @@ export function SignalChartPanel({
             </span>
           ) : data.length > 0 && pointsLoaded != null ? (
             <span className="ml-auto text-2xs text-[var(--text-muted)]">
-              {fmtInt(pointsLoaded)} {t('points loaded')}
+              {fmtInt(pointsLoaded)} {t('signalChart.pointsLoaded', 'points loaded')}
             </span>
           ) : null}
         </div>
 
         {loading && !isLive ? (
-          <div style={{ height }} role="status" aria-label={t('Loading chart…')}>
+          <div style={{ height }} role="status" aria-label={t('signalChart.loading', 'Loading chart…')}>
             <Skeleton className="h-full w-full" />
           </div>
         ) : effectiveMode === 'grid' ? (

@@ -4,22 +4,36 @@
  * own loading state: renders four skeletons inside a labelled, `aria-busy`
  * status region until the stats query resolves, then four null-safe metric
  * cards. Every value falls back to `0` (and the channel ratio to `0/0`) so the
- * band never renders a blank or `NaN` cell.
+ * band never renders a blank or `NaN` cell. A failed stats query renders an
+ * inline error with retry instead of zeros that would read as healthy.
  */
 
 import { useTranslation } from 'react-i18next';
 import { Bell, CheckCircle, XCircle } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback';
+import { QueryError, Skeleton } from '@/components/feedback';
 import type { NotificationStats } from '@/api/types';
 
 interface ChannelStatsBandProps {
   stats?: NotificationStats;
   isLoading: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
-export function ChannelStatsBand({ stats, isLoading }: ChannelStatsBandProps) {
+export function ChannelStatsBand({ stats, isLoading, error, onRetry }: ChannelStatsBandProps) {
   const { t } = useTranslation();
+
+  if (error && !stats) {
+    return (
+      <QueryError
+        error={error}
+        onRetry={onRetry}
+        compact
+        resourceName={t('notifications.stats.resource', 'notification statistics')}
+      />
+    );
+  }
 
   if (isLoading && !stats) {
     return (

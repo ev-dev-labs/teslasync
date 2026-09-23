@@ -31,7 +31,7 @@ import type { AuditLogEntry } from '@/types/admin';
 
 export default function AuditLogPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Audit Log'));
+  usePageTitle(t('audit.title', 'Audit Log'));
   const { data: auditLogs, isLoading, error } = useAuditLogs();
 
   const [search, setSearch] = useState('');
@@ -50,7 +50,7 @@ export default function AuditLogPage() {
     () => [
       {
         key: 'time',
-        header: t('Time'),
+        header: t('audit.time', 'Time'),
         render: (log) => (
           <span className="text-xs font-mono whitespace-nowrap text-[var(--text-muted)]">
             {formatDateTime(log.createdAt)}
@@ -59,17 +59,17 @@ export default function AuditLogPage() {
       },
       {
         key: 'action',
-        header: t('Action'),
+        header: t('audit.action', 'Action'),
         render: (log) => <span className="text-[var(--text-primary)]">{log.action ?? '—'}</span>,
       },
       {
         key: 'resource',
-        header: t('Resource'),
+        header: t('audit.resource', 'Resource'),
         render: (log) => <span className="font-mono text-cyan-300">{log.resource ?? '—'}</span>,
       },
       {
         key: 'details',
-        header: t('Details'),
+        header: t('audit.details', 'Details'),
         render: (log) => (
           <span className="text-xs truncate max-w-xs text-[var(--text-muted)]">
             {log.details ?? '—'}
@@ -82,14 +82,14 @@ export default function AuditLogPage() {
 
   return (
     <PageContainer
-      title={t('Audit Log')}
-      subtitle={t('Recent system-level changes recorded by the audit subsystem')}
+      title={t('audit.title', 'Audit Log')}
+      subtitle={t('audit.subtitle', 'Recent system-level changes recorded by the audit subsystem')}
     >
       <FadeIn>
         <GlassPanel className="p-6">
           <PanelTitle className="mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-neon-cyan" aria-hidden="true" />
-            {t('Recent Activity')}
+            {t('audit.recentActivity', 'Recent Activity')}
           </PanelTitle>
 
           {isLoading ? (
@@ -101,7 +101,7 @@ export default function AuditLogPage() {
           ) : error ? (
             <span role="alert" className="text-sm text-rose-300 flex items-center gap-2 mt-4">
               <AlertTriangle className="h-4 w-4" aria-hidden="true" />{' '}
-              {t('Failed to load audit logs')}:{' '}
+              {t('audit.loadFailed', 'Failed to load audit logs')}:{' '}
               {(error instanceof Error && error.message) ||
                 t('audit.loadError.unknown', 'Unknown error')}
             </span>
@@ -139,6 +139,7 @@ export default function AuditLogPage() {
                 <DataTable
                   tableId="audit-logs"
                   columns={columns}
+                  mobileColumns={['time', 'action', 'resource']}
                   data={filtered}
                   keyExtractor={(log) => String(log.id)}
                   compact
@@ -154,7 +155,7 @@ export default function AuditLogPage() {
             </div>
           ) : (
             <span className="text-sm text-[var(--text-muted)] mt-4 block">
-              {t('No audit entries found')}
+              {t('audit.noEntries', 'No audit entries found')}
             </span>
           )}
         </GlassPanel>

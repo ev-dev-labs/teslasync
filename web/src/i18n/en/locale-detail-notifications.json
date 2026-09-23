@@ -91,6 +91,10 @@
         "announceRestored_one": "{{count}} item restored",
         "announceRestored_other": "{{count}} items restored"
       },
+      "single": {
+        "deleteConfirmTitle": "Delete this notification?",
+        "deleteConfirmBody": "“{{title}}” will be permanently removed. Archive is usually the safer choice."
+      },
       "empty": {
         "title": "No notifications",
         "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
@@ -159,7 +163,8 @@
       "failed": "Failed",
       "pending": "Pending",
       "activeChannels": "Active Channels",
-      "loading": "Loading notification statistics"
+      "loading": "Loading notification statistics",
+      "resource": "notification statistics"
     },
     "channels": {
       "add": "Add Channel",

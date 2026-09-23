@@ -775,6 +775,7 @@ export default function BackupRestorePage() {
               <DataTable<BackupConfig>
                 tableId="admin:backup-configs"
                 columns={configColumns}
+                mobileColumns={['name', 'provider', 'schedule']}
                 data={configs}
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('backup.noConfigs', 'No backup configurations')}
@@ -900,6 +901,7 @@ export default function BackupRestorePage() {
             <DataTable<BackupRun>
               tableId="admin:backup-runs"
               columns={runColumns}
+              mobileColumns={['file_name', 'status', 'created_at']}
               data={runs}
               keyExtractor={(r) => r.id}
               emptyMessage={t('backup.noRuns', 'No backup runs yet')}

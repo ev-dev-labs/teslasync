@@ -184,6 +184,7 @@ export function RateHistoryPanel({
         <DataTable
           tableId="maps:charging-place-rate-history"
           columns={columns}
+          mobileColumns={['effective_from', 'rate_per_wh', 'effective_to']}
           data={sortedRows}
           keyExtractor={(r) => r.id}
           sortKey={sortKey}

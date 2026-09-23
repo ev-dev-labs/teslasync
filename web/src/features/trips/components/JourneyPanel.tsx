@@ -291,6 +291,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
         ) : (
           <DataTable
             columns={columns}
+            mobileColumns={['journey', 'status', 'updated']}
             data={sessions}
             keyExtractor={(row) => row.id}
             tableId="journey-sessions"

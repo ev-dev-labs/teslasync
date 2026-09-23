@@ -128,7 +128,7 @@ function isGeolocationError(err: unknown): boolean {
 
 export default function GeofencesPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Geofences'));
+  usePageTitle(t('geofences.title', 'Geofences'));
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -207,10 +207,10 @@ export default function GeofencesPage() {
       request<Geofence>('/geofences', { method: 'POST', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
-      toast.success(t('Geofence created'));
+      toast.success(t('geofences.toastCreated', 'Geofence created'));
       closeModal();
     },
-    onError: (err: Error) => toast.error(t('Failed to create geofence'), err.message),
+    onError: (err: Error) => toast.error(t('geofences.toastCreateError', 'Failed to create geofence'), err.message),
   });
 
   const updateMut = useMutation({
@@ -223,10 +223,10 @@ export default function GeofencesPage() {
     }) => request<Geofence>(`/geofences/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
-      toast.success(t('Geofence updated'));
+      toast.success(t('geofences.toastUpdated', 'Geofence updated'));
       closeModal();
     },
-    onError: (err: Error) => toast.error(t('Failed to update geofence'), err.message),
+    onError: (err: Error) => toast.error(t('geofences.toastUpdateError', 'Failed to update geofence'), err.message),
   });
 
   const deleteMut = useMutation({
@@ -234,10 +234,10 @@ export default function GeofencesPage() {
       request<void>(`/geofences/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
-      toast.success(t('Geofence deleted'));
+      toast.success(t('geofences.toastDeleted', 'Geofence deleted'));
       setDeleteTarget(null);
     },
-    onError: (err: Error) => toast.error(t('Failed to delete geofence'), err.message),
+    onError: (err: Error) => toast.error(t('geofences.toastDeleteError', 'Failed to delete geofence'), err.message),
   });
 
   const quickUpdateMut = useMutation({
@@ -253,7 +253,7 @@ export default function GeofencesPage() {
         body: JSON.stringify(patch),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['geofences'] }),
-    onError: (err: Error) => toast.error(t('Failed to update geofence'), err.message),
+    onError: (err: Error) => toast.error(t('geofences.toastUpdateError', 'Failed to update geofence'), err.message),
   });
 
   // ─── Computed stats ──────────────────────────────────────────────────────
@@ -520,8 +520,8 @@ export default function GeofencesPage() {
 
   return (
     <PageContainer
-      title={t('Geofences')}
-      subtitle={t('Define locations for contextual tracking and automation')}
+      title={t('geofences.title', 'Geofences')}
+      subtitle={t('geofences.subtitle', 'Define locations for contextual tracking and automation')}
       query={geofencesQuery}
       actions={
         <div className="flex items-center gap-2">
@@ -536,7 +536,7 @@ export default function GeofencesPage() {
             />
           </Button>
           <Button variant="primary" icon={<Plus className="h-4 w-4" aria-hidden="true" />} onClick={openCreate}>
-            {t('Add Geofence')}
+            {t('geofences.addGeofence', 'Add Geofence')}
           </Button>
         </div>
       }
@@ -555,25 +555,25 @@ export default function GeofencesPage() {
           ) : (
             <>
               <MetricCard
-                label={t('Total Geofences')}
+                label={t('geofences.totalGeofences', 'Total Geofences')}
                 value={stats.total ?? 0}
                 icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
                 color="purple"
               />
               <MetricCard
-                label={t('Active')}
+                label={t('common.active', 'Active')}
                 value={stats.active ?? 0}
                 icon={<Check className="h-4 w-4" aria-hidden="true" />}
                 color="green"
               />
               <MetricCard
-                label={t('Entry Alerts')}
+                label={t('geofences.entryAlerts', 'Entry Alerts')}
                 value={stats.entryAlerts ?? 0}
                 icon={<LogIn className="h-4 w-4" aria-hidden="true" />}
                 color="cyan"
               />
               <MetricCard
-                label={t('Exit Alerts')}
+                label={t('geofences.exitAlerts', 'Exit Alerts')}
                 value={stats.exitAlerts ?? 0}
                 icon={<LogOut className="h-4 w-4" aria-hidden="true" />}
                 color="amber"
@@ -653,7 +653,7 @@ export default function GeofencesPage() {
       <Modal
         open={modalOpen}
         onClose={handleRequestClose}
-        title={editingId ? t('Edit Geofence') : t('Create Geofence')}
+        title={editingId ? t('geofences.editTitle', 'Edit Geofence') : t('geofences.createTitle', 'Create Geofence')}
         size="md"
       >
         <div className="space-y-4">
@@ -747,16 +747,16 @@ export default function GeofencesPage() {
             </GlassPanel>
           )}
           <Input
-            label={t('Name')}
+            label={t('geofences.formName', 'Name')}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder={t('Home')}
+            placeholder={t('geofences.namePlaceholder', 'Home')}
             error={fieldErrors.name}
           />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
-              label={t('Latitude')}
+              label={t('geofences.latitude', 'Latitude')}
               type="number"
               step="any"
               value={form.latitude}
@@ -766,7 +766,7 @@ export default function GeofencesPage() {
               error={fieldErrors.latitude}
             />
             <Input
-              label={t('Longitude')}
+              label={t('geofences.longitude', 'Longitude')}
               type="number"
               step="any"
               value={form.longitude}
@@ -778,13 +778,13 @@ export default function GeofencesPage() {
           </div>
 
           <Input
-            label={t('Radius (meters)')}
+            label={t('geofences.radiusMeters', 'Radius (meters)')}
             type="number"
             value={form.radius}
             onChange={(e) => setForm({ ...form, radius: e.target.value })}
             placeholder="100"
             icon={<Ruler className="h-4 w-4" aria-hidden="true" />}
-            hint={t('Minimum 10m, maximum 50000m')}
+            hint={t('geofences.radiusHint', 'Minimum 10m, maximum 50000m')}
             error={fieldErrors.radius}
           />
 
@@ -808,7 +808,7 @@ export default function GeofencesPage() {
           />
 
           <Select
-            label={t('Alert Type')}
+            label={t('geofences.alertType', 'Alert Type')}
             options={ALERT_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))}
             value={form.alertType}
             onChange={(e) =>
@@ -818,14 +818,14 @@ export default function GeofencesPage() {
           />
 
           <Toggle
-            label={t('Active')}
+            label={t('common.active', 'Active')}
             checked={form.enabled}
             onChange={(checked) => setForm({ ...form, enabled: checked })}
           />
 
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={handleRequestClose} icon={<X className="h-4 w-4" aria-hidden="true" />}>
-              {t('Cancel')}
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               variant="primary"
@@ -834,7 +834,7 @@ export default function GeofencesPage() {
               loading={isSaving}
               icon={<Check className="h-4 w-4" aria-hidden="true" />}
             >
-              {editingId ? t('Update') : t('Create')}
+              {editingId ? t('common.update', 'Update') : t('common.create', 'Create')}
             </Button>
           </div>
         </div>
@@ -846,12 +846,12 @@ export default function GeofencesPage() {
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
         open={deleteTarget !== null}
-        title={t('Delete Geofence')}
-        message={t('Are you sure you want to delete "{{name}}"? This action cannot be undone.', {
+        title={t('geofences.deleteTitle', 'Delete Geofence')}
+        message={t('geofences.deleteMessage', 'Are you sure you want to delete "{{name}}"? This action cannot be undone.', {
           name: deleteTarget?.name ?? '',
         })}
-        confirmLabel={t('Delete')}
-        cancelLabel={t('Cancel')}
+        confirmLabel={t('common.delete', 'Delete')}
+        cancelLabel={t('common.cancel', 'Cancel')}
         variant="danger"
         onConfirm={() => {
           if (deleteTarget) deleteMut.mutate(String(deleteTarget.id));

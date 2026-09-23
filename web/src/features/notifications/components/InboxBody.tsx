@@ -40,6 +40,7 @@ import { cn } from '@/lib/cn';
 import {
   Button,
   Checkbox,
+  ConfirmDialog,
   GlassPanel,
   Modal,
   Text,
@@ -53,6 +54,7 @@ import { useToast } from '@/components/feedback/Toast';
 import { ListExportMenu, type ExportScope } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
+import { useConfirm } from '@/hooks/useConfirm';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
@@ -326,8 +328,26 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const archiveMut = useArchiveNotifications();
   const unarchiveMut = useUnarchiveNotifications();
   const deleteMut = useDeleteNotifications();
+  const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm();
   const toast = useToast();
   const { announce } = useAnnouncer();
+
+  const handleSingleDelete = useCallback(
+    async (log: NotificationLog) => {
+      const ok = await confirmDelete({
+        title: t('notifications.inbox.single.deleteConfirmTitle', 'Delete this notification?'),
+        message: t(
+          'notifications.inbox.single.deleteConfirmBody',
+          '“{{title}}” will be permanently removed. Archive is usually the safer choice.',
+          { title: log.title },
+        ),
+        variant: 'danger',
+        confirmLabel: t('common.delete', 'Delete'),
+      });
+      if (ok) deleteMut.mutate([log.id]);
+    },
+    [confirmDelete, deleteMut, t],
+  );
 
   // Auto-mark-read on inbox open (only on the Inbox tab, flat view; in
   // grouped view this would dismiss every thread head and defeat the
@@ -626,11 +646,11 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         label: t('common.delete', 'Delete'),
         icon: <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />,
         destructive: true,
-        onClick: () => deleteMut.mutate([log.id]),
+        onClick: () => void handleSingleDelete(log),
       });
       return items;
     },
-    [ruleMap, vehicleMap, t, archiveMut, unarchiveMut, markReadMut, markUnreadMut, deleteMut, navigate],
+    [ruleMap, vehicleMap, t, archiveMut, unarchiveMut, markReadMut, markUnreadMut, handleSingleDelete, navigate],
   );
   const handleRowContextMenu = useCallback(
     (log: NotificationLog) =>
@@ -964,6 +984,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       )}
     </div>
     </PullToRefresh>
+      {deleteDialogProps && <ConfirmDialog {...deleteDialogProps} />}
     </>
   );
 }

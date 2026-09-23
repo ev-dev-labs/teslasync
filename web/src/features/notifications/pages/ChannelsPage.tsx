@@ -86,7 +86,12 @@ export default function ChannelsPage() {
       {/* 1 — Delivery-health KPI band (full-width) */}
       <FadeIn>
         <section aria-label={t('notifications.channels.statsAria', 'Notification delivery summary')}>
-          <ChannelStatsBand stats={statsQuery.data} isLoading={statsQuery.isLoading} />
+          <ChannelStatsBand
+            stats={statsQuery.data}
+            isLoading={statsQuery.isLoading}
+            error={statsQuery.error}
+            onRetry={() => statsQuery.refetch()}
+          />
         </section>
       </FadeIn>
 

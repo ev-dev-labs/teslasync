@@ -382,6 +382,31 @@ export function toLocalDatetimeStr(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
+/**
+ * Stored UTC ISO instant → `<input type="datetime-local">` value
+ * ("2026-04-04T14:30", browser-local wall time). Never slice a UTC string
+ * directly: the input interprets the value as LOCAL time, so slicing shifts
+ * the instant by the UTC offset on save. Returns '' for missing/invalid input.
+ */
+export function isoUtcToLocalDatetimeInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  return toLocalDatetimeStr(d).slice(0, 16)
+}
+
+/**
+ * `<input type="datetime-local">` value → stored UTC ISO instant. Returns null
+ * for empty/invalid input instead of throwing (a cleared input must never
+ * crash the form — callers keep the previous value or show a validation error).
+ */
+export function localDatetimeInputToIso(value: string | null | undefined): string | null {
+  if (!value) return null
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
 /** Weekday + short date: "Fri, Apr 4" */
 export function formatDateWithDay(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'

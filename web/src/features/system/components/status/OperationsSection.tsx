@@ -67,7 +67,7 @@ export function OperationsSection() {
   const notifLogColumns = useMemo<Column<NotificationLog>[]>(
     () => [
       {
-        key: 'status', header: t('Status'),
+        key: 'status', header: t('common.status', 'Status'),
         render: (row) => (
           <div className="flex items-center gap-2">
             {getStatusIcon(row.status)}
@@ -76,25 +76,25 @@ export function OperationsSection() {
         ),
       },
       {
-        key: 'title', header: t('Title'),
+        key: 'title', header: t('systemStatus.operations.hdrTitle', 'Title'),
         render: (row) => <span className="text-[var(--text-primary)] truncate max-w-[200px] block">{row.title ?? '—'}</span>,
       },
       {
-        key: 'message', header: t('Message'),
+        key: 'message', header: t('systemStatus.operations.message', 'Message'),
         render: (row) => <span className="text-xs text-[var(--text-muted)] truncate max-w-[250px] block">{row.message ?? '—'}</span>,
       },
-      { key: 'created_at', header: t('Time'), render: (row) => formatDateTime(row.created_at) },
+      { key: 'created_at', header: t('systemStatus.operations.time', 'Time'), render: (row) => formatDateTime(row.created_at) },
     ],
     [t],
   );
 
   const auditColumns = useMemo<Column<AuditLog>[]>(
     () => [
-      { key: 'created_at', header: t('Time'), render: (row) => formatDateTime(row.created_at) },
-      { key: 'action', header: t('Action'), render: (row) => <Badge variant="info" size="sm">{row.action ?? '—'}</Badge> },
-      { key: 'resource', header: t('Resource'), render: (row) => <span className="font-mono text-xs">{row.resource ?? '—'}</span> },
+      { key: 'created_at', header: t('systemStatus.operations.time', 'Time'), render: (row) => formatDateTime(row.created_at) },
+      { key: 'action', header: t('systemStatus.operations.action', 'Action'), render: (row) => <Badge variant="info" size="sm">{row.action ?? '—'}</Badge> },
+      { key: 'resource', header: t('systemStatus.operations.resource', 'Resource'), render: (row) => <span className="font-mono text-xs">{row.resource ?? '—'}</span> },
       {
-        key: 'details', header: t('Details'),
+        key: 'details', header: t('systemStatus.operations.details', 'Details'),
         render: (row) => <span className="text-xs text-[var(--text-muted)] truncate max-w-[250px] block">{row.details ?? '—'}</span>,
       },
     ],
@@ -104,15 +104,15 @@ export function OperationsSection() {
   return (
     <AccordionSection
       icon={<Bell className="h-5 w-5" />}
-      title={t('Operations')}
-      description={t('Notification delivery and audit trail')}
+      title={t('systemStatus.operations.title', 'Operations')}
+      description={t('systemStatus.operations.desc', 'Notification delivery and audit trail')}
       badges={
         notifStats ? (
           <Badge
             variant={successRate >= 95 ? 'success' : successRate >= 80 ? 'warning' : 'danger'}
             size="sm"
           >
-            {fmtPercent(successRate, 1)} {t('success rate')}
+            {fmtPercent(successRate, 1)} {t('systemStatus.operations.successRateSuffix', 'success rate')}
           </Badge>
         ) : undefined
       }
@@ -125,23 +125,23 @@ export function OperationsSection() {
       ) : (
         <div className="space-y-6">
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Notification Delivery')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.operations.notifTitle', 'Notification Delivery')}</h4>
             {statsError ? (
               <QueryError error={statsErrorObj} onRetry={() => void refetchStats()} />
             ) : notifStats ? (
               <>
                 <Grid cols={{ default: 2, md: 4 }} gap={3} className="mb-4">
-                  <MetricCard label={t('Total Sent')} value={fmtInt(notifStats.total_sent ?? 0)} icon={<Send className="h-4 w-4" />} color="cyan" />
-                  <MetricCard label={t('Failed')} value={fmtInt(notifStats.failed ?? 0)} icon={<XCircle className="h-4 w-4" />} color="red" />
-                  <MetricCard label={t('Success Rate')} value={fmtPercent(successRate, 1)} icon={<CheckCircle className="h-4 w-4" />} color="green" />
-                  <MetricCard label={t('Channels')} value={`${notifStats.enabled_channels ?? 0}/${notifStats.total_channels ?? 0}`} icon={<Bell className="h-4 w-4" />} color="purple" />
+                  <MetricCard label={t('systemStatus.operations.totalSent', 'Total Sent')} value={fmtInt(notifStats.total_sent ?? 0)} icon={<Send className="h-4 w-4" />} color="cyan" />
+                  <MetricCard label={t('systemStatus.failed', 'Failed')} value={fmtInt(notifStats.failed ?? 0)} icon={<XCircle className="h-4 w-4" />} color="red" />
+                  <MetricCard label={t('systemStatus.operations.successRate', 'Success Rate')} value={fmtPercent(successRate, 1)} icon={<CheckCircle className="h-4 w-4" />} color="green" />
+                  <MetricCard label={t('systemStatus.operations.channels', 'Channels')} value={`${notifStats.enabled_channels ?? 0}/${notifStats.total_channels ?? 0}`} icon={<Bell className="h-4 w-4" />} color="purple" />
                 </Grid>
 
                 <div className="flex justify-center mb-4">
                   <LinearGauge
                     value={successRate}
                     max={100}
-                    label={t('Success')}
+                    label={t('systemStatus.operations.success', 'Success')}
                     unit="%"
                     tone={successRate >= 95 ? 'success' : successRate >= 80 ? 'warning' : 'danger'}
                     size={120}
@@ -170,28 +170,30 @@ export function OperationsSection() {
               <DataTable
                 tableId="system:operations-notifications"
                 columns={notifLogColumns}
+                mobileColumns={['status', 'title']}
                 data={notifRows}
                 keyExtractor={(l) => l.id}
                 compact
                 pagination={{ defaultPageSize: 50 }}
-                emptyMessage={t('No recent notifications')}
+                emptyMessage={t('systemStatus.operations.noNotif', 'No recent notifications')}
               />
             )}
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Audit Log')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.operations.auditTitle', 'Audit Log')}</h4>
             {auditError ? (
               <QueryError error={auditErrorObj} onRetry={() => void refetchAudit()} />
             ) : (
               <DataTable
                 tableId="system:operations-audit"
                 columns={auditColumns}
+                mobileColumns={['action', 'resource']}
                 data={auditRows}
                 keyExtractor={(l) => l.id}
                 compact
                 pagination={{ defaultPageSize: 50 }}
-                emptyMessage={t('No audit log entries')}
+                emptyMessage={t('systemStatus.operations.noAudit', 'No audit log entries')}
               />
             )}
           </div>

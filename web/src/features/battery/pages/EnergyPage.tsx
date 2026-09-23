@@ -1645,6 +1645,7 @@ export default function EnergyPage() {
             <DataTable
               tableId="battery:energy-sessions"
               columns={sessionColumns}
+              mobileColumns={['date', 'energy', 'cost']}
               data={sessions.slice(0, 15)}
               keyExtractor={(s) => s.id}
               pagination

@@ -1,5 +1,11 @@
 {
   "settings": {
+    "quietHours": {
+      "deleteConfirm": {
+        "title": "Delete this quiet-hours window?",
+        "message": "Notifications will no longer be deferred during this window. This cannot be undone."
+      }
+    },
     "tours": {
       "label": "Product tours",
       "title": "Product tours",

@@ -123,6 +123,12 @@ export default function ChargingHeatmapPage() {
         >
           {isLoading ? (
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={92} />)
+          ) : isError ? (
+            <QueryError
+              error={error}
+              onRetry={() => refetch()}
+              className="col-span-2 lg:col-span-4"
+            />
           ) : (
             <>
               <MetricCard

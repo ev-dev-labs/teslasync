@@ -28,8 +28,9 @@ import { AlertBanner } from '@/components/feedback';
 import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -98,6 +99,21 @@ export default function DriverAttributionPage() {
   const profilesQuery = useDriverProfiles(vehicleId);
   const createProfile = useCreateDriverProfile();
   const deleteProfile = useDeleteDriverProfile();
+  const { confirm, dialogProps } = useConfirm();
+
+  const handleRemove = async (row: DriverProfile) => {
+    const ok = await confirm({
+      title: t('ownership.driver.delete.title', 'Delete this driver profile?'),
+      message: t(
+        'ownership.driver.delete.message',
+        'The “{{name}}” profile and its trip attributions will be removed permanently. This cannot be undone.',
+        { name: row.name },
+      ),
+      variant: 'danger',
+      confirmLabel: t('common.delete', 'Delete'),
+    });
+    if (ok) deleteProfile.mutate(row.id);
+  };
   const assign = useAssignDrive();
 
   const report = reportQuery.data;
@@ -396,7 +412,8 @@ export default function DriverAttributionPage() {
           variant="ghost"
           size="sm"
           icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-          onClick={() => deleteProfile.mutate(row.id)}
+          loading={deleteProfile.isPending && deleteProfile.variables === row.id}
+          onClick={() => void handleRemove(row)}
         >
           {t('ownership.action.remove', 'Remove')}
         </Button>
@@ -579,6 +596,7 @@ export default function DriverAttributionPage() {
         >
           <DataTable
             columns={clusterColumns}
+            mobileColumns={['name', 'drives', 'aggression']}
             data={clusters}
             keyExtractor={(row) => row.cluster_id}
             tableId="ownership-driver-clusters"
@@ -647,6 +665,7 @@ export default function DriverAttributionPage() {
 
           <DataTable
             columns={profileColumns}
+            mobileColumns={['name', 'created']}
             data={profiles}
             keyExtractor={(row) => row.id}
             tableId="ownership-driver-profiles"
@@ -718,6 +737,7 @@ export default function DriverAttributionPage() {
 
           <DataTable
             columns={fingerprintColumns}
+            mobileColumns={['drive', 'attribution', 'confidence']}
             data={fingerprints}
             keyExtractor={(row) => row.drive_id}
             tableId="ownership-driver-fingerprints"
@@ -773,6 +793,7 @@ export default function DriverAttributionPage() {
           ]}
         />
       </FadeIn>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageContainer>
   );
 }

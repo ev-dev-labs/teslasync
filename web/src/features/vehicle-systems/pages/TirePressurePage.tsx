@@ -702,6 +702,7 @@ export default function TirePressurePage() {
             <DataTable
               tableId="vehicle-systems:tire-pressure-history"
               columns={historyColumns}
+              mobileColumns={['created_at', 'warnings']}
               data={tableData}
               keyExtractor={(row) => row.id}
               sortKey={sortKey}

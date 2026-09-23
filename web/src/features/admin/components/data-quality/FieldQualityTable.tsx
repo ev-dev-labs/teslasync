@@ -186,6 +186,7 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
           <DataTable
             tableId="admin:data-quality-fields"
             columns={columns}
+            mobileColumns={['field', 'severity', 'freshness']}
             data={rows}
             keyExtractor={(r) => r.field}
             emptyMessage={t('admin.dataQuality.fieldsEmptyTable', 'No field scores')}

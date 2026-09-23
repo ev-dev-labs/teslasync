@@ -36,6 +36,8 @@ import { useUrlBatch, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/use
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useCommandHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { localDayKey } from '@/lib/drivesAggregation';
+import { useTimezone } from '@/lib/timezone';
 import {
   History, CheckCircle, XCircle, Terminal, Clock, TrendingUp,
   Award, Search, Gamepad2, ListChecks, BarChart3, ShieldCheck,
@@ -270,6 +272,7 @@ export default function CommandHistoryPage() {
   }, [allCommands]);
 
   // Daily activity — success/failed counts per calendar day within the range.
+  const timeZone = useTimezone('vehicle');
   const dailyActivity = useMemo(() => {
     if (rangeFiltered.length === 0) return [];
     const buckets = new Map<
@@ -277,16 +280,17 @@ export default function CommandHistoryPage() {
       { day: string; label: string; success: number; failed: number }
     >();
     for (const c of rangeFiltered) {
-      const d = new Date(c.created_at);
-      if (Number.isNaN(d.getTime())) continue;
-      const day = d.toISOString().slice(0, 10);
+      // Bucket by the vehicle's calendar day: UTC slicing misattributed
+      // near-midnight commands for every non-UTC user.
+      const day = localDayKey(c.created_at, timeZone);
+      if (!day) continue;
       const bucket = buckets.get(day) ?? { day, label: day.slice(5), success: 0, failed: 0 };
       if (c.status === 'success') bucket.success += 1;
       else bucket.failed += 1;
       buckets.set(day, bucket);
     }
     return Array.from(buckets.values()).sort((a, b) => a.day.localeCompare(b.day));
-  }, [rangeFiltered]);
+  }, [rangeFiltered, timeZone]);
 
   // Top commands — most-used commands in the range, for the breakdown rail.
   const topCommands = useMemo(() => {
@@ -389,6 +393,18 @@ export default function CommandHistoryPage() {
           aria-label={t('commandHistory.kpis', 'Command metrics')}
           className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
         >
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
+            ))
+          ) : error ? (
+            <QueryError
+              error={error}
+              onRetry={() => refetch()}
+              className="col-span-2 lg:col-span-3 3xl:col-span-6"
+            />
+          ) : (
+            <>
           <MetricCard
             label={t('commandHistory.total', 'Total Commands')}
             value={stats.total}
@@ -429,6 +445,8 @@ export default function CommandHistoryPage() {
             icon={<History className="h-4 w-4" />}
             color="amber"
           />
+            </>
+          )}
         </section>
       </FadeIn>
 

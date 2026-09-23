@@ -13,7 +13,7 @@ import { Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, toLocalDatetimeStr } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type {
   CausalExperiment,
@@ -27,7 +27,9 @@ const PAGE_SIZE = 10;
 type ExperimentForm = Omit<CreateCausalExperimentRequest, 'vehicle_id' | 'confirmed'>;
 
 function isoLocal(daysAgo: number): string {
-  return new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+  // datetime-local values are local wall-clock: build the default from local
+  // fields, not a UTC slice (SmartCharge defaultDepartBy precedent).
+  return toLocalDatetimeStr(new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)).slice(0, 16);
 }
 
 export default function CausalExperimentationPage() {

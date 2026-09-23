@@ -13,8 +13,9 @@ import { AlertBanner } from '@/components/feedback';
 import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -106,6 +107,21 @@ export default function ConsumablesLifecyclePage() {
   const itemsQuery = useConsumableItems(vehicleId);
   const create = useCreateConsumable();
   const remove = useDeleteConsumable();
+  const { confirm, dialogProps } = useConfirm();
+
+  const handleRemove = async (row: ConsumableItem) => {
+    const ok = await confirm({
+      title: t('ownership.consumables.delete.title', 'Delete this part?'),
+      message: t(
+        'ownership.consumables.delete.message',
+        '“{{name}}” and its service history will be removed permanently. This cannot be undone.',
+        { name: row.label },
+      ),
+      variant: 'danger',
+      confirmLabel: t('common.delete', 'Delete'),
+    });
+    if (ok) remove.mutate(row.id);
+  };
   const createEvent = useCreateConsumableEvent();
 
   const report = reportQuery.data;
@@ -293,7 +309,8 @@ export default function ConsumablesLifecyclePage() {
             variant="ghost"
             size="sm"
             icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-            onClick={() => remove.mutate(row.id)}
+            loading={remove.isPending && remove.variables === row.id}
+            onClick={() => void handleRemove(row)}
           >
             {t('ownership.action.remove', 'Remove')}
           </Button>
@@ -526,6 +543,7 @@ export default function ConsumablesLifecyclePage() {
         >
           <DataTable
             columns={stressColumns}
+            mobileColumns={['label', 'observed', 'multiplier']}
             data={allStress}
             keyExtractor={(row) => row.code}
             tableId="ownership-consumables-stress"
@@ -733,6 +751,7 @@ export default function ConsumablesLifecyclePage() {
 
           <DataTable
             columns={itemColumns}
+            mobileColumns={['label', 'installed', 'retired']}
             data={items}
             keyExtractor={(row) => row.id}
             tableId="ownership-consumables-items"
@@ -791,6 +810,7 @@ export default function ConsumablesLifecyclePage() {
           ]}
         />
       </FadeIn>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageContainer>
   );
 }

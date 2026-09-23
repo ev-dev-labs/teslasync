@@ -788,6 +788,7 @@ export default function BatteryCellsPage() {
             <DataTable
               tableId="battery:cells"
               columns={columns}
+              mobileColumns={['cell_number', 'voltage', 'status']}
               data={sortedCells}
               keyExtractor={(r) => r.cell_number}
               sortKey={sortKey}

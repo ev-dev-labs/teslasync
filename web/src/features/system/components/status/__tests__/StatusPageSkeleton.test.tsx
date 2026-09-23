@@ -13,8 +13,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  *      `aria-busy="true"` and an i18n-labelled accessible name, so assistive
  *      tech announces "loading" rather than reading silent pulse blocks.
  *   2. i18n — the accessible name is sourced through `t()` (matching the
- *      natural-language keys the sibling SystemStatusPage uses), not a
- *      hardcoded string, and falls back to the English key when untranslated.
+ *      namespaced keys the sibling SystemStatusPage uses), not a
+ *      hardcoded string, and falls back to English when untranslated.
  *   3. Layout fidelity — the eight glass panels appear in the documented order
  *      (hero → health → action items → resources → 4 accordions), the chip bar
  *      has eight pills, and every band renders the exact placeholder count that
@@ -62,13 +62,16 @@ describe('StatusPageSkeleton', () => {
     expect(region).toHaveClass('space-y-5', 'max-w-3xl', 'mx-auto')
   })
 
-  it('sources the accessible name from i18n and falls back to the English key', () => {
+  it('sources the accessible name from i18n and falls back to English', () => {
     render(<StatusPageSkeleton />)
 
-    // The label is routed through t() with the natural-language key the rest of
+    // The label is routed through t() with the namespaced key the rest of
     // SystemStatusPage uses — not a hardcoded literal.
-    expect(tSpy).toHaveBeenCalledWith('Loading system status')
-    // With no matching translation, react-i18next echoes the key → English copy.
+    expect(tSpy).toHaveBeenCalledWith(
+      'systemStatus.skeletonLoading',
+      'Loading system status',
+    )
+    // With no matching translation, react-i18next uses the fallback → English copy.
     expect(screen.getByRole('status').getAttribute('aria-label')).toBe(
       'Loading system status',
     )

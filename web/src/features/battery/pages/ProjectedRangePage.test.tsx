@@ -24,7 +24,7 @@
  * page tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
@@ -57,7 +57,7 @@ vi.hoisted(() => {
 
 // Shared, hoisted test doubles + a fallback-resolving `t` reachable by both the
 // mock factories below and the specs.
-const { tImpl, rangeMock, selectedVehicleMock, aiPropsMock } = vi.hoisted(() => {
+const { tImpl, rangeMock, selectedVehicleMock, aiPropsMock, settingsMock } = vi.hoisted(() => {
   const tImpl = (key: string, second?: unknown, third?: unknown): string => {
     const template =
       typeof second === 'string'
@@ -81,6 +81,7 @@ const { tImpl, rangeMock, selectedVehicleMock, aiPropsMock } = vi.hoisted(() => 
     rangeMock: vi.fn(),
     selectedVehicleMock: vi.fn(),
     aiPropsMock: vi.fn(),
+    settingsMock: vi.fn(),
   };
 });
 
@@ -109,6 +110,16 @@ vi.mock('@/hooks/useSelectedVehicle', async () => {
   return {
     ...actual,
     useSelectedVehicle: () => selectedVehicleMock(),
+  };
+});
+
+// Controllable settings (overrides the global km/°C default) so the mile-unit
+// suite below can flip the display boundary without affecting other specs.
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return {
+    ...actual,
+    useSettings: (...args: unknown[]) => settingsMock(...args),
   };
 });
 
@@ -199,6 +210,69 @@ function makeQuery(overrides: QueryOverrides = {}) {
   };
 }
 
+type SettingsMockShape = {
+  settings: Record<string, unknown>;
+  isMiles: boolean;
+  isFahrenheit: boolean;
+  isPSI: boolean;
+  decimals: number;
+  locale: string;
+  density: 'comfortable';
+  rangeType: 'rated';
+};
+
+/** Mirror the global km/°C settings default so pre-existing specs are unaffected. */
+function kmSettings(): SettingsMockShape {
+  return {
+    settings: {
+      unit_of_length: 'km',
+      unit_of_temp: 'C',
+      unit_of_pressure: 'bar',
+      preferred_range: 'rated',
+      language: 'en',
+      base_cost_per_kwh: 0.12,
+      api_suspended: false,
+      theme: 'neon-cyan',
+      mode: 'dark',
+      custom_primary: '#00b4d8',
+      custom_accent: '#e63946',
+      gas_price_per_unit: 0,
+      gas_unit: 'gallon',
+      gas_efficiency_mpg: 25,
+      decimal_precision: 2,
+      quiet_hours_enabled: false,
+      quiet_hours_start: '22:00',
+      quiet_hours_end: '07:00',
+      alert_digest_mode: 'instant',
+      currency_symbol: '$',
+      locale: 'en-US',
+      tz_display_default: 'vehicle',
+      timezone_user: '',
+      tab_badge_enabled: true,
+      critical_flash_enabled: true,
+      ui_density: 'comfortable',
+      time_format_default: 'relative',
+      chart_palette: 'cb_safe',
+      ai_mode: 'off',
+      ai_features: {},
+      ai_provider_config: {},
+      ai_cost_cap_cents: 0,
+    },
+    isMiles: false,
+    isFahrenheit: false,
+    isPSI: false,
+    decimals: 2,
+    locale: 'en-US',
+    density: 'comfortable',
+    rangeType: 'rated',
+  };
+}
+
+function miSettings(): SettingsMockShape {
+  const base = kmSettings();
+  return { ...base, settings: { ...base.settings, unit_of_length: 'mi' }, isMiles: true };
+}
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -226,6 +300,7 @@ beforeEach(() => {
     setVehicleId: vi.fn(),
   });
   rangeMock.mockReturnValue(makeQuery({ data: makeProjection() }));
+  settingsMock.mockReturnValue(kmSettings());
 });
 
 /* ── Pure helpers ─────────────────────────────────────────────────── */
@@ -452,5 +527,31 @@ describe('ProjectedRangePage · what-if calculator', () => {
     expect(screen.getByText('243 km')).toBeInTheDocument();
     expect(screen.queryByText('177.50 Wh/km')).not.toBeInTheDocument();
     expect(screen.queryByText('304 km')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProjectedRangePage · mile units', () => {
+  it('renders every efficiency figure in Wh/mi when unit_of_length is mi', () => {
+    settingsMock.mockReturnValue(miSettings());
+    renderPage();
+
+    // Matrix title follows the unit boundary …
+    expect(screen.getByText('Personal Efficiency Matrix (Wh/mi)')).toBeInTheDocument();
+
+    // … as do the matrix cells (whole-number, unit in the title): fixture
+    // highway/mild 190 Wh/km → 306, city/cold 210 Wh/km → 338.
+    const matrix = screen.getByRole('region', { name: 'Personal Efficiency Matrix (Wh/mi)' });
+    expect(within(matrix).getByText('306')).toBeInTheDocument();
+    expect(within(matrix).getByText('338')).toBeInTheDocument();
+
+    // … the what-if readout (177.5 Wh/km → Wh/mi) …
+    expect(screen.getByText('285.66 Wh/mi')).toBeInTheDocument();
+
+    // … and the scenario captions (Highway 190 Wh/km, Winter City 240 Wh/km).
+    expect(screen.getByText('305.78 Wh/mi')).toBeInTheDocument();
+    expect(screen.getByText('386.24 Wh/mi')).toBeInTheDocument();
+
+    // No efficiency figure anywhere on the page may keep the km unit.
+    expect(screen.queryAllByText(/Wh\/km/)).toHaveLength(0);
   });
 });

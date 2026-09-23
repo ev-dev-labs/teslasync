@@ -397,6 +397,50 @@ describe('SmartChargePage — rate plan select', () => {
     expect(screen.getAllByText('LADWP R1B (LADWP)').length).toBeGreaterThan(0);
     expect(screen.getAllByText('PG&E EV2-A (PG&E)').length).toBeGreaterThan(0);
   });
+
+  it('defaults the selection to the first backend plan (no hardcoded home plan)', () => {
+    mockRatePlans.mockReturnValue(
+      makeQuery({
+        data: [
+          { id: 'xcel-tou', name: 'Xcel TOU', utility: 'Xcel' },
+          { id: 'ladwp-r1b', name: 'LADWP R1B', utility: 'LADWP' },
+        ],
+      }),
+    );
+    renderPage();
+    expect(
+      (document.getElementById('smart-charge-rate-plan') as HTMLSelectElement).value,
+    ).toBe('xcel-tou');
+  });
+
+  it('keeps an explicit user choice when the plan list re-resolves', () => {
+    mockRatePlans.mockReturnValue(makeQuery({ data: backendRatePlans }));
+    renderPage();
+    const select = document.getElementById('smart-charge-rate-plan') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'ladwp-r1b' } });
+    // Force a re-render through unrelated state; the sync effect must not clobber.
+    fireEvent.change(document.getElementById('smart-charge-max-amps') as HTMLInputElement, {
+      target: { value: '40' },
+    });
+    expect(select.value).toBe('ladwp-r1b');
+  });
+
+  it('surfaces the rate-plans error with retry instead of silently substituting the fallback', () => {
+    const refetch = vi.fn();
+    mockRatePlans.mockReturnValue(
+      makeQuery({ data: [], isError: true, error: new Error('plans down'), status: 'error', refetch }),
+    );
+    renderPage();
+    const rail = (
+      document.getElementById('smart-charge-rate-plan') as HTMLElement
+    ).closest('div.space-y-4') as HTMLElement;
+    const retry = within(rail).getByRole('button', { name: 'Retry' });
+    expect(retry).toBeInTheDocument();
+    // The fallback list stays usable so the form is not bricked …
+    expect(within(rail).getAllByText('PG&E EV2-A').length).toBeGreaterThan(0);
+    fireEvent.click(retry);
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ─────────────────────────── page: optimize flow ──────────────────────────
@@ -456,6 +500,51 @@ describe('SmartChargePage — optimize interaction', () => {
     );
     renderPage();
     expect(screen.getAllByText('rate service unavailable').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('blocks submit with an inline error (no crash, no mutate) when Depart By is cleared', () => {
+    const mutate = vi.fn();
+    mockOptimize.mockReturnValue(optimizeState({ mutate }));
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText('Depart By'), { target: { value: '' } });
+    fireEvent.click(optimizeButton());
+
+    // Invalid Date.toISOString() used to throw an uncaught RangeError here.
+    expect(screen.getByText('Enter a valid departure date and time.')).toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit with an inline error when Max Amps is cleared or out of range', () => {
+    const mutate = vi.fn();
+    mockOptimize.mockReturnValue(optimizeState({ mutate }));
+    renderPage();
+    const amps = document.getElementById('smart-charge-max-amps') as HTMLInputElement;
+
+    fireEvent.change(amps, { target: { value: '' } }); // Number('') === 0
+    fireEvent.click(optimizeButton());
+    expect(screen.getByText('Enter an amperage between 8 and 80.')).toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+
+    fireEvent.change(amps, { target: { value: '100' } });
+    fireEvent.click(optimizeButton());
+    expect(screen.getByText('Enter an amperage between 8 and 80.')).toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit with an inline error when Battery Capacity is cleared', () => {
+    const mutate = vi.fn();
+    mockOptimize.mockReturnValue(optimizeState({ mutate }));
+    renderPage();
+
+    // UnitInput commits to the parent on blur/Enter, not on every keystroke.
+    const capacity = screen.getByLabelText('Battery Capacity');
+    fireEvent.change(capacity, { target: { value: '' } });
+    fireEvent.blur(capacity);
+    fireEvent.click(optimizeButton());
+
+    expect(screen.getByText('Enter a battery capacity greater than 0.')).toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
   });
 });
 

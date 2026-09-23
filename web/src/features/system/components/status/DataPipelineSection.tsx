@@ -46,7 +46,7 @@ export function DataPipelineSection() {
 
   const exportColumns = useMemo<Column<ExportJobSummary>[]>(() => [
     {
-      key: 'status', header: t('Status'),
+      key: 'status', header: t('common.status', 'Status'),
       render: (row) => (
         <div className="flex items-center gap-2">
           {getStatusIcon(row.status)}
@@ -54,14 +54,14 @@ export function DataPipelineSection() {
         </div>
       ),
     },
-    { key: 'type', header: t('Type'), render: (row) => row.type },
-    { key: 'format', header: t('Format'), render: (row) => <Badge variant="neutral" size="sm">{row.format}</Badge> },
+    { key: 'type', header: t('systemStatus.pipeline.type', 'Type'), render: (row) => row.type },
+    { key: 'format', header: t('systemStatus.pipeline.format', 'Format'), render: (row) => <Badge variant="neutral" size="sm">{row.format}</Badge> },
     {
-      key: 'file_name', header: t('File'),
+      key: 'file_name', header: t('systemStatus.pipeline.file', 'File'),
       render: (row) => <span className="font-mono text-xs truncate max-w-[200px] block">{row.file_name}</span>,
     },
-    { key: 'record_count', header: t('Records'), sortable: true, render: (row) => fmtInt(row.record_count) },
-    { key: 'created_at', header: t('Created'), render: (row) => formatDateTime(row.created_at) },
+    { key: 'record_count', header: t('systemStatus.pipeline.records', 'Records'), sortable: true, render: (row) => fmtInt(row.record_count) },
+    { key: 'created_at', header: t('systemStatus.pipeline.created', 'Created'), render: (row) => formatDateTime(row.created_at) },
   ], [t]);
 
   const { pendingJobs, processingJobs, completedJobs, failedJobs } = useMemo(() => {
@@ -79,8 +79,8 @@ export function DataPipelineSection() {
   return (
     <AccordionSection
       icon={<Archive className="h-5 w-5" />}
-      title={t('Data Pipeline')}
-      description={t('Compression statistics and export job queue')}
+      title={t('systemStatus.pipeline.title', 'Data Pipeline')}
+      description={t('systemStatus.pipeline.desc', 'Compression statistics and export job queue')}
       badges={
         <>
           {compression && (
@@ -100,19 +100,19 @@ export function DataPipelineSection() {
       ) : (
         <div className="space-y-6">
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Compression Statistics')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.pipeline.compressionTitle', 'Compression Statistics')}</h4>
             {compError ? (
               <QueryError error={compError} onRetry={() => refetchCompression()} />
             ) : compression ? (
               <>
                 <Grid cols={{ default: 2, md: 4 }} gap={3}>
-                  <MetricCard label={t('Compression Ratio')} value={fmtPercent(compression.savings_percent)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
-                  <MetricCard label={t('Estimated Savings')} value={formatBytes(compression.estimated_saved_bytes)} icon={<HardDrive className="h-4 w-4" />} color="cyan" />
-                  <MetricCard label={t('Total Positions')} value={fmtInt(compression.total_positions)} icon={<BarChart3 className="h-4 w-4" />} color="purple" />
-                  <MetricCard label={t('Compressed')} value={fmtInt(compression.compressed_positions)} icon={<Archive className="h-4 w-4" />} color="cyan" />
+                  <MetricCard label={t('systemStatus.pipeline.ratio', 'Compression Ratio')} value={fmtPercent(compression.savings_percent)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
+                  <MetricCard label={t('systemStatus.pipeline.estSavings', 'Estimated Savings')} value={formatBytes(compression.estimated_saved_bytes)} icon={<HardDrive className="h-4 w-4" />} color="cyan" />
+                  <MetricCard label={t('systemStatus.pipeline.totalPositions', 'Total Positions')} value={fmtInt(compression.total_positions)} icon={<BarChart3 className="h-4 w-4" />} color="purple" />
+                  <MetricCard label={t('systemStatus.pipeline.compressed', 'Compressed')} value={fmtInt(compression.compressed_positions)} icon={<Archive className="h-4 w-4" />} color="cyan" />
                 </Grid>
                 <div className="mt-4 flex justify-center">
-                  <LinearGauge value={compression.savings_percent} max={100} label={t('Savings')} unit="%" tone="success" size={140} className="max-w-xs" />
+                  <LinearGauge value={compression.savings_percent} max={100} label={t('systemStatus.pipeline.savings', 'Savings')} unit="%" tone="success" size={140} className="max-w-xs" />
                 </div>
               </>
             ) : (
@@ -131,25 +131,26 @@ export function DataPipelineSection() {
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Export Job Queue')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.pipeline.queueTitle', 'Export Job Queue')}</h4>
             {exportError ? (
               <QueryError error={exportError} onRetry={() => refetchExportJobs()} />
             ) : hasJobs ? (
               <>
                 <Grid cols={{ default: 2, md: 4 }} gap={3} className="mb-4">
-                  <StatCard label={t('Pending')} value={pendingJobs} icon={<Clock className="h-4 w-4" />} />
-                  <StatCard label={t('Processing')} value={processingJobs} icon={<Activity className="h-4 w-4" />} />
-                  <StatCard label={t('Completed')} value={completedJobs} icon={<CheckCircle className="h-4 w-4" />} />
-                  <StatCard label={t('Failed')} value={failedJobs} icon={<XCircle className="h-4 w-4" />} />
+                  <StatCard label={t('systemStatus.pipeline.pending', 'Pending')} value={pendingJobs} icon={<Clock className="h-4 w-4" />} />
+                  <StatCard label={t('systemStatus.pipeline.processing', 'Processing')} value={processingJobs} icon={<Activity className="h-4 w-4" />} />
+                  <StatCard label={t('systemStatus.pipeline.completed', 'Completed')} value={completedJobs} icon={<CheckCircle className="h-4 w-4" />} />
+                  <StatCard label={t('systemStatus.failed', 'Failed')} value={failedJobs} icon={<XCircle className="h-4 w-4" />} />
                 </Grid>
                 <DataTable
                   tableId="system:pipeline-export-jobs"
                   columns={exportColumns}
+                  mobileColumns={['status', 'file_name']}
                   data={exportJobs ?? []}
                   keyExtractor={(j) => j.id}
                   compact
                   pagination
-                  emptyMessage={t('No export jobs')}
+                  emptyMessage={t('systemStatus.pipeline.noJobs', 'No export jobs')}
                 />
               </>
             ) : (

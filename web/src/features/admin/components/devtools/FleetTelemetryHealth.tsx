@@ -145,6 +145,7 @@ export function FleetTelemetryHealth() {
             <DataTable
               tableId="admin:fleet-health-vins"
               columns={vinColumns}
+              mobileColumns={['vin', 'last_seen_at']}
               data={vinList}
               keyExtractor={(r) => r.vin}
               compact
@@ -189,6 +190,7 @@ export function FleetTelemetryHealth() {
             <DataTable
               tableId="admin:fleet-health-errors"
               columns={errorColumns}
+              mobileColumns={['vin', 'error_code', 'reported_at']}
               data={errorList}
               keyExtractor={(r) => String(r.id)}
               compact

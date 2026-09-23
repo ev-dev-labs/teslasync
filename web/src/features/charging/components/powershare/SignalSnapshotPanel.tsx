@@ -95,6 +95,7 @@ export function SignalSnapshotPanel({ rows, isLoading, error, onRetry }: SignalS
         <DataTable
           tableId="charging:powershare-signals"
           columns={columns}
+          mobileColumns={['label', 'value', 'ts']}
           data={sortedRows}
           keyExtractor={snapshotKey}
           sortKey={sortKey}

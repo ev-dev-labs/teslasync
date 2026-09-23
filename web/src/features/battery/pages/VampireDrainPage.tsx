@@ -25,7 +25,9 @@ import { VampireCulpritPanel } from '../components/VampireCulpritPanel';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { formatDate, formatDateTime, formatDayKey } from '@/lib/dateFormat';
+import { localDayKey } from '@/lib/drivesAggregation';
+import { useTimezone } from '@/lib/timezone';
 import { fmtNumber } from '@/lib/numberFormat';
 import { request } from '@/api/client';
 
@@ -59,6 +61,35 @@ interface VampireDrainStats {
   sample_window_days: number;
 }
 
+export interface DailyDrainBucket {
+  date: string;
+  drain_pct: number;
+  hours: number;
+  [key: string]: string | number | null | undefined;
+}
+
+/**
+ * Group drain events into calendar-day buckets in the given IANA timezone,
+ * summing battery loss + parked hours per day, oldest first. Events with an
+ * unparseable start are skipped. Bucketing must use the *vehicle's* day —
+ * UTC slicing misattributed near-midnight sessions for non-UTC users.
+ */
+export function buildDailyDrainRollup(
+  events: VampireDrainEvent[],
+  timeZone?: string,
+): DailyDrainBucket[] {
+  const buckets = new Map<string, DailyDrainBucket>();
+  for (const e of events) {
+    const day = localDayKey(e.started_at, timeZone);
+    if (!day) continue;
+    const bucket = buckets.get(day) ?? { date: day, drain_pct: 0, hours: 0 };
+    bucket.drain_pct += e.drain_pct ?? 0;
+    bucket.hours += e.duration_hours ?? 0;
+    buckets.set(day, bucket);
+  }
+  return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
 /** Visual reference for the drain-rate gauge: ≈5 %/day is a high phantom rate. */
 const GAUGE_MAX = 5;
 
@@ -70,6 +101,7 @@ export default function VampireDrainPage() {
 
   const { formatTemperature } = useUnits();
   const { vehicleId } = useSelectedVehicle();
+  const timeZone = useTimezone('vehicle');
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const enabled = activeId !== '';
 
@@ -122,20 +154,11 @@ export default function VampireDrainPage() {
     [events],
   );
 
-  /** Daily rollup — sum battery loss and parked hours per calendar day. */
-  const daily = useMemo(() => {
-    const buckets = new Map<string, { date: string; drain_pct: number; hours: number }>();
-    for (const e of events) {
-      const d = new Date(e.started_at);
-      if (Number.isNaN(d.getTime())) continue;
-      const day = d.toISOString().slice(0, 10);
-      const bucket = buckets.get(day) ?? { date: day, drain_pct: 0, hours: 0 };
-      bucket.drain_pct += e.drain_pct ?? 0;
-      bucket.hours += e.duration_hours ?? 0;
-      buckets.set(day, bucket);
-    }
-    return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date));
-  }, [events]);
+  /** Daily rollup — sum battery loss and parked hours per vehicle-calendar day. */
+  const daily = useMemo(
+    () => buildDailyDrainRollup(events, timeZone),
+    [events, timeZone],
+  );
 
   const pct = (v: number | null | undefined) => (v == null ? '—' : `${fmtNumber(v, 2)}%`);
   const avg = stats?.avg_drain_pct_per_day ?? null;
@@ -408,7 +431,7 @@ export default function VampireDrainPage() {
                 ariaLabel={t('vampireDrain.daily.aria', 'Daily battery loss and parked hours')}
                 data={daily}
                 dataColumns={[
-                  { key: 'date', label: t('vampireDrain.date', 'Date'), format: (value) => formatDate(String(value ?? '')) },
+                  { key: 'date', label: t('vampireDrain.date', 'Date'), format: (value) => formatDayKey(String(value ?? '')) },
                   {
                     key: 'drain_pct',
                     label: t('vampireDrain.daily.loss', 'Battery Loss %'),
@@ -428,7 +451,7 @@ export default function VampireDrainPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={daily} margin={chartMargin}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
+                      <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDayKey(v)} />
                       <YAxis yAxisId="left" tick={axisTick} unit="%" width={44} />
                       <YAxis yAxisId="right" orientation="right" tick={axisTick} unit="h" width={44} />
                       <Tooltip content={<ChartTooltip />} />
@@ -485,6 +508,7 @@ export default function VampireDrainPage() {
             <DataTable<VampireDrainEvent>
               tableId="battery:vampire-drain-sessions"
               columns={columns}
+              mobileColumns={['started_at', 'drain_pct', 'drain_pct_per_day']}
               data={sortedEvents}
               keyExtractor={(r) => r.started_at}
               sortKey={sortKey}

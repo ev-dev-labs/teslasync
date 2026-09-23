@@ -55,7 +55,7 @@ export function HashCalculatorTool() {
   }, [inputVal, t])
 
   return (
-    <ToolCard icon={Hash} color="red" title={t('Hash Calculator')} description={t('Hash Calculator Desc')}>
+    <ToolCard icon={Hash} color="red" title={t('devtools.utils.hash', 'Hash Calculator')} description={t('devtools.utils.hashDesc', 'Hash Calculator Desc')}>
       <div className="space-y-3">
         <Textarea
           id={HASH_INPUT_ID}

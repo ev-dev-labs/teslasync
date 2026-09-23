@@ -38,21 +38,21 @@ interface ToolEntry {
 function useToolList(): ToolEntry[] {
   const { t } = useTranslation()
   return useMemo(() => [
-    { id: 'vin', name: t('Vin Decoder'), desc: t('Vin Decoder Desc'), icon: Car, color: 'cyan', Component: VinDecoderTool },
-    { id: 'jwt', name: t('Jwt Decoder'), desc: t('Jwt Decoder Desc'), icon: Key, color: 'purple', Component: JwtDecoderTool },
+    { id: 'vin', name: t('devtools.utils.vin', 'Vin Decoder'), desc: t('devtools.utils.vinDesc', 'Vin Decoder Desc'), icon: Car, color: 'cyan', Component: VinDecoderTool },
+    { id: 'jwt', name: t('devtools.utils.jwt', 'Jwt Decoder'), desc: t('devtools.utils.jwtDesc', 'Jwt Decoder Desc'), icon: Key, color: 'purple', Component: JwtDecoderTool },
     { id: 'timestamp', name: t('devtools.utils.timestamp', 'Timestamp'), desc: t('devtools.utils.timestampDesc', 'Convert between Unix and ISO 8601 timestamps'), icon: Clock, color: 'green', Component: TimestampTool },
     { id: 'base64', name: t('devtools.utils.base64', 'Base64'), desc: t('devtools.utils.base64Desc', 'Base64Desc'), icon: Braces, color: 'amber', Component: Base64Tool },
-    { id: 'url', name: t('Url Encoder'), desc: t('Url Encoder Desc'), icon: Link, color: 'cyan', Component: UrlEncoderTool },
-    { id: 'json', name: t('Json Formatter'), desc: t('Json Formatter Desc'), icon: Braces, color: 'green', Component: JsonFormatterTool },
-    { id: 'uuid', name: t('Uuid Generator'), desc: t('Uuid Generator Desc'), icon: Fingerprint, color: 'purple', Component: UuidGeneratorTool },
-    { id: 'hash', name: t('Hash Calculator'), desc: t('Hash Calculator Desc'), icon: Hash, color: 'red', Component: HashCalculatorTool },
-    { id: 'bytes', name: t('Byte Size'), desc: t('Byte Size Desc'), icon: HardDrive, color: 'cyan', Component: ByteSizeConverterTool },
-    { id: 'color', name: t('Color Converter'), desc: t('Color Converter Desc'), icon: Palette, color: 'purple', Component: ColorConverterTool },
-    { id: 'cron', name: t('Cron Parser'), desc: t('Cron Parser Desc'), icon: Timer, color: 'green', Component: CronParserTool },
+    { id: 'url', name: t('devtools.utils.url', 'Url Encoder'), desc: t('devtools.utils.urlDesc', 'Url Encoder Desc'), icon: Link, color: 'cyan', Component: UrlEncoderTool },
+    { id: 'json', name: t('devtools.utils.json', 'JSON Formatter'), desc: t('devtools.utils.jsonMenuDesc', 'Json Formatter Desc'), icon: Braces, color: 'green', Component: JsonFormatterTool },
+    { id: 'uuid', name: t('devtools.utils.uuid', 'Uuid Generator'), desc: t('devtools.utils.uuidDesc', 'Uuid Generator Desc'), icon: Fingerprint, color: 'purple', Component: UuidGeneratorTool },
+    { id: 'hash', name: t('devtools.utils.hash', 'Hash Calculator'), desc: t('devtools.utils.hashDesc', 'Hash Calculator Desc'), icon: Hash, color: 'red', Component: HashCalculatorTool },
+    { id: 'bytes', name: t('devtools.utils.byteSize', 'Byte Size'), desc: t('devtools.utils.byteSizeMenuDesc', 'Byte Size Desc'), icon: HardDrive, color: 'cyan', Component: ByteSizeConverterTool },
+    { id: 'color', name: t('devtools.utils.color', 'Color Converter'), desc: t('devtools.utils.colorDesc', 'Color Converter Desc'), icon: Palette, color: 'purple', Component: ColorConverterTool },
+    { id: 'cron', name: t('devtools.utils.cron', 'Cron Parser'), desc: t('devtools.utils.cronDesc', 'Cron Parser Desc'), icon: Timer, color: 'green', Component: CronParserTool },
     { id: 'http', name: t('devtools.utils.httpStatus', 'HTTP Status'), desc: t('devtools.utils.httpStatusDesc', 'Reference for HTTP response status codes'), icon: Network, color: 'amber', Component: HttpStatusTool },
-    { id: 'tesla-api', name: t('Tesla Api Ref'), desc: t('Tesla Api Ref Desc'), icon: BookOpen, color: 'cyan', Component: TeslaApiRefTool },
-    { id: 'regex', name: t('Regex Tester'), desc: t('Regex Tester Desc'), icon: Regex, color: 'red', Component: RegexTesterTool },
-    { id: 'unix-perm', name: t('Unix Perm'), desc: t('Unix Perm Desc'), icon: Lock, color: 'green', Component: UnixPermissionTool },
+    { id: 'tesla-api', name: t('devtools.utils.teslaApiRef', 'Tesla Api Ref'), desc: t('devtools.utils.teslaApiRefDesc', 'Tesla Api Ref Desc'), icon: BookOpen, color: 'cyan', Component: TeslaApiRefTool },
+    { id: 'regex', name: t('devtools.utils.regex', 'Regex Tester'), desc: t('devtools.utils.regexDesc', 'Regex Tester Desc'), icon: Regex, color: 'red', Component: RegexTesterTool },
+    { id: 'unix-perm', name: t('devtools.utils.unixPerm', 'Unix Permissions'), desc: t('devtools.utils.unixPermMenuDesc', 'Unix Perm Desc'), icon: Lock, color: 'green', Component: UnixPermissionTool },
   ], [t])
 }
 

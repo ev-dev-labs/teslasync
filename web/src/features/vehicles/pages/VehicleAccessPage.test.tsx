@@ -272,6 +272,34 @@ describe('VehicleAccessPage — populated KPIs', () => {
 });
 
 describe('VehicleAccessPage — populated tables + overview', () => {
+  it('paginates growing driver and invitation lists independently', () => {
+    mockDrivers.mockReturnValue(makeQuery({
+      data: Array.from({ length: 26 }, (_, index) => makeDriver({
+        id: index + 1,
+        driver_name: `Driver ${index + 1}`,
+        driver_email: `driver${index + 1}@example.com`,
+      })),
+    }));
+    mockInvitations.mockReturnValue(makeQuery({
+      data: Array.from({ length: 26 }, (_, index) => makeInvite({
+        id: index + 1,
+        invitation_id: `inv-${index + 1}`,
+        created_by: `Inviter ${index + 1}`,
+      })),
+    }));
+    renderPage();
+
+    expect(screen.getByText('Driver 1')).toBeInTheDocument();
+    expect(screen.queryByText('Driver 26')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inviter 26')).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Next page' })[0]);
+    expect(screen.getByText('Driver 26')).toBeInTheDocument();
+    expect(screen.queryByText('Driver 1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inviter 26')).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Next page' })[1]);
+    expect(screen.getByText('Inviter 26')).toBeInTheDocument();
+  });
+
   it('renders drivers, gating the Remove button on share_user_id', () => {
     renderPopulated();
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();

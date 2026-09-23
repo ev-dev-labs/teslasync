@@ -30,14 +30,21 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: unknown) => {
-      if (typeof opts === 'string') return opts
-      if (opts && typeof opts === 'object') {
-        return key.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
-          String((opts as Record<string, unknown>)[name] ?? ''),
+    t: (key: string, second?: unknown, third?: unknown) => {
+      let template = key
+      let vars: Record<string, unknown> | undefined
+      if (typeof second === 'string') {
+        template = second
+        if (third && typeof third === 'object') vars = third as Record<string, unknown>
+      } else if (second && typeof second === 'object') {
+        vars = second as Record<string, unknown>
+      }
+      if (vars) {
+        return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
+          String(vars[name] ?? ''),
         )
       }
-      return key
+      return template
     },
     i18n: { language: 'en', changeLanguage: () => Promise.resolve() },
   }),

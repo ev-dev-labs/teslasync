@@ -13,8 +13,9 @@ import { AlertBanner } from '@/components/feedback';
 import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -129,6 +130,21 @@ export default function WarrantyCommandPage() {
   const create = useCreateWarranty();
   const remove = useDeleteWarranty();
   const createClaim = useCreateWarrantyClaim();
+  const { confirm, dialogProps } = useConfirm();
+
+  const handleRemove = async (row: Warranty) => {
+    const ok = await confirm({
+      title: t('ownership.warranty.delete.title', 'Delete this warranty?'),
+      message: t(
+        'ownership.warranty.delete.message',
+        '“{{name}}” and its claims will be removed permanently. This cannot be undone.',
+        { name: row.label },
+      ),
+      variant: 'danger',
+      confirmLabel: t('common.delete', 'Delete'),
+    });
+    if (ok) remove.mutate(row.id);
+  };
 
   const overview = overviewQuery.data;
   const coverages = useMemo(() => overview?.coverages ?? [], [overview?.coverages]);
@@ -362,7 +378,8 @@ export default function WarrantyCommandPage() {
             variant="ghost"
             size="sm"
             icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-            onClick={() => remove.mutate(row.id)}
+            loading={remove.isPending && remove.variables === row.id}
+            onClick={() => void handleRemove(row)}
           >
             {t('ownership.action.remove', 'Remove')}
           </Button>
@@ -580,6 +597,7 @@ export default function WarrantyCommandPage() {
         >
           <DataTable
             columns={checkColumns}
+            mobileColumns={['label', 'state', 'severity']}
             data={allChecks}
             keyExtractor={(row) => `${row.warrantyLabel}-${row.code}`}
             tableId="ownership-warranty-readiness"
@@ -733,6 +751,7 @@ export default function WarrantyCommandPage() {
 
           <DataTable
             columns={warrantyColumns}
+            mobileColumns={['label', 'start', 'term']}
             data={warranties}
             keyExtractor={(row) => row.id}
             tableId="ownership-warranty-list"
@@ -813,6 +832,7 @@ export default function WarrantyCommandPage() {
 
           <DataTable
             columns={claimColumns}
+            mobileColumns={['title', 'status', 'opened']}
             data={allClaims}
             keyExtractor={(row) => row.id}
             tableId="ownership-warranty-claims"
@@ -851,6 +871,7 @@ export default function WarrantyCommandPage() {
           ]}
         />
       </FadeIn>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageContainer>
   );
 }

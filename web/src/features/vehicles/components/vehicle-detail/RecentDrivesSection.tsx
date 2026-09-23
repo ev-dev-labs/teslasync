@@ -85,6 +85,7 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
         <DataTable
           tableId="vehicles:detail-recent-drives"
           columns={driveColumns}
+          mobileColumns={['date', 'distance', 'battery']}
           data={sortedDrives}
           keyExtractor={(d) => d.id}
           sortKey={sortKey}

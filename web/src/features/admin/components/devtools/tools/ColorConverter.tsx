@@ -38,10 +38,10 @@ export function ColorConverterTool() {
   }, [hex])
 
   return (
-    <ToolCard icon={Palette} color="purple" title={t('Color Converter')} description={t('Color Converter Desc')}>
+    <ToolCard icon={Palette} color="purple" title={t('devtools.utils.color', 'Color Converter')} description={t('devtools.utils.colorDesc', 'Color Converter Desc')}>
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <Input label={t('Hex Color')} placeholder="#3b82f6" value={hex} onChange={handleChange} icon={<Palette className="h-4 w-4" />} />
+          <Input label={t('devtools.utils.colorHex', 'Hex Color')} placeholder="#3b82f6" value={hex} onChange={handleChange} icon={<Palette className="h-4 w-4" />} />
           <div
             role="img"
             aria-label={`${t('devtools.utils.colorPreview', 'Color preview')}: ${hex}`}

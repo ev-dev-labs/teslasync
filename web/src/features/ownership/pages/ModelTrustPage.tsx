@@ -502,6 +502,7 @@ export default function ModelTrustPage() {
         >
           <DataTable
             columns={scorecardColumns}
+            mobileColumns={['model', 'grade', 'mape']}
             data={scorecards}
             keyExtractor={(row) => `${row.model_name}::${row.target}`}
             tableId="ownership-trust-scorecards"
@@ -764,6 +765,7 @@ export default function ModelTrustPage() {
 
           <DataTable
             columns={predictionColumns}
+            mobileColumns={['model', 'error', 'when']}
             data={predictions}
             keyExtractor={(row) => row.id}
             tableId="ownership-trust-predictions"

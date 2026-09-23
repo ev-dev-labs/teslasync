@@ -13,6 +13,10 @@
         "subtitle": "Confidence is 95% when both endpoints fall in the same box, 70% when only one does, and 60% for a cross-border split.",
         "title": "Apportionment by jurisdiction"
       },
+      "delete": {
+        "title": "Delete this jurisdiction rate?",
+        "message": "The “{{name}}” rate will be removed permanently. This cannot be undone."
+      },
       "digest": {
         "body": "A stable fingerprint of the apportionment above. If the underlying drives change, the digest changes — which is exactly what makes a sealed filing meaningful.",
         "title": "Period digest"
@@ -134,6 +138,10 @@
         "rotate": "Rotation",
         "service": "Service"
       },
+      "delete": {
+        "title": "Delete this part?",
+        "message": "“{{name}}” and its service history will be removed permanently. This cannot be undone."
+      },
       "form": {
         "category": "Category",
         "cost": "Replacement cost",
@@ -231,6 +239,10 @@
         "subtitle": "Cohesion is the mean feature distance inside the cluster — lower is tighter.",
         "title": "Cluster characteristics"
       },
+      "delete": {
+        "title": "Delete this driver profile?",
+        "message": "The “{{name}}” profile and its trip attributions will be removed permanently. This cannot be undone."
+      },
       "fingerprints": {
         "empty": "No drives with sufficient telemetry in this window.",
         "more": "Showing {{shown}} of {{total}} drives",
@@ -312,6 +324,10 @@
       "moneyHint": "Display equivalent: {{value}}"
     },
     "governance": {
+      "delete": {
+        "title": "Delete this retention policy?",
+        "message": "The retention policy for “{{name}}” will be removed permanently. This cannot be undone."
+      },
       "form": {
         "bucket": "Downsample bucket (seconds)",
         "dataset": "Dataset",
@@ -432,6 +448,10 @@
         "empty": "No factor had enough samples to score in this window.",
         "subtitle": "Every weighted signal behind the score, with the baseline it was measured against.",
         "title": "Factor decomposition"
+      },
+      "delete": {
+        "title": "Delete this policy?",
+        "message": "Policy “{{name}}” and its telematics program enrolment will be removed permanently. This cannot be undone."
       },
       "form": {
         "deductible": "Deductible",
@@ -571,6 +591,10 @@
         "subtitle": "The packet digest fixes exactly which lines and measurements your claim rests on.",
         "title": "Dispute desk"
       },
+      "delete": {
+        "title": "Delete this invoice?",
+        "message": "Invoice “{{name}}” and its reconciled lines will be removed permanently. This cannot be undone."
+      },
       "form": {
         "addLine": "Add line",
         "lineEnergy": "Billed energy (Wh)",
@@ -658,6 +682,10 @@
         "empty": "No subscription has enough measured usage to compute a return yet.",
         "inner": "Return on spend, per subscription",
         "title": "Return by subscription"
+      },
+      "delete": {
+        "title": "Delete this subscription?",
+        "message": "“{{name}}” and its ROI history will be removed permanently. This cannot be undone."
       },
       "form": {
         "benchmark": "Benchmark (minor / unit)",
@@ -822,6 +850,10 @@
         "title": "Arbitrage summary"
       },
       "title": "Utility Tariff Arbitrage Lab",
+      "delete": {
+        "title": "Delete this tariff?",
+        "message": "“{{name}}” and its rate bands will be removed permanently. This cannot be undone."
+      },
       "unsupported": {
         "future": "Future utility price changes, seasonal reindexing, or regulatory riders",
         "home": "Household load outside the vehicle — only measured charging sessions are priced"
@@ -963,6 +995,10 @@
       "coverages": {
         "empty": "Add a warranty below to see how fast you are consuming it.",
         "title": "Coverage burn-down"
+      },
+      "delete": {
+        "title": "Delete this warranty?",
+        "message": "“{{name}}” and its claims will be removed permanently. This cannot be undone."
       },
       "form": {
         "deductible": "Deductible",

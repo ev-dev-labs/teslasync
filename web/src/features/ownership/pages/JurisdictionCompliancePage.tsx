@@ -13,8 +13,9 @@ import { AlertBanner } from '@/components/feedback';
 import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -73,6 +74,21 @@ export default function JurisdictionCompliancePage() {
   const filingsQuery = useComplianceFilings(vehicleId, 50, 0);
   const createRate = useCreateJurisdictionRate();
   const deleteRate = useDeleteJurisdictionRate();
+  const { confirm, dialogProps } = useConfirm();
+
+  const handleRemove = async (row: JurisdictionRate) => {
+    const ok = await confirm({
+      title: t('ownership.compliance.delete.title', 'Delete this jurisdiction rate?'),
+      message: t(
+        'ownership.compliance.delete.message',
+        'The “{{name}}” rate will be removed permanently. This cannot be undone.',
+        { name: row.label },
+      ),
+      variant: 'danger',
+      confirmLabel: t('common.delete', 'Delete'),
+    });
+    if (ok) deleteRate.mutate(row.id);
+  };
   const createFiling = useCreateFiling();
 
   const report = reportQuery.data;
@@ -261,7 +277,8 @@ export default function JurisdictionCompliancePage() {
           variant="ghost"
           size="sm"
           icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-          onClick={() => deleteRate.mutate(row.id)}
+          loading={deleteRate.isPending && deleteRate.variables === row.id}
+          onClick={() => void handleRemove(row)}
         >
           {t('ownership.action.remove', 'Remove')}
         </Button>
@@ -416,6 +433,7 @@ export default function JurisdictionCompliancePage() {
         >
           <DataTable
             columns={apportionColumns}
+            mobileColumns={['jurisdiction', 'liability', 'confidence']}
             data={jurisdictions}
             keyExtractor={(row) => row.jurisdiction_code}
             tableId="ownership-compliance-apportion"
@@ -585,6 +603,7 @@ export default function JurisdictionCompliancePage() {
 
           <DataTable
             columns={rateColumns}
+            mobileColumns={['code', 'roadUsage', 'registration']}
             data={rates}
             keyExtractor={(row) => row.id}
             tableId="ownership-compliance-rates"
@@ -658,6 +677,7 @@ export default function JurisdictionCompliancePage() {
 
           <DataTable
             columns={filingColumns}
+            mobileColumns={['period', 'status', 'charge']}
             data={filings}
             keyExtractor={(row) => row.id}
             tableId="ownership-compliance-filings"
@@ -694,6 +714,7 @@ export default function JurisdictionCompliancePage() {
           ]}
         />
       </FadeIn>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageContainer>
   );
 }

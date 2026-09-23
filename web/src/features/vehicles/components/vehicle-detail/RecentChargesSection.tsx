@@ -112,6 +112,7 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
         <DataTable
           tableId="vehicles:detail-recent-charges"
           columns={chargeColumns}
+          mobileColumns={['date', 'energy', 'battery']}
           data={sessions}
           keyExtractor={(s) => s.id}
           compact

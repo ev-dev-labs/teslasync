@@ -29,8 +29,8 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry }: For
   const breakdown = forecastData?.breakdown;
   const gas = forecastData?.gas_comparison;
 
-  const homeLabel = t('Home');
-  const superchargerLabel = t('Supercharger');
+  const homeLabel = t('costAnalysis.forecast.home', 'Home');
+  const superchargerLabel = t('chargerTypes.supercharger', 'Supercharger');
 
   // Stable reference for the donut series so the <Pie> doesn't re-animate on
   // unrelated parent re-renders; each share is null-safe down to the leaf.

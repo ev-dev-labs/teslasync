@@ -40,9 +40,9 @@ export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionPr
 
   const coachColumns: Column<CoachDriveScore>[] = useMemo(
     () => [
-      { key: 'date', header: t('Date'), render: (r: CoachDriveScore) => formatDateShort(r.date), sortable: true },
+      { key: 'date', header: t('common.date', 'Date'), render: (r: CoachDriveScore) => formatDateShort(r.date), sortable: true },
       {
-        key: 'score', header: t('Score'), sortable: true,
+        key: 'score', header: t('dynamics.coach.score', 'Score'), sortable: true,
         render: (r: CoachDriveScore) => (
           <Badge variant={r.score >= 75 ? 'success' : r.score >= 50 ? 'warning' : 'danger'} size="sm">
             {r.score}
@@ -50,7 +50,7 @@ export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionPr
         ),
       },
       {
-        key: 'style', header: t('Style'), sortable: true,
+        key: 'style', header: t('dynamics.coach.style', 'Style'), sortable: true,
         render: (r: CoachDriveScore) => (
           <Badge
             variant={r.style === 'efficient' ? 'success' : r.style === 'moderate' ? 'warning' : 'danger'}
@@ -60,8 +60,8 @@ export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionPr
           </Badge>
         ),
       },
-      { key: 'efficiency', header: t('Wh/km'), render: (r: CoachDriveScore) => fmtNumber(r.efficiency), sortable: true },
-      { key: 'distance', header: t('Distance'), render: (r: CoachDriveScore) => `${fmtNumber(r.distance)} km`, sortable: true },
+      { key: 'efficiency', header: t('dynamics.coach.whPerKm', 'Wh/km'), render: (r: CoachDriveScore) => fmtNumber(r.efficiency), sortable: true },
+      { key: 'distance', header: t('common.distance', 'Distance'), render: (r: CoachDriveScore) => `${fmtNumber(r.distance)} km`, sortable: true },
     ],
     [t],
   );
@@ -192,7 +192,7 @@ export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionPr
                     <XAxis dataKey="week" tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }} tickLine={false} axisLine={false} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }} tickLine={false} axisLine={false} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Line {...AREA_DEFAULTS} dataKey="score" stroke="#22c55e" dot={{ fill: '#22c55e', r: 3 }} name={t('Score')} />
+                    <Line {...AREA_DEFAULTS} dataKey="score" stroke="#22c55e" dot={{ fill: '#22c55e', r: 3 }} name={t('dynamics.coach.score', 'Score')} />
                   </LineChart>
                 </ResponsiveContainer>
               </EmbeddedChart>
@@ -278,6 +278,7 @@ export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionPr
               <DataTable
                 tableId="driving:coach-per-drive"
                 columns={coachColumns}
+                mobileColumns={['date', 'score', 'style']}
                 data={coachData?.per_drive_scores ?? []}
                 keyExtractor={(row: CoachDriveScore) => String(row.drive_id)}
                 compact

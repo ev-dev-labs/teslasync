@@ -76,7 +76,7 @@ export function SignalHistoryTable({
   const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);
 
   const headingId = useId();
-  const heading = title ?? t('Signal Data');
+  const heading = title ?? t('signalHistory.title', 'Signal Data');
 
   // Null-safe locals — callers should never hand us undefined, but a bad
   // upstream value must degrade to the empty state, not crash on `.length`
@@ -111,7 +111,7 @@ export function SignalHistoryTable({
   const columns: Column<SignalLogEntry>[] = useMemo(() => [
     {
       key: 'time',
-      header: t('Timestamp'),
+      header: t('common.timestamp', 'Timestamp'),
       render: (r) => (
         <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{formatDateTime(r.created_at)}</span>
       ),
@@ -119,7 +119,7 @@ export function SignalHistoryTable({
     },
     {
       key: 'signal',
-      header: t('Signal'),
+      header: t('signalHistory.signal', 'Signal'),
       render: (r) => {
         const idx = safeSelected.indexOf(r.signal);
         const color = idx >= 0 ? CHART_COLORS[idx % CHART_COLORS.length] : undefined;
@@ -145,13 +145,13 @@ export function SignalHistoryTable({
     },
     {
       key: 'value',
-      header: t('Value'),
+      header: t('signalHistory.value', 'Value'),
       render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{formatValue(r)}</span>,
       visibleOnMobile: true,
     },
     {
       key: 'type',
-      header: t('Type'),
+      header: t('signalHistory.type', 'Type'),
       render: (r) => {
         const vt = valueType(r);
         return <Badge variant={TYPE_BADGE_VARIANT[vt] ?? 'neutral'} size="sm">{vt}</Badge>;
@@ -167,13 +167,13 @@ export function SignalHistoryTable({
           <SectionTitle id={headingId}>{heading}</SectionTitle>
           {showHeaderMeta ? (
             <span className="ml-auto text-2xs text-[var(--text-muted)]">
-              {t('Page')} {page} · {fmtInt(totalRows)} {t('total')}
+              {t('signalHistory.page', 'Page')} {page} · {fmtInt(totalRows)} {t('total')}
             </span>
           ) : null}
         </div>
 
         {loading ? (
-          <div role="status" aria-label={t('Loading signal data')} className="space-y-2">
+          <div role="status" aria-label={t('signalHistory.loading', 'Loading signal data')} className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-8" />)}
           </div>
         ) : safeRows.length > 0 ? (

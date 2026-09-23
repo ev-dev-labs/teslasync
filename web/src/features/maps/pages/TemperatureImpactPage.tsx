@@ -655,6 +655,7 @@ export default function TemperatureImpactPage() {
               <DataTable
                 tableId="maps:temperature-impact-drives"
                 columns={driveColumns}
+                mobileColumns={['drive_date', 'outside_temp', 'efficiency_wh_km']}
                 data={driveRows}
                 keyExtractor={(row) => row.id}
                 emptyMessage={t('tempImpact.noData', 'No drive data available yet')}

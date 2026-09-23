@@ -131,12 +131,12 @@ export function SLOTrackingCard() {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('Uptime & SLO')}</h3>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('systemStatus.slo.title', 'Uptime & SLO')}</h3>
         </div>
         {showControls && <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
           {editing ? (
             <>
-              <span>{t('Target')}</span>
+              <span>{t('systemStatus.slo.target', 'Target')}</span>
               <Input
                 value={draftTarget}
                 onChange={(e) => setDraftTarget(e.target.value)}
@@ -146,16 +146,16 @@ export function SLOTrackingCard() {
                 max={100}
                 step={0.1}
                 className="w-20"
-                aria-label={t('Target uptime percentage')}
+                aria-label={t('systemStatus.slo.targetAria', 'Target uptime percentage')}
               />
               <span>%</span>
-              <Button type="button" size="sm" variant="primary" onClick={handleSaveTarget}>{t('Save')}</Button>
-              <Button type="button" size="sm" variant="ghost" onClick={handleCancelEdit}>{t('Cancel')}</Button>
+              <Button type="button" size="sm" variant="primary" onClick={handleSaveTarget}>{t('common.save', 'Save')}</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={handleCancelEdit}>{t('common.cancel', 'Cancel')}</Button>
             </>
           ) : (
             <>
-              <span>{t('Target {{target}}%', { target })}</span>
-              <Button type="button" size="sm" variant="ghost" onClick={handleStartEdit} className="text-xs">{t('Edit')}</Button>
+              <span>{t('systemStatus.slo.targetValue', 'Target {{target}}%', { target })}</span>
+              <Button type="button" size="sm" variant="ghost" onClick={handleStartEdit} className="text-xs">{t('common.edit', 'Edit')}</Button>
             </>
           )}
         </div>}
@@ -177,7 +177,7 @@ export function SLOTrackingCard() {
         </div>
       </div>
 
-      {showControls && <div className="mt-3 flex flex-wrap gap-1" role="tablist" aria-label={t('Uptime window selector')}>
+      {showControls && <div className="mt-3 flex flex-wrap gap-1" role="tablist" aria-label={t('systemStatus.slo.windowAria', 'Uptime window selector')}>
         {(Object.keys(WINDOW_LABEL) as Window[]).map((w) => (
           <Button
             key={w}
@@ -204,13 +204,13 @@ export function SLOTrackingCard() {
         <p role="note" className="mt-3 inline-flex items-start gap-1.5 text-xs text-amber-200/80">
           <Info aria-hidden="true" className="h-3 w-3 mt-0.5 shrink-0" />
           <span>
-            {data.note ?? t('Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.')}
+            {data.note ?? t('systemStatus.slo.snapshotNote', 'Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.')}
           </span>
         </p>
       )}
 
-      {isLoading && <p role="status" className="mt-3 text-xs text-[var(--text-muted)]">{t('Loading uptime…')}</p>}
-      {error && <p role="alert" className="mt-3 text-xs text-red-300">{t('Failed to load uptime data.')}</p>}
+      {isLoading && <p role="status" className="mt-3 text-xs text-[var(--text-muted)]">{t('systemStatus.slo.loading', 'Loading uptime…')}</p>}
+      {error && <p role="alert" className="mt-3 text-xs text-red-300">{t('systemStatus.slo.loadError', 'Failed to load uptime data.')}</p>}
     </GlassPanel>
   )
 }

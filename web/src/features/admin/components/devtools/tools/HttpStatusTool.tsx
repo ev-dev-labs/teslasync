@@ -87,6 +87,7 @@ export function HttpStatusTool() {
         <DataTable
           tableId="admin:http-status-codes"
           columns={columns}
+          mobileColumns={['code', 'text']}
           data={filtered}
           keyExtractor={(r) => r.code}
           sortKey={sortKey}

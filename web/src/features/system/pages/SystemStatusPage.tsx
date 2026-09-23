@@ -71,7 +71,7 @@ const STALE_BACKUP_DAYS = 7
 
 export default function SystemStatusPage() {
   const { t } = useTranslation()
-  usePageTitle(t('System Status'))
+  usePageTitle(t('systemStatus.title', 'System Status'))
   const qc = useQueryClient()
   const location = useLocation()
   const operatorDetails = useRef<HTMLDetailsElement>(null)
@@ -403,8 +403,8 @@ export default function SystemStatusPage() {
 
   return (
     <PageContainer
-      title={t('System Status')}
-      subtitle={t('At-a-glance health for your TeslaSync instance')}
+      title={t('systemStatus.title', 'System Status')}
+      subtitle={t('systemStatus.subtitle', 'At-a-glance health for your TeslaSync instance')}
       loading={false}
       error={null}
       actions={
@@ -416,12 +416,12 @@ export default function SystemStatusPage() {
             onClick={handleRefresh}
             disabled={isFetching}
             className="gap-2"
-            aria-label={t('Refresh (R)')}
+            aria-label={t('systemStatus.refreshAria', 'Refresh (R)')}
             aria-busy={isFetching}
             title="Press R to refresh"
           >
             <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
-            {t('Refresh')}
+            {t('common.refresh', 'Refresh')}
           </Button>
         </div>
       }
@@ -453,7 +453,7 @@ export default function SystemStatusPage() {
                 id="status-hero"
                 status={healthStale ? 'unknown' : overallStatus}
                 subline={heroSubline}
-                cta={{ label: t('Run health check'), onClick: handleRefresh, loading: isFetching }}
+                cta={{ label: t('systemStatus.runHealthCheck', 'Run health check'), onClick: handleRefresh, loading: isFetching }}
               />
             </FadeIn>
 
@@ -478,7 +478,7 @@ export default function SystemStatusPage() {
                 <GlassPanel className="p-4 sm:p-5">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                     <SectionTitle>{t('systemStatus.currentComponents', 'Current component status')}</SectionTitle>
-                    <DetailLink to="/live-monitor" label={t('Open Live Monitor')} />
+                    <DetailLink to="/live-monitor" label={t('systemStatus.openLiveMonitor', 'Open Live Monitor')} />
                   </div>
                   {components.length > 0 ? (
                     <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -498,23 +498,23 @@ export default function SystemStatusPage() {
 
             {hasAttention && (
               <FadeIn>
-                <section id="action-items" aria-label={t('Operator action items')}>
-                  <ActionItemsPanel title={t('Needs your attention')}>
+                <section id="action-items" aria-label={t('systemStatus.actionItems', 'Operator action items')}>
+                  <ActionItemsPanel title={t('systemStatus.needsAttention', 'Needs your attention')}>
                     {hasMaintenance && (
                       <ActionItem
                         severity="info"
-                        title={t('Maintenance mode is active')}
-                        description={maintenance?.maintenance_message || t('System is in operator-set maintenance mode')}
-                        cta={{ label: t('Manage'), to: '/system-status#maintenance' }}
+                        title={t('systemStatus.maintActive', 'Maintenance mode is active')}
+                        description={maintenance?.maintenance_message || t('systemStatus.maintActiveDesc', 'System is in operator-set maintenance mode')}
+                        cta={{ label: t('systemStatus.manage', 'Manage'), to: '/system-status#maintenance' }}
                       />
                     )}
                     {hasUpdate && (
                       <ActionItem
                         severity="info"
-                        title={t('Update available — v{{version}}', { version: updateCheck?.latest })}
-                        description={t('Current: v{{current}}', { current: updateCheck?.current })}
+                        title={t('systemStatus.updateAvailable', 'Update available — v{{version}}', { version: updateCheck?.latest })}
+                        description={t('systemStatus.updateCurrent', 'Current: v{{current}}', { current: updateCheck?.current })}
                         cta={{
-                          label: t('Release notes'),
+                          label: t('systemStatus.releaseNotes', 'Release notes'),
                           to: 'https://github.com/ev-dev-labs/teslasync/releases/latest',
                           external: true,
                         }}
@@ -523,41 +523,41 @@ export default function SystemStatusPage() {
                     {teslaTokenWarn?.severity === 'error' && (
                       <ActionItem
                         severity="error"
-                        title={t('Tesla token expired')}
-                        description={t('Sign in again to resume Tesla-backed features')}
-                        cta={{ label: t('Re-authenticate'), to: '/tesla-account' }}
+                        title={t('systemStatus.tokenExpired', 'Tesla token expired')}
+                        description={t('systemStatus.tokenExpiredDesc', 'Sign in again to resume Tesla-backed features')}
+                        cta={{ label: t('systemStatus.reauthenticate', 'Re-authenticate'), to: '/tesla-account' }}
                       />
                     )}
                     {teslaTokenWarn?.severity === 'warn' && (
                       <ActionItem
                         severity="warn"
-                        title={t('Tesla token expires in {{days}} day(s)', { days: teslaTokenWarn.days })}
-                        description={t('Refresh to avoid disruption')}
-                        cta={{ label: t('Re-authenticate'), to: '/tesla-account' }}
+                        title={t('systemStatus.tokenExpires', 'Tesla token expires in {{days}} day(s)', { days: teslaTokenWarn.days })}
+                        description={t('systemStatus.tokenExpiresDesc', 'Refresh to avoid disruption')}
+                        cta={{ label: t('systemStatus.reauthenticate', 'Re-authenticate'), to: '/tesla-account' }}
                       />
                     )}
                     {auth?.authenticated === false && !teslaTokenWarn && (
                       <ActionItem
                         severity="warn"
-                        title={t('Tesla account not connected')}
-                        description={t('Connect your Tesla account to fetch vehicle data')}
-                        cta={{ label: t('Connect'), to: '/tesla-account' }}
+                        title={t('systemStatus.tokenNotConnected', 'Tesla account not connected')}
+                        description={t('systemStatus.tokenNotConnectedDesc', 'Connect your Tesla account to fetch vehicle data')}
+                        cta={{ label: t('systemStatus.connect', 'Connect'), to: '/tesla-account' }}
                       />
                     )}
                     {hasStaleBackup && (
                       <ActionItem
                         severity="warn"
-                        title={t('Last backup is {{days}} days old', { days: backupStaleDays })}
-                        description={t('Run a backup or check the schedule')}
-                        cta={{ label: t('Manage backups'), to: '/backup' }}
+                        title={t('systemStatus.backupStale', 'Last backup is {{days}} days old', { days: backupStaleDays })}
+                        description={t('systemStatus.backupStaleDesc', 'Run a backup or check the schedule')}
+                        cta={{ label: t('systemStatus.manageBackups', 'Manage backups'), to: '/backup' }}
                       />
                     )}
                     {hasNoBackup && (
                       <ActionItem
                         severity="warn"
-                        title={t('No backups recorded')}
-                        description={t('Configure a schedule or run one now')}
-                        cta={{ label: t('Set up backups'), to: '/backup' }}
+                        title={t('systemStatus.noBackups', 'No backups recorded')}
+                        description={t('systemStatus.noBackupsDesc', 'Configure a schedule or run one now')}
+                        cta={{ label: t('systemStatus.setupBackups', 'Set up backups'), to: '/backup' }}
                       />
                     )}
                     {workers && workers.healthy_count < workers.total && (
@@ -594,42 +594,42 @@ export default function SystemStatusPage() {
             <FadeIn>
               <section aria-labelledby="triage-heading" className="space-y-3">
                 <SectionTitle id="triage-heading" className="px-1">
-                  {t('Health & triage')}
+                  {t('systemStatus.healthTriage', 'Health & triage')}
                 </SectionTitle>
                 <Masonry className="columns-1 lg:columns-2 xl:columns-3">
 
             {/* 3 ─ Health rows ─────────────────────────────────────── */}
-            <section id="health" aria-label={t('Health summary')}>
+            <section id="health" aria-label={t('systemStatus.healthSummary', 'Health summary')}>
               <GlassPanel className="h-full p-4 sm:p-5">
                 <PanelTitle className="mb-3">
-                  {t('Health')}
+                  {t('systemStatus.health', 'Health')}
                 </PanelTitle>
                 <div className="space-y-1">
                   <HealthRow
                     status={totalCount === 0 ? 'unknown' : okCount === totalCount ? 'healthy' : okCount > totalCount / 2 ? 'degraded' : 'unhealthy'}
                     icon={<Server className="h-4 w-4" />}
-                    label={t('Services')}
+                    label={t('systemStatus.services', 'Services')}
                     summary={servicesSummary}
                     onClick={() => scrollToSection('services')}
                   />
                   <HealthRow
                     status={dbStatus}
                     icon={<Database className="h-4 w-4" />}
-                    label={t('Database')}
+                    label={t('systemStatus.database', 'Database')}
                     summary={databaseSummary}
                     onClick={() => scrollToSection('database')}
                   />
                   <HealthRow
                     status={resolveCompStatus(health?.components?.telemetry?.status ?? 'unknown')}
                     icon={<Activity className="h-4 w-4" />}
-                    label={t('Telemetry')}
+                    label={t('systemStatus.telemetry', 'Telemetry')}
                     summary={telemetrySummary}
                     onClick={() => scrollToSection('telemetry')}
                   />
                   <HealthRow
                     status={workersStatus}
                     icon={<Boxes className="h-4 w-4" />}
-                    label={t('Workers')}
+                    label={t('systemStatus.workers', 'Workers')}
                     summary={workersSummary}
                     onClick={() => scrollToSection('workers')}
                   />
@@ -638,7 +638,7 @@ export default function SystemStatusPage() {
                   <HealthRow
                     status={teslaAuthStatus}
                     icon={<ShieldCheck className="h-4 w-4" />}
-                    label={t('Tesla auth')}
+                    label={t('systemStatus.teslaAuth', 'Tesla auth')}
                     summary={teslaAuthSummary}
                     onClick={() => scrollToSection('tesla-auth')}
                   />
@@ -661,7 +661,7 @@ export default function SystemStatusPage() {
             <FadeIn>
               <section aria-labelledby="systems-heading" className="space-y-3">
                 <SectionTitle id="systems-heading" className="px-1">
-                  {t('Systems & services')}
+                  {t('systemStatus.systemsServices', 'Systems & services')}
                 </SectionTitle>
                 <Masonry className="columns-1 xl:columns-2 2xl:columns-3">
 
@@ -669,22 +669,22 @@ export default function SystemStatusPage() {
         <section id="database">
           <AccordionSection
             icon={<Database className="h-5 w-5" />}
-            title={t('Database & connections')}
+            title={t('systemStatus.dbConnections', 'Database & connections')}
             description={databaseSummary}
             defaultOpen
             badges={<StatusBadge status={dbStatus} />}
           >
             <DefList
               rows={[
-                { label: t('Latency'), value: dbLatency != null ? `${Math.round(dbLatency)}ms` : '—' },
-                { label: t('Pool acquired'), value: extendedPool ? `${extendedPool.acquired_conns} / ${extendedPool.total_conns || (extendedPool.acquired_conns + extendedPool.idle_conns)}` : '—' },
-                { label: t('Pool idle'), value: extendedPool ? String(extendedPool.idle_conns) : '—' },
-                { label: t('Storage used'), value: backupStats?.database_size ?? '—' },
-                { label: t('Tables'), value: backupStats?.table_count != null ? String(backupStats.table_count) : '—' },
-                { label: t('Total rows'), value: totalRows > 0 ? fmtInt(totalRows) : '—' },
+                { label: t('systemStatus.latency', 'Latency'), value: dbLatency != null ? `${Math.round(dbLatency)}ms` : '—' },
+                { label: t('systemStatus.poolAcquired', 'Pool acquired'), value: extendedPool ? `${extendedPool.acquired_conns} / ${extendedPool.total_conns || (extendedPool.acquired_conns + extendedPool.idle_conns)}` : '—' },
+                { label: t('systemStatus.poolIdle', 'Pool idle'), value: extendedPool ? String(extendedPool.idle_conns) : '—' },
+                { label: t('systemStatus.storageUsed', 'Storage used'), value: backupStats?.database_size ?? '—' },
+                { label: t('systemStatus.tables', 'Tables'), value: backupStats?.table_count != null ? String(backupStats.table_count) : '—' },
+                { label: t('systemStatus.totalRows', 'Total rows'), value: totalRows > 0 ? fmtInt(totalRows) : '—' },
               ]}
             />
-            <DetailLink to="/db-health" label={t('Open DB Health')} />
+            <DetailLink to="/db-health" label={t('systemStatus.openDbHealth', 'Open DB Health')} />
           </AccordionSection>
         </section>
 
@@ -692,7 +692,7 @@ export default function SystemStatusPage() {
         <section id="telemetry">
           <AccordionSection
             icon={<Activity className="h-5 w-5" />}
-            title={t('Telemetry pipeline')}
+            title={t('systemStatus.telemetryPipeline', 'Telemetry pipeline')}
             description={telemetrySummary}
             defaultOpen
           >
@@ -720,7 +720,7 @@ export default function SystemStatusPage() {
         <section id="workers">
           <AccordionSection
             icon={<Boxes className="h-5 w-5" />}
-            title={t('Background workers')}
+            title={t('systemStatus.bgWorkers', 'Background workers')}
             description={workersSummary}
             defaultOpen
             badges={<StatusBadge status={workersStatus} />}
@@ -733,8 +733,8 @@ export default function SystemStatusPage() {
         <section id="system">
           <AccordionSection
             icon={<Package className="h-5 w-5" />}
-            title={t('System info')}
-            description={t('Version, build, runtime')}
+            title={t('systemStatus.systemInfo', 'System info')}
+            description={t('systemStatus.systemInfoDesc', 'Version, build, runtime')}
             defaultOpen
           >
             <SystemInfoRows version={version} system={extendedSystem} />
@@ -749,17 +749,17 @@ export default function SystemStatusPage() {
             <FadeIn>
               <section aria-labelledby="reliability-heading" className="space-y-3">
                 <SectionTitle id="reliability-heading" className="px-1">
-                  {t('Reliability & history')}
+                  {t('systemStatus.reliabilityHistory', 'Reliability & history')}
                 </SectionTitle>
 
                 <Masonry className="columns-1 lg:columns-2">
                   {/* 13 ─ SLO tracking ────────────────────────────── */}
-                  <section id="slo" aria-label={t('Personal SLO tracking')}>
+                  <section id="slo" aria-label={t('systemStatus.sloTracking', 'Personal SLO tracking')}>
                     <SLOTrackingCard />
                   </section>
 
                   {/* 14 ─ Scheduled maintenance ───────────────────── */}
-                  <section id="maintenance" aria-label={t('Scheduled maintenance')}>
+                  <section id="maintenance" aria-label={t('systemStatus.scheduledMaintenance', 'Scheduled maintenance')}>
                     <ScheduledMaintenanceCard now={now} />
                   </section>
 
@@ -772,13 +772,13 @@ export default function SystemStatusPage() {
             </details>
 
             {/* Footer ─ Status API docs link ──────────────────────── */}
-            <section id="api-docs" aria-label={t('Status API')}>
+            <section id="api-docs" aria-label={t('systemStatus.statusApi', 'Status API')}>
               <div className={cn('flex justify-center pt-1 pb-4', typography.size.xs, typography.color.muted)} data-status-print-hide>
                 <Link
                   to="/docs/status-api"
                   className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
                 >
-                  {t('Stable Status API for your own dashboards')} →
+                  {t('systemStatus.stableStatusApi', 'Stable Status API for your own dashboards')} →
                 </Link>
               </div>
             </section>

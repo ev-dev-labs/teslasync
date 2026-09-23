@@ -30,8 +30,12 @@ type NavItem = (typeof navSections)[number]['items'][number];
 export interface FeatureCatalogEntry {
   to: string;
   label: string;
+  /** Stable catalog key for the label (`nav.items.*`). */
+  labelKey: string;
   /** Section title from navSections (e.g. "Home", "Driving"). */
   section: string;
+  /** Stable catalog key for the section (`nav.groups.*`). */
+  sectionKey: string;
   /** Lucide icon component OR a custom React icon. */
   icon: LucideIcon | ComponentType<{ className?: string }>;
   /** Color class for the icon (Tailwind text-XYZ). */
@@ -325,7 +329,9 @@ export function buildFeatureCatalog(): FeatureCatalogEntry[] {
       out.push({
         to: item.to,
         label: item.label,
+        labelKey: item.labelKey,
         section: section.title,
+        sectionKey: section.titleKey,
         icon: item.icon,
         color: item.color,
         description:
@@ -342,7 +348,7 @@ export function buildFeatureCatalog(): FeatureCatalogEntry[] {
 /** Group a flat catalog by section, preserving navSections order. */
 export function groupFeatureCatalog(
   entries: FeatureCatalogEntry[],
-): { section: string; entries: FeatureCatalogEntry[] }[] {
+): { section: string; sectionKey: string; entries: FeatureCatalogEntry[] }[] {
   const order = navSections.map((s) => s.title);
   const buckets = new Map<string, FeatureCatalogEntry[]>();
   for (const e of entries) {
@@ -352,7 +358,10 @@ export function groupFeatureCatalog(
   }
   return order
     .filter((title) => buckets.has(title))
-    .map((title) => ({ section: title, entries: buckets.get(title)! }));
+    .map((title) => {
+      const bucket = buckets.get(title)!;
+      return { section: title, sectionKey: bucket[0].sectionKey, entries: bucket };
+    });
 }
 
 /**
@@ -363,14 +372,18 @@ export function groupFeatureCatalog(
 export function filterFeatureCatalog(
   entries: FeatureCatalogEntry[],
   query: string,
+  translate: (key: string, fallback: string) => string = (_key, fallback) => fallback,
 ): FeatureCatalogEntry[] {
   const q = query.trim().toLowerCase();
   if (!q) return entries;
-  const exactSection = entries.find((entry) => entry.section.toLowerCase() === q)?.section;
+  const exactSection = entries.find((entry) =>
+    entry.section.toLowerCase() === q ||
+    translate(entry.sectionKey, entry.section).toLowerCase() === q
+  )?.section;
   if (exactSection) return entries.filter((entry) => entry.section === exactSection);
   const tokens = q.split(/\s+/);
   return entries.filter((e) => {
-    const haystack = `${e.label} ${e.section} ${e.description} ${e.to}`.toLowerCase();
+    const haystack = `${e.label} ${translate(e.labelKey, e.label)} ${e.section} ${translate(e.sectionKey, e.section)} ${e.description} ${e.to}`.toLowerCase();
     return tokens.every((tok) => haystack.includes(tok));
   });
 }
