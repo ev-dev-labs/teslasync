@@ -6,7 +6,7 @@ Sidebar group **Tesla Physics**. In the app, expand this section in the left nav
 | ------ | ---- | ------------ | ---------- |
 | Physics hub | `/tesla-only` | Tesla physics views Tesla app and TeslaMate cannot own. | Renders an empty state when no data is available — the page is not hidden. |
 | Physics Ledger | `/tesla-only/ledger` | VIN-scoped energy/force solver: predicted vs measured, unexplained residual, unknown budget. | Shows unknown honestly when signals are missing; never zero-fills. |
-| Science Lab | `/science` | Rest-voltage and apparent-resistance proxies, conditional regression fits, thermal transients, weather correlations, tire models, and generated analysis reports. | Unsupported fits stay unknown. CIs and holdouts are shown only when computed; these are not causal experiments. |
+| Science Lab | `/science` | Seven- or 30-day evidence overview linked to rest-voltage/current-step observations, thermal fit diagnostics, matched weather drives, tire model sensitivity, and generated notebook methods. | Each of the five reports loads independently. Unsupported fits stay unknown; CIs and holdouts are shown only when computed, not implied. |
 | Three Clocks | `/tesla-only/clocks` | Event, ingest, and display time. Ingest stays unknown if not stored. | Renders an empty state when no data is available — the page is not hidden. |
 | Life Tape | `/tesla-only/life-tape` | Every second is Park, Neutral, Drive, Charge, or Unknown — not GPS. | Renders an empty state when no data is available — the page is not hidden. |
 | Contradiction Court | `/tesla-only/contradictions` | Gear=P with speed is a contradiction. Complete still latched is not. | Renders an empty state when no data is available — the page is not hidden. |
@@ -39,6 +39,16 @@ Thermal fits do not bridge separate Park episodes, active heating, long gaps,
 or drifting ambient conditions, and require observed zero HVAC power.
 Tire uncertainty is a model sensitivity band,
 not a calibrated 95% confidence interval.
+Use the Science Lab overview to inspect available evidence by domain.
+Rest-voltage tables retain dwell, temperature and SOC context; resistance
+steps show current and pack IR (not cell IR). Thermal cooldowns include their
+sample counts, confidence bounds, fitted ambient and residual RMSE. Weather
+rows link back to their drives and expose both session energy per distance and
+model residual; Pearson correlations require at least five complete matches
+and are not causal. The notebook exposes generated-row methods, input and
+missing signals, residual diagnostics and firmware epoch, not persisted
+experiments. The default window remains seven days; the optional 30-day
+window is the science endpoint's maximum.
 
 **The broader science loop is not fully implemented:** throughput/rest exposure
 does not identify separate cycle/calendar aging; generated notebook rows are

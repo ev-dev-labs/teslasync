@@ -12,6 +12,7 @@ import {
   TiresPanel,
   WeatherPanel,
 } from '@/features/science/components/SciencePanels';
+import { ScienceEvidenceOverview } from '@/features/science/components/ScienceEvidenceOverview';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAnalysisWindow } from '@/hooks/useAnalysisWindow';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -67,11 +68,12 @@ export default function ScienceLabPage() {
       </div>
 
       <div className="space-y-6">
-        <ElectrochemPanel window={scope} />
-        <ThermalPanel window={scope} />
-        <WeatherPanel window={scope} />
-        <TiresPanel window={scope} />
-        <NotebookPanel window={scope} />
+        <ScienceEvidenceOverview window={scope} />
+        <section id="science-electrochem" className="scroll-mt-24"><ElectrochemPanel window={scope} /></section>
+        <section id="science-thermal" className="scroll-mt-24"><ThermalPanel window={scope} /></section>
+        <section id="science-weather" className="scroll-mt-24"><WeatherPanel window={scope} /></section>
+        <section id="science-tires" className="scroll-mt-24"><TiresPanel window={scope} /></section>
+        <section id="science-notebook" className="scroll-mt-24"><NotebookPanel window={scope} /></section>
       </div>
     </PageContainer>
   );

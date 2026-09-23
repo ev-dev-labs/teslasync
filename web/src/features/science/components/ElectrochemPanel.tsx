@@ -3,7 +3,9 @@ import {
   useScienceElectrochem
 } from '@/api/hooks/useScience';
 import type {
-  ScienceElectrochem
+  ScienceElectrochem,
+  ScienceIRPoint,
+  ScienceOCVPoint,
 } from '@/api/types';
 import { AreaChartWrapper } from '@/components/charts';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
@@ -13,6 +15,7 @@ import {
   DataTable,
   GlassPanel,
   PanelTitle,
+  SectionTitle,
   Text,
   type Column
 } from '@/components/ui';
@@ -29,7 +32,23 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
   const query = useScienceElectrochem(window);
   const state = useDataState(query, { provenance: 'historical' });
   const data = state.data;
-  const { formatEnergy, formatTemperature, unitPrefs } = useUnits();
+  const { formatDuration, formatEnergy, formatTemperature, unitPrefs } = useUnits();
+
+  const restColumns: Column<ScienceOCVPoint>[] = [
+    { key: 'at', header: t('science.electrochem.observedAt', 'Observed'), render: (r) => formatDateTime(r.at) },
+    { key: 'soc', header: t('science.electrochem.soc', 'SOC'), render: (r) => `${fmtNumber(r.soc_pct, 1)}%` },
+    { key: 'voltage', header: t('science.electrochem.packVoltage', 'Pack voltage'), render: (r) => `${fmtNumber(r.ocv_pack_v, 2)} V` },
+    { key: 'dwell', header: t('science.electrochem.dwell', 'Rest dwell'), render: (r) => formatDuration(r.dwell_s) },
+    { key: 'temperature', header: t('science.electrochem.temperature', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
+    { key: 'direction', header: t('science.electrochem.direction', 'Direction'), render: (r) => r.direction },
+  ];
+  const irColumns: Column<ScienceIRPoint>[] = [
+    { key: 'at', header: t('science.electrochem.observedAt', 'Observed'), render: (r) => formatDateTime(r.at) },
+    { key: 'resistance', header: t('science.electrochem.irMilliohm', 'Pack IR (mΩ)'), render: (r) => `${fmtNumber(r.ir_pack_ohm * 1000, 2)} mΩ` },
+    { key: 'current', header: t('science.electrochem.currentStep', 'Current step'), render: (r) => `${fmtNumber(r.delta_i_a, 1)} A` },
+    { key: 'temperature', header: t('science.electrochem.temperature', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
+    { key: 'context', header: t('science.electrochem.context', 'Context'), render: (r) => r.context },
+  ];
 
   const binColumns: Column<ScienceElectrochem['ocv_bins'][number]>[] = [
     { key: 'soc', header: t('science.electrochem.socBin', 'SOC bin'), render: (r) => `${fmtNumber(r.soc_lo_pct, 0)}–${fmtNumber(r.soc_hi_pct, 0)} %` },
@@ -69,6 +88,33 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
             <Badge variant="neutral" size="sm">{t('science.firmware', 'Firmware')}: {data.firmware_epoch || unknown(t)}</Badge>
             {data.truncated ? <Badge variant="danger" size="sm">{t('science.truncated', 'Sample cap hit')}</Badge> : null}
           </div>
+          <div className="space-y-2">
+            <SectionTitle>{t('science.electrochem.restEvidence', 'Rest-voltage evidence')}</SectionTitle>
+            <Text as="p" size="sm" color="secondary">
+              {t('science.electrochem.restCaveat', 'Rest-end pack voltage is not proven equilibrium OCV. Compare SOC, temperature and dwell before interpreting a change.')}
+            </Text>
+            {asList(data.ocv_points).length > 1 && (
+              <AreaChartWrapper
+                data={downsample(data.ocv_points, 400).map((point) => ({ at: point.at, pack_v: point.ocv_pack_v }))}
+                xKey="at"
+                series={[{ key: 'pack_v', label: t('science.electrochem.packVoltage', 'Pack voltage'), color: SCIENCE_ACCENT }]}
+                height={200}
+                xFormatter={(value) => formatDateTime(value)}
+                yFormatter={(value) => fmtNumber(value, 1)}
+                ariaLabel={t('science.electrochem.restChart', 'Rest-end pack voltage over the window')}
+              />
+            )}
+            <DataTable
+              tableId="science:rest-points"
+              columns={restColumns}
+              data={asList(data.ocv_points)}
+              keyExtractor={(r) => `${r.at}-${r.direction}`}
+              emptyMessage={t('science.electrochem.restEmpty', 'No qualified rest-voltage observations in this window.')}
+              pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
+              mobileColumns={['at', 'soc', 'voltage']}
+            />
+          </div>
+          <SectionTitle>{t('science.electrochem.irEvidence', 'Pack resistance evidence')}</SectionTitle>
           {asList(data.ir_points).length > 1 ? (
             <AreaChartWrapper
               data={downsample(data.ir_points, 400).map((p) => ({ at: p.at, ir_mohm: p.ir_pack_ohm * 1000 }))}
@@ -79,8 +125,31 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
               yFormatter={(v) => fmtNumber(v, 2)}
               ariaLabel={t('science.electrochem.irChart', 'Pack resistance over the window')}
             />
-          ) : (
-            <Text as="p" size="sm" color="secondary">{t('science.electrochem.irEmpty', 'No current steps qualified for DCIR in this window.')}</Text>
+          ) : null}
+          <DataTable
+            tableId="science:ir-steps"
+            columns={irColumns}
+            data={asList(data.ir_points)}
+            keyExtractor={(r) => `${r.at}-${r.context}`}
+            emptyMessage={t('science.electrochem.irEmpty', 'No current steps qualified for DCIR in this window.')}
+            pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
+            mobileColumns={['at', 'resistance', 'current']}
+          />
+          <Text as="p" size="sm" color="secondary">
+            {t('science.electrochem.chargePulses', '{{count}} charging pulse steps recorded separately from drive current steps.', {
+              count: fmtNumber(asList(data.pulse_ir).length, 0),
+            })}
+          </Text>
+          {asList(data.pulse_ir).length > 0 && (
+            <DataTable
+              tableId="science:charge-pulses"
+              columns={irColumns}
+              data={asList(data.pulse_ir)}
+              keyExtractor={(r) => `${r.at}-${r.context}`}
+              emptyMessage={t('science.electrochem.irEmpty', 'No current steps qualified for DCIR in this window.')}
+              pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
+              mobileColumns={['at', 'resistance', 'current']}
+            />
           )}
           <div className="flex flex-wrap gap-2">
             <Badge variant={data.arrhenius?.unknown ? 'warning' : 'success'} size="sm">
