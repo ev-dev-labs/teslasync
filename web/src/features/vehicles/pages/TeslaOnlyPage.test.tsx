@@ -195,6 +195,79 @@ describe('TeslaOnlyPage', () => {
     expect(screen.getByText('Range Disagreement')).toBeInTheDocument();
     expect(screen.queryByText('0.0 km')).toBeNull();
     expect(screen.queryByText(/FSD is on/i)).toBeNull();
+    expect(screen.getByText('Where to start')).toBeInTheDocument();
+    expect(screen.getByText('Inspect missing coverage')).toBeInTheDocument();
+    expect(screen.getByText('Sampled window')).toBeInTheDocument();
+  });
+
+  it('shows observed port current and schedule alongside charge state', () => {
+    const original = report.charge_port_court.evidence;
+    report.charge_port_court.evidence = [{
+      at: '2026-03-01T11:40:00Z', latch: 'Engaged', door_open: true,
+      pack_current_a: 12.5, charge_state: 'Charging', scheduled_mode: 'OffPeak',
+    }];
+    try {
+      renderAt('/tesla-only/charge-port');
+      expect(screen.getByText('12.5 A')).toBeInTheDocument();
+      expect(screen.getByText('OffPeak')).toBeInTheDocument();
+      expect(screen.getByText('Continue the investigation')).toBeInTheDocument();
+    } finally {
+      report.charge_port_court.evidence = original;
+    }
+  });
+
+  it('does not convert null report slices into fabricated findings', () => {
+    const original = report.contradictions.findings;
+    report.contradictions.findings = null as unknown as ExclusiveReport['contradictions']['findings'];
+    try {
+      renderAt('/tesla-only/contradictions');
+      expect(screen.getByText(/No contradictions in the window/)).toBeInTheDocument();
+    } finally {
+      report.contradictions.findings = original;
+    }
+  });
+
+  it('distinguishes a bare hash from an authenticated vault', () => {
+    renderAt('/tesla-only/vault');
+    expect(screen.getByText('Hash only: not an authenticated signature')).toBeInTheDocument();
+    expect(screen.getByText(/Certificate window:/)).toBeInTheDocument();
+  });
+
+  it('shows available range spread without claiming true range', () => {
+    renderAt('/tesla-only/range');
+    expect(screen.getByText('Estimate spread: 90.0 km')).toBeInTheDocument();
+    expect(screen.getByText('Estimates differ')).toBeInTheDocument();
+  });
+
+  it('links logbook sessions to their recorded drive', () => {
+    const original = report.logbook.entries;
+    report.logbook.entries = [{
+      word: 'Drive', at: '2026-03-01T11:00:00Z', ended_at: null, kind: 'drive', id: 42,
+    }];
+    try {
+      renderAt('/tesla-only/logbook');
+      expect(screen.getByRole('link', { name: 'Drive →' })).toHaveAttribute('href', '/drives/42');
+    } finally {
+      report.logbook.entries = original;
+    }
+  });
+
+  it('filters life tape by observed state without dropping the other evidence', () => {
+    const original = report.life_tape.segments;
+    report.life_tape.segments = [
+      ...original,
+      { state: 'charging', started_at: '2026-03-01T11:05:00Z', ended_at: '2026-03-01T11:10:00Z', duration_s: 300 },
+    ];
+    try {
+      renderAt('/tesla-only/life-tape');
+      fireEvent.change(screen.getByLabelText('Filter by state'), { target: { value: 'charging' } });
+      expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('charging'))).toBe(true);
+      expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('neutral_rolling'))).toBe(false);
+      fireEvent.change(screen.getByLabelText('Filter by state'), { target: { value: '' } });
+      expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('neutral_rolling'))).toBe(true);
+    } finally {
+      report.life_tape.segments = original;
+    }
   });
 
   it('keeps ingest time unknown on the clocks page', () => {
@@ -224,7 +297,7 @@ describe('TeslaOnlyPage', () => {
 
   it('keeps Neutral rolling on the life tape', () => {
     renderAt('/tesla-only/life-tape');
-    expect(screen.getByText('neutral_rolling')).toBeInTheDocument();
+    expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('neutral_rolling'))).toBe(true);
     expect(screen.getByText('5.0 min')).toBeInTheDocument();
   });
 
@@ -261,10 +334,10 @@ describe('TeslaOnlyPage', () => {
     try {
       renderAt('/tesla-only/life-tape');
       expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument();
-      expect(screen.getByText('seg-29')).toBeInTheDocument();
-      expect(screen.queryByText('seg-0')).toBeNull();
+      expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('seg-29'))).toBe(true);
+      expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('seg-0'))).toBe(false);
       fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-      expect(screen.getByText('seg-0')).toBeInTheDocument();
+      expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('seg-0'))).toBe(true);
       expect(screen.getByText('Showing 26–30 of 30')).toBeInTheDocument();
     } finally {
       report.life_tape.segments = original;

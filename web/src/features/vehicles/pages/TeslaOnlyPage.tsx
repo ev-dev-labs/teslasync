@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +13,7 @@ import {
   DataTable,
   GlassPanel,
   PanelTitle,
+  Select,
   SectionTitle,
   Text,
   type Column,
@@ -26,6 +27,7 @@ import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/dateFormat';
 import { Icons } from '@/lib/icons';
 import { fmtNumber } from '@/lib/numberFormat';
+import { safeArray } from '@/lib/safeArray';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
 
 type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
@@ -82,6 +84,49 @@ const PHYSICS_TABLE_PAGINATION = { defaultPageSize: 25, pageSizeOptions: [25, 50
 
 function newestFirst<T>(rows: readonly T[]): T[] {
   return rows.length < 2 ? [...rows] : rows.slice().reverse();
+}
+
+const RELATED_VIEWS: Partial<Record<TeslaOnlySlug, TeslaOnlySlug[]>> = {
+  clocks: ['unknown', 'car-kept-living'],
+  'life-tape': ['logbook', 'contradictions'],
+  contradictions: ['charge-port', 'life-tape'],
+  meters: ['firmware-epochs', 'modes'],
+  unknown: ['clocks', 'nervous-system'],
+  'car-kept-living': ['clocks', 'black-box'],
+  logbook: ['life-tape', 'vault'],
+  'firmware-epochs': ['meters', 'dictionary'],
+  'charge-port': ['black-box', 'vault'],
+  'black-box': ['charge-port', 'clocks'],
+  dictionary: ['vault', 'firmware-epochs'],
+  vault: ['logbook', 'unknown'],
+  modes: ['meters', 'nervous-system'],
+  'nervous-system': ['unknown', 'contradictions'],
+  range: ['meters', 'ledger'],
+};
+
+function RelatedEvidence({ slug, t }: { slug: TeslaOnlySlug; t: Translate }) {
+  const related = RELATED_VIEWS[slug] ?? [];
+  return (
+    <GlassPanel className="space-y-3 p-4 sm:p-5">
+      <PanelTitle>{t('teslaOnly.followEvidence', 'Continue the investigation')}</PanelTitle>
+      <Text as="p" variant="bodySm">
+        {t('teslaOnly.relatedNote', 'Compare independent evidence before interpreting a gap, reset, or disagreement. These views share the selected vehicle.')}
+      </Text>
+      <div className="flex flex-wrap gap-3">
+        {related.map((item) => {
+          const target = TESLA_ONLY_FEATURES.find((entry) => entry.slug === item);
+          return target ? (
+            <Link key={item} to={`/tesla-only/${item}`} className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
+              {target.title} →
+            </Link>
+          ) : null;
+        })}
+        <Link to="/science" className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
+          {t('teslaOnly.scienceLab', 'Science Lab')} →
+        </Link>
+      </div>
+    </GlassPanel>
+  );
 }
 
 export default function TeslaOnlyPage() {
@@ -152,6 +197,7 @@ export default function TeslaOnlyPage() {
           {show(slug, 'modes') && <ModesPanel report={report} t={t} />}
           {show(slug, 'nervous-system') && <NervousPanel report={report} t={t} />}
           {show(slug, 'range') && <RangePanel report={report} t={t} formatDistance={formatDistance} formatEnergy={formatEnergy} />}
+          {feature && feature.slug !== 'ledger' && <RelatedEvidence slug={feature.slug} t={t} />}
         </div>
       ) : (
         <>
@@ -191,14 +237,22 @@ function PhysicsPanel({
 }
 
 function HubOverview({ report, t }: { report: ExclusiveReport; t: Translate }) {
-  const firmware = report.firmware_epochs.epochs[0]?.version;
+  const epochs = safeArray(report.firmware_epochs.epochs);
+  const firmware = epochs[epochs.length - 1]?.version;
+  const unknown = report.unknown_os;
+  const knownPct = unknown.window_hours > 0 && unknown.sample_hours != null
+    ? Math.min(100, Math.max(0, (unknown.sample_hours / unknown.window_hours) * 100))
+    : null;
+  const contradictions = safeArray(report.contradictions.findings);
+  const resets = safeArray(report.meters.resets);
+  const silent = safeArray(report.nervous_system.nerves).filter((nerve) => nerve.status !== 'alive');
   return (
     <FadeIn>
       <section aria-label={t('teslaOnly.kpis', 'Tesla physics summary')} className="space-y-6">
         <Grid cols={{ default: 2, xl: 4 }} gap={4}>
           <MetricCard
-            label={t('teslaOnly.views', 'Physics views')}
-            value={TESLA_ONLY_FEATURES.length}
+            label={t('teslaOnly.sampleCoverage', 'Sampled window')}
+            value={knownPct == null ? unknownText(t) : `${fmtNumber(knownPct, 1)}%`}
             color="cyan"
           />
           <MetricCard
@@ -208,7 +262,7 @@ function HubOverview({ report, t }: { report: ExclusiveReport; t: Translate }) {
           />
           <MetricCard
             label={t('teslaOnly.contradictionCount', 'Contradictions')}
-            value={report.contradictions.findings.length}
+            value={contradictions.length}
             color="purple"
           />
           <MetricCard
@@ -217,6 +271,28 @@ function HubOverview({ report, t }: { report: ExclusiveReport; t: Translate }) {
             color="green"
           />
         </Grid>
+        <GlassPanel className="space-y-4 p-4 sm:p-5">
+          <PanelTitle>{t('teslaOnly.whereToStart', 'Where to start')}</PanelTitle>
+          <Text as="p" variant="bodySm">
+            {t('teslaOnly.windowNote', 'Exclusive views use up to 14 days of bounded history. Sampled coverage is time with accepted telemetry, not proof that every signal was present. Live values and session boundaries may use different evidence.')}
+          </Text>
+          <div className="grid gap-3 md:grid-cols-2">
+            {([
+              { slug: 'unknown', count: unknown.unknown_hours == null ? unknownText(t) : `${fmtNumber(unknown.unknown_hours, 1)} h`, title: t('teslaOnly.inspectGaps', 'Inspect missing coverage') },
+              { slug: 'contradictions', count: String(contradictions.length), title: t('teslaOnly.inspectConflicts', 'Inspect conflicting observations') },
+              { slug: 'meters', count: String(resets.length), title: t('teslaOnly.inspectResets', 'Inspect meter drops') },
+              { slug: 'nervous-system', count: String(silent.length), title: t('teslaOnly.inspectSignals', 'Inspect non-alive signals') },
+            ] as const).map((item) => (
+              <Link key={item.slug} to={`/tesla-only/${item.slug}`} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--glass-border)] p-3 hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
+                <Text as="span" variant="bodySm">{item.title}</Text>
+                <Badge variant="neutral" size="sm">{item.count}</Badge>
+              </Link>
+            ))}
+          </div>
+          <Text as="p" variant="caption">
+            {t('teslaOnly.zeroScope', 'A zero means no finding in the returned evidence, not proof that nothing happened outside the observed window.')}
+          </Text>
+        </GlassPanel>
         <div>
           <div className="mb-3 flex items-baseline justify-between gap-3">
             <SectionTitle>{t('teslaOnly.hub', 'All Tesla physics')}</SectionTitle>
@@ -267,10 +343,12 @@ function HubOverview({ report, t }: { report: ExclusiveReport; t: Translate }) {
 
 function ClocksPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const latest = report.clocks.latest;
+  const samples = safeArray(report.clocks.samples);
   const columns: Column<NonNullable<ExclusiveReport['clocks']['samples']>[number]>[] = [
     { key: 'event', header: t('teslaOnly.eventTime', 'Event time'), render: (row) => formatDateTime(row.event_time) },
     { key: 'ingest', header: t('teslaOnly.ingestTime', 'Ingest time'), render: (row) => (row.ingest_time ? formatDateTime(row.ingest_time) : unknownText(t)) },
     { key: 'display', header: t('teslaOnly.displayTime', 'Display time'), render: (row) => formatDateTime(row.display_time) },
+    { key: 'gap', header: t('teslaOnly.elapsedSinceEvent', 'Elapsed since prior event'), render: (row) => secondsLabel(row.gap_s, t) },
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.clocks', 'Three Clocks')} honesty={report.clocks.honesty}>
@@ -279,12 +357,16 @@ function ClocksPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
         <MetricCard label={t('teslaOnly.ingestTime', 'Ingest time')} value={latest?.ingest_time ? formatDateTime(latest.ingest_time) : unknownText(t)} color="amber" />
         <MetricCard label={t('teslaOnly.displayTime', 'Display time')} value={latest ? formatDateTime(latest.display_time) : unknownText(t)} color="purple" />
       </Grid>
-      {report.clocks.samples.length > 0 && (
+      <Text as="p" variant="bodySm">
+        {t('teslaOnly.latestAge', 'Time since last recorded event at report generation: {{value}}', { value: secondsLabel(latest?.gap_s, t) })}
+      </Text>
+      <Text as="p" variant="caption">{t('teslaOnly.clockCaution', 'A large interval is not necessarily a telemetry outage; compare Unknown OS before concluding data was lost.')}</Text>
+      {samples.length > 0 && (
         <DataTable
           tableId="physics:clocks"
           columns={columns}
           mobileColumns={['event', 'ingest', 'display']}
-          data={newestFirst(report.clocks.samples)}
+          data={newestFirst(samples)}
           keyExtractor={(row) => row.event_time}
           emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
           pagination={PHYSICS_TABLE_PAGINATION}
@@ -295,7 +377,12 @@ function ClocksPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
 }
 
 function LifeTapePanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
-  const segments = report.life_tape.segments;
+  const segments = safeArray(report.life_tape.segments);
+  const [stateFilter, setStateFilter] = useState('');
+  const selectedState = segments.some((segment) => segment.state === stateFilter) ? stateFilter : '';
+  const visible = selectedState ? segments.filter((segment) => segment.state === selectedState) : segments;
+  const totalS = segments.reduce((sum, segment) => sum + Math.max(0, segment.duration_s), 0);
+  const unknownS = segments.filter((segment) => segment.state === 'unknown').reduce((sum, segment) => sum + Math.max(0, segment.duration_s), 0);
   const columns: Column<(typeof segments)[number]>[] = [
     { key: 'state', header: t('teslaOnly.state', 'State'), render: (row) => row.state },
     { key: 'duration', header: t('teslaOnly.duration', 'Duration'), render: (row) => `${fmtNumber(row.duration_s / 60, 1)} min`, align: 'right' },
@@ -304,6 +391,22 @@ function LifeTapePanel({ report, t }: { report: ExclusiveReport; t: Translate })
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.lifeTape', 'Life Tape')} honesty={report.life_tape.honesty}>
+      <Text as="p" variant="bodySm">
+        {t('teslaOnly.lifeWindow', 'Observed window: {{from}} to {{to}}', { from: formatDateTime(report.life_tape.from), to: formatDateTime(report.life_tape.to) })}
+      </Text>
+      <div className="flex flex-wrap gap-2">
+        <Badge variant="neutral" size="sm">{t('teslaOnly.segmentCount', '{{count}} classified intervals', { count: segments.length })}</Badge>
+        {totalS > 0 && <Badge variant="warning" size="sm">{t('teslaOnly.unclassifiedTime', 'Unclassified: {{value}}', { value: secondsLabel(unknownS, t) })}</Badge>}
+      </div>
+      <Select
+        label={t('teslaOnly.filterState', 'Filter by state')}
+        value={selectedState}
+        onChange={(event) => setStateFilter(event.target.value)}
+        options={[
+          { value: '', label: t('teslaOnly.allStates', 'All states') },
+          ...Array.from(new Set(segments.map((segment) => segment.state))).sort().map((value) => ({ value, label: value })),
+        ]}
+      />
       {segments.length === 0 ? (
         <Text as="p" size="sm" color="secondary">{unknownText(t)}</Text>
       ) : (
@@ -326,7 +429,7 @@ function LifeTapePanel({ report, t }: { report: ExclusiveReport; t: Translate })
             tableId="physics:life-tape"
             columns={columns}
             mobileColumns={['state', 'duration', 'started']}
-            data={newestFirst(segments)}
+            data={newestFirst(visible)}
             keyExtractor={(row) => `${row.state}-${row.started_at}`}
             emptyMessage={unknownText(t)}
             pagination={PHYSICS_TABLE_PAGINATION}
@@ -338,7 +441,10 @@ function LifeTapePanel({ report, t }: { report: ExclusiveReport; t: Translate })
 }
 
 function ContradictionPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
-  const findings = report.contradictions.findings;
+  const findings = safeArray(report.contradictions.findings);
+  const [kindFilter, setKindFilter] = useState('');
+  const selectedKind = findings.some((finding) => finding.kind === kindFilter) ? kindFilter : '';
+  const visible = selectedKind ? findings.filter((finding) => finding.kind === selectedKind) : findings;
   const columns: Column<(typeof findings)[number]>[] = [
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
     { key: 'kind', header: t('teslaOnly.kind', 'Kind'), render: (row) => row.kind },
@@ -346,6 +452,16 @@ function ContradictionPanel({ report, t }: { report: ExclusiveReport; t: Transla
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.contradictions', 'Contradiction Court')} honesty={report.contradictions.honesty}>
+      <Text as="p" variant="caption">{t('teslaOnly.conflictNote', 'Inspect each timestamp against charge-port and motion evidence. Conflicts flag observations for review; they do not establish which sensor was wrong.')}</Text>
+      <Select
+        label={t('teslaOnly.filterKind', 'Filter by finding')}
+        value={selectedKind}
+        onChange={(event) => setKindFilter(event.target.value)}
+        options={[
+          { value: '', label: t('teslaOnly.allFindings', 'All findings') },
+          ...Array.from(new Set(findings.map((finding) => finding.kind))).sort().map((value) => ({ value, label: value })),
+        ]}
+      />
       {findings.length === 0 ? (
         <Text as="p" size="sm" color="secondary">
           {t('teslaOnly.noContradictions', 'No contradictions in the window. Complete still latched is expected.')}
@@ -355,9 +471,9 @@ function ContradictionPanel({ report, t }: { report: ExclusiveReport; t: Transla
           tableId="physics:contradictions"
           columns={columns}
           mobileColumns={['at', 'kind', 'detail']}
-          data={newestFirst(findings)}
+          data={newestFirst(visible)}
           keyExtractor={(row) => `${row.kind}-${row.at}`}
-          emptyMessage={t('teslaOnly.noContradictions', 'No contradictions in the window. Complete still latched is expected.')}
+          emptyMessage={t('teslaOnly.noMatchingFindings', 'No findings match this filter.')}
           pagination={PHYSICS_TABLE_PAGINATION}
         />
       )}
@@ -373,10 +489,13 @@ function MetersPanel({
   formatDistance: (meters: number, opts?: { precision?: number }) => string;
 }) {
   const meters = report.meters;
+  const resets = safeArray(meters.resets);
   const columns: Column<(typeof meters.resets)[number]>[] = [
     { key: 'meter', header: t('teslaOnly.meter', 'Meter'), render: (row) => row.meter },
     { key: 'cause', header: t('teslaOnly.cause', 'Cause'), render: (row) => `${row.cause}${row.unknown ? `, ${unknownText(t)}` : ''}` },
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
+    { key: 'from', header: t('teslaOnly.before', 'Before'), render: (row) => row.from_m == null ? unknownText(t) : formatDistance(row.from_m, { precision: 1 }) },
+    { key: 'to', header: t('teslaOnly.after', 'After'), render: (row) => row.to_m == null ? unknownText(t) : formatDistance(row.to_m, { precision: 1 }) },
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.meters', 'Trip-Meter Genealogy')} honesty={meters.honesty}>
@@ -385,12 +504,13 @@ function MetersPanel({
         <MetricCard label={t('teslaOnly.drivingMeter', 'Driving trip meter')} value={meters.driving_distance_m == null ? unknownText(t) : formatDistance(meters.driving_distance_m, { precision: 1 })} color="green" />
         <MetricCard label={t('teslaOnly.fsdMeter', 'FSD trip meter')} value={meters.fsd_distance_m == null ? unknownText(t) : formatDistance(meters.fsd_distance_m, { precision: 1 })} color="purple" />
       </Grid>
-      {meters.resets.length > 0 && (
+      <Text as="p" variant="caption">{t('teslaOnly.resetCaution', 'A cause is classified from nearby mode or firmware evidence, not verified as the reason the meter fell. Compare timestamps with Firmware Epochs.')}</Text>
+      {resets.length > 0 && (
         <DataTable
           tableId="physics:meters"
           columns={columns}
           mobileColumns={['meter', 'cause', 'at']}
-          data={newestFirst(meters.resets)}
+          data={newestFirst(resets)}
           keyExtractor={(row) => `${row.meter}-${row.at}`}
           emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
           pagination={PHYSICS_TABLE_PAGINATION}
@@ -401,31 +521,39 @@ function MetersPanel({
 }
 
 function UnknownPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
+  const unknown = report.unknown_os;
+  const budgets = safeArray(unknown.budgets);
   return (
-    <PhysicsPanel title={t('teslaOnly.unknownOS', 'Unknown OS')} honesty={report.unknown_os.honesty}>
+    <PhysicsPanel title={t('teslaOnly.unknownOS', 'Unknown OS')} honesty={unknown.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.window', 'Window')} value={`${fmtNumber(report.unknown_os.window_hours, 1)} h`} color="cyan" />
         <MetricCard label={t('teslaOnly.sampled', 'Sampled')} value={report.unknown_os.sample_hours == null ? unknownText(t) : `${fmtNumber(report.unknown_os.sample_hours, 1)} h`} color="green" />
         <MetricCard label={t('teslaOnly.unknownHours', 'Unknown')} value={report.unknown_os.unknown_hours == null ? unknownText(t) : `${fmtNumber(report.unknown_os.unknown_hours, 1)} h`} color="amber" />
       </Grid>
       <div className="flex flex-wrap gap-2">
-        {report.unknown_os.budgets.map((budget) => (
+        {budgets.map((budget) => (
           <Badge key={budget.kind} variant={budget.unknown ? 'warning' : 'success'} size="sm">
             {budget.kind}: {fmtNumber(budget.hours, 1)} h
           </Badge>
         ))}
       </div>
+      <Text as="p" variant="caption">{t('teslaOnly.budgetNote', 'Per-signal unknown hours overlap. Do not add these budgets together: each asks a different question about the same window.')}</Text>
     </PhysicsPanel>
   );
 }
 
 function CarKeptLivingPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const living = report.car_kept_living;
+  const notes = safeArray(living.notes);
   const columns: Column<{ note: string }>[] = [
     { key: 'note', header: t('teslaOnly.detail', 'Detail'), render: (row) => row.note },
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.carKeptLiving', 'Car Kept Living')} honesty={living.honesty}>
+      <Grid cols={{ default: 1, md: 2 }} gap={3}>
+        <MetricCard label={t('teslaOnly.lastTelemetry', 'Last recorded telemetry')} value={living.last_telemetry_at ? formatDateTime(living.last_telemetry_at) : unknownText(t)} color="cyan" />
+        <MetricCard label={t('teslaOnly.missingSince', 'Elapsed since last event')} value={secondsLabel(living.never_received_gap_s, t)} color="amber" />
+      </Grid>
       <div className="flex flex-wrap gap-2">
         <Badge variant={living.mqtt_connected == null ? 'neutral' : living.mqtt_connected ? 'success' : 'warning'} size="sm">
           {living.mqtt_connected == null
@@ -441,11 +569,11 @@ function CarKeptLivingPanel({ report, t }: { report: ExclusiveReport; t: Transla
           <Badge variant="info" size="sm">{t('teslaOnly.replay', 'Replay keeps event time')}</Badge>
         ) : null}
       </div>
-      {living.notes.length > 0 && (
+      {notes.length > 0 && (
         <DataTable
           tableId="physics:car-kept-living"
           columns={columns}
-          data={living.notes.map((note) => ({ note }))}
+          data={notes.map((note) => ({ note }))}
           keyExtractor={(row) => row.note}
           emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
           pagination={PHYSICS_TABLE_PAGINATION}
@@ -456,15 +584,21 @@ function CarKeptLivingPanel({ report, t }: { report: ExclusiveReport; t: Transla
 }
 
 function LogbookPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
-  const entries = report.logbook.entries;
+  const entries = safeArray(report.logbook.entries);
   const columns: Column<(typeof entries)[number]>[] = [
-    { key: 'word', header: t('teslaOnly.word', 'Word'), render: (row) => row.word },
+    {
+      key: 'word', header: t('teslaOnly.word', 'Word'),
+      render: (row) => (row.id > 0 && (row.kind === 'drive' || row.kind === 'charge')
+        ? <Link to={`/${row.kind === 'drive' ? 'drives' : 'charging'}/${row.id}`} className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{row.word} →</Link>
+        : row.word),
+    },
     { key: 'kind', header: t('teslaOnly.kind', 'Kind'), render: (row) => row.kind },
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
     { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (row) => (row.ended_at ? formatDateTime(row.ended_at) : unknownText(t)) },
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.logbook', 'Tesla-Language Logbook')} honesty={report.logbook.honesty}>
+      <Text as="p" variant="caption">{t('teslaOnly.logbookNote', 'This is a session-boundary narrative. If no sessions exist, the latest live state may appear instead; it is not a complete shift-by-shift history.')}</Text>
       <DataTable
         tableId="physics:logbook"
         columns={columns}
@@ -485,7 +619,7 @@ function EpochsPanel({
   t: Translate;
   formatDistance: (meters: number, opts?: { precision?: number }) => string;
 }) {
-  const epochs = report.firmware_epochs.epochs;
+  const epochs = safeArray(report.firmware_epochs.epochs);
   const columns: Column<(typeof epochs)[number]>[] = [
     { key: 'version', header: t('teslaOnly.version', 'Version'), render: (row) => row.version },
     {
@@ -496,9 +630,12 @@ function EpochsPanel({
         : `${formatDistance(row.fsd_meter_start_m, { precision: 1 })} → ${formatDistance(row.fsd_meter_end_m, { precision: 1 })}`),
     },
     { key: 'started', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.started_at) },
+    { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (row) => row.ended_at ? formatDateTime(row.ended_at) : t('teslaOnly.currentEpoch', 'Latest observed version') },
+    { key: 'dwell', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (row) => secondsLabel(row.complete_to_unplug_s, t) },
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.epochs', 'Firmware Epochs')} honesty={report.firmware_epochs.honesty}>
+      <Text as="p" variant="caption">{t('teslaOnly.epochNote', 'FSD meter bounds are counter readings, not FSD engaged miles. An epoch ends when a different firmware value is observed.')}</Text>
       <DataTable
         tableId="physics:firmware-epochs"
         columns={columns}
@@ -513,7 +650,7 @@ function EpochsPanel({
 }
 
 function PortPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
-  const evidence = report.charge_port_court.evidence;
+  const evidence = safeArray(report.charge_port_court.evidence);
   const columns: Column<(typeof evidence)[number]>[] = [
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
     { key: 'state', header: t('teslaOnly.chargeState', 'Charge state'), render: (row) => row.charge_state || unknownText(t) },
@@ -523,9 +660,12 @@ function PortPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
       header: t('teslaOnly.door', 'Door'),
       render: (row) => (row.door_open == null ? unknownText(t) : row.door_open ? t('teslaOnly.open', 'Open') : t('teslaOnly.closed', 'Closed')),
     },
+    { key: 'current', header: t('teslaOnly.packCurrent', 'Pack current'), render: (row) => row.pack_current_a == null ? unknownText(t) : `${fmtNumber(row.pack_current_a, 1)} A` },
+    { key: 'schedule', header: t('teslaOnly.scheduleMode', 'Schedule mode'), render: (row) => row.scheduled_mode || unknownText(t) },
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.portCourt', 'Charge-Port Court')} honesty={report.charge_port_court.honesty}>
+      <Text as="p" variant="caption">{t('teslaOnly.portNote', 'Compare adjacent state, latch, current, and schedule samples before treating a paused charge as unplugged. Only Disconnected marks unplugging.')}</Text>
       <DataTable
         tableId="physics:charge-port"
         columns={columns}
@@ -541,6 +681,7 @@ function PortPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
 
 function BlackBoxPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const box = report.black_box;
+  const frames = safeArray(box.frames);
   const columns: Column<(typeof box.frames)[number]>[] = [
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
     { key: 'state', header: t('teslaOnly.chargeState', 'Charge state'), render: (row) => row.charge_state || unknownText(t) },
@@ -551,18 +692,27 @@ function BlackBoxPanel({ report, t }: { report: ExclusiveReport; t: Translate })
       render: (row) => (row.pack_current_a == null ? unknownText(t) : `${fmtNumber(row.pack_current_a, 1)} A`),
       align: 'right',
     },
+    { key: 'door', header: t('teslaOnly.door', 'Door'), render: (row) => row.door_open == null ? unknownText(t) : row.door_open ? t('teslaOnly.open', 'Open') : t('teslaOnly.closed', 'Closed') },
+    { key: 'schedule', header: t('teslaOnly.scheduleMode', 'Schedule mode'), render: (row) => row.scheduled_mode || unknownText(t) },
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.blackBox', 'Black Box 90s')} honesty={box.honesty}>
       <div className="flex flex-wrap gap-2">
         <Badge variant="info" size="sm">{box.trigger}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.frames', '{{count}} frames', { count: box.frames.length })}</Badge>
+        <Badge variant="neutral" size="sm">{t('teslaOnly.frames', '{{count}} frames', { count: frames.length })}</Badge>
       </div>
+      <Text as="p" variant="bodySm">
+        {t('teslaOnly.blackBoxWindow', 'Evidence window: {{from}} to {{to}}', {
+          from: box.from ? formatDateTime(box.from) : unknownText(t),
+          to: box.to ? formatDateTime(box.to) : unknownText(t),
+        })}
+      </Text>
+      <Text as="p" variant="caption">{t('teslaOnly.blackBoxNote', 'Only the latest selected trigger is shown. Empty frames mean no sample in this 90-second window, not that no event occurred.')}</Text>
       <DataTable
         tableId="physics:black-box"
         columns={columns}
         mobileColumns={['at', 'state', 'current']}
-        data={box.frames}
+        data={frames}
         keyExtractor={(row) => row.at}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
         pagination={PHYSICS_TABLE_PAGINATION}
@@ -580,20 +730,23 @@ function DictionaryPanel({ report, t }: { report: ExclusiveReport; t: Translate 
         <MetricCard label={t('teslaOnly.parkDwell', 'Park confirm dwell')} value={secondsLabel(dict.park_confirm_dwell_s, t)} color="cyan" />
         <MetricCard label={t('teslaOnly.unscheduled', 'Complete without schedule')} value={dict.complete_without_schedule == null ? unknownText(t) : String(dict.complete_without_schedule)} color="purple" />
       </Grid>
+      <Text as="p" variant="caption">{t('teslaOnly.dictionaryNote', 'Typical dwell is a median of observed Complete-to-Disconnected transitions, not a target or a penalty. The count of unscheduled Complete transitions is unknown when none are detected.')}</Text>
     </PhysicsPanel>
   );
 }
 
 function VaultPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const vault = report.vault;
+  const drives = safeArray(vault.certificate.drives);
+  const charges = safeArray(vault.certificate.charges);
   const driveColumns: Column<(typeof vault.certificate.drives)[number]>[] = [
-    { key: 'id', header: t('teslaOnly.sessionId', 'ID'), render: (row) => String(row.id), align: 'right' },
+    { key: 'id', header: t('teslaOnly.sessionId', 'ID'), render: (row) => <Link to={`/drives/${row.id}`} className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{row.id} →</Link>, align: 'right' },
     { key: 'started', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.started_at) },
     { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (row) => (row.ended_at ? formatDateTime(row.ended_at) : unknownText(t)) },
     { key: 'rule', header: t('teslaOnly.endRule', 'End rule'), render: (row) => row.end_rule },
   ];
   const chargeColumns: Column<(typeof vault.certificate.charges)[number]>[] = [
-    { key: 'id', header: t('teslaOnly.sessionId', 'ID'), render: (row) => String(row.id), align: 'right' },
+    { key: 'id', header: t('teslaOnly.sessionId', 'ID'), render: (row) => <Link to={`/charging/${row.id}`} className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{row.id} →</Link>, align: 'right' },
     { key: 'started', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.started_at) },
     { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (row) => (row.ended_at ? formatDateTime(row.ended_at) : unknownText(t)) },
     { key: 'rule', header: t('teslaOnly.endRule', 'End rule'), render: (row) => row.end_rule },
@@ -601,7 +754,7 @@ function VaultPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const dwellColumns: Column<{ dwell: number; key: string }>[] = [
     { key: 'dwell', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (row) => secondsLabel(row.dwell, t), align: 'right' },
   ];
-  const dwells = vault.etiquette_dwells_s.map((dwell, index) => ({ dwell, key: `${dwell}-${index}` }));
+  const dwells = safeArray(vault.etiquette_dwells_s).map((dwell, index) => ({ dwell, key: `${dwell}-${index}` }));
   return (
     <PhysicsPanel title={t('teslaOnly.vault', 'Physics Vault')} honesty={vault.honesty}>
       <Grid cols={{ default: 1, md: 2 }} gap={3}>
@@ -612,12 +765,24 @@ function VaultPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
         />
         <MetricCard
           label={t('teslaOnly.integrity', 'Integrity')}
-          value={vault.certificate.integrity_sha256}
+          value={vault.certificate.integrity_sha256 || unknownText(t)}
           color="green"
         />
       </Grid>
+      <Text as="p" variant="bodySm">
+        {t('teslaOnly.certificateWindow', 'Certificate window: {{from}} to {{to}} · Issued {{issued}}', {
+          from: formatDateTime(vault.certificate.from), to: formatDateTime(vault.certificate.to),
+          issued: formatDateTime(vault.certificate.issued_at),
+        })}
+      </Text>
+      <Badge variant={vault.certificate.hmac_sha256 ? 'success' : 'warning'} size="sm">
+        {vault.certificate.hmac_sha256
+          ? t('teslaOnly.hmacConfigured', 'HMAC configured: verify with the configured key')
+          : t('teslaOnly.hashOnly', 'Hash only: not an authenticated signature')}
+      </Badge>
+      <Text as="p" variant="caption">{vault.certificate.rules}</Text>
       <div className="flex flex-wrap gap-2">
-        {vault.firmware_versions.map((version) => (
+        {safeArray(vault.firmware_versions).map((version) => (
           <Badge key={version} variant="neutral" size="sm">{version}</Badge>
         ))}
       </div>
@@ -626,7 +791,7 @@ function VaultPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
         tableId="physics:vault-drives"
         columns={driveColumns}
         mobileColumns={['id', 'started', 'rule']}
-        data={newestFirst(vault.certificate.drives)}
+        data={newestFirst(drives)}
         keyExtractor={(row) => `drive-${row.id}-${row.started_at}`}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
         pagination={PHYSICS_TABLE_PAGINATION}
@@ -636,7 +801,7 @@ function VaultPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
         tableId="physics:vault-charges"
         columns={chargeColumns}
         mobileColumns={['id', 'started', 'rule']}
-        data={newestFirst(vault.certificate.charges)}
+        data={newestFirst(charges)}
         keyExtractor={(row) => `charge-${row.id}-${row.started_at}`}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
         pagination={PHYSICS_TABLE_PAGINATION}
@@ -665,14 +830,18 @@ function ModesPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   return (
     <PhysicsPanel title={t('teslaOnly.modes', 'Mode Laws')} honesty={modes.honesty}>
       <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">Valet: {modeLabel(modes.valet, 'on', 'off')}</Badge>
-        <Badge variant="neutral" size="sm">Service: {modeLabel(modes.service, 'on', 'off')}</Badge>
-        <Badge variant="neutral" size="sm">Transport: {modeLabel(modes.transport, 'on', 'off')}</Badge>
+        <Badge variant="neutral" size="sm">{t('teslaOnly.valetMode', 'Valet')}: {modeLabel(modes.valet, t('teslaOnly.modeOn', 'on'), t('teslaOnly.modeOff', 'off'))}</Badge>
+        <Badge variant="neutral" size="sm">{t('teslaOnly.serviceMode', 'Service')}: {modeLabel(modes.service, t('teslaOnly.modeOn', 'on'), t('teslaOnly.modeOff', 'off'))}</Badge>
+        <Badge variant="neutral" size="sm">{t('teslaOnly.transportMode', 'Transport')}: {modeLabel(modes.transport, t('teslaOnly.modeOn', 'on'), t('teslaOnly.modeOff', 'off'))}</Badge>
       </div>
+      <SectionTitle>{t('teslaOnly.allowedInferences', 'Permitted inferences')}</SectionTitle>
+      {safeArray(modes.allowed).length ? safeArray(modes.allowed).map((rule) => <Text as="p" variant="bodySm" key={rule}>{rule}</Text>)
+        : <Text as="p" variant="bodySm">{unknownText(t)}</Text>}
+      <SectionTitle>{t('teslaOnly.prohibitedInferences', 'Do not infer')}</SectionTitle>
       <DataTable
         tableId="physics:modes"
         columns={columns}
-        data={modes.forbidden.map((rule) => ({ rule }))}
+        data={safeArray(modes.forbidden).map((rule) => ({ rule }))}
         keyExtractor={(row) => row.rule}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
         pagination={PHYSICS_TABLE_PAGINATION}
@@ -682,7 +851,7 @@ function ModesPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
 }
 
 function NervousPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
-  const nerves = report.nervous_system.nerves;
+  const nerves = safeArray(report.nervous_system.nerves);
   const columns: Column<(typeof nerves)[number]>[] = [
     { key: 'field', header: t('teslaOnly.field', 'Signal'), render: (row) => row.field },
     { key: 'status', header: t('teslaOnly.status', 'Status'), render: (row) => row.status },
@@ -690,6 +859,7 @@ function NervousPanel({ report, t }: { report: ExclusiveReport; t: Translate }) 
   ];
   return (
     <PhysicsPanel title={t('teslaOnly.nervous', 'Nervous System')} honesty={report.nervous_system.honesty}>
+      <Text as="p" variant="caption">{t('teslaOnly.nerveNote', 'Status compares the latest frame against the freshness window. A silent signal can be stale or absent; check Three Clocks and Unknown OS before diagnosing the vehicle.')}</Text>
       <div className="flex flex-wrap gap-2">
         {nerves.map((nerve) => (
           <Badge
@@ -724,6 +894,8 @@ function RangePanel({
 }) {
   const range = report.range;
   const dist = (value: number | null) => (value == null ? unknownText(t) : formatDistance(value, { precision: 1 }));
+  const estimates = [range.rated_range_m, range.est_range_m, range.ideal_range_m].filter((value): value is number => value != null);
+  const spread = estimates.length >= 2 ? Math.max(...estimates) - Math.min(...estimates) : null;
   return (
     <PhysicsPanel title={t('teslaOnly.range', 'Range Disagreement')} honesty={range.honesty}>
       <Grid cols={{ default: 1, md: 2, xl: 4 }} gap={3}>
@@ -732,6 +904,13 @@ function RangePanel({
         <MetricCard label={t('teslaOnly.ideal', 'Ideal')} value={dist(range.ideal_range_m)} color="purple" />
         <MetricCard label={t('teslaOnly.energy', 'Energy remaining')} value={range.energy_remaining_wh == null ? unknownText(t) : formatEnergy(range.energy_remaining_wh)} color="amber" />
       </Grid>
+      <div className="flex flex-wrap gap-2">
+        <Badge variant={range.disagree ? 'warning' : 'neutral'} size="sm">
+          {range.disagree ? t('teslaOnly.estimatesDiffer', 'Estimates differ') : t('teslaOnly.noDetectedDifference', 'No detected difference in available estimates')}
+        </Badge>
+        <Badge variant="neutral" size="sm">{t('teslaOnly.estimateSpread', 'Estimate spread')}: {dist(spread)}</Badge>
+      </div>
+      <Text as="p" variant="caption">{t('teslaOnly.rangeNote', 'Spread is the largest minus smallest available displayed estimate. It is not uncertainty calibrated against actual driving, and missing estimates are excluded.')}</Text>
       <Text as="p" size="sm" color="secondary">
         {t('teslaOnly.noTrueRange', 'No true range. Recent Wh/km: {{value}}', {
           value: range.recent_wh_per_km == null ? unknownText(t) : fmtNumber(range.recent_wh_per_km, 0),

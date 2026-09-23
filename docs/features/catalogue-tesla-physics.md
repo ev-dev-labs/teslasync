@@ -23,6 +23,31 @@ Sidebar group **Tesla Physics**. In the app, expand this section in the left nav
 | Nervous System | `/tesla-only/nervous-system` | BMS, Gear, latch, and trip meters: alive, silent, or contradicting. | Renders an empty state when no data is available — the page is not hidden. |
 | Range Disagreement | `/tesla-only/range` | Rated, typical, ideal, and energy remaining. Never a true range. | Shows unknown/empty honestly when signals are missing. |
 
+## Following the evidence
+
+The hub now prioritizes sampled-window coverage, unknown hours, contradictions,
+meter drops, and non-alive signals. Open a finding to inspect its timestamps and
+then follow the related-evidence links on each view. Three Clocks exposes elapsed
+event time; Life Tape separates unknown intervals; meter genealogy shows the
+readings before and after drops; Life Tape and Contradiction Court can be
+filtered by state or finding without dropping the original evidence.
+Logbook and Vault session boundaries link to drive and charging details.
+Charge-port and Black Box views show current, schedule, and latch alongside
+state. Firmware epochs expose their observed
+boundaries, while the Vault distinguishes a bare hash from an HMAC-backed
+certificate and shows its coverage window. Range Disagreement shows the spread
+of available estimates, **not** a prediction of actual range.
+
+The exclusive report reads **up to 14 days** of bounded telemetry and session
+history; it is not a lifetime archive. The sampled-window percentage measures
+time with accepted telemetry, not completeness of every signal. A zero finding
+count only applies to the returned evidence. Per-signal unknown budgets overlap
+and must not be added. The Black Box captures the *latest selected trigger* and
+may have no frames within its 90-second interval. Logbook narrates session
+boundaries, or the latest state when no sessions exist; it is not a complete gear
+change feed. Follow the separate Physics Ledger and Science Lab for their
+independent model and measurement evidence.
+
 ## Analysis boundaries
 
 New HTTP routes use `internal/handler/v1/analysis` and the `physicssvc` / `sciencesvc`
