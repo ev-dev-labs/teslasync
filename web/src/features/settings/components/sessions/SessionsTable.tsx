@@ -135,6 +135,7 @@ export function SessionsTable({
             data={sessions ?? []}
             keyExtractor={keyExtractor}
             emptyMessage={t('account.sessions.empty', 'No active sessions for this account.')}
+            pagination
           />
         )}
       </GlassPanel>
