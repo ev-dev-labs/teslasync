@@ -80,7 +80,7 @@ type routeDriveDetail struct {
 	Efficiency     float64 `json:"efficiency"`
 }
 
-// List returns the top routes grouped by start→end address pair.
+// List returns routes grouped by start→end address pair, ordered by trip count.
 // Optional `start` and `end` query params (YYYY-MM-DD) scope the
 // underlying drives by `started_at`. When omitted, the route aggregation
 // covers the full vehicle history (legacy behavior).
@@ -144,8 +144,7 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 		FROM labeled
 		GROUP BY start_label, end_label
 		HAVING COUNT(*) >= 1
-		ORDER BY COUNT(*) DESC
-		LIMIT 15`,
+		ORDER BY COUNT(*) DESC, start_label, end_label`,
 		vehicleID, routeEffMetersPerMile, routeEffMpsPerMph, routeEffMetersPerMile,
 		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime))
 	if err != nil {

@@ -222,7 +222,6 @@ const DESCRIPTIONS: Record<string, string> = {
   // ── Notifications ──────────────────────────────────────────────────
   '/notifications/inbox': 'Recent alerts and system messages.',
   '/notifications/channels': 'Where alerts are sent — email, SMS, push, webhook.',
-  '/notifications/webhooks': 'POST alerts to your own URL for downstream automation.',
   '/notifications/browser': 'Enable browser push notifications for this device.',
   '/notifications/quiet-hours': 'Mute non-critical alerts during set times.',
   '/alert-fatigue': 'Identify noisy alert rules and reduce repetitive notifications.',

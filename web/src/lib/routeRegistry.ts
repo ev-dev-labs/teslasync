@@ -174,7 +174,6 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: "/notifications/quiet-hours", name: "NotificationsQuietHours", label: "Notifications Quiet Hours", i18nKey: "routes.notificationsQuietHours" },
   { path: "/notifications/rules", name: "NotificationsRules", label: "Notifications Rules", i18nKey: "routes.notificationsRules" },
   { path: "/notifications/studio", name: "NotificationsStudio", label: "Notifications Studio", i18nKey: "routes.notificationsStudio" },
-  { path: "/notifications/webhooks", name: "NotificationsWebhooks", label: "Notifications Webhooks", i18nKey: "routes.notificationsWebhooks" },
   { path: "/onboarding", name: "Onboarding", label: "Onboarding", i18nKey: "routes.onboarding" },
   { path: "/outage", name: "OutageAutobiography", label: "Outage Autobiography", i18nKey: "routes.outageAutobiography" },
   { path: "/ownership/charging-reconciliation", name: "ChargingReconciliation", label: "Charging Reconciliation", i18nKey: "routes.chargingReconciliation" },

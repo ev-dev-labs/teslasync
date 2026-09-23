@@ -17,6 +17,29 @@ import (
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
+func TestNormalizeWebhookResponseOmitsSigningSecret(t *testing.T) {
+	ch := &notificationmodel.NotificationChannel{
+		ID:   3,
+		Type: "webhook",
+		Name: "Automation",
+		Config: map[string]string{
+			"url":          "https://example.test/events",
+			"bearer_token": "do-not-return",
+			"http_method":  "PUT",
+		},
+	}
+	resp := normalizeChannelResponse(ch)
+	if _, ok := resp["bearer_token"]; ok {
+		t.Fatal("webhook signing secret exposed in API response")
+	}
+	if resp["url"] != ch.Config["url"] {
+		t.Fatalf("url = %v, want stored URL", resp["url"])
+	}
+	if resp["method"] != "PUT" {
+		t.Fatalf("method = %v, want persisted PUT method", resp["method"])
+	}
+}
+
 // fakeInboxStore is an in-memory stub of notificationInboxStore so handler
 // tests can exercise filter parsing and bulk endpoints without a live DB.
 type fakeInboxStore struct {
@@ -215,6 +238,26 @@ func TestParseNotificationLogFilters(t *testing.T) {
 			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.From.Year() != 2024 {
 					t.Fatalf("from year = %d", f.From.Year())
+				}
+			},
+		},
+		{
+			name:  "to date-only includes the entire selected day",
+			query: "from=2026-09-22&to=2026-09-23",
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
+				want := time.Date(2026, 9, 24, 0, 0, 0, -1, time.UTC)
+				if !f.To.Equal(want) {
+					t.Fatalf("to = %s, want %s", f.To.Format(time.RFC3339Nano), want.Format(time.RFC3339Nano))
+				}
+			},
+		},
+		{
+			name:  "to timestamp remains exact",
+			query: "to=2026-09-23T12%3A30%3A00Z",
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
+				want := time.Date(2026, 9, 23, 12, 30, 0, 0, time.UTC)
+				if !f.To.Equal(want) {
+					t.Fatalf("to = %s, want %s", f.To.Format(time.RFC3339Nano), want.Format(time.RFC3339Nano))
 				}
 			},
 		},

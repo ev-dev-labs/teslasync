@@ -88,7 +88,7 @@ func TestUnarchive(t *testing.T) {
 			t.Fatalf("unexpected err: %v", err)
 		}
 		call := pool.execCalls[0]
-		for _, sub := range []string{"archived_at = NULL", "archived_at IS NOT NULL"} {
+		for _, sub := range []string{"archived_at = NULL", "archived_at IS NOT NULL", "enabled = NOT needs_review"} {
 			if !strings.Contains(call.sql, sub) {
 				t.Errorf("SQL missing %q:\n%s", sub, call.sql)
 			}

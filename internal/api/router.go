@@ -3603,6 +3603,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// {geofenceID} subrouter so chi matches the static path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", geofenceHandler.BulkUpdate)
 			r.Get("/needs-review", geofenceHandler.NeedsReview)
+			r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/visited-candidates", geofenceHandler.VisitedCandidates)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/resolve", geofenceHandler.ResolveName)
 			r.Get("/rates/current", geofenceHandler.CurrentRates)
 			r.Route("/{geofenceID}", func(r chi.Router) {
 				r.Get("/", geofenceHandler.Get)
@@ -3631,6 +3633,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// Read-only charging-activity views for this place.
 				r.Get("/charging-summary", geofenceHandler.ChargingSummary)
 				r.Get("/charging-activity", geofenceHandler.ChargingActivity)
+				r.Get("/first-charging-session", geofenceHandler.FirstChargingSession)
 			})
 		})
 

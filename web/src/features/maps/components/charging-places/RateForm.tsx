@@ -15,6 +15,7 @@ export interface RateFormProps {
   geofenceId: number;
   /** The rate active now (if any) — seeds the currency default. */
   currentRate?: GeofenceRate | null;
+  firstSessionAt?: string | null;
 }
 
 /** A reasonably broad, curated set of ISO-4217 currencies for the picker. */
@@ -57,6 +58,15 @@ function nowAsLocalInput(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function dayBeforeSessionAsLocalInput(startedAt: string): string {
+  const date = new Date(startedAt);
+  if (Number.isNaN(date.getTime())) return nowAsLocalInput();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - 1);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T00:00`;
+}
+
 /**
  * Add-a-rate form — first-time setup, a future scheduled change, or a
  * correction (there is no separate "replace" endpoint: a correction is
@@ -66,14 +76,14 @@ function nowAsLocalInput(): string {
  * and converts to the canonical `rate_per_wh` strictly at the request
  * boundary — never sends a per-kWh value on the wire.
  */
-export function RateForm({ geofenceId, currentRate }: RateFormProps) {
+export function RateForm({ geofenceId, currentRate, firstSessionAt }: RateFormProps) {
   const { t } = useTranslation();
   const { locale, settings } = useSettings();
   const defaultCurrency = currentRate?.currency ?? currencyCodeFromSymbol(settings.currency_symbol);
 
   const [currency, setCurrency] = useState(defaultCurrency);
   const [rateMicro, setRateMicro] = useState<number | null>(null);
-  const [effectiveFrom, setEffectiveFrom] = useState(nowAsLocalInput());
+  const [effectiveFrom, setEffectiveFrom] = useState(() => !currentRate && firstSessionAt ? dayBeforeSessionAsLocalInput(firstSessionAt) : nowAsLocalInput());
   const [effectiveTo, setEffectiveTo] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -177,7 +187,7 @@ export function RateForm({ geofenceId, currentRate }: RateFormProps) {
       <HelperText className="mt-3">
         {t(
           'chargingPlaces.rateForm.legacyEstimateHint',
-          'If this rate is active today, it also estimates older unpriced sessions at this place. Existing actual costs stay unchanged.',
+          'Starting before the first charge makes that session eligible. Preview and apply to price past sessions; existing actual costs stay unchanged.',
         )}
       </HelperText>
 

@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route, Repeat, Gauge, Activity, TrendingUp, Award, Navigation } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, SectionTitle } from '@/components/ui';
+import { GlassPanel, Pagination, PanelTitle, SectionTitle } from '@/components/ui';
 import { VehicleSelect, RangePicker } from '@/components/forms';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -17,12 +17,15 @@ import { AIRouteEfficiencySuggestions } from '@/components/ai/AIRouteEfficiencyS
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useUrlNumber } from '@/hooks/useUrlState';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtInt } from '@/lib/numberFormat';
 import {
   RouteCard, makeUnitDisplay, ROUTE_EFF_COLORS, MAX_COMPARISON_ROUTES,
 } from '../components/route-efficiency';
+
+const ROUTES_PAGE_SIZE = 12;
 
 export default function RouteEfficiencyPage() {
   const { t } = useTranslation();
@@ -31,15 +34,32 @@ export default function RouteEfficiencyPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { start: startDate, end: endDate, setRange } = useRangeState({
+  const { start: startDate, end: endDate, setRangeWithUrlUpdates } = useRangeState({
     persistKey: 'route-efficiency.range',
   });
+  const [page, setPage] = useUrlNumber('page', 1);
 
   const routeQuery = useRouteEfficiency(vehicleIdStr, startDate, endDate);
   const { data, isLoading, error, refetch } = routeQuery;
 
   const routes = data?.routes ?? [];
   const hasRoutes = routes.length > 0;
+  const totalPages = Math.max(1, Math.ceil(routes.length / ROUTES_PAGE_SIZE));
+  const currentPage = Number.isFinite(page)
+    ? Math.min(Math.max(1, Math.trunc(page)), totalPages)
+    : 1;
+  const visibleRoutes = routes.slice((currentPage - 1) * ROUTES_PAGE_SIZE, currentPage * ROUTES_PAGE_SIZE);
+
+  const scope = `${vehicleIdStr ?? ''}|${startDate}|${endDate}`;
+  const previousScope = useRef(scope);
+  useEffect(() => {
+    if (previousScope.current !== scope) {
+      previousScope.current = scope;
+      if (page !== 1) setPage(1);
+    } else if (data && page !== currentPage) {
+      setPage(currentPage);
+    }
+  }, [scope, data, page, currentPage, setPage]);
   // Only surface the hard error state when there is nothing to fall back on.
   // TanStack Query retains the last good `data` when a background refetch
   // fails, so a transient error must not blow the still-valid routes away —
@@ -91,7 +111,7 @@ export default function RouteEfficiencyPage() {
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
-            onChange={setRange}
+            onChange={(range) => setRangeWithUrlUpdates(range, { page: null })}
             align="end"
             triggerTestId="route-efficiency-range-picker"
           />
@@ -288,12 +308,20 @@ export default function RouteEfficiencyPage() {
             </GlassPanel>
           ) : (
             <StaggerContainer className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))]">
-              {routes.map((route) => (
+              {visibleRoutes.map((route) => (
                 <StaggerItem key={`${route.startLocation}-${route.endLocation}`}>
                   <RouteCard route={route} unit={unit} />
                 </StaggerItem>
               ))}
             </StaggerContainer>
+          )}
+          {!isLoading && !isError && routes.length > ROUTES_PAGE_SIZE && (
+            <Pagination
+              page={currentPage}
+              pageSize={ROUTES_PAGE_SIZE}
+              total={routes.length}
+              onPageChange={setPage}
+            />
           )}
         </section>
       </FadeIn>

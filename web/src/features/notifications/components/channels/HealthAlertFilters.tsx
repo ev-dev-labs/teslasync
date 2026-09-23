@@ -35,7 +35,7 @@ export function HealthAlertFilters({
             : t('notifications.healthAlerts.channelInactive', 'Channel disabled')}
         </Badge>
       </div>
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-end">
         <SearchInput value={search} onChange={onSearch} debounceMs={0}
           ariaLabel={t('notifications.healthAlerts.search', 'Search components')}
           placeholder={t('notifications.healthAlerts.search', 'Search components')} />

@@ -95,7 +95,6 @@ const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/notifications/quiet-hours': () => import('../features/notifications/pages/QuietHoursPage'),
   '/notifications/rules': () => import('../features/notifications/pages/AlertRulesPage'),
   '/notifications/studio': () => import('../features/notifications/pages/AlertStudioPage'),
-  '/notifications/webhooks': () => import('../features/notifications/pages/WebhooksPage'),
   '/onboarding': () => import('../features/onboarding/pages/OnboardingPage'),
   '/period-compare': () => import('../features/analytics/pages/PeriodComparePage'),
   '/power-flow': () => import('../features/battery/pages/PowerFlowDashboardPage'),

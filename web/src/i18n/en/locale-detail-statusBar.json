@@ -2,6 +2,12 @@
   "statusBar": {
     "aria": "Application status",
     "announcements": "Application status announcements",
+    "fleet": {
+      "label": "Fleet"
+    },
+    "mode": {
+      "now": "Now"
+    },
     "connection": {
       "short": "API",
       "ok": "Online",

@@ -13,8 +13,10 @@ import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useActivity } from '@/api/hooks/useActivity';
+import { ListExportMenu } from '@/components/forms';
+import { downloadJSON, downloadRowsAsCSV } from '@/lib/csvExport';
 import type { ActivityKind } from '@/types/activity';
-import { ActivityFeed, KindFilterBar } from '../components/activity-timeline';
+import { ActivityFeed, ActivityOverview, KindFilterBar } from '../components/activity-timeline';
 
 const PAGE_LIMIT = 50;
 
@@ -111,6 +113,7 @@ export default function ActivityTimelinePage() {
 
   const hasOlder = offset + items.length < total;
   const hasNewer = offset > 0;
+  const exportName = `activity-${start}-${end}-page-${Math.floor(offset / PAGE_LIMIT) + 1}`;
 
   return (
     <PageContainer
@@ -126,7 +129,39 @@ export default function ActivityTimelinePage() {
           <RangePicker value={{ start, end }} onChange={setRange} align="end" triggerTestId="activity-range" />
         </>
       }
+      overflowActions={
+        <ListExportMenu
+          testId="activity-export"
+          visibleCount={items.length}
+          disabled={isLoading || isError || items.length === 0}
+          onExportCsv={() => downloadRowsAsCSV(exportName, items, [
+            { key: 'occurred_at', header: t('activity.timeline.export.timestamp', 'Timestamp') },
+            { key: 'kind', header: t('activity.timeline.export.type', 'Type') },
+            { key: 'vehicle_id', header: t('activity.timeline.export.vehicle', 'Vehicle ID') },
+            { key: 'title', header: t('activity.timeline.export.title', 'Title') },
+            { key: 'summary', header: t('activity.timeline.export.summary', 'Summary') },
+            { key: 'severity', header: t('activity.timeline.export.severity', 'Severity') },
+            { key: 'status', header: t('activity.timeline.export.status', 'Status') },
+            { key: 'source_table', header: t('activity.timeline.export.source', 'Source') },
+            { key: 'source_id', header: t('activity.timeline.export.sourceId', 'Source ID') },
+            { key: 'duration_s', header: t('activity.timeline.export.duration', 'Duration (s)') },
+            { key: 'energy_added_wh', header: t('activity.timeline.export.energy', 'Energy added (Wh)') },
+            { key: 'path', header: t('activity.timeline.export.detail', 'Detail path') },
+          ])}
+          onExportJson={() => downloadJSON(exportName, items)}
+        />
+      }
     >
+      <FadeIn>
+        <ActivityOverview
+          items={items}
+          total={total}
+          offset={offset}
+          loading={isLoading}
+          error={isError}
+          timezone={tz}
+        />
+      </FadeIn>
       <FadeIn>
         <KindFilterBar activeKinds={kinds} onChange={setKinds} />
       </FadeIn>
@@ -142,8 +177,18 @@ export default function ActivityTimelinePage() {
         />
       </FadeIn>
 
-      {(hasOlder || hasNewer) && (
-        <div className="flex items-center justify-center gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-3" aria-live="polite">
+        {!isLoading && !isError && (
+          <Text as="p" variant="caption">
+            {t('activity.timeline.pagePosition', 'Showing {{start}}–{{end}} of {{total}} events in the selected range', {
+              start: items.length ? offset + 1 : 0,
+              end: items.length ? offset + items.length : 0,
+              total,
+            })}
+          </Text>
+        )}
+        {!isLoading && !isError && (
+          <>
           {hasNewer && (
             <Button
               type="button"
@@ -166,8 +211,12 @@ export default function ActivityTimelinePage() {
               <Icons.next className="ml-1 h-4 w-4" aria-hidden="true" />
             </Button>
           )}
-        </div>
-      )}
+          </>
+        )}
+      </div>
+      <Text as="p" variant="caption" className="text-center">
+        {t('activity.timeline.exportScope', 'Exports include only the loaded page. Use Older or Newer to browse and export other pages.')}
+      </Text>
 
       <Text as="p" variant="caption" className="text-center">
         {t(

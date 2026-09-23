@@ -198,6 +198,7 @@
       "notificationLatency",
       "notificationSounds",
       "severity",
+      "webhookChannels",
       "webpush"
     ],
     "telemetry": [
@@ -634,8 +635,7 @@
       "quietHours",
       "safetySettings",
       "settingsReset",
-      "totp",
-      "webhookChannels"
+      "totp"
     ],
     "admin": [
       "admin",

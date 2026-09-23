@@ -148,6 +148,84 @@ func TestEventInboxReportTwoChannelFanout(t *testing.T) {
 	}
 }
 
+func TestOrphanedCorrelatedDeliveriesAppearOnceWithoutDuplicatingCanonicalEvents(t *testing.T) {
+	repo, ctx := eventFixture(t)
+	triggerID, eventType := uuid.NewString(), "system.database.recovery"
+	var firstID int64
+	for _, channelID := range []int64{1, 2} {
+		entry := &notificationmodel.NotificationLog{
+			ChannelID: channelID, Title: "Database recovered", Message: "Back online",
+			Status: "sent", TriggerID: &triggerID, EventType: &eventType,
+		}
+		if err := repo.CreateLog(ctx, entry); err != nil {
+			t.Fatal(err)
+		}
+		if firstID == 0 {
+			firstID = entry.ID
+		}
+	}
+	checkInbox := func(wantID int64) {
+		t.Helper()
+		direct, err := repo.GetLogs(ctx, 10, 0)
+		if err != nil || len(direct) != 1 || direct[0].ID != wantID {
+			t.Fatalf("direct inbox=%+v err=%v, want representative %d", direct, err, wantID)
+		}
+		logs, err := repo.GetLogsFiltered(ctx, NotificationLogFilters{Limit: 1})
+		if err != nil || len(logs) != 1 || logs[0].ID != wantID {
+			t.Fatalf("page one=%+v err=%v, want one representative %d", logs, err, wantID)
+		}
+		next, err := repo.GetLogsFiltered(ctx, NotificationLogFilters{Limit: 1, Offset: 1})
+		if err != nil || len(next) != 0 {
+			t.Fatalf("page two=%+v err=%v, want empty", next, err)
+		}
+		groups, err := repo.ListGrouped(ctx, NotificationLogFilters{})
+		if err != nil || len(groups) != 1 || groups[0].Latest.ID != wantID {
+			t.Fatalf("grouped inbox=%+v err=%v, want one representative %d", groups, err, wantID)
+		}
+		unread, err := repo.GetUnreadCount(ctx)
+		if err != nil || unread != 1 {
+			t.Fatalf("unread=%d err=%v, want one", unread, err)
+		}
+		detail, err := repo.GetLog(ctx, wantID)
+		if err != nil || detail == nil || detail.ID != wantID {
+			t.Fatalf("inbox detail=%+v err=%v, want %d", detail, err, wantID)
+		}
+	}
+	checkInbox(firstID)
+	if changed, err := repo.BulkSetRead(ctx, []int64{firstID}, true); err != nil || changed != 1 {
+		t.Fatalf("mark orphan read: changed=%d err=%v", changed, err)
+	}
+	if changed, err := repo.BulkSetRead(ctx, []int64{firstID}, false); err != nil || changed != 1 {
+		t.Fatalf("mark orphan unread: changed=%d err=%v", changed, err)
+	}
+	if changed, err := repo.BulkSetArchived(ctx, []int64{firstID}, true); err != nil || changed != 1 {
+		t.Fatalf("archive orphan: changed=%d err=%v", changed, err)
+	}
+	notArchived := false
+	inbox, err := repo.GetLogsFiltered(ctx, NotificationLogFilters{Archived: &notArchived})
+	if err != nil || len(inbox) != 0 {
+		t.Fatalf("archived orphan leaked into inbox: logs=%+v err=%v", inbox, err)
+	}
+	if changed, err := repo.BulkSetArchived(ctx, []int64{firstID}, false); err != nil || changed != 1 {
+		t.Fatalf("restore orphan: changed=%d err=%v", changed, err)
+	}
+	event := &notificationmodel.NotificationLog{
+		Title: "Database recovered", Message: "Back online",
+		TriggerID: &triggerID, EventType: &eventType,
+	}
+	if err := repo.CreateEvent(ctx, event); err != nil {
+		t.Fatal(err)
+	}
+	checkInbox(event.ID)
+	if changed, err := repo.BulkSetRead(ctx, []int64{firstID}, true); err != nil || changed != 0 {
+		t.Fatalf("correlated delivery must not be mutable as inbox entry: changed=%d err=%v", changed, err)
+	}
+	deliveries, err := repo.GetLogsFiltered(ctx, NotificationLogFilters{DeliveryOnly: true})
+	if err != nil || len(deliveries) != 2 {
+		t.Fatalf("delivery analytics=%+v err=%v, want both attempts", deliveries, err)
+	}
+}
+
 func TestWebPushOnlyEventCanBeReadArchivedAndAcknowledged(t *testing.T) {
 	repo, ctx := eventFixture(t)
 	triggerID, eventType := uuid.NewString(), "digest.fsd_weekly"

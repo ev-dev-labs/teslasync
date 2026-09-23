@@ -17,7 +17,7 @@ import (
 // geofenceColumns is the canonical projection for every SELECT in this file.
 // Column order MUST match scanGeofence() arg order; keep them in sync or
 // pgx scan errors will surface at first list/get.
-const geofenceColumns = `id, name, polygon_wkt, category, enabled, alert_on_entry, alert_on_exit, created_at, updated_at, origin, needs_review, archived_at`
+const geofenceColumns = `id, name, polygon_wkt, category, enabled, alert_on_entry, alert_on_exit, created_at, updated_at, origin, needs_review, archived_at, is_charging_location`
 
 // scanGeofence is the single point of truth for geofences row → struct
 // mapping so a column rename only requires one edit.
@@ -35,6 +35,7 @@ func scanGeofence(row pgx.Row, g *systemmodel.Geofence) error {
 		&g.Origin,
 		&g.NeedsReview,
 		&g.ArchivedAt,
+		&g.IsChargingLocation,
 	)
 }
 
@@ -51,13 +52,14 @@ func (r *GeofenceRepo) Create(ctx context.Context, g *systemmodel.Geofence) erro
 	if g.Origin == "" {
 		g.Origin = systemmodel.GeofenceOriginManual
 	}
-	query := `INSERT INTO geofences (name, polygon_wkt, category, enabled, alert_on_entry, alert_on_exit, created_at, updated_at, origin, needs_review)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9) RETURNING id`
+	g.Enabled = !g.NeedsReview
+	query := `INSERT INTO geofences (name, polygon_wkt, category, enabled, alert_on_entry, alert_on_exit, created_at, updated_at, origin, needs_review, is_charging_location)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10) RETURNING id`
 	now := time.Now().UTC()
 	if err := r.pool.QueryRow(ctx, query,
 		g.Name, g.PolygonWKT, g.Category,
 		g.Enabled, g.AlertOnEntry, g.AlertOnExit,
-		now, g.Origin, g.NeedsReview,
+		now, g.Origin, g.NeedsReview, g.IsChargingLocation,
 	).Scan(&g.ID); err != nil {
 		return fmt.Errorf("geofences create: %w", err)
 	}
@@ -119,21 +121,22 @@ func (r *GeofenceRepo) GetByID(ctx context.Context, id int64) (*systemmodel.Geof
 }
 
 // Update applies the CRUD/alert-relevant fields (name, geometry, category,
-// enabled, alert flags, needs_review). It deliberately does NOT touch Origin
+// alert flags, needs_review). It deliberately does NOT touch Origin
 // (immutable provenance set once at creation) or ArchivedAt (owned
 // exclusively by Archive/Unarchive so a routine merge-PUT can never
 // accidentally resurrect or retire a place).
 func (r *GeofenceRepo) Update(ctx context.Context, g *systemmodel.Geofence) error {
+	g.Enabled = !g.NeedsReview
 	query := `UPDATE geofences
 		SET name=$2, polygon_wkt=$3, category=$4,
 		    enabled=$5, alert_on_entry=$6, alert_on_exit=$7,
-		    needs_review=$8, updated_at=$9
+		    needs_review=$8, updated_at=$9, is_charging_location=$10
 		WHERE id=$1`
 	now := time.Now().UTC()
 	if _, err := r.pool.Exec(ctx, query,
 		g.ID, g.Name, g.PolygonWKT, g.Category,
 		g.Enabled, g.AlertOnEntry, g.AlertOnExit,
-		g.NeedsReview, now,
+		g.NeedsReview, now, g.IsChargingLocation,
 	); err != nil {
 		return fmt.Errorf("geofences update %d: %w", g.ID, err)
 	}

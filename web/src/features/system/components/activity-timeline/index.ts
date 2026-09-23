@@ -7,3 +7,4 @@ export {
   severityBadgeVariant,
   statusBadgeVariant,
 } from './constants';
+export { ActivityOverview } from './ActivityOverview';

@@ -9,7 +9,7 @@ Sidebar group **Home**. In the app, expand this section in the left nav (or sear
 | Explore Features | `/explore` | Browse and search every feature in TeslaSync with a 1-line description for each. | Renders an empty state when no data is available — the page is not hidden. |
 | Live Map | `/live` | Real-time map of where your vehicle is right now. | Renders an empty state when no data is available — the page is not hidden. |
 | Timeline | `/timeline` | Hour-by-hour history of drives, charges, and events. | Renders an empty state when no data is available — the page is not hidden. |
-| Activity Timeline | `/activity` | Unified timeline of drives, charging, alerts, software updates, and annotations. | Renders an empty state when no data is available — the page is not hidden. |
+| Activity Timeline | `/activity` | Unified, date- and vehicle-filterable timeline of drives, charging, alerts, software updates, and annotations. Shows a range-wide event count, clearly labeled page-scoped activity and event-type breakdowns, and CSV/JSON exports of the loaded page. | Renders an empty state when no data is available — the page is not hidden. |
 | Weekly Digest | `/weekly-digest` | A printable weekly recap of usage, range, and cost. | Renders an empty state when no data is available — the page is not hidden. |
 
 [← All groups](./catalogue.md)

@@ -114,7 +114,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'InboxPage', load: () => import('../features/notifications/pages/InboxPage') },
   { name: 'ArchivedPage', load: () => import('../features/notifications/pages/ArchivedPage') },
   { name: 'ChannelsPage', load: () => import('../features/notifications/pages/ChannelsPage') },
-  { name: 'WebhooksPage', load: () => import('../features/notifications/pages/WebhooksPage') },
   { name: 'BrowserNotificationsPage', load: () => import('../features/notifications/pages/BrowserNotificationsPage') },
   { name: 'QuietHoursPage', load: () => import('../features/notifications/pages/QuietHoursPage') },
   { name: 'NotificationsAudit', load: () => import('../features/notifications/pages/AuditLogPage') },

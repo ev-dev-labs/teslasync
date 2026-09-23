@@ -1403,6 +1403,9 @@
       "unavailable": "Diagnostics are temporarily unavailable.",
       "unknown": "Unknown"
     },
+    "fleet": {
+      "label": "Fleet"
+    },
     "help": {
       "about": "About TeslaSync",
       "buildNews": "Update or release notes available",
@@ -1420,6 +1423,9 @@
       "stale": "Stale",
       "tooltip": "Live telemetry stream",
       "unknown": "Idle"
+    },
+    "mode": {
+      "now": "Now"
     },
     "more": {
       "backgroundComplete": "Background work completed",

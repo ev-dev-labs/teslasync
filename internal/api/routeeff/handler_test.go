@@ -449,7 +449,7 @@ func TestList_QueryArgs(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// List — SQL shape: SI-canonical columns, no snapshot tables, ordering/limit
+// List — SQL shape: SI-canonical columns, no snapshot tables, complete ordering
 // ---------------------------------------------------------------------------
 
 func TestList_SQLShape(t *testing.T) {
@@ -469,8 +469,7 @@ func TestList_SQLShape(t *testing.T) {
 		"end_soc_pct",   //
 		"ambient_temp_c_avg",
 		"GROUP BY start_label, end_label",
-		"ORDER BY COUNT(*) DESC",
-		"LIMIT 15",
+		"ORDER BY COUNT(*) DESC, start_label, end_label",
 		"$5::timestamptz IS NULL OR started_at BETWEEN $5 AND $6",
 	}
 	for _, frag := range mustContain {
@@ -481,6 +480,7 @@ func TestList_SQLShape(t *testing.T) {
 	// Layered live-state contract + SI-on-disk: never read snapshot tables and
 	// never resurrect legacy display-unit column names.
 	mustNotContain := []string{
+		"LIMIT ", // The UI pages the full result, not just a capped subset.
 		"FROM positions",
 		"FROM climate_snapshots",
 		"distance_mi",

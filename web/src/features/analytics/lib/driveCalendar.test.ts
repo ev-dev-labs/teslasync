@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Drive } from '@/types/driving';
-import { buildDriveCalendar } from './driveCalendar';
+import { buildDriveCalendar, driveCalendarBounds } from './driveCalendar';
 
 let nextId = 1;
 
@@ -99,6 +99,52 @@ describe('buildDriveCalendar', () => {
     const cal = buildDriveCalendar([driveOn(new Date(2024, 0, 1, 9))], NOW);
     expect(cal.totalDrives).toBe(0);
     expect(cal.activeDays).toBe(0);
+  });
+
+  it('preserves earlier calendar years, including leap day and the last day of December', () => {
+    const cal = buildDriveCalendar([
+      driveOn(new Date(2024, 1, 29, 9), 5_000),
+      driveOn(new Date(2024, 11, 31, 9), 7_000),
+      driveOn(new Date(2025, 0, 1, 9), 99_000),
+    ], NOW, 2024);
+    expect(cal.days.find((day) => day.date === '2024-02-29')).toEqual(
+      expect.objectContaining({ drives: 1, distanceM: 5_000 }),
+    );
+    expect(cal.days.at(-1)!.date).toBe('2024-12-31');
+    expect(cal.totalDrives).toBe(2);
+    expect(cal.totalDistanceM).toBe(12_000);
+    expect(cal.months.map((month) => month.month)).toHaveLength(12);
+    expect(cal.months.at(0)?.month).toBe('2024-01');
+    expect(cal.months.at(-1)?.month).toBe('2024-12');
+    expect(cal.activityRate).toBeCloseTo(2 / 366);
+  });
+
+  it('uses year-to-date for the current year and excludes last-year padding', () => {
+    const cal = buildDriveCalendar([
+      driveOn(new Date(2025, 11, 31, 9)),
+      driveOn(new Date(2026, 0, 1, 9)),
+      driveOn(new Date(2026, 6, 30, 9)),
+    ], NOW, 2026);
+    expect(cal.totalDrives).toBe(2);
+    expect(cal.months.at(0)?.month).toBe('2026-01');
+    expect(cal.days.at(-1)?.date).toBe('2026-07-30');
+    expect(cal.activityRate).toBeCloseTo(2 / 211);
+  });
+
+  it('scopes API bounds to local calendar midnights with an exclusive next-year end', () => {
+    const { start, endExclusive } = driveCalendarBounds(NOW, 2024);
+    expect(start).toEqual(new Date(2024, 0, 1));
+    expect(endExclusive).toEqual(new Date(2025, 0, 1));
+    const current = driveCalendarBounds(NOW, 2026);
+    expect(current.start).toEqual(new Date(2026, 0, 1));
+    expect(current.endExclusive).toEqual(new Date(2026, 6, 31));
+  });
+
+  it('keeps every day when a leap year needs 54 Sunday-first columns', () => {
+    const cal = buildDriveCalendar([driveOn(new Date(2000, 11, 31, 9))], NOW, 2000);
+    expect(cal.weeks).toHaveLength(54);
+    expect(cal.days.at(-1)?.date).toBe('2000-12-31');
+    expect(cal.totalDrives).toBe(1);
   });
 
   it('excludes old outliers from the visible heatmap intensity scale', () => {

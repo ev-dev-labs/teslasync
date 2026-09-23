@@ -88,6 +88,7 @@ export interface NotificationChannelWebhook extends NotificationChannelBase {
   method: 'GET' | 'POST' | 'PUT';
   headers: Record<string, string>;
   body_template: string;
+  bearer_token?: string;
 }
 
 export interface NotificationChannelNtfy extends NotificationChannelBase {

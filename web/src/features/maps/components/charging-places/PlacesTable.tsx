@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell, Globe, MapPin, Pencil, Ruler, Trash2, Zap } from 'lucide-react';
+import { Globe, MapPin, Pencil, Ruler, Trash2, Zap } from 'lucide-react';
 
 import {
   Badge,
@@ -9,7 +9,6 @@ import {
   PanelTitle,
   PinButton,
   Text,
-  Toggle,
   useSortToggle,
   type Column,
 } from '@/components/ui';
@@ -24,10 +23,6 @@ import {
 import { formatRatePerWh } from './helpers';
 import type { Geofence, GeofenceRate } from '@/api/types';
 
-export type GeofenceQuickPatch = Partial<
-  Pick<Geofence, 'enabled' | 'alert_on_entry' | 'alert_on_exit'>
->;
-
 export interface PlacesTableProps {
   places?: Geofence[];
   currentRates?: GeofenceRate[];
@@ -37,8 +32,6 @@ export interface PlacesTableProps {
   onSelect: (place: Geofence) => void;
   onEdit?: (place: Geofence) => void;
   onDelete?: (place: Geofence) => void;
-  onUpdate?: (place: Geofence, patch: GeofenceQuickPatch) => void;
-  updatePending?: boolean;
   selectedKeys?: number[];
   onSelectionChange?: (keys: number[]) => void;
   bulkActions?: (selected: Geofence[]) => ReactNode;
@@ -55,8 +48,6 @@ export function PlacesTable({
   onSelect,
   onEdit,
   onDelete,
-  onUpdate,
-  updatePending = false,
   selectedKeys,
   onSelectionChange,
   bulkActions,
@@ -159,6 +150,18 @@ export function PlacesTable({
         },
       },
       {
+        key: 'purpose',
+        header: t('geofences.visits.purpose', 'Purpose'),
+        sortable: false,
+        render: (place) => (
+          <Badge variant={place.is_charging_location ? 'success' : 'neutral'} size="sm">
+            {place.is_charging_location
+              ? t('geofences.visits.chargingShort', 'Charging')
+              : t('geofences.visits.otherShort', 'Other place')}
+          </Badge>
+        ),
+      },
+      {
         key: 'radius',
         header: t('chargingPlaces.table.zone', 'Zone'),
         sortable: true,
@@ -170,65 +173,15 @@ export function PlacesTable({
         ),
       },
       {
-        key: 'enabled',
-        header: t('chargingPlaces.table.status', 'Status'),
+        key: 'review',
+        header: t('geofences.visits.reviewStatus', 'Review'),
         sortable: false,
         render: (place) => (
-          <Toggle
-            checked={place.enabled}
-            onChange={(enabled) => {
-              if (!updatePending && !place.archived_at) onUpdate?.(place, { enabled });
-            }}
-            size="sm"
-            aria-disabled={updatePending || Boolean(place.archived_at)}
-            className={updatePending || place.archived_at ? 'pointer-events-none opacity-50' : undefined}
-            aria-label={t('geofences.toggleGeofence', 'Toggle geofence {{name}}', {
-              name: place.name,
-            })}
-          />
-        ),
-      },
-      {
-        key: 'alerts',
-        header: t('chargingPlaces.table.alerts', 'Alerts'),
-        sortable: false,
-        render: (place) => (
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-1.5">
-              <Toggle
-                checked={place.alert_on_entry}
-                onChange={(alert_on_entry) => {
-                  if (!updatePending && !place.archived_at) onUpdate?.(place, { alert_on_entry });
-                }}
-                size="sm"
-                aria-disabled={updatePending || Boolean(place.archived_at)}
-                className={updatePending || place.archived_at ? 'pointer-events-none opacity-50' : undefined}
-                aria-label={t('chargingPlaces.table.entryAlertLabel', 'Entry alert for {{name}}', {
-                  name: place.name,
-                })}
-              />
-              <Text size="xs" color="muted">
-                {t('chargingPlaces.table.entry', 'Entry')}
-              </Text>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Toggle
-                checked={place.alert_on_exit}
-                onChange={(alert_on_exit) => {
-                  if (!updatePending && !place.archived_at) onUpdate?.(place, { alert_on_exit });
-                }}
-                size="sm"
-                aria-disabled={updatePending || Boolean(place.archived_at)}
-                className={updatePending || place.archived_at ? 'pointer-events-none opacity-50' : undefined}
-                aria-label={t('chargingPlaces.table.exitAlertLabel', 'Exit alert for {{name}}', {
-                  name: place.name,
-                })}
-              />
-              <Text size="xs" color="muted">
-                {t('chargingPlaces.table.exit', 'Exit')}
-              </Text>
-            </div>
-          </div>
+          <Badge variant={place.needs_review ? 'warning' : 'success'} size="sm">
+            {place.needs_review
+              ? t('chargingPlaces.detail.needsReviewBadge', 'Needs review')
+              : t('geofences.visits.reviewed', 'Reviewed')}
+          </Badge>
         ),
       },
       {
@@ -264,7 +217,7 @@ export function PlacesTable({
             <Button
               size="sm"
               variant="secondary"
-              icon={<Bell className="h-3.5 w-3.5" aria-hidden="true" />}
+              icon={<MapPin className="h-3.5 w-3.5" aria-hidden="true" />}
               onClick={() => onSelect(place)}
             >
               {t('chargingPlaces.table.manage', 'Manage')}
@@ -295,7 +248,7 @@ export function PlacesTable({
         ),
       },
     ],
-    [t, rateByGeofenceId, locale, onSelect, onEdit, onDelete, onUpdate, updatePending],
+    [t, rateByGeofenceId, locale, onSelect, onEdit, onDelete],
   );
 
   if (error) {
@@ -350,7 +303,7 @@ export function PlacesTable({
         selectedKeys={selectedKeys}
         onSelectionChange={(keys) => onSelectionChange?.(keys.map(Number))}
         bulkActions={bulkActions}
-        mobileColumns={['name', 'rate', 'actions']}
+        mobileColumns={['name', 'purpose', 'actions']}
         columnVisibility
         pagination
       />

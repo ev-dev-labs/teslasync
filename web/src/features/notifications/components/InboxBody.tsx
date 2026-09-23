@@ -8,7 +8,7 @@
  *   - Auto-mark-read on open (opt-out via localStorage)
  *   - Per-row context menu (view context, mark read/unread, archive/restore,
  *     delete)
- *   - Day-grouped flat list AND threaded grouped list
+ *   - Selectable flat table AND threaded grouped list
  *
  * Used by InboxPage (`archived=false`) and ArchivedPage (`archived=true`).
  * Was previously an inner component of the now-removed NotificationsPage.
@@ -39,7 +39,6 @@ import {
 import { cn } from '@/lib/cn';
 import {
   Button,
-  Checkbox,
   ConfirmDialog,
   GlassPanel,
   Modal,
@@ -76,11 +75,11 @@ import type { NotificationLog, AlertRule, Vehicle, Alert } from '@/api/types';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { NotificationFilterBar } from './NotificationFilterBar';
 import { AIInboxAutoCategorization } from '@/components/ai/AIInboxAutoCategorization';
-import { NotificationRow } from './NotificationRow';
 import { NotificationGroupRow } from './NotificationGroupRow';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
-import { PullToRefresh, SwipeRow } from '@/components/mobile';
+import { PullToRefresh } from '@/components/mobile';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
+import { NotificationInboxTable } from './NotificationInboxTable';
 
 const SEVERITY_VALUES = ['info', 'warn', 'critical'] as const;
 type SeverityValue = (typeof SEVERITY_VALUES)[number];
@@ -88,10 +87,7 @@ type SeverityValue = (typeof SEVERITY_VALUES)[number];
 const READ_VALUES = ['all', 'read', 'unread'] as const;
 type ReadValue = (typeof READ_VALUES)[number];
 
-// Grouped/threaded vs flat inbox view. Default
-// is grouped because power users with many alert rules drown in flat
-// duplicates; flat remains available for the historical workflow and
-// for users who want to see every individual delivery.
+// Show each notification on arrival; grouped threads remain an opt-in view.
 const VIEW_VALUES = ['grouped', 'flat'] as const;
 type ViewValue = (typeof VIEW_VALUES)[number];
 const INBOX_PAGE_SIZE = 50;
@@ -129,47 +125,6 @@ function readPref(key: string): boolean {
   }
 }
 
-/**
- * Group ISO timestamps into "Today" / "Yesterday" / dated buckets keyed by
- * the user's local day. Rows are returned in the order they came in (newest
- * first); the day grouping just adds headers.
- */
-function groupByDay<T extends { created_at: string }>(rows: T[]): { day: string; rows: T[] }[] {
-  if (rows.length === 0) return [];
-  const fmt = new Intl.DateTimeFormat(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const labelFor = (d: Date): string => {
-    const day = new Date(d);
-    day.setHours(0, 0, 0, 0);
-    if (day.getTime() === today.getTime()) return 'Today';
-    if (day.getTime() === yesterday.getTime()) return 'Yesterday';
-    return fmt.format(d);
-  };
-
-  const out: { day: string; rows: T[] }[] = [];
-  let current: { day: string; rows: T[] } | null = null;
-  for (const row of rows) {
-    const d = new Date(row.created_at);
-    if (Number.isNaN(d.getTime())) continue;
-    const label = labelFor(d);
-    if (!current || current.day !== label) {
-      current = { day: label, rows: [] };
-      out.push(current);
-    }
-    current.rows.push(row);
-  }
-  return out;
-}
-
 export interface InboxBodyProps {
   archived: boolean;
   vehicles: Vehicle[];
@@ -198,7 +153,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   });
   // View mode is URL-backed too so a deep link can
   // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
-  const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'grouped');
+  const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'flat');
   const [page, setPage] = useState(1);
   const setFiltersBatch = useUrlBatch();
   const isGrouped = view === 'grouped' && !archived;
@@ -373,7 +328,18 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     (id: number, on: boolean) => bulkSelection.setSelected(id, on),
     [bulkSelection],
   );
-  const visibleIds = useMemo(() => rows.map(r => r.id), [rows]);
+  const setTableSelection = useCallback(
+    (ids: number[]) => {
+      const next = new Set(ids);
+      for (const id of selected) {
+        if (!next.has(id)) toggleSelected(id, false);
+      }
+      for (const id of ids) {
+        if (!selected.has(id)) toggleSelected(id, true);
+      }
+    },
+    [selected, toggleSelected],
+  );
   const visibleExportRows = useMemo(
     () =>
       isGrouped
@@ -420,21 +386,9 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     },
     [exportFilename, exportRows],
   );
-  const selectAllVisible = useCallback(
-    () => bulkSelection.selectAll(visibleIds),
-    [bulkSelection, visibleIds],
-  );
-  // Derive the master-checkbox tri-state once so the header checkbox can
-  // reflect the "some but not all visible rows selected" case as a native
-  // `indeterminate` control instead of silently showing an unchecked box.
-  const visibleSelectionState = bulkSelection.masterState(visibleIds);
-  const allVisibleSelected = visibleSelectionState === 'all';
-  const someVisibleSelected = visibleSelectionState === 'some';
   // Drop selections when filter changes — selection should never carry over
   // across a different result set.
   useEffect(() => { clearSelection(); }, [filters, clearSelection]);
-
-  const grouped = useMemo(() => groupByDay(rows), [rows]);
 
   const unreadCount = useMemo(
     () => rows.reduce((acc, r) => (r.read_at ? acc : acc + 1), 0),
@@ -729,14 +683,6 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
 
       <GlassPanel className="p-3 sm:p-4" data-tour="alerts-list">
         <div className="mb-2 flex items-center gap-3 px-1 pb-2 border-b border-white/[0.04]">
-          {!isGrouped && (
-            <Checkbox
-              checked={allVisibleSelected}
-              indeterminate={someVisibleSelected}
-              onChange={checked => (checked ? selectAllVisible() : clearSelection())}
-              aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
-            />
-          )}
           <span
             className="text-xs text-[var(--text-muted)]"
             data-testid="inbox-result-count"
@@ -861,7 +807,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           />
         )}
 
-        {!isGrouped && !isLoading && !error && grouped.length === 0 && (
+        {!isGrouped && !isLoading && !error && rows.length === 0 && (
           <EmptyState
             icon={<Bell className="h-8 w-8" />}
             title={archived
@@ -889,55 +835,17 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           />
         )}
 
-        {!isGrouped && !isLoading && !error && grouped.length > 0 && (
-          <div className="space-y-4">
-            {grouped.map(group => (
-              <div key={group.day}>
-                <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  {group.day === 'Today'
-                    ? t('common.today', 'Today')
-                    : group.day === 'Yesterday'
-                      ? t('common.yesterday', 'Yesterday')
-                      : group.day}
-                </div>
-                <div className="space-y-1">
-                  {group.rows.map(log => (
-                    <SwipeRow
-                      key={log.id}
-                      rightAction={!archived
-                        ? {
-                            label: t('mobile.swipe.archive', 'Archive'),
-                            onAction: () => archiveMut.mutate([log.id]),
-                            tone: 'default',
-                          }
-                        : {
-                            label: t('mobile.swipe.restore', 'Restore'),
-                            onAction: () => unarchiveMut.mutate([log.id]),
-                            tone: 'default',
-                          }}
-                    >
-                      <div onContextMenu={handleRowContextMenu(log)}>
-                        <NotificationRow
-                          log={log}
-                          rule={log.alert_id != null ? ruleMap[log.alert_id] : undefined}
-                          vehicle={log.alert_id != null && ruleMap[log.alert_id]?.vehicle_id != null
-                            ? vehicleMap[ruleMap[log.alert_id]!.vehicle_id!]
-                            : undefined}
-                          selected={selected.has(log.id)}
-                          onSelectionChange={toggleSelected}
-                          onActivate={handleRowActivate}
-                          onArchive={!archived ? (id) => archiveMut.mutate([id]) : undefined}
-                          onUnarchive={archived ? (id) => unarchiveMut.mutate([id]) : undefined}
-                          onMarkRead={!log.read_at ? (id) => markReadMut.mutate([id]) : undefined}
-                          onMarkUnread={log.read_at ? (id) => markUnreadMut.mutate([id]) : undefined}
-                        />
-                      </div>
-                    </SwipeRow>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+        {!isGrouped && !isLoading && !error && rows.length > 0 && (
+          <NotificationInboxTable
+            rows={rows}
+            selectedIds={Array.from(selected)}
+            onSelectionChange={setTableSelection}
+            onActivate={handleRowActivate}
+            onContextMenu={buildRowContextMenu}
+            ruleMap={ruleMap}
+            vehicleMap={vehicleMap}
+            archived={archived}
+          />
         )}
 
         {isGrouped && !groupsLoading && !groupsError && groups.length > 0 && (

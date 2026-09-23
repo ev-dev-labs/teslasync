@@ -12,9 +12,9 @@ import (
 // The legacy visited_locations and addresses tables are intentionally
 // dropped without recreation (ADR-004 #4 forward-only). Visited-location
 // queries derive on demand from the SI canonical drives table (migration
-// 000185_drives_si) by grouping on end_place, the geocoded place name
-// persisted at end-of-drive. Synthetic IDs use MIN(d.id) per
-// (vehicle_id, end_place) so locations URLs stay anchored to a stable drive.
+// 000185_drives_si). Attached geofence names take priority over the
+// end-of-drive geocode so renaming a saved place also updates its visited-
+// location label. Synthetic IDs use MIN(d.id) per group.
 
 type VisitedLocationRepo struct {
 	db *database.DB
@@ -35,17 +35,18 @@ func (r *VisitedLocationRepo) GetAll(ctx context.Context, limit int) ([]*geomode
 // deriveFromDrives is the only visited-location read path now that the
 // legacy visited_locations table is gone.
 func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *int64, limit int) ([]*geomodel.VisitedLocation, error) {
+	const placeName = `COALESCE(NULLIF(g.name, ''), NULLIF(d.end_place, ''))`
 	query := `SELECT MIN(d.id) AS id,
 			d.vehicle_id,
-			d.end_place,
+			` + placeName + `,
 			COUNT(*) AS visit_count,
 			COALESCE(SUM(d.duration_s), 0) AS total_duration_s,
 			MAX(d.ended_at) AS last_visited,
 			MIN(d.started_at) AS first_visited
 		FROM drives d
+		LEFT JOIN geofences g ON g.id = d.end_geofence_id
 		WHERE d.ended_at IS NOT NULL
-		  AND d.end_place IS NOT NULL
-		  AND d.end_place != ''`
+		  AND ` + placeName + ` IS NOT NULL`
 
 	var args []interface{}
 	argN := 1
@@ -54,9 +55,9 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 		args = append(args, *vehicleID)
 		argN = 2
 	}
-	query += fmt.Sprintf(` GROUP BY d.vehicle_id, d.end_place
+	query += fmt.Sprintf(` GROUP BY d.vehicle_id, %s
 		ORDER BY visit_count DESC
-		LIMIT $%d`, argN)
+		LIMIT $%d`, placeName, argN)
 	args = append(args, limit)
 
 	rows, err := r.db.Pool.Query(ctx, query, args...)

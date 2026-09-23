@@ -27,6 +27,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityItem } from '@/types/activity';
+import { Button } from '@/components/ui';
 
 const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
@@ -35,11 +36,22 @@ const h = vi.hoisted(() => ({
   refetch: vi.fn(),
   setRange: vi.fn(),
   asOf: null as string | null,
+  downloadCsv: vi.fn(),
+  downloadJson: vi.fn(),
+}));
+
+vi.mock('@/lib/csvExport', () => ({
+  downloadRowsAsCSV: (...args: unknown[]) => h.downloadCsv(...args),
+  downloadJSON: (...args: unknown[]) => h.downloadJson(...args),
 }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : _key),
+    t: (_key: string, fallback?: unknown, options?: Record<string, unknown>) =>
+      typeof fallback === 'string'
+        ? fallback.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
+            options?.[key] == null ? match : String(options[key]))
+        : _key,
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -87,6 +99,17 @@ vi.mock('@/hooks/useOperationalMode', () => ({
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
   RangePicker: () => <div data-testid="range-picker" />,
+  ListExportMenu: ({ disabled, onExportCsv, onExportJson }: {
+    disabled: boolean;
+    onExportCsv: () => void;
+    onExportJson: () => void;
+  }) => (
+    <div>
+      <Button type="button" data-testid="activity-export-trigger" disabled={disabled}>Export</Button>
+      <Button type="button" data-testid="activity-export-csv" disabled={disabled} onClick={onExportCsv}>CSV</Button>
+      <Button type="button" data-testid="activity-export-json" disabled={disabled} onClick={onExportJson}>JSON</Button>
+    </div>
+  ),
 }));
 
 vi.mock('@/api/hooks/useActivity', () => ({
@@ -146,6 +169,8 @@ beforeEach(() => {
   h.setRange.mockReset();
   h.useActivityMock.mockReset();
   h.asOf = null;
+  h.downloadCsv.mockReset();
+  h.downloadJson.mockReset();
   h.useActivityMock.mockReturnValue(mockQueryResult());
 });
 
@@ -237,5 +262,62 @@ describe('ActivityTimelinePage', () => {
     expect(screen.queryByRole('button', { name: /newer/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /older/i }));
     expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 50 }));
+  });
+
+  it('does not claim to show an event when a page becomes empty after the range changes', () => {
+    h.useActivityMock.mockImplementation(({ offset }: { offset: number }) =>
+      mockQueryResult({
+        data: {
+          items: offset ? [] : [makeItem()],
+          total: offset ? 20 : 75,
+          limit: 50,
+          offset,
+          generated_at: '',
+        },
+      }),
+    );
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /older/i }));
+    expect(screen.getByText('Showing 0–0 of 20 events in the selected range')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent(
+      'events 0–0 of 20',
+    );
+    expect(screen.getByRole('button', { name: /newer/i })).toBeInTheDocument();
+  });
+
+  it('shows range total but limits event-type and alert counts to the loaded page', () => {
+    h.useActivityMock.mockReturnValue(
+      mockQueryResult({
+        data: { items: [makeItem(), makeItem({ id: 'notification_logs:2', kind: 'alert', severity: 'critical', source_id: 2 })], total: 75, limit: 50, offset: 0, generated_at: '' },
+      }),
+    );
+    renderPage();
+    const overview = screen.getByRole('region', { name: 'Activity overview' });
+    expect(overview).toHaveTextContent('Events in selected range75');
+    expect(overview).toHaveTextContent('Events on this page2');
+    expect(overview).toHaveTextContent('Critical alerts on this page1');
+    expect(overview).toHaveTextContent('Event types on this page');
+  });
+
+  it('exports only loaded records and preserves raw SI fields', () => {
+    const item = makeItem({ duration_s: 120, energy_added_wh: 2500 });
+    h.useActivityMock.mockReturnValue(
+      mockQueryResult({ data: { items: [item], total: 100, limit: 50, offset: 0, generated_at: '' } }),
+    );
+    renderPage();
+    fireEvent.click(screen.getByTestId('activity-export-csv'));
+    expect(h.downloadCsv).toHaveBeenCalledWith(
+      'activity-2026-01-01-2026-01-31-page-1',
+      [item],
+      expect.arrayContaining([expect.objectContaining({ key: 'energy_added_wh' })]),
+    );
+    expect(screen.getByText(/exports include only the loaded page/i)).toBeInTheDocument();
+  });
+
+  it('does not present stale totals or an available export when the request fails', () => {
+    h.useActivityMock.mockReturnValue(mockQueryResult({ isError: true, error: new Error('failed') }));
+    renderPage();
+    expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Events in selected range—');
+    expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
   });
 });

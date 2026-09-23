@@ -7,6 +7,7 @@ import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useNotificationReport } from '@/api/hooks/useNotifications';
 import type { NotificationReport } from '@/api/types';
 import { fmtInt } from '@/lib/numberFormat';
+import { notificationEventTypeFallback } from '@/lib/notificationEventType';
 
 type Breakdown = NotificationReport['by_source'];
 
@@ -103,7 +104,7 @@ export function NotificationReportPanel({ from, to }: { from: string; to: string
                     {group.rows.map(row => (
                       <li key={row.key} className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] py-1 text-sm">
                         <span className="min-w-0 break-all text-[var(--text-secondary)]">
-                          {t(`notifications.report.values.${row.key}`, row.key.replace(/_/g, ' '))}
+                          <span title={row.key}>{t(`notifications.report.values.${row.key}`, notificationEventTypeFallback(row.key))}</span>
                         </span>
                         <span className="shrink-0 font-medium text-[var(--text-primary)]">{fmtInt(row.count)}</span>
                       </li>

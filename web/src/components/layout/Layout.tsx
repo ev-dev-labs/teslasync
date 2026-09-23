@@ -587,7 +587,6 @@ export const navSections = [
     items: [
       { to: '/notifications/inbox', icon: Icons.notifications, label: 'All Notifications', labelKey: 'nav.items.notifications_inbox', color: 'text-purple-400' },
       { to: '/notifications/channels', icon: Icons.send, label: 'Notification Channels', labelKey: 'nav.items.notifications_channels', color: 'text-cyan-400' },
-      { to: '/notifications/webhooks', icon: Icons.cloud, label: 'Webhooks', labelKey: 'nav.items.notifications_webhooks', color: 'text-sky-400' },
       { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser Notifications', labelKey: 'nav.items.notifications_browser', color: 'text-fuchsia-400' },
       { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet Hours', labelKey: 'nav.items.notifications_quiet-hours', color: 'text-indigo-400' },
       { to: '/alert-fatigue', icon: Icons.trendDown, label: 'Alert Fatigue', labelKey: 'nav.items.alert-fatigue', color: 'text-amber-400' },

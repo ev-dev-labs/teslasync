@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net/http"
@@ -266,9 +267,11 @@ func runGeofenceUpdateMerge(t *testing.T, repo *fakeGeofenceUpdateRepo, id int64
 	if patch.Category != nil {
 		merged.Category = patch.Category
 	}
-	if raw.Enabled != nil {
-		merged.Enabled = *raw.Enabled
+	if err := validateEnabledRequest(raw.Enabled, existing.NeedsReview); err != nil {
+		apperror.Write(w, r, apperror.ErrInvalidInput.WithMessage(err.Error()))
+		return w
 	}
+	merged.Enabled = !existing.NeedsReview
 	if raw.AlertOnEntry != nil {
 		merged.AlertOnEntry = *raw.AlertOnEntry
 	}
@@ -303,12 +306,9 @@ func basePersistedGeofence() *systemmodel.Geofence {
 	}
 }
 
-// TestGeofenceUpdate_TogglePreservesNameAndPolygon — the toggle row sends
-// only `{enabled: true}` (or false). Without merge semantics this used to
-// blank the name + polygon, fail validation, and silently 400.
-func TestGeofenceUpdate_TogglePreservesNameAndPolygon(t *testing.T) {
+func TestGeofenceUpdate_PartialEditPreservesNameAndPolygon(t *testing.T) {
 	repo := &fakeGeofenceUpdateRepo{getByIDResult: basePersistedGeofence()}
-	body := bytes.NewReader([]byte(`{"enabled":true}`))
+	body := bytes.NewReader([]byte(`{"alertOnEntry":true}`))
 	w := runGeofenceUpdateMerge(t, repo, 1, body)
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
@@ -348,8 +348,7 @@ func TestGeofenceUpdate_FullModalPersistsFlags(t *testing.T) {
 	}
 }
 
-// TestGeofenceUpdate_TurnFlagsOff — explicit `false` (a non-nil pointer)
-// must overlay; this is distinct from "field omitted" which preserves.
+// Explicit false disables alert flags, not the place itself.
 func TestGeofenceUpdate_TurnFlagsOff(t *testing.T) {
 	existing := basePersistedGeofence()
 	existing.Enabled = true
@@ -357,7 +356,6 @@ func TestGeofenceUpdate_TurnFlagsOff(t *testing.T) {
 	existing.AlertOnExit = true
 	repo := &fakeGeofenceUpdateRepo{getByIDResult: existing}
 	body := bytes.NewReader([]byte(`{
-		"enabled":false,
 		"alertOnEntry":false,
 		"alertOnExit":false
 	}`))
@@ -365,8 +363,46 @@ func TestGeofenceUpdate_TurnFlagsOff(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
 	}
-	if repo.lastUpdate.Enabled || repo.lastUpdate.AlertOnEntry || repo.lastUpdate.AlertOnExit {
+	if !repo.lastUpdate.Enabled || repo.lastUpdate.AlertOnEntry || repo.lastUpdate.AlertOnExit {
 		t.Errorf("flags not turned off: %+v", repo.lastUpdate)
+	}
+}
+
+func TestGeofenceEnabledRequest(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		needsReview bool
+		enabled     bool
+		wantBad     bool
+	}{
+		{"cannot disable reviewed", false, false, true},
+		{"reviewed remains enabled", false, true, false},
+		{"cannot enable pending", true, true, true},
+		{"pending remains disabled", true, false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateEnabledRequest(&tc.enabled, tc.needsReview)
+			if (err != nil) != tc.wantBad {
+				t.Fatalf("validation error = %v, wantBad = %v", err, tc.wantBad)
+			}
+			repo := &fakeGeofenceUpdateRepo{getByIDResult: basePersistedGeofence()}
+			repo.getByIDResult.NeedsReview = tc.needsReview
+			body := bytes.NewReader([]byte(fmt.Sprintf(`{"enabled":%t}`, tc.enabled)))
+			w := runGeofenceUpdateMerge(t, repo, 1, body)
+			wantStatus := http.StatusOK
+			if tc.wantBad {
+				wantStatus = http.StatusBadRequest
+			}
+			if w.Code != wantStatus {
+				t.Fatalf("status = %d, want %d; body=%s", w.Code, wantStatus, w.Body.String())
+			}
+			if tc.wantBad && repo.updateCalls != 0 {
+				t.Fatalf("invalid state written: %+v", repo.lastUpdate)
+			}
+			if !tc.wantBad && repo.lastUpdate.Enabled == tc.needsReview {
+				t.Fatalf("wrong enabled state: %+v", repo.lastUpdate)
+			}
+		})
 	}
 }
 

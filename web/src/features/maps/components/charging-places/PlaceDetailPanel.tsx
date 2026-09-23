@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, CheckCircle2 } from 'lucide-react';
 
-import { Modal, Button, Tabs, Badge, Text, EditableText, Select } from '@/components/ui';
+import { Modal, Button, Tabs, Badge, Text, EditableText, Select, Toggle } from '@/components/ui';
+import { QueryError, Skeleton } from '@/components/feedback';
 import {
   useGeofenceRates,
   useDeleteGeofenceRate,
@@ -10,8 +11,10 @@ import {
   useUnarchiveGeofence,
   useMarkGeofenceReviewed,
   useGeofenceChargingSummary,
+  useGeofenceFirstChargingSession,
   useRenameGeofence,
   useUpdateGeofenceCategory,
+  useUpdateGeofencePurpose,
 } from '@/api/hooks/useLocations';
 import { RateHistoryPanel } from './RateHistoryPanel';
 import { RateForm } from './RateForm';
@@ -46,16 +49,22 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
   const [tab, setTab] = useState<DetailTab>('pricing');
   const [selectedRate, setSelectedRate] = useState<GeofenceRate | null>(null);
   const [category, setCategory] = useState<GeofenceCategoryValue>('custom');
+  const [isCharging, setIsCharging] = useState(false);
   const previewPanelRef = useRef<HTMLDivElement>(null);
 
   const ratesQuery = useGeofenceRates(place?.id);
   const summaryQuery = useGeofenceChargingSummary(place?.id);
+  const firstSessionQuery = useGeofenceFirstChargingSession(
+    place?.id,
+    place?.is_charging_location === true,
+  );
   const deleteRate = useDeleteGeofenceRate();
   const archive = useArchiveGeofence();
   const unarchive = useUnarchiveGeofence();
   const markReviewed = useMarkGeofenceReviewed();
   const rename = useRenameGeofence();
   const updateCategory = useUpdateGeofenceCategory();
+  const updatePurpose = useUpdateGeofencePurpose();
   const scrollToPreview = useCallback(() => {
     const target = previewPanelRef.current;
     if (!target) return;
@@ -95,6 +104,10 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
   }, [place?.id, place?.category]);
 
   useEffect(() => {
+    setIsCharging(place?.is_charging_location ?? false);
+  }, [place?.id, place?.is_charging_location]);
+
+  useEffect(() => {
     const rates = ratesQuery.data ?? [];
     if (selectedRate != null && rates.some((rate) => rate.id === selectedRate.id)) {
       return;
@@ -109,7 +122,14 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
 
   const currentRate = (ratesQuery.data ?? []).find((rate) => isRateActiveAt(rate)) ?? null;
 
-  const handleMarkReviewed = () => {
+  const handleMarkReviewed = async () => {
+    if (isCharging !== place.is_charging_location) {
+      try {
+        await updatePurpose.mutateAsync({ geofenceId: place.id, isChargingLocation: isCharging });
+      } catch {
+        return;
+      }
+    }
     markReviewed.mutate(place.id);
   };
 
@@ -138,10 +158,10 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
               size="sm"
               variant="secondary"
               icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
-              onClick={handleMarkReviewed}
-              loading={markReviewed.isPending}
+              onClick={() => void handleMarkReviewed()}
+              loading={markReviewed.isPending || updatePurpose.isPending}
             >
-              {t('chargingPlaces.detail.markReviewed', 'Mark reviewed')}
+              {t('chargingPlaces.detail.markReviewedAndEnable', 'Mark reviewed & enable')}
             </Button>
           </>
         )}
@@ -165,6 +185,27 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
           >
             {t('chargingPlaces.detail.archive', 'Archive')}
           </Button>
+        )}
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Toggle
+          label={t('geofences.visits.charging', 'This is a charging location')}
+          checked={isCharging}
+          onChange={(next) => {
+            setIsCharging(next);
+            if (!place.needs_review) {
+              updatePurpose.mutate(
+                { geofenceId: place.id, isChargingLocation: next },
+                { onError: () => setIsCharging(place.is_charging_location) },
+              );
+            }
+          }}
+        />
+        {place.needs_review && (
+          <Text size="sm" color="muted">
+            {t('geofences.visits.reviewHint', 'Confirm the detected purpose, name and location, then mark reviewed to enable.')}
+          </Text>
         )}
       </div>
 
@@ -223,10 +264,21 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
           <Text size="sm" color="muted">
             {t(
               'chargingPlaces.detail.pricingIntro',
-              'Rate changes never rewrite protected actual costs. The rate active today estimates older unpriced sessions automatically; use preview and apply when you have exact historical rates.',
+              'Rates preserve actual costs. The first rate starts the day before the earliest matching charge; preview and apply to price eligible past sessions.',
             )}
           </Text>
-          <RateForm geofenceId={place.id} currentRate={currentRate} />
+          {firstSessionQuery.isError ? (
+            <QueryError error={firstSessionQuery.error} onRetry={() => void firstSessionQuery.refetch()} />
+          ) : firstSessionQuery.isLoading && firstSessionQuery.fetchStatus !== 'idle' ? (
+            <Skeleton className="h-40" />
+          ) : (
+            <RateForm
+              key={place.id}
+              geofenceId={place.id}
+              currentRate={currentRate}
+              firstSessionAt={firstSessionQuery.data?.started_at}
+            />
+          )}
           <RateHistoryPanel
             rates={ratesQuery.data}
             isLoading={ratesQuery.isLoading}

@@ -399,6 +399,9 @@ func TestMarkReviewed(t *testing.T) {
 		if !strings.Contains(call.sql, "needs_review = false") {
 			t.Errorf("unexpected SQL: %s", call.sql)
 		}
+		if !strings.Contains(call.sql, "enabled = true") {
+			t.Errorf("review must enable the place: %s", call.sql)
+		}
 	})
 
 	t.Run("not found", func(t *testing.T) {

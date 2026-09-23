@@ -96,6 +96,8 @@
       "noActivity": "No activity in this period",
       "inbox": "Open inbox",
       "values": {
+        "digest.fsd.weekly": "Weekly FSD digest",
+        "system.database.recovery": "Database recovery",
         "system": "System",
         "alert": "Alert rules",
         "automation": "Automation",
@@ -113,6 +115,17 @@
     "inbox": {
       "title": "Inbox",
       "subtitle": "All system, alert, automation, and scheduled notifications in one place.",
+      "columns": {
+        "received": "Received",
+        "title": "Notification",
+        "message": "Message",
+        "type": "Type",
+        "source": "Source",
+        "severity": "Severity",
+        "status": "Status",
+        "read": "Read",
+        "unread": "Unread"
+      },
       "detail": {
         "title": "Notification details"
       },
@@ -243,6 +256,9 @@
     },
     "channels": {
       "add": "Add Channel",
+      "fields": {
+        "signingSecret": "Signing secret"
+      },
       "addTitle": "Add Channel",
       "editTitle": "Edit Channel",
       "active": "Active",
@@ -273,6 +289,19 @@
     "alertStudio": {
       "title": "Alert Studio",
       "subtitle": "Create custom rules from Fleet Telemetry signals",
+      "placeEvents": {
+        "title": "Place arrival and departure alerts",
+        "place": "Place",
+        "entry": "On entry",
+        "exit": "On exit",
+        "entryFor": "Alert on entry: {{name}}",
+        "exitFor": "Alert on exit: {{name}}",
+        "description": "Choose which reviewed places notify you when a vehicle enters or leaves. Manage place names and boundaries in Places.",
+        "manage": "Manage places",
+        "reviewFirst": "Review this place before enabling its notifications.",
+        "empty": "No places yet. Add or review a place to configure its alerts.",
+        "saveError": "Could not save place alerts. Try again."
+      },
       "aiBuilder": {
         "title": "Draft from natural language",
         "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",

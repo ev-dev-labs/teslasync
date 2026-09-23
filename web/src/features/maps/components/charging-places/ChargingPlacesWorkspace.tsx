@@ -22,28 +22,28 @@ import { useConfirm } from '@/hooks/useConfirm';
 import { NeedsSetupQueue } from './NeedsSetupQueue';
 import {
   PlacesTable,
-  type GeofenceQuickPatch,
 } from './PlacesTable';
 import { PlaceDetailPanel } from './PlaceDetailPanel';
-import type { Geofence } from '@/api/types';
+import { VisitedCandidates } from './VisitedCandidates';
+import type { Geofence, VisitedPlaceCandidate } from '@/api/types';
 
 export interface ChargingPlacesWorkspaceProps {
   onAdd?: () => void;
+  onReviewCandidate?: (candidate: VisitedPlaceCandidate) => void;
+  onSelectForTemplate?: (id: number) => void;
   onEdit?: (place: Geofence) => void;
   onDelete?: (place: Geofence) => void;
-  onUpdate?: (place: Geofence, patch: GeofenceQuickPatch) => void;
   onBulkDelete?: (places: Geofence[]) => Promise<void>;
-  updatePending?: boolean;
   deletePending?: boolean;
 }
 
 export function ChargingPlacesWorkspace({
   onAdd,
+  onReviewCandidate,
+  onSelectForTemplate,
   onEdit,
   onDelete,
-  onUpdate,
   onBulkDelete,
-  updatePending = false,
   deletePending = false,
 }: ChargingPlacesWorkspaceProps) {
   const { t } = useTranslation();
@@ -128,7 +128,7 @@ export function ChargingPlacesWorkspace({
           <Caption className="mt-1">
             {t(
               'chargingPlaces.workspace.unifiedDescription',
-              'Manage zone boundaries, alerts, categories, charging rates, and session history in one place.',
+              'Review visited places, define their boundaries and charging purpose, and manage rates and session history.',
             )}
           </Caption>
         </div>
@@ -163,6 +163,9 @@ export function ChargingPlacesWorkspace({
           onRetry={() => void needsReviewQuery.refetch()}
           onReview={setSelectedPlace}
         />
+        {onReviewCandidate && (
+          <VisitedCandidates onReview={onReviewCandidate} onSelectForTemplate={onSelectForTemplate} />
+        )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <SearchInput
@@ -201,8 +204,6 @@ export function ChargingPlacesWorkspace({
           onSelect={setSelectedPlace}
           onEdit={onEdit}
           onDelete={onDelete}
-          onUpdate={onUpdate}
-          updatePending={updatePending}
           selectedKeys={selectedKeys}
           onSelectionChange={onBulkDelete ? setSelectedKeys : undefined}
           bulkActions={

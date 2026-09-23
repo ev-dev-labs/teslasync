@@ -29,7 +29,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { RouteSummary } from '@/types/driving';
@@ -282,15 +282,22 @@ function units(distance: 'km' | 'mi') {
   };
 }
 
+function LocationProbe() {
+  const { search } = useLocation();
+  return <output data-testid="location-search">{search}</output>;
+}
+
 function renderPage(initialEntries: string[] = ['/route-efficiency?from=2026-01-01&to=2026-01-31']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const page = (
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <RouteEfficiencyPage />
+        <LocationProbe />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  return render(page);
 }
 
 const kpiRegion = () => screen.getByRole('region', { name: 'Route efficiency summary metrics' });
@@ -323,6 +330,7 @@ describe('RouteEfficiencyPage — no vehicle selected', () => {
     expect(empties.length).toBeGreaterThanOrEqual(2);
     // No route endpoints are rendered when there is nothing to show.
     expect(screen.queryByText('Beach')).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
     // The AI panel is handed no id when the fleet is unselected.
     expect(screen.getByTestId('ai-suggestions')).toHaveAttribute('data-vehicle-id', '');
   });
@@ -339,6 +347,7 @@ describe('RouteEfficiencyPage — loading', () => {
     expect(within(kpiRegion()).queryByText('Routes')).not.toBeInTheDocument();
     // The no-data empty copy must not appear during loading.
     expect(screen.queryByText('No route data')).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
   });
 });
 
@@ -363,6 +372,7 @@ describe('RouteEfficiencyPage — error', () => {
 
     // The KPI band shows the error, not the metric tiles.
     expect(within(kpiRegion()).queryByText('Total Trips')).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
   });
 
   it('keeps rendering the last good routes when a background refetch errors', () => {
@@ -472,6 +482,7 @@ describe('RouteEfficiencyPage — comparison chart bounds', () => {
     // …but the rest of the page still shows real content.
     expect(kpiValue('Routes')).toBe('1');
     expect(within(cardsRegion()).getByText('Depot')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
   });
 });
 
@@ -490,5 +501,79 @@ describe('RouteEfficiencyPage — range picker URL wiring', () => {
       expect(screen.getByTestId('range-display')).toHaveTextContent('2026-05-01..2026-05-31'),
     );
     expect(mockRouteEff).toHaveBeenLastCalledWith('7', '2026-05-01', '2026-05-31');
+  });
+});
+
+describe('RouteEfficiencyPage — route cards pagination', () => {
+    const many = Array.from({ length: 25 }, (_, i) =>
+      makeRoute({
+        startLocation: `Start${String(i).padStart(2, '0')}`,
+        endLocation: `End${String(i).padStart(2, '0')}`,
+        tripCount: 25 - i,
+        avgEfficiency: 100 + i,
+      }),
+    );
+
+    beforeEach(() => {
+      mockRouteEff.mockReturnValue(makeQuery({ data: { routes: many } }));
+    });
+
+    it('pages the cards without changing the full-result KPIs or comparison chart', () => {
+      renderPage();
+      expect(kpiValue('Routes')).toBe('25');
+      expect(kpiValue('Total Trips')).toBe('325');
+      expect(screen.getAllByTestId('chart-row')).toHaveLength(10);
+
+      const nav = screen.getByRole('navigation', { name: 'Pagination' });
+      expect(within(nav).getByText('Showing 1–12 of 25')).toBeInTheDocument();
+      expect(within(cardsRegion()).getByText('End00')).toBeInTheDocument();
+      expect(within(cardsRegion()).getByText('End11')).toBeInTheDocument();
+      expect(within(cardsRegion()).queryByText('End12')).not.toBeInTheDocument();
+      expect(within(nav).getByRole('button', { name: 'Previous page' })).toBeDisabled();
+
+      fireEvent.click(within(nav).getByRole('button', { name: 'Next page' }));
+      expect(within(nav).getByText('Showing 13–24 of 25')).toBeInTheDocument();
+      expect(within(cardsRegion()).queryByText('End00')).not.toBeInTheDocument();
+      expect(within(cardsRegion()).getByText('End12')).toBeInTheDocument();
+      expect(kpiValue('Routes')).toBe('25');
+      expect(screen.getByTestId('location-search')).toHaveTextContent('page=2');
+
+      fireEvent.click(within(nav).getByRole('button', { name: 'Last page' }));
+      expect(within(nav).getByText('Showing 25–25 of 25')).toBeInTheDocument();
+      expect(within(cardsRegion()).getByText('End24')).toBeInTheDocument();
+      expect(within(nav).getByRole('button', { name: 'Next page' })).toBeDisabled();
+      fireEvent.click(within(nav).getByRole('button', { name: 'First page' }));
+      expect(within(cardsRegion()).getByText('End00')).toBeInTheDocument();
+      expect(screen.getByTestId('location-search')).not.toHaveTextContent('page=');
+    });
+
+    it('opens a bookmarked page and corrects an out-of-range page after data loads', async () => {
+      const first = renderPage(['/route-efficiency?from=2026-01-01&to=2026-01-31&page=3']);
+      expect(within(cardsRegion()).getByText('End24')).toBeInTheDocument();
+      expect(screen.getByRole('navigation', { name: 'Pagination' })).toHaveTextContent('25–25 of 25');
+      expect(screen.getByTestId('location-search')).toHaveTextContent('page=3');
+      first.unmount();
+
+      // A smaller result set cannot leave a bookmarked page stranded.
+      mockRouteEff.mockReturnValue(makeQuery({ data: { routes: many.slice(0, 13) } }));
+      // A fresh URL simulates a direct visit after the route count has changed.
+      renderPage(['/route-efficiency?from=2026-01-01&to=2026-01-31&page=99']);
+      await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent('page=2'));
+      expect(screen.getByRole('navigation', { name: 'Pagination' })).toHaveTextContent('Showing 13–13 of 13');
+    });
+
+    it('atomically resets page when the date filter changes and keeps the new range', async () => {
+      mockRouteEff.mockImplementation((_id: string, start: string) =>
+        makeQuery({ data: { routes: start === '2026-05-01' ? many.slice(0, 13) : many } }),
+      );
+      renderPage(['/route-efficiency?from=2026-01-01&to=2026-01-31&page=3']);
+      expect(within(cardsRegion()).getByText('End24')).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('route-efficiency-range-picker'));
+      await waitFor(() => expect(within(cardsRegion()).getByText('End00')).toBeInTheDocument());
+      expect(within(cardsRegion()).queryByText('End12')).not.toBeInTheDocument();
+      expect(screen.getByTestId('location-search')).toHaveTextContent('from=2026-05-01');
+      expect(screen.getByTestId('location-search')).toHaveTextContent('to=2026-05-31');
+      expect(screen.getByTestId('location-search')).not.toHaveTextContent('page=');
+      expect(mockRouteEff).toHaveBeenLastCalledWith('7', '2026-05-01', '2026-05-31');
   });
 });

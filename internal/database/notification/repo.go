@@ -224,7 +224,8 @@ func (r *NotificationRepo) upsertChannelConfig(ctx context.Context, ch *notifica
 		_, err := r.db.Pool.Exec(ctx,
 			`INSERT INTO notification_channel_webhook (channel_id, url, http_method, bearer_token)
 			 VALUES ($1, $2, $3, $4)
-			 ON CONFLICT (channel_id) DO UPDATE SET url=$2, http_method=$3, bearer_token=$4`,
+			 ON CONFLICT (channel_id) DO UPDATE SET url=$2, http_method=$3,
+			   bearer_token=COALESCE($4, notification_channel_webhook.bearer_token)`,
 			ch.ID, cfg["url"], method, nilIfEmpty(cfg["bearer_token"]),
 		)
 		return err
@@ -533,6 +534,20 @@ func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg s
 // "cannot scan NULL into *string" failures on rows with no error message.
 const notificationLogColumns = `id, COALESCE(channel_id, 0), alert_id, title, message, status, COALESCE(severity, ''), COALESCE(error, ''), created_at, sent_at, scheduled_at, latency_ms, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note, trigger_id, event_type`
 
+// Keep a correlated delivery visible only when its canonical event is missing.
+// The earliest delivery is a stable representative even when several channels
+// succeeded; a late delivery must not create another inbox row for the trigger.
+const inboxLogPredicate = `(nl.status = 'triggered' OR (
+	nl.status <> 'triggered' AND (
+		nl.trigger_id IS NULL OR (
+			NOT EXISTS (SELECT 1 FROM notification_logs event
+				WHERE event.trigger_id = nl.trigger_id AND event.status = 'triggered')
+			AND nl.id = (SELECT MIN(delivery.id) FROM notification_logs delivery
+				WHERE delivery.trigger_id = nl.trigger_id AND delivery.status <> 'triggered')
+		)
+	)
+))`
+
 func scanNotificationLog(rows pgx.Row, l *notificationmodel.NotificationLog) error {
 	return rows.Scan(
 		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Severity, &l.Error,
@@ -544,7 +559,7 @@ func scanNotificationLog(rows pgx.Row, l *notificationmodel.NotificationLog) err
 func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT `+notificationLogColumns+`
-		 FROM notification_logs WHERE status = 'triggered' OR trigger_id IS NULL
+		 FROM notification_logs nl WHERE `+inboxLogPredicate+`
 		 ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset,
 	)
 	if err != nil {
@@ -575,8 +590,8 @@ func (r *NotificationRepo) GetAlertLogs(ctx context.Context, limit, offset int) 
 	}
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT `+notificationLogColumns+`
-		 FROM notification_logs
-		 WHERE alert_id IS NOT NULL AND (status = 'triggered' OR trigger_id IS NULL)
+		 FROM notification_logs nl
+		 WHERE nl.alert_id IS NOT NULL AND `+inboxLogPredicate+`
 		 ORDER BY created_at DESC
 		 LIMIT $1 OFFSET $2`, limit, offset,
 	)
@@ -781,7 +796,7 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 	if f.DeliveryOnly {
 		w.clauses = append(w.clauses, "nl.status <> 'triggered'")
 	} else {
-		w.clauses = append(w.clauses, "(nl.status = 'triggered' OR nl.trigger_id IS NULL)")
+		w.clauses = append(w.clauses, inboxLogPredicate)
 	}
 	args := w.args
 	ph := func(offset int) string { return fmt.Sprintf("$%d", len(args)+offset) }
@@ -851,7 +866,7 @@ func (r *NotificationRepo) ListGrouped(ctx context.Context, f NotificationLogFil
 	}
 
 	w := buildNotificationLogWhere(f)
-	w.clauses = append(w.clauses, "(nl.status = 'triggered' OR nl.trigger_id IS NULL)")
+	w.clauses = append(w.clauses, inboxLogPredicate)
 	args := w.args
 	ph := func(offset int) string { return fmt.Sprintf("$%d", len(args)+offset) }
 
@@ -944,8 +959,8 @@ ORDER BY agg.latest_at DESC, nl.id DESC`
 func (r *NotificationRepo) GetUnreadCount(ctx context.Context) (int64, error) {
 	var n int64
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM notification_logs
-		 WHERE (status = 'triggered' OR trigger_id IS NULL) AND read_at IS NULL AND archived_at IS NULL`,
+		`SELECT COUNT(*) FROM notification_logs nl
+		 WHERE `+inboxLogPredicate+` AND nl.read_at IS NULL AND nl.archived_at IS NULL`,
 	).Scan(&n)
 	if err != nil {
 		return 0, err
@@ -966,14 +981,14 @@ func (r *NotificationRepo) BulkSetRead(ctx context.Context, ids []int64, read bo
 	)
 	if read {
 		ct, err = r.db.Pool.Exec(ctx,
-			`UPDATE notification_logs SET read_at = COALESCE(read_at, $1)
-			 WHERE id = ANY($2) AND (status = 'triggered' OR trigger_id IS NULL)`,
+			`UPDATE notification_logs AS nl SET read_at = COALESCE(read_at, $1)
+			 WHERE nl.id = ANY($2) AND `+inboxLogPredicate,
 			time.Now().UTC(), ids,
 		)
 	} else {
 		ct, err = r.db.Pool.Exec(ctx,
-			`UPDATE notification_logs SET read_at = NULL WHERE id = ANY($1)
-			 AND (status = 'triggered' OR trigger_id IS NULL)`, ids,
+			`UPDATE notification_logs AS nl SET read_at = NULL WHERE nl.id = ANY($1)
+			 AND `+inboxLogPredicate, ids,
 		)
 	}
 	if err != nil {
@@ -993,10 +1008,10 @@ func (r *NotificationRepo) BulkSetRead(ctx context.Context, ids []int64, read bo
 // because the badge contract excludes archived from "unread" anyway.
 func (r *NotificationRepo) BulkSetReadAll(ctx context.Context) (int64, error) {
 	ct, err := r.db.Pool.Exec(ctx,
-		`UPDATE notification_logs
+		`UPDATE notification_logs AS nl
 		    SET read_at = $1
-		  WHERE (status = 'triggered' OR trigger_id IS NULL)
-		    AND read_at IS NULL AND archived_at IS NULL`,
+		  WHERE `+inboxLogPredicate+`
+		    AND nl.read_at IS NULL AND nl.archived_at IS NULL`,
 		time.Now().UTC(),
 	)
 	if err != nil {
@@ -1025,12 +1040,12 @@ func (r *NotificationRepo) BulkSetReadByGroupKey(ctx context.Context, groupKey s
 		return 0, nil
 	}
 	ct, err := r.db.Pool.Exec(ctx,
-		`UPDATE notification_logs
+		`UPDATE notification_logs AS nl
 		    SET read_at = COALESCE(read_at, $1)
-		  WHERE group_key = $2
-		    AND (status = 'triggered' OR trigger_id IS NULL)
-		    AND read_at IS NULL
-		    AND archived_at IS NULL`,
+		  WHERE nl.group_key = $2
+		    AND `+inboxLogPredicate+`
+		    AND nl.read_at IS NULL
+		    AND nl.archived_at IS NULL`,
 		time.Now().UTC(), gk,
 	)
 	if err != nil {
@@ -1053,16 +1068,16 @@ func (r *NotificationRepo) BulkSetArchived(ctx context.Context, ids []int64, arc
 	if archived {
 		now := time.Now().UTC()
 		ct, err = r.db.Pool.Exec(ctx,
-			`UPDATE notification_logs
+			`UPDATE notification_logs AS nl
 			    SET archived_at = COALESCE(archived_at, $1),
 			        read_at     = COALESCE(read_at, $1)
-			  WHERE id = ANY($2) AND (status = 'triggered' OR trigger_id IS NULL)`,
+			  WHERE nl.id = ANY($2) AND `+inboxLogPredicate,
 			now, ids,
 		)
 	} else {
 		ct, err = r.db.Pool.Exec(ctx,
-			`UPDATE notification_logs SET archived_at = NULL WHERE id = ANY($1)
-			 AND (status = 'triggered' OR trigger_id IS NULL)`, ids,
+			`UPDATE notification_logs AS nl SET archived_at = NULL WHERE nl.id = ANY($1)
+			 AND `+inboxLogPredicate, ids,
 		)
 	}
 	if err != nil {
@@ -1078,8 +1093,8 @@ func (r *NotificationRepo) BulkDelete(ctx context.Context, ids []int64) (int64, 
 		return 0, nil
 	}
 	ct, err := r.db.Pool.Exec(ctx,
-		`DELETE FROM notification_logs WHERE id = ANY($1)
-		 AND (status = 'triggered' OR trigger_id IS NULL)`, ids,
+		`DELETE FROM notification_logs AS nl WHERE nl.id = ANY($1)
+		 AND `+inboxLogPredicate, ids,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("bulk delete logs: %w", err)
@@ -1121,7 +1136,7 @@ func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}
 func (r *NotificationRepo) GetLog(ctx context.Context, id int64) (*notificationmodel.NotificationLog, error) {
 	row := r.db.Pool.QueryRow(ctx,
 		`SELECT `+notificationLogColumns+`
-		 FROM notification_logs WHERE id = $1 AND (status = 'triggered' OR trigger_id IS NULL)`, id,
+		 FROM notification_logs nl WHERE nl.id = $1 AND `+inboxLogPredicate, id,
 	)
 	l := &notificationmodel.NotificationLog{}
 	if err := scanNotificationLog(row, l); err != nil {
@@ -1159,7 +1174,7 @@ func (r *NotificationRepo) AcknowledgeLog(ctx context.Context, id int64, actor, 
 		// concurrent DELETE just removed the row.
 		existing := &notificationmodel.NotificationLog{}
 		err := scanNotificationLog(
-			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1 AND (status = 'triggered' OR trigger_id IS NULL)`, id),
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs nl WHERE nl.id = $1 AND `+inboxLogPredicate, id),
 			existing,
 		)
 		if err != nil {
@@ -1241,7 +1256,7 @@ func (r *NotificationRepo) ReopenLog(ctx context.Context, id int64, actor string
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		existing := &notificationmodel.NotificationLog{}
 		err := scanNotificationLog(
-			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1 AND (status = 'triggered' OR trigger_id IS NULL)`, id),
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs nl WHERE nl.id = $1 AND `+inboxLogPredicate, id),
 			existing,
 		)
 		if err != nil {
@@ -1310,7 +1325,7 @@ func (r *NotificationRepo) CommentOnLog(ctx context.Context, id int64, actor, no
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var exists bool
 		if err := tx.QueryRow(ctx,
-			`SELECT EXISTS(SELECT 1 FROM notification_logs WHERE id = $1 AND (status = 'triggered' OR trigger_id IS NULL))`, id,
+			`SELECT EXISTS(SELECT 1 FROM notification_logs nl WHERE nl.id = $1 AND `+inboxLogPredicate+`)`, id,
 		).Scan(&exists); err != nil {
 			return fmt.Errorf("notification_logs comment pre-read: %w", err)
 		}

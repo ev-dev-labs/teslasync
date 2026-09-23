@@ -474,10 +474,10 @@ slos:
     tags: [http, privacy, benchmarks]
 
   - name: geofence_pricing_read_availability
-    description: "Charging-place rate history, preview, and activity reads must avoid server errors."
+    description: "Place discovery, name resolution, and charging-place rate/activity reads must avoid server errors."
     sli:
-      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[5m]))"
-      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[5m]))"
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|visited-candidates|resolve|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity|first-charging-session))\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|visited-candidates|resolve|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity|first-charging-session))\"}[5m]))"
     objective: 99.5
     window: 30d
     owner: platform

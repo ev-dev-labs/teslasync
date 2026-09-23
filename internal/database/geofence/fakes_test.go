@@ -287,7 +287,7 @@ func geofenceRowVals(g *systemmodel.Geofence) []any {
 		g.ID, g.Name, g.PolygonWKT, g.Category,
 		g.Enabled, g.AlertOnEntry, g.AlertOnExit,
 		g.CreatedAt, g.UpdatedAt,
-		g.Origin, g.NeedsReview, g.ArchivedAt,
+		g.Origin, g.NeedsReview, g.ArchivedAt, g.IsChargingLocation,
 	}
 }
 

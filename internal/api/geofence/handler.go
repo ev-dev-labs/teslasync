@@ -25,8 +25,7 @@ import (
 // wins; circle takes precedence when both are supplied.
 //
 // `*bool` for the alert flags lets Update distinguish "field omitted" from
-// "field set to false" — required for the merge-style PUT the toggle row
-// switches and the modal both rely on.
+// "field set to false" for API clients configuring alert rules.
 //
 // Both camelCase (web-client `toGeofencePayload`) and snake_case (curl /
 // import bundles) are accepted: Go's encoding/json is case-insensitive
@@ -35,9 +34,10 @@ import (
 // coalesceGeofenceRequestSpellings merge them after decode. camelCase wins
 // on conflict because that's the documented client contract.
 type geofenceCreateRequest struct {
-	Name       string                        `json:"name"`
-	PolygonWKT string                        `json:"polygon_wkt"`
-	Category   *systemmodel.GeofenceCategory `json:"category"`
+	Name               string                        `json:"name"`
+	PolygonWKT         string                        `json:"polygon_wkt"`
+	Category           *systemmodel.GeofenceCategory `json:"category"`
+	IsChargingLocation *bool                         `json:"is_charging_location"`
 
 	Latitude  *float64 `json:"latitude"`
 	Longitude *float64 `json:"longitude"`
@@ -62,9 +62,20 @@ func coalesceGeofenceRequestSpellings(req *geofenceCreateRequest) {
 	if req.AlertOnEntry == nil && req.AlertOnEntrySnake != nil {
 		req.AlertOnEntry = req.AlertOnEntrySnake
 	}
+
 	if req.AlertOnExit == nil && req.AlertOnExitSnake != nil {
 		req.AlertOnExit = req.AlertOnExitSnake
 	}
+}
+
+func validateEnabledRequest(enabled *bool, needsReview bool) error {
+	if enabled != nil && *enabled == needsReview {
+		if needsReview {
+			return fmt.Errorf("places awaiting review cannot be enabled; review the place first")
+		}
+		return fmt.Errorf("reviewed places cannot be disabled; archive the place instead")
+	}
+	return nil
 }
 
 // decodeGeofenceWriteBody unmarshals the request and resolves whichever
@@ -90,6 +101,9 @@ func decodeGeofenceWriteBody(body io.Reader) (*systemmodel.Geofence, *geofenceCr
 	}
 	if req.Enabled != nil {
 		g.Enabled = *req.Enabled
+	}
+	if req.IsChargingLocation != nil {
+		g.IsChargingLocation = *req.IsChargingLocation
 	}
 	if req.AlertOnEntry != nil {
 		g.AlertOnEntry = *req.AlertOnEntry
@@ -215,11 +229,16 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	g, _, err := decodeGeofenceWriteBody(r.Body)
+	g, raw, err := decodeGeofenceWriteBody(r.Body)
 	if err != nil {
 		apperror.Write(w, r, apperror.ErrInvalidJSON)
 		return
 	}
+	if err := validateEnabledRequest(raw.Enabled, false); err != nil {
+		apperror.Write(w, r, apperror.ErrInvalidInput.WithMessage(err.Error()))
+		return
+	}
+	g.Enabled = true
 	if g.Name == "" || g.Radius() <= 0 {
 		apperror.Write(w, r, apperror.ErrMissingField.WithMessage("name and positive radius required"))
 		return
@@ -257,10 +276,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, g)
 }
 
-// Update applies a merge-style PUT: load the row, then overlay the fields
-// the client supplied. This lets the toggle row send `{enabled: true}` and
-// the rename input send `{name: "..."}` without each callsite having to
-// re-send the polygon, category, and alert flags.
+// Update applies a merge-style PUT: load the row, then overlay supplied
+// fields. Name and category updates need not resend geometry or alert flags.
 //
 // Field-presence detection:
 //   - String fields (Name, PolygonWKT) — empty string means "not supplied".
@@ -268,9 +285,10 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 //     so this is safe in practice.
 //   - Category (*GeofenceCategory pointer) — nil means "not supplied".
 //     Trade-off: the client cannot null Category via PUT (rare op).
-//   - Enabled / AlertOnEntry / AlertOnExit (*bool) — nil from the raw
-//     request means "not supplied"; a non-nil pointer (true OR false)
-//     overlays the existing row. This is the whole point of the bug fix.
+//   - AlertOnEntry / AlertOnExit (*bool) — nil means "not supplied";
+//     explicit false disables an alert without changing the other flag.
+//   - Enabled is a read-only lifecycle projection: reviewed places are
+//     enabled; pending review places cannot be enabled through PUT.
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := apiparams.URLParamInt64(r, "geofenceID")
 	if err != nil {
@@ -294,6 +312,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		apperror.Write(w, r, apperror.ErrGeofenceNotFound)
 		return
 	}
+	if err := validateEnabledRequest(raw.Enabled, existing.NeedsReview); err != nil {
+		apperror.Write(w, r, apperror.ErrInvalidInput.WithMessage(err.Error()))
+		return
+	}
 
 	merged := *existing
 	if patch.Name != "" {
@@ -305,8 +327,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if patch.Category != nil {
 		merged.Category = patch.Category
 	}
-	if raw.Enabled != nil {
-		merged.Enabled = *raw.Enabled
+	merged.Enabled = !merged.NeedsReview
+	if raw.IsChargingLocation != nil {
+		merged.IsChargingLocation = *raw.IsChargingLocation
 	}
 	if raw.AlertOnEntry != nil {
 		merged.AlertOnEntry = *raw.AlertOnEntry

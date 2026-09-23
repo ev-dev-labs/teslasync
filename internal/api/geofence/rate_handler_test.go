@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -88,9 +89,22 @@ type fakeRateRepo struct {
 	summaryResult []*systemmodel.GeofenceChargingSummary
 	summaryErr    error
 
-	activityResult []*systemmodel.GeofenceChargingActivity
-	activityErr    error
-	activityCalls  []struct{ limit, offset int }
+	activityResult  []*systemmodel.GeofenceChargingActivity
+	activityErr     error
+	activityCalls   []struct{ limit, offset int }
+	firstSessionAt  *time.Time
+	firstSessionErr error
+}
+
+func (f *fakeRateRepo) ListVisitedCandidates(_ context.Context) ([]geofencedb.VisitedPlaceCandidate, error) {
+	return []geofencedb.VisitedPlaceCandidate{}, nil
+}
+
+func (f *fakeRateRepo) FindByCoordinates(_ context.Context, _, _ float64) ([]*systemmodel.Geofence, error) {
+	if f.getByIDResult == nil {
+		return nil, nil
+	}
+	return []*systemmodel.Geofence{f.getByIDResult}, nil
 }
 
 func (f *fakeRateRepo) GetByID(_ context.Context, id int64) (*systemmodel.Geofence, error) {
@@ -169,6 +183,10 @@ func (f *fakeRateRepo) ChargingActivity(_ context.Context, _ int64, limit, offse
 	return f.activityResult, f.activityErr
 }
 
+func (f *fakeRateRepo) FirstChargingSessionAt(_ context.Context, _ int64) (*time.Time, error) {
+	return f.firstSessionAt, f.firstSessionErr
+}
+
 // ---------------------------------------------------------------------------
 // shared test helpers
 // ---------------------------------------------------------------------------
@@ -210,6 +228,28 @@ func sampleGeofence(id int64) *systemmodel.Geofence {
 		Name:       "Test Place",
 		PolygonWKT: "POLYGON((-74.0 40.0,-74.001 40.0,-74.001 40.001,-74.0 40.001,-74.0 40.0))",
 		Origin:     systemmodel.GeofenceOriginManual,
+	}
+}
+
+func TestVisitedCandidatesAndSavedNameResolution(t *testing.T) {
+	f := &fakeRateRepo{getByIDResult: sampleGeofence(11)}
+	h := NewHandler(nil, WithRateStore(f))
+	w := httptest.NewRecorder()
+	h.VisitedCandidates(w, httptest.NewRequest(http.MethodGet, "/geofences/visited-candidates", nil))
+	if w.Code != http.StatusOK || strings.TrimSpace(w.Body.String()) != "[]" {
+		t.Fatalf("candidates: code=%d body=%s", w.Code, w.Body.String())
+	}
+	w = httptest.NewRecorder()
+	h.ResolveName(w, httptest.NewRequest(http.MethodGet, "/geofences/resolve?lat=40&lon=-74", nil))
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"name":"Test Place"`) {
+		t.Fatalf("name resolution: code=%d body=%s", w.Code, w.Body.String())
+	}
+	for _, path := range []string{"/geofences/resolve?lat=NaN&lon=1", "/geofences/resolve?lat=0&lon=0"} {
+		w = httptest.NewRecorder()
+		h.ResolveName(w, httptest.NewRequest(http.MethodGet, path, nil))
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("invalid coordinate %q accepted: %d", path, w.Code)
+		}
 	}
 }
 

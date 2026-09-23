@@ -1520,12 +1520,20 @@
   "driveCalendar": {
     "title": "Drive Calendar",
     "subtitle": "A year of driving at a glance, with streaks",
+    "yearSubtitle": "Driving activity across {{year}}",
+    "rolling": "Last 52 weeks",
+    "previousYear": "Previous year",
+    "nextYear": "Next year",
+    "jumpToYear": "Jump to year",
+    "invalidYear": "Choose a year from 1900 through {{year}}.",
     "kpis": "Drive calendar summary metrics",
     "activity": "Driving activity",
     "insights": "Driving patterns and highlights",
     "activeDays": "Active Days",
     "inYear": "in the last 52 weeks",
+    "inSelectedYear": "in {{year}}",
     "currentStreak": "Current Streak",
+    "yearEndStreak": "Year-end Streak",
     "days": "{{count}} days",
     "longest": "longest: {{count}}",
     "distance": "Distance",
@@ -1534,18 +1542,20 @@
     "less": "Less",
     "more": "More",
     "noDrives": "No drives in the last year yet.",
+    "noDrivesYear": "No drives recorded in {{year}}.",
     "browseDrives": "Browse drives",
     "heatmap": {
       "title": "Last 52 Weeks",
       "activeSummary": "{{active}} active days · {{drives}} drives",
       "aria": "Daily driving heatmap for the last 52 weeks; {{active}} active days and a {{streak}} day current streak",
+      "ariaYear": "Daily driving heatmap for {{year}}; {{active}} active days and a {{streak}} day year-end streak",
       "cell": "{{date}} · {{distance}} · {{count}} drives",
       "legend": "Driving intensity from less to more"
     },
     "monthly": {
       "title": "Monthly distance & activity",
-      "subtitle": "Rolling 52-week totals by calendar month",
-      "aria": "Monthly driving distance bars with a drive-count trend for the last 52 weeks",
+      "subtitle": "Totals for the selected period by calendar month",
+      "aria": "Monthly driving distance bars with a drive-count trend for the selected period",
       "distanceSeries": "Distance ({{unit}})",
       "drivesSeries": "Drives",
       "month": "Month",
@@ -1606,7 +1616,7 @@
     },
     "topDays": {
       "title": "Top driving days",
-      "subtitle": "Highest-distance days in the last 52 weeks",
+      "subtitle": "Highest-distance days in the selected period",
       "rank": "Rank {{rank}}",
       "dayDetails": "{{count}} drives",
       "noData": "No active driving days to rank yet."
@@ -4993,6 +5003,12 @@
   "statusBar": {
     "aria": "Application status",
     "announcements": "Application status announcements",
+    "fleet": {
+      "label": "Fleet"
+    },
+    "mode": {
+      "now": "Now"
+    },
     "connection": {
       "short": "API",
       "ok": "Online",
@@ -13185,6 +13201,31 @@
       "empty": "No activity in this window.",
       "loadMore": "Older",
       "loadNewer": "Newer",
+      "pagePosition": "Showing {{start}}–{{end}} of {{total}} events in the selected range",
+      "exportScope": "Exports include only the loaded page. Use Older or Newer to browse and export other pages.",
+      "overview": {
+        "aria": "Activity overview",
+        "total": "Events in selected range",
+        "shown": "Events on this page",
+        "days": "Days on this page",
+        "critical": "Critical alerts on this page",
+        "mix": "Event types on this page",
+        "scope": "Counts below describe only the loaded page (events {{start}}–{{end}} of {{total}}), not the entire selected range."
+      },
+      "export": {
+        "timestamp": "Timestamp",
+        "type": "Type",
+        "vehicle": "Vehicle ID",
+        "title": "Title",
+        "summary": "Summary",
+        "severity": "Severity",
+        "status": "Status",
+        "source": "Source",
+        "sourceId": "Source ID",
+        "duration": "Duration (s)",
+        "energy": "Energy added (Wh)",
+        "detail": "Detail path"
+      },
       "provenance": "Source: {{source}}",
       "sourceRecord": "{{source}} record {{id}}",
       "serviceHistoryLimitation": "Dated service records will join this timeline when a verified service-history source is available.",
@@ -15649,6 +15690,29 @@
     "browseDrives": "Browse drives"
   },
   "geofences": {
+    "visits": {
+      "candidates": "Visited candidates",
+      "charging": "This is a charging location",
+      "chargingShort": "Charging",
+      "confirm": "Confirm detected location",
+      "description": "Drive endpoints suggest places; completed charging sessions provide independent charging evidence. Review each location before adding it to your directory.",
+      "empty": "No unmatched visited places in recent drive history.",
+      "evidence": "{{visits}} visits · {{charges}} confirmed charges",
+      "otherShort": "Other place",
+      "pending": "Awaiting review",
+      "purpose": "Purpose",
+      "rateHint": "After saving, open this place to set a rate effective before its first charge.",
+      "review": "Review place",
+      "reviewed": "Reviewed",
+      "reviewedPlaces": "Reviewed places",
+      "reviewHint": "Confirm the detected purpose, name and location, then mark reviewed to enable.",
+      "reviewStatus": "Review",
+      "select": "Select a visited place",
+      "suggestCharging": "Likely charging",
+      "suggestOther": "Visited; charging not observed",
+      "title": "Visited places to review",
+      "useTemplate": "Use in template"
+    },
     "selectVehicle": "Select a vehicle first",
     "noPosition": "No position data available for this vehicle",
     "locationDenied": "Location access denied",
@@ -15918,6 +15982,8 @@
       "noActivity": "No activity in this period",
       "inbox": "Open inbox",
       "values": {
+        "digest.fsd.weekly": "Weekly FSD digest",
+        "system.database.recovery": "Database recovery",
         "system": "System",
         "alert": "Alert rules",
         "automation": "Automation",
@@ -15935,6 +16001,17 @@
     "inbox": {
       "title": "Inbox",
       "subtitle": "All system, alert, automation, and scheduled notifications in one place.",
+      "columns": {
+        "received": "Received",
+        "title": "Notification",
+        "message": "Message",
+        "type": "Type",
+        "source": "Source",
+        "severity": "Severity",
+        "status": "Status",
+        "read": "Read",
+        "unread": "Unread"
+      },
       "detail": { "title": "Notification details" },
       "previousPage": "Previous",
       "nextPage": "Next",
@@ -16063,6 +16140,7 @@
     },
     "channels": {
       "add": "Add Channel",
+      "fields": { "signingSecret": "Signing secret" },
       "addTitle": "Add Channel",
       "editTitle": "Edit Channel",
       "active": "Active",
@@ -16093,6 +16171,19 @@
     "alertStudio": {
       "title": "Alert Studio",
       "subtitle": "Create custom rules from Fleet Telemetry signals",
+      "placeEvents": {
+        "title": "Place arrival and departure alerts",
+        "place": "Place",
+        "entry": "On entry",
+        "exit": "On exit",
+        "entryFor": "Alert on entry: {{name}}",
+        "exitFor": "Alert on exit: {{name}}",
+        "description": "Choose which reviewed places notify you when a vehicle enters or leaves. Manage place names and boundaries in Places.",
+        "manage": "Manage places",
+        "reviewFirst": "Review this place before enabling its notifications.",
+        "empty": "No places yet. Add or review a place to configure its alerts.",
+        "saveError": "Could not save place alerts. Try again."
+      },
       "aiBuilder": {
         "title": "Draft from natural language",
         "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
@@ -20599,6 +20690,7 @@
       "secret": "Signing secret",
       "secretPlaceholder": "Optional — used for HMAC signing",
       "secretPlaceholderEdit": "Leave blank to keep existing",
+      "keepSecret": "Leave the signing secret blank to keep the existing secret.",
       "secretHelp": "When set, every request includes X-TeslaSync-Signature: sha256=<hmac> so the receiver can verify authenticity.",
       "showSecret": "Show secret",
       "hideSecret": "Hide secret",

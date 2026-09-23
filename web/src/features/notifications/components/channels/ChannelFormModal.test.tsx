@@ -53,6 +53,8 @@ if (typeof window.matchMedia !== 'function') {
 const h = vi.hoisted(() => ({
   saveMutate: vi.fn(),
   testMutate: vi.fn(),
+  webhookTestMutate: vi.fn(),
+  signatureMutate: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
   pending: { save: false, test: false },
@@ -80,6 +82,11 @@ vi.mock('react-i18next', async () => {
 vi.mock('@/api/hooks/useNotifications', () => ({
   useSaveChannel: () => ({ mutate: h.saveMutate, isPending: h.pending.save }),
   useTestChannel: () => ({ mutate: h.testMutate, isPending: h.pending.test }),
+}));
+
+vi.mock('@/api/hooks/useNotificationChannels', () => ({
+  useTestWebhookChannel: () => ({ mutate: h.webhookTestMutate, isPending: false }),
+  useWebhookSignaturePreview: () => ({ mutateAsync: h.signatureMutate, isPending: false }),
 }));
 
 vi.mock('@/components/feedback/Toast', () => {
@@ -140,6 +147,8 @@ function setValue(label: string, value: string) {
 beforeEach(() => {
   h.saveMutate.mockReset();
   h.testMutate.mockReset();
+  h.webhookTestMutate.mockReset();
+  h.signatureMutate.mockReset();
   h.toastSuccess.mockReset();
   h.toastError.mockReset();
   h.pending.save = false;
@@ -151,6 +160,10 @@ beforeEach(() => {
   h.testMutate.mockImplementation((_id: number, opts?: MutateOptions<TestResponse>) => {
     opts?.onSuccess?.({ success: true });
   });
+  h.webhookTestMutate.mockImplementation((_id: number, opts?: MutateOptions<TestResponse>) => {
+    opts?.onSuccess?.({ success: true });
+  });
+  h.signatureMutate.mockResolvedValue({ signature: 'sha256=example' });
 });
 
 describe('ChannelFormModal — create mode', () => {
@@ -189,6 +202,49 @@ describe('ChannelFormModal — create mode', () => {
 
     // Placeholder tracks the selected provider label.
     expect(screen.getByPlaceholderText('My Email')).toBeInTheDocument();
+  });
+
+  it('creates a signed webhook from Add Channel without unsupported template fields', () => {
+    renderModal();
+    fireEvent.click(screen.getByRole('radio', { name: 'Webhook' }));
+    setValue('Channel Name', 'Automation hook');
+    setValue('URL', 'https://receiver.example.test/events');
+    setValue('Signing secret', 'sample-secret');
+    fireEvent.change(screen.getByLabelText('HTTP method'), { target: { value: 'PUT' } });
+    expect(screen.queryByLabelText('Headers (JSON)')).toBeNull();
+    expect(screen.queryByLabelText('Body Template')).toBeNull();
+    submitForm();
+    expect(h.saveMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'webhook',
+        url: 'https://receiver.example.test/events',
+        method: 'PUT',
+        bearer_token: 'sample-secret',
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('does not erase an existing webhook secret on edit and tests via signed delivery', () => {
+    const webhook: NotificationChannel = {
+      id: 44,
+      kind: 'webhook',
+      name: 'Custom receiver',
+      enabled: true,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+      url: 'https://receiver.example.test/events',
+      method: 'POST',
+      headers: {},
+      body_template: '',
+    };
+    renderModal({ channel: webhook });
+    expect(screen.getByText('Leave the signing secret blank to keep the existing secret.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Test Connection' }));
+    expect(h.webhookTestMutate).toHaveBeenCalledWith({ id: 44 }, expect.anything());
+    expect(h.testMutate).not.toHaveBeenCalled();
+    submitForm();
+    expect(h.saveMutate.mock.calls[0][0]).not.toHaveProperty('bearer_token', 'sample-secret');
   });
 
   it('clears previously-entered config when switching providers', () => {

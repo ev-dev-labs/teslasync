@@ -108,7 +108,6 @@ describe('ROUTE_META breadcrumb hierarchy', () => {
     for (const path of [
       '/notifications/rules',
       '/notifications/channels',
-      '/notifications/webhooks',
       '/notifications/quiet-hours',
       '/notifications/audit',
     ]) {

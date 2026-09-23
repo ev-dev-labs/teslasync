@@ -15,11 +15,13 @@ const KPI_COLUMNS = { default: 2, xl: 4 } as const;
 
 interface CalendarSummaryCardsProps extends DriveCalendarSectionState {
   calendar: DriveCalendar;
+  year: number | null;
 }
 
 /** Existing four-card summary, kept independent from every richer section. */
 export function CalendarSummaryCards({
   calendar,
+  year,
   isLoading,
   error,
   onRetry,
@@ -43,12 +45,16 @@ export function CalendarSummaryCards({
             <MetricCard
               label={t('driveCalendar.activeDays', 'Active Days')}
               value={calendar.activeDays}
-              subtitle={t('driveCalendar.inYear', 'in the last 52 weeks')}
+              subtitle={year == null
+                ? t('driveCalendar.inYear', 'in the last 52 weeks')
+                : t('driveCalendar.inSelectedYear', 'in {{year}}', { year })}
               icon={<CalendarDays className="h-5 w-5" aria-hidden="true" />}
               color="cyan"
             />
             <MetricCard
-              label={t('driveCalendar.currentStreak', 'Current Streak')}
+              label={year != null && year < new Date().getFullYear()
+                ? t('driveCalendar.yearEndStreak', 'Year-end Streak')
+                : t('driveCalendar.currentStreak', 'Current Streak')}
               value={t('driveCalendar.days', '{{count}} days', {
                 count: calendar.currentStreak,
               })}
@@ -89,7 +95,9 @@ export function CalendarSummaryCards({
               <EmptyState
                 className="col-span-full py-6"
                 icon={<CalendarDays className="h-7 w-7" aria-hidden="true" />}
-                message={t('driveCalendar.noDrives', 'No drives in the last year yet.')}
+                message={year == null
+                  ? t('driveCalendar.noDrives', 'No drives in the last year yet.')
+                  : t('driveCalendar.noDrivesYear', 'No drives recorded in {{year}}.', { year })}
                 actionTo={{
                   label: t('driveCalendar.browseDrives', 'Browse drives'),
                   to: '/drives',

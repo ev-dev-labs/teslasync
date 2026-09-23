@@ -95,6 +95,14 @@ function typeRate(value: string) {
 }
 
 describe('RateForm — structure', () => {
+  it('defaults the first rate to local midnight the day before the earliest charge', () => {
+    render(<RateForm geofenceId={7} firstSessionAt="2026-09-01T18:30:00Z" />);
+    const session = new Date('2026-09-01T18:30:00Z');
+    session.setHours(0, 0, 0, 0);
+    session.setDate(session.getDate() - 1);
+    const expected = `${session.getFullYear()}-${String(session.getMonth() + 1).padStart(2, '0')}-${String(session.getDate()).padStart(2, '0')}T00:00`;
+    expect((screen.getByLabelText('Effective from') as HTMLInputElement).value).toBe(expected);
+  });
   it('renders the currency select, rate field, and both effective-date fields', () => {
     render(<RateForm geofenceId={7} />);
 
@@ -106,7 +114,7 @@ describe('RateForm — structure', () => {
     expect(screen.getByText('Leave blank for an open-ended rate.')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'If this rate is active today, it also estimates older unpriced sessions at this place. Existing actual costs stay unchanged.',
+        'Starting before the first charge makes that session eligible. Preview and apply to price past sessions; existing actual costs stay unchanged.',
       ),
     ).toBeInTheDocument();
   });

@@ -45,6 +45,8 @@ export const drivingKeys = {
       : ['drives', vehicleId] as const),
   history: (vehicleId?: string, limit = 1000) =>
     ['drives', vehicleId, 'history', limit] as const,
+  calendar: (vehicleId?: string, start?: string, end?: string) =>
+    ['drives', vehicleId, 'calendar', start, end] as const,
   // Detail key is namespaced under 'drive' (singular) so it never collides
   // with `drives(vehicleId)` when the vehicleId numerically equals the drive
   // id. The collision swapped the cached value between `Drive[]` (list) and
@@ -134,6 +136,45 @@ export function useDriveHistory(vehicleId?: string, limit = 1000) {
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.MODERATE,
     select: safeArray,
+  });
+}
+
+const CALENDAR_PAGE_SIZE = 1000;
+
+/** Fetch every drive in a bounded calendar window, not just the first API page. */
+export function useDriveCalendarHistory(vehicleId?: string, start?: string, end?: string) {
+  return useQuery({
+    queryKey: drivingKeys.calendar(vehicleId, start, end),
+    queryFn: async ({ signal }) => {
+      if (!vehicleId || !start || !end) {
+        throw new Error('Drive calendar vehicle and date range are required');
+      }
+      const drives: Drive[] = [];
+      const seenIds = new Set<number>();
+      for (let offset = 0; ; offset += CALENDAR_PAGE_SIZE) {
+        const params = new URLSearchParams({
+          vehicle_id: vehicleId,
+          start,
+          end,
+          limit: String(CALENDAR_PAGE_SIZE),
+          offset: String(offset),
+        });
+        const page = await request<Drive[]>(`/drives?${params}`, { signal });
+        if (!Array.isArray(page) || page.length > CALENDAR_PAGE_SIZE) {
+          throw new Error('Invalid drive calendar history response');
+        }
+        for (const drive of page) {
+          if (!drive || !Number.isSafeInteger(drive.id) || seenIds.has(drive.id)) {
+            throw new Error('Drive calendar history changed while loading; retry');
+          }
+          seenIds.add(drive.id);
+        }
+        drives.push(...page);
+        if (page.length < CALENDAR_PAGE_SIZE) return drives;
+      }
+    },
+    enabled: !!vehicleId && !!start && !!end,
+    staleTime: STALE_TIMES.MODERATE,
   });
 }
 

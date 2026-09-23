@@ -561,7 +561,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Webhook channels ────────────────────────────────────────────
     {
       id: 'webhooks.list',
-      href: '/notifications/webhooks',
+      href: '/notifications/channels',
       section: 'webhooks',
       title: t('search.entries.webhooks.list.title', 'Webhook channels'),
       description: t(
@@ -581,7 +581,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'webhooks.signing',
-      href: '/notifications/webhooks',
+      href: '/notifications/channels',
       section: 'webhooks',
       title: t('search.entries.webhooks.signing.title', 'Webhook HMAC signing'),
       description: t(
@@ -592,7 +592,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'webhooks.test',
-      href: '/notifications/webhooks',
+      href: '/notifications/channels',
       section: 'webhooks',
       title: t('search.entries.webhooks.test.title', 'Test a webhook channel'),
       description: t(

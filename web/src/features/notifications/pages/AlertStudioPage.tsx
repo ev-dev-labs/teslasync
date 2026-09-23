@@ -51,6 +51,7 @@ import { AlertMessageEditor } from '../components/AlertMessageEditor'
 import AlertPacksPanel from '../components/packs/AlertPacksPanel'
 import RuleListTools from '../components/RuleListTools'
 import RuleChannelDialog from '../components/RuleChannelDialog'
+import { PlaceEventAlertsPanel } from '../components/PlaceEventAlertsPanel'
 import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
 import { DEFAULT_ALERT_COOLDOWN_S, getAlertBehaviorOptions } from '../lib/alertDelivery'
 import { Icons } from '@/lib/icons';
@@ -1439,6 +1440,10 @@ export default function AlertStudio() {
         if (rule) handleSelectRule(rule)
         else setFormError(t('alertPacks.ruleMissing', 'This rule is no longer available. Refresh the rule list.'))
       }} />}
+
+      <FadeIn>
+        <PlaceEventAlertsPanel />
+      </FadeIn>
 
       {showTemplates && (
         <FadeIn>

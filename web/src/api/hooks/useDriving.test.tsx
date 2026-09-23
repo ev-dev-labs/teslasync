@@ -38,6 +38,7 @@ import {
   drivingKeys,
   useDrives,
   useDriveHistory,
+  useDriveCalendarHistory,
   useDrive,
   useDriveScore,
   useDrivingStats,
@@ -156,6 +157,55 @@ describe('getDrives', () => {
     await getDrives(1);
     expect(mockedRequest).toHaveBeenCalledTimes(1);
     expect(callArgs()[0]).toBe('/drives?vehicle_id=1&limit=50&offset=0');
+  });
+
+  describe('useDriveCalendarHistory', () => {
+    const start = '2024-01-01T08:00:00.000Z';
+    const end = '2025-01-01T08:00:00.000Z';
+
+    it('loads every API page in the selected year without a 1,000-drive cutoff', async () => {
+      mockedRequest.mockResolvedValueOnce(Array.from({ length: 1000 }, (_, id) => ({ id: id + 1 })));
+      mockedRequest.mockResolvedValueOnce([{ id: 1001 }]);
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useDriveCalendarHistory('5', start, end), { wrapper: Wrapper });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toHaveLength(1001);
+      expect(mockedRequest).toHaveBeenCalledTimes(2);
+      expect(callArgs(0)[0]).toContain('offset=0');
+      expect(callArgs(1)[0]).toContain('offset=1000');
+      for (const index of [0, 1]) {
+        const [url, opts] = callArgs(index);
+        expect(url).toContain('vehicle_id=5');
+        expect(url).toContain('limit=1000');
+        expect(url).toContain(`start=${encodeURIComponent(start)}`);
+        expect(url).toContain(`end=${encodeURIComponent(end)}`);
+        expect(opts.signal).toBeDefined();
+      }
+    });
+
+    it('reports malformed history rather than treating it as an empty calendar', async () => {
+      mockedRequest.mockResolvedValueOnce(null);
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useDriveCalendarHistory('5', start, end), { wrapper: Wrapper });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.error).toEqual(new Error('Invalid drive calendar history response'));
+    });
+
+    it('rejects shifted API pages rather than counting a drive twice', async () => {
+      mockedRequest.mockResolvedValueOnce(Array.from({ length: 1000 }, (_, id) => ({ id: id + 1 })));
+      mockedRequest.mockResolvedValueOnce([{ id: 1000 }]);
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useDriveCalendarHistory('5', start, end), { wrapper: Wrapper });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.error).toEqual(new Error('Drive calendar history changed while loading; retry'));
+    });
+
+    it('does not fetch until a vehicle and both year boundaries are known', async () => {
+      const { Wrapper } = makeWrapper();
+      renderHook(() => useDriveCalendarHistory(undefined, start, end), { wrapper: Wrapper });
+      await tick();
+      expect(mockedRequest).not.toHaveBeenCalled();
+    });
   });
 
   it('appends start/end and honours explicit limit/offset', async () => {

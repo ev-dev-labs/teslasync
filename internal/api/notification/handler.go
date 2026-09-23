@@ -245,7 +245,13 @@ func normalizeChannelResponse(ch *notificationmodel.NotificationChannel) map[str
 		"updated_at": ch.UpdatedAt,
 	}
 	for k, v := range ch.Config {
+		if ch.Type == "webhook" && k == "bearer_token" {
+			continue
+		}
 		resp[k] = v
+	}
+	if method, ok := ch.Config["http_method"]; ch.Type == "webhook" && ok {
+		resp["method"] = method
 	}
 	return resp
 }
@@ -456,6 +462,9 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 		t, err := parseFlexibleTime(s)
 		if err != nil {
 			return f, fmt.Errorf("invalid to: %w", err)
+		}
+		if len(s) == len(time.DateOnly) {
+			t = t.AddDate(0, 0, 1).Add(-time.Nanosecond)
 		}
 		f.To = t
 	}

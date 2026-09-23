@@ -100,7 +100,6 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/notifications/channels': '/notifications/inbox',
   '/notifications/quiet-hours': '/notifications/inbox',
   '/notifications/rules': '/notifications/inbox',
-  '/notifications/webhooks': '/notifications/inbox',
 
   // ── Diagnostics / repair ───────────────────────────────────────────────
   '/diagnostics/root-cause': '/system-status',

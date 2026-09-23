@@ -57,9 +57,9 @@ describe('NotificationReportPanel', () => {
     expect(screen.getByText('Channel deliveries')).toBeInTheDocument();
     expect(screen.getByText('1.7')).toBeInTheDocument();
     expect(screen.getByText('Unattributed deliveries')).toBeInTheDocument();
-    expect(screen.getByText('system')).toBeInTheDocument();
-    expect(screen.getByText('alert')).toBeInTheDocument();
-    expect(screen.getByText('system.mqtt.outage')).toBeInTheDocument();
+    expect(screen.getByText('System')).toBeInTheDocument();
+    expect(screen.getByText('Alert')).toBeInTheDocument();
+    expect(screen.getByText('System Mqtt Outage')).toBeInTheDocument();
     expect(screen.getByText('Delivery outcomes')).toBeInTheDocument();
     expect(screen.getByText('Daily activity')).toBeInTheDocument();
   });

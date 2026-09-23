@@ -1,9 +1,8 @@
 /**
- * Drive Calendar model — a GitHub-style year of daily driving.
+ * Drive Calendar model — a year of daily driving.
  *
- * Buckets drive distance into local calendar days, exposes a week-aligned
- * grid for the trailing 52 weeks plus daily-drive streaks. Pure and
- * clock-free (`nowMs` injected).
+ * Buckets drive distance into local calendar days for either the trailing
+ * 52 weeks or a selected calendar year. Pure and clock-free (`nowMs` injected).
  */
 
 import type { Drive } from '@/types/driving';
@@ -44,9 +43,9 @@ export interface CalendarWeekday {
 }
 
 export interface DriveCalendar {
-  /** Ascending days covering the trailing 52 full weeks up to today. */
+  /** Ascending days covering the selected window up to today when current. */
   days: CalendarDay[];
-  /** The same days grouped into the 53 visible Sunday-first grid columns. */
+  /** The same days grouped into Sunday-first grid columns. */
   weeks: CalendarWeek[];
   /** Ascending calendar-month totals, including quiet months in the window. */
   months: CalendarMonth[];
@@ -74,7 +73,23 @@ export interface DriveCalendar {
   weekendDistanceShare: number | null;
 }
 
-const DAY_MS = 86_400_000;
+export function driveCalendarBounds(nowMs: number, year: number | null): { start: Date; endExclusive: Date } {
+  const today = new Date(nowMs);
+  today.setHours(0, 0, 0, 0);
+  const endExclusive = new Date(today);
+  endExclusive.setDate(endExclusive.getDate() + 1);
+  if (year != null) {
+    const yearEnd = new Date(year + 1, 0, 1);
+    return {
+      start: new Date(year, 0, 1),
+      endExclusive: yearEnd < endExclusive ? yearEnd : endExclusive,
+    };
+  }
+  const start = new Date(today);
+  start.setDate(start.getDate() - 52 * 7);
+  start.setDate(start.getDate() - start.getDay());
+  return { start, endExclusive };
+}
 
 function localKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -87,7 +102,7 @@ function p95(values: readonly number[]): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(0.95 * sorted.length) - 1)]!;
 }
 
-export function buildDriveCalendar(drives: readonly Drive[], nowMs: number): DriveCalendar {
+export function buildDriveCalendar(drives: readonly Drive[], nowMs: number, year: number | null = null): DriveCalendar {
   const byDay = new Map<string, { distanceM: number; drives: number }>();
   for (const d of drives) {
     if (!d.startTs) continue;
@@ -100,17 +115,17 @@ export function buildDriveCalendar(drives: readonly Drive[], nowMs: number): Dri
     byDay.set(key, agg);
   }
 
-  // Window: 52 weeks back, aligned so the grid starts on a Sunday.
-  const today = new Date(nowMs);
-  today.setHours(12, 0, 0, 0);
-  const start = new Date(today.getTime() - 52 * 7 * DAY_MS);
-  start.setDate(start.getDate() - start.getDay()); // back to Sunday
+  const { start: windowStart, endExclusive } = driveCalendarBounds(nowMs, year);
+  const start = new Date(windowStart);
+  start.setDate(start.getDate() - start.getDay());
+  const today = new Date(endExclusive);
+  today.setDate(today.getDate() - 1);
 
-  const startKey = localKey(start);
   const todayKey = localKey(today);
+  const windowStartKey = localKey(windowStart);
   const positives: number[] = [];
   for (const [key, { distanceM }] of byDay) {
-    if (key >= startKey && key <= todayKey && distanceM > 0) positives.push(distanceM);
+    if (key >= windowStartKey && key <= todayKey && distanceM > 0) positives.push(distanceM);
   }
   const cap = p95(positives);
 
@@ -120,10 +135,9 @@ export function buildDriveCalendar(drives: readonly Drive[], nowMs: number): Dri
   let activeDays = 0;
   let busiestDay: CalendarDay | null = null;
 
-  for (let t = start.getTime(); t <= today.getTime(); t += DAY_MS) {
-    const date = new Date(t);
+  for (const date = new Date(start); date < endExclusive; date.setDate(date.getDate() + 1)) {
     const key = localKey(date);
-    const agg = byDay.get(key);
+    const agg = key >= windowStartKey ? byDay.get(key) : undefined;
     const distanceM = agg?.distanceM ?? 0;
     const count = agg?.drives ?? 0;
     // Level 0 = idle; 1–4 scale against the p95 cap so one epic road-trip
@@ -175,7 +189,8 @@ export function buildDriveCalendar(drives: readonly Drive[], nowMs: number): Dri
     totalDays: 0,
   }));
 
-  for (const day of days) {
+  const observedDays = days.filter((day) => day.date >= windowStartKey);
+  for (const day of observedDays) {
     const monthKey = day.date.slice(0, 7);
     const month = byMonth.get(monthKey) ?? {
       month: monthKey,
@@ -198,7 +213,7 @@ export function buildDriveCalendar(drives: readonly Drive[], nowMs: number): Dri
   }
 
   const months = [...byMonth.values()];
-  const topDays = days
+  const topDays = observedDays
     .filter((day) => day.drives > 0)
     .sort((a, b) => b.distanceM - a.distanceM || a.date.localeCompare(b.date))
     .slice(0, 5);
@@ -237,7 +252,7 @@ export function buildDriveCalendar(drives: readonly Drive[], nowMs: number): Dri
     topDays,
     favoriteWeekday,
     busiestMonth,
-    activityRate: days.length > 0 ? activeDays / days.length : 0,
+    activityRate: observedDays.length > 0 ? activeDays / observedDays.length : 0,
     averageDistancePerActiveDayM: activeDays > 0 ? totalDistanceM / activeDays : null,
     averageDrivesPerActiveDay: activeDays > 0 ? totalDrives / activeDays : null,
     weekendDistanceShare: totalDistanceM > 0 ? weekendDistanceM / totalDistanceM : null,

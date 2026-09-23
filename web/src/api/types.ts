@@ -295,6 +295,7 @@ export interface Geofence {
   alert_on_exit: boolean
   origin: GeofenceOrigin
   needs_review: boolean
+  is_charging_location: boolean
   archived_at?: string | null
   created_at: string
   updated_at: string
@@ -304,6 +305,18 @@ export interface Geofence {
   longitude: number
   /** Computed bounding radius, meters — see MarshalJSON note above. */
   radius: number
+}
+
+/** Completed-drive endpoint cluster; charging evidence is from completed sessions. */
+export interface VisitedPlaceCandidate {
+  id: number
+  name: string
+  latitude: number
+  longitude: number
+  visit_count: number
+  charge_count: number
+  last_visited: string
+  first_charge_at: string | null
 }
 
 /**

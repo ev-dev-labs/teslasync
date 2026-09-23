@@ -205,7 +205,6 @@ const AlertRulesPage = lazy(() => import('./features/notifications/pages/AlertRu
 const InboxPage = lazy(() => import('./features/notifications/pages/InboxPage'))
 const ArchivedPage = lazy(() => import('./features/notifications/pages/ArchivedPage'))
 const ChannelsPage = lazy(() => import('./features/notifications/pages/ChannelsPage'))
-const WebhooksPage = lazy(() => import('./features/notifications/pages/WebhooksPage'))
 const BrowserNotificationsPage = lazy(() => import('./features/notifications/pages/BrowserNotificationsPage'))
 const QuietHoursPage = lazy(() => import('./features/notifications/pages/QuietHoursPage'))
 const LegacyAlertRulesRedirect = lazy(() => import('./features/notifications/components/LegacyAlertRulesRedirect'))
@@ -618,7 +617,7 @@ export default function App() {
         <Route path="notifications/inbox" element={<SafeRoute name="NotificationsInbox"><InboxPage /></SafeRoute>} />
         <Route path="notifications/archived" element={<SafeRoute name="NotificationsArchived"><ArchivedPage /></SafeRoute>} />
         <Route path="notifications/channels" element={<SafeRoute name="NotificationsChannels"><ChannelsPage /></SafeRoute>} />
-        <Route path="notifications/webhooks" element={<SafeRoute name="NotificationsWebhooks"><WebhooksPage /></SafeRoute>} />
+        <Route path="notifications/webhooks" element={<Navigate to="/notifications/channels" replace />} />
         <Route path="notifications/browser" element={<SafeRoute name="NotificationsBrowser"><BrowserNotificationsPage /></SafeRoute>} />
         <Route path="notifications/quiet-hours" element={<SafeRoute name="NotificationsQuietHours"><QuietHoursPage /></SafeRoute>} />
         <Route path="notifications/rules" element={<SafeRoute name="NotificationsRules"><AlertRulesPage /></SafeRoute>} />
