@@ -78,31 +78,14 @@ export function NotificationRow({
 
   return (
     <div
-      role="row"
-      tabIndex={0}
-      aria-selected={selected}
+      role="group"
+      aria-label={displayTitle}
       className={cn(
         'group relative flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors',
         'border-white/[0.06] hover:bg-white/[0.04]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
         !isRead && 'bg-white/[0.03] border-l-2 border-l-cyan-400/70',
         isRead && 'opacity-90',
       )}
-      onClick={(e) => {
-        // Activate only when the click is on the row body (not on form controls
-        // or the drill-through link, which already navigate or toggle).
-        const target = e.target as HTMLElement;
-        if (target.closest('button, a, input, label')) return;
-        onActivate?.(log);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          const target = e.target as HTMLElement;
-          if (target.closest('button, a, input, label')) return;
-          e.preventDefault();
-          onActivate?.(log);
-        }
-      }}
     >
       <Checkbox
         checked={selected}
@@ -111,7 +94,14 @@ export function NotificationRow({
         className="mt-1"
       />
 
-      <div className="flex-1 min-w-0">
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() => onActivate?.(log)}
+        aria-label={t('notifications.inbox.row.open', 'Open notification: {{title}}', { title: displayTitle })}
+        className="!h-auto min-w-0 flex-1 !justify-start !p-0 text-left !font-normal focus-visible:ring-2"
+      >
+      <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <SeverityBadge severity={severity} size="sm" showIcon={false}>
             {severity}
@@ -151,6 +141,7 @@ export function NotificationRow({
           </p>
         )}
       </div>
+      </Button>
 
       <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
         {!isRead && onMarkRead && (

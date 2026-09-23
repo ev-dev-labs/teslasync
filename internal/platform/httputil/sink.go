@@ -50,14 +50,16 @@ type APICallSink interface {
 //     truncated to MaxOutboundBodyBytes with OutboundTruncationMarker
 //     appended on overflow.
 type APICallRecord struct {
-	Service      string
-	Method       string
-	URL          string
-	StatusCode   int
-	DurationMs   int
-	ErrorMessage string
-	RequestBody  []byte
-	ResponseBody []byte
+	Service         string
+	Method          string
+	URL             string
+	StatusCode      int
+	DurationMs      int
+	ErrorMessage    string
+	RequestBody     []byte
+	ResponseBody    []byte
+	RequestHeaders  map[string]string
+	ResponseHeaders map[string]string
 }
 
 // RedactURL returns the request URL with sensitive query parameter values

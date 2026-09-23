@@ -33,16 +33,18 @@ func (t *TeslaToken) IsActive() bool {
 // Request/response bodies are stored as nullable TEXT, truncated to 10 KB
 // on the Go side to prevent storage bloat.
 type APICallLog struct {
-	ID           int64     `db:"id" json:"id"`
-	Ts           time.Time `db:"ts" json:"ts"`
-	VehicleID    *int64    `db:"vehicle_id" json:"vehicle_id,omitempty"`
-	Service      string    `db:"service" json:"service"`
-	HTTPMethod   string    `db:"http_method" json:"http_method"`
-	Endpoint     string    `db:"endpoint" json:"endpoint"`
-	StatusCode   int16     `db:"status_code" json:"status_code"`
-	DurationMs   int32     `db:"duration_ms" json:"duration_ms"`
-	ErrorMessage *string   `db:"error_message" json:"error_message,omitempty"`
-	RateLimited  bool      `db:"rate_limited" json:"rate_limited"`
-	RequestBody  *string   `db:"request_body" json:"request_body,omitempty"`
-	ResponseBody *string   `db:"response_body" json:"response_body,omitempty"`
+	ID              int64             `db:"id" json:"id"`
+	Ts              time.Time         `db:"ts" json:"ts"`
+	VehicleID       *int64            `db:"vehicle_id" json:"vehicle_id,omitempty"`
+	Service         string            `db:"service" json:"service"`
+	HTTPMethod      string            `db:"http_method" json:"http_method"`
+	Endpoint        string            `db:"endpoint" json:"endpoint"`
+	StatusCode      int16             `db:"status_code" json:"status_code"`
+	DurationMs      int32             `db:"duration_ms" json:"duration_ms"`
+	ErrorMessage    *string           `db:"error_message" json:"error_message,omitempty"`
+	RateLimited     bool              `db:"rate_limited" json:"rate_limited"`
+	RequestBody     *string           `db:"request_body" json:"request_body,omitempty"`
+	ResponseBody    *string           `db:"response_body" json:"response_body,omitempty"`
+	RequestHeaders  map[string]string `db:"request_headers" json:"request_headers,omitempty"`
+	ResponseHeaders map[string]string `db:"response_headers" json:"response_headers,omitempty"`
 }

@@ -6,3 +6,4 @@ export { ActionItem, type ActionItemProps, type ActionSeverity } from './ActionI
 export { ActionItemsPanel, type ActionItemsPanelProps } from './ActionItemsPanel'
 export { ResourcesPanel, type ResourcesPanelProps, type ResourceRow } from './ResourcesPanel'
 export { UptimeHeatmap, type UptimeHeatmapProps, type UptimeDay } from './UptimeHeatmap'
+export { FrontendErrorsCard } from './FrontendErrorsCard'

@@ -174,6 +174,8 @@ func (s *fakeSink) len() int {
 // T01 — single GET maps cleanly to a single api_call_logs record.
 func TestLoggedTransport_SinkRecordsSuccessfulGet(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Set-Cookie", "session=secret")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	}))
@@ -193,6 +195,9 @@ func TestLoggedTransport_SinkRecordsSuccessfulGet(t *testing.T) {
 		t.Fatalf("expected exactly 1 sink record, got %d", sink.len())
 	}
 	rec := sink.snapshot()[0]
+	if rec.ResponseHeaders["Content-Type"] != "application/json" || rec.ResponseHeaders["Set-Cookie"] != "REDACTED" {
+		t.Errorf("response headers not sanitized: %v", rec.ResponseHeaders)
+	}
 	if rec.Service != "example-api" {
 		t.Errorf("Service: want %q, got %q", "example-api", rec.Service)
 	}

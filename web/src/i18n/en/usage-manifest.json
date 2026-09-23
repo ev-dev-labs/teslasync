@@ -98,6 +98,7 @@
     "error": "shell",
     "playground": "admin",
     "admin": "admin",
+    "systemStatus": "system",
     "apiLogs": "admin",
     "backup": "admin",
     "redis": "admin",
@@ -615,6 +616,7 @@
       "roadmap",
       "statusApi",
       "system",
+      "systemStatus",
       "teslaAccount",
       "teslaUsage"
     ],
@@ -3060,6 +3062,7 @@
     "error": "detail-error",
     "playground": "admin",
     "admin": "admin",
+    "systemStatus": "system",
     "apiLogs": "admin",
     "backup": "admin",
     "redis": "admin",

@@ -246,6 +246,9 @@ func TestT02_BodyCaptureOn_RecordsRequestAndResponseBodies(t *testing.T) {
 		t.Fatalf("entries=%d, want 1", len(entries))
 	}
 	e := entries[0]
+	if e.RequestHeaders["Content-Type"] != "application/json" || e.ResponseHeaders["Content-Type"] != "application/json" {
+		t.Errorf("content type headers missing: request=%v response=%v", e.RequestHeaders, e.ResponseHeaders)
+	}
 	if e.RequestBody == nil {
 		t.Fatal("request_body=nil, want captured")
 	}
@@ -408,6 +411,7 @@ func TestT05_RedactsAuthorizationHeaderInStoredEndpointAndHeadersSnapshot(t *tes
 	req, _ := http.NewRequest("GET", srv.URL+"/api/v1/vehicles?api_key=SECRET&visible=ok", nil)
 	req.Header.Set("Authorization", "Bearer abc.def.ghi")
 	req.Header.Set("Cookie", "session=xyz")
+	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET failed: %v", err)
@@ -421,6 +425,12 @@ func TestT05_RedactsAuthorizationHeaderInStoredEndpointAndHeadersSnapshot(t *tes
 	e := entries[0]
 	if !strings.Contains(e.Endpoint, "api_key=REDACTED") {
 		t.Errorf("endpoint=%q, want api_key=REDACTED", e.Endpoint)
+	}
+	if e.RequestHeaders["Authorization"] != "REDACTED" || e.RequestHeaders["Cookie"] != "REDACTED" {
+		t.Errorf("request headers not redacted: %v", e.RequestHeaders)
+	}
+	if e.RequestHeaders["Accept"] != "application/json" {
+		t.Errorf("request content negotiation missing: %v", e.RequestHeaders)
 	}
 	if !strings.Contains(e.Endpoint, "visible=ok") {
 		t.Errorf("endpoint=%q, want visible=ok preserved", e.Endpoint)

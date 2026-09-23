@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { TeslaApiUsageCard } from '../TeslaApiUsageCard'
 import type { APIUsage } from '@/api/types'
+import { TeslaUsageContractError } from '@/api/hooks/useTeslaUsage'
 
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ formatCurrency: (value: number) => `$${value.toFixed(2)}` }),
@@ -52,5 +53,9 @@ describe('Tesla Fleet usage estimate', () => {
     rerender(<MemoryRouter><TeslaApiUsageCard apiUsage={undefined} now={0} compact error={new Error('offline')} /></MemoryRouter>)
     expect(screen.getByRole('link', { name: 'Explore Tesla API usage' })).toHaveAttribute('href', '/tesla-api-usage')
     expect(screen.getByText(/could not be loaded/)).toBeInTheDocument()
+  })
+  it('shows a specific upgrade notice when the API still returns the legacy usage shape', () => {
+    renderCard(undefined, { error: new TeslaUsageContractError() })
+    expect(screen.getByText(/requires a newer API service/)).toBeInTheDocument()
   })
 })

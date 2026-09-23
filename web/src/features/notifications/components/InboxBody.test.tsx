@@ -662,7 +662,7 @@ describe('InboxBody — row context menu', () => {
     });
     renderInbox({ route: '/notifications/inbox?view=flat' });
 
-    const rowEl = (await screen.findByText('Context row')).closest('[role="row"]');
+    const rowEl = (await screen.findByText('Context row')).closest('[role="group"]');
     expect(rowEl).not.toBeNull();
     fireEvent.contextMenu(rowEl as Element);
 

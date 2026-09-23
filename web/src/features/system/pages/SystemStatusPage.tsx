@@ -8,49 +8,42 @@
  *
  * Pulls live data from existing backend endpoints so every accordion
  *   shows real values (DB size, vehicle count, worker
- *   health, Tesla API spend, error counts, backup recency) instead of
+ *   health and backup recency) instead of
  *   the generic "Operational" stub the first cut shipped with.
  *
  * Heavy panels that duplicated other pages remain link-outs to:
  *   - Detailed DB pool table → /db-health
  *   - Full component health table → /live-monitor
- *   - Audit log table → /notifications
  *   - Telemetry pipeline detail → /admin/telemetry/coverage
  *   - Compression stats → /backup
  */
 
-import { useCallback, useMemo, useState, useEffect, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Activity, Database, Bell, ShieldCheck, Cpu, Server,
-  HardDrive, Package, Clock, RefreshCw, Boxes, AlertTriangle,
-  Car, Inbox,
+  Activity, Database, ShieldCheck, Cpu, Server,
+  HardDrive, Package, Clock, RefreshCw, Boxes,
 } from 'lucide-react'
 
 import { PageContainer, Masonry } from '@/components/layout'
-import { GlassPanel, Button, Badge, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
+import { GlassPanel, Button, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import {
   StatusHero, type HeroStatus,
-  StickyChipBar, StickyCompactHero,
   HealthRow, ResourcesPanel, type ResourceRow,
   ActionItemsPanel, ActionItem,
-  UptimeHeatmap, type UptimeDay,
 } from '@/components/status'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useSystemHealth, useBackupRuns, useBackupConfigs, useMaintenanceState } from '@/api/hooks/useAdmin'
 import { useAuthStatus } from '@/api/hooks/useSettings'
-import { useNotificationStats } from '@/api/hooks/useNotifications'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import {
   getVersionInfo, getExtendedHealth, checkForUpdates,
-  getBackupStats, getWorkersHealth, getErrorStats,
+  getBackupStats, getWorkersHealth,
 } from '@/api/devtools'
-import { formatBytes, fmtInt } from '@/lib/numberFormat'
-import { useDateFormat } from '@/hooks/useDateFormat'
-import { useFormatting } from '@/hooks/useFormatting'
+import { fmtInt } from '@/lib/numberFormat'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 
@@ -59,21 +52,17 @@ import {
   AccordionSection,
   AnomalyInlineRow,
   BackgroundWorkersCard,
-  BackupActionsCard,
   TeslaAuthCard,
-  TeslaApiUsageCard,
   TelemetryPipelineCard,
   UpdateAvailableCallout,
   StatusPageSkeleton,
   LiveStatusPill,
   IncidentsCard,
+  IncidentHistory,
   ScheduledMaintenanceCard,
-  SubscribeCard,
   SLOTrackingCard,
-  FrontendErrorsCard,
 } from '../components/status'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
-import { useTeslaUsage } from '@/api/hooks/useTeslaUsage'
 
 // Shared cadence
 const STATUS_REFRESH_MS = 30_000
@@ -84,8 +73,14 @@ export default function SystemStatusPage() {
   const { t } = useTranslation()
   usePageTitle(t('System Status'))
   const qc = useQueryClient()
-  const { formatDateTime } = useDateFormat()
-  const { formatCurrency } = useFormatting()
+  const location = useLocation()
+  const operatorDetails = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    const section = location.hash ? document.getElementById(location.hash.slice(1)) : null
+    if (section && operatorDetails.current?.contains(section)) {
+      operatorDetails.current.open = true
+    }
+  }, [location.hash])
 
   // ── data sources ────────────────────────────────────────────────
   const {
@@ -132,19 +127,11 @@ export default function SystemStatusPage() {
     refetchInterval: STATUS_REFRESH_MS,
   })
 
-  const { data: apiUsage, isLoading: usageLoading, error: usageError } = useTeslaUsage()
-
-  const { data: errorStats } = useQuery({
-    queryKey: ['system-status', 'errors'],
-    queryFn: getErrorStats,
-    refetchInterval: STATUS_REFRESH_MS,
-  })
 
   const { data: auth } = useAuthStatus()
   const { data: backupRuns } = useBackupRuns()
   const { data: backupConfigs } = useBackupConfigs()
   const { data: maintenance } = useMaintenanceState()
-  const { data: notifStats } = useNotificationStats()
   const { data: vehicles } = useVehicles()
 
   // ── derived overall status ──────────────────────────────────────
@@ -152,11 +139,19 @@ export default function SystemStatusPage() {
     if (maintenance?.mode === 'maintenance') return 'maintenance'
     if (!health) return 'unknown'
     const s = health.status as string
+    const componentStatuses = Object.values(health.components ?? {}).map((component) => resolveCompStatus(component.status))
+    if (s === 'unhealthy' || s === 'down' || s === 'offline' || componentStatuses.includes('unhealthy')) return 'unhealthy'
+    if (extHealth?.components?.database?.status === 'unhealthy' ||
+        extHealth?.components?.database?.status === 'down' ||
+        (workers && workers.total > 0 && workers.healthy_count === 0)) return 'unhealthy'
+    if (s === 'degraded' || s === 'warning' ||
+        componentStatuses.some((status) => status !== 'healthy') ||
+        auth?.authenticated === false) return 'degraded'
+    if (extHealth?.components?.database?.status === 'degraded' ||
+        (workers && workers.healthy_count < workers.total && workers.healthy_count > 0)) return 'degraded'
     if (s === 'healthy' || s === 'ok') return 'healthy'
-    if (s === 'degraded' || s === 'warning') return 'degraded'
-    if (s === 'unhealthy' || s === 'down' || s === 'offline') return 'unhealthy'
     return 'unknown'
-  }, [health, maintenance])
+  }, [health, maintenance, extHealth, workers, auth])
 
   // ── live "last checked" tick (drives the subline + sticky bar) ─
   const [now, setNow] = useState(() => Date.now())
@@ -281,23 +276,12 @@ export default function SystemStatusPage() {
   const vehicleCount = vehicles?.length ?? 0
 
   const workersStatus: HeroStatus = workers
-    ? workers.healthy_count === workers.total
+    ? workers.total === 0 ? 'unknown'
+      : workers.healthy_count === workers.total
       ? 'healthy'
       : workers.healthy_count > 0
         ? 'degraded'
         : 'unhealthy'
-    : 'unknown'
-
-  const notifStatus: HeroStatus = notifStats
-    ? notifStats.failed > 0
-      ? 'degraded'
-      : 'healthy'
-    : 'unknown'
-
-  const errorsStatus: HeroStatus = errorStats
-    ? errorStats.total_errors > 500 ? 'unhealthy'
-      : errorStats.total_errors > 100 ? 'degraded'
-      : 'healthy'
     : 'unknown'
 
 
@@ -381,49 +365,14 @@ export default function SystemStatusPage() {
     workers,
   ])
 
-  // ── 30-day uptime heatmap ───────────────────────────────────────
-  const uptimeDays: UptimeDay[] = useMemo(() => {
-    const days: UptimeDay[] = []
-    const day = 24 * 60 * 60 * 1000
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now - i * day)
-      const iso = d.toISOString().slice(0, 10)
-      days.push({
-        date: iso,
-        // Today = current status; prior days assumed healthy until the
-        // backend exposes a real day-level history feed.
-        status: i === 0 ? overallStatus : 'healthy',
-      })
-    }
-    return days
-  }, [now, overallStatus])
-
-  // ── chip bar IDs ────────────────────────────────────────────────
-  const chips = useMemo(() => [
-    { id: 'health', label: 'Health' },
-    { id: 'action-items', label: 'Action items' },
-    { id: 'resources', label: 'Resources' },
-    { id: 'services', label: 'Services' },
-    { id: 'database', label: 'Database' },
-    { id: 'telemetry', label: 'Telemetry' },
-    { id: 'tesla-auth', label: 'Tesla auth' },
-    { id: 'notifications', label: 'Notifications' },
-    { id: 'workers', label: 'Workers' },
-    { id: 'backups', label: 'Backups' },
-    { id: 'tesla-api', label: 'Tesla API' },
-    { id: 'errors', label: 'Errors' },
-    { id: 'system', label: 'System' },
-    { id: 'uptime', label: 'Uptime' },
-    { id: 'slo', label: 'SLO' },
-    { id: 'maintenance', label: 'Maintenance' },
-    { id: 'subscribe', label: 'Subscribe' },
-  ], [])
-
   // Action item flags
   const hasUpdate = updateCheck?.update_available === true
   const hasStaleBackup = backupStaleDays != null && backupStaleDays > STALE_BACKUP_DAYS
   const hasNoBackup = backupRuns != null && backupRuns.length === 0 && (backupConfigs?.length ?? 0) > 0
   const hasMaintenance = maintenance?.mode === 'maintenance'
+  const hasAttention = hasMaintenance || hasUpdate || hasStaleBackup || hasNoBackup ||
+    teslaTokenWarn != null || auth?.authenticated === false ||
+    (workers != null && workers.healthy_count < workers.total)
 
   // Health staleness — surface in hero subline if /health errored or
   // we haven't received fresh data in over 2 minutes.
@@ -446,13 +395,7 @@ export default function SystemStatusPage() {
   const telemetrySummary =
     vehicleCount > 0
       ? `${vehicleCount} vehicle${vehicleCount === 1 ? '' : 's'} · ${fmtInt(positionCount)} positions`
-      : 'operational · 0 vehicles (idle)'
-  const notificationsSummary =
-    notifStats
-      ? notifStats.enabled_channels === 0
-        ? 'No channels configured'
-        : `${notifStats.enabled_channels}/${notifStats.total_channels} channels · ${notifStats.sent} sent`
-      : 'operational'
+      : t('systemStatus.telemetryUnknown', 'No vehicle telemetry to assess')
   const workersSummary =
     workers
       ? `${workers.healthy_count} / ${workers.total} healthy`
@@ -503,15 +446,6 @@ export default function SystemStatusPage() {
         <StatusPageSkeleton />
       ) : (
         <>
-          <div data-status-print-hide>
-            <StickyCompactHero
-              targetId="status-hero"
-              status={overallStatus}
-              lastCheckedLabel={lastCheckedLabel}
-              onRefresh={handleRefresh}
-            />
-          </div>
-
           <div className="space-y-6 [&_section]:scroll-mt-24">
             {/* 1 ─ Hero ───────────────────────────────────────────── */}
             <FadeIn>
@@ -539,11 +473,123 @@ export default function SystemStatusPage() {
               <IncidentsCard now={now} />
             </FadeIn>
 
-            {/* 2 ─ Sticky chip bar ─────────────────────────────────── */}
-            <div data-status-print-hide className="px-4">
-              <StickyChipBar chips={chips} />
-            </div>
+            <FadeIn>
+              <section id="services" aria-label={t('systemStatus.currentComponents', 'Current component status')}>
+                <GlassPanel className="p-4 sm:p-5">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <SectionTitle>{t('systemStatus.currentComponents', 'Current component status')}</SectionTitle>
+                    <DetailLink to="/live-monitor" label={t('Open Live Monitor')} />
+                  </div>
+                  {components.length > 0 ? (
+                    <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                      {components.map(([name, comp]) => (
+                        <li key={name} className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-3">
+                          <Text size="sm" weight="medium" color="primary" className="min-w-0 truncate">{name}</Text>
+                          <StatusBadge status={resolveCompStatus(comp.status)} />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <Text as="p" variant="bodySm">{t('systemStatus.noComponents', 'Current component status is unavailable.')}</Text>
+                  )}
+                </GlassPanel>
+              </section>
+            </FadeIn>
 
+            {hasAttention && (
+              <FadeIn>
+                <section id="action-items" aria-label={t('Operator action items')}>
+                  <ActionItemsPanel title={t('Needs your attention')}>
+                    {hasMaintenance && (
+                      <ActionItem
+                        severity="info"
+                        title={t('Maintenance mode is active')}
+                        description={maintenance?.maintenance_message || t('System is in operator-set maintenance mode')}
+                        cta={{ label: t('Manage'), to: '/system-status#maintenance' }}
+                      />
+                    )}
+                    {hasUpdate && (
+                      <ActionItem
+                        severity="info"
+                        title={t('Update available — v{{version}}', { version: updateCheck?.latest })}
+                        description={t('Current: v{{current}}', { current: updateCheck?.current })}
+                        cta={{
+                          label: t('Release notes'),
+                          to: 'https://github.com/ev-dev-labs/teslasync/releases/latest',
+                          external: true,
+                        }}
+                      />
+                    )}
+                    {teslaTokenWarn?.severity === 'error' && (
+                      <ActionItem
+                        severity="error"
+                        title={t('Tesla token expired')}
+                        description={t('Sign in again to resume Tesla-backed features')}
+                        cta={{ label: t('Re-authenticate'), to: '/tesla-account' }}
+                      />
+                    )}
+                    {teslaTokenWarn?.severity === 'warn' && (
+                      <ActionItem
+                        severity="warn"
+                        title={t('Tesla token expires in {{days}} day(s)', { days: teslaTokenWarn.days })}
+                        description={t('Refresh to avoid disruption')}
+                        cta={{ label: t('Re-authenticate'), to: '/tesla-account' }}
+                      />
+                    )}
+                    {auth?.authenticated === false && !teslaTokenWarn && (
+                      <ActionItem
+                        severity="warn"
+                        title={t('Tesla account not connected')}
+                        description={t('Connect your Tesla account to fetch vehicle data')}
+                        cta={{ label: t('Connect'), to: '/tesla-account' }}
+                      />
+                    )}
+                    {hasStaleBackup && (
+                      <ActionItem
+                        severity="warn"
+                        title={t('Last backup is {{days}} days old', { days: backupStaleDays })}
+                        description={t('Run a backup or check the schedule')}
+                        cta={{ label: t('Manage backups'), to: '/backup' }}
+                      />
+                    )}
+                    {hasNoBackup && (
+                      <ActionItem
+                        severity="warn"
+                        title={t('No backups recorded')}
+                        description={t('Configure a schedule or run one now')}
+                        cta={{ label: t('Set up backups'), to: '/backup' }}
+                      />
+                    )}
+                    {workers && workers.healthy_count < workers.total && (
+                      <ActionItem
+                        severity="error"
+                        title={t('{{down}} of {{total}} workers unhealthy', {
+                          down: workers.total - workers.healthy_count,
+                          total: workers.total,
+                        })}
+                        description={(workers.workers || [])
+                          .filter((w) => w.status !== 'healthy')
+                          .map((w) => w.name)
+                          .join(', ')}
+                      />
+                    )}
+                  </ActionItemsPanel>
+                </section>
+              </FadeIn>
+            )}
+
+            <FadeIn>
+              <section id="incidents" aria-label={t('systemStatus.incidentHistory.title', 'Recent incidents')}>
+                <IncidentHistory />
+              </section>
+            </FadeIn>
+
+            <details ref={operatorDetails} id="operator-details" className="group rounded-panel border border-[var(--glass-border)] bg-[var(--surface-1)]">
+              <summary className="cursor-pointer px-4 py-4 text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:px-5">
+                <Text as="span" weight="semibold">{t('systemStatus.operatorDetails', 'Operator diagnostics')}</Text>
+                <Caption className="ml-2">{t('systemStatus.operatorDetailsHint', 'Resources, workers, telemetry, maintenance and system details')}</Caption>
+              </summary>
+              <div className="space-y-6 border-t border-[var(--glass-border)] p-4 sm:p-5">
             {/* ══ Band A ─ Health & triage (full-width bento) ══════════ */}
             <FadeIn>
               <section aria-labelledby="triage-heading" className="space-y-3">
@@ -574,18 +620,11 @@ export default function SystemStatusPage() {
                     onClick={() => scrollToSection('database')}
                   />
                   <HealthRow
-                    status="healthy"
+                    status={resolveCompStatus(health?.components?.telemetry?.status ?? 'unknown')}
                     icon={<Activity className="h-4 w-4" />}
                     label={t('Telemetry')}
                     summary={telemetrySummary}
                     onClick={() => scrollToSection('telemetry')}
-                  />
-                  <HealthRow
-                    status={notifStatus}
-                    icon={<Bell className="h-4 w-4" />}
-                    label={t('Notifications')}
-                    summary={notificationsSummary}
-                    onClick={() => scrollToSection('notifications')}
                   />
                   <HealthRow
                     status={workersStatus}
@@ -607,90 +646,10 @@ export default function SystemStatusPage() {
               </GlassPanel>
             </section>
 
-        {/* 4 ─ Action items (always render) ─────────────────────── */}
-        <section id="action-items" aria-label="Operator action items">
-          <ActionItemsPanel title={t('Needs your attention')}>
-            {hasMaintenance && (
-              <ActionItem
-                severity="info"
-                title={t('Maintenance mode is active')}
-                description={maintenance?.maintenance_message || t('System is in operator-set maintenance mode')}
-                cta={{ label: t('Manage'), to: '/system-status#maintenance' }}
-              />
-            )}
-            {hasUpdate && (
-              <ActionItem
-                severity="info"
-                title={t('Update available — v{{version}}', { version: updateCheck?.latest })}
-                description={t('Current: v{{current}}', { current: updateCheck?.current })}
-                cta={{
-                  label: t('Release notes'),
-                  to: 'https://github.com/ev-dev-labs/teslasync/releases/latest',
-                  external: true,
-                }}
-              />
-            )}
-            {teslaTokenWarn?.severity === 'error' && (
-              <ActionItem
-                severity="error"
-                title={t('Tesla token expired')}
-                description={t('Sign in again to resume Tesla-backed features')}
-                cta={{ label: t('Re-authenticate'), to: '/tesla-account' }}
-              />
-            )}
-            {teslaTokenWarn?.severity === 'warn' && (
-              <ActionItem
-                severity="warn"
-                title={t('Tesla token expires in {{days}} day(s)', { days: teslaTokenWarn.days })}
-                description={t('Refresh to avoid disruption')}
-                cta={{ label: t('Re-authenticate'), to: '/tesla-account' }}
-              />
-            )}
-            {auth?.authenticated === false && !teslaTokenWarn && (
-              <ActionItem
-                severity="warn"
-                title={t('Tesla account not connected')}
-                description={t('Connect your Tesla account to fetch vehicle data')}
-                cta={{ label: t('Connect'), to: '/tesla-account' }}
-              />
-            )}
-            {hasStaleBackup && (
-              <ActionItem
-                severity="warn"
-                title={t('Last backup is {{days}} days old', { days: backupStaleDays })}
-                description={t('Run a backup or check the schedule')}
-                cta={{ label: t('Manage backups'), to: '/backup' }}
-              />
-            )}
-            {hasNoBackup && (
-              <ActionItem
-                severity="warn"
-                title={t('No backups recorded')}
-                description={t('Configure a schedule or run one now')}
-                cta={{ label: t('Set up backups'), to: '/backup' }}
-              />
-            )}
-            {workers && workers.healthy_count < workers.total && (
-              <ActionItem
-                severity="error"
-                title={t('{{down}} of {{total}} workers unhealthy', {
-                  down: workers.total - workers.healthy_count,
-                  total: workers.total,
-                })}
-                description={(workers.workers || [])
-                  .filter((w) => w.status !== 'healthy')
-                  .map((w) => w.name)
-                  .join(', ')}
-              />
-            )}
-          </ActionItemsPanel>
-        </section>
-
         {/* 5 ─ Resources ───────────────────────────────────────── */}
         <section id="resources" aria-label="Server resources">
           <ResourcesPanel
             rows={resourceRows}
-            footnote={t('CPU %, memory bytes, and disk usage need a new /system/resources endpoint (Phase 2).')}
           />
         </section>
 
@@ -705,34 +664,6 @@ export default function SystemStatusPage() {
                   {t('Systems & services')}
                 </SectionTitle>
                 <Masonry className="columns-1 xl:columns-2 2xl:columns-3">
-
-        {/* 6 ─ Services & components ──────────────────────────── */}
-        <section id="services">
-          <AccordionSection
-            icon={<Server className="h-5 w-5" />}
-            title={t('Services & components')}
-            description={servicesSummary}
-            defaultOpen
-            badges={<StatusBadge status={totalCount === 0 ? 'unknown' : okCount === totalCount ? 'healthy' : 'degraded'} />}
-          >
-            {components.length > 0 ? (
-              <ul className="divide-y divide-white/[0.05]">
-                {components.map(([name, comp]) => (
-                  <li key={name} className="flex items-center gap-3 py-2">
-                    <StatusDot status={resolveCompStatus(comp.status)} />
-                    <Text size="sm" weight="medium" color="primary" className="flex-1 truncate">
-                      {name}
-                    </Text>
-                    <Caption>{comp.status}</Caption>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <Text as="p" size="sm" color="muted">No component data yet.</Text>
-            )}
-            <DetailLink to="/live-monitor" label={t('Open Live Monitor')} />
-          </AccordionSection>
-        </section>
 
         {/* 7 ─ Database ───────────────────────────────────────── */}
         <section id="database">
@@ -785,28 +716,7 @@ export default function SystemStatusPage() {
           />
         </section>
 
-        {/* 9 ─ Notifications ──────────────────────────────────── */}
-        <section id="notifications">
-          <AccordionSection
-            icon={<Bell className="h-5 w-5" />}
-            title={t('Notifications & audit')}
-            description={notificationsSummary}
-            defaultOpen
-            badges={notifStats?.failed ? <Badge variant="warning">{notifStats.failed} failed</Badge> : undefined}
-          >
-            <DefList
-              rows={[
-                { label: t('Channels'), value: notifStats ? `${notifStats.enabled_channels} of ${notifStats.total_channels} enabled` : '—' },
-                { label: t('Sent (lifetime)'), value: notifStats ? String(notifStats.total_sent) : '—' },
-                { label: t('Pending'), value: notifStats ? String(notifStats.pending) : '—' },
-                { label: t('Failed'), value: notifStats ? String(notifStats.failed) : '—' },
-              ]}
-            />
-            <DetailLink to="/notifications" label={t('Open Notifications')} />
-          </AccordionSection>
-        </section>
-
-        {/* 10 ─ Workers ───────────────────────────────────────── */}
+        {/* 9 ─ Workers ────────────────────────────────────────── */}
         <section id="workers">
           <AccordionSection
             icon={<Boxes className="h-5 w-5" />}
@@ -819,99 +729,7 @@ export default function SystemStatusPage() {
           </AccordionSection>
         </section>
 
-        {/* 11 ─ Backups ───────────────────────────────────────── */}
-        <section id="backups">
-          <AccordionSection
-            icon={<HardDrive className="h-5 w-5" />}
-            title={t('Backups')}
-            description={
-              lastSuccessfulBackup?.completedAt
-                ? backupStaleDays === 0
-                  ? t('Last backup: today')
-                  : t('Last backup: {{days}}d ago', { days: backupStaleDays ?? '?' })
-                : (backupConfigs?.length ?? 0) > 0
-                  ? t('Configured · no successful run yet')
-                  : t('Not configured')
-            }
-            defaultOpen
-            badges={hasStaleBackup
-              ? <Badge variant="warning">stale</Badge>
-              : hasNoBackup
-                ? <Badge variant="warning">none</Badge>
-                : undefined}
-          >
-            <BackupActionsCard>
-              <DefList
-                rows={[
-                  { label: t('Configured schedules'), value: String(backupConfigs?.length ?? 0) },
-                  { label: t('Total runs'), value: String(backupRuns?.length ?? 0) },
-                  { label: t('Last successful'), value: lastSuccessfulBackup?.completedAt ? formatDateTime(lastSuccessfulBackup.completedAt) : '—' },
-                  { label: t('Last successful size'), value: lastSuccessfulBackup?.fileSize ? formatBytes(lastSuccessfulBackup.fileSize) : '—' },
-                  { label: t('Failures (recent)'), value: String((backupRuns ?? []).filter((r) => r.status === 'failed').length) },
-                ]}
-              />
-            </BackupActionsCard>
-          </AccordionSection>
-        </section>
-
-        {/* 12 ─ Tesla API usage ───────────────────────────────── */}
-        <section id="tesla-api">
-          <AccordionSection
-            icon={<Car className="h-5 w-5" />}
-            title={t('Tesla API usage')}
-            description={apiUsage
-              ? t('teslaUsage.summary', '{{cost}} estimated this 30-day cycle (not an invoice)', {
-                cost: formatCurrency(apiUsage.current.estimated_usd),
-              })
-              : t('No data')}
-            defaultOpen
-          >
-            <TeslaApiUsageCard apiUsage={apiUsage} now={now} loading={usageLoading} error={usageError} compact />
-          </AccordionSection>
-        </section>
-
-        {/* 13 ─ Recent errors ─────────────────────────────────── */}
-        <section id="errors">
-          <AccordionSection
-            icon={<AlertTriangle className="h-5 w-5" />}
-            title={t('Recent errors')}
-            description={errorStats
-              ? t('{{count}} since {{uptime}} ago', { count: errorStats.total_errors, uptime: errorStats.uptime })
-              : t('No data')}
-            defaultOpen
-            badges={errorStats && errorStats.total_errors > 0
-              ? <Badge variant={errorsStatus === 'healthy' ? 'neutral' : errorsStatus === 'unhealthy' ? 'danger' : 'warning'}>{errorStats.total_errors}</Badge>
-              : <Badge variant="success">clean</Badge>}
-          >
-            {errorStats && Object.keys(errorStats.by_code).length > 0 ? (
-              <ul className="divide-y divide-white/[0.05]">
-                {Object.entries(errorStats.by_code)
-                  .sort((a, b) => b[1].count - a[1].count)
-                  .slice(0, 10)
-                  .map(([code, info]) => (
-                    <li key={code} className="flex items-start gap-3 py-2">
-                      <Text size="xs" mono className="shrink-0 text-amber-300">{code}</Text>
-                      <Text size="sm" color="secondary" className="flex-1 min-w-0 truncate">
-                        {info.last_message || '—'}
-                      </Text>
-                      <Caption className="shrink-0 tabular-nums">
-                        {info.count}
-                      </Caption>
-                    </li>
-                  ))}
-              </ul>
-            ) : (
-              <div className="flex items-center gap-2 text-[var(--text-muted)]">
-                <Inbox className="h-4 w-4" />
-                <Text size="sm" color="muted">{t('No errors recorded recently.')}</Text>
-              </div>
-            )}
-            <DetailLink to="/api-logs?level=error" label={t('Open error logs')} />
-            <FrontendErrorsCard />
-          </AccordionSection>
-        </section>
-
-        {/* 14 ─ System info ────────────────────────────────────── */}
+        {/* 10 ─ System info ────────────────────────────────────── */}
         <section id="system">
           <AccordionSection
             icon={<Package className="h-5 w-5" />}
@@ -934,33 +752,24 @@ export default function SystemStatusPage() {
                   {t('Reliability & history')}
                 </SectionTitle>
 
-                {/* 15 ─ 30-day uptime heatmap ─────────────────────── */}
-                <section id="uptime">
-                  <UptimeHeatmap
-                    days={uptimeDays}
-                    footnote={t('Today reflects the current status. Day-level historical data ships with the backend health-history endpoint in Phase 2.')}
-                  />
-                </section>
-
-                <Masonry className="columns-1 lg:columns-3">
-                  {/* 16 ─ SLO tracking ────────────────────────────── */}
+                <Masonry className="columns-1 lg:columns-2">
+                  {/* 13 ─ SLO tracking ────────────────────────────── */}
                   <section id="slo" aria-label={t('Personal SLO tracking')}>
                     <SLOTrackingCard />
                   </section>
 
-                  {/* 17 ─ Scheduled maintenance ───────────────────── */}
+                  {/* 14 ─ Scheduled maintenance ───────────────────── */}
                   <section id="maintenance" aria-label={t('Scheduled maintenance')}>
                     <ScheduledMaintenanceCard now={now} />
                   </section>
 
-                  {/* 18 ─ Subscribe / discover channels ───────────── */}
-                  <section id="subscribe" aria-label={t('Notification channels')}>
-                    <SubscribeCard />
-                  </section>
                 </Masonry>
 
               </section>
             </FadeIn>
+
+              </div>
+            </details>
 
             {/* Footer ─ Status API docs link ──────────────────────── */}
             <section id="api-docs" aria-label={t('Status API')}>

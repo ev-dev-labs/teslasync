@@ -157,7 +157,7 @@ describe('NotificationRow', () => {
     );
     const checkbox = screen.getByRole('checkbox', { name: /select notification/i });
     expect(checkbox).not.toBeChecked();
-    expect(screen.getByRole('row')).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('group', { name: 'Tire pressure low' })).toBeInTheDocument();
 
     rerender(
       <MemoryRouter>
@@ -171,7 +171,7 @@ describe('NotificationRow', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('checkbox', { name: /select notification/i })).toBeChecked();
-    expect(screen.getByRole('row')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('group', { name: 'Tire pressure low' })).toBeInTheDocument();
   });
 
   it('toggling the checkbox fires onSelectionChange with (id, checked) but not onActivate', () => {
@@ -194,20 +194,19 @@ describe('NotificationRow', () => {
     expect(onActivate).toHaveBeenCalledWith(log);
   });
 
-  it('activates via Enter and Space on the row, but not from a focused control', () => {
+  it('uses a native action button for keyboard access without nesting selection controls', () => {
     const onActivate = vi.fn();
     renderRow({ onActivate });
-    const row = screen.getByRole('row');
-
-    fireEvent.keyDown(row, { key: 'Enter' });
-    fireEvent.keyDown(row, { key: ' ' });
-    expect(onActivate).toHaveBeenCalledTimes(2);
+    const button = screen.getByRole('button', { name: 'Open notification: Tire pressure low' });
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onActivate).toHaveBeenCalledTimes(1);
 
     // A key press that originates on the checkbox must be ignored by the row.
     fireEvent.keyDown(screen.getByRole('checkbox', { name: /select notification/i }), {
       key: 'Enter',
     });
-    expect(onActivate).toHaveBeenCalledTimes(2);
+    expect(onActivate).toHaveBeenCalledTimes(1);
   });
 
   it('shows "Mark as read" only while unread and wired, firing onMarkRead(id)', () => {

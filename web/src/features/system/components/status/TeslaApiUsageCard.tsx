@@ -4,6 +4,7 @@ import { UsageCard } from '@/components/data-display'
 import type { APIUsage, TeslaUsageCycle } from '@/api/types'
 import { fmtInt } from '@/lib/numberFormat'
 import { useFormatting } from '@/hooks/useFormatting'
+import { TeslaUsageContractError } from '@/api/hooks/useTeslaUsage'
 
 interface Props {
   apiUsage: APIUsage | undefined
@@ -20,12 +21,19 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
   const compactState = (message: string) => (
     <UsageCard banner={{ title: message, description: t('teslaUsage.notInvoice', 'Local estimate, not an invoice'), intent: 'warn' }} footer={pageLink} />
   )
+  const errorMessage = error instanceof TeslaUsageContractError
+    ? t('teslaUsage.upgradeApi', 'Tesla usage requires a newer API service. Update the API service and refresh.')
+    : t('teslaUsage.error', 'Tesla usage could not be loaded. Try refreshing.')
   if (compact && loading) return compactState(t('teslaUsage.loading', 'Loading Tesla usage…'))
-  if (compact && error) return compactState(t('teslaUsage.error', 'Tesla usage could not be loaded. Try refreshing.'))
+  if (compact && error) return compactState(errorMessage)
   if (compact && !apiUsage) return compactState(t('teslaUsage.empty', 'Tesla usage is not available yet.'))
   if (loading) return <UsageCard emptyMessage={t('teslaUsage.loading', 'Loading Tesla usage…')} />
-  if (error) return <UsageCard emptyMessage={t('teslaUsage.error', 'Tesla usage could not be loaded. Try refreshing.')} />
+  if (error) return <UsageCard emptyMessage={errorMessage} />
   if (!apiUsage) return <UsageCard emptyMessage={t('teslaUsage.empty', 'Tesla usage is not available yet.')} />
+  if (!apiUsage.current || !Array.isArray(apiUsage.history)) {
+    const message = t('teslaUsage.upgradeApi', 'Tesla usage requires a newer API service. Update the API service and refresh.')
+    return compact ? compactState(message) : <UsageCard emptyMessage={message} />
+  }
 
   const count = (cycle: TeslaUsageCycle) =>
     cycle.signals + cycle.commands + cycle.data_requests + cycle.wakes

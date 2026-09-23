@@ -75,7 +75,9 @@ export function SLOTrackingCard() {
   // 0.00% painted in the failure tone (which is what an unguarded `?? null`
   // that lets NaN through would produce, since `NaN == null` is false).
   const rawPct = data?.uptime_percent
-  const pct = isFiniteNumber(rawPct) ? rawPct : null
+  const hasHistory = data?.historical_source === 'series'
+  const showControls = !data || hasHistory
+  const pct = hasHistory && isFiniteNumber(rawPct) ? rawPct : null
   const rawHealthy = data?.healthy_count
   const healthy = isFiniteNumber(rawHealthy) ? rawHealthy : null
   const rawTotal = data?.total_count
@@ -131,7 +133,7 @@ export function SLOTrackingCard() {
           <Target className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('Uptime & SLO')}</h3>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+        {showControls && <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
           {editing ? (
             <>
               <span>{t('Target')}</span>
@@ -156,7 +158,7 @@ export function SLOTrackingCard() {
               <Button type="button" size="sm" variant="ghost" onClick={handleStartEdit} className="text-xs">{t('Edit')}</Button>
             </>
           )}
-        </div>
+        </div>}
       </div>
 
       <div className="mt-3 flex flex-wrap items-baseline gap-3">
@@ -164,7 +166,9 @@ export function SLOTrackingCard() {
           {pct == null ? '—' : fmtPercent(pct, 2)}
         </div>
         <div className="text-xs text-[var(--text-muted)]">
-          {t(WINDOW_LABEL[win])}
+          {hasHistory
+            ? t(WINDOW_LABEL[win])
+            : t('systemStatus.currentHealthOnly', 'Current component health')}
           {' · '}
           {t('{{healthy}} / {{total}} components healthy', {
             healthy: healthy ?? '—',
@@ -173,7 +177,7 @@ export function SLOTrackingCard() {
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1" role="tablist" aria-label={t('Uptime window selector')}>
+      {showControls && <div className="mt-3 flex flex-wrap gap-1" role="tablist" aria-label={t('Uptime window selector')}>
         {(Object.keys(WINDOW_LABEL) as Window[]).map((w) => (
           <Button
             key={w}
@@ -194,7 +198,7 @@ export function SLOTrackingCard() {
             {w}
           </Button>
         ))}
-      </div>
+      </div>}
 
       {data?.historical_source && data.historical_source !== 'series' && (
         <p role="note" className="mt-3 inline-flex items-start gap-1.5 text-xs text-amber-200/80">

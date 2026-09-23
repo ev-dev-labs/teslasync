@@ -883,6 +883,22 @@
       "telemetryDescription": "Connection mode, vehicle counts, and signal throughput appear after the telemetry service publishes health data."
     }
   },
+  "systemStatus": {
+    "currentComponents": "Current component status",
+    "noComponents": "Current component status is unavailable.",
+    "telemetryUnknown": "No vehicle telemetry to assess",
+    "operatorDetails": "Operator diagnostics",
+    "operatorDetailsHint": "Resources, workers, telemetry, maintenance and system details",
+    "currentHealthOnly": "Current component health",
+    "incidentHistory": {
+      "title": "Recent incidents",
+      "scope": "Recorded incidents only; no uptime percentage is inferred from missing monitoring data.",
+      "loading": "Loading incident history",
+      "empty": "No incidents recorded. This does not establish historical uptime.",
+      "untitled": "Untitled incident",
+      "unspecified": "Component not specified"
+    }
+  },
   "teslaAccount": {
     "title": "Tesla Account",
     "subtitle": "Your Tesla account profile synced from the Fleet API",
@@ -972,6 +988,7 @@
     "bucketStart": "UTC bucket start",
     "loading": "Loading Tesla usage…",
     "error": "Tesla usage could not be loaded. Try refreshing.",
+    "upgradeApi": "Tesla usage requires a newer API service. Update the API service and refresh.",
     "empty": "Tesla usage is not available yet.",
     "cycle": "Current 30-day cycle",
     "signals": "Streaming signals",

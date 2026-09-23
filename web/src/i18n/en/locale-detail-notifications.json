@@ -71,6 +71,7 @@
       },
       "row": {
         "select": "Select notification",
+        "open": "Open notification: {{title}}",
         "markRead": "Mark as read",
         "markUnread": "Mark as unread",
         "archive": "Archive",

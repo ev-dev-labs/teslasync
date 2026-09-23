@@ -1,5 +1,5 @@
 /**
- * FrontendErrorsCard tests.
+ * FrontendErrorsCard tests for the shared diagnostics panel.
  *
  * Covers every branch of the card:
  *   - loading (skeleton + aria-busy status region)

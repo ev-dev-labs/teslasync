@@ -7,7 +7,7 @@
  *
  * Strategy:
  *   - The seven inline `useQuery(...)` devtools calls (extended-health, version,
- *     update-check, backup-stats, workers, api-usage, errors) are controlled
+ *     update-check, backup-stats, workers, errors) are controlled
  *     synchronously via a mocked `@tanstack/react-query.useQuery` keyed off
  *     `queryKey[1]`, so there is no async network flush.
  *   - The domain hooks (`useSystemHealth`, `useBackupRuns`, `useBackupConfigs`,
@@ -63,7 +63,7 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-// ── react-query: the page's 7 inline queries + its queryClient ──
+// ── react-query: the page's inline queries + its queryClient ──
 vi.mock('@tanstack/react-query', async () => {
   const actual = await vi.importActual<typeof import('@tanstack/react-query')>('@tanstack/react-query')
   return { ...actual, useQuery: vi.fn(), useQueryClient: vi.fn() }
@@ -77,8 +77,6 @@ vi.mock('@/api/devtools', () => ({
   checkForUpdates: vi.fn(),
   getBackupStats: vi.fn(),
   getWorkersHealth: vi.fn(),
-  getAPIUsage: vi.fn(),
-  getErrorStats: vi.fn(),
 }))
 
 vi.mock('@/api/hooks/useAdmin', () => ({
@@ -88,22 +86,8 @@ vi.mock('@/api/hooks/useAdmin', () => ({
   useMaintenanceState: vi.fn(),
 }))
 vi.mock('@/api/hooks/useSettings', () => ({ useAuthStatus: vi.fn() }))
-vi.mock('@/api/hooks/useNotifications', () => ({ useNotificationStats: vi.fn() }))
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }))
 vi.mock('../hooks/useStatusLiveSSE', () => ({ useStatusLiveSSE: vi.fn() }))
-
-// Keep the shared status PRIMITIVES real; stub only the sticky chrome so no
-// chip-button accessible-name collisions leak into role queries.
-vi.mock('@/components/status', async () => {
-  const actual = await vi.importActual<typeof import('@/components/status')>('@/components/status')
-  return {
-    ...actual,
-    StickyChipBar: ({ chips }: { chips: Array<{ id: string; label: string }> }) => (
-      <div data-testid="chip-bar" data-count={chips.length} />
-    ),
-    StickyCompactHero: () => <div data-testid="sticky-compact-hero" />,
-  }
-})
 
 // Feature-level status cards fetch their own data — stub to prop-exposing
 // stand-ins so the page runs end-to-end without a network.
@@ -130,14 +114,8 @@ vi.mock('../components/status', () => ({
   BackgroundWorkersCard: ({ health }: { health?: { total?: number } }) => (
     <div data-testid="workers-card">{health ? `workers:${health.total}` : 'no-workers'}</div>
   ),
-  BackupActionsCard: ({ children }: { children?: ReactNode }) => (
-    <div data-testid="backup-actions">{children}</div>
-  ),
   TeslaAuthCard: ({ authenticated }: { authenticated?: boolean }) => (
     <div data-testid="tesla-auth-card">auth:{String(authenticated)}</div>
-  ),
-  TeslaApiUsageCard: ({ apiUsage }: { apiUsage?: { current?: { estimated_usd: number } } }) => (
-    <div data-testid="tesla-api-card">{apiUsage ? `cost:${apiUsage.current?.estimated_usd}` : 'no-usage'}</div>
   ),
   TelemetryPipelineCard: ({ positionCount }: { positionCount?: number }) => (
     <div data-testid="telemetry-card">positions:{positionCount}</div>
@@ -150,10 +128,9 @@ vi.mock('../components/status', () => ({
   StatusPageSkeleton: () => <div data-testid="status-skeleton" />,
   LiveStatusPill: ({ state }: { state?: string }) => <div data-testid="live-pill">{state}</div>,
   IncidentsCard: () => null,
+  IncidentHistory: () => <div data-testid="incident-history" />,
   ScheduledMaintenanceCard: () => <div data-testid="scheduled-maintenance" />,
-  SubscribeCard: () => <div data-testid="subscribe-card" />,
   SLOTrackingCard: () => <div data-testid="slo-card" />,
-  FrontendErrorsCard: () => <div data-testid="frontend-errors" />,
 }))
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -164,11 +141,9 @@ import {
   useMaintenanceState,
 } from '@/api/hooks/useAdmin'
 import { useAuthStatus } from '@/api/hooks/useSettings'
-import { useNotificationStats } from '@/api/hooks/useNotifications'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
 import SystemStatusPage from './SystemStatusPage'
-import { BADGE_VARIANTS } from '@/components/ui';
 
 const mockUseQuery = vi.mocked(useQuery)
 const mockUseQueryClient = vi.mocked(useQueryClient)
@@ -177,7 +152,6 @@ const mockBackupRuns = vi.mocked(useBackupRuns)
 const mockBackupConfigs = vi.mocked(useBackupConfigs)
 const mockMaintenance = vi.mocked(useMaintenanceState)
 const mockAuthStatus = vi.mocked(useAuthStatus)
-const mockNotifStats = vi.mocked(useNotificationStats)
 const mockVehicles = vi.mocked(useVehicles)
 const mockLiveSSE = vi.mocked(useStatusLiveSSE)
 
@@ -255,35 +229,11 @@ function workersHealth(over: Record<string, unknown> = {}) {
     ...over,
   }
 }
-function apiUsage(over: Record<string, unknown> = {}) {
-  return {
-    current: { start: '2026-09-01T00:00:00Z', end: '2026-10-01T00:00:00Z',
-      signals: 0, commands: 0, data_requests: 0, wakes: 0, estimated_usd: 5 },
-    history: [],
-    rate_source: 'https://developer.tesla.com/docs/fleet-api#pricing',
-    disclaimer: 'Not an invoice.',
-    ...over,
-  }
-}
-function errorStats(over: Record<string, unknown> = {}) {
-  return { total_errors: 0, uptime: '1h', by_code: {}, ...over }
-}
 function maintenance(over: Record<string, unknown> = {}) {
   return { mode: 'ok', source: 'db', updated_at: new Date().toISOString(), ...over }
 }
 function authStatus(over: Record<string, unknown> = {}) {
   return { authenticated: true, ...over }
-}
-function notifStats(over: Record<string, unknown> = {}) {
-  return {
-    total_sent: 10,
-    sent: 10,
-    failed: 0,
-    pending: 0,
-    total_channels: 3,
-    enabled_channels: 2,
-    ...over,
-  }
 }
 function backupRun(over: Record<string, unknown> = {}) {
   return {
@@ -366,8 +316,6 @@ beforeEach(() => {
     'update-check': updateCheck(),
     'backup-stats': backupStats(),
     workers: workersHealth(),
-    'api-usage': apiUsage(),
-    errors: errorStats(),
   }
   mockUseQuery.mockImplementation(
     (opts: unknown) =>
@@ -398,7 +346,6 @@ beforeEach(() => {
     q(authStatus({ expires_at: new Date(NOW + 30 * DAY).toISOString() })) as any,
   )
    
-  mockNotifStats.mockReturnValue(q(notifStats()) as any)
    
   mockVehicles.mockReturnValue(q([{ id: 1 }, { id: 2 }]) as any)
   mockLiveSSE.mockReturnValue({
@@ -418,8 +365,8 @@ describe('SystemStatusPage — healthy populated view', () => {
     expect(screen.getByText('All systems operational')).toBeInTheDocument()
     // subline reports recency, not an error/stale banner.
     expect(screen.getByText(/^Last checked/)).toBeInTheDocument()
-    expect(screen.getByTestId('sticky-compact-hero')).toBeInTheDocument()
-    expect(screen.getByTestId('chip-bar')).toHaveAttribute('data-count', '17')
+    expect(screen.getByText('Operator diagnostics')).toBeInTheDocument()
+    expect(document.querySelector('#operator-details')).not.toHaveAttribute('open')
     expect(screen.getByTestId('live-pill')).toHaveTextContent('live')
   })
 
@@ -433,7 +380,6 @@ describe('SystemStatusPage — healthy populated view', () => {
     expect(r.getByText('12ms · 512 MB')).toBeInTheDocument() // round(12.4) + db size
     expect(r.getByText('Telemetry')).toBeInTheDocument()
     expect(r.getByText('2 vehicles · 1,000 positions')).toBeInTheDocument()
-    expect(r.getByText('2/3 channels · 10 sent')).toBeInTheDocument()
     expect(r.getByText('2 / 2 healthy')).toBeInTheDocument() // workers
     expect(r.getByText('Connected')).toBeInTheDocument() // tesla auth
   })
@@ -466,10 +412,13 @@ describe('SystemStatusPage — healthy populated view', () => {
     // Prop-threaded feature cards.
     expect(screen.getByTestId('telemetry-card')).toHaveTextContent('positions:1000')
     expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
-    expect(screen.getByTestId('tesla-api-card')).toHaveTextContent('cost:5')
+    expect(screen.queryByText('Tesla API usage')).not.toBeInTheDocument()
     expect(screen.getByTestId('tesla-auth-card')).toHaveTextContent('auth:true')
-    // Backups accordion: formatted size in the def list.
-    expect(screen.getByText('5.0 MB')).toBeInTheDocument()
+    expect(document.querySelector('#backups')).toBeNull()
+    expect(document.querySelector('#notifications')).toBeNull()
+    expect(document.querySelector('#subscribe')).toBeNull()
+    expect(document.querySelector('#tesla-api')).toBeNull()
+    expect(screen.queryByText('Get notified about incidents')).not.toBeInTheDocument()
     // System info rows (hardcoded labels, real values).
     expect(screen.getByText('App version')).toBeInTheDocument()
     expect(screen.getByText('1.2.3')).toBeInTheDocument()
@@ -488,18 +437,15 @@ describe('SystemStatusPage — healthy populated view', () => {
     expect(within(databaseSection as HTMLElement).getByText('down')).toBeInTheDocument()
   })
 
-  it('renders the reliability band: 30-day uptime, clean errors, empty action items', () => {
+  it('shows real incident history instead of fabricated uptime and keeps action items', () => {
     renderPage()
 
-    const heatmap = within(screen.getByRole('list', { name: 'Daily status history' }))
-    expect(heatmap.getAllByRole('listitem')).toHaveLength(30)
-
-    // No errors recorded → a "clean" badge + honest empty copy.
-    expect(screen.getByText('clean')).toBeInTheDocument()
-    expect(screen.getByText('No errors recorded recently.')).toBeInTheDocument()
+    expect(screen.getByTestId('incident-history')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Daily status history' })).not.toBeInTheDocument()
+    expect(document.querySelector('#errors')).toBeNull()
 
     // Everything healthy → the action list shows its explicit empty state.
-    expect(actionsRegion().getByText('Nothing right now')).toBeInTheDocument()
+    expect(document.querySelector('#action-items')).toBeNull()
   })
 })
 
@@ -509,7 +455,6 @@ describe('SystemStatusPage — operator action items', () => {
      
     mockMaintenance.mockReturnValue(q(maintenance({ mode: 'maintenance', maintenance_message: 'Upgrading DB' })) as any)
     inline['update-check'] = updateCheck({ update_available: true, current: '1.2.3', latest: '1.3.0' })
-    inline['api-usage'] = apiUsage({ current: { ...apiUsage().current, estimated_usd: 15 } })
     inline.workers = workersHealth({
       total: 3,
       healthy_count: 1,
@@ -519,7 +464,6 @@ describe('SystemStatusPage — operator action items', () => {
         { name: 'geocode', host: 'h', status: 'down', latency_ms: 0 },
       ],
     })
-    inline.errors = errorStats({ total_errors: 3, uptime: '2h' })
     mockAuthStatus.mockReturnValue(
        
       q(authStatus({ expires_at: new Date(NOW + 3.5 * DAY).toISOString() })) as any,
@@ -529,7 +473,6 @@ describe('SystemStatusPage — operator action items', () => {
       q([backupRun({ completedAt: new Date(NOW - 10.5 * DAY).toISOString() })]) as any,
     )
      
-    mockNotifStats.mockReturnValue(q(notifStats({ failed: 2 })) as any)
   })
 
   it('surfaces every actionable operator task with interpolated copy', () => {
@@ -558,8 +501,6 @@ describe('SystemStatusPage — operator action items', () => {
     expect(r.getByText('1 / 3 healthy')).toBeInTheDocument() // workers degraded
     expect(r.getByText('Expires in 3d')).toBeInTheDocument() // tesla auth warn
 
-    // failed notifications surface a warning badge in the accordion.
-    expect(screen.getByText('2 failed')).toBeInTheDocument()
   })
 })
 
@@ -657,7 +598,6 @@ describe('SystemStatusPage — missing data placeholders', () => {
      
     mockAuthStatus.mockReturnValue(q(undefined) as any)
      
-    mockNotifStats.mockReturnValue(q(undefined) as any)
      
     mockVehicles.mockReturnValue(q(undefined) as any)
     renderPage()
@@ -666,18 +606,17 @@ describe('SystemStatusPage — missing data placeholders', () => {
     const r = healthRegion()
     expect(r.getByText('no data')).toBeInTheDocument() // services
     expect(r.getByText('connected')).toBeInTheDocument() // database (no latency/size)
-    expect(r.getByText('operational · 0 vehicles (idle)')).toBeInTheDocument()
-    expect(r.getByText('operational')).toBeInTheDocument() // notifications
+    expect(r.getByText('No vehicle telemetry to assess')).toBeInTheDocument()
     expect(r.getByText('unknown')).toBeInTheDocument() // workers
     expect(r.getByText('Not connected')).toBeInTheDocument() // tesla auth
 
     // Errors + system-info honest fallbacks.
-    expect(screen.getByText('No errors recorded recently.')).toBeInTheDocument()
+    expect(document.querySelector('#errors')).toBeNull()
     expect(screen.getByText('Loading system info…')).toBeInTheDocument()
-    // Resources footnote still explains what's missing.
-    expect(screen.getByText(/CPU %/)).toBeInTheDocument()
+    // Infrastructure details are available in the operator disclosure.
+    expect(document.querySelector('#operator-details #resources')).not.toBeNull()
     // Nothing actionable → empty action list.
-    expect(actionsRegion().getByText('Nothing right now')).toBeInTheDocument()
+    expect(document.querySelector('#action-items')).toBeNull()
   })
 
   it('does not crash and shows an empty component list when components is missing', () => {
@@ -689,7 +628,7 @@ describe('SystemStatusPage — missing data placeholders', () => {
 
     // The page still mounts (crash guard: Object.entries(health.components ?? {})).
     expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
-    expect(screen.getByText('No component data yet.')).toBeInTheDocument()
+    expect(screen.getByText('Current component status is unavailable.')).toBeInTheDocument()
     expect(healthRegion().getByText('no data')).toBeInTheDocument()
   })
 })
@@ -742,31 +681,5 @@ describe('SystemStatusPage — interactions', () => {
     const btn = screen.getByRole('button', { name: 'Refresh (R)' })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('aria-busy', 'true')
-  })
-})
-
-describe('SystemStatusPage — error-count severity (ordering-bug fix)', () => {
-  it('escalates the errors badge to danger once counts exceed 500', () => {
-    inline.errors = errorStats({ total_errors: 600 })
-    renderPage()
-
-    const badge = screen.getByText('600')
-    expect(badge.className).toContain('bg-red-100') // danger
-  })
-
-  it('keeps a warning badge for counts between 100 and 500', () => {
-    inline.errors = errorStats({ total_errors: 350 })
-    renderPage()
-
-    const badge = screen.getByText('350')
-    expect(badge.className).toContain('bg-yellow-100') // warning
-  })
-
-  it('uses a neutral badge for low, non-zero error counts', () => {
-    inline.errors = errorStats({ total_errors: 50 })
-    renderPage()
-
-    const badge = screen.getByText('50')
-    expect(badge.className).toContain(BADGE_VARIANTS.neutral) // neutral
   })
 })

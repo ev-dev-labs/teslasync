@@ -440,3 +440,16 @@ migrations:
     irreversible_justification: Rolling back after storing event-only rows would erase real inbox history; leave the additive schema in place on binary rollback.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-09-22"
+
+  - version: 250
+    name: api_log_headers
+    forward_compatible: true
+    forward_compatibility_notes: Previous binaries ignore nullable header columns; new binaries require the migration before deployment.
+    rollback_notes: Leave columns on binary rollback to preserve diagnostics. Down drops saved header snapshots only if explicitly approved.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Two nullable JSONB columns take a brief ACCESS EXCLUSIVE metadata lock without rewriting rows.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-23"

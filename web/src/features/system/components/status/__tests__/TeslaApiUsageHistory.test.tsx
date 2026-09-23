@@ -4,7 +4,10 @@ import type { ReactNode } from 'react'
 import { TeslaApiUsageHistory, toUtcUsageRange } from '../TeslaApiUsageHistory'
 
 const useHistory = vi.hoisted(() => vi.fn())
-vi.mock('@/api/hooks/useTeslaUsage', () => ({ useTeslaUsageHistory: useHistory }))
+vi.mock('@/api/hooks/useTeslaUsage', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api/hooks/useTeslaUsage')>()),
+  useTeslaUsageHistory: useHistory,
+}))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
 }))

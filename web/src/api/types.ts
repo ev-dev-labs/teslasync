@@ -1788,6 +1788,8 @@ export interface APICallLog {
   rate_limited: boolean
   request_body: string | null
   response_body: string | null
+  request_headers?: Record<string, string> | null
+  response_headers?: Record<string, string> | null
 }
 
 export interface APICallLogResponse {

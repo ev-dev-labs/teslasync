@@ -1243,12 +1243,20 @@ func TestPipelineSubscriber_ExpiresStaleSUBACKLease(t *testing.T) {
 }
 
 func TestPipelineSubscriber_RecoveryRetriesFailedReconnectSubscribe(t *testing.T) {
+	gate := make(chan struct{})
+	defer func() {
+		select {
+		case <-gate:
+		default:
+			close(gate)
+		}
+	}()
 	client := &sequencedPahoClient{
 		fakePahoClient: fakePahoClient{connected: true},
 		tokens: []pahoToken{
 			immediatePahoToken{},
 			erroringPahoToken{err: errors.New("transient SUBACK failure")},
-			immediatePahoToken{},
+			gatedPahoToken{done: gate},
 		},
 	}
 	sub := NewPipelineSubscriber(
@@ -1258,7 +1266,7 @@ func TestPipelineSubscriber_RecoveryRetriesFailedReconnectSubscribe(t *testing.T
 		staticResolver(1),
 		PipelineSubscriberConfig{
 			TopicBase:                 "telemetry",
-			SubscribeTimeout:          20 * time.Millisecond,
+			SubscribeTimeout:          time.Second,
 			SubscriptionRetryInterval: 5 * time.Millisecond,
 			LivenessFailureAfter:      time.Second,
 		},
@@ -1270,11 +1278,19 @@ func TestPipelineSubscriber_RecoveryRetriesFailedReconnectSubscribe(t *testing.T
 		t.Fatalf("Start() error = %v", err)
 	}
 	sub.OnBrokerReconnect(client)
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for client.Calls() < 3 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if client.Calls() != 3 {
+		t.Fatalf("supervisor did not retry; Subscribe calls = %d", client.Calls())
+	}
 	if sub.IsHealthy() {
 		t.Fatal("IsHealthy() = true after failed reconnect subscription")
 	}
 
-	deadline := time.Now().Add(500 * time.Millisecond)
+	close(gate)
+	deadline = time.Now().Add(500 * time.Millisecond)
 	for !sub.IsHealthy() && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
@@ -1636,6 +1652,20 @@ type sequencedPahoClient struct {
 	fakePahoClient
 	tokens []pahoToken
 }
+
+type gatedPahoToken struct{ done <-chan struct{} }
+
+func (g gatedPahoToken) Wait() bool { <-g.done; return true }
+func (g gatedPahoToken) WaitTimeout(d time.Duration) bool {
+	select {
+	case <-g.done:
+		return true
+	case <-time.After(d):
+		return false
+	}
+}
+func (g gatedPahoToken) Done() <-chan struct{} { return g.done }
+func (g gatedPahoToken) Error() error          { return nil }
 
 func (s *sequencedPahoClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
 	s.mu.Lock()

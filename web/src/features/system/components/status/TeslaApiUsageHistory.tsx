@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTeslaUsageHistory } from '@/api/hooks/useTeslaUsage'
+import { TeslaUsageContractError, useTeslaUsageHistory } from '@/api/hooks/useTeslaUsage'
 import type { TeslaUsageCycle, TeslaUsagePoint } from '@/api/types'
 import { RangePicker } from '@/components/forms'
 import { GlassPanel, Select, Text } from '@/components/ui'
@@ -69,7 +69,9 @@ export function TeslaApiUsageHistory() {
   const invalid = !utcRange ? t('teslaUsage.invalidRange', 'Select 1 to 366 UTC days, with the end on or after the start.') : null
   const showTotals = !!totals && points.length > 0 && !isLoading && !error && !invalid
   const stateMessage = invalid ??
-    (error ? t('teslaUsage.historyError', 'Usage history could not be loaded. Try again.') :
+    (error instanceof TeslaUsageContractError
+      ? t('teslaUsage.upgradeApi', 'Tesla usage requires a newer API service. Update the API service and refresh.')
+      : error ? t('teslaUsage.historyError', 'Usage history could not be loaded. Try again.') :
       t('teslaUsage.historyEmpty', 'No observed Tesla billable traffic in this range. Try an older range.'))
 
   return (
@@ -124,7 +126,7 @@ export function TeslaApiUsageHistory() {
         loading={isLoading && !invalid}
         error={invalid ?? error}
         onRetry={() => { if (!invalid) void refetch() }}
-        empty={!isLoading && !invalid && !error && (!showTotals || totals.estimated_usd === 0)}
+        empty={!isLoading && !invalid && !error && (!showTotals || !totals || totals.estimated_usd === 0)}
         emptyMessage={stateMessage}
         data={distribution}
         dataColumns={[

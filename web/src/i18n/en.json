@@ -38,6 +38,7 @@
     "bucketStart": "UTC bucket start",
     "loading": "Loading Tesla usage…",
     "error": "Tesla usage could not be loaded. Try refreshing.",
+    "upgradeApi": "Tesla usage requires a newer API service. Update the API service and refresh.",
     "empty": "Tesla usage is not available yet.",
     "cycle": "Current 30-day cycle",
     "signals": "Streaming signals",
@@ -8628,9 +8629,32 @@
       "fieldsEmptyTable": "No field scores"
     }
   },
+  "systemStatus": {
+    "currentComponents": "Current component status",
+    "noComponents": "Current component status is unavailable.",
+    "telemetryUnknown": "No vehicle telemetry to assess",
+    "operatorDetails": "Operator diagnostics",
+    "operatorDetailsHint": "Resources, workers, telemetry, maintenance and system details",
+    "currentHealthOnly": "Current component health",
+    "incidentHistory": {
+      "title": "Recent incidents",
+      "scope": "Recorded incidents only; no uptime percentage is inferred from missing monitoring data.",
+      "loading": "Loading incident history",
+      "empty": "No incidents recorded. This does not establish historical uptime.",
+      "untitled": "Untitled incident",
+      "unspecified": "Component not specified"
+    }
+  },
   "apiLogs": {
     "title": "API Logs",
     "subtitle": "Record of all API calls with request/response details",
+    "statsScope": "API call totals are all-time across services; the date and filters below apply only to the request list.",
+    "errorDiagnostics": "Error diagnostics",
+    "backendErrors": "Backend runtime errors",
+    "backendScope": "Since the current API process started; independent of API call filters.",
+    "runtimeTotal": "{{count}} errors · uptime {{uptime}}",
+    "noRuntimeErrors": "No backend runtime errors in this process.",
+    "runtimeUnavailable": "Backend runtime error summary unavailable.",
     "totalCalls": "Total Calls",
     "errorRate": "Error Rate",
     "avgDuration": "Avg Duration",
@@ -8655,6 +8679,14 @@
     "error": "Error",
     "requestBody": "Request Body",
     "responseBody": "Response Body",
+    "requestHeaders": "Request Headers",
+    "responseHeaders": "Response Headers",
+    "captureNote": "Bodies are recorded only when API_LOG_CAPTURE_BODIES is enabled; payloads are capped at 10 KB. Header values are limited to safe diagnostic fields; credentials are redacted. Missing fields on older records cannot be recovered.",
+    "duration": "Duration",
+    "vehicleId": "Vehicle ID",
+    "rateLimited": "Rate limited",
+    "yes": "Yes",
+    "no": "No",
     "previous": "Previous",
     "next": "Next",
     "noData": "No {{label}}",
@@ -15099,6 +15131,7 @@
       },
       "row": {
         "select": "Select notification",
+        "open": "Open notification: {{title}}",
         "markRead": "Mark as read",
         "markUnread": "Mark as unread",
         "archive": "Archive",

@@ -223,6 +223,10 @@ describe('SLOTrackingCard — historical-source caveat', () => {
 
     const note = await screen.findByRole('note')
     expect(note).toHaveTextContent(/heartbeat history backend/i)
+    expect(screen.queryByText('99.98%')).not.toBeInTheDocument()
+    expect(screen.getByText(/Current component health/)).toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
   })
 
   it('prefers a server-supplied note over the default caveat copy', async () => {
@@ -327,11 +331,10 @@ describe('SLOTrackingCard — accessibility', () => {
     requestMock.mockResolvedValue(makePayload({ historical_source: 'snapshot' }))
     const { container } = renderCard()
 
-    await screen.findByText('99.98%')
-    expect(
-      screen.getByRole('tablist', { name: 'Uptime window selector' }),
-    ).toBeInTheDocument()
-    expect(container.querySelector('[aria-live="polite"]')).toBeInTheDocument()
+    await screen.findByRole('note')
+    expect(screen.queryByText('99.98%')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent('—')
 
     // Both the header Target glyph and the caveat Info glyph are decorative.
     const decorativeIcons = container.querySelectorAll('svg[aria-hidden="true"]')

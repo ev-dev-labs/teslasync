@@ -1,17 +1,3 @@
-/**
- * FrontendErrorsCard — last-hour rolling summary of browser-reported
- * frontend errors (the same data that backed the now-deleted /admin
- * page's "Frontend Errors" panel).
- *
- * Surfaces the total error count plus top offenders (component + route
- * + count) so operators can immediately see whether the SPA is
- * misbehaving without having to leave /system-status.
- *
- * Pulls from `useWebErrorsSummary()` which talks to
- * `GET /admin/web-errors/summary`. Renders inside the existing
- * "Recent errors" accordion as a sibling of the backend error list.
- */
-
 import { Bug } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui'
@@ -46,9 +32,6 @@ export function FrontendErrorsCard() {
   }
 
   const total = data.total ?? 0
-  // Guard against a null / malformed `top` payload — the hook returns the raw
-  // summary object without a `safeArray` select, so a partial backend response
-  // (or a camelCaseKeys quirk) could leave `top` non-iterable.
   const top = Array.isArray(data.top) ? data.top : []
   const heading = t('Frontend errors (last hour)')
 
