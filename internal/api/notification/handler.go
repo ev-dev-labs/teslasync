@@ -16,6 +16,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -345,6 +347,8 @@ func (h *Handler) TestChannel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "notifications.logs")
+	defer span.End()
 	filters, err := parseNotificationLogFilters(r)
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
@@ -373,10 +377,17 @@ func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "grouped=true and group_key are mutually exclusive")
 		return
 	}
+	if groupedRequested && !filters.BeforeCreatedAt.IsZero() {
+		httpx.WriteError(w, http.StatusBadRequest, "grouped=true does not support a log cursor")
+		return
+	}
 	if groupedRequested {
-		groups, gErr := h.inbox.ListGrouped(r.Context(), filters)
+		groups, gErr := h.inbox.ListGrouped(ctx, filters)
 		if gErr != nil {
-			log.Error().Err(gErr).Msg("failed to list notification log groups")
+			span.RecordError(gErr)
+			span.SetStatus(codes.Error, "notification groups failed")
+			log.Ctx(ctx).Error().Err(gErr).Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("failed to list notification log groups")
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to get logs")
 			return
 		}
@@ -386,9 +397,12 @@ func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, groups)
 		return
 	}
-	logs, err := h.inbox.GetLogsFiltered(r.Context(), filters)
+	logs, err := h.inbox.GetLogsFiltered(ctx, filters)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get notification logs")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "notification logs failed")
+		log.Ctx(ctx).Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to get notification logs")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get logs")
 		return
 	}
@@ -445,6 +459,20 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 		}
 		f.To = t
 	}
+	if q.Has("before_created_at") || q.Has("before_id") {
+		if q.Get("before_created_at") == "" || q.Get("before_id") == "" {
+			return f, fmt.Errorf("before_created_at and before_id must be provided together")
+		}
+		before, err := time.Parse(time.RFC3339Nano, q.Get("before_created_at"))
+		if err != nil {
+			return f, fmt.Errorf("invalid before_created_at: %w", err)
+		}
+		id, err := strconv.ParseInt(q.Get("before_id"), 10, 64)
+		if err != nil || id <= 0 {
+			return f, fmt.Errorf("invalid before_id: must be a positive integer")
+		}
+		f.BeforeCreatedAt, f.BeforeID = before, id
+	}
 	if s := q.Get("read"); s != "" {
 		v, err := parseBoolish(s)
 		if err != nil {
@@ -455,7 +483,9 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 	// Default the inbox view to non-archived. Callers must opt into
 	// archived=true to switch to the Archived tab.
 	f.Archived = boolPtr(false)
-	if s := q.Get("archived"); s != "" {
+	if s := q.Get("archived"); s == "all" {
+		f.Archived = nil
+	} else if s != "" {
 		v, err := parseBoolish(s)
 		if err != nil {
 			return f, fmt.Errorf("invalid archived: %w", err)

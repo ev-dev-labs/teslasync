@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
@@ -263,6 +264,28 @@ func TestParseNotificationLogFilters(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:  "all archived states for historical analysis",
+			query: "archived=all",
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
+				if f.Archived != nil {
+					t.Fatalf("archived filter = %v, want none", *f.Archived)
+				}
+			},
+		},
+		{
+			name:  "cursor for complete historical analysis",
+			query: "before_created_at=2026-09-15T12%3A30%3A00Z&before_id=42",
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
+				if f.BeforeCreatedAt.Format(time.RFC3339) != "2026-09-15T12:30:00Z" || f.BeforeID != 42 {
+					t.Fatalf("cursor = %v, %d", f.BeforeCreatedAt, f.BeforeID)
+				}
+			},
+		},
+		{name: "cursor missing id", query: "before_created_at=2026-09-15T12%3A30%3A00Z", wantErr: true},
+		{name: "cursor missing time", query: "before_id=42", wantErr: true},
+		{name: "cursor invalid time", query: "before_created_at=tomorrow&before_id=42", wantErr: true},
+		{name: "cursor invalid id", query: "before_created_at=2026-09-15T12%3A30%3A00Z&before_id=-1", wantErr: true},
 		{
 			name:  "free text query",
 			query: "q=%20%20battery%20low%20%20",
