@@ -375,6 +375,33 @@ describe('DayLogPage', () => {
     expect(screen.getByText('5 events')).toBeInTheDocument();
   });
 
+  it('clears every category and the search so a single category can be selected', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
+    renderPage();
+
+    expect(screen.getByTestId('daylog-show-all')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('daylog-search'), { target: { value: 'locked' } });
+    fireEvent.click(screen.getByTestId('daylog-clear-all'));
+
+    expect(screen.getByTestId('daylog-search')).toHaveValue('');
+    expect(screen.getByText('Showing 0 of 5 events')).toBeInTheDocument();
+    expect(screen.getByText('No events match these filters.')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-clear-all')).toBeDisabled();
+    for (const category of ['driving', 'lock', 'turn', 'gear']) {
+      expect(screen.getByTestId(`daylog-filter-${category}`)).toHaveAttribute('aria-pressed', 'false');
+    }
+
+    fireEvent.click(screen.getByTestId('daylog-filter-lock'));
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
+    expect(screen.queryByText('Drive started')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('daylog-show-all'));
+    expect(screen.getByText('5 events')).toBeInTheDocument();
+    expect(screen.getByText('Drive started')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-show-all')).toBeDisabled();
+  });
+
   it('shows per-section query errors with retry', () => {
     useDayLogMock.mockReturnValue(
       queryState({ data: undefined, error: new Error('boom'), isError: true, isSuccess: false, status: 'error' }),

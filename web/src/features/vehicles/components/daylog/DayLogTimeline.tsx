@@ -40,8 +40,8 @@ type Row = { kind: 'hour'; key: string; hour: string } | { kind: 'event'; key: s
  * as an individual compact row (time with seconds, category, exact
  * component, previous → new state), virtualized so large days scroll
  * efficiently without dropping data. Search + category chips filter
- * client-side over the already-complete dataset; "Show all" and the
- * Showing X-of-Y indicator make filtered subsets explicit.
+ * client-side over the already-complete dataset; "Show all" restores
+ * every category, while "Clear all" lets users select a subset from none.
  */
 export function DayLogTimeline({
   events,
@@ -77,6 +77,7 @@ export function DayLogTimeline({
     });
   }, [all, hidden, query, t]);
   const isFiltered = query !== '' || hidden.size > 0;
+  const allCategoriesHidden = counts.size > 0 && [...counts.keys()].every((category) => hidden.has(category));
 
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
@@ -110,6 +111,10 @@ export function DayLogTimeline({
   const showAll = () => {
     setSearch('');
     setHidden(new Set());
+  };
+  const clearAll = () => {
+    setSearch('');
+    setHidden(new Set(counts.keys()));
   };
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
@@ -174,6 +179,9 @@ export function DayLogTimeline({
               </div>
               <Button variant="secondary" onClick={showAll} disabled={!isFiltered} data-testid="daylog-show-all">
                 {t('dayLog.list.showAll', 'Show all')}
+              </Button>
+              <Button variant="ghost" onClick={clearAll} disabled={allCategoriesHidden} data-testid="daylog-clear-all">
+                {t('filters.clearAll', 'Clear all')}
               </Button>
             </div>
 
