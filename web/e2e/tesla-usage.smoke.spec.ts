@@ -30,7 +30,7 @@ const cycle = {
 }
 const usageRoute = /\/api\/v1\/system\/api-usage(?:\/history)?(?:\?|$)/
 
-test('Tesla usage page and status card render desktop/mobile, light/dark and historical empty states', async ({ page }, testInfo) => {
+test('Tesla usage page and status overview render desktop/mobile, light/dark and historical empty states', async ({ page }, testInfo) => {
   testInfo.setTimeout(180_000)
   await page.clock.setFixedTime(new Date('2026-09-23T00:42:00Z'))
   for (const theme of ['dark', 'light'] as const) {
@@ -107,9 +107,8 @@ test('Tesla usage page and status card render desktop/mobile, light/dark and his
       await expect(trend).toHaveAttribute('data-chart-state', 'empty')
       await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-empty.png`), fullPage: true })
       await page.goto('/system-status')
-      await expect(page.getByRole('link', { name: 'Explore Tesla API usage' })).toBeVisible()
-      await page.evaluate(() => document.querySelector('#tesla-api')?.scrollIntoView({ block: 'center', behavior: 'instant' }))
-      await page.locator('#tesla-api').screenshot({ path: testInfo.outputPath(`tesla-status-card-${theme}-${width}.png`) })
+      await expect(page.getByRole('region', { name: 'Current component status' })).toBeVisible()
+      await expect(page.locator('#tesla-api')).toHaveCount(0)
       await page.screenshot({ path: testInfo.outputPath(`tesla-status-${theme}-${width}.png`) })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
       await page.unroute(usageRoute)
