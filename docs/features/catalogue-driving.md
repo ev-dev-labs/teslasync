@@ -35,7 +35,7 @@ Sidebar group **Driving**. In the app, expand this section in the left nav (or s
 | Destination Transitions | `/destination-transitions` | Map recurring movement between destinations and likely next stops. | Renders an empty state when no data is available — the page is not hidden. |
 | Journey Fragmentation | `/journey-fragmentation` | Measure trip chains, stopovers, and avoidable journey fragments. | Renders an empty state when no data is available — the page is not hidden. |
 | Seasonal Efficiency | `/seasonal-efficiency` | Compare efficiency patterns across seasons and weather regimes. | Renders an empty state when no data is available — the page is not hidden. |
-| Ghost Racing | `/segments` | Race your historical best on repeated road segments. | Renders an empty state when no data is available — the page is not hidden. |
+| Ghost Racing | `/segments` | Race your historical best on repeated road segments. | Detected segments are displayed 12 at a time with shareable page URLs; switching pages or vehicles clears the selected race. Route detection still uses the complete drive history. Renders an empty state when no data is available. |
 | Drive detail | `/drives/:id` | Route, energy, FSD share, cost, and session telemetry for one drive. | Open a row from /drives. FSD % needs trip-meter ticks; quantized 1-mile Tesla counters are valid. |
 
 [← All groups](./catalogue.md)

@@ -9,6 +9,7 @@ import {
   Button,
   DataTable,
   GlassPanel,
+  Pagination,
   PanelTitle,
   SelectableCard,
   StatusPill,
@@ -30,6 +31,7 @@ import {
 } from '@/api/hooks/useSegments';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUrlNumber } from '@/hooks/useUrlState';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDurationClock, formatDateShort } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
@@ -42,6 +44,7 @@ const DASH = '—';
    the leaderboard chips and the chart legend on the same two hues. */
 const COLOR_A = '#22d3ee'; // cyan-400
 const COLOR_B = '#e879f9'; // fuchsia-400
+const SEGMENTS_PAGE_SIZE = 12;
 
 /** Segment duration in whole seconds → m:ss clock. */
 function clock(seconds: number | null | undefined): string {
@@ -74,6 +77,13 @@ export default function SegmentsPage() {
     data: segmentsData, isLoading: segLoading, error: segError, refetch: refetchSegments,
   } = segmentsQuery;
   const segments = useMemo(() => segmentsData?.segments ?? [], [segmentsData]);
+  const [page, setPage] = useUrlNumber('page', 1);
+  const totalPages = Math.max(1, Math.ceil(segments.length / SEGMENTS_PAGE_SIZE));
+  const currentPage = Math.min(Math.max(1, Math.trunc(page)), totalPages);
+  const visibleSegments = useMemo(
+    () => segments.slice((currentPage - 1) * SEGMENTS_PAGE_SIZE, currentPage * SEGMENTS_PAGE_SIZE),
+    [segments, currentPage],
+  );
 
   /* ── Selection state ──
      A chosen segment drives the leaderboard; two chosen attempts (drive IDs)
@@ -83,6 +93,41 @@ export default function SegmentsPage() {
   const [board, setBoard] = useState<'time' | 'efficiency'>('time');
   const [racerA, setRacerA] = useState<number | null>(null);
   const [racerB, setRacerB] = useState<number | null>(null);
+  const previousVehicleId = useRef(vehicleId);
+  const defaultedFor = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (segmentsData && page !== currentPage) setPage(currentPage);
+  }, [segmentsData, page, currentPage, setPage]);
+
+  useEffect(() => {
+    if (previousVehicleId.current === vehicleId) return;
+    if (previousVehicleId.current !== null) {
+      setPage(1);
+      setSelectedSegmentId(null);
+      setRacerA(null);
+      setRacerB(null);
+      defaultedFor.current = null;
+    }
+    previousVehicleId.current = vehicleId;
+  }, [vehicleId, setPage]);
+
+  const onPageChange = useCallback((next: number) => {
+    setPage(next);
+    setSelectedSegmentId(null);
+    setRacerA(null);
+    setRacerB(null);
+    defaultedFor.current = null;
+  }, [setPage]);
+
+  useEffect(() => {
+    if (!segmentsData || selectedSegmentId == null
+      || visibleSegments.some((segment) => segment.id === selectedSegmentId)) return;
+    setSelectedSegmentId(null);
+    setRacerA(null);
+    setRacerB(null);
+    defaultedFor.current = null;
+  }, [segmentsData, selectedSegmentId, visibleSegments]);
 
   const onSelectSegment = useCallback((id: number) => {
     if (id <= 0) return; // id === 0 → persist failed, cannot drill in
@@ -100,7 +145,6 @@ export default function SegmentsPage() {
      runner-up so a ghost renders as soon as a segment is opened. Keyed on the
      leaderboard's own segment id so it defaults once per segment and never
      clobbers a manual pick afterwards. */
-  const defaultedFor = useRef<number | null>(null);
   useEffect(() => {
     const segId = leaderboard?.segment.id ?? null;
     if (segId == null || defaultedFor.current === segId) return;
@@ -239,7 +283,7 @@ export default function SegmentsPage() {
             </GlassPanel>
           ) : (
             <div role="listbox" aria-label={t('segments.list.title', 'Route segments')} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {segments.map((s) => (
+              {visibleSegments.map((s) => (
                 <SegmentCard
                   key={s.id || `${s.name}-${s.start_address}`}
                   segment={s}
@@ -251,6 +295,14 @@ export default function SegmentsPage() {
                 />
               ))}
             </div>
+          )}
+          {!noVehicle && !segLoading && !segError && segments.length > SEGMENTS_PAGE_SIZE && (
+            <Pagination
+              page={currentPage}
+              pageSize={SEGMENTS_PAGE_SIZE}
+              total={segments.length}
+              onPageChange={onPageChange}
+            />
           )}
         </section>
       </FadeIn>
