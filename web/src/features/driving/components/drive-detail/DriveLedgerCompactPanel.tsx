@@ -9,7 +9,7 @@ import { DriveLedgerPanel } from '@/features/vehicles/components/physics-ledger/
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 
-/** Compact energy/force ledger for one drive. Full solver lives at /tesla-only/ledger. */
+/** Compact energy/force ledger for one drive. Full solver lives at /tesla-physics/ledger. */
 export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefined }) {
   const { t } = useTranslation();
   const query = useDriveLedger(driveId);
@@ -51,7 +51,7 @@ export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefin
           <DriveLedgerPanel ledger={ledger.drive} />
           <Text as="p" size="sm" color="secondary">
             <Link
-              to="/tesla-only/ledger"
+              to="/tesla-physics/ledger"
               className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
             >
               {t('driveDetail.ledger.openFull', 'Open the full physics ledger')}

@@ -25,7 +25,8 @@
  * scenario, mirroring NotificationGroupRow.test.tsx.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import '../../../i18n';
 
 import { BrowserPushChannelCard } from './BrowserPushChannelCard';
@@ -95,7 +96,7 @@ function makeRow(
 }
 
 function renderCard() {
-  return render(<BrowserPushChannelCard />);
+  return render(<MemoryRouter><BrowserPushChannelCard /></MemoryRouter>);
 }
 
 describe('BrowserPushChannelCard', () => {
@@ -128,6 +129,24 @@ describe('BrowserPushChannelCard', () => {
       isPending: false,
       variables: undefined,
     });
+  });
+
+  it('explains subscription failure when the browser rejects push without throwing', async () => {
+    subscribeFn.mockResolvedValue(false);
+    renderCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Enable on this device' }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(
+      'This device could not update its browser push subscription.',
+    ));
+    expect(screen.getByRole('button', { name: 'Enable on this device' })).toBeEnabled();
+  });
+
+  it('shows a retry when the registered-device list cannot be loaded', () => {
+    const retry = vi.fn();
+    subsMock.mockReturnValue({ data: undefined, isError: true, error: new Error('offline'), refetch: retry });
+    renderCard();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(retry).toHaveBeenCalledOnce();
   });
 
   // ── Ready state ─────────────────────────────────────────────────────────────

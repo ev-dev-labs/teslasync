@@ -2,6 +2,7 @@
   "browserNotifications": {
     "title": "Browser Notifications",
     "subtitle": "Get notified when the app tab is in the background",
+    "permissionError": "Could not request browser permission. Check site settings and try again.",
     "unsupported": "Browser notifications are not supported in this browser.",
     "enable": "Enable Browser Notifications",
     "enabled": "Enabled",
@@ -19,7 +20,7 @@
     },
     "kpi": {
       "permission": "Browser permission",
-      "pushEvents": "Push events",
+      "pushEvents": "In-tab events",
       "tabSignals": "Tab signals",
       "soundChannels": "Sound channels",
       "activeOfTotal": "{{active}} of {{total}} on"

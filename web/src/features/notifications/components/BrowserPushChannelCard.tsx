@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { BellRing, BellOff, Smartphone, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 
 import { Badge, Button, GlassPanel, Heading, Text } from '@/components/ui';
+import { QueryError } from '@/components/feedback';
 import { useWebPush } from '@/hooks/useWebPush';
 import { usePushSubscriptions, useUnsubscribePush, usePushPublicKey } from '@/api/hooks/usePush';
 import { formatRelative } from '@/lib/dateFormat';
@@ -34,10 +35,12 @@ import type { PushSubscriptionRow } from '@/api/types';
 
 interface BrowserPushChannelCardProps {
   className?: string;
+  webPush?: ReturnType<typeof useWebPush>;
 }
 
-export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProps) {
+export function BrowserPushChannelCard({ className, webPush }: BrowserPushChannelCardProps) {
   const { t } = useTranslation();
+  const localPush = useWebPush();
   const {
     isSupported: notifSupported,
     isPushSupported,
@@ -46,14 +49,15 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
     permission,
     subscribe,
     unsubscribe,
-  } = useWebPush();
+  } = webPush ?? localPush;
   const {
     data: publicKey,
     isLoading: keyLoading,
     isError: keyError,
     refetch: refetchPublicKey,
   } = usePushPublicKey();
-  const { data: subs } = usePushSubscriptions();
+  const subsQuery = usePushSubscriptions();
+  const { data: subs } = subsQuery;
   const {
     mutateAsync: removeDevice,
     isPending: removePending,
@@ -65,6 +69,7 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
   // subscribe()/unsubscribe() lifecycle in useWebPush does not expose its
   // own pending flag.
   const [busy, setBusy] = useState(false);
+  const [actionFailed, setActionFailed] = useState(false);
 
   const rows = useMemo<PushSubscriptionRow[]>(() => subs ?? [], [subs]);
 
@@ -101,13 +106,11 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
 
   const runDeviceAction = useCallback(async (action: () => Promise<boolean>) => {
     setBusy(true);
+    setActionFailed(false);
     try {
-      await action();
+      if (!await action()) setActionFailed(true);
     } catch {
-      // subscribe()/unsubscribe() already surface their own failure toasts
-      // via the mutation hooks; swallow here so a dismissed permission
-      // prompt or PushManager rejection can't escape as an unhandled
-      // rejection — and the button is always re-enabled by `finally`.
+      setActionFailed(true);
     } finally {
       setBusy(false);
     }
@@ -219,8 +222,18 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
             </Text>
           </div>
         )}
+        {actionFailed && (
+          <div role="alert" className="rounded-lg bg-rose-300/5 p-3 ring-1 ring-rose-300/20">
+            <Text as="p" variant="bodySm">
+              {t('webpush.error.action', 'This device could not update its browser push subscription. Check browser permission and service-worker availability, then retry.')}
+            </Text>
+          </div>
+        )}
 
-        {rows.length > 0 && (
+        {subsQuery.isError && (
+          <QueryError error={subsQuery.error} onRetry={() => void subsQuery.refetch()} />
+        )}
+        {!subsQuery.isError && rows.length > 0 && (
           <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
             <Text as="h4" variant="label">
               {t('webpush.devices.title', 'Registered devices')}

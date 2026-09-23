@@ -131,14 +131,14 @@ describe('LinearSidebar', () => {
       {
         title: 'Tesla Physics',
         items: [
-          { to: '/tesla-only', icon: Icons.sparkles, label: 'Physics hub', labelKey: 'nav.items.physics-hub' },
-          { to: '/tesla-only/clocks', icon: Icons.clock, label: 'Three Clocks', labelKey: 'nav.items.three-clocks' },
+          { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics hub', labelKey: 'nav.items.physics-hub' },
+          { to: '/tesla-physics/clocks', icon: Icons.clock, label: 'Three Clocks', labelKey: 'nav.items.three-clocks' },
         ],
       },
     ]
     renderSidebar({
       sections,
-      pathname: '/tesla-only/clocks',
+      pathname: '/tesla-physics/clocks',
       activeSectionTitle: 'Tesla Physics',
     })
     expect(screen.getByRole('link', { name: /Three Clocks/ })).toHaveAttribute('aria-current', 'page')

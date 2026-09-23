@@ -2,6 +2,76 @@
   "notifications": {
     "title": "Notifications",
     "subtitle": "All notification sources and delivery channels.",
+    "healthAlerts": {
+      "title": "Component health alerts",
+      "subtitle": "Choose which system outages and recoveries are delivered to each channel. These are system events, separate from vehicle alert rules.",
+      "channelLabel": "Delivery channel",
+      "disabledChannel": "{{name}} (disabled)",
+      "noChannelsTitle": "Add a delivery channel first",
+      "noChannels": "Health alerts need a notification destination such as Discord, Slack, ntfy, or a webhook.",
+      "addChannel": "Add notification channel",
+      "noEvents": "No component health event types are available from this server.",
+      "refreshEvents": "Refresh event types",
+      "channelOff": "This channel is disabled. Your choices are saved, but no alerts will be delivered until you enable the channel above.",
+      "routingTitle": "Delivery settings",
+      "enabledCount": "{{enabled}} of {{total}} events enabled",
+      "channelActive": "Channel active",
+      "channelInactive": "Channel disabled",
+      "search": "Search components",
+      "filterLabel": "Show",
+      "all": "All components",
+      "someEnabled": "Sending alerts",
+      "someDisabled": "Needs attention",
+      "saveError": "Could not save this choice. Check your connection and try again.",
+      "noMatches": "No components match your search or filter.",
+      "off": "Off",
+      "bothOn": "Outage + recovery",
+      "partial": "{{count}} of {{total}} on",
+      "outage": "{{component}} outage",
+      "recovery": "{{component}} recovery",
+      "saving": "Saving…",
+      "components": {
+        "telemetry": "Fleet Telemetry",
+        "mqtt": "MQTT",
+        "database": "Database",
+        "redis": "Redis",
+        "tesla_api": "Tesla API authorization",
+        "worker": "Background worker"
+      },
+      "events": {
+        "telemetry": {
+          "outage": "Fleet Telemetry ingest has gone quiet across the entire fleet — not the same as a single vehicle sleeping.",
+          "recovery": "Fleet Telemetry ingest is receiving signals again."
+        },
+        "mqtt": {
+          "outage": "The MQTT broker is disconnected or the Fleet Telemetry subscription is no longer active.",
+          "recovery": "The MQTT broker connection is back up."
+        },
+        "database": {
+          "outage": "The PostgreSQL database is failing health checks.",
+          "recovery": "The PostgreSQL database is healthy again."
+        },
+        "redis": {
+          "outage": "Redis is enabled but unreachable (only fires when Redis is actually configured).",
+          "recovery": "Redis is reachable again."
+        },
+        "tesla_api": {
+          "outage": "The Tesla Fleet API token is missing or expired.",
+          "recovery": "The Tesla Fleet API token is valid again."
+        },
+        "worker": {
+          "outage": "Every actively-polled vehicle is failing to sync with the Tesla API.",
+          "recovery": "Vehicle polling has recovered."
+        }
+      }
+    },
+    "browser": {
+      "title": "Browser notifications",
+      "subtitle": "Receive background push on this device and tune what happens while the tab is open.",
+      "inTabTitle": "While this tab is open",
+      "inTabHelp": "These controls affect notifications and indicators in this browser tab. Browser push above delivers even when TeslaSync is closed.",
+      "controlsAria": "Notification delivery controls"
+    },
     "report": {
       "title": "Notification activity",
       "description": "Explore triggers and delivery outcomes across every notification source. Historical periods remain available.",
@@ -12,7 +82,12 @@
       "countNote": "Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.",
       "timeline": "Daily activity",
       "day": "Day",
+      "period": "Period",
+      "timelineAnnual": "Annual activity",
+      "timelineMonthly": "Monthly activity",
       "timelineAria": "Daily notification triggers and channel deliveries",
+      "timelineAriaAnnual": "Annual notification triggers and channel deliveries",
+      "timelineAriaMonthly": "Monthly notification triggers and channel deliveries",
       "sources": "Trigger sources",
       "types": "Event types",
       "severities": "Severities",

@@ -5,7 +5,9 @@ import type { NotificationReport } from '@/api/types';
 
 vi.mock('@/api/hooks/useNotifications', () => ({ useNotificationReport: vi.fn() }));
 vi.mock('@/components/charts', () => ({
-  ChartContainer: ({ title }: { title: string }) => <div>{title}</div>,
+  ChartContainer: ({ title, data }: { title: string; data: unknown[] }) => (
+    <div>{title}<output data-testid="timeline-buckets">{JSON.stringify(data)}</output></div>
+  ),
   Bar: () => null,
   BarChart: () => null,
   CartesianGrid: () => null,
@@ -72,6 +74,27 @@ describe('NotificationReportPanel', () => {
     expect(screen.getByText('1.0')).toBeInTheDocument();
     expect(screen.getByText('Unattributed deliveries').closest('[data-role="metric-card"]')).toHaveTextContent('2');
     expect(screen.getByText(/Older deliveries without an event identifier appear only in delivery counts/)).toBeInTheDocument();
+  });
+
+  it('aggregates long all-time windows without dropping older daily counts', () => {
+    const daily = Array.from({ length: 4000 }, (_, index) => ({
+      day: new Date(Date.UTC(2015, 0, 1 + index)).toISOString().slice(0, 10),
+      triggered: 1,
+      deliveries: 2,
+    }));
+    useReport.mockReturnValue({
+      data: { ...report, daily },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useNotificationReport>);
+    renderPanel();
+    expect(screen.getByText('Annual activity')).toBeInTheDocument();
+    const buckets = JSON.parse(screen.getByTestId('timeline-buckets').textContent ?? '') as {
+      period: string; triggered: number; deliveries: number
+    }[];
+    expect(buckets.length).toBeLessThanOrEqual(12);
+    expect(buckets.reduce((total, row) => total + row.triggered, 0)).toBe(4000);
+    expect(buckets.reduce((total, row) => total + row.deliveries, 0)).toBe(8000);
   });
 
   it('keeps all breakdown panels visible with no activity', () => {

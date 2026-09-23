@@ -102,6 +102,7 @@ export const notificationKeys = {
   preferences: (channelId: number) => ['notification-preferences', channelId] as const,
   logs: ['notification-logs'] as const,
   deliveryLogs: ['notification-logs', 'delivery-history'] as const,
+  analysisLogs: ['notification-logs', 'analysis-history'] as const,
   logsFiltered: (filters?: NotificationFilters) =>
     ['notification-logs', 'filtered', filters ?? {}] as const,
   // Grouped/threaded inbox cache sits beside `logsFiltered` so a
@@ -840,12 +841,47 @@ export function useNotificationLogs(
   });
 }
 
-/** Bounded recent delivery attempts for latency and reliability analysis; inbox rows are trigger events. */
+const ANALYSIS_PAGE_SIZE = 1000;
+
+async function fetchAnalysisLogs(view: 'inbox' | 'deliveries', signal: AbortSignal): Promise<NotificationLog[]> {
+  const logs: NotificationLog[] = [];
+  let cursor: Pick<NotificationLog, 'created_at' | 'id'> | undefined;
+  for (;;) {
+    const params = new URLSearchParams({ view, archived: 'all', limit: String(ANALYSIS_PAGE_SIZE) });
+    if (cursor) {
+      params.set('before_created_at', cursor.created_at);
+      params.set('before_id', String(cursor.id));
+    }
+    const page = await request<NotificationLog[]>(`/notifications/logs?${params}`, { signal });
+    if (!Array.isArray(page)) {
+      throw new Error('Invalid notification history response');
+    }
+    logs.push(...page);
+    if (page.length < ANALYSIS_PAGE_SIZE) return logs;
+    const last = page[page.length - 1]!;
+    if (!last.created_at || !Number.isSafeInteger(last.id) || last.id <= 0 ||
+        (cursor && cursor.created_at === last.created_at && cursor.id === last.id)) {
+      throw new Error('Notification history cursor did not advance');
+    }
+    cursor = { created_at: last.created_at, id: last.id };
+  }
+}
+
+/** All recorded delivery attempts, including archived and historical rows. */
 export function useNotificationDeliveryLogs() {
   return useQuery({
     queryKey: notificationKeys.deliveryLogs,
-    queryFn: ({ signal }) => request<NotificationLog[]>('/notifications/logs?view=deliveries&limit=1000', { signal }),
-    select: safeArray,
+    queryFn: ({ signal }) => fetchAnalysisLogs('deliveries', signal),
+    staleTime: STALE_TIMES.MODERATE,
+  });
+}
+
+/** All canonical inbox triggers and legacy uncorrelated events for fatigue analysis. */
+export function useNotificationAnalysisLogs() {
+  return useQuery({
+    queryKey: notificationKeys.analysisLogs,
+    queryFn: ({ signal }) => fetchAnalysisLogs('inbox', signal),
+    staleTime: STALE_TIMES.MODERATE,
   });
 }
 

@@ -63,7 +63,7 @@ export default function NotificationBurnRatePage() {
       title={t('notificationBurnRate.title', 'Notification Burn Rate')}
       subtitle={t(
         'notificationBurnRate.subtitle',
-        'Track up to 1,000 recent notification delivery attempts against a 99% SLO with short and long error-budget windows',
+        'Track all recorded notification delivery attempts against a 99% SLO with short and long error-budget windows',
       )}
       query={logsQuery}
     >

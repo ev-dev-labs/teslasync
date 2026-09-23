@@ -69,7 +69,7 @@ export function BrowserNotificationsKpis({
         color={permissionMeta.color}
       />
       <MetricCard
-        label={t('browserNotifications.kpi.pushEvents', 'Push events')}
+        label={t('browserNotifications.kpi.pushEvents', 'In-tab events')}
         value={`${pushActive}/2`}
         subtitle={activeOf(pushActive, 2)}
         icon={<BellRing className="h-5 w-5" aria-hidden="true" />}

@@ -20,11 +20,11 @@ const (
 	cockpitHonesty       = "Live Tesla physics: Gear, ChargeState, port latch, BMS, and trip meters. Not an IoT dashboard."
 	clocksHonesty        = "signal_log time is vehicle event time. Ingest time is unknown unless the envelope stored it. Display time is now. Gaps stay gaps."
 	lifeTapeHonesty      = "Every second is Confirmed Park, Neutral rolling, Drive, Reverse, plugged-not-charging, Charging, Complete-still-plugged, Unplugged, or Unknown. This is not a GPS trip list."
-	contradictionHonesty = "MQTT/live physics vs Tesla charge/gear language. Complete still latched is expected. Gear=P with speed is a contradiction. Neutral is rolling, not parked."
+	contradictionHonesty = "Recorded conflicting observations are grouped into episodes, not counted once per telemetry sample. Repeated forward-filled states are not independent failures. Complete still latched is expected. A gap ends an episode; neither sensor is declared correct."
 	meterHonesty         = "Odometer, MilesSinceReset, and SelfDrivingMilesSinceReset are trip meters. A drop is a reset or a gap. Null is not zero."
 	unknownOSHonesty     = "Unknown hours are a budget, never a measured zero. Missing Park, Charge, FSD, or motion stays unknown."
 	carKeptLivingHonesty = "After carbon or MQTT loss: what may have queued, what replays with original event time, and what the car did that we never received. Queue depth is unknown unless the broker reports it."
-	logbookHonesty       = "Sessions are narrated as Park, Drive, Reverse, Neutral, Charging, Stopped, Complete, Disconnected — Tesla words, not GPS trips."
+	logbookHonesty       = "Recorded gear and charge-state changes are shown beside drive/charge session boundaries. A first reading establishes observed state, not the time of transition. With no sessions or recorded changes, only the latest state is shown. Gaps remain unknown; this is not a GPS trip list."
 	epochHonesty         = "Each software version is a physics baseline for this VIN. Changes are correlation, not proof that FSD got better."
 	portCourtHonesty     = "Latch, door, pack current, ChargeState, and schedule are one evidence chain. Complete-to-unplug is etiquette, not a Tesla penalty score."
 	blackBoxHonesty      = "High-resolution samples in the 90 seconds before confirmed Park, unplug, or a telemetry gap. Tesla will not give you this black box."
@@ -286,7 +286,7 @@ type TheaterSample struct {
 	ChargePortLatch    string
 }
 
-// PhysicsFrame is one Tesla-physics sample used by TeslaSync-only views.
+// PhysicsFrame is one Tesla-physics sample used by Tesla Physics views.
 type PhysicsFrame struct {
 	At                 time.Time
 	IngestTime         *time.Time
@@ -322,7 +322,7 @@ type ClockReading struct {
 	Unknown     bool       `json:"unknown"`
 }
 
-// ThreeClocks is the TeslaSync-only clock product.
+// ThreeClocks is the Tesla Physics clock product.
 type ThreeClocks struct {
 	VehicleID int64          `json:"vehicle_id"`
 	Latest    *ClockReading  `json:"latest"`
@@ -349,10 +349,12 @@ type LifeTape struct {
 
 // Contradiction is one MQTT/live vs Tesla-language disagreement.
 type Contradiction struct {
-	At      time.Time `json:"at"`
-	Kind    string    `json:"kind"`
-	Detail  string    `json:"detail"`
-	Unknown bool      `json:"unknown"`
+	At           time.Time `json:"at"`
+	LastAt       time.Time `json:"last_at"`
+	Observations int       `json:"observations"`
+	Kind         string    `json:"kind"`
+	Detail       string    `json:"detail"`
+	Unknown      bool      `json:"unknown"`
 }
 
 // ContradictionCourt lists Tesla-physics disagreements. Complete-latched is not one.
@@ -448,6 +450,8 @@ type FirmwareEpochs struct {
 // PortEvidence is one charge-port courtroom sample.
 type PortEvidence struct {
 	At            time.Time `json:"at"`
+	Gear          string    `json:"gear,omitempty"`
+	Firmware      string    `json:"firmware,omitempty"`
 	Latch         string    `json:"latch,omitempty"`
 	DoorOpen      *bool     `json:"door_open"`
 	PackCurrentA  *float64  `json:"pack_current_a"`
@@ -481,7 +485,7 @@ type OwnerDictionary struct {
 	Honesty                 string   `json:"honesty"`
 }
 
-// PhysicsVault is the resale/service export of TeslaSync-only physics.
+// PhysicsVault is the resale/service export of Tesla Physics.
 type PhysicsVault struct {
 	VehicleID        int64              `json:"vehicle_id"`
 	Certificate      SessionCertificate `json:"certificate"`
@@ -529,9 +533,10 @@ type RangeDisagreement struct {
 	Honesty           string   `json:"honesty"`
 }
 
-// ExclusiveReport is the TeslaSync-only physics pack.
+// ExclusiveReport is the Tesla Physics evidence pack.
 type ExclusiveReport struct {
 	VehicleID       int64              `json:"vehicle_id"`
+	Evidence        EvidenceScope      `json:"evidence"`
 	Clocks          ThreeClocks        `json:"clocks"`
 	LifeTape        LifeTape           `json:"life_tape"`
 	Contradictions  ContradictionCourt `json:"contradictions"`
@@ -547,4 +552,21 @@ type ExclusiveReport struct {
 	Modes           ModeLaws           `json:"modes"`
 	NervousSystem   NervousSystem      `json:"nervous_system"`
 	Range           RangeDisagreement  `json:"range"`
+}
+
+// EvidenceScope distinguishes the requested interval from the bounded records
+// actually used to construct an exclusive report.
+type EvidenceScope struct {
+	RequestedFrom           time.Time  `json:"requested_from"`
+	RequestedTo             time.Time  `json:"requested_to"`
+	FirstRecordedAt         *time.Time `json:"first_recorded_at"`
+	LastRecordedAt          *time.Time `json:"last_recorded_at"`
+	HistoryRows             int        `json:"history_rows"`
+	BlackBoxRows            int        `json:"black_box_rows"`
+	HistoryTruncated        bool       `json:"history_truncated"`
+	BlackBoxTruncated       bool       `json:"black_box_truncated"`
+	DriveSessionsTruncated  bool       `json:"drive_sessions_truncated"`
+	ChargeSessionsTruncated bool       `json:"charge_sessions_truncated"`
+	HistoryAvailable        bool       `json:"history_available"`
+	BlackBoxAvailable       bool       `json:"black_box_available"`
 }

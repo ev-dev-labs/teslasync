@@ -175,9 +175,9 @@ describe('isCompactActivePath', () => {
 describe('isExclusiveActivePath', () => {
   const settingsCatalog = ['/settings', '/settings/fleet-setup', '/chatbot', '/dev-tools']
   const physicsCatalog = [
-    '/tesla-only',
-    '/tesla-only/clocks',
-    '/tesla-only/life-tape',
+    '/tesla-physics',
+    '/tesla-physics/clocks',
+    '/tesla-physics/life-tape',
     '/physics-cockpit',
   ]
 
@@ -192,9 +192,9 @@ describe('isExclusiveActivePath', () => {
   })
 
   it('lights only the Tesla Physics child, not the hub, on nested routes', () => {
-    expect(isExclusiveActivePath('/tesla-only/clocks', '/tesla-only/clocks', physicsCatalog)).toBe(true)
-    expect(isExclusiveActivePath('/tesla-only/clocks', '/tesla-only', physicsCatalog)).toBe(false)
-    expect(isExclusiveActivePath('/tesla-only', '/tesla-only', physicsCatalog)).toBe(true)
+    expect(isExclusiveActivePath('/tesla-physics/clocks', '/tesla-physics/clocks', physicsCatalog)).toBe(true)
+    expect(isExclusiveActivePath('/tesla-physics/clocks', '/tesla-physics', physicsCatalog)).toBe(false)
+    expect(isExclusiveActivePath('/tesla-physics', '/tesla-physics', physicsCatalog)).toBe(true)
   })
 })
 

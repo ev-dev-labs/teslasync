@@ -52,7 +52,7 @@ export default function NotificationLatencyPage() {
       title={t('notificationLatency.title', 'Notification Latency')}
       subtitle={t(
         'notificationLatency.subtitle',
-        'Measure up to 1,000 recent delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records',
+        'Measure all recorded delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records',
       )}
       query={logsQuery}
     >

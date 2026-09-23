@@ -585,7 +585,7 @@
   },
   "notificationBurnRate": {
     "title": "Notification Burn Rate",
-    "subtitle": "Track up to 1,000 recent notification delivery attempts against a 99% SLO with short and long error-budget windows",
+    "subtitle": "Track all recorded notification delivery attempts against a 99% SLO with short and long error-budget windows",
     "kpis": {
       "label": "Delivery SLO metrics",
       "delivery": "24h Delivery SLO",
@@ -630,7 +630,7 @@
       "subtitle": "Apdex bands are anchored to the documented 1-second satisfied threshold",
       "aria": "Bar chart of notification deliveries grouped into latency ranges"
     },
-    "subtitle": "Measure up to 1,000 recent delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records",
+    "subtitle": "Measure all recorded delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records",
     "kpis": {
       "label": "Notification latency metrics",
       "p50": "p50 Latency",
@@ -714,7 +714,8 @@
     },
     "checking": "Checking browser push availability…",
     "error": {
-      "load": "Couldn't check browser push availability."
+      "load": "Couldn't check browser push availability.",
+      "action": "This device could not update its browser push subscription. Check browser permission and service-worker availability, then retry."
     },
     "retry": "Retry"
   }

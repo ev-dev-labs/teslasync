@@ -203,6 +203,8 @@ export interface LifeTape {
 
 export interface Contradiction {
   at: string;
+  last_at?: string;
+  observations?: number;
   kind: string;
   detail: string;
   unknown: boolean;
@@ -290,6 +292,8 @@ export interface FirmwareEpochs {
 
 export interface PortEvidence {
   at: string;
+  gear?: string;
+  firmware?: string;
   latch?: string;
   door_open: boolean | null;
   pack_current_a: number | null;
@@ -365,6 +369,20 @@ export interface RangeDisagreement {
 
 export interface ExclusiveReport {
   vehicle_id: number;
+  evidence?: {
+    requested_from: string;
+    requested_to: string;
+    first_recorded_at: string | null;
+    last_recorded_at: string | null;
+    history_rows: number;
+    black_box_rows: number;
+    history_truncated: boolean;
+    black_box_truncated: boolean;
+    drive_sessions_truncated: boolean;
+    charge_sessions_truncated: boolean;
+    history_available: boolean;
+    black_box_available: boolean;
+  };
   clocks: ThreeClocks;
   life_tape: LifeTape;
   contradictions: ContradictionCourt;
@@ -381,4 +399,3 @@ export interface ExclusiveReport {
   nervous_system: NervousSystem;
   range: RangeDisagreement;
 }
-

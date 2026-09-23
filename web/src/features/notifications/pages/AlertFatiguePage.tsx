@@ -13,7 +13,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from '@/components/charts';
 
-import { useNotificationLogs } from '@/api/hooks/useNotifications';
+import { useNotificationAnalysisLogs } from '@/api/hooks/useNotifications';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { chartTokens } from '@/lib/tokens';
 
@@ -39,7 +39,7 @@ export default function AlertFatiguePage() {
   const { t } = useTranslation();
   usePageTitle(t('alertFatigue.title', 'Alert Fatigue'));
 
-  const logsQuery = useNotificationLogs();
+  const logsQuery = useNotificationAnalysisLogs();
 
   const summary = useMemo(
     () => analyzeAlertFatigue(logsQuery.data ?? []),

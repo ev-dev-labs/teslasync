@@ -126,7 +126,7 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
       '/climate-control',
       '/maintenance',
       '/software-updates',
-      '/tesla-only',
+      '/tesla-physics',
     ],
   },
   {
@@ -420,8 +420,8 @@ export function isCompactActivePath(pathname: string, to: string): boolean {
 
 /**
  * Among catalog destinations that cover `pathname`, the longest `to` wins.
- * `/settings/fleet-setup` must not also light `/settings`; `/tesla-only/clocks`
- * must not also light `/tesla-only`. Unlisted children still fall back to the
+ * `/settings/fleet-setup` must not also light `/settings`; `/tesla-physics/clocks`
+ * must not also light `/tesla-physics`. Unlisted children still fall back to the
  * parent (`/drives/42` → `/drives`).
  */
 export function bestMatchingNavPath(

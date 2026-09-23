@@ -25,7 +25,7 @@ export function PendingPanels({ loading }: { loading: boolean }) {
         <GlassPanel key={id} padding="auto" className="space-y-4" data-testid={id}>
           <PanelTitle>{t(key, title)}</PanelTitle>
           {loading ? <Skeleton className="h-32" /> : (
-            <EmptyState message={t('physicsLedger.empty', 'No ledger samples in this window. Drive, charge, or park with telemetry flowing.')} actionTo={{ label: t('physicsLedger.back', 'Tesla Physics'), to: '/tesla-only' }} />
+            <EmptyState message={t('physicsLedger.empty', 'No ledger samples in this window. Drive, charge, or park with telemetry flowing.')} actionTo={{ label: t('physicsLedger.back', 'Tesla Physics'), to: '/tesla-physics' }} />
           )}
         </GlassPanel>
       ))}

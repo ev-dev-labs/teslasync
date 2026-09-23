@@ -95,6 +95,12 @@ vi.mock('../components/BrowserNotificationsKpis', () => ({
   ),
 }));
 
+vi.mock('../components/BrowserPushChannelCard', () => ({
+  BrowserPushChannelCard: ({ webPush }: { webPush: { permission: NotificationPermission } }) => (
+    <div data-testid="bn-background-push" data-permission={webPush.permission} />
+  ),
+}));
+
 type PermissionPanelProps = {
   className?: string;
   permission: NotificationPermission;
@@ -204,17 +210,16 @@ describe('BrowserNotificationsPage — scaffolding + a11y', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Browser notifications' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Native browser push notifications when alerts fire.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Receive background push on this device and tune what happens while the tab is open.')).toBeInTheDocument();
 
     expect(
       screen.getByRole('region', { name: 'Notification delivery controls' }),
     ).toBeInTheDocument();
 
-    for (const id of ['bn-kpis', 'bn-permission-panel', 'bn-tab-signals', 'bn-sounds']) {
+    for (const id of ['bn-background-push', 'bn-kpis', 'bn-permission-panel', 'bn-tab-signals', 'bn-sounds']) {
       expect(screen.getByTestId(id)).toBeInTheDocument();
     }
+    expect(screen.getByText('While this tab is open')).toBeInTheDocument();
   });
 
   it('exposes the copy-link affordance from the page chrome', () => {
@@ -237,6 +242,7 @@ describe('BrowserNotificationsPage — single source of truth', () => {
 
     expect(kpis().getAttribute('data-permission')).toBe('granted');
     expect(panel().getAttribute('data-permission')).toBe('granted');
+    expect(screen.getByTestId('bn-background-push')).toHaveAttribute('data-permission', 'granted');
     // The whole point of lifting: both children read the exact same value.
     expect(kpis().getAttribute('data-permission')).toBe(panel().getAttribute('data-permission'));
 

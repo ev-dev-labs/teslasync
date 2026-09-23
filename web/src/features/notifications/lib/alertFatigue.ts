@@ -31,7 +31,7 @@ import type { NotificationLog } from '@/api/types';
 export type FatigueVerdict = 'healthy' | 'chatty' | 'noisy' | 'fatiguing';
 
 export interface AlertGroup {
-  /** Normalised title — the human-recognisable identity of the rule. */
+  /** Rule, event type and normalised title; prevents unrelated sources merging. */
   key: string;
   title: string;
   severity: string | null;
@@ -174,8 +174,9 @@ export function analyzeAlertFatigue(
     const ms = new Date(log.sent_at ?? log.created_at).getTime();
     if (!Number.isFinite(ms)) continue;
 
-    const key = normalizeTitle(log.title ?? '');
-    if (key.length === 0) continue;
+    const titleKey = normalizeTitle(log.title ?? '');
+    if (titleKey.length === 0) continue;
+    const key = `${log.alert_id ?? ''}:${log.event_type ?? ''}:${titleKey}`;
 
     let bucket = buckets.get(key);
     if (bucket == null) {
@@ -188,7 +189,7 @@ export function analyzeAlertFatigue(
       buckets.set(key, bucket);
     }
 
-    const delivered = log.status === 'sent';
+    const delivered = log.status === 'sent' || log.status === 'triggered';
     // `read_at` is only meaningful on delivered notifications, and a field that
     // is absent entirely (vs. explicitly null) means the backend never tracked
     // reads for this row.

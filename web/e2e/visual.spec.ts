@@ -96,9 +96,15 @@ for (const route of VISUAL_ROUTES) {
     // Pin rolling date labels to the committed baseline day, without freezing timers.
     // This clock is visual-only; the native Date contract uses the shared seed unchanged.
     await page.clock.setFixedTime(new Date('2026-09-13T12:00:00Z'));
-    await seedBrowserState(page, theme, route.path, { density });
+    // The inbox and report now share one date range. The fixture's recorded
+    // events precede the default seven-day window, so explicitly select the
+    // historical period whose populated state this visual test asserts.
+    const path = route.name === 'notifications' && scenario === 'populated'
+      ? `${route.path}?from=2026-08-20&to=2026-09-13`
+      : route.path;
+    await seedBrowserState(page, theme, path, { density });
     const mockApi = await installApiMocks(page, scenario, theme, density);
-    await page.goto(route.path, { waitUntil: 'domcontentloaded' });
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
     await waitForHarnessReady(page, mockApi);
     await expectThemeApplied(page, theme);
     await expect(page.locator('body')).toHaveAttribute('data-density', density);

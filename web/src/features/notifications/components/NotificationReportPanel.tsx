@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bar, BarChart, CartesianGrid, ChartContainer, ChartLegend, ChartTooltip, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
@@ -13,6 +14,29 @@ export function NotificationReportPanel({ from, to }: { from: string; to: string
   const { t } = useTranslation();
   const query = useNotificationReport(from, to);
   const report = query.data;
+  const daily = report?.daily;
+  const resolution = (daily?.length ?? 0) > 3650 ? 4 : (daily?.length ?? 0) > 730 ? 7 : 10;
+  const timeline = useMemo(() => {
+    const buckets = new Map<string, { period: string; triggered: number; deliveries: number }>();
+    for (const row of daily ?? []) {
+      const period = row.day.slice(0, resolution);
+      const bucket = buckets.get(period) ?? { period, triggered: 0, deliveries: 0 };
+      bucket.triggered += row.triggered;
+      bucket.deliveries += row.deliveries;
+      buckets.set(period, bucket);
+    }
+    return Array.from(buckets.values());
+  }, [daily, resolution]);
+  const timelineTitle = resolution === 4
+    ? t('notifications.report.timelineAnnual', 'Annual activity')
+    : resolution === 7
+      ? t('notifications.report.timelineMonthly', 'Monthly activity')
+      : t('notifications.report.timeline', 'Daily activity');
+  const timelineAria = resolution === 4
+    ? t('notifications.report.timelineAriaAnnual', 'Annual notification triggers and channel deliveries')
+    : resolution === 7
+      ? t('notifications.report.timelineAriaMonthly', 'Monthly notification triggers and channel deliveries')
+      : t('notifications.report.timelineAria', 'Daily notification triggers and channel deliveries');
   const breakdowns: { key: string; title: string; rows: Breakdown }[] = [
     { key: 'source', title: t('notifications.report.sources', 'Trigger sources'), rows: report?.by_source ?? [] },
     { key: 'type', title: t('notifications.report.types', 'Event types'), rows: report?.by_type ?? [] },
@@ -42,23 +66,23 @@ export function NotificationReportPanel({ from, to }: { from: string; to: string
           </div>
           <Text variant="caption">{t('notifications.report.countNote', 'Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.')}</Text>
           <ChartContainer
-            title={t('notifications.report.timeline', 'Daily activity')}
-            ariaLabel={t('notifications.report.timelineAria', 'Daily notification triggers and channel deliveries')}
+            title={timelineTitle}
+            ariaLabel={timelineAria}
             chartKey="notification-activity"
             height={280}
-            empty={(report.daily ?? []).length === 0}
-            data={report.daily ?? []}
+            empty={timeline.length === 0}
+            data={timeline}
             dataColumns={[
-              { key: 'day', label: t('notifications.report.day', 'Day') },
+              { key: 'period', label: t('notifications.report.period', 'Period') },
               { key: 'triggered', label: t('notifications.report.triggered', 'Triggers recorded') },
               { key: 'deliveries', label: t('notifications.report.deliveries', 'Channel deliveries') },
             ]}
           >
             {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={report.daily ?? []}>
+                <BarChart data={timeline}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" />
+                  <XAxis dataKey="period" />
                   <YAxis allowDecimals={false} />
                   <Tooltip content={<ChartTooltip />} />
                   <ChartLegend />

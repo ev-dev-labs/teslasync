@@ -2,38 +2,52 @@
 
 Sidebar group **Tesla Physics**. In the app, expand this section in the left nav (or search `/explore`).
 
+The **Tesla Physics hub** at `/tesla-physics` leads to **15 individually lazy-loaded
+investigation pages** at `/tesla-physics/{option}`. Every option owns its measured
+summaries, interpretation, drilldowns, and missing-slice handling. The shared
+page shell explains requested versus recorded windows, row counts, availability,
+and caps. Large timestamp tables are **closed by default** and paginated on
+demand. Legacy `/tesla-only/*` bookmarks redirect to the matching canonical
+`/tesla-physics/*` page;
+Physics Ledger and Science Lab remain independent pages.
+
 | Screen | Path | What it does | When empty |
 | ------ | ---- | ------------ | ---------- |
-| Physics hub | `/tesla-only` | Tesla physics views Tesla app and TeslaMate cannot own. | Renders an empty state when no data is available — the page is not hidden. |
-| Physics Ledger | `/tesla-only/ledger` | VIN-scoped energy/force solver: predicted vs measured, unexplained residual, unknown budget. | Shows unknown honestly when signals are missing; never zero-fills. |
+| Physics hub | `/tesla-physics` | VIN-scoped source boundaries, trust warnings, and links to all 15 investigations. | Renders an empty state when no report is available. |
+| Physics Ledger | `/tesla-physics/ledger` | VIN-scoped energy/force solver: predicted vs measured, unexplained residual, unknown budget. | Shows unknown honestly when signals are missing; never zero-fills. |
 | Science Lab | `/science` | Seven- or 30-day evidence overview linked to rest-voltage/current-step observations, thermal fit diagnostics, matched weather drives, tire model sensitivity, and generated notebook methods. | Each of the five reports loads independently. Unsupported fits stay unknown; CIs and holdouts are shown only when computed, not implied. |
-| Three Clocks | `/tesla-only/clocks` | Event, ingest, and display time. Ingest stays unknown if not stored. | Renders an empty state when no data is available — the page is not hidden. |
-| Life Tape | `/tesla-only/life-tape` | Every second is Park, Neutral, Drive, Charge, or Unknown — not GPS. | Renders an empty state when no data is available — the page is not hidden. |
-| Contradiction Court | `/tesla-only/contradictions` | Gear=P with speed is a contradiction. Complete still latched is not. | Renders an empty state when no data is available — the page is not hidden. |
-| Trip-Meter Genealogy | `/tesla-only/meters` | Odometer and FSD trip meters. A drop is a reset. Null is not zero. | Renders an empty state when no data is available — the page is not hidden. |
-| Unknown OS | `/tesla-only/unknown` | Unknown hours are a budget, never a measured zero of missing physics. | Renders an empty state when no data is available — the page is not hidden. |
-| Car Kept Living | `/tesla-only/car-kept-living` | After MQTT or carbon loss: queued, replayed event time, never-received. | Renders an empty state when no data is available — the page is not hidden. |
-| Tesla-Language Logbook | `/tesla-only/logbook` | Park, Drive, Neutral, Charging, Complete, Disconnected — Tesla words. | Renders an empty state when no data is available — the page is not hidden. |
-| Firmware Epochs | `/tesla-only/firmware-epochs` | Each software version as this VIN physics baseline, not fleet proof. | Renders an empty state when no data is available — the page is not hidden. |
-| Charge-Port Court | `/tesla-only/charge-port` | Latch, door, pack current, and ChargeState as one evidence chain. | Renders an empty state when no data is available — the page is not hidden. |
-| Black Box 90s | `/tesla-only/black-box` | High-resolution samples in the 90s before Park, unplug, or a gap. | Renders an empty state when no data is available — the page is not hidden. |
-| Owner Dictionary | `/tesla-only/dictionary` | This car Complete-to-unplug, Park dwell, and unscheduled Complete. | Renders an empty state when no data is available — the page is not hidden. |
-| Physics Vault | `/tesla-only/vault` | Hashed session boundaries, unknown hours, firmware, etiquette dwells. | Renders an empty state when no data is available — the page is not hidden. |
-| Mode Laws | `/tesla-only/modes` | Valet, Service, Transport laws. Unknown mode stays unknown. | Renders an empty state when no data is available — the page is not hidden. |
-| Nervous System | `/tesla-only/nervous-system` | BMS, Gear, latch, and trip meters: alive, silent, or contradicting. | Renders an empty state when no data is available — the page is not hidden. |
-| Range Disagreement | `/tesla-only/range` | Rated, typical, ideal, and energy remaining. Never a true range. | Shows unknown/empty honestly when signals are missing. |
+| Three Clocks | `/tesla-physics/clocks` | Second-precision latest readings, paired ingest lag and gap distribution, six latest samples, a long-gap filter and paginated raw timestamps. | Missing ingest stays unknown. |
+| Life Tape | `/tesla-physics/life-tape` | State-duration and interval-count breakdown, classified/window share with overlap warning, longest interval, chronology and filterable raw intervals — not GPS. | Missing evidence stays unknown. |
+| Contradiction Court | `/tesla-physics/contradictions` | Backend episodes, per-kind episode/reading counts, observed bounds, kind/uncertainty filters and nearby charge-port context. | An episode is not proof of a distinct fault; individual source readings are not in this report. |
+| Trip-Meter Genealogy | `/tesla-physics/meters` | Current counters, observed drop sequence and firmware counter bounds, mode context and before/after drilldown. Null is not zero. | With no returned drops, still shows current counters and firmware evidence, not an invented continuous timeline. |
+| Unknown OS | `/tesla-physics/unknown` | Sampled share, uncovered share, per-signal budget breakdown and links to clock, broker and signal investigations. | Missing signals stay unknown. |
+| Car Kept Living | `/tesla-physics/car-kept-living` | MQTT, queue, replay, paired ingest lag, bounded-source availability and telemetry-gap context. | Unreported broker state stays unknown. |
+| Tesla-Language Logbook | `/tesla-physics/logbook` | First/latest historical observations, session boundaries, positive-ID links and kind-filtered narrative. | Synthetic live state is only a fallback. |
+| Firmware Epochs | `/tesla-physics/firmware-epochs` | Each version's observed bounds, counter changes, dwell availability and version filter, not fleet proof or FSD engagement. | Unknown bounds stay unknown. |
+| Charge-Port Court | `/tesla-physics/charge-port` | Latest state/current with gear, version, observed state changes, schedule context and filterable per-sample evidence. | Missing readings stay unknown. |
+| Black Box 90s | `/tesla-physics/black-box` | Latest selected trigger, 90-second window, frame changes, observed gears/firmware, source caps and optional frames. | Empty frames do not exclude an event. |
+| Owner Dictionary | `/tesla-physics/dictionary` | This car's Complete-to-unplug, Park dwell, source-dwell distribution and guarded quartile comparison. | Missing samples do not imply zero dwell. |
+| Physics Vault | `/tesla-physics/vault` | Hash/HMAC status, capped session boundaries and optional drive/charge links. | Hashing does not prove complete coverage. |
+| Mode Laws | `/tesla-physics/modes` | Valet, Service, Transport inference boundaries with separately returned counter and firmware context. | Unknown mode stays unknown; current modes do not prove past modes. |
+| Nervous System | `/tesla-physics/nervous-system` | Signal-status breakdown, non-alive details, status filter and exact-name Unknown OS budget cross-reference. | Silence is not zero or proof of a component fault. |
+| Range Disagreement | `/tesla-physics/range` | Rated, typical, ideal and energy remaining with spread and pairwise differences; not a true-range forecast. | Missing estimates remain unknown. |
 
 ## Following the evidence
 
-The hub now prioritizes sampled-window coverage, unknown hours, contradictions,
-meter drops, and non-alive signals. Open a finding to inspect its timestamps and
-then follow the related-evidence links on each view. Three Clocks exposes elapsed
-event time; Life Tape separates unknown intervals; meter genealogy shows the
-readings before and after drops; Life Tape and Contradiction Court can be
-filtered by state or finding without dropping the original evidence.
+The hub prioritizes sampled coverage, unknown hours, backend contradiction
+episodes and meter drops. Contradiction Court uses the backend's episode window and observation count;
+an episode is not a confirmed independent physical failure. The individual
+readings grouped by the backend are **not** included in the exclusive report.
+Three Clocks leads with second-precision timestamps, stored-ingest lag, gap
+distribution and a long-gap filter instead of a giant repeated minute-only
+table. Life Tape and Contradiction Court keep state/kind filters for their
+evidence. Meter readings have no continuous counter time series; reset pairs
+and firmware epoch counter bounds are the only historical meter comparisons,
+and a counter ratio cannot measure FSD engagement.
 Logbook and Vault session boundaries link to drive and charging details.
 Charge-port and Black Box views show current, schedule, and latch alongside
-state. Firmware epochs expose their observed
+state; recorded gear and firmware readings appear in both evidence tables
+(including their mobile views), and absent readings stay unknown. Firmware epochs expose their observed
 boundaries, while the Vault distinguishes a bare hash from an HMAC-backed
 certificate and shows its coverage window. Range Disagreement shows the spread
 of available estimates, **not** a prediction of actual range.
@@ -44,8 +58,18 @@ time with accepted telemetry, not completeness of every signal. A zero finding
 count only applies to the returned evidence. Per-signal unknown budgets overlap
 and must not be added. The Black Box captures the *latest selected trigger* and
 may have no frames within its 90-second interval. Logbook narrates session
-boundaries, or the latest state when no sessions exist; it is not a complete gear
-change feed. Follow the separate Physics Ledger and Science Lab for their
+boundaries alongside observed historical gear and charge-state changes. The first
+recorded value establishes observed state, not an exact transition time.
+Synthetic live state is excluded when recorded entries exist; it appears only
+as a fallback when none do. Historical signal entries have no session ID and
+do not link to a drive or charge. Gaps and unobserved changes remain unknown. The evidence
+boundaries panel lists requested and recorded timestamps, row counts,
+availability, and row/session cap warnings; it does not equate an empty row set
+with complete coverage. The hub calls out partial sources beside its summary;
+Black Box separately warns when its source or trigger-selection history is
+unavailable or capped. Vault separately warns when history, drive sessions,
+or charge sessions are capped: its hash attests to the returned boundaries,
+not completeness of the underlying history. Follow the separate Physics Ledger and Science Lab for their
 independent model and measurement evidence.
 
 ## Analysis boundaries

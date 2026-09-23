@@ -10,7 +10,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// BuildExclusiveReport derives every TeslaSync-only physics view from one frame set.
+// BuildExclusiveReport derives every Tesla Physics view from one frame set.
 func BuildExclusiveReport(
 	vehicleID int64,
 	frames []PhysicsFrame,
@@ -176,37 +176,49 @@ func classifyLife(frame PhysicsFrame, parkConfirmed bool) string {
 
 func BuildContradictionCourt(vehicleID int64, frames []PhysicsFrame) ContradictionCourt {
 	out := ContradictionCourt{VehicleID: vehicleID, Findings: []Contradiction{}, Honesty: contradictionHonesty}
+	active := make(map[string]int)
+	var previous time.Time
 	for _, frame := range frames {
+		if frame.Live {
+			continue
+		}
+		at := frame.At.UTC()
+		if !previous.IsZero() && at.Sub(previous) > unknownGap {
+			clear(active)
+		}
+		previous = at
 		gear := normalizeGear(frame.Gear)
 		charge := normalizeChargeState(frame.ChargeState)
-		speed := 0.0
-		if frame.SpeedMps != nil {
-			speed = *frame.SpeedMps
-		}
-		if gear == enums.GearPark && speed > movingSpeedMps {
+		present := make(map[string]bool, 3)
+		add := func(kind, detail string) {
+			present[kind] = true
+			if index, ok := active[kind]; ok {
+				finding := &out.Findings[index]
+				if at.After(finding.LastAt) {
+					finding.LastAt = at
+					finding.Observations++
+				}
+				return
+			}
+			active[kind] = len(out.Findings)
 			out.Findings = append(out.Findings, Contradiction{
-				At:     frame.At.UTC(),
-				Kind:   "park_with_speed",
-				Detail: "Gear=P with speed above walking pace",
+				At: at, LastAt: at, Observations: 1,
+				Kind: kind, Detail: detail,
 			})
+		}
+		if gear == enums.GearPark && frame.SpeedMps != nil && *frame.SpeedMps > movingSpeedMps {
+			add("park_with_speed", "Gear=P with speed above walking pace")
 		}
 		if charge == enums.ChargeStateDisconnected && latchEngaged(frame.Latch) {
-			out.Findings = append(out.Findings, Contradiction{
-				At:     frame.At.UTC(),
-				Kind:   "unplugged_latched",
-				Detail: "ChargeState=Disconnected while charge-port latch is engaged",
-			})
+			add("unplugged_latched", "ChargeState=Disconnected while charge-port latch is engaged")
 		}
 		if charge == enums.ChargeStateDisconnected && packDrawing(frame.PackCurrentA) {
-			out.Findings = append(out.Findings, Contradiction{
-				At:     frame.At.UTC(),
-				Kind:   "unplugged_with_current",
-				Detail: "ChargeState=Disconnected while pack current is not quiet",
-			})
+			add("unplugged_with_current", "ChargeState=Disconnected while pack current is not quiet")
 		}
-		if charge == enums.ChargeStateComplete && latchEngaged(frame.Latch) {
-			// Expected Tesla language: Complete is at limit, still plugged.
-			continue
+		for kind := range active {
+			if !present[kind] {
+				delete(active, kind)
+			}
 		}
 	}
 	return out
@@ -397,6 +409,28 @@ func BuildTeslaLogbook(vehicleID int64, drives, charges []SessionBoundary, frame
 			})
 		}
 	}
+	var priorGear, priorCharge string
+	for _, frame := range frames {
+		if frame.Live {
+			continue
+		}
+		gear := normalizeGear(frame.Gear)
+		if gear != "" && gear != priorGear {
+			out.Entries = append(out.Entries, LogbookEntry{
+				Word: teslaWord(classifyLife(PhysicsFrame{Gear: gear}, false)),
+				At:   frame.At.UTC(), Kind: "gear",
+			})
+			priorGear = gear
+		}
+		charge := normalizeChargeState(frame.ChargeState)
+		if charge != "" && charge != priorCharge {
+			out.Entries = append(out.Entries, LogbookEntry{
+				Word: chargeWord(charge),
+				At:   frame.At.UTC(), Kind: "charge_state",
+			})
+			priorCharge = charge
+		}
+	}
 	sort.SliceStable(out.Entries, func(i, j int) bool {
 		return out.Entries[i].At.Before(out.Entries[j].At)
 	})
@@ -406,6 +440,19 @@ func BuildTeslaLogbook(vehicleID int64, drives, charges []SessionBoundary, frame
 		out.Entries = append(out.Entries, LogbookEntry{Word: teslaWord(word), At: latest.At.UTC(), Kind: "live"})
 	}
 	return out
+}
+
+func chargeWord(state string) string {
+	switch state {
+	case enums.ChargeStateStarting:
+		return "Starting"
+	case enums.ChargeStateStopped:
+		return "Stopped"
+	case enums.ChargeStateNoPower:
+		return "No Power"
+	default:
+		return teslaWord(classifyLife(PhysicsFrame{ChargeState: state}, false))
+	}
 }
 
 func teslaWord(state string) string {
@@ -822,10 +869,12 @@ func sortFrames(frames []PhysicsFrame) []PhysicsFrame {
 
 func windowOf(frames []PhysicsFrame, now time.Time) (time.Time, time.Time) {
 	to := now.UTC()
-	if len(frames) == 0 {
-		return to.Add(-maxExclusiveLookback), to
+	for _, frame := range frames {
+		if !frame.Live {
+			return frame.At.UTC(), to
+		}
 	}
-	return frames[0].At.UTC(), to
+	return to.Add(-maxExclusiveLookback), to
 }
 
 func lastFrame(frames []PhysicsFrame) *PhysicsFrame {
@@ -837,8 +886,10 @@ func lastFrame(frames []PhysicsFrame) *PhysicsFrame {
 }
 
 func lastFrameTime(frames []PhysicsFrame) *time.Time {
-	if latest := lastFrame(frames); latest != nil {
-		return timePtr(latest.At)
+	for i := len(frames) - 1; i >= 0; i-- {
+		if !frames[i].Live {
+			return timePtr(frames[i].At)
+		}
 	}
 	return nil
 }
@@ -858,6 +909,8 @@ func packDrawing(current *float64) bool {
 func portEvidence(frame PhysicsFrame) PortEvidence {
 	return PortEvidence{
 		At:            frame.At.UTC(),
+		Gear:          normalizeGear(frame.Gear),
+		Firmware:      frame.Firmware,
 		Latch:         frame.Latch,
 		DoorOpen:      frame.DoorOpen,
 		PackCurrentA:  frame.PackCurrentA,

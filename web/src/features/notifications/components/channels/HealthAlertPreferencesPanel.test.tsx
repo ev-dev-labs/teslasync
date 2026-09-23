@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type {
@@ -13,7 +13,7 @@ const hooks = vi.hoisted(() => ({
   eventTypes: vi.fn(),
   preferences: vi.fn(),
   update: vi.fn(),
-  mutate: vi.fn(),
+  mutateAsync: vi.fn(),
   eventRefetch: vi.fn(),
   preferenceRefetch: vi.fn(),
 }));
@@ -109,12 +109,12 @@ function renderPanel(channels: NotificationChannel[], onAddChannel = vi.fn()) {
 }
 
 beforeEach(() => {
-  hooks.mutate.mockReset();
+  hooks.mutateAsync.mockReset().mockResolvedValue(undefined);
   hooks.eventRefetch.mockReset();
   hooks.preferenceRefetch.mockReset();
   hooks.eventTypes.mockReset().mockReturnValue(eventQuery());
   hooks.preferences.mockReset().mockReturnValue(preferenceQuery());
-  hooks.update.mockReset().mockReturnValue({ mutate: hooks.mutate });
+  hooks.update.mockReset().mockReturnValue({ mutateAsync: hooks.mutateAsync });
 });
 
 describe('HealthAlertPreferencesPanel', () => {
@@ -173,14 +173,65 @@ describe('HealthAlertPreferencesPanel', () => {
     );
   });
 
-  it('updates the selected channel with the stable snake_case event type', () => {
+  it('updates the selected channel with the stable snake_case event type', async () => {
     renderPanel([CHANNEL]);
 
     fireEvent.click(screen.getByRole('switch', { name: 'Fleet Telemetry outage' }));
-    expect(hooks.mutate).toHaveBeenCalledWith({
+    expect(hooks.mutateAsync).toHaveBeenCalledWith({
       channel_id: 7,
       event_type: 'system.telemetry.outage',
       enabled: false,
     });
+    await waitFor(() => expect(screen.queryByText('Saving…')).not.toBeInTheDocument());
+  });
+
+  it('scopes settings and counts to the chosen channel', async () => {
+    const disabledChannel = { ...CHANNEL, id: 8, name: 'Disabled Slack', enabled: false };
+    hooks.preferences.mockImplementation((channelId: number) => preferenceQuery({
+      data: channelId === 8
+        ? [{ id: 2, channel_id: 8, event_type: 'system.database.outage', enabled: false }]
+        : [],
+    }));
+    renderPanel([CHANNEL, disabledChannel]);
+    fireEvent.change(screen.getByLabelText('Delivery channel'), { target: { value: '8' } });
+
+    expect(hooks.preferences).toHaveBeenLastCalledWith(8);
+    expect(screen.getByText(/this channel is disabled/i)).toBeInTheDocument();
+    expect(screen.getByText('1 of 3 events enabled')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: 'Database outage' }));
+    expect(hooks.mutateAsync).toHaveBeenCalledWith({
+      channel_id: 8, event_type: 'system.database.outage', enabled: true,
+    });
+    await waitFor(() => expect(screen.queryByText('Saving…')).not.toBeInTheDocument());
+  });
+
+  it('filters the live catalog without changing stored preferences', async () => {
+    renderPanel([CHANNEL]);
+    fireEvent.change(screen.getByLabelText('Search components'), { target: { value: 'Database' } });
+    expect(screen.getByRole('region', { name: 'Component health alerts' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Component health alerts' })
+      .querySelectorAll('section[aria-label="Database"]')).toHaveLength(1);
+    await waitFor(() =>
+      expect(screen.queryByRole('switch', { name: 'Fleet Telemetry outage' })).not.toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Show'), { target: { value: 'disabled' } });
+    expect(screen.getByText('No components match your search or filter.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByRole('switch', { name: 'Fleet Telemetry outage' })).toBeInTheDocument();
+    expect(hooks.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('prevents duplicate writes while saving and shows a retryable failure', async () => {
+    let rejectSave: (error: Error) => void = () => {};
+    hooks.mutateAsync.mockImplementation(() => new Promise((_resolve, reject) => {
+      rejectSave = reject;
+    }));
+    renderPanel([CHANNEL]);
+    fireEvent.click(screen.getByRole('switch', { name: 'Fleet Telemetry outage' }));
+    expect(screen.getByRole('switch', { name: 'Fleet Telemetry outage' })).toBeDisabled();
+    expect(screen.getByLabelText('Delivery channel')).toBeDisabled();
+    rejectSave(new Error('connection lost'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this choice');
+    expect(screen.getByRole('switch', { name: 'Fleet Telemetry outage' })).not.toBeDisabled();
+    expect(hooks.mutateAsync).toHaveBeenCalledTimes(1);
   });
 });
