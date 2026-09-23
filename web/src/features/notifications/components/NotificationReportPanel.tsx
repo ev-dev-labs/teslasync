@@ -1,30 +1,17 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bar, BarChart, CartesianGrid, ChartContainer, ChartLegend, ChartTooltip, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { RangePicker } from '@/components/forms';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useNotificationReport } from '@/api/hooks/useNotifications';
 import type { NotificationReport } from '@/api/types';
 import { fmtInt } from '@/lib/numberFormat';
 
-function initialRange() {
-  const today = new Date();
-  const start = new Date(today);
-  start.setUTCDate(start.getUTCDate() - 29);
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: today.toISOString().slice(0, 10),
-  };
-}
-
 type Breakdown = NotificationReport['by_source'];
 
-export function NotificationReportPanel() {
+export function NotificationReportPanel({ from, to }: { from: string; to: string }) {
   const { t } = useTranslation();
-  const [range, setRange] = useState(initialRange);
-  const query = useNotificationReport(range.start, range.end);
+  const query = useNotificationReport(from, to);
   const report = query.data;
   const breakdowns: { key: string; title: string; rows: Breakdown }[] = [
     { key: 'source', title: t('notifications.report.sources', 'Trigger sources'), rows: report?.by_source ?? [] },
@@ -41,7 +28,6 @@ export function NotificationReportPanel() {
           <PanelTitle>{t('notifications.report.title', 'Notification activity')}</PanelTitle>
           <Text variant="caption">{t('notifications.report.description', 'Explore triggers and delivery outcomes across every notification source. Historical periods remain available.')}</Text>
         </div>
-        <RangePicker value={range} onChange={next => setRange(next)} scope="local" presetIds={['7d', '30d', '90d', 'all']} />
       </div>
 
       {query.isLoading && <div className="grid gap-3 sm:grid-cols-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}</div>}

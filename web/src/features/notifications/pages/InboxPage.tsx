@@ -17,6 +17,7 @@ import { typography } from '@/lib/tokens';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import {
   useAlertRules,
@@ -30,6 +31,7 @@ import { NotificationReportPanel } from '../components/NotificationReportPanel';
 export default function InboxPage() {
   const { t } = useTranslation();
   usePageTitle(t('notifications.inbox.title', 'Inbox'));
+  const { start: from, end: to } = useRangeState({ persistKey: 'notifications.inbox.range' });
 
   const { data: vehicles = [] } = useVehicles();
   const { data: rules = [] } = useAlertRules();
@@ -62,7 +64,7 @@ export default function InboxPage() {
       }
     >
       <FadeIn>
-        <NotificationReportPanel />
+        <NotificationReportPanel from={from} to={to} />
       </FadeIn>
       <FadeIn>
         <InboxSummary query={summaryQuery} />

@@ -16,9 +16,6 @@ vi.mock('@/components/charts', () => ({
   XAxis: () => null,
   YAxis: () => null,
 }));
-vi.mock('@/components/forms', () => ({
-  RangePicker: () => <div>Choose date range</div>,
-}));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
 }));
@@ -42,7 +39,7 @@ const report: NotificationReport = {
 };
 
 function renderPanel() {
-  return render(<MemoryRouter><NotificationReportPanel /></MemoryRouter>);
+  return render(<MemoryRouter><NotificationReportPanel from="2026-01-01" to="2026-01-30" /></MemoryRouter>);
 }
 
 beforeEach(() => {
@@ -52,6 +49,8 @@ beforeEach(() => {
 describe('NotificationReportPanel', () => {
   it('separates triggered events from multi-channel deliveries and shows each breakdown', () => {
     renderPanel();
+    expect(useReport).toHaveBeenCalledWith('2026-01-01', '2026-01-30');
+    expect(screen.queryByText('Choose date range')).not.toBeInTheDocument();
     expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
     expect(screen.getByText('Channel deliveries')).toBeInTheDocument();
     expect(screen.getByText('1.7')).toBeInTheDocument();

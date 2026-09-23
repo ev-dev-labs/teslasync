@@ -29,4 +29,10 @@ func TestReportSQLCountsCorrelatedTriggersOnly(t *testing.T) {
 			t.Fatalf("source classification missing %s", family)
 		}
 	}
+	// "unknown" is not a notification_channel_kind enum label; the JOIN
+	// fallback must operate on text even when there are no matching rows.
+	if !strings.Contains(reportSQL, "COALESCE(c.kind::text, 'unknown')") ||
+		strings.Contains(reportSQL, "COALESCE(c.kind, 'unknown')") {
+		t.Fatal("channel fallback must cast the enum to text")
+	}
 }

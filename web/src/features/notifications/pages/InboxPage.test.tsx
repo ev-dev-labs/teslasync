@@ -103,7 +103,9 @@ vi.mock('../components/InboxBody', () => ({
   ),
 }));
 vi.mock('../components/NotificationReportPanel', () => ({
-  NotificationReportPanel: () => <div data-testid="notification-report">Notification activity</div>,
+  NotificationReportPanel: ({ from, to }: { from: string; to: string }) => (
+    <div data-testid="notification-report">{`Notification activity ${from} ${to}`}</div>
+  ),
 }));
 
 import { ToastProvider } from '@/components/feedback/Toast';
@@ -150,13 +152,13 @@ const LOGS = [
 const VEHICLES = [{ id: 1 }, { id: 2 }] as unknown as Vehicle[];
 const RULES = [{ id: 10 }, { id: 11 }, { id: 12 }] as unknown as AlertRule[];
 
-function renderPage() {
+function renderPage(path = '/notifications/inbox') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/notifications/inbox']}>
+      <MemoryRouter initialEntries={[path]}>
         <ToastProvider>
           <InboxPage />
         </ToastProvider>
@@ -204,6 +206,13 @@ describe('InboxPage — page shell & composition', () => {
     expect(screen.getByTestId('inbox-body-archived')).toHaveTextContent('false');
     expect(screen.getByTestId('inbox-body-vehicles')).toHaveTextContent('2');
     expect(screen.getByTestId('inbox-body-rules')).toHaveTextContent('3');
+  });
+
+  it('passes the top date filter to notification activity', () => {
+    renderPage('/notifications/inbox?from=2026-01-01&to=2026-01-30');
+    expect(screen.getByTestId('notification-report')).toHaveTextContent(
+      'Notification activity 2026-01-01 2026-01-30',
+    );
   });
 });
 

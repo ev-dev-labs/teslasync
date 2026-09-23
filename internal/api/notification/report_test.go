@@ -71,10 +71,20 @@ func TestGetReportDefaultThirtyDays(t *testing.T) {
 	}
 }
 
+func TestGetReportAllTimeRange(t *testing.T) {
+	store := &fakeReportStore{}
+	rec := httptest.NewRecorder()
+	(&Handler{report: store}).GetReport(rec, httptest.NewRequest(http.MethodGet,
+		"/api/v1/notifications/report?from=2015-01-01&to=2026-09-23", nil))
+	if rec.Code != http.StatusOK || store.from.Format(time.DateOnly) != "2015-01-01" {
+		t.Fatalf("all-time range: status %d, from %v", rec.Code, store.from)
+	}
+}
+
 func TestGetReportRejectsInvalidRanges(t *testing.T) {
 	for _, query := range []string{
 		"?from=2026-02-30", "?to=2020-01-01&from=2020-01-02",
-		"?from=2000-01-01&to=2025-01-01", "?from=2026-01-01T00:00:00Z",
+		"?from=1900-01-01&to=2025-01-01", "?from=2026-01-01T00:00:00Z",
 	} {
 		store := &fakeReportStore{}
 		rec := httptest.NewRecorder()

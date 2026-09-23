@@ -70,8 +70,8 @@ WITH deliveries AS (
   UNION ALL SELECT 'source', source, '', COUNT(*)::bigint FROM classified GROUP BY source
   UNION ALL SELECT 'type', event_type, '', COUNT(*)::bigint FROM classified GROUP BY event_type
   UNION ALL SELECT 'severity', severity, '', COUNT(*)::bigint FROM classified GROUP BY severity
-  UNION ALL SELECT 'channel', COALESCE(c.kind, 'unknown'), '', COUNT(*)::bigint
-    FROM deliveries d LEFT JOIN notification_channels c ON c.id = d.channel_id GROUP BY COALESCE(c.kind, 'unknown')
+  UNION ALL SELECT 'channel', COALESCE(c.kind::text, 'unknown'), '', COUNT(*)::bigint
+    FROM deliveries d LEFT JOIN notification_channels c ON c.id = d.channel_id GROUP BY COALESCE(c.kind::text, 'unknown')
   UNION ALL SELECT 'status', status, '', COUNT(*)::bigint FROM deliveries GROUP BY status
   UNION ALL SELECT 'daily_triggered', '', to_char(fired_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), COUNT(*)::bigint
     FROM classified GROUP BY 3

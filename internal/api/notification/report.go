@@ -37,8 +37,8 @@ func (h *Handler) GetReport(w http.ResponseWriter, r *http.Request) {
 		}
 		to = date
 	}
-	if to.Before(from) || to.Sub(from).Hours() >= 24*3660 {
-		httpx.WriteError(w, http.StatusBadRequest, "date range must be ordered and at most 3660 days")
+	if to.Before(from) || to.Sub(from).Hours() >= 24*18263 {
+		httpx.WriteError(w, http.StatusBadRequest, "date range must be ordered and at most 50 years")
 		return
 	}
 	result, err := h.report.GetReport(ctx, from, to.AddDate(0, 0, 1))
