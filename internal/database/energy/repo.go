@@ -42,6 +42,13 @@ const (
 		ORDER BY created_at DESC
 		LIMIT $2`
 
+	commandLogHistoryRangeSQL = `SELECT id, vehicle_id, command, params, status, error, created_at
+		FROM command_logs
+		WHERE vehicle_id = $1 AND created_at >= $2 AND created_at < $3
+		  AND ($4::timestamptz IS NULL OR (created_at, id) < ($4, $5))
+		ORDER BY created_at DESC, id DESC
+		LIMIT $6`
+
 	// Migration 000188 made cagg_fleet_stats canonical SI: energy in Wh and
 	// distance in meters. Keep those units at this boundary so the API/FE
 	// display layer owns presentation conversion.
@@ -73,7 +80,7 @@ const (
 // /commands history endpoint.
 const (
 	commandLogHistoryDefaultLimit = 50
-	commandLogHistoryMaxLimit     = 100
+	commandLogHistoryMaxLimit     = 1000
 )
 
 // CommandLogRepo provides command log data access.
@@ -144,6 +151,31 @@ func (r *CommandLogRepo) GetHistoryByVehicle(ctx context.Context, vehicleID int6
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate command logs: %w", err)
+	}
+	return results, nil
+}
+
+// GetHistoryByVehicleRange pages every attempt within a UTC half-open window.
+// A (created_at, id) cursor keeps pagination stable as newer commands arrive.
+func (r *CommandLogRepo) GetHistoryByVehicleRange(
+	ctx context.Context, vehicleID int64, from, until time.Time, before *time.Time, beforeID int64, limit int,
+) ([]*vehiclemodel.CommandLog, error) {
+	limit = clampLimit(limit, commandLogHistoryDefaultLimit, commandLogHistoryMaxLimit)
+	rows, err := r.db.Pool.Query(ctx, commandLogHistoryRangeSQL, vehicleID, from.UTC(), until.UTC(), before, beforeID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query ranged command log history: %w", err)
+	}
+	defer rows.Close()
+	var results []*vehiclemodel.CommandLog
+	for rows.Next() {
+		cl := &vehiclemodel.CommandLog{}
+		if err := rows.Scan(&cl.ID, &cl.VehicleID, &cl.Command, &cl.Params, &cl.Status, &cl.Error, &cl.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan ranged command log: %w", err)
+		}
+		results = append(results, cl)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ranged command logs: %w", err)
 	}
 	return results, nil
 }

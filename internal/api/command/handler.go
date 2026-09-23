@@ -3,8 +3,10 @@ package command
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -19,6 +21,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // CommandHandler handles vehicle command HTTP requests.
@@ -322,8 +326,11 @@ func (h *CommandHandler) LatestCommands(w http.ResponseWriter, r *http.Request) 
 	httpx.WriteJSON(w, http.StatusOK, items)
 }
 
-// CommandHistory returns recent command logs for a vehicle.
+// CommandHistory returns recent command logs, or cursor-paged attempts in a
+// requested UTC calendar window for complete reliability analysis.
 func (h *CommandHandler) CommandHistory(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "commands.history")
+	defer span.End()
 	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
@@ -337,9 +344,29 @@ func (h *CommandHandler) CommandHistory(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	items, err := h.commandRepo.GetHistoryByVehicle(r.Context(), vehicleID, limit)
+	var items []*vehiclemodel.CommandLog
+	q := r.URL.Query()
+	if q.Has("from") || q.Has("to") {
+		from, until, before, beforeID, scopeErr := parseCommandHistoryWindow(
+			q.Get("from"), q.Get("to"), q.Get("before_created_at"), q.Get("before_id"),
+		)
+		if scopeErr != nil {
+			httpx.WriteError(w, http.StatusBadRequest, scopeErr.Error())
+			return
+		}
+		items, err = h.commandRepo.GetHistoryByVehicleRange(ctx, vehicleID, from, until, before, beforeID, limit)
+	} else {
+		if q.Has("before_created_at") || q.Has("before_id") {
+			httpx.WriteError(w, http.StatusBadRequest, "command cursor requires from and to")
+			return
+		}
+		items, err = h.commandRepo.GetHistoryByVehicle(ctx, vehicleID, limit)
+	}
 	if err != nil {
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get command history")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "command history failed")
+		log.Ctx(ctx).Error().Err(err).Int64("vehicle_id", vehicleID).
+			Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to get command history")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch command history")
 		return
 	}
@@ -347,4 +374,33 @@ func (h *CommandHandler) CommandHistory(w http.ResponseWriter, r *http.Request) 
 		items = []*vehiclemodel.CommandLog{}
 	}
 	httpx.WriteJSON(w, http.StatusOK, items)
+}
+
+func parseCommandHistoryWindow(fromRaw, toRaw, beforeRaw, idRaw string) (time.Time, time.Time, *time.Time, int64, error) {
+	from, err := time.Parse(time.DateOnly, fromRaw)
+	if err != nil || from.Format(time.DateOnly) != fromRaw {
+		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("from must be YYYY-MM-DD")
+	}
+	to, err := time.Parse(time.DateOnly, toRaw)
+	if err != nil || to.Format(time.DateOnly) != toRaw {
+		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("to must be YYYY-MM-DD")
+	}
+	if to.Before(from) || to.Sub(from).Hours() >= 24*18263 {
+		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("date range must be ordered and at most 50 years")
+	}
+	if beforeRaw == "" && idRaw == "" {
+		return from, to.AddDate(0, 0, 1), nil, 0, nil
+	}
+	if beforeRaw == "" || idRaw == "" {
+		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("before_created_at and before_id must be provided together")
+	}
+	before, err := time.Parse(time.RFC3339Nano, beforeRaw)
+	if err != nil {
+		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("invalid before_created_at: %w", err)
+	}
+	id, err := strconv.ParseInt(idRaw, 10, 64)
+	if err != nil || id <= 0 {
+		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("before_id must be a positive integer")
+	}
+	return from, to.AddDate(0, 0, 1), &before, id, nil
 }

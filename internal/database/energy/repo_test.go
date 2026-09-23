@@ -165,6 +165,14 @@ func TestCommandLogSQL_Shape(t *testing.T) {
 	if !strings.Contains(commandLogHistorySQL, "LIMIT") {
 		t.Error("commandLogHistorySQL must be LIMIT-bounded")
 	}
+	for _, fragment := range []string{
+		"vehicle_id = $1", "created_at >= $2", "created_at < $3",
+		"(created_at, id) < ($4, $5)", "ORDER BY created_at DESC, id DESC", "LIMIT $6",
+	} {
+		if !strings.Contains(commandLogHistoryRangeSQL, fragment) {
+			t.Errorf("ranged command history missing %q", fragment)
+		}
+	}
 }
 
 // TestEnergyStatsSQL_Shape pins the SI-canonical fleet-stats queries.

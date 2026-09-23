@@ -27,6 +27,8 @@ function vehicleKeyPart(vehicleId: string | number | undefined): string | undefi
 export const commandKeys = {
   history: (vehicleId: string | number | undefined) =>
     ['command-history', vehicleKeyPart(vehicleId)] as const,
+  reliability: (vehicleId: string | number | undefined, from: string, to: string) =>
+    ['command-history', vehicleKeyPart(vehicleId), 'reliability', from, to] as const,
   latest: (vehicleId: string | number | undefined) =>
     ['command-latest', vehicleKeyPart(vehicleId)] as const,
 };
@@ -47,6 +49,43 @@ export function useCommandHistory(vehicleId: string | number | undefined) {
       return data ?? [];
     },
     enabled: !!vehicleId,
+    staleTime: STALE_TIMES.QUICK,
+  });
+}
+
+/** Every command attempt in the selected window, using a stable log cursor. */
+export function useCommandReliabilityHistory(
+  vehicleId: string | number | undefined,
+  from: string,
+  to: string,
+) {
+  return useQuery({
+    queryKey: commandKeys.reliability(vehicleId, from, to),
+    queryFn: async ({ signal }) => {
+      const entries: CommandLogEntry[] = [];
+      let cursor: Pick<CommandLogEntry, 'created_at' | 'id'> | undefined;
+      for (;;) {
+        const params = new URLSearchParams({ from, to, limit: '1000' });
+        if (cursor) {
+          params.set('before_created_at', cursor.created_at);
+          params.set('before_id', String(cursor.id));
+        }
+        const page = await request<CommandLogEntry[]>(
+          `/vehicles/${encodeURIComponent(String(vehicleId))}/commands/history?${params}`,
+          { signal },
+        );
+        if (!Array.isArray(page)) throw new Error('Invalid command history response');
+        entries.push(...page);
+        if (page.length < 1000) return entries;
+        const last = page[page.length - 1]!;
+        if (!last.created_at || !Number.isSafeInteger(last.id) || last.id <= 0 ||
+            (cursor && cursor.created_at === last.created_at && cursor.id === last.id)) {
+          throw new Error('Command history cursor did not advance');
+        }
+        cursor = { created_at: last.created_at, id: last.id };
+      }
+    },
+    enabled: !!vehicleId && !!from && !!to,
     staleTime: STALE_TIMES.QUICK,
   });
 }
