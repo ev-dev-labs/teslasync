@@ -2,6 +2,66 @@
 # Source: slo/catalog.yaml
 # Multi-window multi-burn-rate per Google SRE Workbook ch. 5.
 groups:
+  - name: slo_tesla_usage_availability_burn
+    rules:
+      - alert: SLOTeslaUsageAvailabilityFastBurn
+        expr: "(1 - slo:tesla_usage_availability:ratio_rate1h) > 0.072000 and (1 - slo:tesla_usage_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "tesla_usage_availability"
+          owner: "platform"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO tesla_usage_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"tesla_usage_availability\" (objective 99.5%, owner platform) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOTeslaUsageAvailabilitySlowBurn
+        expr: "(1 - slo:tesla_usage_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "tesla_usage_availability"
+          owner: "platform"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO tesla_usage_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"tesla_usage_availability\" (objective 99.5%, owner platform) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_tesla_usage_history_availability_burn
+    rules:
+      - alert: SLOTeslaUsageHistoryAvailabilityFastBurn
+        expr: "(1 - slo:tesla_usage_history_availability:ratio_rate1h) > 0.072000 and (1 - slo:tesla_usage_history_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "tesla_usage_history_availability"
+          owner: "platform"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO tesla_usage_history_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"tesla_usage_history_availability\" (objective 99.5%, owner platform) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOTeslaUsageHistoryAvailabilitySlowBurn
+        expr: "(1 - slo:tesla_usage_history_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage/history\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage/history\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage/history\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage/history\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "tesla_usage_history_availability"
+          owner: "platform"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO tesla_usage_history_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"tesla_usage_history_availability\" (objective 99.5%, owner platform) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
   - name: slo_alert_packs_availability_burn
     rules:
       - alert: SLOAlertPacksAvailabilityFastBurn

@@ -179,6 +179,7 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
       '/notifications/channels',
       '/security-access',
       '/system-status',
+      '/tesla-api-usage',
     ],
   },
   {

@@ -4353,7 +4353,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/auth-mode", systemAuthModeHandler.ServeHTTP)
 
-			r.Get("/api-usage", APIUsageHandler(db))
+			r.Get("/api-usage", NewTeslaUsageHandler(db).Get)
+			r.Get("/api-usage/history", NewTeslaUsageHandler(db).History)
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
 			r.Get("/backup/stats", backupHandler.BackupStats)

@@ -1637,12 +1637,37 @@ export interface AuditLog {
 // === System / Admin ===
 
 export interface APIUsage {
-  total_requests: number
-  skipped_polls: number
-  estimated_cost: number
-  cost_per_request: number
-  monthly_credit: number
-  estimated_remaining: number
+  current: TeslaUsageCycle
+  history: TeslaUsageCycle[]
+  rate_source: string
+  disclaimer: string
+}
+
+export interface TeslaUsageCycle {
+  start: string
+  end: string
+  signals: number
+  commands: number
+  data_requests: number
+  wakes: number
+  estimated_usd: number
+}
+
+export interface TeslaUsagePoint {
+  bucket_start: string
+  signals: number
+  commands: number
+  data_requests: number
+  wakes: number
+  estimated_usd: number
+}
+
+export interface TeslaUsageSeries {
+  start: string
+  end: string
+  bucket: 'day' | 'week'
+  total: TeslaUsageCycle
+  points: TeslaUsagePoint[]
 }
 
 export interface CompressionStats {

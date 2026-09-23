@@ -399,3 +399,16 @@ migrations:
     reversible: true
     reviewed_by: "@Copilot"
     reviewed_on: "2026-09-18"
+
+  - version: 247
+    name: tesla_stream_usage
+    forward_compatible: true
+    forward_compatibility_notes: New stream usage evidence table; existing service/ts audit index reused. Removes automatic API log chunk expiry to preserve Tesla history.
+    rollback_notes: Leave applied during binary rollback to preserve accumulated evidence. Down drops stream evidence and restores 365-day log expiry; only run with explicit approval.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Indexes only the new empty table; retention policy removal is metadata-only.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-22"

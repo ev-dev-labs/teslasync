@@ -243,6 +243,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: "/tco", name: "TrueCostOwnership", label: "True Cost Ownership", i18nKey: "routes.trueCostOwnership" },
   { path: "/temperature-impact", name: "TemperatureImpact", label: "Temperature Impact", i18nKey: "routes.temperatureImpact" },
   { path: "/tesla-account", name: "TeslaAccount", label: "Tesla Account", i18nKey: "routes.teslaAccount" },
+  { path: "/tesla-api-usage", name: "TeslaApiUsage", label: "Tesla Api Usage", i18nKey: "routes.teslaApiUsage" },
   { path: "/tesla-charging-history", name: "TeslaChargingHistory", label: "Tesla Charging History", i18nKey: "routes.teslaChargingHistory" },
   { path: "/tesla-charging-sessions", name: "TeslaChargingSessions", label: "Tesla Charging Sessions", i18nKey: "routes.teslaChargingSessions" },
   { path: "/tesla-features", name: "TeslaFeatureFlags", label: "Tesla Feature Flags", i18nKey: "routes.teslaFeatureFlags" },

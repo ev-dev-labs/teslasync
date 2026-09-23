@@ -136,8 +136,8 @@ vi.mock('../components/status', () => ({
   TeslaAuthCard: ({ authenticated }: { authenticated?: boolean }) => (
     <div data-testid="tesla-auth-card">auth:{String(authenticated)}</div>
   ),
-  TeslaApiUsageCard: ({ apiUsage }: { apiUsage?: { estimated_cost?: number } }) => (
-    <div data-testid="tesla-api-card">{apiUsage ? `cost:${apiUsage.estimated_cost}` : 'no-usage'}</div>
+  TeslaApiUsageCard: ({ apiUsage }: { apiUsage?: { current?: { estimated_usd: number } } }) => (
+    <div data-testid="tesla-api-card">{apiUsage ? `cost:${apiUsage.current?.estimated_usd}` : 'no-usage'}</div>
   ),
   TelemetryPipelineCard: ({ positionCount }: { positionCount?: number }) => (
     <div data-testid="telemetry-card">positions:{positionCount}</div>
@@ -257,12 +257,11 @@ function workersHealth(over: Record<string, unknown> = {}) {
 }
 function apiUsage(over: Record<string, unknown> = {}) {
   return {
-    total_requests: 100,
-    skipped_polls: 5,
-    estimated_cost: 5,
-    cost_per_request: 0.01,
-    monthly_credit: 10,
-    estimated_remaining: 5,
+    current: { start: '2026-09-01T00:00:00Z', end: '2026-10-01T00:00:00Z',
+      signals: 0, commands: 0, data_requests: 0, wakes: 0, estimated_usd: 5 },
+    history: [],
+    rate_source: 'https://developer.tesla.com/docs/fleet-api#pricing',
+    disclaimer: 'Not an invoice.',
     ...over,
   }
 }
@@ -510,7 +509,7 @@ describe('SystemStatusPage — operator action items', () => {
      
     mockMaintenance.mockReturnValue(q(maintenance({ mode: 'maintenance', maintenance_message: 'Upgrading DB' })) as any)
     inline['update-check'] = updateCheck({ update_available: true, current: '1.2.3', latest: '1.3.0' })
-    inline['api-usage'] = apiUsage({ estimated_cost: 15, monthly_credit: 10 })
+    inline['api-usage'] = apiUsage({ current: { ...apiUsage().current, estimated_usd: 15 } })
     inline.workers = workersHealth({
       total: 3,
       healthy_count: 1,
@@ -542,9 +541,7 @@ describe('SystemStatusPage — operator action items', () => {
     expect(a.getByText('Update available — v1.3.0')).toBeInTheDocument()
     expect(a.getByText('Tesla token expires in 3 day(s)')).toBeInTheDocument()
     expect(a.getByText('Last backup is 10 days old')).toBeInTheDocument()
-    expect(
-      a.getByText('Tesla API estimated cost $15.00 exceeds $10.00 monthly credit'),
-    ).toBeInTheDocument()
+    expect(a.queryByText(/Tesla API estimated cost/)).not.toBeInTheDocument()
     expect(a.getByText('2 of 3 workers unhealthy')).toBeInTheDocument()
     expect(a.getByText('export, geocode')).toBeInTheDocument()
   })

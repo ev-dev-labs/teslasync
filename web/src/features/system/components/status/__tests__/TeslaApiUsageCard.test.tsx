@@ -1,144 +1,56 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-
+import { describe, expect, it, vi } from 'vitest'
 import { TeslaApiUsageCard } from '../TeslaApiUsageCard'
 import type { APIUsage } from '@/api/types'
-import type { APICallLogStats } from '@/types/admin'
 
 vi.mock('@/hooks/useFormatting', () => ({
-  useFormatting: () => ({
-    formatCurrency: (amount: number, decimals = 2) =>
-      `$${Number(amount).toFixed(decimals)}`,
-    formatEnergyCost: (kwh: number) => `$${(kwh * 0.12).toFixed(2)}`,
-    currencySymbol: '$',
-    costPerKwh: 0.12,
-    costPerDistanceUnit: () => null,
-    estimateGasCost: () => null,
-  }),
+  useFormatting: () => ({ formatCurrency: (value: number) => `$${value.toFixed(2)}` }),
 }))
 
-const mockLogStats: { data: APICallLogStats | undefined } = { data: undefined }
-
-vi.mock('@/api/hooks/useAdmin', () => ({
-  useApiLogStats: () => ({ data: mockLogStats.data }),
-}))
-
-const NOW = Date.parse('2025-01-15T12:00:00Z')
-
-function withRouter(ui: React.ReactNode) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>)
+const usage: APIUsage = {
+  current: {
+    start: '2026-09-01T00:00:00Z', end: '2026-10-01T00:00:00Z',
+    signals: 150000, commands: 1000, data_requests: 500, wakes: 50,
+    estimated_usd: 4,
+  },
+  history: [{
+    start: '2026-08-02T00:00:00Z', end: '2026-09-01T00:00:00Z',
+    signals: 0, commands: 0, data_requests: 0, wakes: 0, estimated_usd: 0,
+  }],
+  rate_source: 'https://developer.tesla.com/docs/fleet-api#pricing',
+  disclaimer: 'Not an invoice.',
 }
+const renderCard = (value?: APIUsage, props: { loading?: boolean; error?: Error } = {}) =>
+  render(<MemoryRouter><TeslaApiUsageCard apiUsage={value} now={Date.now()} {...props} /></MemoryRouter>)
 
-function makeUsage(overrides: Partial<APIUsage> = {}): APIUsage {
-  return {
-    total_requests: 39436,
-    skipped_polls: 0,
-    estimated_cost: 87.55,
-    monthly_credit: 10,
-    cost_per_request: 0.00222,
-    estimated_remaining: 0,
-    ...overrides,
-  }
-}
-
-function makeLogStats(overrides: Partial<APICallLogStats> = {}): APICallLogStats {
-  return {
-    totalCalls: 39436,
-    errorRate: 1.2, // backend returns this as a percentage already
-    avgDurationMs: 184,
-    last24h: 2800,
-    errorCount: 470,
-    by_method: { GET: 30000, POST: 9436 },
-    by_service: {
-      // camelCaseKeys may also add aliases like teslaFleet — dedup test below covers it
-      tesla_fleet: 28000,
-      tesla_streaming: 11000,
-    },
-    ...overrides,
-  }
-}
-
-describe('TeslaApiUsageCard', () => {
-  beforeEach(() => {
-    mockLogStats.data = undefined
+describe('Tesla Fleet usage estimate', () => {
+  it('handles loading, error and missing evidence separately', () => {
+    const { rerender } = renderCard(undefined, { loading: true })
+    expect(screen.getByText(/Loading Tesla usage/)).toBeInTheDocument()
+    rerender(<MemoryRouter><TeslaApiUsageCard apiUsage={undefined} now={0} error={new Error('down')} /></MemoryRouter>)
+    expect(screen.getByText(/could not be loaded/)).toBeInTheDocument()
+    rerender(<MemoryRouter><TeslaApiUsageCard apiUsage={undefined} now={0} /></MemoryRouter>)
+    expect(screen.getByText(/not available yet/)).toBeInTheDocument()
   })
-
-  it('shows a no-data placeholder when apiUsage is undefined', () => {
-    withRouter(<TeslaApiUsageCard apiUsage={undefined} now={NOW} />)
-    expect(screen.getByText(/Tesla API usage data is not available/)).toBeInTheDocument()
+  it('shows four billable categories and retained zero-cost history without claiming a bill', () => {
+    renderCard(usage)
+    expect(screen.getByText('$4.00')).toBeInTheDocument()
+    expect(screen.getByText('Streaming signals')).toBeInTheDocument()
+    expect(screen.getByText('Commands · 1,000 / $1')).toBeInTheDocument()
+    expect(screen.getByText('Data requests · 500 / $1')).toBeInTheDocument()
+    expect(screen.getByText('Wakes · 50 / $1')).toBeInTheDocument()
+    expect(screen.getByText('$0.00')).toBeInTheDocument()
+    expect(screen.getByText(/not a Tesla invoice/)).toBeInTheDocument()
+    expect(screen.queryByText(/monthly credit/)).not.toBeInTheDocument()
   })
-
-  it('renders the budget progress bar with the correct percentage', () => {
-    mockLogStats.data = makeLogStats()
-    withRouter(<TeslaApiUsageCard apiUsage={makeUsage()} now={NOW} />)
-    const bar = screen.getByRole('progressbar', { name: /budget used/i })
-    // 87.55 / 10 = 875.5%, but JS float math yields ~875.4999… → rounds to 875
-    expect(bar).toHaveAttribute('aria-valuenow', '875')
-    expect(screen.getByText(/875% of monthly credit/)).toBeInTheDocument()
-  })
-
-  it('displays the over-budget call-out and computes the overage', () => {
-    mockLogStats.data = makeLogStats()
-    withRouter(<TeslaApiUsageCard apiUsage={makeUsage()} now={NOW} />)
-    expect(screen.getByText(/Over monthly credit/)).toBeInTheDocument()
-    expect(screen.getByText(/exceeded the \$10\.00 monthly credit by \$77\.55/)).toBeInTheDocument()
-  })
-
-  it('renders the days-elapsed / reset countdown', () => {
-    mockLogStats.data = makeLogStats()
-    withRouter(<TeslaApiUsageCard apiUsage={makeUsage()} now={NOW} />)
-    // Jan 15 → day 15 of 31, resets in 16 days
-    expect(screen.getByText(/Day 15 of 31/)).toBeInTheDocument()
-    expect(screen.getByText(/resets in 16 days/)).toBeInTheDocument()
-  })
-
-  it('lists top services and method splits when log stats are available', () => {
-    mockLogStats.data = makeLogStats()
-    withRouter(<TeslaApiUsageCard apiUsage={makeUsage()} now={NOW} />)
-    expect(screen.getByText('tesla_fleet')).toBeInTheDocument()
-    expect(screen.getByText('tesla_streaming')).toBeInTheDocument()
-    expect(screen.getByText('GET')).toBeInTheDocument()
-    expect(screen.getByText('POST')).toBeInTheDocument()
-  })
-
-  it('formats latency, error rate, and 24h volume', () => {
-    mockLogStats.data = makeLogStats({ avgDurationMs: 184.7, errorRate: 7.0, errorCount: 200, last24h: 2800 })
-    withRouter(<TeslaApiUsageCard apiUsage={makeUsage()} now={NOW} />)
-    expect(screen.getByText('185 ms')).toBeInTheDocument()
-    // 7.0% triggers red severity
-    expect(screen.getByText(/7\.0%/)).toBeInTheDocument()
-    expect(screen.getByText('2,800')).toBeInTheDocument()
-  })
-
-  it('dedupes camelCase aliases that camelCaseKeys() injects into nested maps', () => {
-    mockLogStats.data = makeLogStats({
-      by_service: {
-        tesla_fleet: 28000,
-        teslaFleet: 28000, // alias injected by camelCaseKeys
-        tesla_streaming: 11000,
-        teslaStreaming: 11000, // alias
-      },
-    })
-    withRouter(<TeslaApiUsageCard apiUsage={makeUsage()} now={NOW} />)
-    // Each service should appear exactly once
-    expect(screen.getAllByText('tesla_fleet')).toHaveLength(1)
-    expect(screen.getAllByText('tesla_streaming')).toHaveLength(1)
-    expect(screen.queryByText('teslaFleet')).not.toBeInTheDocument()
-    expect(screen.queryByText('teslaStreaming')).not.toBeInTheDocument()
-  })
-
-  it('renders both footer links', () => {
-    mockLogStats.data = makeLogStats()
-    withRouter(<TeslaApiUsageCard apiUsage={makeUsage()} now={NOW} />)
-    expect(screen.getByRole('link', { name: /Open API Logs/ })).toHaveAttribute('href', '/api-logs')
-    expect(screen.getByRole('link', { name: /Tesla account/ })).toHaveAttribute('href', '/tesla-account')
-  })
-
-  it('renders without log stats — falls back to em-dashes for missing fields', () => {
-    mockLogStats.data = undefined
-    withRouter(<TeslaApiUsageCard apiUsage={makeUsage({ estimated_cost: 5, total_requests: 1000 })} now={NOW} />)
-    const dashes = screen.getAllByText('—')
-    expect(dashes.length).toBeGreaterThanOrEqual(2)
+  it('keeps status concise and links to the dedicated page, including when usage is unavailable', () => {
+    const { rerender } = render(<MemoryRouter><TeslaApiUsageCard apiUsage={usage} now={0} compact /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: 'Explore Tesla API usage' })).toHaveAttribute('href', '/tesla-api-usage')
+    expect(screen.queryByText('Prior 30-day cycles')).not.toBeInTheDocument()
+    expect(screen.getByText(/not a Tesla invoice/)).toBeInTheDocument()
+    rerender(<MemoryRouter><TeslaApiUsageCard apiUsage={undefined} now={0} compact error={new Error('offline')} /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: 'Explore Tesla API usage' })).toHaveAttribute('href', '/tesla-api-usage')
+    expect(screen.getByText(/could not be loaded/)).toBeInTheDocument()
   })
 })

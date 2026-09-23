@@ -11,6 +11,7 @@ export { BackgroundWorkersCard } from './BackgroundWorkersCard';
 export { BackupActionsCard } from './BackupActionsCard';
 export { TeslaAuthCard } from './TeslaAuthCard';
 export { TeslaApiUsageCard } from './TeslaApiUsageCard';
+export { TeslaApiUsageHistory } from './TeslaApiUsageHistory';
 export { TelemetryPipelineCard } from './TelemetryPipelineCard';
 export { UpdateAvailableCallout } from './UpdateAvailableCallout';
 export { StatusPageSkeleton } from './StatusPageSkeleton';

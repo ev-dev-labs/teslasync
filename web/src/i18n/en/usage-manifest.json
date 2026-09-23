@@ -1,5 +1,6 @@
 {
   "namespaceToBundle": {
+    "teslaUsage": "system",
     "alertPacks": "notifications",
     "density": "shell",
     "honesty": "shell",
@@ -603,6 +604,20 @@
     "science": "science"
   },
   "bundles": {
+    "system": [
+      "chatbot",
+      "commandHistory",
+      "dataExport",
+      "dataRepair",
+      "dbHealth",
+      "debugger",
+      "incidentTimeline",
+      "roadmap",
+      "statusApi",
+      "system",
+      "teslaAccount",
+      "teslaUsage"
+    ],
     "notifications": [
       "alertPacks",
       "alertRules",
@@ -1183,19 +1198,6 @@
       "rateLimitStatus",
       "redis",
       "region"
-    ],
-    "system": [
-      "chatbot",
-      "commandHistory",
-      "dataExport",
-      "dataRepair",
-      "dbHealth",
-      "debugger",
-      "incidentTimeline",
-      "roadmap",
-      "statusApi",
-      "system",
-      "teslaAccount"
     ],
     "automations": [
       "automationList",
@@ -2297,6 +2299,7 @@
     "routes.tariffLab",
     "routes.temperatureImpact",
     "routes.teslaAccount",
+    "routes.teslaApiUsage",
     "routes.teslaChargingHistory",
     "routes.teslaChargingSessions",
     "routes.teslaFeatureFlags",
@@ -2961,6 +2964,7 @@
     "workspaceContext"
   ],
   "namespaceFallbackBundles": {
+    "teslaUsage": "system",
     "alertPacks": "notifications",
     "density": "detail-density",
     "honesty": "detail-honesty",
@@ -4415,6 +4419,7 @@
     "routes.tariffLab",
     "routes.temperatureImpact",
     "routes.teslaAccount",
+    "routes.teslaApiUsage",
     "routes.teslaChargingHistory",
     "routes.teslaChargingSessions",
     "routes.teslaFeatureFlags",

@@ -460,6 +460,10 @@ type PipelineSubscriberConfig struct {
 	// concurrent calls (paho dispatches messages on multiple goroutines).
 	StreamingRecorder StreamingHealthRecorder
 
+	// UsageRecorder stores one source emission (not one decoded atomic).
+	// Failure must never change pipeline or ACK disposition.
+	UsageRecorder SignalUsageRecorder
+
 	// AllowMissingSourceTimestamp is an emergency compatibility escape hatch
 	// for legacy MQTT producers that publish bare values. It is false by
 	// default because receipt-time fallback can turn queued historical
@@ -475,6 +479,10 @@ type PipelineSubscriberConfig struct {
 // be cheap (the call runs on the message-handling goroutine).
 type StreamingHealthRecorder interface {
 	RecordStream(vin string, atomics []codec.Atomic)
+}
+
+type SignalUsageRecorder interface {
+	RecordSignal(ctx context.Context, topic string, emittedAt time.Time, payload []byte) error
 }
 
 func (c *PipelineSubscriberConfig) withDefaults() {
@@ -1263,9 +1271,26 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	if recorder := s.cfg.StreamingRecorder; recorder != nil {
 		recorder.RecordStream(vin, atomics)
 	}
+	s.recordSignalUsage(ctx, msg, atomics)
 
 	span.SetAttributes(attribute.String("mqtt.disposition", "ack"))
 	msg.Ack()
+}
+
+func (s *PipelineSubscriber) recordSignalUsage(ctx context.Context, msg mqttPayload, atomics []codec.Atomic) {
+	if s.cfg.UsageRecorder == nil || len(atomics) == 0 || atomics[0].SourceEmittedAt == nil {
+		return
+	}
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			s.logger.Error().Interface("panic", recovered).Msg("Tesla usage evidence recorder panicked; estimate may undercount")
+		}
+	}()
+	recordCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	if err := s.cfg.UsageRecorder.RecordSignal(recordCtx, msg.Topic, *atomics[0].SourceEmittedAt, msg.Payload); err != nil {
+		s.logger.Warn().Err(err).Msg("Tesla stream usage evidence unavailable; estimate may undercount")
+	}
 }
 
 // handlePipelineError applies the ADR-004 #8 classification to a non-nil

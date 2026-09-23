@@ -46,7 +46,7 @@ import { useNotificationStats } from '@/api/hooks/useNotifications'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import {
   getVersionInfo, getExtendedHealth, checkForUpdates,
-  getBackupStats, getWorkersHealth, getAPIUsage, getErrorStats,
+  getBackupStats, getWorkersHealth, getErrorStats,
 } from '@/api/devtools'
 import { formatBytes, fmtInt } from '@/lib/numberFormat'
 import { useDateFormat } from '@/hooks/useDateFormat'
@@ -73,6 +73,7 @@ import {
   FrontendErrorsCard,
 } from '../components/status'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
+import { useTeslaUsage } from '@/api/hooks/useTeslaUsage'
 
 // Shared cadence
 const STATUS_REFRESH_MS = 30_000
@@ -131,11 +132,7 @@ export default function SystemStatusPage() {
     refetchInterval: STATUS_REFRESH_MS,
   })
 
-  const { data: apiUsage } = useQuery({
-    queryKey: ['system-status', 'api-usage'],
-    queryFn: getAPIUsage,
-    refetchInterval: 5 * 60_000,
-  })
+  const { data: apiUsage, isLoading: usageLoading, error: usageError } = useTeslaUsage()
 
   const { data: errorStats } = useQuery({
     queryKey: ['system-status', 'errors'],
@@ -303,8 +300,6 @@ export default function SystemStatusPage() {
       : 'healthy'
     : 'unknown'
 
-  // Tesla API budget — alert when spend exceeds the documented free credit
-  const apiOverBudget = !!apiUsage && apiUsage.estimated_cost > apiUsage.monthly_credit
 
   // ── resources rows ──────────────────────────────────────────────
   const resourceRows: ResourceRow[] = useMemo(() => {
@@ -675,17 +670,6 @@ export default function SystemStatusPage() {
                 cta={{ label: t('Set up backups'), to: '/backup' }}
               />
             )}
-            {apiOverBudget && apiUsage && (
-              <ActionItem
-                severity="warn"
-                title={t('Tesla API estimated cost {{cost}} exceeds {{credit}} monthly credit', {
-                  cost: formatCurrency(apiUsage.estimated_cost),
-                  credit: formatCurrency(apiUsage.monthly_credit),
-                })}
-                description={t('Review polling cadence or vehicle subscriptions')}
-                cta={{ label: t('Open Tesla API logs'), to: '/api-logs' }}
-              />
-            )}
             {workers && workers.healthy_count < workers.total && (
               <ActionItem
                 severity="error"
@@ -876,15 +860,13 @@ export default function SystemStatusPage() {
             icon={<Car className="h-5 w-5" />}
             title={t('Tesla API usage')}
             description={apiUsage
-              ? t('{{cost}} of {{credit}} estimated this period', {
-                cost: formatCurrency(apiUsage.estimated_cost),
-                credit: formatCurrency(apiUsage.monthly_credit),
+              ? t('teslaUsage.summary', '{{cost}} estimated this 30-day cycle (not an invoice)', {
+                cost: formatCurrency(apiUsage.current.estimated_usd),
               })
               : t('No data')}
             defaultOpen
-            badges={apiOverBudget ? <Badge variant="warning">over budget</Badge> : undefined}
           >
-            <TeslaApiUsageCard apiUsage={apiUsage} now={now} />
+            <TeslaApiUsageCard apiUsage={apiUsage} now={now} loading={usageLoading} error={usageError} compact />
           </AccordionSection>
         </section>
 

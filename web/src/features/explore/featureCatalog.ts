@@ -261,6 +261,7 @@ const DESCRIPTIONS: Record<string, string> = {
 
   // ── Diagnostics ────────────────────────────────────────────────────
   '/system-status': 'Health of every dependent service — MQTT, Redis, DB, Tesla API.',
+  '/tesla-api-usage': 'Explore observed Tesla signal and request costs across selected dates.',
   '/outage': 'What queued, replayed with original event time, or stayed unknown.',
   '/db-health': 'Database size, query latency, and replication lag.',
   '/anomaly-detection': 'Auto-detected outliers in charging, range, and drives.',

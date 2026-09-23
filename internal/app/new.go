@@ -16,6 +16,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 
+	teslausage "github.com/ev-dev-labs/teslasync/internal/adapter/teslausage"
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	apicomfort "github.com/ev-dev-labs/teslasync/internal/api/comfort"
 	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
@@ -633,7 +634,7 @@ func (a *App) initAPILogging() {
 			HTTPMethod: method,
 			Endpoint:   url,
 			DurationMs: int32(durationMs),
-			Service:    "tesla-api",
+			Service:    teslausage.AuditService(a.TeslaClient.BaseURL(), url),
 		}
 		if statusCode > 0 {
 			sc := int16(statusCode)
@@ -1083,6 +1084,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 			PersistenceQueueCapacity: a.Cfg.FleetTelemetry.PersistenceQueueCapacity,
 			PersistenceTimeout:       a.Cfg.FleetTelemetry.PersistenceTimeout,
 			StreamingRecorder:        a.TelemetryHandler,
+			UsageRecorder:            database.NewTeslaUsageRepo(a.DB),
 		},
 		pipelineLogger,
 	)

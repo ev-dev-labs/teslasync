@@ -288,6 +288,7 @@ const PowerDashboards = lazy(() => import('./features/power-user/pages/Dashboard
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
+const TeslaApiUsage = lazy(() => import('./features/system/pages/TeslaApiUsagePage'))
 const OutageAutobiography = lazy(() => import('./features/system/pages/OutageAutobiographyPage'))
 const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
 const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))
@@ -659,6 +660,7 @@ export default function App() {
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
         <Route path="analytics/lifetime" element={<Navigate to="/lifetime-stats" replace />} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
+        <Route path="tesla-api-usage" element={<SafeRoute name="TeslaApiUsage"><TeslaApiUsage /></SafeRoute>} />
         <Route path="outage" element={<SafeRoute name="OutageAutobiography"><OutageAutobiography /></SafeRoute>} />
         <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
         <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />

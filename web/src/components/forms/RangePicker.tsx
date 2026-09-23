@@ -255,7 +255,8 @@ export function RangePicker({
         anchorRef={triggerRef}
         align={align}
         ariaLabel={t('date.range.popoverLabel', 'Date range picker')}
-        className="w-[min(96vw,640px)] p-0"
+        avoidMobileChrome
+        className="w-[min(96vw,820px)] max-h-[calc(100dvh-6rem)] overflow-y-auto p-0"
       >
         <div className="flex flex-col md:flex-row">
           {/* Preset list */}
@@ -334,6 +335,9 @@ export function RangePicker({
                   </span>
                 )}
                 <div className="flex items-center justify-end gap-2">
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setStaged(undefined)}>
+                    {t('date.range.newRange', 'New range')}
+                  </Button>
                   <Button type="button" size="sm" variant="ghost" onClick={handleCancel}>
                     {t('date.range.cancel', 'Cancel')}
                   </Button>

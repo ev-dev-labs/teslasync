@@ -231,6 +231,44 @@ func staticResolver(id int64) VINResolver {
 	return func(_ context.Context, _ string) (int64, error) { return id, nil }
 }
 
+type usageRecorderFunc func(context.Context, string, time.Time, []byte) error
+
+func (f usageRecorderFunc) RecordSignal(ctx context.Context, topic string, at time.Time, payload []byte) error {
+	return f(ctx, topic, at, payload)
+}
+
+func TestPipelineSubscriberUsageEvidenceFailureNeverChangesACK(t *testing.T) {
+	for _, scenario := range []struct {
+		name   string
+		record usageRecorderFunc
+	}{
+		{"error", func(_ context.Context, _ string, _ time.Time, _ []byte) error { return errors.New("db unavailable") }},
+		{"panic", func(_ context.Context, _ string, _ time.Time, _ []byte) error { panic("recorder failure") }},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			pipe := &fakePipeline{}
+			sub := newTestSubscriber(t, pipe, &fakeDLQ{}, staticResolver(42))
+			var recorded, acked int
+			sub.cfg.UsageRecorder = usageRecorderFunc(func(ctx context.Context, topic string, at time.Time, payload []byte) error {
+				recorded++
+				if topic != "telemetry/5YJ3E1EA1LF000001/v/Soc" || at.IsZero() || len(payload) == 0 {
+					t.Error("incorrect source emission evidence")
+				}
+				return scenario.record(ctx, topic, at, payload)
+			})
+			sub.handlePayload(context.Background(), mqttPayload{
+				Topic:      "telemetry/5YJ3E1EA1LF000001/v/Soc",
+				Payload:    []byte(`{"value":75.5,"ts":"2026-08-22T10:00:00Z"}`),
+				ReceivedAt: time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC),
+				Ack:        func() { acked++ },
+			})
+			if recorded != 1 || acked != 1 || len(pipe.Calls()) != 1 {
+				t.Fatalf("recorder=%d ack=%d pipeline=%d; usage failure must not change ingest", recorded, acked, len(pipe.Calls()))
+			}
+		})
+	}
+}
+
 // TestPipelineSubscriber_ValidPayload_DelegatesToPipeline asserts that a
 // well-formed per-field MQTT payload is decoded and the resulting atomics
 // are forwarded to Pipeline.ProcessAtomics with the correct vehicleID, and

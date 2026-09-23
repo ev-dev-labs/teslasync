@@ -1,5 +1,44 @@
 package models
 
+import "time"
+
+// TeslaUsageCycle is an estimate from locally observed Fleet API traffic.
+type TeslaUsageCycle struct {
+	Start        time.Time `json:"start" db:"start"`
+	End          time.Time `json:"end" db:"end"`
+	Signals      int64     `json:"signals" db:"signals"`
+	Commands     int64     `json:"commands" db:"commands"`
+	DataRequests int64     `json:"data_requests" db:"data_requests"`
+	Wakes        int64     `json:"wakes" db:"wakes"`
+	EstimatedUSD float64   `json:"estimated_usd" db:"estimated_usd"`
+}
+
+type TeslaUsageResponse struct {
+	Current    TeslaUsageCycle   `json:"current"`
+	History    []TeslaUsageCycle `json:"history"`
+	RateSource string            `json:"rate_source"`
+	Disclaimer string            `json:"disclaimer"`
+}
+
+// TeslaUsageSeriesResponse contains only buckets with observed billable traffic.
+// BucketStart is the UTC midnight for a day or Monday for a week.
+type TeslaUsagePoint struct {
+	BucketStart  time.Time `json:"bucket_start" db:"bucket_start"`
+	Signals      int64     `json:"signals" db:"signals"`
+	Commands     int64     `json:"commands" db:"commands"`
+	DataRequests int64     `json:"data_requests" db:"data_requests"`
+	Wakes        int64     `json:"wakes" db:"wakes"`
+	EstimatedUSD float64   `json:"estimated_usd" db:"estimated_usd"`
+}
+
+type TeslaUsageSeriesResponse struct {
+	Start  time.Time         `json:"start"`
+	End    time.Time         `json:"end"`
+	Bucket string            `json:"bucket"`
+	Total  TeslaUsageCycle   `json:"total"`
+	Points []TeslaUsagePoint `json:"points"`
+}
+
 // APIKey moved to internal/models/auth.
 
 // AuditLog moved to internal/models/system (along with 14 other types).

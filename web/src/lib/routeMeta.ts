@@ -109,6 +109,7 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/diagnostics/service-evidence': '/maintenance',
   '/system-status/incidents/:id': '/system-status',
   '/docs/status-api': '/system-status',
+  '/tesla-api-usage': '/system-status',
 
   // ── Administration & developer surfaces ────────────────────────────────
   '/admin/audit-log': '/dev-tools',

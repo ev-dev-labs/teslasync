@@ -1000,6 +1000,7 @@
     "journeys": "Journeys",
     "roadHazardMesh": "Road Hazard Mesh",
     "tCOOptimizer": "TCO Optimizer",
+    "teslaApiUsage": "Tesla API usage",
     "twinLab": "Vehicle Twin Lab",
     "vehicleManagement": "Vehicle Management"
   },

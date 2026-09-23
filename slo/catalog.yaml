@@ -14,6 +14,26 @@
 version: 1
 
 slos:
+  - name: tesla_usage_availability
+    description: "The read-only Tesla usage estimate must not return server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, tesla]
+
+  - name: tesla_usage_history_availability
+    description: "The bounded daily/weekly Tesla usage history query must not return server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage/history\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage/history\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, tesla]
+
   - name: alert_packs_availability
     description: "Alert pack catalog, installations, removal and bulk rule deletion endpoints must avoid server errors."
     sli:

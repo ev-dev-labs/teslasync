@@ -32,6 +32,8 @@ export interface PopoverProps {
   className?: string;
   /** ARIA label for the popover region (when no internal heading exists). */
   ariaLabel?: string;
+  /** Keep tall mobile calendar footers clear of the shell's fixed bottom bars. */
+  avoidMobileChrome?: boolean;
   children: ReactNode;
 }
 
@@ -52,6 +54,7 @@ export function Popover({
   sideOffset = 6,
   className,
   ariaLabel,
+  avoidMobileChrome = false,
   children,
 }: PopoverProps) {
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -72,10 +75,11 @@ export function Popover({
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const margin = 8;
+      const bottomInset = avoidMobileChrome && vw < 640 ? 80 : margin;
 
       // Resolve side: flip if requested side overflows.
       let resolvedSide: PopoverSide = side;
-      const spaceBelow = vh - a.bottom - sideOffset - margin;
+      const spaceBelow = vh - a.bottom - sideOffset - bottomInset;
       const spaceAbove = a.top - sideOffset - margin;
       if (side === 'bottom' && c.height > spaceBelow && spaceAbove > spaceBelow) {
         resolvedSide = 'top';
@@ -104,20 +108,25 @@ export function Popover({
       if (left < margin) left = margin;
 
       // Clamp vertically (rare — only if both sides overflow).
-      if (top + c.height + margin > vh) top = vh - c.height - margin;
+      if (top + c.height + bottomInset > vh) top = vh - c.height - bottomInset;
       if (top < margin) top = margin;
 
       setPos({ top, left, resolvedSide });
     };
 
     compute();
+    // Suspended calendars often mount *after* the initial measurement. Reflow
+    // when their real height arrives instead of clipping the Apply/Cancel row.
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(compute) : null;
+    if (contentRef.current) observer?.observe(contentRef.current);
     window.addEventListener('resize', compute);
     window.addEventListener('scroll', compute, true);
     return () => {
       window.removeEventListener('resize', compute);
       window.removeEventListener('scroll', compute, true);
+      observer?.disconnect();
     };
-  }, [open, side, align, sideOffset, anchorRef]);
+  }, [open, side, align, sideOffset, anchorRef, avoidMobileChrome]);
 
   // Restore focus to trigger when the popover closes.
   const wasOpenRef = useRef(false);

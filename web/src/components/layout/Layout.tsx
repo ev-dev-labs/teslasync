@@ -241,6 +241,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/media-player': ['media', 'music', 'player'],
   '/tesla-account': ['account', 'tesla login', 'oauth'],
   '/system-status': ['system', 'status', 'health', 'admin', 'administration', 'overview'],
+  '/tesla-api-usage': ['tesla', 'fleet api', 'signals', 'commands', 'wakes', 'usage', 'spend'],
   '/physics-cockpit': ['physics', 'cockpit', 'gear', 'charge port', 'bms', 'trip meter', 'fsd counter'],
   '/tesla-only': ['teslasync only', 'physics', 'exclusive', 'tesla language'],
   '/tesla-only/clocks': ['event time', 'ingest time', 'display time', 'three clocks'],
@@ -669,6 +670,7 @@ export const navSections = [
     title: 'Diagnostics',
     items: [
       { to: '/system-status', icon: Icons.efficiency, label: 'System Status', color: 'text-emerald-400' },
+      { to: '/tesla-api-usage', icon: Icons.activity, label: 'Tesla API Usage', color: 'text-cyan-400' },
       { to: '/outage', icon: Icons.history, label: 'Outage Autobiography', color: 'text-indigo-400' },
       { to: '/db-health', icon: Icons.hardDrive, label: 'Database Health', color: 'text-emerald-400' },
       { to: '/anomaly-detection', icon: Icons.scanSearch, label: 'Anomaly Detection', color: 'text-red-400' },

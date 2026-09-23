@@ -175,6 +175,20 @@
     "watchFaceNL"
   ],
   "grouped": {
+    "system": [
+      "chatbot",
+      "commandHistory",
+      "dataExport",
+      "dataRepair",
+      "dbHealth",
+      "debugger",
+      "incidentTimeline",
+      "roadmap",
+      "statusApi",
+      "system",
+      "teslaAccount",
+      "teslaUsage"
+    ],
     "notifications": [
       "alertPacks",
       "alertRules",
@@ -635,19 +649,6 @@
       "rateLimitStatus",
       "redis",
       "region"
-    ],
-    "system": [
-      "chatbot",
-      "commandHistory",
-      "dataExport",
-      "dataRepair",
-      "dbHealth",
-      "debugger",
-      "incidentTimeline",
-      "roadmap",
-      "statusApi",
-      "system",
-      "teslaAccount"
     ],
     "automations": [
       "automationList",

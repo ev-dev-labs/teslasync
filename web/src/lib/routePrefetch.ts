@@ -126,6 +126,7 @@ const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/state-debugger': () => import('../features/system/pages/StateMachineDebuggerPage'),
   '/statistics': () => import('../features/analytics/pages/StatisticsPage'),
   '/system-status': () => import('../features/system/pages/SystemStatusPage'),
+  '/tesla-api-usage': () => import('../features/system/pages/TeslaApiUsagePage'),
   '/tco': () => import('../features/analytics/pages/TrueCostPage'),
   '/temperature-impact': () => import('../features/maps/pages/TemperatureImpactPage'),
   '/tesla-account': () => import('../features/system/pages/TeslaAccountPage'),

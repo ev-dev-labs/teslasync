@@ -85,8 +85,8 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		}
 	}
 
-	// Clean up old API call logs (keep 30 days)
-	apiLogsDeleted, err := cleanupOldLogs(maintCtx, db, "api_call_logs", "ts", 30)
+	// Keep outbound Tesla evidence for prior 30-day cycles; prune other logs as before.
+	apiLogsDeleted, err := cleanupOldNonTeslaLogs(maintCtx, db)
 	if err != nil {
 		span.RecordError(err)
 		log.Error().Err(err).Msg("API call log cleanup failed")
@@ -183,11 +183,21 @@ func cleanupOldLogs(ctx context.Context, db *database.DB, table, tsCol string, r
 	if err != nil {
 		return 0, err
 	}
+
 	deleted := tag.RowsAffected()
 	if deleted > 0 {
 		log.Info().Int64("deleted", deleted).Str("table", table).Msg("cleaned up old logs")
 	}
+
 	return deleted, nil
+}
+
+func cleanupOldNonTeslaLogs(ctx context.Context, db *database.DB) (int64, error) {
+	tag, err := db.Pool.Exec(ctx, `DELETE FROM api_call_logs WHERE ts < NOW() - INTERVAL '30 days' AND service NOT IN ($1, $2)`, "tesla-api", "tesla-command-proxy")
+	if err != nil {
+		return 0, fmt.Errorf("prune non-Tesla API logs: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 // redactOldAuditIPs nulls out audit_logs.ip and audit_logs.user_agent for rows
