@@ -98,6 +98,8 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/notifications/audit': '/notifications/inbox',
   '/notifications/browser': '/notifications/inbox',
   '/notifications/channels': '/notifications/inbox',
+  '/notifications/health': '/notifications/inbox',
+  '/notifications/packs': '/notifications/inbox',
   '/notifications/quiet-hours': '/notifications/inbox',
   '/notifications/rules': '/notifications/inbox',
 

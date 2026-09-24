@@ -169,6 +169,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: "/notifications/channels", name: "NotificationsChannels", label: "Notifications Channels", i18nKey: "routes.notificationsChannels" },
   { path: "/notifications/health", name: "NotificationHealth", label: "Notification Health", i18nKey: "routes.notificationHealth" },
   { path: "/notifications/inbox", name: "NotificationsInbox", label: "Notifications Inbox", i18nKey: "routes.notificationsInbox" },
+  { path: "/notifications/packs", name: "NotificationsPacks", label: "Notifications Packs", i18nKey: "routes.notificationsPacks" },
   { path: "/notifications/quiet-hours", name: "NotificationsQuietHours", label: "Notifications Quiet Hours", i18nKey: "routes.notificationsQuietHours" },
   { path: "/notifications/rules", name: "NotificationsRules", label: "Notifications Rules", i18nKey: "routes.notificationsRules" },
   { path: "/notifications/studio", name: "NotificationsStudio", label: "Notifications Studio", i18nKey: "routes.notificationsStudio" },

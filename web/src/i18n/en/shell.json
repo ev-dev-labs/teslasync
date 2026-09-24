@@ -890,6 +890,7 @@
       "notifications_inbox": "All Notifications",
       "notifications_quiet-hours": "Quiet Hours",
       "notifications_rules": "Alert Rules",
+      "notifications_packs": "Alert Packs",
       "notifications_studio": "Alert Studio",
       "notifications_webhooks": "Webhooks",
       "outage": "Outage Autobiography",

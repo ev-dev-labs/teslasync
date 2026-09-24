@@ -230,6 +230,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/notifications/quiet-hours': ['quiet hours', 'do not disturb', 'dnd', 'schedule'],
   '/notifications/rules': ['alert rules', 'rules', 'conditions'],
   '/notifications/studio': ['alert studio', 'studio', 'rule builder'],
+  '/notifications/packs': ['alert packs', 'rule packs', 'curated alert templates'],
   '/notifications/health': ['alert fatigue', 'notification burn rate', 'notification latency', 'delivery slo', 'error budget', 'apdex', 'tail latency'],
   '/geofences': ['geofence', 'zones', 'places'],
   '/guard-mode': ['guard', 'sentry', 'security'],
@@ -578,6 +579,7 @@ export const navSections = [
       { to: '/automations', icon: Icons.workflow, label: 'Automations', labelKey: 'nav.items.automations', color: 'text-purple-400' },
       { to: '/notifications/studio', icon: Icons.notificationsAdd, label: 'Alert Studio', labelKey: 'nav.items.notifications_studio', color: 'text-fuchsia-400' },
       { to: '/notifications/rules', icon: Icons.filter, label: 'Alert Rules', labelKey: 'nav.items.notifications_rules', color: 'text-amber-400' },
+      { to: '/notifications/packs', icon: Icons.package, label: 'Alert Packs', labelKey: 'nav.items.notifications_packs', color: 'text-cyan-400' },
     ],
   },
   {

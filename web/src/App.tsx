@@ -200,6 +200,7 @@ const AutomationBuilderPage = lazy(() => import('./features/automations/pages/Au
 // Notifications & Alerts
 const AlertStudio = lazy(() => import('./features/notifications/pages/AlertStudioPage'))
 const AlertRulesPage = lazy(() => import('./features/notifications/pages/AlertRulesPage'))
+const AlertPacksPage = lazy(() => import('./features/notifications/pages/AlertPacksPage'))
 const InboxPage = lazy(() => import('./features/notifications/pages/InboxPage'))
 const ArchivedPage = lazy(() => import('./features/notifications/pages/ArchivedPage'))
 const ChannelsPage = lazy(() => import('./features/notifications/pages/ChannelsPage'))
@@ -619,6 +620,7 @@ export default function App() {
         <Route path="notifications/browser" element={<SafeRoute name="NotificationsBrowser"><BrowserNotificationsPage /></SafeRoute>} />
         <Route path="notifications/quiet-hours" element={<SafeRoute name="NotificationsQuietHours"><QuietHoursPage /></SafeRoute>} />
         <Route path="notifications/rules" element={<SafeRoute name="NotificationsRules"><AlertRulesPage /></SafeRoute>} />
+        <Route path="notifications/packs" element={<SafeRoute name="NotificationsPacks"><AlertPacksPage /></SafeRoute>} />
         <Route path="notifications/studio" element={<SafeRoute name="NotificationsStudio"><AlertStudio /></SafeRoute>} />
         <Route path="notifications/audit" element={<SafeRoute name="NotificationsAudit"><NotificationsAudit /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />

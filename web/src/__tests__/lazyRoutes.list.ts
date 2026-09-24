@@ -111,6 +111,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   // Notifications
   { name: 'AlertStudio', load: () => import('../features/notifications/pages/AlertStudioPage') },
   { name: 'AlertRulesPage', load: () => import('../features/notifications/pages/AlertRulesPage') },
+  { name: 'AlertPacksPage', load: () => import('../features/notifications/pages/AlertPacksPage') },
   { name: 'InboxPage', load: () => import('../features/notifications/pages/InboxPage') },
   { name: 'ArchivedPage', load: () => import('../features/notifications/pages/ArchivedPage') },
   { name: 'ChannelsPage', load: () => import('../features/notifications/pages/ChannelsPage') },

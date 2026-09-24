@@ -218,6 +218,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/automations': 'Trigger actions on geofence, time, or vehicle state.',
   '/notifications/studio': 'Build a custom alert rule with conditions and channels.',
   '/notifications/rules': 'Manage existing alert rules.',
+  '/notifications/packs': 'Preview curated or AI-proposed alert groups, install them, and manage installed packs.',
 
   // ── Notifications ──────────────────────────────────────────────────
   '/notifications/inbox': 'Recent alerts and system messages.',
