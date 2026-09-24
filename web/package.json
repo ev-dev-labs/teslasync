@@ -110,7 +110,7 @@
     "@opentelemetry/sdk-trace-web": "^2.8.0",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-virtual": "^3.13.24",
-    "date-fns": "^3.6.0",
+    "date-fns": "^4.4.0",
     "framer-motion": "^12.38.0",
     "html2canvas-pro": "^2.0.2",
     "i18next": "^25.10.4",
