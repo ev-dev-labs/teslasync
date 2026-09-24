@@ -47,15 +47,15 @@ in this repository; the policy change requires the network administrator.
 After the administrator fixes the policy:
 
 ```sh
-gh workflow run release.yml --ref typograpghy -f runner=arc-runner -f diagnose_signing=true
+gh workflow run release.yml --ref typograpghy -f runner=arc-runner
 ```
 
-This is a **real release dispatch with additional read-only probes**, not a
-diagnostic-only success path. The ordinary signing preflight and every release
-gate remain enabled. While connectivity is broken, preflight fails before builds
-or publication; once restored, the release proceeds.
+This is a **real release dispatch**, not a diagnostic-only success path. The
+ordinary signing preflight and every release gate remain enabled. While
+connectivity is broken, preflight fails before builds or publication; once
+restored, the release proceeds.
 
-Both ARC endpoints must return HTTP 200 with certificate verification successful.
+Both signing endpoints must return HTTP 200 with certificate verification successful.
 Monitor the returned run with `gh run watch <id> --exit-status` through signing,
 attestation, tagging, and Helm publication. A hosted diagnostic pass alone is
 not release success.
