@@ -51,7 +51,7 @@ on:
         options:
           - arc-runner
           - ubuntu-latest
-        default: arc-runner
+        default: ubuntu-latest
 
 concurrency:
   group: ai-eval-${{ github.workflow }}-${{ github.ref }}
@@ -64,7 +64,7 @@ jobs:
   fast:
     name: ai-eval (fast / canned only)
     if: github.event_name == 'pull_request'
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -86,7 +86,7 @@ jobs:
   full:
     name: ai-eval (full / blocking on main)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -109,7 +109,7 @@ jobs:
   judged:
     name: ai-eval (judged / nightly drift)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
       JUDGE_PROVIDER: ${{ secrets.JUDGE_PROVIDER }}

@@ -27,14 +27,6 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      runner:
-        description: 'Runner to use (manual runs only)'
-        type: choice
-        options:
-          - arc-runner
-          - ubuntu-latest
-        default: ubuntu-latest
 
 concurrency:
   group: si-canonical-gate-${{ github.ref }}

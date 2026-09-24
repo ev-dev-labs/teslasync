@@ -7,14 +7,6 @@ on:
       - 'internal/tesla/protomodel/**'
       - 'cmd/protogen-tesla/**'
   workflow_dispatch:
-    inputs:
-      runner:
-        description: 'Runner to use (manual runs only)'
-        type: choice
-        options:
-          - arc-runner
-          - ubuntu-latest
-        default: arc-runner
 
 concurrency:
   group: proto-gen-check-${{ github.ref }}

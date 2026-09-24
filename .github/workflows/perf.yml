@@ -14,7 +14,7 @@ on:
         options:
           - arc-runner
           - ubuntu-latest
-        default: arc-runner
+        default: ubuntu-latest
 
 concurrency:
   group: perf-${{ github.workflow }}-${{ github.ref }}

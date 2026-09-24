@@ -34,7 +34,7 @@ on:
         options:
           - arc-runner
           - ubuntu-latest
-        default: arc-runner
+        default: ubuntu-latest
 
 concurrency:
   group: codec-coverage-gate-${{ github.ref }}
