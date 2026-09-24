@@ -4532,6 +4532,12 @@
     }
   },
   "nav": {
+    "reportGroups": {
+      "fleetInsights": "Fleet Insights",
+      "drivingEfficiency": "Driving Efficiency",
+      "costs": "Costs",
+      "sections": "{{group}} sections"
+    },
     "workspaceContext": "Fleet operations",
     "workspaceHeader": "Workspace command bar",
     "quickAccess": "Quick access",

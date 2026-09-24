@@ -144,7 +144,6 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
       '/tesla-charging-history',
       '/charging-curve',
       '/smart-charge',
-      '/cost-analysis',
     ],
   },
   {
@@ -165,7 +164,16 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
     title: 'Insights',
     tier: 'primary',
     capability: 'core',
-    paths: ['/statistics', '/analytics', '/efficiency', '/tco', '/weekly-digest', '/data-export'],
+    paths: [
+      '/statistics',
+      '/efficiency',
+      '/cost-analysis',
+      '/analytics/carbon',
+      '/share-card',
+      '/benchmarks/privacy',
+      '/weekly-digest',
+      '/data-export',
+    ],
   },
   {
     title: 'Operations',
@@ -188,7 +196,6 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
     paths: [
       '/intelligence-packs',
       '/anomaly-detection',
-      '/period-compare',
       '/what-if',
       '/drive-dna',
       '/time-machine',

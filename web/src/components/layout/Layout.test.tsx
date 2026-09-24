@@ -645,7 +645,7 @@ describe('compact nav blueprint ↔ navSections catalog', () => {
       '/charging',
       '/energy',
       '/battery',
-      '/analytics',
+      '/statistics',
       '/automations',
       '/settings',
     ]) {
@@ -770,6 +770,35 @@ describe('Layout — compact Linear sidebar wiring', () => {
     expect(props.sections.map((s) => s.title)).toContain('Diagnostics')
     expect(props.sections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
     expect(props.activeSectionTitle).toBe('Diagnostics')
+  })
+
+  it('shows six Reports entries in the Notion sidebar while keeping every route in the catalog', () => {
+    H.sidebarStyle.value = 'notion'
+    renderLayout('/analytics')
+
+    const props = H.sidebarProps.notion as unknown as {
+      pathname: string
+      sections: Array<{ title: string; items: Array<{ to: string; label: string }> }>
+    }
+    const reports = props.sections.find(section => section.title === 'Reports')
+    expect(reports?.items.map(item => item.to)).toEqual([
+      '/statistics', '/efficiency', '/cost-analysis',
+      '/share-card', '/analytics/carbon', '/benchmarks/privacy',
+    ])
+    expect(reports?.items.slice(0, 3).map(item => item.label)).toEqual([
+      'Fleet Insights', 'Driving Efficiency', 'Costs',
+    ])
+    expect(props.pathname).toBe('/statistics')
+    expect(navSections.find(section => section.title === 'Reports')?.items).toHaveLength(11)
+  })
+
+  it('groups secondary report routes under their primary sidebar link', () => {
+    renderLayout('/tco')
+    const reports = document.querySelector('#nav-section-reports')
+    expect(reports).toBeInTheDocument()
+    expect(within(reports as HTMLElement).getAllByRole('link')).toHaveLength(6)
+    expect(within(reports as HTMLElement).getByRole('link', { name: 'Costs' }))
+      .toHaveAttribute('aria-current', 'page')
   })
 
   it('uses distinct icons for system status and Tesla API usage', () => {

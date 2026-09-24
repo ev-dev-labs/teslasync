@@ -1,6 +1,14 @@
 # Reports
 
-Sidebar group **Reports**. In the app, expand this section in the left nav (or search `/explore`).
+The detailed sidebar's **Reports** group has six destinations; the compact
+sidebar shows them under **Insights**. **Fleet Insights** links
+Statistics, Analytics, and Period Comparison; **Driving Efficiency** links
+Efficiency, Temperature Impact, and Drive Archetypes; **Costs** links Cost
+Analysis and Cost of Ownership. Each screen keeps its own URL, filters, and
+full functionality, with links between screens in its group. Carbon
+Intelligence, Share Card Studio, and Private Benchmarks remain separate.
+All eleven screens remain directly accessible via their existing URLs,
+bookmarks, the feature catalog, and search.
 
 | Screen | Path | What it does | When empty |
 | ------ | ---- | ------------ | ---------- |

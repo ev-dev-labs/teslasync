@@ -45,6 +45,8 @@ import {
   prioritizeCanonicalNavSections,
   prioritizeCompactNavTree,
 } from './sidebar/compactNav'
+import { ReportGroupNavigation } from './ReportGroupNavigation'
+import { labelReportPrimaries, reportPrimaryPath, reportSidebarItems } from './reportGroups'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
@@ -1232,6 +1234,22 @@ export default function Layout() {
       productPreferences.persona,
     ],
   )
+  const reportSidebarSections = useMemo(
+    () => visibleNavSections.map(section =>
+      section.title === 'Reports'
+        ? { ...section, items: reportSidebarItems(section.items) }
+        : section,
+    ),
+    [visibleNavSections],
+  )
+  const compactReportSections = useMemo(
+    () => visibleNavSections.map(section =>
+      section.title === 'Reports'
+        ? { ...section, items: labelReportPrimaries(section.items) }
+        : section,
+    ),
+    [visibleNavSections],
+  )
   const pinnedNavItems = useMemo(() =>
     pinnedNavPaths
       .map(path => findNavItemByExactPath(path))
@@ -1256,9 +1274,8 @@ export default function Layout() {
 
   // Progressive disclosure for the DEFAULT (Linear) sidebar only.
   //
-  // `visibleNavSections` is the complete 20-group catalog — it still feeds
-  // the `notion` and `legacy` styles (explicit user choice to see
-  // everything), the `/explore` Feature Hub, and the command palette. The
+  // `visibleNavSections` remains the complete catalog for `/explore`, search,
+  // and pinning. Report links are grouped only in the rendered sidebars. The
   // Linear style instead renders a curated two-tier tree: seven everyday
   // primary groups (Overview · Vehicles · Drives · Charging · Energy ·
   // Insights · Operations) followed by intentional advanced groups. Nothing
@@ -1276,13 +1293,13 @@ export default function Layout() {
   const compactNav = useMemo(
     () =>
       prioritizeCompactNavTree(
-        buildCompactNavTree(visibleNavSections, location.pathname, {
+        buildCompactNavTree(compactReportSections, reportPrimaryPath(location.pathname), {
           capabilities: navCapabilities,
         }),
         productPreferences.persona,
       ),
     [
-      visibleNavSections,
+      compactReportSections,
       location.pathname,
       navCapabilities,
       productPreferences.persona,
@@ -1408,10 +1425,10 @@ export default function Layout() {
       return next
     })
   }, [activeSectionTitle])
-  const expandedSectionCount = visibleNavSections.filter(section => expandedSections.has(section.title)).length
+  const expandedSectionCount = reportSidebarSections.filter(section => expandedSections.has(section.title)).length
   const expandAllSections = useCallback(() => {
-    setExpandedSections(new Set(visibleNavSections.map(section => section.title)))
-  }, [visibleNavSections])
+    setExpandedSections(new Set(reportSidebarSections.map(section => section.title)))
+  }, [reportSidebarSections])
   const collapseAllSections = useCallback(() => {
     setExpandedSections(new Set())
   }, [])
@@ -1441,7 +1458,7 @@ export default function Layout() {
   const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
     const { to, icon: Icon, ...rest } = item
     const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined
-    const isActive = isExclusiveActivePath(location.pathname, to, NAV_CATALOG_PATHS)
+    const isActive = isExclusiveActivePath(reportPrimaryPath(location.pathname), to, NAV_CATALOG_PATHS)
     const isInTabBar = BOTTOM_TAB_PATHS.has(to)
     return (
       <PrefetchNavLink
@@ -1627,9 +1644,9 @@ export default function Layout() {
         ) : sidebarStyle === 'notion' ? (
           <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
             <NotionSidebar
-              sections={visibleNavSections}
+              sections={reportSidebarSections}
               pinnedItems={pinnedNavItems}
-              pathname={location.pathname}
+              pathname={reportPrimaryPath(location.pathname)}
               navLabel={navLabel}
               onPin={pinNavPath}
               onUnpin={unpinNavPath}
@@ -1735,7 +1752,7 @@ export default function Layout() {
                     size="sm"
                     aria-label={t('nav.expandAll', 'Expand all sections')}
                     title={t('nav.expandAll', 'Expand all sections')}
-                    disabled={expandedSectionCount === visibleNavSections.length}
+                    disabled={expandedSectionCount === reportSidebarSections.length}
                     onClick={expandAllSections}
                     className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                   >
@@ -1756,7 +1773,7 @@ export default function Layout() {
                 </div>
               }
             />
-            {visibleNavSections.map(section => {
+            {reportSidebarSections.map(section => {
               const isExpanded = expandedSections.has(section.title)
               const isActiveSection = section.title === activeSectionTitle
               const sectionStyle = SECTION_ICON_STYLES[section.title]
@@ -1946,6 +1963,7 @@ export default function Layout() {
               </div>
             )}
             <RouteTransition>
+              {presentation.mode === 'standard' && <ReportGroupNavigation />}
               <Outlet />
             </RouteTransition>
           </div>
