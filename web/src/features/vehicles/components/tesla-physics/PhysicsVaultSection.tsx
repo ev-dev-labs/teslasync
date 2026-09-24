@@ -2,12 +2,11 @@ import { Link } from 'react-router-dom';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { hours, PhysicsPageShell, seconds, time, unknown, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, hours, seconds, time, unknown } from './PhysicsPageShell';
 import type { SessionBoundary } from '@/types/teslaPhysics';
 
-export default function PhysicsVaultPage() {
-  const physics = usePhysicsPage('vault');
+export default function PhysicsVaultSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const vault = report?.vault;
   const cert = vault?.certificate;
@@ -23,7 +22,7 @@ export default function PhysicsVaultPage() {
     { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (r: SessionBoundary) => time(r.ended_at, t) },
     { key: 'rule', header: t('teslaOnly.endRule', 'End rule'), render: (r: SessionBoundary) => r.end_rule },
   ];
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={vault?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.unknownHours', 'Unknown')} value={hours(vault?.unknown_hours, t)} color="amber" />
@@ -59,5 +58,5 @@ export default function PhysicsVaultPage() {
           { key: 'dwell', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (r) => seconds(r.dwell, t) },
         ]} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

@@ -1,11 +1,10 @@
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, seconds, unknown, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, seconds, unknown } from './PhysicsPageShell';
 
-export default function PhysicsDictionaryPage() {
-  const physics = usePhysicsPage('dictionary');
+export default function PhysicsDictionarySection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const dictionary = report?.dictionary;
   const dwells = (report?.vault?.etiquette_dwells_s ?? []).map((dwell, index) => ({ dwell, index }));
@@ -18,7 +17,7 @@ export default function PhysicsDictionaryPage() {
   const long = ranked.filter((value) => value > 300).length;
   const lowerQuartile = ranked.length >= 4 ? ranked[Math.floor((ranked.length - 1) / 4)] : null;
   const upperQuartile = ranked.length >= 4 ? ranked[Math.ceil(3 * (ranked.length - 1) / 4)] : null;
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={dictionary?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.unplug', 'Complete → unplug')} value={seconds(dictionary?.typical_complete_unplug_s, t)} color="amber" />
@@ -57,5 +56,5 @@ export default function PhysicsDictionaryPage() {
           { key: 'index', header: t('teslaOnly.dictionaryIndex', 'Returned observation'), render: (r) => r.index + 1 },
         ]} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

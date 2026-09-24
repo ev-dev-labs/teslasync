@@ -1,19 +1,22 @@
 # Tesla Physics
 
-Sidebar group **Tesla Physics**. In the app, expand this section in the left nav (or search `/explore`).
+Sidebar group **Tesla Physics** has one workbench entry; its grouped navigation
+opens all 15 investigations (or search `/explore`).
 
-The **Tesla Physics hub** at `/tesla-physics` leads to **15 individually lazy-loaded
-investigation pages** at `/tesla-physics/{option}`. Every option owns its measured
-summaries, interpretation, drilldowns, and missing-slice handling. The shared
-page shell explains requested versus recorded windows, row counts, availability,
-and caps. Large timestamp tables are **closed by default** and paginated on
-demand. Legacy `/tesla-only/*` bookmarks redirect to the matching canonical
-`/tesla-physics/*` page;
-Physics Ledger and Science Lab remain independent pages.
+The **Tesla Physics workbench** at `/tesla-physics` groups 15 individually
+lazy-loaded investigation sections into Time & coverage, Motion & states,
+Charging & range, and Integrity & firmware. Selecting a section retains the
+same shell and opens its existing `/tesla-physics/{option}` deep link. Each
+section keeps its measured summaries, interpretation, drilldowns, filters,
+and missing-slice handling. The shell explains requested versus recorded
+windows, row counts, availability, and caps. Large timestamp tables are
+**closed by default** and paginated on demand. Legacy `/tesla-only/*`
+bookmarks still redirect to the matching deep link; Physics Ledger and
+Science Lab remain independent pages with their own evidence windows.
 
 | Screen | Path | What it does | When empty |
 | ------ | ---- | ------------ | ---------- |
-| Physics hub | `/tesla-physics` | VIN-scoped source boundaries, trust warnings, and links to all 15 investigations. | Renders an empty state when no report is available. |
+| Physics workbench | `/tesla-physics` | VIN-scoped source boundaries, trust warnings, and grouped navigation to all 15 investigations. | Renders an empty state when no report is available. |
 | Physics Ledger | `/tesla-physics/ledger` | VIN-scoped energy/force solver: predicted vs measured, unexplained residual, unknown budget. | Shows unknown honestly when signals are missing; never zero-fills. |
 | Science Lab | `/science` | Seven- or 30-day evidence overview linked to rest-voltage/current-step observations, thermal fit diagnostics, matched weather drives, tire model sensitivity, and generated notebook methods. | Each of the five reports loads independently. Unsupported fits stay unknown; CIs and holdouts are shown only when computed, not implied. |
 | Three Clocks | `/tesla-physics/clocks` | Second-precision latest readings, paired ingest lag and gap distribution, six latest samples, a long-gap filter and paginated raw timestamps. | Missing ingest stays unknown. |

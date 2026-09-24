@@ -4,11 +4,10 @@ import { Grid } from '@/components/layout';
 import { Badge, DataTable, Select, Text } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { ClockReading } from '@/types/teslaPhysics';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { pagination, PhysicsPageShell, seconds, unknown, usePhysicsPage, yesNo } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, pagination, seconds, unknown, yesNo } from './PhysicsPageShell';
 
-export default function PhysicsClocksPage() {
-  const physics = usePhysicsPage('clocks');
+export default function PhysicsClocksSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const clock = report?.clocks;
   const rows = clock?.samples ?? [];
@@ -51,7 +50,7 @@ export default function PhysicsClocksPage() {
     { key: 'display', header: t('teslaOnly.displayTime', 'Display time'), render: (row: ClockReading) => preciseTime(row.display_time) },
     { key: 'unknown', header: t('teslaOnly.unknownFlag', 'Unknown flag'), render: (row: ClockReading) => yesNo(row.unknown, t) },
   ];
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={clock?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.eventTime', 'Event time')} value={preciseTime(latest?.event_time)} color="cyan" />
@@ -96,5 +95,5 @@ export default function PhysicsClocksPage() {
       <RawRows title={physics.title} rows={[...filtered].reverse()} tableId="physics:clocks" t={t} keyExtractor={(row) => row.event_time}
         mobileColumns={['event', 'lag', 'gap']} columns={columns} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

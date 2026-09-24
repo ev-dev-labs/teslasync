@@ -3,11 +3,10 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { hours, PhysicsPageShell, unknown, usePhysicsPage, yesNo } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, hours, unknown, yesNo } from './PhysicsPageShell';
 
-export default function PhysicsUnknownPage() {
-  const physics = usePhysicsPage('unknown');
+export default function PhysicsUnknownSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const coverage = report?.unknown_os;
   const budgets = coverage?.budgets ?? [];
@@ -19,7 +18,7 @@ export default function PhysicsUnknownPage() {
   const sorted = [...budgets].sort((a, b) => b.hours - a.hours);
   const worst = sorted[0];
   const flagged = budgets.filter((row) => row.unknown);
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={coverage?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.window', 'Window')} value={hours(window, t)} color="cyan" />
@@ -62,5 +61,5 @@ export default function PhysicsUnknownPage() {
           { key: 'flag', header: t('teslaOnly.unknownFlag', 'Unknown flag'), render: (r) => yesNo(r.unknown, t) },
         ]} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

@@ -3,11 +3,10 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Select, Text } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, time, unknown, usePhysicsPage, yesNo } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, time, unknown, yesNo } from './PhysicsPageShell';
 
-export default function PhysicsChargePortPage() {
-  const physics = usePhysicsPage('charge-port');
+export default function PhysicsChargePortSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const port = report?.charge_port_court;
   const rows = port?.evidence ?? [];
@@ -30,7 +29,7 @@ export default function PhysicsChargePortPage() {
     { key: 'door', header: t('teslaOnly.door', 'Door'), render: (r: typeof rows[number]) => yesNo(r.door_open, t) },
     { key: 'schedule', header: t('teslaOnly.scheduleMode', 'Schedule mode'), render: (r: typeof rows[number]) => r.scheduled_mode || unknown(t) },
   ];
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={port?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.portSamples', 'Returned port samples')} value={rows.length} color="cyan" />
@@ -62,5 +61,5 @@ export default function PhysicsChargePortPage() {
       <RawRows title={physics.title} rows={[...visible].reverse()} columns={columns} tableId="physics:port" t={t}
         mobileColumns={['at', 'state', 'gear', 'firmware', 'latch']} keyExtractor={(r) => r.at} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

@@ -3,11 +3,10 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, DataTable, Select, Text } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { pagination, PhysicsPageShell, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, pagination } from './PhysicsPageShell';
 
-export default function PhysicsNervousSystemPage() {
-  const physics = usePhysicsPage('nervous-system');
+export default function PhysicsNervousSystemSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const nerves = report?.nervous_system?.nerves ?? [];
   const alive = nerves.filter((r) => r.status === 'alive');
@@ -27,7 +26,7 @@ export default function PhysicsNervousSystemPage() {
     { key: 'status', header: t('teslaOnly.status', 'Status'), render: (r: typeof nerves[number]) => r.status },
     { key: 'detail', header: t('teslaOnly.detail', 'Detail'), render: (r: typeof nerves[number]) => r.detail },
   ];
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={report?.nervous_system?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.aliveSignals', 'Alive signals')} value={alive.length} color="green" />
@@ -60,5 +59,5 @@ export default function PhysicsNervousSystemPage() {
       <RawRows title={physics.title} rows={visible} columns={columns} tableId="physics:nerves" t={t}
         mobileColumns={['field', 'status']} keyExtractor={(r) => r.field} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

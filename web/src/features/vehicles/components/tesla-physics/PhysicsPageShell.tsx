@@ -71,20 +71,26 @@ export function usePhysicsPage(slug?: PhysicsSlug) {
   return { slug, t, title, vehicleId, query, state, report: state.data };
 }
 
-export function PhysicsPageShell({ physics, children }: { physics: ReturnType<typeof usePhysicsPage>; children: ReactNode }) {
+export type PhysicsPage = ReturnType<typeof usePhysicsPage>;
+
+export function PhysicsPageShell({ physics, children, navigation, unified = false }: {
+  physics: PhysicsPage; children: ReactNode; navigation?: ReactNode; unified?: boolean;
+}) {
   const { slug, t, title, vehicleId, query, state, report } = physics;
-  usePageTitle(title);
-  if (vehicleId == null) return <NoVehicleSelected pageTitle={title} />;
+  const pageTitle = unified ? t('teslaOnly.title', 'Tesla Physics') : title;
+  usePageTitle(pageTitle);
+  if (vehicleId == null) return <NoVehicleSelected pageTitle={pageTitle} />;
   const slice = features.find((feature) => feature.slug === slug)?.slice;
   const evidence = report?.evidence;
   const limited = evidence && (!evidence.history_available || !evidence.black_box_available || evidence.history_truncated ||
     evidence.black_box_truncated || evidence.drive_sessions_truncated || evidence.charge_sessions_truncated);
-  return <PageContainer title={title} subtitle={t('teslaOnly.workbench.subtitle', 'A bounded evidence workbench: conclusions first, raw observations on demand.')}
+  return <PageContainer title={pageTitle} subtitle={t('teslaOnly.workbench.subtitle', 'A bounded evidence workbench: conclusions first, raw observations on demand.')}
     query={query} copyLink contextActions={<div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
       <DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />
       <VehicleSelect />
     </div>}>
     <StaleRefreshWarning state={state} label={title} />
+    {navigation}
     {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => { void query.refetch(); }} /> : report ? <div className="space-y-6">
       <GlassPanel className="space-y-3 p-4 sm:p-5">
         <PanelTitle>{t('teslaOnly.scopeTitle', 'Evidence boundaries')}</PanelTitle>
@@ -105,12 +111,12 @@ export function PhysicsPageShell({ physics, children }: { physics: ReturnType<ty
         </> : <Text as="p" variant="bodySm">{t('teslaOnly.scopeUnavailable', 'Evidence coverage metadata was not returned; counts cannot establish completeness.')}</Text>}
         <Text as="p" variant="caption">{t('teslaOnly.scopeCaution', 'The exclusive report covers at most 14 days. Row caps, missing history, and partial session coverage limit conclusions; a zero finding is not lifetime proof.')}</Text>
       </GlassPanel>
-      {slug && <Link to="/tesla-physics" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.hub', 'All Tesla physics')} →</Link>}
+      {slug && !unified && <Link to="/tesla-physics" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.hub', 'All Tesla physics')} →</Link>}
       {slice && !report[slice] ? <GlassPanel className="p-4 sm:p-5">
         {/* no-action: missing evidence cannot be restored from a display-only page. */}
         <EmptyState title={title} message={t('teslaOnly.missingSlice', 'This evidence slice was not returned. No measurement is inferred from its absence.')} />
       </GlassPanel> : children}
-      {slug && <GlassPanel className="space-y-3 p-4 sm:p-5">
+      {slug && !unified && <GlassPanel className="space-y-3 p-4 sm:p-5">
         <PanelTitle>{t('teslaOnly.followEvidence', 'Continue the investigation')}</PanelTitle>
         <div className="flex flex-wrap gap-3">
           {features.filter((item) => related[slug].includes(item.slug)).map((item) =>

@@ -39,21 +39,6 @@ const DigitalTwin = lazy(() => import('./features/vehicles/pages/DigitalTwinPage
 const TimeMachine = lazy(() => import('./features/vehicles/pages/TimeMachinePage'))
 const PhysicsCockpit = lazy(() => import('./features/vehicles/pages/PhysicsCockpitPage'))
 const TeslaPhysics = lazy(() => import('./features/vehicles/pages/TeslaPhysicsPage'))
-const PhysicsClocks = lazy(() => import('./features/vehicles/pages/PhysicsClocksPage'))
-const PhysicsLifeTape = lazy(() => import('./features/vehicles/pages/PhysicsLifeTapePage'))
-const PhysicsContradictions = lazy(() => import('./features/vehicles/pages/PhysicsContradictionsPage'))
-const PhysicsMeters = lazy(() => import('./features/vehicles/pages/PhysicsMetersPage'))
-const PhysicsUnknown = lazy(() => import('./features/vehicles/pages/PhysicsUnknownPage'))
-const PhysicsCarKeptLiving = lazy(() => import('./features/vehicles/pages/PhysicsCarKeptLivingPage'))
-const PhysicsLogbook = lazy(() => import('./features/vehicles/pages/PhysicsLogbookPage'))
-const PhysicsFirmwareEpochs = lazy(() => import('./features/vehicles/pages/PhysicsFirmwareEpochsPage'))
-const PhysicsChargePort = lazy(() => import('./features/vehicles/pages/PhysicsChargePortPage'))
-const PhysicsBlackBox = lazy(() => import('./features/vehicles/pages/PhysicsBlackBoxPage'))
-const PhysicsDictionary = lazy(() => import('./features/vehicles/pages/PhysicsDictionaryPage'))
-const PhysicsVault = lazy(() => import('./features/vehicles/pages/PhysicsVaultPage'))
-const PhysicsModes = lazy(() => import('./features/vehicles/pages/PhysicsModesPage'))
-const PhysicsNervousSystem = lazy(() => import('./features/vehicles/pages/PhysicsNervousSystemPage'))
-const PhysicsRange = lazy(() => import('./features/vehicles/pages/PhysicsRangePage'))
 const PhysicsLedger = lazy(() => import('./features/vehicles/pages/PhysicsLedgerPage'))
 const ScienceLab = lazy(() => import('./features/science/pages/ScienceLabPage'))
 
@@ -579,21 +564,21 @@ export default function App() {
         <Route path="time-machine" element={<SafeRoute name="TimeMachine"><TimeMachine /></SafeRoute>} />
         <Route path="physics-cockpit" element={<SafeRoute name="PhysicsCockpit"><PhysicsCockpit /></SafeRoute>} />
         <Route path="tesla-physics" element={<SafeRoute name="TeslaPhysics"><TeslaPhysics /></SafeRoute>} />
-        <Route path="tesla-physics/clocks" element={<SafeRoute name="PhysicsClocks"><PhysicsClocks /></SafeRoute>} />
-        <Route path="tesla-physics/life-tape" element={<SafeRoute name="PhysicsLifeTape"><PhysicsLifeTape /></SafeRoute>} />
-        <Route path="tesla-physics/contradictions" element={<SafeRoute name="PhysicsContradictions"><PhysicsContradictions /></SafeRoute>} />
-        <Route path="tesla-physics/meters" element={<SafeRoute name="PhysicsMeters"><PhysicsMeters /></SafeRoute>} />
-        <Route path="tesla-physics/unknown" element={<SafeRoute name="PhysicsUnknown"><PhysicsUnknown /></SafeRoute>} />
-        <Route path="tesla-physics/car-kept-living" element={<SafeRoute name="PhysicsCarKeptLiving"><PhysicsCarKeptLiving /></SafeRoute>} />
-        <Route path="tesla-physics/logbook" element={<SafeRoute name="PhysicsLogbook"><PhysicsLogbook /></SafeRoute>} />
-        <Route path="tesla-physics/firmware-epochs" element={<SafeRoute name="PhysicsFirmwareEpochs"><PhysicsFirmwareEpochs /></SafeRoute>} />
-        <Route path="tesla-physics/charge-port" element={<SafeRoute name="PhysicsChargePort"><PhysicsChargePort /></SafeRoute>} />
-        <Route path="tesla-physics/black-box" element={<SafeRoute name="PhysicsBlackBox"><PhysicsBlackBox /></SafeRoute>} />
-        <Route path="tesla-physics/dictionary" element={<SafeRoute name="PhysicsDictionary"><PhysicsDictionary /></SafeRoute>} />
-        <Route path="tesla-physics/vault" element={<SafeRoute name="PhysicsVault"><PhysicsVault /></SafeRoute>} />
-        <Route path="tesla-physics/modes" element={<SafeRoute name="PhysicsModes"><PhysicsModes /></SafeRoute>} />
-        <Route path="tesla-physics/nervous-system" element={<SafeRoute name="PhysicsNervousSystem"><PhysicsNervousSystem /></SafeRoute>} />
-        <Route path="tesla-physics/range" element={<SafeRoute name="PhysicsRange"><PhysicsRange /></SafeRoute>} />
+        <Route path="tesla-physics/clocks" element={<SafeRoute name="PhysicsClocks"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/life-tape" element={<SafeRoute name="PhysicsLifeTape"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/contradictions" element={<SafeRoute name="PhysicsContradictions"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/meters" element={<SafeRoute name="PhysicsMeters"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/unknown" element={<SafeRoute name="PhysicsUnknown"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/car-kept-living" element={<SafeRoute name="PhysicsCarKeptLiving"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/logbook" element={<SafeRoute name="PhysicsLogbook"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/firmware-epochs" element={<SafeRoute name="PhysicsFirmwareEpochs"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/charge-port" element={<SafeRoute name="PhysicsChargePort"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/black-box" element={<SafeRoute name="PhysicsBlackBox"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/dictionary" element={<SafeRoute name="PhysicsDictionary"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/vault" element={<SafeRoute name="PhysicsVault"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/modes" element={<SafeRoute name="PhysicsModes"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/nervous-system" element={<SafeRoute name="PhysicsNervousSystem"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/range" element={<SafeRoute name="PhysicsRange"><TeslaPhysics /></SafeRoute>} />
         <Route path="tesla-physics/ledger" element={<SafeRoute name="PhysicsLedger"><PhysicsLedger /></SafeRoute>} />
         <Route path="tesla-only" element={<LegacyTeslaPhysicsRedirect />} />
         <Route path="tesla-only/*" element={<LegacyTeslaPhysicsRedirect />} />
