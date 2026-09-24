@@ -1,6 +1,8 @@
 name: Security
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
     paths:
@@ -20,7 +22,7 @@ on:
       - 'scripts/check-security-workflow-pins_test.go'
       - '.github/workflows/security.yml'
   schedule:
-    - cron: "0 4 * * 1"
+    - cron: "17 4 * * *"
   workflow_dispatch:
     inputs:
       runner:
