@@ -626,14 +626,32 @@ export function resolveApiFixture(
   if (path.startsWith('/data-repair/suggestions')) return matched({ suggestions: [], generated_at: observedAt });
   if (path.startsWith('/fleet-ops/work-orders')) return matched({ items: [], total: 0, limit: 100, offset: 0 });
   if (path.startsWith('/pinned')) return matched([]);
+  if (path === '/geofences') return matched([]);
+  if (/^\/signals\/\d+\/available$/.test(path)) {
+    return matched({
+      vehicle_id: Number(path.split('/')[2]),
+      count: 0,
+      source: 'protomodel',
+      signals: [],
+    });
+  }
+  if (path.startsWith('/notifications/logs?') && new URLSearchParams(path.split('?')[1]).get('count_only') === 'true') {
+    const params = new URLSearchParams(path.split('?')[1]);
+    const events = scenario === 'empty' ? [] : notificationEvents;
+    const matching = params.get('source') === 'rule' ? events.filter(event => event.alert_id != null) : events;
+    return matched({ total: matching.length });
+  }
   if (path.startsWith('/notifications/logs')) {
     const events = scenario === 'empty' ? [] : notificationEvents;
+    const matching = new URLSearchParams(path.split('?')[1]).get('source') === 'rule'
+      ? events.filter(event => event.alert_id != null)
+      : events;
     if (new URLSearchParams(path.split('?')[1]).get('grouped') === 'true') {
-      return matched(events.map(latest => ({
+      return matched(matching.map(latest => ({
         group_key: null, latest, count: 1, unread_count: 1, vehicle_ids: [],
       })));
     }
-    return matched(events);
+    return matched(matching);
   }
   if (path.startsWith('/notifications/report?')) {
     const params = new URLSearchParams(path.split('?')[1]);

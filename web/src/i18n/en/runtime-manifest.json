@@ -195,6 +195,7 @@
       "alertRules",
       "audit",
       "notificationBurnRate",
+      "notificationHealth",
       "notificationLatency",
       "notificationSounds",
       "severity",

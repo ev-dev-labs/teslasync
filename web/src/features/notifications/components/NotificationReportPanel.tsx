@@ -62,8 +62,8 @@ export function NotificationReportPanel({ from, to }: { from: string; to: string
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard label={t('notifications.report.triggered', 'Triggers recorded')} value={fmtInt(report.triggered)} />
             <MetricCard label={t('notifications.report.deliveries', 'Channel deliveries')} value={fmtInt(report.deliveries)} />
-            <MetricCard label={t('notifications.report.fanout', 'Attributed deliveries per trigger')} value={report.triggered > 0 ? ((report.deliveries - report.uncorrelated_deliveries) / report.triggered).toFixed(1) : '—'} />
-            <MetricCard label={t('notifications.report.uncorrelated', 'Unattributed deliveries')} value={fmtInt(report.uncorrelated_deliveries)} />
+            <MetricCard label={t('notifications.report.fanout', 'Linked deliveries per trigger')} value={report.triggered > 0 ? ((report.deliveries - report.uncorrelated_deliveries) / report.triggered).toFixed(1) : '—'} />
+            <MetricCard label={t('notifications.report.uncorrelated', 'Deliveries without a linked trigger')} value={fmtInt(report.uncorrelated_deliveries)} />
           </div>
           <Text variant="caption">{t('notifications.report.countNote', 'Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.')}</Text>
           <ChartContainer

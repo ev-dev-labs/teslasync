@@ -288,3 +288,14 @@ func TestBuildNotificationLogWhere_PlaceholderOrdering(t *testing.T) {
 		t.Fatalf("expected 4 bind args, got %d (%v)", len(w.args), w.args)
 	}
 }
+
+func TestBuildNotificationLogWhere_RuleSource(t *testing.T) {
+	all := buildNotificationLogWhere(NotificationLogFilters{})
+	rules := buildNotificationLogWhere(NotificationLogFilters{Source: "rule"})
+	if strings.Contains(strings.Join(all.clauses, " "), "nl.alert_id IS NOT NULL") {
+		t.Fatal("unfiltered inbox excluded notifications without rules")
+	}
+	if !strings.Contains(strings.Join(rules.clauses, " "), "nl.alert_id IS NOT NULL") {
+		t.Fatal("rule source did not restrict to rule-backed notifications")
+	}
+}

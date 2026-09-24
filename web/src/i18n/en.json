@@ -3946,7 +3946,7 @@
         "cooldown": "Minimum minutes between repeat firings of this rule. Prevents the same condition from spamming your channels (e.g. battery at 19% triggering once per minute).",
         "severity": "Visual / routing priority — info, warn, or critical. Channels can subscribe to specific severities to keep critical alerts from being drowned out by chatty info ones.",
         "alertBehavior": "Pick 'Notify on event' for one-time confirmations like 'vehicle locked' or 'charging done'. Pick 'Re-alert until resolved' for ongoing safety concerns like 'vehicle unlocked' or 'door open'.",
-        "kind": "Signal threshold compares a single live telemetry value (e.g. BatteryLevel < 20). Computed metric aggregates over a time window (e.g. cost > $5 in last 24h).",
+        "kind": "Signal threshold compares live telemetry; computed metric aggregates over a time window. System service watches outage or recovery for the whole fleet. Place event watches arrival or departure from a saved place.",
         "vehicleId": "Restricts the rule to a single vehicle. Leave blank to apply across every vehicle on the account.",
         "operator": "Comparison applied to the signal value: =, !=, <, <=, >, >=, between, any change. Some operators only apply to numeric signals.",
         "testMessage": "Message body sent when the rule fires. Use {{SignalName}} placeholders to interpolate the current value into the notification."
@@ -4828,6 +4828,7 @@
         "navigation": "Navigation",
         "notification-burn-rate": "Notification Burn Rate",
         "notification-latency": "Notification Latency",
+        "notifications_health": "Notification Health",
         "notifications_browser": "Browser Notifications",
         "notifications_channels": "Notification Channels",
         "notifications_inbox": "All Notifications",
@@ -4948,6 +4949,7 @@
       }
   },
   "routes": {
+    "notificationHealth": "Notification Health",
     "teslaApiUsage": "Tesla API usage",
     "teslaPhysics": "Tesla Physics",
     "fSDInsights": "FSD Insights",
@@ -10521,6 +10523,7 @@
     "manageVehicles": "Manage vehicles"
   },
   "fleetApi": {
+    "subtitle": "Control Tesla Fleet API polling and endpoint toggles",
     "configured": {
       "emptyTitle": "Endpoint metadata unavailable",
       "emptyMessage": "This runtime did not publish any configured endpoint URLs.",
@@ -15963,8 +15966,8 @@
       "description": "Explore triggers and delivery outcomes across every notification source. Historical periods remain available.",
       "triggered": "Triggers recorded",
       "deliveries": "Channel deliveries",
-      "fanout": "Attributed deliveries per trigger",
-      "uncorrelated": "Unattributed deliveries",
+      "fanout": "Linked deliveries per trigger",
+      "uncorrelated": "Deliveries without a linked trigger",
       "countNote": "Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.",
       "timeline": "Daily activity",
       "day": "Day",
@@ -16013,6 +16016,14 @@
         "unread": "Unread"
       },
       "detail": { "title": "Notification details" },
+      "legacyDelivery": "Legacy channel delivery (original source not recorded)",
+      "countError": "Could not load the notification count: {{error}}",
+      "source": {
+        "ruleId": "Rule #{{id}}",
+        "legacyDelivery": "Legacy channel delivery",
+        "legacyHint": "Original source was not recorded for this older channel delivery.",
+        "unknown": "Unknown source"
+      },
       "previousPage": "Previous",
       "nextPage": "Next",
       "pageNumber": "Page {{page}}",
@@ -16031,6 +16042,9 @@
         "severity": "Severity",
         "vehicle": "Vehicle",
         "rule": "Rule",
+        "source": "Source",
+        "allSources": "All sources",
+        "ruleTriggers": "Rule triggers",
         "allVehicles": "All vehicles",
         "allRules": "All rules",
         "searchPlaceholder": "Search messages…",
@@ -16044,6 +16058,7 @@
       "row": {
         "select": "Select notification",
         "open": "Open notification: {{title}}",
+        "readMessage": "Read full message: {{title}}",
         "markRead": "Mark as read",
         "markUnread": "Mark as unread",
         "archive": "Archive",
@@ -16070,6 +16085,7 @@
       "empty": {
         "title": "No notifications",
         "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
+        "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert Studio.",
         "archivedTitle": "No archived notifications",
         "archivedMessage": "Archived notifications will appear here.",
         "cta": "Configure alert rules"
@@ -16170,7 +16186,7 @@
     },
     "alertStudio": {
       "title": "Alert Studio",
-      "subtitle": "Create custom rules from Fleet Telemetry signals",
+      "subtitle": "Create rules for vehicle signals, computed metrics, system health, and places",
       "placeEvents": {
         "title": "Place arrival and departure alerts",
         "place": "Place",
@@ -16384,7 +16400,36 @@
       },
       "kind": {
         "signal": "Signal threshold",
-        "computedMetric": "Computed metric"
+        "computedMetric": "Computed metric",
+        "system": "System service",
+        "place": "Place event",
+        "systemHint": "Notify when a monitored system service fails or recovers.",
+        "placeHint": "Notify when a vehicle arrives at or departs from a saved place."
+      },
+      "system": {
+        "telemetry": "TELEMETRY",
+        "mqtt": "MQTT",
+        "database": "DATABASE",
+        "redis": "REDIS",
+        "tesla_api": "TESLA API",
+        "worker": "WORKER",
+        "scope": "System health rules monitor a service for the entire fleet.",
+        "component": "Service",
+        "choose": "Choose a service",
+        "transition": "When",
+        "outage": "Becomes unavailable",
+        "recovery": "Recovers"
+      },
+      "place": {
+        "unavailable": "Place #{{id}} (unavailable)",
+        "emptyTitle": "No places configured",
+        "empty": "Add a place before creating an arrival or departure rule.",
+        "add": "Manage places",
+        "label": "Place",
+        "choose": "Choose a place",
+        "transition": "When",
+        "enter": "Arrives",
+        "exit": "Departs"
       }
     },
     "log": {
@@ -20591,6 +20636,11 @@
       },
       "alertRules": {
         "title": "Alert rules",
+        "editTitle": "Edit notification rule",
+        "editNamed": "Edit {{name}}",
+        "backToRules": "Back to rules",
+        "editMissing": "Rule not found",
+        "editMissingDetail": "This rule may have been deleted. Return to the list to choose another.",
         "desc": "Delete every alert rule you have authored. Cannot be undone."
       },
       "geofences": {
@@ -21236,7 +21286,7 @@
   },
   "alertRules": {
     "title": "Alert rules",
-    "subtitle": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio.",
+    "subtitle": "Manage and edit notification rules here. Create new rules in Alert Studio.",
     "kpis": "Alert rule metrics",
     "noun": {
       "one": "rule",
@@ -21254,14 +21304,16 @@
       "noSeverity": "No rules to summarise yet",
       "status": "Status breakdown",
       "noStatus": "No rules to summarise yet",
-      "topSignals": "Top monitored signals",
-      "noSignals": "No monitored signals yet",
+      "topSignals": "Top monitored subjects",
+      "noSignals": "No monitored subjects yet",
       "ruleCount": "Rules",
       "severityLabel": "Severity"
     },
     "kind": {
       "signal": "Signal",
-      "metric": "Metric"
+      "metric": "Metric",
+      "system": "System service",
+      "place": "Place event"
     },
     "scope": {
       "all": "All vehicles",
@@ -21283,13 +21335,13 @@
     },
     "empty": {
       "title": "No alert rules yet",
-      "body": "Create your first alert rule in the Alert Studio.",
-      "cta": "Open Alert Studio"
+      "body": "Create your first notification rule in Alert Studio.",
+      "cta": "Create rule"
     },
     "col": {
       "name": "Name",
       "type": "Type",
-      "signal": "Signal",
+      "signal": "Subject",
       "severity": "Severity",
       "scope": "Scope",
       "status": "Status"
@@ -21298,7 +21350,7 @@
     "error": {
       "nameTooLong": "Max 120 characters"
     },
-    "openStudio": "Open Alert Studio"
+    "openStudio": "Create rule"
   },
   "severity": {
     "info": "Info",
@@ -24385,6 +24437,11 @@
       "contribution": "Contribution (bits)",
       "count": "Aligned samples"
     }
+  },
+  "notificationHealth": {
+    "title": "Notification Health",
+    "subtitle": "Understand alert noise, delivery reliability, and delivery speed in one place.",
+    "navigation": "Notification health sections"
   },
   "notificationBurnRate": {
     "title": "Notification Burn Rate",

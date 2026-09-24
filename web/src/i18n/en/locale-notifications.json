@@ -501,7 +501,7 @@
   },
   "alertRules": {
     "title": "Alert rules",
-    "subtitle": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio.",
+    "subtitle": "Manage and edit notification rules here. Create new rules in Alert Studio.",
     "kpis": "Alert rule metrics",
     "noun": {
       "one": "rule",
@@ -519,14 +519,16 @@
       "noSeverity": "No rules to summarise yet",
       "status": "Status breakdown",
       "noStatus": "No rules to summarise yet",
-      "topSignals": "Top monitored signals",
-      "noSignals": "No monitored signals yet",
+      "topSignals": "Top monitored subjects",
+      "noSignals": "No monitored subjects yet",
       "ruleCount": "Rules",
       "severityLabel": "Severity"
     },
     "kind": {
       "signal": "Signal",
-      "metric": "Metric"
+      "metric": "Metric",
+      "system": "System service",
+      "place": "Place event"
     },
     "scope": {
       "all": "All vehicles",
@@ -548,13 +550,13 @@
     },
     "empty": {
       "title": "No alert rules yet",
-      "body": "Create your first alert rule in the Alert Studio.",
-      "cta": "Open Alert Studio"
+      "body": "Create your first notification rule in Alert Studio.",
+      "cta": "Create rule"
     },
     "col": {
       "name": "Name",
       "type": "Type",
-      "signal": "Signal",
+      "signal": "Subject",
       "severity": "Severity",
       "scope": "Scope",
       "status": "Status"
@@ -563,7 +565,7 @@
     "error": {
       "nameTooLong": "Max 120 characters"
     },
-    "openStudio": "Open Alert Studio"
+    "openStudio": "Create rule"
   },
   "audit": {
     "title": "Audit Log",
@@ -617,6 +619,11 @@
       "empty": "No notification outcomes are available in the last 24 hours.",
       "outcomes": "{{sent}} sent · {{failed}} failed · {{deferred}} deferred · {{pending}} pending"
     }
+  },
+  "notificationHealth": {
+    "title": "Notification Health",
+    "subtitle": "Understand alert noise, delivery reliability, and delivery speed in one place.",
+    "navigation": "Notification health sections"
   },
   "notificationLatency": {
     "title": "Notification Latency",

@@ -241,7 +241,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'FirmwareImpact', load: () => import('../features/analytics/pages/FirmwareImpactPage') },
   { name: 'CabinThermal', load: () => import('../features/vehicle-systems/pages/CabinThermalPage') },
   { name: 'ChargerHealth', load: () => import('../features/charging/pages/ChargerHealthPage') },
-  { name: 'AlertFatigue', load: () => import('../features/notifications/pages/AlertFatiguePage') },
+  { name: 'NotificationHealth', load: () => import('../features/notifications/pages/NotificationHealthPage') },
   { name: 'CommandReliability', load: () => import('../features/system/pages/CommandReliabilityPage') },
   { name: 'SignalCorrelation', load: () => import('../features/telemetry/pages/SignalCorrelationPage') },
 
@@ -264,8 +264,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'SignalChangePoints', load: () => import('../features/telemetry/pages/SignalChangePointsPage') },
   { name: 'SignalDeadband', load: () => import('../features/telemetry/pages/SignalDeadbandPage') },
   { name: 'SignalMutualInformation', load: () => import('../features/telemetry/pages/SignalMutualInformationPage') },
-  { name: 'NotificationBurnRate', load: () => import('../features/notifications/pages/NotificationBurnRatePage') },
-  { name: 'NotificationLatency', load: () => import('../features/notifications/pages/NotificationLatencyPage') },
 
   // Differentiated local intelligence and operations
   { name: 'RootCauseIntelligence', load: () => import('../features/diagnostics/pages/RootCauseIntelligencePage') },

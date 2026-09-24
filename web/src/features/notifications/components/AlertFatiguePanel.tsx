@@ -2,8 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BellRing, BellOff, EyeOff, Waves } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
+import { GlassPanel, PanelTitle, SectionTitle, Text, Badge, HelpTooltip } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -14,7 +13,6 @@ import {
 } from '@/components/charts';
 
 import { useNotificationAnalysisLogs } from '@/api/hooks/useNotifications';
-import { usePageTitle } from '@/hooks/usePageTitle';
 import { chartTokens } from '@/lib/tokens';
 
 import { analyzeAlertFatigue, type FatigueVerdict } from '../lib/alertFatigue';
@@ -35,9 +33,8 @@ const VERDICT_DEFAULT: Record<FatigueVerdict, string> = {
 
 const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, '0')}`);
 
-export default function AlertFatiguePage() {
+export function AlertFatiguePanel() {
   const { t } = useTranslation();
-  usePageTitle(t('alertFatigue.title', 'Alert Fatigue'));
 
   const logsQuery = useNotificationAnalysisLogs();
 
@@ -77,14 +74,13 @@ export default function AlertFatiguePage() {
   const isError = logsQuery.isError;
 
   return (
-    <PageContainer
-      title={t('alertFatigue.title', 'Alert Fatigue')}
-      subtitle={t(
-        'alertFatigue.subtitle',
-        'Which of your notification rules have stopped being useful — scored on volume, burstiness and how often you actually read them',
-      )}
-      query={logsQuery}
-    >
+    <section id="fatigue" aria-label={t('alertFatigue.title', 'Alert Fatigue')} className="space-y-4 scroll-mt-24">
+      <div>
+        <SectionTitle>{t('alertFatigue.title', 'Alert Fatigue')}</SectionTitle>
+        <Text as="p" color="secondary">
+          {t('alertFatigue.subtitle', 'Which of your notification rules have stopped being useful — scored on volume, burstiness and how often you actually read them')}
+        </Text>
+      </div>
       {/* 1 — KPI band */}
       <FadeIn>
         <section
@@ -349,6 +345,6 @@ export default function AlertFatiguePage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </section>
   );
 }

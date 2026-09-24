@@ -3,8 +3,7 @@
  *
  * Wraps three dropdowns (metric / window / operator) plus a numeric threshold
  * input and a live preview line that calls /alerts/test (preview path) to
- * report the current value of the metric. Used inside AlertStudioPage when
- * the user toggles to the "Computed metric" kind.
+ * report the current value of the metric. Used by the shared AlertRuleEditor.
  *
  * Props are intentionally narrow: the parent owns the editor state and
  * threads change events back through `onChange`. The component itself owns
@@ -34,6 +33,13 @@ interface Props {
 }
 
 const ALL_OPS: ComputedMetricOp[] = ['>', '>=', '<', '<=', '=', '!=', '%_change_>', '%_change_<']
+const CATEGORY_ORDER: Record<ComputedMetricSummary['category'], number> = {
+  driving: 0,
+  energy: 1,
+  charging: 2,
+  battery: 3,
+  cost: 4,
+}
 
 export function ComputedMetricEditor({ value, onChange, metrics = [], loading }: Props) {
   const { t } = useTranslation()
@@ -45,14 +51,13 @@ export function ComputedMetricEditor({ value, onChange, metrics = [], loading }:
     [metrics, value.metric_id],
   )
 
-  const metricOptions = useMemo(
-    () =>
-      metrics.map(m => ({
-        value: m.id,
-        label: t(`notifications.alertStudio.metricNames.${m.id}`, m.label),
-      })),
-    [metrics, t],
-  )
+  const metricOptions = useMemo(() => [...metrics]
+    .sort((a, b) => CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category]
+      || a.label.localeCompare(b.label))
+    .map(m => ({
+      value: m.id,
+      label: `${t(`notifications.alertStudio.metricCategories.${m.category}`, categoryLabel(m.category))} · ${t(`notifications.alertStudio.metricNames.${m.id}`, m.label)} (${unitSuffix(m.unit) || m.unit})`,
+    })), [metrics, t])
 
   const windowOptions = useMemo(() => {
     const list = selected?.windows ?? []
@@ -283,6 +288,12 @@ function unitSuffix(unit: string): string {
       return 'mi'
     case 'km':
       return 'km'
+    case 'mph':
+      return 'mph'
+    case 'kw':
+      return 'kW'
+    case 'pp':
+      return 'pp'
     case 'h':
       return 'h'
     case 'count':
@@ -291,5 +302,15 @@ function unitSuffix(unit: string): string {
       return '%'
     default:
       return unit
+  }
+}
+
+function categoryLabel(category: ComputedMetricSummary['category']): string {
+  switch (category) {
+    case 'driving': return 'Driving'
+    case 'energy': return 'Energy'
+    case 'charging': return 'Charging'
+    case 'battery': return 'Battery'
+    case 'cost': return 'Cost'
   }
 }

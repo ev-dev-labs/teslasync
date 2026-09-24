@@ -79,6 +79,10 @@ export function NotificationFilterBar({
     },
     [filters, onChange],
   );
+  const setSource = useCallback(
+    (value: string) => onChange({ ...filters, source: value === 'rule' ? 'rule' : undefined }),
+    [filters, onChange],
+  );
 
   const setQuery = useCallback(
     (q: string) => {
@@ -152,6 +156,14 @@ export function NotificationFilterBar({
         onRemove: () => onChange({ ...filters, rule_id: undefined }),
       });
     }
+    if (filters.source === 'rule') {
+      chips.push({
+        key: 'source',
+        label: t('notifications.inbox.filter.source', 'Source'),
+        value: t('notifications.inbox.filter.ruleTriggers', 'Rule triggers'),
+        onRemove: () => onChange({ ...filters, source: undefined }),
+      });
+    }
     if (filters.q) {
       chips.push({
         key: 'q',
@@ -169,6 +181,7 @@ export function NotificationFilterBar({
       severity: undefined,
       vehicle_id: undefined,
       rule_id: undefined,
+      source: undefined,
       q: undefined,
     });
   }, [filters, onChange]);
@@ -220,6 +233,16 @@ export function NotificationFilterBar({
           value={filters.rule_id?.[0] ? String(filters.rule_id[0]) : ''}
           onChange={e => setRule(e.target.value)}
           aria-label={t('notifications.inbox.filter.rule', 'Rule')}
+          className="min-w-[10rem]"
+        />
+        <Select
+          options={[
+            { value: '', label: t('notifications.inbox.filter.allSources', 'All sources') },
+            { value: 'rule', label: t('notifications.inbox.filter.ruleTriggers', 'Rule triggers') },
+          ]}
+          value={filters.source ?? ''}
+          onChange={e => setSource(e.target.value)}
+          aria-label={t('notifications.inbox.filter.source', 'Source')}
           className="min-w-[10rem]"
         />
 

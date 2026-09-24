@@ -727,7 +727,8 @@ export interface AlertDetail extends Alert {
 export type AlertRuleSeverity = 'info' | 'warn' | 'critical'
 export type AlertRuleOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'changed' | 'between' | 'outside'
 export type AlertRuleTriggerMode = 'once' | 'repeat'
-export type AlertRuleKind = 'signal' | 'computed_metric'
+export type AlertRuleKind = 'signal' | 'computed_metric' | 'system_component' | 'place'
+export type AlertRuleTransition = 'outage' | 'recovery' | 'enter' | 'exit'
 export type ComputedMetricOp = '>' | '>=' | '<' | '<=' | '=' | '!=' | '%_change_>' | '%_change_<'
 
 export interface AlertRule {
@@ -764,6 +765,9 @@ export interface AlertRule {
   trigger_mode: AlertRuleTriggerMode
   snoozed_until?: string | null
   kind?: AlertRuleKind
+  component_name?: string | null
+  place_id?: number | null
+  transition?: AlertRuleTransition | null
   metric_id?: string | null
   metric_window?: string | null
   metric_threshold?: number | null
@@ -836,6 +840,9 @@ export interface AlertRuleInput {
   trigger_mode?: AlertRuleTriggerMode
   snoozed_until?: string | null
   kind?: AlertRuleKind
+  component_name?: string | null
+  place_id?: number | null
+  transition?: AlertRuleTransition | null
   metric_id?: string | null
   metric_window?: string | null
   metric_threshold?: number | null
@@ -857,6 +864,7 @@ export interface AlertRuleInput {
 export interface ComputedMetricSummary {
   id: string
   label: string
+  category: 'driving' | 'energy' | 'charging' | 'cost' | 'battery'
   unit: string
   windows: string[]
   ops: ComputedMetricOp[]
@@ -935,6 +943,9 @@ export interface AlertMessagePreset {
 export interface AlertMessagePreviewRequest {
   name?: string
   kind?: AlertRuleKind
+  component_name?: string | null
+  place_id?: number | null
+  transition?: AlertRuleTransition | null
   signal_name?: string
   op?: AlertRuleOp
   severity?: AlertRuleSeverity

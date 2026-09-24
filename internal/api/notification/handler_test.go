@@ -46,6 +46,8 @@ type fakeInboxStore struct {
 	lastFilters dbnotif.NotificationLogFilters
 	rows        []*notificationmodel.NotificationLog
 	listErr     error
+	count       int64
+	countErr    error
 
 	groups        []*notificationmodel.NotificationLogGroup
 	listGroupErr  error
@@ -88,6 +90,33 @@ func (f *fakeInboxStore) GetLogsFiltered(_ context.Context, filters dbnotif.Noti
 		return nil, f.listErr
 	}
 	return f.rows, nil
+}
+
+func (f *fakeInboxStore) CountLogsFiltered(_ context.Context, filters dbnotif.NotificationLogFilters) (int64, error) {
+	f.lastFilters = filters
+	return f.count, f.countErr
+}
+
+func (f *fakeInboxStore) CountGroupsFiltered(ctx context.Context, filters dbnotif.NotificationLogFilters) (int64, error) {
+	return f.CountLogsFiltered(ctx, filters)
+}
+
+func TestCountLogsRuleSource(t *testing.T) {
+	store := &fakeInboxStore{count: 73}
+	h := &Handler{inbox: store}
+	rec := httptest.NewRecorder()
+	h.CountLogs(rec, httptest.NewRequest(http.MethodGet, "/notifications/logs/count?source=rule&limit=25&offset=50", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"total":73`) {
+		t.Fatalf("count response: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if store.lastFilters.Source != "rule" || store.lastFilters.Offset != 50 {
+		t.Fatalf("count filters: %+v", store.lastFilters)
+	}
+	rec = httptest.NewRecorder()
+	h.CountLogs(rec, httptest.NewRequest(http.MethodGet, "/notifications/logs/count?source=invalid", nil))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid source status=%d", rec.Code)
+	}
 }
 
 func (f *fakeInboxStore) ListGrouped(_ context.Context, filters dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error) {

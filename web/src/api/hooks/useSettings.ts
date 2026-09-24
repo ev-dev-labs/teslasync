@@ -324,7 +324,8 @@ export function useUpdatePollingConfig() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pc),
       }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      qc.setQueryData(['polling-config'], updated);
       qc.invalidateQueries({ queryKey: ['polling-config'] });
       qc.invalidateQueries({ queryKey: ['capture-stats'] });
       success('toast.settings.polling.success', 'Polling config saved');

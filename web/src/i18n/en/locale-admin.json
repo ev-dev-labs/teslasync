@@ -1023,6 +1023,7 @@
     }
   },
   "fleetApi": {
+    "subtitle": "Control Tesla Fleet API polling and endpoint toggles",
     "configured": {
       "emptyTitle": "Endpoint metadata unavailable",
       "emptyMessage": "This runtime did not publish any configured endpoint URLs.",

@@ -72,6 +72,8 @@ type notificationReportStore interface {
 // handlers (filter, bulk, unread-count). Extracted so tests can stub the DB.
 type notificationInboxStore interface {
 	GetLogsFiltered(ctx context.Context, f dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error)
+	CountLogsFiltered(ctx context.Context, f dbnotif.NotificationLogFilters) (int64, error)
+	CountGroupsFiltered(ctx context.Context, f dbnotif.NotificationLogFilters) (int64, error)
 	ListGrouped(ctx context.Context, f dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error)
 	GetUnreadCount(ctx context.Context) (int64, error)
 	BulkSetRead(ctx context.Context, ids []int64, read bool) (int64, error)
@@ -353,6 +355,10 @@ func (h *Handler) TestChannel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("count_only") == "true" {
+		h.CountLogs(w, r)
+		return
+	}
 	ctx, span := otel.Tracer("api").Start(r.Context(), "notifications.logs")
 	defer span.End()
 	filters, err := parseNotificationLogFilters(r)
@@ -418,6 +424,39 @@ func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, logs)
 }
 
+// CountLogs returns the total matching inbox rows independently of pagination.
+func (h *Handler) CountLogs(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "notifications.logs.count")
+	defer span.End()
+	filters, err := parseNotificationLogFilters(r)
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	grouped := r.URL.Query().Get("grouped")
+	if grouped != "" && grouped != "true" {
+		httpx.WriteError(w, http.StatusBadRequest, "grouped must be true")
+		return
+	}
+	var count int64
+	if grouped == "true" {
+		count, err = h.inbox.CountGroupsFiltered(ctx, filters)
+	} else {
+		count, err = h.inbox.CountLogsFiltered(ctx, filters)
+	}
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "notification count failed")
+		log.Ctx(ctx).Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to count notification logs")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to count logs")
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, struct {
+		Total int64 `json:"total"`
+	}{Total: count})
+}
+
 // parseNotificationLogFilters turns query params into a NotificationLogFilters.
 // All params are optional. Multi-value filters (severity, vehicle_id, rule_id)
 // accept either repeated params (?severity=info&severity=warn) or a single
@@ -450,6 +489,12 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 			return f, fmt.Errorf("invalid rule_id: %w", err)
 		}
 		f.RuleIDs = ids
+	}
+	if source := q.Get("source"); source != "" {
+		if source != "rule" {
+			return f, fmt.Errorf("invalid source %q", source)
+		}
+		f.Source = source
 	}
 	if s := q.Get("from"); s != "" {
 		t, err := parseFlexibleTime(s)

@@ -189,6 +189,7 @@ interface Handlers {
   logs?: () => Promise<unknown>;
   groups?: () => Promise<unknown>;
   members?: () => Promise<unknown>;
+  total?: number;
 }
 
 function installRequest(h: Handlers = {}) {
@@ -201,6 +202,7 @@ function installRequest(h: Handlers = {}) {
       if (path.startsWith('/notifications/logs')) return Promise.resolve({ deleted: 1 });
       return Promise.resolve({});
     }
+    if (path.includes('count_only=true')) return Promise.resolve({ total: h.total ?? 2 });
     if (path.includes('group_key=')) return (h.members ?? (() => Promise.resolve([])))();
     if (path.includes('grouped=true')) return (h.groups ?? (() => Promise.resolve([])))();
     if (path.startsWith('/notifications/logs')) return (h.logs ?? (() => Promise.resolve([])))();
@@ -217,7 +219,7 @@ function callsFor(pred: (path: string, method: string | undefined) => boolean) {
 const flatCalls = () =>
   callsFor(
     (p, m) =>
-      !m && p.startsWith('/notifications/logs') && !p.includes('grouped=true') && !p.includes('group_key='),
+      !m && p.startsWith('/notifications/logs?') && !p.includes('count_only=true') && !p.includes('grouped=true') && !p.includes('group_key='),
   );
 const groupedCalls = () => callsFor((p, m) => !m && p.includes('grouped=true'));
 const markReadPosts = () => callsFor((p, m) => m === 'POST' && p.includes('mark-read'));
@@ -266,17 +268,18 @@ beforeEach(() => {
 describe('InboxBody — flat view', () => {
   it('pages through older notifications instead of stopping at the first 50', async () => {
     installRequest({
+      total: 100,
       logs: () => Promise.resolve(Array.from({ length: 50 }, (_, index) => makeLog({
         id: index + 1,
         title: `Message ${index + 1}`,
       }))),
     });
     renderInbox({ route: '/notifications/inbox?view=flat' });
-    fireEvent.click(await screen.findByRole('button', { name: 'Next' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Next page' }));
     await waitFor(() => {
       expect(flatCalls().some(([path]) => String(path).includes('offset=50'))).toBe(true);
     });
-    expect(screen.getByText('Page 2')).toBeInTheDocument();
+    expect(screen.getByLabelText('Page 2 of 2')).toBeInTheDocument();
   });
 
   it('opens and marks read a channel-less system event without a rule', async () => {
@@ -300,6 +303,29 @@ describe('InboxBody — flat view', () => {
     );
     expect(screen.getByRole('dialog')).toHaveTextContent('system.mqtt.recovery');
     await waitFor(() => expect(markReadPosts().some(call => JSON.stringify(bodyOf(call)).includes('23'))).toBe(true));
+  });
+
+  it('filters rule-triggered history and opens the full text of a legacy delivery', async () => {
+    installRequest({
+      logs: () => Promise.resolve([
+        makeLog({
+          id: 24, title: 'Recovered', message: 'Full first line\nFull second line',
+          channel_id: 2, alert_id: null, event_type: undefined,
+        }),
+      ]),
+    });
+    renderInbox();
+    await screen.findByText('Recovered');
+    expect(screen.getByText('Legacy channel delivery')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Read full message: Recovered' }));
+    expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full first line');
+    expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full second line');
+    fireEvent.click(screen.getByRole('button', { name: /close/i }));
+    fireEvent.change(screen.getByLabelText('Source'), { target: { value: 'rule' } });
+    await waitFor(() => {
+      expect(flatCalls().some(([path]) => String(path).includes('source=rule'))).toBe(true);
+      expect(callsFor((path) => path.includes('count_only=true') && path.includes('source=rule')).length).toBeGreaterThan(0);
+    });
   });
 
   it('renders a column table, the count label, and fetches the SI-clean flat path by default', async () => {

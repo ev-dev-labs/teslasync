@@ -33,7 +33,7 @@ const alertRuleColumns = `id, name, description, enabled, vehicle_id, all_vehicl
 	kind, metric_id, metric_window, metric_threshold, metric_op,
 	max_fires_per_resolution,
 	escalation_after_min, escalation_severity,
-	msg_template, include_title,
+	msg_template, include_title, component_name, transition, place_id,
 	created_at, updated_at, channel_ids`
 
 func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *alertmodel.AlertRule) error {
@@ -45,7 +45,7 @@ func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *alertmodel.Aler
 		&ar.Kind, &ar.MetricID, &ar.MetricWindow, &ar.MetricThreshold, &ar.MetricOp,
 		&ar.MaxFiresPerResolution,
 		&ar.EscalationAfterMin, &ar.EscalationSeverity,
-		&ar.MsgTemplate, &ar.IncludeTitle,
+		&ar.MsgTemplate, &ar.IncludeTitle, &ar.ComponentName, &ar.Transition, &ar.PlaceID,
 		&ar.CreatedAt, &ar.UpdatedAt,
 		&ar.ChannelIDs,
 	)
@@ -254,7 +254,8 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *alertmodel.A
 			max_fires_per_resolution=$23,
 			escalation_after_min=$24, escalation_severity=$25,
 			msg_template=$26, include_title=$27,
-			updated_at=$28, channel_ids=$29
+			updated_at=$28, channel_ids=$29,
+			component_name=$30, transition=$31, place_id=$32
 			WHERE id=$1`,
 			id, rule.Name, rule.Description, rule.Enabled, rule.VehicleID,
 			rule.AllVehicles,
@@ -265,7 +266,7 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *alertmodel.A
 			rule.MaxFiresPerResolution,
 			rule.EscalationAfterMin, rule.EscalationSeverity,
 			rule.MsgTemplate, rule.IncludeTitle,
-			time.Now().UTC(), rule.ChannelIDs)
+			time.Now().UTC(), rule.ChannelIDs, rule.ComponentName, rule.Transition, rule.PlaceID)
 		if err != nil {
 			return err
 		}
@@ -343,9 +344,9 @@ func createRuleTx(ctx context.Context, tx pgx.Tx, rule *alertmodel.AlertRule) er
 			max_fires_per_resolution,
 			escalation_after_min, escalation_severity,
 			msg_template, include_title,
-			created_at, updated_at, channel_ids)
+			created_at, updated_at, channel_ids, component_name, transition, place_id)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-				$16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW(), $27)
+				$16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW(), $27, $28, $29, $30)
 			RETURNING id, created_at, updated_at`
 	err := tx.QueryRow(ctx, query, rule.Name, rule.Description, rule.Enabled,
 		rule.VehicleID, rule.AllVehicles,
@@ -355,7 +356,7 @@ func createRuleTx(ctx context.Context, tx pgx.Tx, rule *alertmodel.AlertRule) er
 		rule.Kind, rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp,
 		rule.MaxFiresPerResolution,
 		rule.EscalationAfterMin, rule.EscalationSeverity,
-		rule.MsgTemplate, rule.IncludeTitle, rule.ChannelIDs).
+		rule.MsgTemplate, rule.IncludeTitle, rule.ChannelIDs, rule.ComponentName, rule.Transition, rule.PlaceID).
 		Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
 	if err != nil {
 		return err

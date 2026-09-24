@@ -105,6 +105,8 @@ export const notificationKeys = {
   analysisLogs: ['notification-logs', 'analysis-history'] as const,
   logsFiltered: (filters?: NotificationFilters) =>
     ['notification-logs', 'filtered', filters ?? {}] as const,
+  logsCount: (filters?: NotificationFilters, grouped = false) =>
+    ['notification-logs', 'count', grouped, filters ?? {}] as const,
   // Grouped/threaded inbox cache sits beside `logsFiltered` so a
   // same-filter swap between flat and grouped views doesn't fight the cache.
   // Members of a single group reuse `logsFiltered` keyed on `{ group_key }`
@@ -129,6 +131,7 @@ export interface NotificationFilters {
   severity?: ('info' | 'warn' | 'critical')[];
   vehicle_id?: number[];
   rule_id?: number[];
+  source?: 'rule';
   from?: string;
   to?: string;
   read?: boolean;
@@ -146,6 +149,7 @@ function serializeNotificationFilters(filters: NotificationFilters): string {
   if (filters.severity?.length) params.set('severity', filters.severity.join(','));
   if (filters.vehicle_id?.length) params.set('vehicle_id', filters.vehicle_id.join(','));
   if (filters.rule_id?.length) params.set('rule_id', filters.rule_id.join(','));
+  if (filters.source) params.set('source', filters.source);
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
   if (typeof filters.read === 'boolean') params.set('read', String(filters.read));
@@ -838,6 +842,23 @@ export function useNotificationLogs(
     queryFn: ({ signal }) => request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`, { signal }),
     enabled: options?.enabled ?? true,
     select: safeArray,
+  });
+}
+
+export function useNotificationLogCount(
+  filters: NotificationFilters,
+  options?: { grouped?: boolean },
+) {
+  const countFilters = { ...filters };
+  delete countFilters.limit;
+  delete countFilters.offset;
+  const params = new URLSearchParams(serializeNotificationFilters(countFilters));
+  params.set('count_only', 'true');
+  if (options?.grouped) params.set('grouped', 'true');
+  return useQuery({
+    queryKey: notificationKeys.logsCount(countFilters, options?.grouped),
+    queryFn: ({ signal }) =>
+      request<{ total: number }>(`/notifications/logs?${params}`, { signal }),
   });
 }
 

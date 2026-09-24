@@ -34,7 +34,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 		endpoints = w.pollingConfig.EnabledVehicleDataEndpoints()
 	}
 
-	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VIN, endpoints...)
+	data, err := w.teslaClient.GetVehicleData(tesla.AutomaticPollingContext(pollCtx), vehicle.VIN, endpoints...)
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
 		w.publishMQTT(vehicle, "state", enums.StateAsleep)
 		w.recordVehicleAsleep(vehicle.ID)
@@ -103,7 +103,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 		if w.doRefreshToken(ctx) {
 			retryCtx, retryCancel := context.WithTimeout(ctx, 30*time.Second)
 			defer retryCancel()
-			data, err = w.teslaClient.GetVehicleData(retryCtx, vehicle.VIN, endpoints...)
+			data, err = w.teslaClient.GetVehicleData(tesla.AutomaticPollingContext(retryCtx), vehicle.VIN, endpoints...)
 			if err != nil {
 				logger.Warn().Err(err).Msg("retry after token refresh still failed")
 				w.recordVehicleFailure(vehicle.ID)

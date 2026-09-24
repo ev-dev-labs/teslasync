@@ -42,6 +42,7 @@ import {
   ConfirmDialog,
   GlassPanel,
   Modal,
+  Pagination,
   Text,
   useContextMenu,
   type ContextMenuItem,
@@ -59,6 +60,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
 import {
   useNotificationLogs,
+  useNotificationLogCount,
   useNotificationGroups,
   useArchiveNotifications,
   useUnarchiveNotifications,
@@ -140,6 +142,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const [severityRaw] = useUrlArray('severity');
   const [vehicleIdsRaw] = useUrlArray('vehicle_id');
   const [ruleIdsRaw] = useUrlArray('rule_id');
+  const [source] = useUrlEnum<'all' | 'rule'>('source', ['all', 'rule'], 'all');
   const [search] = useUrlString('q', '');
   const [readState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
   const {
@@ -180,18 +183,19 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     severity: severity.length ? severity : undefined,
     vehicle_id: vehicleIds.length ? vehicleIds : undefined,
     rule_id: ruleIds.length ? ruleIds : undefined,
+    source: source === 'rule' ? 'rule' : undefined,
     q: search || undefined,
     from: from || undefined,
     to: to || undefined,
     read: readState === 'all' ? undefined : readState === 'read',
     limit: INBOX_PAGE_SIZE,
     offset: (page - 1) * INBOX_PAGE_SIZE,
-  }), [archived, severity, vehicleIds, ruleIds, search, from, to, readState, page]);
+  }), [archived, severity, vehicleIds, ruleIds, source, search, from, to, readState, page]);
 
   const severityKey = severityRaw.join(',');
   const vehicleKey = vehicleIdsRaw.join(',');
   const ruleKey = ruleIdsRaw.join(',');
-  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, search, from, to, readState, view]);
+  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, source, search, from, to, readState, view]);
 
   const handleFiltersChange = useCallback((next: NotificationFilters) => {
     // Bridge the existing controlled-component contract back into the
@@ -205,6 +209,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       severity: (next.severity ?? []).join(',') || null,
       vehicle_id: (next.vehicle_id ?? []).map(String).join(',') || null,
       rule_id: (next.rule_id ?? []).map(String).join(',') || null,
+      source: next.source ?? null,
       q: next.q ?? null,
       read: readValue,
     };
@@ -245,6 +250,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   }, [setFiltersBatch]);
 
   const { data: rawRows, isLoading, error, refetch } = useNotificationLogs(filters, { enabled: !isGrouped });
+  const { data: countData, error: countError } = useNotificationLogCount(filters, { grouped: isGrouped });
   const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);
   const [openedLog, setOpenedLog] = useState<NotificationLog | null>(null);
   const alertDetail = useAlertDetail(openedLog?.alert_id != null ? openedLog.id : null);
@@ -638,8 +644,8 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       title={openedLog?.title || t('notifications.inbox.detail.title', 'Notification details')}
     >
       <div className="space-y-3">
-        <Text variant="body">{openedLog?.message ?? ''}</Text>
-        <Text variant="caption">{openedLog?.event_type ?? t('notifications.report.values.unknown', 'Unattributed')}</Text>
+        <Text variant="body" className="whitespace-pre-wrap break-words">{openedLog?.message ?? ''}</Text>
+        <Text variant="caption">{openedLog?.event_type ?? t('notifications.inbox.legacyDelivery', 'Legacy channel delivery (original source not recorded)')}</Text>
         <Text variant="caption">{openedLog?.created_at ? new Date(openedLog.created_at).toLocaleString() : ''}</Text>
       </div>
     </Modal>
@@ -690,7 +696,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             {isGrouped ? (
               <>
                 {t('notifications.inbox.threadCountLabel', '{{count}} threads', {
-                  count: groups.length,
+                  count: countData?.total ?? groups.length,
                 })}
                 <span aria-hidden="true"> · </span>
                 {t('notifications.inbox.notificationCountLabel', '{{count}} notifications', {
@@ -698,7 +704,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                 })}
               </>
             ) : (
-              t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })
+              t('notifications.inbox.countLabel', '{{count}} notifications', { count: countData?.total ?? rows.length })
             )}
           </span>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
@@ -815,7 +821,9 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
               : t('notifications.inbox.empty.title', 'No notifications')}
             message={archived
               ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
-              : t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}
+              : source === 'rule'
+                ? t('notifications.inbox.empty.ruleTriggers', 'No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert Studio.')
+                : t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}
             actionTo={archived ? undefined : {
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
               to: '/notifications/studio',
@@ -874,21 +882,9 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           </div>
         )}
       </GlassPanel>
-      {(page > 1 || (isGrouped ? groups.length : rows.length) === INBOX_PAGE_SIZE) && (
-        <div className="flex items-center justify-end gap-3">
-          <Button size="sm" variant="ghost" disabled={page === 1} onClick={() => setPage(page - 1)}>
-            {t('notifications.inbox.previousPage', 'Previous')}
-          </Button>
-          <Text variant="caption">{t('notifications.inbox.pageNumber', 'Page {{page}}', { page })}</Text>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={(isGrouped ? groups.length : rows.length) < INBOX_PAGE_SIZE}
-            onClick={() => setPage(page + 1)}
-          >
-            {t('notifications.inbox.nextPage', 'Next')}
-          </Button>
-        </div>
+      {countError && <Text variant="bodySm">{t('notifications.inbox.countError', 'Could not load the notification count: {{error}}', { error: String(countError) })}</Text>}
+      {countData && countData.total > 0 && (
+        <Pagination page={page} pageSize={INBOX_PAGE_SIZE} total={countData.total} onPageChange={setPage} />
       )}
     </div>
     </PullToRefresh>

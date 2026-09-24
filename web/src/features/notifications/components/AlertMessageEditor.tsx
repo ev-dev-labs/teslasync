@@ -58,6 +58,7 @@ import type {
   AlertMessagePreviewRequest,
   AlertMessagePreviewResponse,
   AlertRuleKind,
+  AlertRuleTransition,
   AlertRuleOp,
   AlertRuleSeverity,
   ComputedMetricOp,
@@ -67,6 +68,9 @@ import type {
 export interface AlertMessageEditorDraft {
   name?: string
   kind?: AlertRuleKind
+  component_name?: string | null
+  place_id?: number | null
+  transition?: AlertRuleTransition | null
   signal_name?: string
   op?: AlertRuleOp
   severity?: AlertRuleSeverity
@@ -361,6 +365,9 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
           includeTitle,
           name: draft.name,
           kind: draft.kind,
+          component_name: draft.component_name,
+          place_id: draft.place_id,
+          transition: draft.transition,
           signal_name: draft.signal_name,
           op: draft.op,
           severity: draft.severity,
@@ -383,6 +390,9 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
         const body: AlertMessagePreviewRequest = {
           name: draft.name,
           kind: draft.kind,
+          component_name: draft.component_name,
+          place_id: draft.place_id,
+          transition: draft.transition,
           signal_name: draft.signal_name,
           op: draft.op,
           severity: draft.severity,

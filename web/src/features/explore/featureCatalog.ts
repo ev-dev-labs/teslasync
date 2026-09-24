@@ -224,9 +224,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/notifications/channels': 'Where alerts are sent — email, SMS, push, webhook.',
   '/notifications/browser': 'Enable browser push notifications for this device.',
   '/notifications/quiet-hours': 'Mute non-critical alerts during set times.',
-  '/alert-fatigue': 'Identify noisy alert rules and reduce repetitive notifications.',
-  '/notification-burn-rate': 'Track notification reliability against its error budget.',
-  '/notification-latency': 'Measure delivery speed and tail latency by channel.',
+  '/notifications/health': 'Understand alert fatigue, notification delivery error budgets, and tail latency together.',
 
   // ── Security ───────────────────────────────────────────────────────
   '/security-access': 'Manage who can drive, charge, and unlock your vehicle.',

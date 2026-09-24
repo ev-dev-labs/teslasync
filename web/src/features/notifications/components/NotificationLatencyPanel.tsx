@@ -9,19 +9,16 @@ import {
 } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { usePageTitle } from '@/hooks/usePageTitle';
+import { Badge, GlassPanel, PanelTitle, SectionTitle, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 
 import { analyzeNotificationLatency } from '../lib/notificationLatency';
 
-export default function NotificationLatencyPage() {
+export function NotificationLatencyPanel() {
   const { t } = useTranslation();
-  usePageTitle(t('notificationLatency.title', 'Notification Latency'));
   const logsQuery = useNotificationDeliveryLogs();
   const summary = useMemo(
     () => analyzeNotificationLatency(logsQuery.data ?? []),
@@ -48,14 +45,13 @@ export default function NotificationLatencyPage() {
   const isError = logsQuery.isError;
 
   return (
-    <PageContainer
-      title={t('notificationLatency.title', 'Notification Latency')}
-      subtitle={t(
-        'notificationLatency.subtitle',
-        'Measure all recorded delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records',
-      )}
-      query={logsQuery}
-    >
+    <section id="latency" aria-label={t('notificationLatency.title', 'Notification Latency')} className="space-y-4 scroll-mt-24">
+      <div>
+        <SectionTitle>{t('notificationLatency.title', 'Notification Latency')}</SectionTitle>
+        <Text as="p" color="secondary">
+          {t('notificationLatency.subtitle', 'Measure all recorded delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records')}
+        </Text>
+      </div>
       <FadeIn>
         <section
           aria-label={t('notificationLatency.kpis.label', 'Notification latency metrics')}
@@ -260,6 +256,6 @@ export default function NotificationLatencyPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </section>
   );
 }

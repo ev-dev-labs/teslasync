@@ -9,10 +9,8 @@ import {
 } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { usePageTitle } from '@/hooks/usePageTitle';
+import { Badge, GlassPanel, PanelTitle, SectionTitle, Text } from '@/components/ui';
 import { formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
@@ -29,9 +27,8 @@ const STATUS_FALLBACK: Record<BurnBreachStatus, string> = {
   no_data: 'No outcomes',
 };
 
-export default function NotificationBurnRatePage() {
+export function NotificationBurnRatePanel() {
   const { t } = useTranslation();
-  usePageTitle(t('notificationBurnRate.title', 'Notification Burn Rate'));
   const logsQuery = useNotificationDeliveryLogs();
   const summary = useMemo(
     () => analyzeNotificationBurnRate(logsQuery.data ?? []),
@@ -59,14 +56,13 @@ export default function NotificationBurnRatePage() {
   );
 
   return (
-    <PageContainer
-      title={t('notificationBurnRate.title', 'Notification Burn Rate')}
-      subtitle={t(
-        'notificationBurnRate.subtitle',
-        'Track all recorded notification delivery attempts against a 99% SLO with short and long error-budget windows',
-      )}
-      query={logsQuery}
-    >
+    <section id="burn-rate" aria-label={t('notificationBurnRate.title', 'Notification Burn Rate')} className="space-y-4 scroll-mt-24">
+      <div>
+        <SectionTitle>{t('notificationBurnRate.title', 'Notification Burn Rate')}</SectionTitle>
+        <Text as="p" color="secondary">
+          {t('notificationBurnRate.subtitle', 'Track all recorded notification delivery attempts against a 99% SLO with short and long error-budget windows')}
+        </Text>
+      </div>
       <FadeIn>
         <section
           aria-label={t('notificationBurnRate.kpis.label', 'Delivery SLO metrics')}
@@ -259,6 +255,6 @@ export default function NotificationBurnRatePage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </section>
   );
 }

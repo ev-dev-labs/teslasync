@@ -160,7 +160,7 @@ export function Drawer({
                   id={descriptionId}
                   as="p"
                   variant="bodySm"
-                  className="mt-1.5"
+                  className="mt-1.5 whitespace-pre-wrap break-words"
                 >
                   {description}
                 </Text>

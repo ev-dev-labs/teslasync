@@ -56,7 +56,7 @@ describe('NotificationReportPanel', () => {
     expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
     expect(screen.getByText('Channel deliveries')).toBeInTheDocument();
     expect(screen.getByText('1.7')).toBeInTheDocument();
-    expect(screen.getByText('Unattributed deliveries')).toBeInTheDocument();
+    expect(screen.getByText('Deliveries without a linked trigger')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByText('Alert')).toBeInTheDocument();
     expect(screen.getByText('System Mqtt Outage')).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('NotificationReportPanel', () => {
     } as ReturnType<typeof useNotificationReport>);
     renderPanel();
     expect(screen.getByText('1.0')).toBeInTheDocument();
-    expect(screen.getByText('Unattributed deliveries').closest('[data-role="metric-card"]')).toHaveTextContent('2');
+    expect(screen.getByText('Deliveries without a linked trigger').closest('[data-role="metric-card"]')).toHaveTextContent('2');
     expect(screen.getByText(/Older deliveries without an event identifier appear only in delivery counts/)).toBeInTheDocument();
   });
 

@@ -386,6 +386,11 @@
       },
       "alertRules": {
         "title": "Alert rules",
+        "editTitle": "Edit notification rule",
+        "editNamed": "Edit {{name}}",
+        "backToRules": "Back to rules",
+        "editMissing": "Rule not found",
+        "editMissingDetail": "This rule may have been deleted. Return to the list to choose another.",
         "desc": "Delete every alert rule you have authored. Cannot be undone."
       },
       "geofences": {

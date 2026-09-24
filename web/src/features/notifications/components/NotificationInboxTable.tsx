@@ -54,7 +54,17 @@ export function NotificationInboxTable({
     {
       key: 'message',
       header: t('notifications.inbox.columns.message', 'Message'),
-      render: log => <span className="block max-w-72 truncate" title={log.message}>{log.message || '—'}</span>,
+      render: log => (
+        <Button
+          type="button"
+          variant="ghost"
+          className="!h-auto max-w-72 !justify-start !p-0 text-left"
+          onClick={() => onActivate(log)}
+          aria-label={t('notifications.inbox.row.readMessage', 'Read full message: {{title}}', { title: log.title || '—' })}
+        >
+          <span className="block truncate" title={log.message}>{log.message || '—'}</span>
+        </Button>
+      ),
     },
     {
       key: 'type',
@@ -67,7 +77,15 @@ export function NotificationInboxTable({
       render: log => {
         const rule = log.alert_id != null ? ruleMap[log.alert_id] : undefined;
         const vehicle = rule?.vehicle_id != null ? vehicleMap[rule.vehicle_id] : undefined;
-        return <span title={vehicle?.display_name || undefined}>{rule?.name ?? t(`notifications.report.values.${log.event_type?.split('.')[0] || 'unknown'}`, log.event_type?.split('.')[0] || 'Unattributed')}</span>;
+        const label = rule?.name
+          ?? (log.alert_id != null
+            ? t('notifications.inbox.source.ruleId', 'Rule #{{id}}', { id: log.alert_id })
+            : log.event_type
+              ? t(`notifications.report.values.${log.event_type.split('.')[0]}`, notificationEventTypeFallback(log.event_type.split('.')[0]))
+              : log.channel_id
+                ? t('notifications.inbox.source.legacyDelivery', 'Legacy channel delivery')
+                : t('notifications.inbox.source.unknown', 'Unknown source'));
+        return <span title={vehicle?.display_name || (log.channel_id && !log.event_type ? t('notifications.inbox.source.legacyHint', 'Original source was not recorded for this older channel delivery.') : undefined)}>{label}</span>;
       },
     },
     {

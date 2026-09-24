@@ -9,11 +9,10 @@ import (
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
-	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
-
 	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
 
@@ -136,11 +135,14 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 		return
 	}
 
-	// Load polling config for this cycle (per-vehicle configs are in the
-	// polling_config table; the worker still uses the legacy feature-flag
-	// struct for endpoint selection until the full migration is complete).
-	defaultPC := settingsmodel.DefaultPollingConfig()
-	pc := &defaultPC
+	// Endpoint selection is installation-wide; per-vehicle intervals remain
+	// in polling_config. Do not poll with defaults when the setting is unreadable.
+	controls, err := w.settingsRepo.GetEndpointControls(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("endpoint controls unavailable — skipping poll cycle")
+		return
+	}
+	pc := &controls
 	w.pollingConfig = pc
 
 	// When fleet telemetry is primary, periodically discover new vehicles
@@ -240,7 +242,7 @@ func (w *Worker) discoverVehicles(ctx context.Context) {
 	listCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	teslaVehicles, err := w.teslaClient.ListVehicles(listCtx)
+	teslaVehicles, err := w.teslaClient.ListVehicles(tesla.AutomaticPollingContext(listCtx))
 	if err != nil {
 		log.Warn().Err(err).Msg("fleet telemetry: vehicle discovery failed")
 		return

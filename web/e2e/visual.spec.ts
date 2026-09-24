@@ -103,6 +103,11 @@ for (const route of VISUAL_ROUTES) {
       ? `${route.path}?from=2026-08-20&to=2026-09-13`
       : route.path;
     await seedBrowserState(page, theme, path, { density });
+    if (route.name === 'notifications') {
+      await page.addInitScript(() => {
+        localStorage.setItem('teslasync.notifications.markOnOpen', 'false');
+      });
+    }
     const mockApi = await installApiMocks(page, scenario, theme, density);
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     await waitForHarnessReady(page, mockApi);

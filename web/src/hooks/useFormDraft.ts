@@ -53,6 +53,8 @@ export interface FormDraftOptions<T> {
   skipPersist?: (value: T) => boolean
   /** Optional schema-version stamp; bumping this invalidates older drafts silently. */
   version?: number
+  /** Reject persisted drafts that no longer match this form's runtime shape. */
+  validateDraft?: (value: unknown) => value is T
   /** Maximum age in ms before the draft is treated as expired (default 7 days). */
   maxAgeMs?: number
   /**
@@ -111,6 +113,7 @@ function readDraft<T>(
   fullKey: string,
   expectedVersion: number,
   maxAgeMs: number,
+  validateDraft?: (value: unknown) => value is T,
 ): { value: T; savedAt: Date } | null {
   if (!storage) return null
   let raw: string | null
@@ -138,6 +141,10 @@ function readDraft<T>(
   }
   if (Date.now() - parsed.savedAt > maxAgeMs) {
     // Expired: drop it so we don't keep re-reading and re-rejecting.
+    try { storage.removeItem(fullKey) } catch { /* ignore */ }
+    return null
+  }
+  if (validateDraft && !validateDraft(parsed.value)) {
     try { storage.removeItem(fullKey) } catch { /* ignore */ }
     return null
   }
@@ -215,6 +222,7 @@ export function useFormDraft<T>(
     storage = 'local',
     skipPersist,
     version = 1,
+    validateDraft,
     maxAgeMs = DEFAULT_MAX_AGE_MS,
     recover,
   } = opts
@@ -224,7 +232,7 @@ export function useFormDraft<T>(
 
   // Lazy init: read from storage on first mount.
   const [state, setState] = useState<InternalState<T>>(() => {
-    const stored = readDraft<T>(storageObj, fullKey, version, maxAgeMs)
+    const stored = readDraft<T>(storageObj, fullKey, version, maxAgeMs, validateDraft)
     return stored
       ? { value: stored.value, savedAt: stored.savedAt, hasDraft: true }
       : { value: initial, savedAt: null, hasDraft: false }
@@ -267,7 +275,7 @@ export function useFormDraft<T>(
   let currentState = state
   if (lastKeyRef.current !== fullKey) {
     lastKeyRef.current = fullKey
-    const stored = readDraft<T>(storageObj, fullKey, version, maxAgeMs)
+    const stored = readDraft<T>(storageObj, fullKey, version, maxAgeMs, validateDraft)
     currentState = stored
       ? { value: stored.value, savedAt: stored.savedAt, hasDraft: true }
       : { value: initial, savedAt: null, hasDraft: false }

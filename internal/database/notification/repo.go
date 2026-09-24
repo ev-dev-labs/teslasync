@@ -676,6 +676,7 @@ type NotificationLogFilters struct {
 	IncludeFailedInfoAsWarning bool      // match the /alerts DTO warning floor for failed info deliveries
 	VehicleIDs                 []int64   // rule applies to any requested vehicle; unscoped system rows remain visible
 	RuleIDs                    []int64   // notification_logs.alert_id (== alert_rules.id)
+	Source                     string    // empty = all; rule = notification with an alert rule
 	From                       time.Time // inclusive lower bound on created_at
 	To                         time.Time // inclusive upper bound on created_at
 	BeforeCreatedAt            time.Time // keyset cursor: rows strictly before this created_at/id tuple
@@ -715,6 +716,9 @@ func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
 
 	if len(f.RuleIDs) > 0 {
 		addClause("nl.alert_id = ANY("+ph(1)+")", f.RuleIDs)
+	}
+	if f.Source == "rule" {
+		w.clauses = append(w.clauses, "nl.alert_id IS NOT NULL")
 	}
 	if !f.From.IsZero() {
 		addClause("nl.created_at >= "+ph(1), f.From.UTC())
@@ -778,6 +782,41 @@ func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
 		}
 	}
 	return w
+}
+
+// CountLogsFiltered uses the same filters and inbox predicate as the flat list.
+func (r *NotificationRepo) CountLogsFiltered(ctx context.Context, f NotificationLogFilters) (int64, error) {
+	w := buildNotificationLogWhere(f)
+	if f.DeliveryOnly {
+		w.clauses = append(w.clauses, "nl.status <> 'triggered'")
+	} else {
+		w.clauses = append(w.clauses, inboxLogPredicate)
+	}
+	query := "SELECT COUNT(*) FROM notification_logs nl"
+	if w.needsRuleJoin {
+		query += " LEFT JOIN alert_rules ar ON ar.id = nl.alert_id"
+	}
+	query += " WHERE " + strings.Join(w.clauses, " AND ")
+	var count int64
+	if err := r.db.Pool.QueryRow(ctx, query, w.args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count notification logs: %w", err)
+	}
+	return count, nil
+}
+
+func (r *NotificationRepo) CountGroupsFiltered(ctx context.Context, f NotificationLogFilters) (int64, error) {
+	w := buildNotificationLogWhere(f)
+	w.clauses = append(w.clauses, inboxLogPredicate)
+	query := "SELECT COUNT(DISTINCT COALESCE(nl.group_key, 'singleton:' || nl.id::text)) FROM notification_logs nl"
+	if w.needsRuleJoin {
+		query += " LEFT JOIN alert_rules ar ON ar.id = nl.alert_id"
+	}
+	query += " WHERE " + strings.Join(w.clauses, " AND ")
+	var count int64
+	if err := r.db.Pool.QueryRow(ctx, query, w.args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count notification groups: %w", err)
+	}
+	return count, nil
 }
 
 // GetLogsFiltered returns notification_logs matching the supplied filters.

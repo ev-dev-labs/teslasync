@@ -77,8 +77,8 @@
       "description": "Explore triggers and delivery outcomes across every notification source. Historical periods remain available.",
       "triggered": "Triggers recorded",
       "deliveries": "Channel deliveries",
-      "fanout": "Attributed deliveries per trigger",
-      "uncorrelated": "Unattributed deliveries",
+      "fanout": "Linked deliveries per trigger",
+      "uncorrelated": "Deliveries without a linked trigger",
       "countNote": "Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.",
       "timeline": "Daily activity",
       "day": "Day",
@@ -129,6 +129,14 @@
       "detail": {
         "title": "Notification details"
       },
+      "legacyDelivery": "Legacy channel delivery (original source not recorded)",
+      "countError": "Could not load the notification count: {{error}}",
+      "source": {
+        "ruleId": "Rule #{{id}}",
+        "legacyDelivery": "Legacy channel delivery",
+        "legacyHint": "Original source was not recorded for this older channel delivery.",
+        "unknown": "Unknown source"
+      },
       "previousPage": "Previous",
       "nextPage": "Next",
       "pageNumber": "Page {{page}}",
@@ -147,6 +155,9 @@
         "severity": "Severity",
         "vehicle": "Vehicle",
         "rule": "Rule",
+        "source": "Source",
+        "allSources": "All sources",
+        "ruleTriggers": "Rule triggers",
         "allVehicles": "All vehicles",
         "allRules": "All rules",
         "searchPlaceholder": "Search messages…",
@@ -160,6 +171,7 @@
       "row": {
         "select": "Select notification",
         "open": "Open notification: {{title}}",
+        "readMessage": "Read full message: {{title}}",
         "markRead": "Mark as read",
         "markUnread": "Mark as unread",
         "archive": "Archive",
@@ -186,6 +198,7 @@
       "empty": {
         "title": "No notifications",
         "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
+        "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert Studio.",
         "archivedTitle": "No archived notifications",
         "archivedMessage": "Archived notifications will appear here.",
         "cta": "Configure alert rules"
@@ -288,7 +301,7 @@
     },
     "alertStudio": {
       "title": "Alert Studio",
-      "subtitle": "Create custom rules from Fleet Telemetry signals",
+      "subtitle": "Create rules for vehicle signals, computed metrics, system health, and places",
       "placeEvents": {
         "title": "Place arrival and departure alerts",
         "place": "Place",
@@ -502,7 +515,36 @@
       },
       "kind": {
         "signal": "Signal threshold",
-        "computedMetric": "Computed metric"
+        "computedMetric": "Computed metric",
+        "system": "System service",
+        "place": "Place event",
+        "systemHint": "Notify when a monitored system service fails or recovers.",
+        "placeHint": "Notify when a vehicle arrives at or departs from a saved place."
+      },
+      "system": {
+        "telemetry": "TELEMETRY",
+        "mqtt": "MQTT",
+        "database": "DATABASE",
+        "redis": "REDIS",
+        "tesla_api": "TESLA API",
+        "worker": "WORKER",
+        "scope": "System health rules monitor a service for the entire fleet.",
+        "component": "Service",
+        "choose": "Choose a service",
+        "transition": "When",
+        "outage": "Becomes unavailable",
+        "recovery": "Recovers"
+      },
+      "place": {
+        "unavailable": "Place #{{id}} (unavailable)",
+        "emptyTitle": "No places configured",
+        "empty": "Add a place before creating an arrival or departure rule.",
+        "add": "Manage places",
+        "label": "Place",
+        "choose": "Choose a place",
+        "transition": "When",
+        "enter": "Arrives",
+        "exit": "Departs"
       }
     },
     "log": {

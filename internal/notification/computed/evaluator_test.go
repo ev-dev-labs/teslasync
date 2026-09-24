@@ -391,6 +391,48 @@ func TestComputedMetric_ListMetricSummaries_Stable(t *testing.T) {
 	}
 }
 
+func TestComputedMetric_ExpandedCatalogIsEvaluable(t *testing.T) {
+	expected := map[string]string{
+		"drive_hours":         "driving",
+		"longest_drive":       "driving",
+		"peak_drive_speed":    "driving",
+		"regen_energy":        "energy",
+		"charging_sessions":   "charging",
+		"charging_hours":      "charging",
+		"peak_charging_power": "charging",
+		"supercharger_energy": "charging",
+		"soc_gained_charging": "battery",
+		"soc_used_driving":    "battery",
+	}
+	summaries := ListMetricSummaries()
+	if len(summaries) < 19 {
+		t.Fatalf("metric registry has %d entries, want at least 19", len(summaries))
+	}
+	for _, metric := range summaries {
+		def := ComputedMetrics[metric.ID]
+		if def.Compute == nil {
+			t.Errorf("%s lacks a real compute function", metric.ID)
+		}
+		if metric.Category == "" || metric.Unit == "" || len(metric.Windows) == 0 || len(metric.Ops) == 0 {
+			t.Errorf("%s has incomplete picker metadata: %+v", metric.ID, metric)
+		}
+		for _, window := range metric.Windows {
+			if !def.IsValidWindow(window) {
+				t.Errorf("%s advertises invalid window %q", metric.ID, window)
+			}
+		}
+		if want, ok := expected[metric.ID]; ok {
+			if metric.Category != want {
+				t.Errorf("%s category = %q, want %q", metric.ID, metric.Category, want)
+			}
+			delete(expected, metric.ID)
+		}
+	}
+	for id := range expected {
+		t.Errorf("metric %s missing from API catalog", id)
+	}
+}
+
 func TestComputedMetric_IsValidComputedMetricOp(t *testing.T) {
 	for _, op := range ComputedMetricOps {
 		if !IsValidComputedMetricOp(op) {

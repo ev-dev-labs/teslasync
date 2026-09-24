@@ -50,6 +50,7 @@ import (
 	hadiscovery "github.com/ev-dev-labs/teslasync/internal/integrations/homeassistant"
 	embeddingsjobs "github.com/ev-dev-labs/teslasync/internal/jobs/embeddings"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
@@ -137,6 +138,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initTeslaClient()
 	a.initAPILogging()
 	a.initOutboundSinks()
+	a.eventAlerts = a.newEventAlertObserver()
 	a.initWebPush()
 	a.initStateReader()
 
@@ -595,6 +597,7 @@ func (a *App) initEncryptor() {
 
 func (a *App) initTeslaClient() {
 	a.TeslaClient = tesla.NewClient(a.Cfg.Tesla)
+	a.TeslaClient.SetEndpointControlsReader(settingsdb.NewSettingsRepo(a.DB))
 	policy := tesla.NewBudgetPolicy(
 		a.Cfg.Tesla.DailyBudgetUSD,
 		a.Cfg.Tesla.CommandReserveUSD,
@@ -945,7 +948,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 	swUpdateRepo := systemdb.NewSoftwareUpdateRepo(a.DB)
 	swUpdateObserver := teslapipeline.NewSoftwareUpdateObserver(swUpdateRepo, pipelineLogger)
 
-	normPipeline := normalize.New(unitRepo, pipelineRouter, pipelineLogger, sideEffects, swUpdateObserver)
+	normPipeline := normalize.New(unitRepo, pipelineRouter, pipelineLogger, sideEffects, swUpdateObserver, a.eventAlerts)
 
 	a.TelemetryHandler.SetPipeline(normPipeline)
 
@@ -1459,6 +1462,9 @@ func (a *App) initHealthWatchdog(ctx context.Context) {
 	a.onboardingRepo = dbuser.NewOnboardingRepo(a.DB)
 	a.onboardingStateRepo = dbuser.NewOnboardingStateRepo(a.DB)
 	a.healthNotifications = newComponentNotificationCache(a.notifRepo, a.prefRepo)
+	if a.eventAlerts != nil {
+		a.eventAlerts.refreshSystemRules(ctx)
+	}
 	if err := a.healthNotifications.Refresh(ctx); err != nil {
 		log.Warn().Err(err).Msg("health watchdog: initial notification target cache load failed")
 	}
@@ -1558,6 +1564,9 @@ func (a *App) runHealthWatchdogTick(ctx context.Context) {
 			log.Warn().Err(err).Msg("health watchdog: notification target cache refresh failed")
 		}
 	}
+	if databaseHealthy && a.eventAlerts != nil {
+		a.eventAlerts.refreshSystemRules(tickCtx)
+	}
 	a.checkMQTTHealth(span)
 	a.checkRedisHealth(tickCtx)
 	a.checkTeslaAuthHealth()
@@ -1570,6 +1579,14 @@ func (a *App) runHealthWatchdogTick(ctx context.Context) {
 	for name, comp := range components {
 		initialOutageEligible := name != "tesla_api" || setupComplete
 		if evt, fire := a.healthTracker.Observe(name, *comp, initialOutageEligible); fire {
+			if a.eventAlerts != nil {
+				direction := "outage"
+				if evt.Severity == "info" {
+					direction = "recovery"
+				}
+				a.eventAlerts.fire(tickCtx, alertmodel.AlertRuleKindSystemComponent, name+":"+direction,
+					0, 0, "", name, direction, evt.Title, evt.Message, evt.EventType)
+			}
 			icon := "⚠️"
 			if evt.Severity == "info" {
 				icon = "✅"

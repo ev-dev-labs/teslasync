@@ -1,8 +1,8 @@
 /**
  * FleetApiPage — Tesla Fleet API polling configuration and endpoint management.
  *
- * Suspend/resume polling, toggle individual endpoints, manage telemetry
- * capture, and view the runtime's configured endpoints. Laid out as a
+ * Suspend/resume polling, toggle individual endpoints, and view the runtime's
+ * configured endpoints. Laid out as a
  * full-width, mobile-first bento; every data section owns its own
  * loading / error / empty state and reads only from the settings hooks.
  */
@@ -10,10 +10,10 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity, AlertTriangle, Database, Globe, Link as LinkIcon, Pause, Play, Shield,
+  Activity, AlertTriangle, Globe, Link as LinkIcon, Pause, Play, Shield,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, IconBox, Toggle, Select, Badge, PanelTitle, Text, Caption, HelperText, Label, Code } from '@/components/ui';
+import { GlassPanel, IconBox, Toggle, Badge, PanelTitle, Text, Caption, HelperText, Label, Code } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, InlineCallout } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -21,13 +21,13 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtInt } from '@/lib/numberFormat';
 import {
   useSettings, useToggleAPISuspend, usePollingConfig,
-  useUpdatePollingConfig, useCaptureStats, useVersionInfo,
+  useUpdatePollingConfig, useVersionInfo,
 } from '@/api/hooks/useSettings';
 
 // ─── EndpointToggle — single on/off row (≥44px touch target) ─────────────────
 
-function EndpointToggle({ label, desc, enabled, onToggle }: {
-  label: string; desc: string; enabled: boolean; onToggle: () => void;
+function EndpointToggle({ label, desc, enabled, onToggle, disabled }: {
+  label: string; desc: string; enabled: boolean; onToggle: () => void; disabled: boolean;
 }) {
   return (
     <GlassPanel className="flex min-h-11 items-center justify-between gap-3 p-3">
@@ -35,7 +35,7 @@ function EndpointToggle({ label, desc, enabled, onToggle }: {
         <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">{label}</Text>
         <Caption className="block truncate">{desc}</Caption>
       </div>
-      <Toggle checked={enabled} onChange={() => onToggle()} size="sm" className="shrink-0" aria-label={label} />
+      <Toggle checked={enabled} onChange={() => onToggle()} disabled={disabled} size="sm" className="shrink-0" aria-label={label} />
     </GlassPanel>
   );
 }
@@ -44,7 +44,7 @@ function EndpointToggle({ label, desc, enabled, onToggle }: {
 // panel never leaves dead horizontal space on large monitors.
 const TOGGLE_GRID = 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-6';
 
-// Every toggleable polling-config key, including telemetry capture, used for
+// Every toggleable endpoint key used for
 // the enabled/total tally. Kept module-level (label-independent) so the tally
 // never depends on the translated render arrays.
 const ALL_ENDPOINT_KEYS = [
@@ -53,7 +53,7 @@ const ALL_ENDPOINT_KEYS = [
   'on_demand_vehicle_discovery', 'on_demand_charge_state', 'on_demand_climate_state',
   'on_demand_drive_state', 'on_demand_location_data', 'on_demand_vehicle_state',
   'on_demand_vehicle_config', 'nearby_charging_sites', 'release_notes',
-  'recent_alerts', 'service_data', 'wake_up', 'commands', 'telemetry_capture',
+  'recent_alerts', 'service_data', 'wake_up', 'commands',
 ];
 
 // ─── Page component ──────────────────────────────────────────────────────────
@@ -64,7 +64,6 @@ export default function FleetAPIPage() {
 
   const settingsQuery = useSettings();
   const pollingQuery = usePollingConfig();
-  const captureQuery = useCaptureStats();
   const versionQuery = useVersionInfo();
   const dataSources = useMemo(
     () => [
@@ -79,17 +78,12 @@ export default function FleetAPIPage() {
         query: pollingQuery,
       },
       {
-        id: 'capture-statistics',
-        label: t('dataSources.labels.captureStatistics', 'Capture statistics'),
-        query: captureQuery,
-      },
-      {
         id: 'runtime-version',
         label: t('dataSources.labels.runtimeVersion', 'Runtime version'),
         query: versionQuery,
       },
     ],
-    [captureQuery, pollingQuery, settingsQuery, t, versionQuery],
+    [pollingQuery, settingsQuery, t, versionQuery],
   );
 
   const suspendMut = useToggleAPISuspend();
@@ -97,17 +91,11 @@ export default function FleetAPIPage() {
 
   const settings = settingsQuery.data;
   const pollingConfig = pollingQuery.data;
-  const captureStats = captureQuery.data;
   const version = versionQuery.data;
 
   const toggleEndpoint = useCallback((key: string) => {
     if (!pollingConfig) return;
     pollingConfigMut.mutate({ ...pollingConfig, [key]: !pollingConfig[key] });
-  }, [pollingConfig, pollingConfigMut]);
-
-  const setRetention = useCallback((days: number) => {
-    if (!pollingConfig) return;
-    pollingConfigMut.mutate({ ...pollingConfig, telemetry_capture_retention_days: days });
   }, [pollingConfig, pollingConfigMut]);
 
   const pollingEndpoints = [
@@ -160,12 +148,6 @@ export default function FleetAPIPage() {
     : 0;
 
   const apiSuspended = settings?.api_suspended ?? false;
-  const captureEnabled = !!pollingConfig?.telemetry_capture;
-  const retentionDays = pollingConfig?.telemetry_capture_retention_days ?? 7;
-  const mongoStatusKnown = !!captureStats;
-  const mongoEnabled = !!captureStats?.mongodb_enabled;
-  const totalDocuments = captureStats?.total_documents ?? 0;
-  const distinctVinsCount = captureStats?.distinct_vins?.length ?? 0;
   const kpiLoading = settingsQuery.isLoading || pollingQuery.isLoading;
 
   // A source that has errored (or simply hasn't resolved yet, once the KPI
@@ -182,29 +164,21 @@ export default function FleetAPIPage() {
   const configuredEndpointMap = version?.endpoints ?? {};
   const hasConfiguredEndpoints = Object.keys(configuredEndpointMap).length > 0;
 
-  const retentionOptions = [
-    { value: '1', label: t('fleetApi.retention.1', '1 day') },
-    { value: '3', label: t('fleetApi.retention.3', '3 days') },
-    { value: '7', label: t('fleetApi.retention.7', '7 days') },
-    { value: '14', label: t('fleetApi.retention.14', '14 days') },
-    { value: '30', label: t('fleetApi.retention.30', '30 days') },
-  ];
-
   return (
     <PageContainer
       title={t('fleetApi.pageTitle', 'Fleet API Settings')}
-      subtitle={t('fleetApi.subtitle', 'Control Tesla Fleet API polling, endpoint toggles, and telemetry capture')}
-      query={[settingsQuery, pollingQuery, captureQuery, versionQuery]}
+      subtitle={t('fleetApi.subtitle', 'Control Tesla Fleet API polling and endpoint toggles')}
+      query={[settingsQuery, pollingQuery, versionQuery]}
       dataSources={dataSources}
     >
       {/* 1 — KPI band ─────────────────────────────────────────────── */}
       <FadeIn>
         <section
           aria-label={t('fleetApi.kpis.label', 'Fleet API summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
         >
           {kpiLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
+            Array.from({ length: 2 }).map((_, i) => (
               <GlassPanel key={i} className="p-4">
                 <Skeleton width="55%" height={12} />
                 <Skeleton width="70%" height={28} className="mt-2" />
@@ -228,34 +202,15 @@ export default function FleetAPIPage() {
                 color="cyan"
                 subtitle={t('fleetApi.kpis.endpointsHint', 'Active toggles')}
               />
-              <MetricCard
-                label={t('fleetApi.kpis.telemetryCapture', 'Telemetry Capture')}
-                value={pollingKnown ? (captureEnabled ? t('common.on', 'On') : t('common.off', 'Off')) : EM_DASH}
-                icon={<Database className="h-5 w-5" />}
-                color={pollingKnown && captureEnabled ? 'purple' : 'blue'}
-                subtitle={mongoStatusKnown
-                  ? (mongoEnabled
-                    ? t('fleetApi.kpis.mongoConnected', 'MongoDB connected')
-                    : t('fleetApi.kpis.mongoOff', 'MongoDB not configured'))
-                  : t('fleetApi.kpis.mongoUnknown', 'Storage status unknown')}
-              />
-              <MetricCard
-                label={t('fleetApi.kpis.signalsCaptured', 'Signals Captured')}
-                value={mongoStatusKnown ? fmtInt(totalDocuments) : EM_DASH}
-                icon={<Activity className="h-5 w-5" />}
-                color="amber"
-                subtitle={t('fleetApi.kpis.signalsHint', 'Stored documents')}
-              />
             </>
           )}
         </section>
       </FadeIn>
 
-      {/* 2 — Control bento: master switch (hero) + telemetry capture ─ */}
+      {/* 2 — Master Tesla API switch ─ */}
       <FadeIn delay={0.1}>
-        <section className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
-          {/* Master Tesla API power switch */}
-          <GlassPanel className="flex h-full flex-col gap-4 p-4 sm:p-5 xl:col-span-2">
+        <section>
+          <GlassPanel className="flex h-full flex-col gap-4 p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <IconBox color={apiSuspended ? 'red' : 'green'}>
@@ -295,77 +250,6 @@ export default function FleetAPIPage() {
             )}
           </GlassPanel>
 
-          {/* Telemetry capture */}
-          <GlassPanel className="flex h-full flex-col gap-4 p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <IconBox color="purple">
-                  <Database className="h-5 w-5" />
-                </IconBox>
-                <div className="min-w-0">
-                  <PanelTitle>{t('fleetApi.telemetry.title', 'Telemetry Capture')}</PanelTitle>
-                  <HelperText className="mt-0.5">
-                    {t('fleetApi.telemetry.subtitle', 'Record raw fleet signals to MongoDB')}
-                  </HelperText>
-                </div>
-              </div>
-              {mongoStatusKnown && (
-                <Badge variant={mongoEnabled ? 'success' : 'neutral'} size="sm" className="shrink-0">
-                  {mongoEnabled
-                    ? t('fleetApi.telemetry.mongoConnected', 'MongoDB Connected')
-                    : t('fleetApi.telemetry.mongoNotConfigured', 'MongoDB Not Configured')}
-                </Badge>
-              )}
-            </div>
-
-            {pollingQuery.isLoading ? (
-              <Skeleton height={120} />
-            ) : pollingQuery.isError ? (
-              <QueryError error={pollingQuery.error} onRetry={() => pollingQuery.refetch()} />
-            ) : (
-              <div className={`space-y-3 ${mongoStatusKnown && !mongoEnabled ? 'opacity-60' : ''}`}>
-                <EndpointToggle
-                  label={t('fleetApi.telemetry.rawSignal', 'Raw Signal Recording')}
-                  desc={mongoStatusKnown && !mongoEnabled
-                    ? t('fleetApi.telemetry.rawSignalHint', 'Set MONGODB_ENABLED=true and configure MONGODB_URI to enable')
-                    : t('fleetApi.telemetry.rawSignalDesc', 'Capture every fleet telemetry signal to MongoDB for debugging')}
-                  enabled={captureEnabled}
-                  onToggle={() => toggleEndpoint('telemetry_capture')}
-                />
-                {captureEnabled && mongoEnabled && (
-                  <>
-                    <GlassPanel className="flex min-h-11 items-center justify-between gap-3 p-3">
-                      <div className="min-w-0">
-                        <Text as="span" size="sm" weight="medium" color="primary" className="block">
-                          {t('fleetApi.telemetry.retention', 'Retention Period')}
-                        </Text>
-                        <Caption className="block">
-                          {t('fleetApi.telemetry.retentionHint', 'Auto-delete captured signals after this many days')}
-                        </Caption>
-                      </div>
-                      <Select
-                        aria-label={t('fleetApi.telemetry.retention', 'Retention Period')}
-                        value={String(retentionDays)}
-                        onChange={(e) => setRetention(parseInt(e.target.value, 10))}
-                        disabled={pollingConfigMut.isPending}
-                        options={retentionOptions}
-                        size="sm"
-                        className="w-28 shrink-0"
-                      />
-                    </GlassPanel>
-                    {totalDocuments > 0 && (
-                      <InlineCallout variant="info" icon={<Database />}>
-                        {t('fleetApi.telemetry.capturedSummary', '{{signals}} signals captured from {{vehicles}} vehicle(s)', {
-                          signals: fmtInt(totalDocuments),
-                          vehicles: fmtInt(distinctVinsCount),
-                        })}
-                      </InlineCallout>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </GlassPanel>
         </section>
       </FadeIn>
 
@@ -415,6 +299,7 @@ export default function FleetAPIPage() {
                         label={ep.label}
                         desc={ep.desc}
                         enabled={!!pollingConfig[ep.key]}
+                        disabled={pollingConfigMut.isPending}
                         onToggle={() => toggleEndpoint(ep.key)}
                       />
                     ))}

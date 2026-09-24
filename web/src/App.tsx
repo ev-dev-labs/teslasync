@@ -96,7 +96,7 @@ const DriveArchetypes = lazy(() => import('./features/analytics/pages/DriveArche
 const FirmwareImpact = lazy(() => import('./features/analytics/pages/FirmwareImpactPage'))
 const CabinThermal = lazy(() => import('./features/vehicle-systems/pages/CabinThermalPage'))
 const ChargerHealth = lazy(() => import('./features/charging/pages/ChargerHealthPage'))
-const AlertFatigue = lazy(() => import('./features/notifications/pages/AlertFatiguePage'))
+const NotificationHealth = lazy(() => import('./features/notifications/pages/NotificationHealthPage'))
 const CommandReliability = lazy(() => import('./features/system/pages/CommandReliabilityPage'))
 const SignalCorrelation = lazy(() => import('./features/telemetry/pages/SignalCorrelationPage'))
 
@@ -121,8 +121,6 @@ const SignalTrend = lazy(() => import('./features/telemetry/pages/SignalTrendPag
 const SignalChangePoints = lazy(() => import('./features/telemetry/pages/SignalChangePointsPage'))
 const SignalDeadband = lazy(() => import('./features/telemetry/pages/SignalDeadbandPage'))
 const SignalMutualInformation = lazy(() => import('./features/telemetry/pages/SignalMutualInformationPage'))
-const NotificationBurnRate = lazy(() => import('./features/notifications/pages/NotificationBurnRatePage'))
-const NotificationLatency = lazy(() => import('./features/notifications/pages/NotificationLatencyPage'))
 
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
@@ -854,7 +852,7 @@ export default function App() {
         <Route path="firmware-impact" element={<SafeRoute name="FirmwareImpact"><FirmwareImpact /></SafeRoute>} />
         <Route path="cabin-thermal" element={<SafeRoute name="CabinThermal"><CabinThermal /></SafeRoute>} />
         <Route path="charger-health" element={<SafeRoute name="ChargerHealth"><ChargerHealth /></SafeRoute>} />
-        <Route path="alert-fatigue" element={<SafeRoute name="AlertFatigue"><AlertFatigue /></SafeRoute>} />
+        <Route path="alert-fatigue" element={<Navigate to="/notifications/health#fatigue" replace />} />
         <Route path="command-reliability" element={<SafeRoute name="CommandReliability"><CommandReliability /></SafeRoute>} />
         <Route path="signal-correlation" element={<SafeRoute name="SignalCorrelation"><SignalCorrelation /></SafeRoute>} />
         {/* Phase-52 — decision intelligence family. */}
@@ -876,8 +874,9 @@ export default function App() {
         <Route path="signal-change-points" element={<SafeRoute name="SignalChangePoints"><SignalChangePoints /></SafeRoute>} />
         <Route path="signal-deadband" element={<SafeRoute name="SignalDeadband"><SignalDeadband /></SafeRoute>} />
         <Route path="signal-mutual-information" element={<SafeRoute name="SignalMutualInformation"><SignalMutualInformation /></SafeRoute>} />
-        <Route path="notification-burn-rate" element={<SafeRoute name="NotificationBurnRate"><NotificationBurnRate /></SafeRoute>} />
-        <Route path="notification-latency" element={<SafeRoute name="NotificationLatency"><NotificationLatency /></SafeRoute>} />
+        <Route path="notification-burn-rate" element={<Navigate to="/notifications/health#burn-rate" replace />} />
+        <Route path="notification-latency" element={<Navigate to="/notifications/health#latency" replace />} />
+        <Route path="notifications/health" element={<SafeRoute name="NotificationHealth"><NotificationHealth /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
             against frontend route `/analytics/tco`; the canonical app path

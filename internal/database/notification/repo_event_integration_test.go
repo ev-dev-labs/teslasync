@@ -182,6 +182,22 @@ func TestOrphanedCorrelatedDeliveriesAppearOnceWithoutDuplicatingCanonicalEvents
 		if err != nil || len(groups) != 1 || groups[0].Latest.ID != wantID {
 			t.Fatalf("grouped inbox=%+v err=%v, want one representative %d", groups, err, wantID)
 		}
+		for _, countQuery := range []struct {
+			name string
+			run  func(context.Context, NotificationLogFilters) (int64, error)
+		}{
+			{"flat", repo.CountLogsFiltered},
+			{"grouped", repo.CountGroupsFiltered},
+		} {
+			count, err := countQuery.run(ctx, NotificationLogFilters{})
+			if err != nil || count != 1 {
+				t.Fatalf("%s inbox count=%d err=%v, want one", countQuery.name, count, err)
+			}
+			rules, err := countQuery.run(ctx, NotificationLogFilters{Source: "rule"})
+			if err != nil || rules != 0 {
+				t.Fatalf("%s rule count=%d err=%v, want zero", countQuery.name, rules, err)
+			}
+		}
 		unread, err := repo.GetUnreadCount(ctx)
 		if err != nil || unread != 1 {
 			t.Fatalf("unread=%d err=%v, want one", unread, err)

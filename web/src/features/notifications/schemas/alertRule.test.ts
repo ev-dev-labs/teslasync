@@ -100,7 +100,40 @@ describe('alertRule constants', () => {
 
   it('pins trigger modes and rule kinds', () => {
     expect([...ALERT_RULE_TRIGGER_MODES]).toEqual(['once', 'repeat'])
-    expect([...ALERT_RULE_KINDS]).toEqual(['signal', 'computed_metric'])
+    expect([...ALERT_RULE_KINDS]).toEqual(['signal', 'computed_metric', 'system_component', 'place'])
+  })
+
+  describe('alertRuleSchema — event rules', () => {
+    const system = {
+      name: 'Broker unavailable', kind: 'system_component', component_name: 'mqtt',
+      transition: 'outage', all_vehicles: true, vehicle_ids: [],
+    }
+    const place = {
+      name: 'Home arrival', kind: 'place', place_id: 7,
+      transition: 'enter', all_vehicles: false, vehicle_ids: [1],
+    }
+
+    it('accepts outage and recovery for a fleet-wide system service', () => {
+      expectValid(system)
+      expectValid({ ...system, transition: 'recovery' })
+    })
+
+    it('requires a known component, a health transition, and fleet scope', () => {
+      expectIssue({ ...system, component_name: null }, 'component_name', 'Component is required')
+      expectIssue({ ...system, transition: 'enter' }, 'transition', 'Choose an outage or recovery')
+      expectIssue({ ...system, all_vehicles: false }, 'all_vehicles', 'System rules apply to the whole fleet')
+    })
+
+    it('accepts arrival and departure for a saved place', () => {
+      expectValid(place)
+      expectValid({ ...place, transition: 'exit', all_vehicles: true, vehicle_ids: [] })
+    })
+
+    it('requires a real place and a place transition', () => {
+      expectIssue({ ...place, place_id: null }, 'place_id', 'Choose a place')
+      expectIssue({ ...place, transition: 'outage' }, 'transition', 'Choose an arrival or departure')
+      expectIssue({ ...place, place_id: -1 }, 'place_id', 'Number must be greater than 0')
+    })
   })
 
   it('pins COMPUTED_METRIC_OPS including the percent-change operators', () => {
