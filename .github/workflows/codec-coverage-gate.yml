@@ -50,11 +50,11 @@ jobs:
     # (same pin as CI "Backend (lint + test + build)").
     runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version-file: go.mod
 
       - name: TestRoutingCoverage
         # The test is reflective: iterates protomodel.Signals and

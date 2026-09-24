@@ -48,7 +48,7 @@ jobs:
     runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Boot ephemeral TeslaSync stack
         env:
@@ -91,7 +91,7 @@ jobs:
 
       - name: Upload k6 summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: k6-summary-${{ github.run_number }}
           path: tests/k6/summary.json
@@ -104,7 +104,7 @@ jobs:
 
       - name: Upload API logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: api-logs-${{ github.run_number }}
           path: api.log

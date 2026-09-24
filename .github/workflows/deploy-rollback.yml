@@ -96,11 +96,11 @@ jobs:
       verdict: ${{ steps.evaluate.outputs.verdict }}
       automation_allowed: ${{ steps.evaluate.outputs.automation_allowed }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version: '1.25'
+          go-version-file: go.mod
 
       - name: Validate rollback policy
         run: go run ./cmd/ops-gate -check rollback
@@ -155,7 +155,7 @@ jobs:
 
       - name: Upload decision
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: rollback-decision-${{ github.run_number }}
           path: decision.json
@@ -189,11 +189,11 @@ jobs:
     # a production rollback safe.
     environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version: '1.25'
+          go-version-file: go.mod
 
       - name: Refuse an unexplained rollback
         env:
