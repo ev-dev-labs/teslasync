@@ -33,6 +33,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PrefetchNavLink } from '../PrefetchLink'
+import { CollectionTreeRow } from './CollectionTreeRow'
 import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
@@ -248,6 +249,7 @@ export function NotionSidebar({
   alertCount = 0,
   vehicleCount = 0,
   staleCount = 0,
+  collections = [],
 }: NotionSidebarProps) {
   const { t } = useTranslation()
   const location = useLocation()
@@ -434,21 +436,35 @@ export function NotionSidebar({
                 />
                 {expanded && (
                   <div className="space-y-0.5" role="group" aria-label={section.titleKey ? t(section.titleKey, section.title) : section.title}>
-                    {section.items.map(item => (
-                      <NotionRow
-                        key={item.to}
-                        to={item.to}
-                        label={navLabel(item)}
-                        icon={item.icon}
-                        iconColor={item.color}
-                        active={itemIsActive(item.to)}
-                        onSelect={onItemSelect}
-                        trailing={trailingFor(item.to)}
-                        hoverAction={pinAction(item)}
-                        dataTour={item.dataTour}
-                        indent="ps-7"
-                      />
-                    ))}
+                    {section.items.map(item => {
+                      const group = collections.find(candidate => candidate.primary === item.to)
+                      return group
+                        ? <CollectionTreeRow
+                            key={item.to}
+                            group={group}
+                            icon={item.icon}
+                            pathname={location.pathname}
+                            onSelect={onItemSelect}
+                            dataTour={item.dataTour}
+                            statusCount={item.to === '/vehicles' ? vehicleCount : item.to === '/notifications/inbox' ? alertCount : item.to === '/data-export' ? staleCount : undefined}
+                            pinnedPaths={pinnedSet}
+                            onPin={onPin}
+                            onUnpin={onUnpin}
+                          />
+                        : <NotionRow
+                            key={item.to}
+                            to={item.to}
+                            label={navLabel(item)}
+                            icon={item.icon}
+                            iconColor={item.color}
+                            active={itemIsActive(item.to)}
+                            onSelect={onItemSelect}
+                            trailing={trailingFor(item.to)}
+                            hoverAction={pinAction(item)}
+                            dataTour={item.dataTour}
+                            indent="ps-7"
+                          />
+                    })}
                   </div>
                 )}
               </div>

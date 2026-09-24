@@ -3,6 +3,11 @@
 Operator index of TeslaSync screens. Labels and paths come from the live sidebar (`navSections` in `web/src/components/layout/Layout.tsx`). One-line descriptions come from Explore (`web/src/features/explore/featureCatalog.ts`).
 
 **In the app:** sidebar groups, or **Explore Features** at `/explore`.
+Related views are nested directly under their task in the sidebar. The current
+task opens automatically, so switching between its views is one click: no
+intermediate landing page or second row of tabs. Group counts show how many
+destinations are available; Expand a group to reveal every original route.
+The full searchable catalogue, direct URLs, pins and visibility rules remain.
 
 | Sidebar group | Screens | Catalogue page |
 | ------------- | ------: | -------------- |

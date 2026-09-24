@@ -315,6 +315,8 @@ export interface CompactNavTree<TItem extends CompactNavItemLike> {
 export interface BuildCompactNavTreeOptions {
   /** Capabilities granted to the current principal (see `lib/navCapabilities`). */
   capabilities?: ReadonlySet<NavCapability>
+  /** Replace curated child paths with the collection's visible primary. */
+  primaryPath?: (path: string) => string
 }
 
 /**
@@ -506,10 +508,11 @@ export function buildCompactNavTree<TItem extends CompactNavItemLike>(
   const groups: Array<CompactNavGroup<TItem>> = COMPACT_NAV_BLUEPRINT.map((group) => {
     const items: TItem[] = []
     for (const path of group.paths) {
-      if (used.has(path)) continue
-      const item = byPath.get(path)
+      const primary = options.primaryPath?.(path) ?? path
+      const item = byPath.get(primary) ?? byPath.get(path)
       if (!item) continue
-      used.add(path)
+      if (used.has(item.to)) continue
+      used.add(item.to)
       items.push(item)
     }
     return {

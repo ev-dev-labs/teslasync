@@ -45,9 +45,9 @@ import {
   prioritizeCanonicalNavSections,
   prioritizeCompactNavTree,
 } from './sidebar/compactNav'
-import { GroupedSectionNavigation } from './GroupedSectionNavigation'
-import { REPORT_GROUPS, labelReportPrimaries, reportPrimaryPath, reportSidebarItems } from './reportGroups'
-import { DIAGNOSTIC_GROUPS, diagnosticPrimaryPath, diagnosticSidebarItems, labelDiagnosticPrimaries } from './diagnosticGroups'
+import { collectionGroups, collectionPrimaryPath, collectionSidebarSections } from './sidebar/collections'
+import { CollectionTreeRow } from './sidebar/CollectionTreeRow'
+import { labelSectionPrimaries } from './sectionGroups'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
@@ -1199,8 +1199,6 @@ export default function Layout() {
   const { data: authMode } = useAuthMode()
 
   const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
-  const activeSectionTitle = activeNavEntry?.section.title
-  const activeSectionStyle = activeSectionTitle ? SECTION_ICON_STYLES[activeSectionTitle] : undefined
   const visibleNavSections = useMemo(
     () =>
       prioritizeCanonicalNavSections(
@@ -1220,27 +1218,21 @@ export default function Layout() {
       productPreferences.persona,
     ],
   )
+  const visibleCollections = useMemo(() => collectionGroups(visibleNavSections), [visibleNavSections])
+  const groupedPathname = collectionPrimaryPath(visibleCollections, location.pathname)
+  const activeSectionTitle = findNavItemByPath(groupedPathname)?.section.title
+  const activeSectionStyle = activeSectionTitle ? SECTION_ICON_STYLES[activeSectionTitle] : undefined
   const groupedSidebarSections = useMemo(
-    () => visibleNavSections.map(section =>
-      section.title === 'Reports'
-        ? { ...section, items: reportSidebarItems(section.items) }
-        : section.title === 'Diagnostics'
-          ? { ...section, items: diagnosticSidebarItems(section.items) }
-          : section,
-    ),
-    [visibleNavSections],
+    () => collectionSidebarSections(visibleNavSections, visibleCollections),
+    [visibleNavSections, visibleCollections],
   )
   const compactGroupedSections = useMemo(
-    () => visibleNavSections.map(section =>
-      section.title === 'Reports'
-        ? { ...section, items: labelReportPrimaries(section.items) }
-        : section.title === 'Diagnostics'
-          ? { ...section, items: labelDiagnosticPrimaries(section.items) }
-          : section,
-    ),
-    [visibleNavSections],
+    () => visibleNavSections.map(section => ({
+      ...section,
+      items: labelSectionPrimaries(section.items, visibleCollections),
+    })),
+    [visibleNavSections, visibleCollections],
   )
-  const groupedPathname = diagnosticPrimaryPath(reportPrimaryPath(location.pathname))
   const pinnedNavItems = useMemo(() =>
     pinnedNavPaths
       .map(path => findNavItemByExactPath(path))
@@ -1286,6 +1278,7 @@ export default function Layout() {
       prioritizeCompactNavTree(
         buildCompactNavTree(compactGroupedSections, groupedPathname, {
           capabilities: navCapabilities,
+          primaryPath: path => collectionPrimaryPath(visibleCollections, path),
         }),
         productPreferences.persona,
       ),
@@ -1294,8 +1287,10 @@ export default function Layout() {
       groupedPathname,
       navCapabilities,
       productPreferences.persona,
+      visibleCollections,
     ],
   )
+  const pinnedNavSet = useMemo(() => new Set(pinnedNavPaths), [pinnedNavPaths])
 
   useEffect(() => {
     if (!activeSectionTitle) return
@@ -1630,6 +1625,7 @@ export default function Layout() {
               alertCount={unreadAlerts}
               vehicleCount={vehicleCount}
               staleCount={staleCount}
+              collections={visibleCollections}
             />
           </Suspense>
         ) : sidebarStyle === 'notion' ? (
@@ -1646,6 +1642,7 @@ export default function Layout() {
               alertCount={unreadAlerts}
               vehicleCount={vehicleCount}
               staleCount={staleCount}
+              collections={visibleCollections}
             />
           </Suspense>
         ) : (
@@ -1844,7 +1841,23 @@ export default function Layout() {
                         className="overflow-hidden"
                       >
                         <div className="space-y-0.5 pb-2">
-                          {section.items.map(item => renderNavLink(item, true, `section-${section.title}`))}
+                          {section.items.map(item => {
+                            const group = visibleCollections.find(candidate => candidate.primary === item.to)
+                            return group
+                              ? <CollectionTreeRow
+                                  key={item.to}
+                                  group={group}
+                                  icon={item.icon}
+                                  pathname={location.pathname}
+                                  onSelect={() => setSidebarOpen(false)}
+                                  dataTour={'dataTour' in item ? item.dataTour : undefined}
+                                  statusCount={item.to === '/vehicles' ? vehicleCount : item.to === '/notifications/inbox' ? unreadAlerts : item.to === '/data-export' ? staleCount : undefined}
+                                  pinnedPaths={pinnedNavSet}
+                                  onPin={pinNavPath}
+                                  onUnpin={unpinNavPath}
+                                />
+                              : renderNavLink(item, true, `section-${section.title}`)
+                          })}
                         </div>
                       </motion.div>
                     )}
@@ -1954,12 +1967,6 @@ export default function Layout() {
               </div>
             )}
             <RouteTransition>
-              {presentation.mode === 'standard' && (
-                <>
-                  <GroupedSectionNavigation groups={REPORT_GROUPS} sectionsLabelKey="nav.reportGroups.sections" />
-                  <GroupedSectionNavigation groups={DIAGNOSTIC_GROUPS} sectionsLabelKey="nav.diagnosticGroups.sections" />
-                </>
-              )}
               <Outlet />
             </RouteTransition>
           </div>
