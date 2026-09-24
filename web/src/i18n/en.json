@@ -19554,6 +19554,7 @@
     "workbench": {
       "subtitle": "A bounded evidence workbench: conclusions first, raw observations on demand.",
       "navigation": "Tesla Physics investigations",
+      "choose": "Choose investigation",
       "overview": "Start here",
       "summary": "Evidence at a glance",
       "time": "Time & coverage",

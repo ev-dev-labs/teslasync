@@ -18,7 +18,7 @@ export default function TeslaPhysicsPage() {
   const findings = report?.contradictions?.findings;
   const drops = report?.meters?.resets;
   const attention = report?.nervous_system?.nerves?.filter((nerve) => nerve.status !== 'alive');
-  return <PhysicsPageShell physics={physics} unified navigation={<PhysicsInvestigationNav activeSlug={slug} t={t} />}>
+  return <PhysicsPageShell physics={physics} navigation={<PhysicsInvestigationNav activeSlug={slug} t={t} />}>
     <GlassPanel className="space-y-4 p-4 sm:p-6">
       <PanelTitle>{slug ? t('teslaOnly.workbench.summary', 'Evidence at a glance') : t('teslaOnly.whereToStart', 'Where to start')}</PanelTitle>
       {!slug && <Text as="p" variant="bodySm">{t('teslaOnly.hubGuide', 'Choose a focused investigation. Each section explains its measurements, interpretation limits, related evidence, and optional timestamp-level drilldowns. Start by checking source coverage.')}</Text>}

@@ -7,6 +7,8 @@ The **Tesla Physics workbench** at `/tesla-physics` groups 15 individually
 lazy-loaded investigation sections into Time & coverage, Motion & states,
 Charging & range, and Integrity & firmware. Selecting a section retains the
 same shell and opens its existing `/tesla-physics/{option}` deep link. Each
+group has direct links on desktop; the compact mobile selector groups its
+options by the same four categories so evidence appears sooner on screen. Each
 section keeps its measured summaries, interpretation, drilldowns, filters,
 and missing-slice handling. The shell explains requested versus recorded
 windows, row counts, availability, and caps. Large timestamp tables are

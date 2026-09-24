@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Link, useNavigate } from 'react-router-dom';
+import { GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
 import { features, type PhysicsSlug, type Translate } from './PhysicsPageShell';
 
 const groups: ReadonlyArray<{ key: string; title: string; slugs: readonly PhysicsSlug[] }> = [
@@ -10,6 +10,7 @@ const groups: ReadonlyArray<{ key: string; title: string; slugs: readonly Physic
 ];
 
 export function PhysicsInvestigationNav({ activeSlug, t }: { activeSlug?: PhysicsSlug; t: Translate }) {
+  const navigate = useNavigate();
   return <GlassPanel className="space-y-4 p-4 sm:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <PanelTitle>{t('teslaOnly.workbench.navigation', 'Tesla Physics investigations')}</PanelTitle>
@@ -18,7 +19,18 @@ export function PhysicsInvestigationNav({ activeSlug, t }: { activeSlug?: Physic
         {t('teslaOnly.workbench.overview', 'Start here')}
       </Link>
     </div>
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="sm:hidden">
+      <Select label={t('teslaOnly.workbench.choose', 'Choose investigation')} value={activeSlug ?? ''}
+        onChange={(event) => navigate(event.target.value ? `/tesla-physics/${event.target.value}` : '/tesla-physics')}
+        options={[
+          { value: '', label: t('teslaOnly.workbench.overview', 'Start here') },
+          ...groups.flatMap((group) => features.filter((item) => group.slugs.includes(item.slug)).map((item) => ({
+            value: item.slug,
+            label: `${t(`teslaOnly.workbench.${group.key}`, group.title)} · ${t(`teslaOnly.feature.${item.slug}.title`, item.title)}`,
+          }))),
+        ]} />
+    </div>
+    <div className="hidden gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-4">
       {groups.map((group) => <div key={group.key} className="space-y-2">
         <Text as="h3" variant="subhead">{t(`teslaOnly.workbench.${group.key}`, group.title)}</Text>
         <div className="flex flex-col gap-1">

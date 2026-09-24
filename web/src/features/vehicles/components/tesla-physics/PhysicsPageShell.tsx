@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTeslaExclusive } from '@/api/hooks/useTeslaPhysics';
 import { DataProvenanceBadge } from '@/components/data-display';
@@ -42,23 +41,6 @@ export const features = [
   { slug: 'range', title: 'Range Disagreement', slice: 'range' },
 ] as const satisfies ReadonlyArray<{ slug: string; title: string; slice: keyof ExclusiveReport }>;
 export type PhysicsSlug = typeof features[number]['slug'];
-const related: Record<PhysicsSlug, PhysicsSlug[]> = {
-  clocks: ['unknown', 'car-kept-living', 'black-box'],
-  'life-tape': ['meters', 'modes', 'contradictions'],
-  contradictions: ['charge-port', 'life-tape', 'black-box'],
-  meters: ['firmware-epochs', 'modes', 'life-tape'],
-  unknown: ['clocks', 'nervous-system', 'car-kept-living'],
-  'car-kept-living': ['clocks', 'unknown', 'logbook'],
-  logbook: ['life-tape', 'vault', 'charge-port'],
-  'firmware-epochs': ['meters', 'vault', 'charge-port'],
-  'charge-port': ['black-box', 'dictionary', 'contradictions'],
-  'black-box': ['charge-port', 'contradictions', 'unknown'],
-  dictionary: ['charge-port', 'vault', 'range'],
-  vault: ['logbook', 'unknown', 'firmware-epochs'],
-  modes: ['meters', 'life-tape', 'nervous-system'],
-  'nervous-system': ['unknown', 'clocks', 'contradictions'],
-  range: ['dictionary', 'meters', 'charge-port'],
-};
 
 export function usePhysicsPage(slug?: PhysicsSlug) {
   const { t: translate } = useTranslation();
@@ -73,11 +55,11 @@ export function usePhysicsPage(slug?: PhysicsSlug) {
 
 export type PhysicsPage = ReturnType<typeof usePhysicsPage>;
 
-export function PhysicsPageShell({ physics, children, navigation, unified = false }: {
-  physics: PhysicsPage; children: ReactNode; navigation?: ReactNode; unified?: boolean;
+export function PhysicsPageShell({ physics, children, navigation }: {
+  physics: PhysicsPage; children: ReactNode; navigation: ReactNode;
 }) {
   const { slug, t, title, vehicleId, query, state, report } = physics;
-  const pageTitle = unified ? t('teslaOnly.title', 'Tesla Physics') : title;
+  const pageTitle = t('teslaOnly.title', 'Tesla Physics');
   usePageTitle(pageTitle);
   if (vehicleId == null) return <NoVehicleSelected pageTitle={pageTitle} />;
   const slice = features.find((feature) => feature.slug === slug)?.slice;
@@ -111,20 +93,10 @@ export function PhysicsPageShell({ physics, children, navigation, unified = fals
         </> : <Text as="p" variant="bodySm">{t('teslaOnly.scopeUnavailable', 'Evidence coverage metadata was not returned; counts cannot establish completeness.')}</Text>}
         <Text as="p" variant="caption">{t('teslaOnly.scopeCaution', 'The exclusive report covers at most 14 days. Row caps, missing history, and partial session coverage limit conclusions; a zero finding is not lifetime proof.')}</Text>
       </GlassPanel>
-      {slug && !unified && <Link to="/tesla-physics" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.hub', 'All Tesla physics')} →</Link>}
       {slice && !report[slice] ? <GlassPanel className="p-4 sm:p-5">
         {/* no-action: missing evidence cannot be restored from a display-only page. */}
         <EmptyState title={title} message={t('teslaOnly.missingSlice', 'This evidence slice was not returned. No measurement is inferred from its absence.')} />
       </GlassPanel> : children}
-      {slug && !unified && <GlassPanel className="space-y-3 p-4 sm:p-5">
-        <PanelTitle>{t('teslaOnly.followEvidence', 'Continue the investigation')}</PanelTitle>
-        <div className="flex flex-wrap gap-3">
-          {features.filter((item) => related[slug].includes(item.slug)).map((item) =>
-            <Link key={item.slug} to={`/tesla-physics/${item.slug}`} className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t(`teslaOnly.feature.${item.slug}.title`, item.title)} →</Link>)}
-          <Link to="/tesla-physics/ledger" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.feature.ledger.title', 'Physics Ledger')} →</Link>
-          <Link to="/science" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.scienceLab', 'Science Lab')} →</Link>
-        </div>
-      </GlassPanel>}
     </div> : <>
       {/* no-action: VehicleSelect is already in the header. */}
       <EmptyState title={title} message={t('teslaOnly.empty', 'Select a vehicle to load Tesla physics.')} />
