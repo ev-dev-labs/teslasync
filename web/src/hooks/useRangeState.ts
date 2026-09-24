@@ -63,6 +63,8 @@ export interface UseRangeStateOptions {
    * Recommended: a dotted key like `'charging.list.range'`.
    */
   persistKey?: string;
+  /** Ignore the workspace-wide range when this page needs its own default. */
+  inheritSharedPreference?: boolean;
   /**
    * Lower bound for the "All time" preset and for clamping any restored or
    * user-supplied range. Falls back to `2015-01-01` when not provided.
@@ -295,6 +297,7 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     compareKey = 'compare',
     scopeKey = DEFAULT_SCOPE_KEY,
     persistKey,
+    inheritSharedPreference = true,
     minDate,
     enableCompare = false,
     timezone,
@@ -341,7 +344,9 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     [defaultPresetId, minDate, rollingNow, resolvedTimezone],
   );
 
-  const sharedPreference = loadFromStorage(SHARED_RANGE_STORAGE_KEY);
+  const sharedPreference = inheritSharedPreference
+    ? loadFromStorage(SHARED_RANGE_STORAGE_KEY)
+    : null;
   const pagePreference = loadFromStorage(persistKey);
   const storedPreference = sharedPreference ?? pagePreference;
   const storedRange = storedPreference

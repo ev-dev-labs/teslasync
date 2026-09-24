@@ -152,7 +152,9 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     setRangeWithUrlUpdates,
     resetWithUrlUpdates: resetRangeWithUrlUpdates,
   } = useRangeState({
-    persistKey: 'notifications.inbox.range',
+    defaultPresetId: 'all',
+    inheritSharedPreference: false,
+    persistKey: 'notifications.inbox.full-history.range',
   });
   // View mode is URL-backed too so a deep link can
   // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
