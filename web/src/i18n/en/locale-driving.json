@@ -2834,8 +2834,7 @@
       "distance": "Distance stays in canonical SI meters in the model. Only finite non-negative values feed distance totals, and display conversion follows your unit preference.",
       "scope": "These are descriptive departure patterns. They do not identify causes or predict a specific future trip.",
       "title": "Coverage & methodology",
-      "capReached": "{{limit}}-row cap reached",
-      "belowCap": "Returned window below API cap",
+      "historyComplete": "Complete selected history",
       "windowLabel": "{{start}} – {{end}} selected date scope",
       "returned": "Rows returned",
       "included": "Valid starts included",
@@ -2844,8 +2843,7 @@
       "empty": "Coverage will appear when the selected date scope returns drives.",
       "noIncluded": "Returned rows were accounted for, but none had an eligible non-future start.",
       "observedSpan": "Included span: {{first}} to {{last}} · distance available for {{measured}} of {{included}} included drives.",
-      "capped": "The request returned {{limit}} rows, so additional drives inside the selected dates may be absent. Every result describes only this returned subset.",
-      "coverage": "All {{count}} rows returned for the selected date scope were accounted for, up to the {{limit}}-row API limit."
+      "coverage": "All {{count}} drives in the selected dates were fetched across API pages and accounted for."
     },
     "loading": "Loading driving rhythm evidence",
     "hourly": {

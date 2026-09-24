@@ -11,12 +11,10 @@ import type { DrivingRhythm } from '../../lib/drivingRhythm';
 
 interface RhythmCoverageSummaryProps {
   summary: DrivingRhythm;
-  windowLimit: number;
 }
 
 export function RhythmCoverageSummary({
   summary,
-  windowLimit,
 }: RhythmCoverageSummaryProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
@@ -87,20 +85,11 @@ export function RhythmCoverageSummary({
       )}
       <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
         <Text as="p" variant="caption">
-          {summary.historyCapReached
-            ? t(
-                'rhythm.method.capped',
-                'The request returned {{limit}} rows, so additional drives inside the selected dates may be absent. Every result describes only this returned subset.',
-                { limit: fmtInt(windowLimit) },
-              )
-            : t(
-                'rhythm.method.coverage',
-                'All {{count}} rows returned for the selected date scope were accounted for, up to the {{limit}}-row API limit.',
-                {
-                  count: summary.observed,
-                  limit: fmtInt(windowLimit),
-                },
-              )}
+          {t(
+            'rhythm.method.coverage',
+            'All {{count}} drives in the selected dates were fetched across API pages and accounted for.',
+            { count: summary.observed },
+          )}
         </Text>
       </div>
     </div>

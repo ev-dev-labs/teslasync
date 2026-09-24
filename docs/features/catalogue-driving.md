@@ -13,7 +13,7 @@ Sidebar group **Driving**. In the app, expand this section in the left nav (or s
 | Mileage Log | `/mileage` | Odometer log with monthly and yearly totals. | Renders an empty state when no data is available — the page is not hidden. |
 | Trip Logbook | `/logbook` | Review and annotate a searchable chronological trip log. | Renders an empty state when no data is available — the page is not hidden. |
 | Mileage Budget | `/mileage-budget` | Track distance budgets and forecast when thresholds will be reached. | Renders an empty state when no data is available — the page is not hidden. |
-| Driving Rhythm | `/driving-rhythm` | See recurring departure, duration, and travel-time patterns. | Renders an empty state when no data is available — the page is not hidden. |
+| Driving Rhythm | `/driving-rhythm` | See recurring departure, duration, and travel-time patterns across complete driving history or a selected date range. Pages through every drive in the selected range rather than truncating at 1,000; a page-specific date range is not narrowed by the workspace-wide preference. | Renders an empty state when no data is available — the page is not hidden. |
 | Speed Sweet Spot | `/speed-sweetspot` | Find the speed band where your vehicle is most efficient. | Renders an empty state when no data is available — the page is not hidden. |
 | Efficiency Target | `/efficiency-target` | Set an efficiency goal and measure progress toward it. | Renders an empty state when no data is available — the page is not hidden. |
 | Cold Start Cost | `/cold-start` | Quantify the energy and range cost of cold departures. | Renders an empty state when no data is available — the page is not hidden. |

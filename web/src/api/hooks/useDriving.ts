@@ -141,7 +141,7 @@ export function useDriveHistory(vehicleId?: string, limit = 1000) {
 
 const CALENDAR_PAGE_SIZE = 1000;
 
-/** Fetch every drive in a bounded calendar window, not just the first API page. */
+/** Fetch every drive in a bounded calendar or rhythm window, not just the first API page. */
 export function useDriveCalendarHistory(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
     queryKey: drivingKeys.calendar(vehicleId, start, end),

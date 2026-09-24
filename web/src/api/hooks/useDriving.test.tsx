@@ -183,6 +183,19 @@ describe('getDrives', () => {
       }
     });
 
+    it('pages date-only rhythm history beyond 1,000 drives', async () => {
+      mockedRequest.mockResolvedValueOnce(Array.from({ length: 1000 }, (_, id) => ({ id: id + 1 })));
+      mockedRequest.mockResolvedValueOnce([{ id: 1001 }]);
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(
+        () => useDriveCalendarHistory('5', '2015-01-01', '2026-09-23'),
+        { wrapper: Wrapper },
+      );
+      await waitFor(() => expect(result.current.data).toHaveLength(1001));
+      expect(callArgs(0)[0]).toContain('start=2015-01-01&end=2026-09-23');
+      expect(callArgs(1)[0]).toContain('offset=1000');
+    });
+
     it('reports malformed history rather than treating it as an empty calendar', async () => {
       mockedRequest.mockResolvedValueOnce(null);
       const { Wrapper } = makeWrapper();

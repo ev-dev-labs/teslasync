@@ -17,7 +17,6 @@ import {
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDayKey } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
 import { DrivingRhythmSectionBody } from './DrivingRhythmSectionBody';
@@ -28,7 +27,6 @@ interface DrivingRhythmMethodologyProps {
   summary: DrivingRhythm;
   start: string;
   end: string;
-  windowLimit: number;
   state: DrivingRhythmSectionState;
 }
 
@@ -36,7 +34,6 @@ export function DrivingRhythmMethodology({
   summary,
   start,
   end,
-  windowLimit,
   state,
 }: DrivingRhythmMethodologyProps) {
   const { t } = useTranslation();
@@ -113,13 +110,11 @@ export function DrivingRhythmMethodology({
           <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('rhythm.method.title', 'Coverage & methodology')}
         </PanelTitle>
-        <Badge variant={summary.historyCapReached ? 'warning' : 'neutral'} dot>
-          {summary.historyCapReached
-            ? t('rhythm.method.capReached', '{{limit}}-row cap reached', {
-                limit: fmtInt(windowLimit),
-              })
-            : t('rhythm.method.belowCap', 'Returned window below API cap')}
-        </Badge>
+        {!state.isLoading && !state.error && (
+          <Badge variant="neutral" dot>
+            {t('rhythm.method.historyComplete', 'Complete selected history')}
+          </Badge>
+        )}
       </div>
       <Text as="p" variant="caption" className="mt-1">
         {t(
@@ -134,10 +129,7 @@ export function DrivingRhythmMethodology({
 
       <DrivingRhythmSectionBody state={state} className="mt-4 min-h-72">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
-          <RhythmCoverageSummary
-            summary={summary}
-            windowLimit={windowLimit}
-          />
+          <RhythmCoverageSummary summary={summary} />
           <ul className="space-y-3">
             {methods.map((method) => (
               <li
