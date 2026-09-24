@@ -1,6 +1,8 @@
 name: Security
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
     paths:
@@ -20,7 +22,7 @@ on:
       - 'scripts/check-security-workflow-pins_test.go'
       - '.github/workflows/security.yml'
   schedule:
-    - cron: "0 4 * * 1"
+    - cron: "17 4 * * *"
   workflow_dispatch:
     inputs:
       runner:
@@ -29,7 +31,7 @@ on:
         options:
           - arc-runner
           - ubuntu-latest
-        default: arc-runner
+        default: ubuntu-latest
 
 permissions:
   contents: read
@@ -44,7 +46,7 @@ env:
 jobs:
   security:
     name: Security Scan
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 

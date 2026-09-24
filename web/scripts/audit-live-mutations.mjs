@@ -72,6 +72,8 @@ const LIVE_ONLY_MUTATIONS = {
     'useMarkGeofenceReviewed',
     'useRenameGeofence',
     'useUpdateGeofenceCategory',
+    'useUpdateGeofencePurpose',
+    'useUpdateGeofenceAlerts',
     'useCreateGeofenceRate',
     'useDeleteGeofenceRate',
     'useApplyGeofenceRate',

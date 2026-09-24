@@ -113,6 +113,7 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
           <DataTable
             tableId="admin:vehicle-cost"
             columns={columns}
+            mobileColumns={['vehicle', 'failures', 'last']}
             data={vehicleRows}
             keyExtractor={(r) => r.vehicle_id}
             emptyMessage={t('admin.vehicleCost.emptyTable', 'No vehicle cost data')}

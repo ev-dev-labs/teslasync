@@ -152,13 +152,13 @@ describe('CommandsPage', () => {
     expect(screen.getByLabelText('Loading your fleet')).toBeInTheDocument();
     expect(screen.getByText('Command readiness')).toBeInTheDocument();
     expect(screen.getByText('Command workspace')).toBeInTheDocument();
-    expect(screen.getByText('Safety & execution')).toBeInTheDocument();
-    expect(screen.getByText('Recent command activity')).toBeInTheDocument();
+    expect(screen.queryByText('Safety & execution')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent command activity')).not.toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-command-center')).not.toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-management-workspace')).not.toBeInTheDocument();
   });
 
-  it('renders a useful no-vehicle state without hiding safety or activity', () => {
+  it('renders a useful no-vehicle state without the removed cards', () => {
     installHooks({ vehicles: [], selected: null });
 
     renderPage();
@@ -167,8 +167,8 @@ describe('CommandsPage', () => {
     expect(
       screen.getAllByText(/Connect your Tesla account and sync your fleet/i),
     ).not.toHaveLength(0);
-    expect(screen.getByTestId('command-safety')).toBeInTheDocument();
-    expect(screen.getByText('Recent command activity')).toBeInTheDocument();
+    expect(screen.queryByTestId('command-safety')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent command activity')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Select vehicle')).not.toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-management-workspace')).not.toBeInTheDocument();
   });
@@ -185,7 +185,7 @@ describe('CommandsPage', () => {
     expect(screen.getByTestId('command-center-fallback')).toBeInTheDocument();
     expect(screen.getByText('Command readiness')).toBeInTheDocument();
     expect(screen.getByText('Command workspace')).toBeInTheDocument();
-    expect(screen.getByText('Safety & execution')).toBeInTheDocument();
+    expect(screen.queryByText('Safety & execution')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 

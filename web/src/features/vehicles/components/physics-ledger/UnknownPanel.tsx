@@ -42,6 +42,7 @@ export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
         <DataTable
           tableId="physics-ledger:unknown"
           columns={columns}
+          mobileColumns={['start', 'duration', 'reason']}
           data={intervals}
           keyExtractor={(row) => `${row.started_at}-${row.ended_at}`}
           emptyMessage={t('physicsLedger.unknown.empty', 'Full coverage: no gaps in this window.')}

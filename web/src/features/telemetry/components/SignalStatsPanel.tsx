@@ -122,7 +122,7 @@ export function SignalStatsPanel({
   const columns: Column<SignalStat>[] = useMemo(() => [
     {
       key: 'signal',
-      header: t('Signal'),
+      header: t('signalStats.signal', 'Signal'),
       render: (s) => {
         const idx = signalIndex?.[s.signal] ?? positionIndex.get(s.signal) ?? 0;
         const color = CHART_COLORS[Math.max(0, idx) % CHART_COLORS.length];
@@ -140,12 +140,12 @@ export function SignalStatsPanel({
         );
       },
     },
-    { key: 'min', header: t('Min'), render: (s) => renderNumeric(s.min, 'text-[var(--text-secondary)]') },
-    { key: 'max', header: t('Max'), render: (s) => renderNumeric(s.max, 'text-[var(--text-secondary)]') },
-    { key: 'avg', header: t('Avg'), render: (s) => renderNumeric(s.avg, 'text-[var(--text-primary)]') },
+    { key: 'min', header: t('signalStats.min', 'Min'), render: (s) => renderNumeric(s.min, 'text-[var(--text-secondary)]') },
+    { key: 'max', header: t('signalStats.max', 'Max'), render: (s) => renderNumeric(s.max, 'text-[var(--text-secondary)]') },
+    { key: 'avg', header: t('signalStats.avg', 'Avg'), render: (s) => renderNumeric(s.avg, 'text-[var(--text-primary)]') },
     {
       key: 'count',
-      header: t('Count'),
+      header: t('signalStats.count', 'Count'),
       render: (s) => (
         <span className="font-mono text-[var(--text-muted)]">{fmtInt(s.count)}</span>
       ),
@@ -156,7 +156,7 @@ export function SignalStatsPanel({
     <FadeIn>
       <GlassPanel className={cn('p-4 sm:p-5', className)}>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <SectionTitle>{title ?? t('Stats Summary')}</SectionTitle>
+          <SectionTitle>{title ?? t('signalStats.title', 'Stats Summary')}</SectionTitle>
           {emptyCount > 0 && (
             <Toggle
               checked={hideEmpty}
@@ -176,6 +176,7 @@ export function SignalStatsPanel({
           <DataTable
             tableId="telemetry:signal-stats"
             columns={columns}
+            mobileColumns={['signal', 'avg', 'count']}
             data={visibleStats}
             keyExtractor={(s) => s.signal}
             compact

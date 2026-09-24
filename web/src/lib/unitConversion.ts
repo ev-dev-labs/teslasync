@@ -231,6 +231,20 @@ export function convertEnergyFromSI(wh: number, to: EnergyUnitPref): number {
 }
 
 /**
+ * Convert consumption-style efficiency from SI Wh/km to the user's display
+ * unit (Wh/mi for mile users). Non-mile prefs pass through unchanged.
+ * @param whPerKm - efficiency in watt-hours per kilometer (SI)
+ * @param to - target display distance preference
+ */
+export function convertEfficiencyFromSI(
+  whPerKm: number,
+  to: DistanceUnitPref,
+): number {
+  if (to === 'mi') return (whPerKm * METERS_PER_MILE) / METERS_PER_KM
+  return whPerKm
+}
+
+/**
  * Convert duration from SI seconds to the user's display unit.
  * @param seconds - duration in seconds (SI)
  * @param to - target display unit

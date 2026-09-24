@@ -981,6 +981,7 @@ export default function NavigationRoutePage() {
                     <DataTable
                       tableId="maps:navigation-waypoints"
                       columns={waypointColumns}
+                      mobileColumns={['name', 'type', 'distance']}
                       data={waypoints}
                       keyExtractor={(wp) => `${wp.name}-${wp.distance}`}
                       compact
@@ -1024,6 +1025,7 @@ export default function NavigationRoutePage() {
                     <DataTable
                       tableId="maps:navigation-recent-destinations"
                       columns={destColumns}
+                      mobileColumns={['destination', 'distance', 'eta']}
                       data={recentDestinations}
                       keyExtractor={(row) => `${row.time}-${row.destination}`}
                       compact
@@ -1060,6 +1062,7 @@ export default function NavigationRoutePage() {
                     <DataTable
                       tableId="maps:navigation-location-history"
                       columns={historyColumns}
+                      mobileColumns={['time', 'destination_name', 'located_at_home']}
                       data={sortedHistory}
                       keyExtractor={(row) => row.id}
                       sortKey={sortKey}

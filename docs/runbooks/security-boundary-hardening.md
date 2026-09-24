@@ -112,7 +112,8 @@ for print/certificate paths, then add a report-only policy before enforcing.
 
 ## Security gate
 
-`.github/workflows/security.yml` blocks pull requests and weekly scans on:
+`.github/workflows/security.yml` blocks relevant pull requests, scans each
+push to `main`, and runs a daily scan at 04:17 UTC on:
 
 - Go dependency vulnerabilities (`govulncheck`);
 - dependency and filesystem-secret findings (`Trivy fs`, excluding generated

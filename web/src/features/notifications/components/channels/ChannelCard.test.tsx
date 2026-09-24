@@ -39,7 +39,7 @@ import { ChannelCard } from './ChannelCard';
 
 // ── Controllable mutation doubles ─────────────────────────────────────────────
 type MutateOpts = {
-  onSuccess?: (data?: { success?: boolean; error?: string }) => void;
+  onSuccess?: (data?: { success?: boolean; error?: string; status_code?: number; latency_ms?: number; signature?: string }) => void;
   onError?: (err?: unknown) => void;
 };
 
@@ -50,12 +50,17 @@ const mutations = vi.hoisted(() => ({
   toggle: vi.fn(),
   del: vi.fn(),
   test: vi.fn(),
+  webhookTest: vi.fn(),
 }));
 
 vi.mock('@/api/hooks/useNotifications', () => ({
   useToggleChannel: () => ({ mutate: mutations.toggle, isPending: mutations.togglePending }),
   useDeleteChannel: () => ({ mutate: mutations.del, isPending: mutations.deletePending }),
   useTestChannel: () => ({ mutate: mutations.test, isPending: mutations.testPending }),
+}));
+
+vi.mock('@/api/hooks/useNotificationChannels', () => ({
+  useTestWebhookChannel: () => ({ mutate: mutations.webhookTest, isPending: false }),
 }));
 
 // ── framer-motion → passthrough (ToastProvider animates its stack) ────────────
@@ -179,6 +184,7 @@ beforeEach(() => {
   mutations.toggle.mockReset();
   mutations.del.mockReset();
   mutations.test.mockReset();
+  mutations.webhookTest.mockReset();
 });
 
 // ── 1. Rendering ──────────────────────────────────────────────────────────────
@@ -297,6 +303,22 @@ describe('ChannelCard — toggle', () => {
 
 // ── 4. Test ───────────────────────────────────────────────────────────────────
 describe('ChannelCard — test', () => {
+  it('uses signed delivery for a webhook and displays the response status', async () => {
+    const webhook: NotificationChannel = {
+      id: 41, name: 'Ops hook', kind: 'webhook', enabled: true,
+      created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+      url: 'https://example.test/events', method: 'POST', headers: {}, body_template: '',
+    };
+    mutations.webhookTest.mockImplementation((_vars: unknown, opts: MutateOpts) =>
+      opts.onSuccess?.({ success: true, status_code: 202, latency_ms: 8, signature: 'sha256=preview' }),
+    );
+    renderCard(webhook);
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
+    expect(mutations.webhookTest).toHaveBeenCalledWith({ id: 41 }, expect.anything());
+    expect(mutations.test).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Status 202/)).toBeInTheDocument();
+    expect(screen.getByText('sha256=preview')).toBeInTheDocument();
+  });
   it('fires the test mutation and toasts provider success', async () => {
     mutations.test.mockImplementation((_id: number, opts: MutateOpts) =>
       opts.onSuccess?.({ success: true }),

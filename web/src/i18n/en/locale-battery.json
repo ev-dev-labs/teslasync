@@ -1472,7 +1472,7 @@
     "projected": "Projected Range",
     "scenarios": "Range Scenarios",
     "noScenarios": "Drive more to see personalized scenario projections.",
-    "efficiencyMatrix": "Personal Efficiency Matrix (Wh/km)",
+    "efficiencyMatrix": "Personal Efficiency Matrix",
     "noMatrix": "Efficiency data requires drives in different conditions.",
     "whatIf": "What If Calculator",
     "speed": "Speed",

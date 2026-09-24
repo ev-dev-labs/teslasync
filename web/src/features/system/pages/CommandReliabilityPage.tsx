@@ -4,7 +4,7 @@ import { CheckCheck, Radio, RefreshCw, ShieldAlert } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -15,9 +15,10 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from '@/components/charts';
 
-import { useCommandHistory } from '@/api/hooks/useCommands';
+import { useCommandReliabilityHistory } from '@/api/hooks/useCommands';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { chartTokens } from '@/lib/tokens';
 import { formatDateShort } from '@/lib/dateFormat';
 
@@ -52,7 +53,11 @@ export default function CommandReliabilityPage() {
   usePageTitle(t('commandReliability.title', 'Command Reliability'));
 
   const { vehicleId } = useSelectedVehicle();
-  const historyQuery = useCommandHistory(vehicleId ?? undefined);
+  const { start: from, end: to, setRange } = useRangeState({
+    persistKey: 'command.reliability.range',
+    defaultPresetId: 'all',
+  });
+  const historyQuery = useCommandReliabilityHistory(vehicleId ?? undefined, from, to);
 
   const summary = useMemo(
     () => analyzeCommandReliability(historyQuery.data ?? []),
@@ -95,7 +100,12 @@ export default function CommandReliabilityPage() {
         'Which remote commands you can actually trust, graded on Wilson confidence bounds rather than a raw success percentage',
       )}
       query={historyQuery}
-      actions={<VehicleSelect />}
+      actions={
+        <div className="flex flex-wrap items-center gap-3">
+          <RangePicker value={{ start: from, end: to }} onChange={setRange} presetIds={['7d', '30d', '90d', 'all']} />
+          <VehicleSelect />
+        </div>
+      }
     >
       {/* 1 — KPI band */}
       <FadeIn>

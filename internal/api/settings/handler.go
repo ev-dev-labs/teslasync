@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -16,17 +17,25 @@ import (
 
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 // SettingsHandler handles user settings.
 type SettingsHandler struct {
 	settingsRepo     *settingsdb.SettingsRepo
+	endpointControls endpointControlsStore
 	db               *database.DB
 	telemetryHandler any
 }
 
+type endpointControlsStore interface {
+	GetEndpointControls(context.Context) (settingsmodel.LegacyPollingConfig, error)
+	UpsertEndpointControls(context.Context, settingsmodel.LegacyPollingConfig) error
+}
+
 func NewSettingsHandler(db *database.DB) *SettingsHandler {
-	return &SettingsHandler{settingsRepo: settingsdb.NewSettingsRepo(db), db: db}
+	repo := settingsdb.NewSettingsRepo(db)
+	return &SettingsHandler{settingsRepo: repo, endpointControls: repo, db: db}
 }
 
 // SetTelemetryHandler allows the settings handler to sync capture toggle changes.
@@ -251,26 +260,43 @@ func (h *SettingsHandler) ToggleAPISuspend(w http.ResponseWriter, r *http.Reques
 }
 
 // GetPollingConfig returns the current polling endpoint configuration.
-// Per-vehicle polling tuning now lives in the `polling_config` table;
-// this endpoint returns a backward-compatible LegacyPollingConfig with
-// all endpoints enabled (default safe state).
+// The installation-wide endpoint switches live in settings, separately from
+// per-vehicle interval tuning in polling_config.
 func (h *SettingsHandler) GetPollingConfig(w http.ResponseWriter, r *http.Request) {
-	pc := settingsmodel.DefaultPollingConfig()
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.settings.get_endpoint_controls")
+	defer span.End()
+	pc, err := h.endpointControls.GetEndpointControls(ctx)
+	if err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to read endpoint controls")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read endpoint controls")
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, pc)
 }
 
 // UpdatePollingConfig accepts a polling configuration update.
-// Per-vehicle polling tuning now lives in the `polling_config` table;
-// this is a no-op that returns the default config.
 func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.settings.update_endpoint_controls")
+	defer span.End()
 	var pc settingsmodel.LegacyPollingConfig
-	if err := json.NewDecoder(r.Body).Decode(&pc); err != nil {
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&pc); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-
-	log.Info().Interface("polling_config", pc).Msg("polling config updated (legacy no-op)")
-
+	if pc.TelemetryCapture || (pc.TelemetryCaptureRetentionDays != 0 && pc.TelemetryCaptureRetentionDays != 7) {
+		httpx.WriteError(w, http.StatusBadRequest, "telemetry capture is not supported by endpoint controls")
+		return
+	}
+	pc.TelemetryCaptureRetentionDays = 7
+	if err := h.endpointControls.UpsertEndpointControls(ctx, pc); err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to persist endpoint controls")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to persist endpoint controls")
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, pc)
 }
 

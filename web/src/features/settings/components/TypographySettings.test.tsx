@@ -48,6 +48,14 @@ vi.mock('@/components/ui/FontProvider', async (importActual) => {
   return { ...actual, useFont: vi.fn() }
 })
 
+// Agent store is mocked at the provider boundary (same pattern as useFont):
+// the component consumes `useTypographyAgentOptional()` and must work both
+// with a store (section renders) and without one (section hidden).
+vi.mock('@/components/typography-agent', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/typography-agent')>()
+  return { ...actual, useTypographyAgentOptional: vi.fn() }
+})
+
 import {
   useFont,
   DEFAULT_FONT_PREFS,
@@ -57,8 +65,13 @@ import {
   type FontPrefs,
 } from '@/components/ui/FontProvider'
 import { TypographySettings } from './TypographySettings'
+import {
+  useTypographyAgentOptional,
+  type TypographyAgentContextValue,
+} from '@/components/typography-agent'
 
 const mockedUseFont = useFont as unknown as Mock
+const mockedUseAgent = useTypographyAgentOptional as unknown as Mock
 
 // Build a full FontContext value: real prefs + every setter as a spy. Returned
 // so a test can assert exactly which setter fired with which argument.
@@ -290,5 +303,53 @@ describe('TypographySettings — reading presets & reset', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }))
     expect(font.reset).toHaveBeenCalledTimes(1)
+  })
+})
+
+function setAgent(over: Partial<TypographyAgentContextValue> = {}) {
+  const api: TypographyAgentContextValue = {
+    agent: {} as TypographyAgentContextValue['agent'],
+    spec: {
+      ratio: 'majorThird',
+      baseSizeMinPx: 15,
+      baseSizeMaxPx: 17,
+      viewportMinPx: 360,
+      viewportMaxPx: 1440,
+      density: 'comfortable',
+    },
+    verification: { passed: true, score: 100, anomalies: [] },
+    hudOpen: false,
+    setHudOpen: vi.fn(),
+    dispatch: vi.fn(async () => ({ passed: true, score: 100, anomalies: [] })),
+    ...over,
+  }
+  mockedUseAgent.mockReturnValue(api)
+  return api
+}
+
+describe('TypographySettings — agent harmonic-scale bridge', () => {
+  it('hides the agent section outside the provider', () => {
+    mockedUseAgent.mockReturnValue(null)
+    render(<TypographySettings />)
+
+    expect(screen.queryByRole('button', { name: 'Open ambient HUD' })).toBeNull()
+  })
+
+  it('opens the ambient HUD from the entry-point button', () => {
+    const agent = setAgent()
+    render(<TypographySettings />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open ambient HUD' }))
+    expect(agent.setHudOpen).toHaveBeenCalledWith(true)
+  })
+
+  it('routes ratio changes through the shared dispatch store', () => {
+    const agent = setAgent()
+    render(<TypographySettings />)
+
+    fireEvent.change(screen.getByLabelText('Harmonic ratio'), {
+      target: { value: 'goldenRatio' },
+    })
+    expect(agent.dispatch).toHaveBeenCalledWith({ ratio: 'goldenRatio' })
   })
 })

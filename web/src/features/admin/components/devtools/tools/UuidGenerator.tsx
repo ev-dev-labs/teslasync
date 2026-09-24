@@ -20,13 +20,13 @@ export function UuidGeneratorTool() {
   }, [])
 
   return (
-    <ToolCard icon={Fingerprint} color="purple" title={t('Uuid Generator')} description={t('Uuid Generator Desc')}>
+    <ToolCard icon={Fingerprint} color="purple" title={t('devtools.utils.uuid', 'Uuid Generator')} description={t('devtools.utils.uuidDesc', 'Uuid Generator Desc')}>
       <div className="space-y-3">
         <Button variant="primary" size="sm" onClick={generate} icon={<RefreshCw className="h-3.5 w-3.5" />}>
-          {t('Generate')}
+          {t('devtools.utils.uuidGenerate', 'Generate')}
         </Button>
         {uuids.length > 0 ? (
-          <div role="list" aria-label={t('Generated UUIDs')} className="space-y-1">
+          <div role="list" aria-label={t('devtools.utils.uuidResults', 'Generated UUIDs')} className="space-y-1">
             {uuids.map((u) => (
               <div
                 key={u}
@@ -39,7 +39,7 @@ export function UuidGeneratorTool() {
             ))}
           </div>
         ) : (
-          <p className="text-xs text-[var(--text-secondary)]">{t('Click Generate to create a UUID')}</p>
+          <p className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.uuidEmpty', 'Click Generate to create a UUID')}</p>
         )}
       </div>
     </ToolCard>

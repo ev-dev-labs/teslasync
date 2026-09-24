@@ -431,6 +431,7 @@ export default function FeedbackQueuePage() {
               <DataTable<FeedbackEntry>
                 tableId="admin:feedback"
                 columns={columns}
+                mobileColumns={['title', 'status', 'created_at']}
                 data={items}
                 keyExtractor={(r) => r.id}
                 selectable="multi"

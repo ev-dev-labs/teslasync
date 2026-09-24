@@ -41,7 +41,7 @@ export function NotebookPanel({ window }: { window: ScienceWindow }) {
               {asList(data.entries).map((entry) => (
                 <Accordion
                   key={entry.id}
-                  title={`${entry.domain} · ${entry.id}`}
+                  title={`${entry.domain} · ${entry.hypothesis || entry.id}`}
                   badge={(
                     <Badge variant={entry.unknown ? 'warning' : 'neutral'} size="sm">
                       n={fmtNumber(entry.n, 0)}

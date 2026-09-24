@@ -460,7 +460,8 @@ describe('AutomationListPage', () => {
 
   it('propagates an error to both sections without hiding them', () => {
     const err = new Error('boom');
-    useAutomationsMock.mockReturnValue(makeQuery({ error: err, isError: true, data: undefined }));
+    const query = makeQuery({ error: err, isError: true, data: undefined });
+    useAutomationsMock.mockReturnValue(query);
     renderPage();
 
     expect(captured.table.error).toBe(err);
@@ -469,8 +470,11 @@ describe('AutomationListPage', () => {
     // Sections stay mounted on error — never a blank / removed panel.
     expect(screen.getByTestId('stub-table')).toBeInTheDocument();
     expect(screen.getByTestId('stub-status')).toBeInTheDocument();
-    // KPI band still renders (zeroed) rather than vanishing.
-    expect(within(kpiRegion()).getByText('Total')).toBeInTheDocument();
+    // KPI band shows the error with retry — never fabricated zeros.
+    expect(within(kpiRegion()).queryByText('Total')).not.toBeInTheDocument();
+    const retry = within(kpiRegion()).getByRole('button', { name: 'Retry' });
+    fireEvent.click(retry);
+    expect(query.refetch).toHaveBeenCalledTimes(1);
   });
 
   it('wires each section retry handler to the query refetch', () => {

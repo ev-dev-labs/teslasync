@@ -348,16 +348,27 @@ func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
 	}
 	now := h.now()
 	from := now.Add(-maxExclusiveLookback)
+	evidence := EvidenceScope{RequestedFrom: from, RequestedTo: now}
 	var frames []PhysicsFrame
 	if h.state != nil {
 		rows, err := h.state.Timeline(ctx, vehicleID, exclusiveHistoryFields(), from, now.Add(time.Nanosecond), signal.TimelineOptions{
 			CollapseBy: exclusiveCollapseBy(),
-			MaxRows:    maxExclusiveRows,
+			MaxRows:    maxExclusiveRows + 1,
 		})
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("exclusive physics timeline failed")
-			httpx.WriteError(w, http.StatusInternalServerError, "failed to load TeslaSync-only physics")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load Tesla Physics")
 			return
+		}
+		evidence.HistoryAvailable = true
+		evidence.HistoryTruncated = len(rows) > maxExclusiveRows
+		if evidence.HistoryTruncated {
+			rows = rows[:maxExclusiveRows]
+		}
+		evidence.HistoryRows = len(rows)
+		if len(rows) > 0 {
+			evidence.FirstRecordedAt = timePtr(rows[0].Timestamp)
+			evidence.LastRecordedAt = timePtr(rows[len(rows)-1].Timestamp)
 		}
 		frames = physicsFramesFromTimeline(rows)
 		boxFrom := now.Add(-blackBoxWindow)
@@ -365,11 +376,17 @@ func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
 			boxFrom = frames[len(frames)-1].At.Add(-blackBoxWindow)
 		}
 		hiRes, boxErr := h.state.Timeline(ctx, vehicleID, exclusiveFields(), boxFrom, now.Add(time.Nanosecond), signal.TimelineOptions{
-			MaxRows: maxBlackBoxRows,
+			MaxRows: maxBlackBoxRows + 1,
 		})
 		if boxErr != nil {
 			log.Warn().Err(boxErr).Int64("vehicle_id", vehicleID).Msg("exclusive black-box timeline failed")
 		} else {
+			evidence.BlackBoxAvailable = true
+			evidence.BlackBoxTruncated = len(hiRes) > maxBlackBoxRows
+			if evidence.BlackBoxTruncated {
+				hiRes = hiRes[:maxBlackBoxRows]
+			}
+			evidence.BlackBoxRows = len(hiRes)
 			frames = append(frames, physicsFramesFromTimeline(hiRes)...)
 		}
 	}
@@ -385,11 +402,15 @@ func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
 	driveBounds := []SessionBoundary{}
 	chargeBounds := []SessionBoundary{}
 	if h.driveList != nil {
-		drives, err := h.driveList.GetByVehicle(ctx, vehicleID, maxExclusiveSessions, 0, from, now)
+		drives, err := h.driveList.GetByVehicle(ctx, vehicleID, maxExclusiveSessions+1, 0, from, now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("exclusive physics drives failed")
-			httpx.WriteError(w, http.StatusInternalServerError, "failed to load TeslaSync-only physics")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load Tesla Physics")
 			return
+		}
+		evidence.DriveSessionsTruncated = len(drives) > maxExclusiveSessions
+		if evidence.DriveSessionsTruncated {
+			drives = drives[:maxExclusiveSessions]
 		}
 		for _, drive := range drives {
 			if drive == nil {
@@ -405,11 +426,15 @@ func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if h.chargeList != nil {
-		charges, err := h.chargeList.GetByVehicle(ctx, vehicleID, maxExclusiveSessions, 0, from, now)
+		charges, err := h.chargeList.GetByVehicle(ctx, vehicleID, maxExclusiveSessions+1, 0, from, now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("exclusive physics charges failed")
-			httpx.WriteError(w, http.StatusInternalServerError, "failed to load TeslaSync-only physics")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load Tesla Physics")
 			return
+		}
+		evidence.ChargeSessionsTruncated = len(charges) > maxExclusiveSessions
+		if evidence.ChargeSessionsTruncated {
+			charges = charges[:maxExclusiveSessions]
 		}
 		for _, charge := range charges {
 			if charge == nil {
@@ -424,7 +449,9 @@ func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-	httpx.WriteJSON(w, http.StatusOK, BuildExclusiveReport(vehicleID, frames, now, connected, driveBounds, chargeBounds, h.hmacKey))
+	report := BuildExclusiveReport(vehicleID, frames, now, connected, driveBounds, chargeBounds, h.hmacKey)
+	report.Evidence = evidence
+	httpx.WriteJSON(w, http.StatusOK, report)
 }
 
 func (h *Handler) Outage(w http.ResponseWriter, r *http.Request) {

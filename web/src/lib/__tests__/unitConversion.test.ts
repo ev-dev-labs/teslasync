@@ -16,6 +16,7 @@ import {
   convertTempFromSI,
   convertPressureFromSI,
   convertEnergyFromSI,
+  convertEfficiencyFromSI,
   convertPowerFromSI,
   convertDurationFromSI,
   formatDistance,
@@ -517,5 +518,20 @@ describe('SI input contract (no "guess the input unit" fallback)', () => {
       duration: 'h' satisfies DurationUnitPref,
     }
     expect(pref.distance).toBe('mi')
+  })
+})
+
+describe('convertEfficiencyFromSI', () => {
+  it('passes Wh/km through for km users', () => {
+    expect(convertEfficiencyFromSI(180, 'km')).toBe(180)
+  })
+
+  it('converts Wh/km to Wh/mi for mile users', () => {
+    // 180 Wh/km × 1.609344 = 289.68 Wh/mi.
+    expect(convertEfficiencyFromSI(180, 'mi')).toBeCloseTo(289.68, 2)
+  })
+
+  it('passes through for non-distance prefs', () => {
+    expect(convertEfficiencyFromSI(180, 'ft')).toBe(180)
   })
 })

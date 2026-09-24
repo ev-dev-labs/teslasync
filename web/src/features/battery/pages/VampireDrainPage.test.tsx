@@ -93,7 +93,7 @@ import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
-import VampireDrainPage from './VampireDrainPage'
+import VampireDrainPage, { buildDailyDrainRollup } from './VampireDrainPage'
 import type { Vehicle } from '@/types/vehicle'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
@@ -326,6 +326,32 @@ describe('VampireDrainPage', () => {
     expect(screen.getByText('25.00°C')).toBeInTheDocument()
     expect(screen.getByText('10.00°C')).toBeInTheDocument()
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('buckets the daily rollup by the vehicle calendar day, not UTC', () => {
+    // 00:30 UTC Jan 15 = 19:30 ET Jan 14 → the bucket belongs to Jan 14 in the
+    // vehicle's zone (the old UTC slice filed it under Jan 15).
+    const buckets = buildDailyDrainRollup(
+      [{ ...eventA, started_at: '2026-01-15T00:30:00Z', drain_pct: 2.0, duration_hours: 6.0 }],
+      'America/New_York',
+    )
+    expect(buckets).toEqual([{ date: '2026-01-14', drain_pct: 2.0, hours: 6.0 }])
+  })
+
+  it('sums losses per day, sorts oldest-first, and skips unparseable starts', () => {
+    const buckets = buildDailyDrainRollup(
+      [
+        { ...eventA, started_at: '2026-01-16T12:00:00Z', drain_pct: 1.0, duration_hours: 2.0 },
+        { ...eventB, started_at: '2026-01-15T12:00:00Z', drain_pct: 3.0, duration_hours: 4.0 },
+        { ...eventC, started_at: '2026-01-15T18:00:00Z', drain_pct: 5.0, duration_hours: 6.0 },
+        { ...eventC, started_at: 'not-a-date' },
+      ],
+      'UTC',
+    )
+    expect(buckets).toEqual([
+      { date: '2026-01-15', drain_pct: 8.0, hours: 10.0 },
+      { date: '2026-01-16', drain_pct: 1.0, hours: 2.0 },
+    ])
   })
 
   it('keeps every panel on its select-a-vehicle empty state and never queries drain for a null id', async () => {

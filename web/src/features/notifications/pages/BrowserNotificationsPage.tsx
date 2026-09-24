@@ -6,11 +6,13 @@
 
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
+import { SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useWebPush } from '@/hooks/useWebPush';
 import { useNotificationListener } from '@/hooks/useNotificationListener';
 import { BrowserNotificationsKpis } from '../components/BrowserNotificationsKpis';
+import { BrowserPushChannelCard } from '../components/BrowserPushChannelCard';
 import { BrowserPermissionPanel } from '../components/BrowserPermissionPanel';
 import { BrowserTabSignalsPanel } from '../components/BrowserTabSignalsPanel';
 import { DeviceDataUsagePanel } from '../components/DeviceDataUsagePanel';
@@ -24,7 +26,8 @@ export default function BrowserNotificationsPage() {
   // Permission + per-event push prefs are lifted here so the KPI band and the
   // permission panel share one source of truth (each hold their own local
   // state, so mounting them independently would desync after a toggle).
-  const { permission, requestPermission, isSupported } = useWebPush();
+  const webPush = useWebPush();
+  const { permission, requestPermission, isSupported } = webPush;
   const { prefs: pushPrefs, setPrefs: setPushPrefs } = useNotificationListener();
 
   return (
@@ -32,12 +35,18 @@ export default function BrowserNotificationsPage() {
       title={t('notifications.browser.title', 'Browser notifications')}
       subtitle={t(
         'notifications.browser.subtitle',
-        'Native browser push notifications when alerts fire.',
+        'Receive background push on this device and tune what happens while the tab is open.',
       )}
       copyLink
     >
       <div className="space-y-4 sm:space-y-6">
         <FadeIn>
+          <section aria-label={t('webpush.title', 'Browser push')}>
+            <BrowserPushChannelCard className="p-4 sm:p-5" webPush={webPush} />
+          </section>
+        </FadeIn>
+
+        <FadeIn delay={0.05}>
           <BrowserNotificationsKpis
             permission={permission}
             notificationsSupported={isSupported}
@@ -46,6 +55,10 @@ export default function BrowserNotificationsPage() {
         </FadeIn>
 
         <FadeIn delay={0.1}>
+          <SectionTitle>{t('notifications.browser.inTabTitle', 'While this tab is open')}</SectionTitle>
+          <Text as="p" variant="bodySm" className="mt-1 mb-3">
+            {t('notifications.browser.inTabHelp', 'These controls affect notifications and indicators in this browser tab. Browser push above delivers even when TeslaSync is closed.')}
+          </Text>
           <section
             aria-label={t(
               'notifications.browser.controlsAria',

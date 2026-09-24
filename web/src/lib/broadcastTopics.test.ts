@@ -20,6 +20,7 @@ const ALL_BROADCAST_TYPES: ReadonlyArray<BroadcastMessage['type']> = [
   'theme.changed',
   'theme.customColors',
   'font.changed',
+  'typography.spec.changed',
   'auth.logout',
   'notifications.read',
   'notifications.cleared',

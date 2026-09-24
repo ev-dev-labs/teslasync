@@ -8,7 +8,7 @@ import { QueryError, Skeleton } from '@/components/feedback';
 import { ChargeLedgerPanel } from '@/features/vehicles/components/physics-ledger/LedgerPanels';
 import { useDataState } from '@/hooks/useDataState';
 
-/** Compact charge-energy ledger for one session. Full solver lives at /tesla-only/ledger. */
+/** Compact charge-energy ledger for one session. Full solver lives at /tesla-physics/ledger. */
 export function ChargeLedgerCompactPanel({ sessionId }: { sessionId: string | undefined }) {
   const { t } = useTranslation();
   const query = useChargeLedger(sessionId);
@@ -37,7 +37,7 @@ export function ChargeLedgerCompactPanel({ sessionId }: { sessionId: string | un
           <ChargeLedgerPanel ledger={ledger} />
           <Text as="p" size="sm" color="secondary">
             <Link
-              to="/tesla-only/ledger"
+              to="/tesla-physics/ledger"
               className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
             >
               {t('charging.ledger.openFull', 'Open the full physics ledger')}

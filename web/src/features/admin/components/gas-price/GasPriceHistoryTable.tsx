@@ -130,6 +130,7 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
         <DataTable
           tableId="admin:gas-price-history"
           columns={columns}
+          mobileColumns={['effective_from', 'price_per_unit', 'effective_to']}
           data={sortedRows}
           keyExtractor={(r) => r.id}
           sortKey={sortKey}

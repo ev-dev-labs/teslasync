@@ -131,6 +131,19 @@ func TestCutover_SideEffectsObserverWired(t *testing.T) {
 	}
 }
 
+func TestEventAlertProductionWiring(t *testing.T) {
+	src := readAppSources(t)
+	for _, required := range []string{
+		"a.eventAlerts = a.newEventAlertObserver()",
+		"normalize.New(unitRepo, pipelineRouter, pipelineLogger, sideEffects, swUpdateObserver, a.eventAlerts)",
+		"a.eventAlerts.fire(tickCtx, alertmodel.AlertRuleKindSystemComponent",
+	} {
+		if !strings.Contains(src, required) {
+			t.Errorf("missing production event alert observer wiring: %s", required)
+		}
+	}
+}
+
 // TestCutover_ProductionMQTTHelperWired pins the helper that
 // constructs a paho client with auto-ack disabled and a DLQ publisher.
 // The PipelineSubscriber's manual-ack +

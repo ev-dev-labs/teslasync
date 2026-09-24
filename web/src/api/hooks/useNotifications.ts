@@ -24,6 +24,7 @@ import type {
   NotificationEventType,
   NotificationPreference,
   NotificationStats,
+  NotificationReport,
   QuietHoursWindow,
   QuietHoursWindowInput,
 } from '@/api/types';
@@ -100,8 +101,12 @@ export const notificationKeys = {
   eventTypes: ['notification-event-types'] as const,
   preferences: (channelId: number) => ['notification-preferences', channelId] as const,
   logs: ['notification-logs'] as const,
+  deliveryLogs: ['notification-logs', 'delivery-history'] as const,
+  analysisLogs: ['notification-logs', 'analysis-history'] as const,
   logsFiltered: (filters?: NotificationFilters) =>
     ['notification-logs', 'filtered', filters ?? {}] as const,
+  logsCount: (filters?: NotificationFilters, grouped = false) =>
+    ['notification-logs', 'count', grouped, filters ?? {}] as const,
   // Grouped/threaded inbox cache sits beside `logsFiltered` so a
   // same-filter swap between flat and grouped views doesn't fight the cache.
   // Members of a single group reuse `logsFiltered` keyed on `{ group_key }`
@@ -114,6 +119,7 @@ export const notificationKeys = {
   bellUnread: (limit: number) => ['notification-logs', 'bell-unread', limit] as const,
   unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
+  report: (from: string, to: string) => ['notification-report', from, to] as const,
   quietHours: ['notification-quiet-hours'] as const,
 };
 
@@ -125,6 +131,7 @@ export interface NotificationFilters {
   severity?: ('info' | 'warn' | 'critical')[];
   vehicle_id?: number[];
   rule_id?: number[];
+  source?: 'rule';
   from?: string;
   to?: string;
   read?: boolean;
@@ -142,6 +149,7 @@ function serializeNotificationFilters(filters: NotificationFilters): string {
   if (filters.severity?.length) params.set('severity', filters.severity.join(','));
   if (filters.vehicle_id?.length) params.set('vehicle_id', filters.vehicle_id.join(','));
   if (filters.rule_id?.length) params.set('rule_id', filters.rule_id.join(','));
+  if (filters.source) params.set('source', filters.source);
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
   if (typeof filters.read === 'boolean') params.set('read', String(filters.read));
@@ -837,6 +845,67 @@ export function useNotificationLogs(
   });
 }
 
+export function useNotificationLogCount(
+  filters: NotificationFilters,
+  options?: { grouped?: boolean },
+) {
+  const countFilters = { ...filters };
+  delete countFilters.limit;
+  delete countFilters.offset;
+  const params = new URLSearchParams(serializeNotificationFilters(countFilters));
+  params.set('count_only', 'true');
+  if (options?.grouped) params.set('grouped', 'true');
+  return useQuery({
+    queryKey: notificationKeys.logsCount(countFilters, options?.grouped),
+    queryFn: ({ signal }) =>
+      request<{ total: number }>(`/notifications/logs?${params}`, { signal }),
+  });
+}
+
+const ANALYSIS_PAGE_SIZE = 1000;
+
+async function fetchAnalysisLogs(view: 'inbox' | 'deliveries', signal: AbortSignal): Promise<NotificationLog[]> {
+  const logs: NotificationLog[] = [];
+  let cursor: Pick<NotificationLog, 'created_at' | 'id'> | undefined;
+  for (;;) {
+    const params = new URLSearchParams({ view, archived: 'all', limit: String(ANALYSIS_PAGE_SIZE) });
+    if (cursor) {
+      params.set('before_created_at', cursor.created_at);
+      params.set('before_id', String(cursor.id));
+    }
+    const page = await request<NotificationLog[]>(`/notifications/logs?${params}`, { signal });
+    if (!Array.isArray(page)) {
+      throw new Error('Invalid notification history response');
+    }
+    logs.push(...page);
+    if (page.length < ANALYSIS_PAGE_SIZE) return logs;
+    const last = page[page.length - 1]!;
+    if (!last.created_at || !Number.isSafeInteger(last.id) || last.id <= 0 ||
+        (cursor && cursor.created_at === last.created_at && cursor.id === last.id)) {
+      throw new Error('Notification history cursor did not advance');
+    }
+    cursor = { created_at: last.created_at, id: last.id };
+  }
+}
+
+/** All recorded delivery attempts, including archived and historical rows. */
+export function useNotificationDeliveryLogs() {
+  return useQuery({
+    queryKey: notificationKeys.deliveryLogs,
+    queryFn: ({ signal }) => fetchAnalysisLogs('deliveries', signal),
+    staleTime: STALE_TIMES.MODERATE,
+  });
+}
+
+/** All canonical inbox triggers and legacy uncorrelated events for fatigue analysis. */
+export function useNotificationAnalysisLogs() {
+  return useQuery({
+    queryKey: notificationKeys.analysisLogs,
+    queryFn: ({ signal }) => fetchAnalysisLogs('inbox', signal),
+    staleTime: STALE_TIMES.MODERATE,
+  });
+}
+
 /**
  * Fetches the inbox in grouped/threaded form.
  *
@@ -1196,6 +1265,15 @@ export function useNotificationStats() {
     queryKey: notificationKeys.stats,
     queryFn: ({ signal }) => request<NotificationStats>('/notifications/stats', { signal }),
     refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+export function useNotificationReport(from: string, to: string) {
+  const params = new URLSearchParams({ from, to });
+  return useQuery({
+    queryKey: notificationKeys.report(from, to),
+    queryFn: ({ signal }) => request<NotificationReport>(`/notifications/report?${params}`, { signal }),
+    enabled: Boolean(from && to),
   });
 }
 

@@ -41,6 +41,7 @@ import {
   within,
 } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 vi.mock('@/api/client', async () => {
@@ -137,7 +138,9 @@ function renderPanel(initial: Partial<AppSettings> | null = settingsFixture) {
   return render(
     <QueryClientProvider client={qc}>
       <ToastProvider>
-        <AppearanceSettings />
+        <MemoryRouter>
+          <AppearanceSettings />
+        </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
   )
@@ -435,5 +438,12 @@ describe('AppearanceSettings — degraded load', () => {
         (c) => (c[1] as RequestInit | undefined)?.method === 'PUT',
       ),
     ).toBe(false)
+  })
+
+  it('links to dashboard kiosk settings', () => {
+    renderPanel()
+    const link = screen.getByTestId('kiosk-settings-link')
+    expect(link).toHaveAttribute('href', '/?kiosk=settings')
+    expect(link).toHaveAccessibleName(/open kiosk settings/i)
   })
 })

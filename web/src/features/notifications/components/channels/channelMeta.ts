@@ -72,15 +72,7 @@ export const FIELD_HELP: Record<string, { i18nKey: string; content: string }> = 
   },
   method: {
     i18nKey: 'help.fields.channels.method',
-    content: 'HTTP method TeslaSync uses to deliver the payload. POST is the conventional choice; PUT/PATCH are supported for systems that require them.',
-  },
-  headers: {
-    i18nKey: 'help.fields.channels.headersJson',
-    content: 'Optional JSON object of extra headers to send with each delivery, e.g. {"Authorization": "******"}. Must be valid JSON.',
-  },
-  body_template: {
-    i18nKey: 'help.fields.channels.bodyTemplate',
-    content: 'Mustache-style template controlling the request body. Use {{message}}, {{title}}, {{severity}}, {{vehicle_name}} placeholders.',
+    content: 'HTTP method TeslaSync uses to deliver the payload. Choose POST or PUT.',
   },
   server_url: {
     i18nKey: 'help.fields.channels.ntfyServer',
@@ -114,9 +106,7 @@ export const CHANNEL_TYPES: readonly ChannelTypeMeta[] = [
   ] },
   { value: 'webhook', label: 'Webhook', icon: Webhook, color: '#FF6B35', fields: [
     { key: 'url', i18nKey: 'notifications.channels.fields.url', label: 'URL', placeholder: 'https://example.com/webhook', type: 'url' },
-    { key: 'method', i18nKey: 'notifications.channels.fields.method', label: 'HTTP Method', placeholder: 'POST', type: 'text' },
-    { key: 'headers', i18nKey: 'notifications.channels.fields.headers', label: 'Headers (JSON)', placeholder: '{"Authorization": "******"}', type: 'text' },
-    { key: 'body_template', i18nKey: 'notifications.channels.fields.bodyTemplate', label: 'Body Template', placeholder: '{"text": "{{message}}"}', type: 'text' },
+    { key: 'bearer_token', i18nKey: 'notifications.channels.fields.signingSecret', label: 'Signing secret', placeholder: 'Optional — used for HMAC signing', type: 'password' },
   ] },
   { value: 'ntfy', label: 'ntfy', icon: Megaphone, color: '#57A773', fields: [
     { key: 'server_url', i18nKey: 'notifications.channels.fields.serverUrl', label: 'Server URL', placeholder: 'https://ntfy.sh', type: 'url' },
@@ -167,9 +157,8 @@ export function channelToFormConfig(ch: NotificationChannel): Record<string, str
     case 'webhook':
       return {
         url: ch.url,
-        method: ch.method,
-        headers: JSON.stringify(ch.headers ?? {}),
-        body_template: ch.body_template,
+        method: ch.method || 'POST',
+        bearer_token: '',
       };
     case 'ntfy':
       return { server_url: ch.server_url, topic: ch.topic };
@@ -220,20 +209,16 @@ export function buildChannelPayload(
       } as NotificationChannelInput;
     }
     case 'webhook': {
-      let headers: Record<string, string> = {};
-      try {
-        const parsed = JSON.parse(config.headers || '{}');
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) headers = parsed as Record<string, string>;
-      } catch { headers = {}; }
       const method = (config.method ?? 'POST').toUpperCase();
-      const safeMethod: 'GET' | 'POST' | 'PUT' = method === 'GET' || method === 'PUT' ? method : 'POST';
+      const safeMethod: 'POST' | 'PUT' = method === 'PUT' ? 'PUT' : 'POST';
       return {
         ...idPart, kind: 'webhook', name, enabled,
-        url: config.url ?? '',
+        url: config.url?.trim() ?? '',
         method: safeMethod,
-        headers,
-        body_template: config.body_template ?? '',
-      } as NotificationChannelInput;
+        headers: {},
+        body_template: '',
+        bearer_token: config.bearer_token?.trim() || undefined,
+      };
     }
     case 'ntfy':
       return {

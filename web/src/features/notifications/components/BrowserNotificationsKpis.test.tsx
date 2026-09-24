@@ -67,7 +67,7 @@ const TOTAL_CHANNELS = NOTIFICATION_SOUND_CATEGORIES.length;
 const EM_DASH = '—';
 
 const LABEL_PERMISSION = 'Browser permission';
-const LABEL_PUSH = 'Push events';
+const LABEL_PUSH = 'In-tab events';
 const LABEL_TAB = 'Tab signals';
 const LABEL_SOUND = 'Sound channels';
 const ALL_LABELS = [LABEL_PERMISSION, LABEL_PUSH, LABEL_TAB, LABEL_SOUND];

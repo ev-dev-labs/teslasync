@@ -504,6 +504,7 @@ export default function MapOverviewPage() {
             <DataTable<PositionRecord>
               tableId="maps:overview-history"
               columns={historyColumns}
+              mobileColumns={['time', 'speed', 'heading']}
               data={historyRows}
               keyExtractor={(r) => r.id}
               emptyMessage={t('mapOverview.noHistory', 'No location history found.')}

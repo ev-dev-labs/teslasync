@@ -1,8 +1,8 @@
 /**
  * InboxSummary — KPI band for the active Notifications inbox.
  *
- * Derives a full-width, responsive metric bento from the unfiltered active
- * backlog (`useNotificationLogs({ archived: false })`, passed in from the page
+ * Derives a full-width, responsive metric bento from the latest page of active
+ * notifications (`useNotificationLogs({ archived: false })`, passed in from the page
  * so it can dedupe with the InboxBody's own fetch). Leads with the unread
  * count — the inbox's primary triage metric — then breaks the backlog down by
  * severity and surfaces how recently the newest notification arrived.
@@ -110,7 +110,7 @@ export function InboxSummary({ query }: InboxSummaryProps) {
   return (
     <section aria-label={sectionLabel} className={gridClass}>
       <MetricCard
-        label={t('notifications.inbox.summary.total', 'Total')}
+        label={t('notifications.inbox.summary.total', 'Recent notifications')}
         value={stats.total}
         icon={<Inbox className="h-5 w-5" aria-hidden="true" />}
       />

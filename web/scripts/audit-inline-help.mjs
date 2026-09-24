@@ -52,7 +52,7 @@ const TARGETS = [
   },
   {
     name: 'alert-studio',
-    path: 'src/features/notifications/pages/AlertStudioPage.tsx',
+    path: 'src/features/notifications/components/AlertRuleEditor.tsx',
     min: 6,
   },
   {

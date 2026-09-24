@@ -26,14 +26,6 @@ on:
       - 'internal/api/sse_handler_tracing_test.go'
       - '.github/workflows/span-budget-gate.yml'
   workflow_dispatch:
-    inputs:
-      runner:
-        description: 'Runner to use (manual runs only)'
-        type: choice
-        options:
-          - arc-runner
-          - ubuntu-latest
-        default: arc-runner
 
 concurrency:
   group: span-budget-gate-${{ github.ref }}

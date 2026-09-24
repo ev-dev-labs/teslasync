@@ -109,6 +109,27 @@ describe('analyzeAlertFatigue', () => {
     expect(s.groups[0]!.total).toBe(3);
   });
 
+  it('counts canonical inbox events and their read state without requiring a delivery channel', () => {
+    const events = [
+      log({ min: 0, title: 'Automation complete', status: 'triggered' }),
+      log({ min: 120, title: 'Automation complete', status: 'triggered', readAfterMin: 5 }),
+    ];
+    const group = analyzeAlertFatigue(events).groups[0]!;
+    expect(group.total).toBe(2);
+    expect(group.delivered).toBe(2);
+    expect(group.ignoredRate).toBe(0.5);
+  });
+
+  it('does not combine a system event and an automation with the same title', () => {
+    const system = log({ min: 0, title: 'Job failed', status: 'triggered' });
+    const automation = log({ min: 5, title: 'Job failed', status: 'triggered' });
+    system.alert_id = null;
+    automation.alert_id = null;
+    system.event_type = 'system.worker.outage';
+    automation.event_type = 'automation.notify';
+    expect(analyzeAlertFatigue([system, automation]).groups).toHaveLength(2);
+  });
+
   it('flags a high-volume, ignored, bursty rule as fatiguing', () => {
     const logs = series('Charge rate dropped', 40, 20); // every 20 min, all unread
     const g = analyzeAlertFatigue(logs).groups[0]!;

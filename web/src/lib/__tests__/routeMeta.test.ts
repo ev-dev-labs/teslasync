@@ -106,10 +106,8 @@ describe('ROUTE_META breadcrumb hierarchy', () => {
 
   it('nests notification workspace pages under the inbox', () => {
     for (const path of [
-      '/notifications/alerts',
       '/notifications/rules',
       '/notifications/channels',
-      '/notifications/webhooks',
       '/notifications/quiet-hours',
       '/notifications/audit',
     ]) {

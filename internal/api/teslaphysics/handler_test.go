@@ -194,8 +194,16 @@ func TestHandler_CockpitHeartbeatCertificate(t *testing.T) {
 		t.Fatalf("exclusive timeline calls = %d, want history + 90s black box", calls)
 	}
 	opts := state.LastTimelineOptions()
-	if opts.MaxRows != maxBlackBoxRows {
-		t.Fatalf("black-box MaxRows = %d, want %d", opts.MaxRows, maxBlackBoxRows)
+	if opts.MaxRows != maxBlackBoxRows+1 {
+		t.Fatalf("black-box MaxRows = %d, want %d", opts.MaxRows, maxBlackBoxRows+1)
+	}
+	if !exclusive.Evidence.HistoryAvailable || !exclusive.Evidence.BlackBoxAvailable ||
+		exclusive.Evidence.HistoryRows == 0 || exclusive.Evidence.HistoryTruncated {
+		t.Fatalf("evidence scope = %+v", exclusive.Evidence)
+	}
+	if exclusive.CarKeptLiving.LastTelemetryAt == nil ||
+		!exclusive.CarKeptLiving.LastTelemetryAt.Equal(at(t, "2026-03-01T11:00:00Z")) {
+		t.Fatalf("live state must not pose as accepted telemetry: %+v", exclusive.CarKeptLiving)
 	}
 
 	driveRec := httptest.NewRecorder()
@@ -209,5 +217,47 @@ func TestHandler_CockpitHeartbeatCertificate(t *testing.T) {
 	router.ServeHTTP(missing, httptest.NewRequest(http.MethodGet, "/physics/drives/295/silent", nil))
 	if missing.Code != http.StatusNotFound {
 		t.Fatalf("missing drive status = %d", missing.Code)
+	}
+}
+
+func TestHandler_ExclusiveReportsBoundedEvidence(t *testing.T) {
+	h, state, _ := testPhysicsHandler(t)
+	now := h.now()
+	rows := make([]signal.TimelineRow, maxExclusiveRows+2)
+	for i := range rows {
+		gear := "D"
+		if i%2 == 0 {
+			gear = "P"
+		}
+		rows[i] = signal.TimelineRow{
+			Timestamp: now.Add(-time.Duration(len(rows)-i) * time.Second),
+			Fields:    map[string]signal.SignalValue{"gear": gear},
+		}
+	}
+	state.SetTimeline(7, rows)
+	drives := make([]*drivemodel.Drive, maxExclusiveSessions+1)
+	for i := range drives {
+		drives[i] = &drivemodel.Drive{ID: int64(i + 1), VehicleID: 7, StartTs: now}
+	}
+	h.driveList = fakeDriveStore{list: drives}
+
+	rec := httptest.NewRecorder()
+	physicsRouter(h).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/physics/exclusive?vehicle_id=7", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("exclusive status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	var report ExclusiveReport
+	if err := json.Unmarshal(rec.Body.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+	scope := report.Evidence
+	if !scope.HistoryTruncated || scope.HistoryRows != maxExclusiveRows ||
+		!scope.DriveSessionsTruncated || len(report.Vault.Certificate.Drives) != maxExclusiveSessions {
+		t.Fatalf("bounded scope = %+v drives=%d", scope, len(report.Vault.Certificate.Drives))
+	}
+	if !scope.FirstRecordedAt.Equal(rows[0].Timestamp) ||
+		!scope.LastRecordedAt.Equal(rows[maxExclusiveRows-1].Timestamp) ||
+		!scope.RequestedFrom.Equal(now.Add(-maxExclusiveLookback)) {
+		t.Fatalf("evidence timestamps = %+v", scope)
 	}
 }

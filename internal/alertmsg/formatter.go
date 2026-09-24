@@ -203,6 +203,17 @@ func BuildContext(rule *alertmodel.AlertRule, vehicleName string, signals map[st
 				ctx["MetricThreshold"] = *rule.MetricThreshold
 			}
 		}
+		if rule.Kind == alertmodel.AlertRuleKindSystemComponent || rule.Kind == alertmodel.AlertRuleKindPlace {
+			if rule.ComponentName != nil {
+				ctx["ComponentName"] = *rule.ComponentName
+			}
+			if rule.PlaceID != nil {
+				ctx["PlaceID"] = *rule.PlaceID
+			}
+			if rule.Transition != nil {
+				ctx["Transition"] = *rule.Transition
+			}
+		}
 	}
 	if vehicleName != "" {
 		ctx["VehicleName"] = vehicleName
@@ -230,6 +241,13 @@ func RenderTitle(rule *alertmodel.AlertRule, ctx Context) string {
 	name := strings.TrimSpace(rule.Name)
 	if name == "" {
 		name = "Alert"
+	}
+	if rule.Kind == alertmodel.AlertRuleKindSystemComponent || rule.Kind == alertmodel.AlertRuleKindPlace {
+		eventTitle := strings.TrimSpace(toString(ctx["EventTitle"]))
+		if eventTitle == "" {
+			eventTitle = RenderDefaultBody(rule, ctx)
+		}
+		return name + ": " + eventTitle
 	}
 	if v, ok := ctx["VehicleName"]; ok {
 		if vs := strings.TrimSpace(toString(v)); vs != "" {
@@ -279,6 +297,24 @@ func RenderDefaultBody(rule *alertmodel.AlertRule, ctx Context) string {
 	}
 	if rule.Kind == "computed_metric" {
 		return defaultComputedBody(rule, ctx)
+	}
+	if rule.Kind == alertmodel.AlertRuleKindSystemComponent || rule.Kind == alertmodel.AlertRuleKindPlace {
+		if body := strings.TrimSpace(toString(ctx["EventMessage"])); body != "" {
+			return body
+		}
+		transition := strings.TrimSpace(toString(ctx["Transition"]))
+		if rule.Kind == alertmodel.AlertRuleKindSystemComponent {
+			component := strings.TrimSpace(toString(ctx["ComponentName"]))
+			if component == "" || transition == "" {
+				return "System component transition"
+			}
+			return component + " " + transition
+		}
+		place := strings.TrimSpace(toString(ctx["PlaceName"]))
+		if place == "" || transition == "" {
+			return "Place transition"
+		}
+		return place + " " + transition
 	}
 	return defaultSignalBody(rule, ctx)
 }
@@ -420,6 +456,29 @@ func Substitute(tmpl string, ctx Context) string {
 // groups by Placeholder.Group when rendering.
 func Placeholders(rule *alertmodel.AlertRule) []Placeholder {
 	out := make([]Placeholder, 0, 16)
+	if rule != nil && (rule.Kind == alertmodel.AlertRuleKindSystemComponent || rule.Kind == alertmodel.AlertRuleKindPlace) {
+		transitionExample, ruleExample, messageExample := "enter", "Arrived Home", "Vehicle 42 entered Home"
+		if rule.Kind == alertmodel.AlertRuleKindSystemComponent {
+			transitionExample, ruleExample, messageExample = "outage", "MQTT unavailable", "MQTT broker unavailable"
+		}
+		out = append(out,
+			Placeholder{Key: "RuleName", Label: "Rule name", Group: "Built-in", Example: ruleExample},
+			Placeholder{Key: "Severity", Label: "Severity", Group: "Built-in", Example: "warn"},
+			Placeholder{Key: "Now", Label: "Timestamp", Group: "Built-in", Example: time.Now().UTC().Format(time.RFC3339)},
+			Placeholder{Key: "Transition", Label: "Transition", Group: "Event", Example: transitionExample},
+			Placeholder{Key: "EventMessage", Label: "Event details", Group: "Event", Example: messageExample},
+		)
+		if rule.Kind == alertmodel.AlertRuleKindSystemComponent {
+			out = append(out, Placeholder{Key: "ComponentName", Label: "System component", Group: "Event", Example: "mqtt"})
+		} else {
+			out = append(out,
+				Placeholder{Key: "VehicleName", Label: "Vehicle identifier", Group: "Built-in", Example: "Vehicle 42"},
+				Placeholder{Key: "PlaceID", Label: "Place ID", Group: "Event", Example: "42"},
+				Placeholder{Key: "PlaceName", Label: "Place name", Group: "Event", Example: "Home"},
+			)
+		}
+		return out
+	}
 
 	// Built-ins common to all rule kinds and ops.
 	out = append(out,

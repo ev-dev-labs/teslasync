@@ -96,7 +96,6 @@ type RequestCall = [string, RequestInit?];
 let stateResponse: unknown;
 let stateError: Error | null;
 let latestEntries: CommandLogEntry[];
-let historyEntries: CommandLogEntry[];
 let commandResponse: () => Promise<unknown>;
 
 function makeVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
@@ -127,22 +126,6 @@ function makeState(overrides: Partial<VehicleState> = {}): VehicleState {
   };
 }
 
-function makeEntry(
-  id: number,
-  overrides: Partial<CommandLogEntry> = {},
-): CommandLogEntry {
-  return {
-    id,
-    vehicle_id: VEHICLE_ID,
-    command: 'flash_lights',
-    params: '{}',
-    status: 'success',
-    error: '',
-    created_at: new Date(Date.now() - 120_000).toISOString(),
-    ...overrides,
-  };
-}
-
 function installRequestRouter() {
   requestMock.mockImplementation((url: string, options?: RequestInit) => {
     if (url === `/vehicles/${VEHICLE_ID}/state`) {
@@ -150,9 +133,6 @@ function installRequestRouter() {
     }
     if (url === `/vehicles/${VEHICLE_ID}/commands/latest`) {
       return Promise.resolve(latestEntries);
-    }
-    if (url === `/vehicles/${VEHICLE_ID}/commands/history?limit=200`) {
-      return Promise.resolve(historyEntries);
     }
     if (
       url === `/vehicles/${VEHICLE_ID}/command` &&
@@ -207,7 +187,6 @@ beforeEach(() => {
   stateResponse = { state: makeState(), live: true };
   stateError = null;
   latestEntries = [];
-  historyEntries = [];
   commandResponse = () => Promise.resolve({ success: true, result: 'success' });
   installRequestRouter();
 });
@@ -224,8 +203,8 @@ describe('VehicleCommandCenter — summary and readiness', () => {
     expect(screen.getByText('21')).toBeInTheDocument();
     expect(screen.getByTestId('command-readiness')).toBeInTheDocument();
     expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
-    expect(screen.getByTestId('command-safety')).toBeInTheDocument();
-    expect(screen.getByTestId('command-activity')).toBeInTheDocument();
+    expect(screen.queryByTestId('command-safety')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('command-activity')).not.toBeInTheDocument();
   });
 
   it('keeps commands usable when live state is unavailable and shows an honest error', async () => {
@@ -241,28 +220,23 @@ describe('VehicleCommandCenter — summary and readiness', () => {
     expect(screen.getAllByText('Wake Up').length).toBeGreaterThan(0);
   });
 
-  it('shows the stale warning exactly once for extremely old telemetry', () => {
+  it('does not block commands with the removed stale telemetry warning', () => {
     const veryOld = new Date(Date.now() - 2_501 * 60 * 60 * 1000).toISOString();
 
     renderCenter(makeVehicle({ updated_at: veryOld }));
 
-    expect(screen.getAllByTestId('command-freshness-warning')).toHaveLength(1);
-    expect(
-      within(screen.getByTestId('command-freshness-warning')).getByText(
-        /Last vehicle update: 2501h ago\./,
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/ago old/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('command-freshness-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
   });
 
-  it('still renders one stale warning when the last-known vehicle state is asleep', () => {
+  it('retains the actual asleep-state guidance without a stale warning', () => {
     const stale = new Date(Date.now() - 30 * 60_000).toISOString();
     stateResponse = { state: makeState({ state: 'asleep' }), live: false };
     installRequestRouter();
 
     renderCenter(makeVehicle({ state: 'asleep', updated_at: stale }));
 
-    expect(screen.getAllByTestId('command-freshness-warning')).toHaveLength(1);
+    expect(screen.queryByTestId('command-freshness-warning')).not.toBeInTheDocument();
     expect(
       screen.getByText(/The vehicle is asleep\. Commands remain selectable/i),
     ).toBeInTheDocument();
@@ -454,28 +428,5 @@ describe('VehicleCommandCenter — command execution', () => {
     expect(
       screen.queryByText('Flash Lights request sent to My Tesla.'),
     ).not.toBeInTheDocument();
-  });
-});
-
-describe('VehicleCommandCenter — recent activity', () => {
-  it('renders recent success and failure outcomes from command history', async () => {
-    historyEntries = [
-      makeEntry(1, { command: 'lock', status: 'success' }),
-      makeEntry(2, {
-        command: 'climate_on',
-        status: 'failed',
-        error: 'vehicle asleep',
-      }),
-    ];
-    installRequestRouter();
-
-    renderCenter();
-
-    const activity = screen.getByTestId('command-activity');
-    expect(await within(activity).findByText('Lock')).toBeInTheDocument();
-    expect(within(activity).getByText('Climate')).toBeInTheDocument();
-    expect(
-      within(activity).getByText(/Failed · vehicle asleep/),
-    ).toBeInTheDocument();
   });
 });

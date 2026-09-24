@@ -84,14 +84,13 @@ const ACKNOWLEDGED_LONG_LIST_SURFACES = [
   // which builds objects and renders nothing.)
   'features/charging/components/charging-list/SessionListSection.tsx',
   'features/driving/pages/DrivesListPage.tsx',
+  // Route cards vary in height and render only the selected 12-card page.
+  'features/driving/pages/RouteEfficiencyPage.tsx',
   'features/maps/pages/LocationsPage.tsx',
   // Successor to the deleted NotificationsPage.tsx (renamed in #64
   // "Refactor/filters"). Rows are mapped into <NotificationRow> here, so this
   // is the file that must migrate.
   'features/notifications/components/InboxBody.tsx',
-  // Successor to the deleted AlertsPage.tsx (same PR).
-  'features/notifications/pages/AlertsListPage.tsx',
-  'features/notifications/pages/AlertStudioPage.tsx',
   'features/system/pages/CommandHistoryPage.tsx',
   // `Array.from(pinnedSignals).sort().map(...)` — a chained render the old
   // `{ident.map(` regex could not see.

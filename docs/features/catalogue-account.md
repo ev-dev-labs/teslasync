@@ -10,7 +10,7 @@ Sidebar group **Account**. In the app, expand this section in the left nav (or s
 | Region & API | `/tesla-region` | Switch Fleet API region (NA, EU, China). | Renders an empty state when no data is available — the page is not hidden. |
 | Feature Flags | `/tesla-features` | Tesla feature-flag previews exposed by your firmware version. | Renders an empty state when no data is available — the page is not hidden. |
 | Two-Factor Auth | `/account/2fa` | Enroll or disable two-factor authentication on your account. | Renders an empty state when no data is available — the page is not hidden. |
-| Active Sessions | `/account/sessions` | Browser and device sessions — revoke any of them. | Renders an empty state when no data is available — the page is not hidden. |
+| Active Sessions | `/account/sessions` | Browser and device sessions — page through active devices (25, 50, or 100 per page) and revoke individual sessions or all other devices. Summary cards cover all sessions, not just the visible page. | Renders an empty state when no data is available — the page is not hidden. |
 | Privacy | `/account/privacy` | Recently viewed pages, cookies, and analytics consent. | Renders an empty state when no data is available — the page is not hidden. |
 | My Activity | `/me/activity` | Your recent page views and actions in this app. | Renders an empty state when no data is available — the page is not hidden. |
 

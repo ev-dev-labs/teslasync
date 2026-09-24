@@ -96,9 +96,20 @@ for (const route of VISUAL_ROUTES) {
     // Pin rolling date labels to the committed baseline day, without freezing timers.
     // This clock is visual-only; the native Date contract uses the shared seed unchanged.
     await page.clock.setFixedTime(new Date('2026-09-13T12:00:00Z'));
-    await seedBrowserState(page, theme, route.path, { density });
+    // The inbox and report now share one date range. The fixture's recorded
+    // events precede the default seven-day window, so explicitly select the
+    // historical period whose populated state this visual test asserts.
+    const path = route.name === 'notifications' && scenario === 'populated'
+      ? `${route.path}?from=2026-08-20&to=2026-09-13`
+      : route.path;
+    await seedBrowserState(page, theme, path, { density });
+    if (route.name === 'notifications') {
+      await page.addInitScript(() => {
+        localStorage.setItem('teslasync.notifications.markOnOpen', 'false');
+      });
+    }
     const mockApi = await installApiMocks(page, scenario, theme, density);
-    await page.goto(route.path, { waitUntil: 'domcontentloaded' });
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
     await waitForHarnessReady(page, mockApi);
     await expectThemeApplied(page, theme);
     await expect(page.locator('body')).toHaveAttribute('data-density', density);
@@ -110,6 +121,12 @@ for (const route of VISUAL_ROUTES) {
     }
     await page.evaluate(() => window.scrollTo(0, 0));
     await waitForHarnessReady(page, mockApi);
+    if (route.name === 'notifications' && scenario === 'populated') {
+      await expect(page.getByRole('region', { name: 'Notification activity' }).locator('[data-role="metric-value"]').first()).toHaveText('3');
+      await expect(page.getByText('Fleet connection restored')).toBeAttached();
+      await expect(page.getByText('Charging schedule changed')).toBeAttached();
+      await expect(page.getByText('Battery alert', { exact: true })).toBeAttached();
+    }
     const sidebar = page.getByRole('navigation', { name: /sidebar navigation/i });
     if (await sidebar.count()) {
       await sidebar.evaluate((element) => { element.scrollTop = 0; });

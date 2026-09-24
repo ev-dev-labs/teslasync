@@ -109,13 +109,12 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'AutomationBuilderPage', load: () => import('../features/automations/pages/AutomationBuilderPage') },
 
   // Notifications
-  { name: 'AlertsListPage', load: () => import('../features/notifications/pages/AlertsListPage') },
   { name: 'AlertStudio', load: () => import('../features/notifications/pages/AlertStudioPage') },
   { name: 'AlertRulesPage', load: () => import('../features/notifications/pages/AlertRulesPage') },
+  { name: 'AlertPacksPage', load: () => import('../features/notifications/pages/AlertPacksPage') },
   { name: 'InboxPage', load: () => import('../features/notifications/pages/InboxPage') },
   { name: 'ArchivedPage', load: () => import('../features/notifications/pages/ArchivedPage') },
   { name: 'ChannelsPage', load: () => import('../features/notifications/pages/ChannelsPage') },
-  { name: 'WebhooksPage', load: () => import('../features/notifications/pages/WebhooksPage') },
   { name: 'BrowserNotificationsPage', load: () => import('../features/notifications/pages/BrowserNotificationsPage') },
   { name: 'QuietHoursPage', load: () => import('../features/notifications/pages/QuietHoursPage') },
   { name: 'NotificationsAudit', load: () => import('../features/notifications/pages/AuditLogPage') },
@@ -145,6 +144,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
 
   // System
   { name: 'SystemStatus', load: () => import('../features/system/pages/SystemStatusPage') },
+  { name: 'TeslaApiUsage', load: () => import('../features/system/pages/TeslaApiUsagePage') },
   { name: 'DataExport', load: () => import('../features/system/pages/DataExportPage') },
   { name: 'ExportsPage', load: () => import('../features/exports/pages/ExportsPage') },
   { name: 'DataRepair', load: () => import('../features/system/pages/DataRepairPage') },
@@ -167,8 +167,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'WatchFace', load: () => import('../features/watch/pages/WatchFacePage') },
 
   // Additional routes — kept in App.tsx order so the parity counter stays honest.
-  { name: 'LegacyAlertsRedirect', load: () => import('../features/notifications/components/LegacyAlertsRedirect') },
-  { name: 'LegacyNotificationsRedirect', load: () => import('../features/notifications/components/LegacyNotificationsRedirect') },
   { name: 'LegacyAlertRulesRedirect', load: () => import('../features/notifications/components/LegacyAlertRulesRedirect') },
   { name: 'LegacyAlertStudioRedirect', load: () => import('../features/notifications/components/LegacyAlertStudioRedirect') },
   { name: 'SignalsWorkspace', load: () => import('../features/telemetry/pages/SignalsWorkspacePage') },
@@ -244,7 +242,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'FirmwareImpact', load: () => import('../features/analytics/pages/FirmwareImpactPage') },
   { name: 'CabinThermal', load: () => import('../features/vehicle-systems/pages/CabinThermalPage') },
   { name: 'ChargerHealth', load: () => import('../features/charging/pages/ChargerHealthPage') },
-  { name: 'AlertFatigue', load: () => import('../features/notifications/pages/AlertFatiguePage') },
+  { name: 'NotificationHealth', load: () => import('../features/notifications/pages/NotificationHealthPage') },
   { name: 'CommandReliability', load: () => import('../features/system/pages/CommandReliabilityPage') },
   { name: 'SignalCorrelation', load: () => import('../features/telemetry/pages/SignalCorrelationPage') },
 
@@ -267,8 +265,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'SignalChangePoints', load: () => import('../features/telemetry/pages/SignalChangePointsPage') },
   { name: 'SignalDeadband', load: () => import('../features/telemetry/pages/SignalDeadbandPage') },
   { name: 'SignalMutualInformation', load: () => import('../features/telemetry/pages/SignalMutualInformationPage') },
-  { name: 'NotificationBurnRate', load: () => import('../features/notifications/pages/NotificationBurnRatePage') },
-  { name: 'NotificationLatency', load: () => import('../features/notifications/pages/NotificationLatencyPage') },
 
   // Differentiated local intelligence and operations
   { name: 'RootCauseIntelligence', load: () => import('../features/diagnostics/pages/RootCauseIntelligencePage') },
@@ -304,7 +300,22 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'ConsumablesLifecycle', load: () => import('../features/ownership/pages/ConsumablesLifecyclePage') },
   { name: 'SubscriptionROI', load: () => import('../features/ownership/pages/SubscriptionROIPage') },
   { name: 'PhysicsCockpit', load: () => import('../features/vehicles/pages/PhysicsCockpitPage') },
-  { name: 'TeslaOnly', load: () => import('../features/vehicles/pages/TeslaOnlyPage') },
+  { name: 'TeslaPhysics', load: () => import('../features/vehicles/pages/TeslaPhysicsPage') },
+  { name: 'PhysicsClocks', load: () => import('../features/vehicles/pages/PhysicsClocksPage') },
+  { name: 'PhysicsLifeTape', load: () => import('../features/vehicles/pages/PhysicsLifeTapePage') },
+  { name: 'PhysicsContradictions', load: () => import('../features/vehicles/pages/PhysicsContradictionsPage') },
+  { name: 'PhysicsMeters', load: () => import('../features/vehicles/pages/PhysicsMetersPage') },
+  { name: 'PhysicsUnknown', load: () => import('../features/vehicles/pages/PhysicsUnknownPage') },
+  { name: 'PhysicsCarKeptLiving', load: () => import('../features/vehicles/pages/PhysicsCarKeptLivingPage') },
+  { name: 'PhysicsLogbook', load: () => import('../features/vehicles/pages/PhysicsLogbookPage') },
+  { name: 'PhysicsFirmwareEpochs', load: () => import('../features/vehicles/pages/PhysicsFirmwareEpochsPage') },
+  { name: 'PhysicsChargePort', load: () => import('../features/vehicles/pages/PhysicsChargePortPage') },
+  { name: 'PhysicsBlackBox', load: () => import('../features/vehicles/pages/PhysicsBlackBoxPage') },
+  { name: 'PhysicsDictionary', load: () => import('../features/vehicles/pages/PhysicsDictionaryPage') },
+  { name: 'PhysicsVault', load: () => import('../features/vehicles/pages/PhysicsVaultPage') },
+  { name: 'PhysicsModes', load: () => import('../features/vehicles/pages/PhysicsModesPage') },
+  { name: 'PhysicsNervousSystem', load: () => import('../features/vehicles/pages/PhysicsNervousSystemPage') },
+  { name: 'PhysicsRange', load: () => import('../features/vehicles/pages/PhysicsRangePage') },
   { name: 'PhysicsLedger', load: () => import('../features/vehicles/pages/PhysicsLedgerPage') },
   { name: 'ScienceLab', load: () => import('../features/science/pages/ScienceLabPage') },
   { name: 'OutageAutobiography', load: () => import('../features/system/pages/OutageAutobiographyPage') },

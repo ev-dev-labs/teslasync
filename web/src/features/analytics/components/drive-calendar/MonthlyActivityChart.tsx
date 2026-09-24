@@ -30,7 +30,7 @@ interface MonthlyActivityChartProps extends DriveCalendarSectionState {
   className?: string;
 }
 
-/** Rolling calendar-month distance bars with drive-count trend overlay. */
+/** Calendar-month distance bars with drive-count trend overlay. */
 export function MonthlyActivityChart({
   months,
   className,
@@ -68,11 +68,11 @@ export function MonthlyActivityChart({
       title={t('driveCalendar.monthly.title', 'Monthly distance & activity')}
       subtitle={t(
         'driveCalendar.monthly.subtitle',
-        'Rolling 52-week totals by calendar month',
+        'Totals for the selected period by calendar month',
       )}
       ariaLabel={t(
         'driveCalendar.monthly.aria',
-        'Monthly driving distance bars with a drive-count trend for the last 52 weeks',
+        'Monthly driving distance bars with a drive-count trend for the selected period',
       )}
       loading={isLoading}
       empty={!error && !hasData}

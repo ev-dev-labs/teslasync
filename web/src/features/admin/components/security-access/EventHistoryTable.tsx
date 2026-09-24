@@ -104,6 +104,7 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
         <DataTable<SecurityEvent>
           tableId="admin:security-events"
           columns={eventColumns}
+          mobileColumns={['createdAt', 'locked', 'sentryMode']}
           data={rows}
           keyExtractor={(row) => row.id}
           emptyMessage={t('admin.security.noEvents', 'No security events recorded yet.')}

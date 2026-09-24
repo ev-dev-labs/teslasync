@@ -28,6 +28,9 @@ type createAlertRuleRequest struct {
 
 	// Computed-metric fields (kind='computed_metric'). NULL when kind='signal'.
 	Kind            *string  `json:"kind"`
+	ComponentName   *string  `json:"component_name"`
+	Transition      *string  `json:"transition"`
+	PlaceID         *int64   `json:"place_id"`
 	MetricID        *string  `json:"metric_id"`
 	MetricWindow    *string  `json:"metric_window"`
 	MetricThreshold *float64 `json:"metric_threshold"`
@@ -88,6 +91,9 @@ type updateAlertRuleRequest struct {
 	// new operands; legacy signal_* fields are cleared when Kind transitions
 	// to 'computed_metric' (and vice versa) — see normalizeAlertRuleByKind.
 	Kind            *string  `json:"kind"`
+	ComponentName   *string  `json:"component_name"`
+	Transition      *string  `json:"transition"`
+	PlaceID         *int64   `json:"place_id"`
 	MetricID        *string  `json:"metric_id"`
 	MetricWindow    *string  `json:"metric_window"`
 	MetricThreshold *float64 `json:"metric_threshold"`

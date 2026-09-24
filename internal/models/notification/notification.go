@@ -13,7 +13,9 @@ type NotificationChannel struct {
 	UpdatedAt time.Time         `json:"updated_at" db:"updated_at"`
 }
 
-// NotificationLog records a notification delivery attempt.
+// NotificationLog records one canonical notification event (status=triggered,
+// SQL channel_id=NULL) or one per-channel delivery attempt correlated by
+// trigger_id. A zero-channel event still has its own inbox row.
 //
 // ReadAt and ArchivedAt drive the /notifications inbox: NULL means
 // unread or still visible, while a timestamp records when the user or an
@@ -29,11 +31,13 @@ type NotificationChannel struct {
 // acknowledgement audit timeline lives in notification_log_events.
 type NotificationLog struct {
 	ID                  int64      `json:"id" db:"id"`
-	ChannelID           int64      `json:"channel_id" db:"channel_id"`
+	ChannelID           int64      `json:"channel_id" db:"channel_id"` // 0 for canonical event rows (SQL NULL)
 	AlertID             *int64     `json:"alert_id,omitempty" db:"alert_id"`
+	TriggerID           *string    `json:"trigger_id,omitempty" db:"trigger_id"`
+	EventType           *string    `json:"event_type,omitempty" db:"event_type"`
 	Title               string     `json:"title" db:"title"`
 	Message             string     `json:"message" db:"message"`
-	Status              string     `json:"status" db:"status"` // pending, sent, failed, deferred_dnd
+	Status              string     `json:"status" db:"status"` // triggered (event), pending, sent, failed, deferred_dnd (delivery)
 	Severity            string     `json:"severity,omitempty" db:"severity"`
 	Error               string     `json:"error,omitempty" db:"error"`
 	ScheduledAt         *time.Time `json:"scheduled_at,omitempty" db:"scheduled_at"`

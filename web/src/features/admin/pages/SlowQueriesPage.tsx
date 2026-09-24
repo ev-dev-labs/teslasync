@@ -464,6 +464,7 @@ export default function SlowQueriesPage() {
                 <DataTable
                   tableId="admin:slow-queries"
                   columns={columns}
+                  mobileColumns={['fingerprint', 'mean_time_ms', 'calls']}
                   data={rows}
                   keyExtractor={(r) => r.query_id}
                   emptyMessage={t('admin.slowQueries.emptyTable', 'No slow queries')}

@@ -95,13 +95,13 @@ const PARENT_OVERRIDES: Record<string, string> = {
   // ── Notifications workspace ────────────────────────────────────────────
   '/notifications/studio': '/notifications/inbox',
   '/notifications/archived': '/notifications/inbox',
-  '/notifications/alerts': '/notifications/inbox',
   '/notifications/audit': '/notifications/inbox',
   '/notifications/browser': '/notifications/inbox',
   '/notifications/channels': '/notifications/inbox',
+  '/notifications/health': '/notifications/inbox',
+  '/notifications/packs': '/notifications/inbox',
   '/notifications/quiet-hours': '/notifications/inbox',
   '/notifications/rules': '/notifications/inbox',
-  '/notifications/webhooks': '/notifications/inbox',
 
   // ── Diagnostics / repair ───────────────────────────────────────────────
   '/diagnostics/root-cause': '/system-status',
@@ -109,6 +109,7 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/diagnostics/service-evidence': '/maintenance',
   '/system-status/incidents/:id': '/system-status',
   '/docs/status-api': '/system-status',
+  '/tesla-api-usage': '/system-status',
 
   // ── Administration & developer surfaces ────────────────────────────────
   '/admin/audit-log': '/dev-tools',
@@ -136,22 +137,22 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/vehicle-systems/software': '/software-updates',
 
   // ── Tesla Physics nested pages ─────────────────────────────────────────
-  '/tesla-only/black-box': '/tesla-only',
-  '/tesla-only/car-kept-living': '/tesla-only',
-  '/tesla-only/charge-port': '/tesla-only',
-  '/tesla-only/clocks': '/tesla-only',
-  '/tesla-only/contradictions': '/tesla-only',
-  '/tesla-only/dictionary': '/tesla-only',
-  '/tesla-only/firmware-epochs': '/tesla-only',
-  '/tesla-only/life-tape': '/tesla-only',
-  '/tesla-only/logbook': '/tesla-only',
-  '/tesla-only/meters': '/tesla-only',
-  '/tesla-only/modes': '/tesla-only',
-  '/tesla-only/nervous-system': '/tesla-only',
-  '/tesla-only/range': '/tesla-only',
-  '/tesla-only/ledger': '/tesla-only',
-  '/tesla-only/unknown': '/tesla-only',
-  '/tesla-only/vault': '/tesla-only',
+  '/tesla-physics/black-box': '/tesla-physics',
+  '/tesla-physics/car-kept-living': '/tesla-physics',
+  '/tesla-physics/charge-port': '/tesla-physics',
+  '/tesla-physics/clocks': '/tesla-physics',
+  '/tesla-physics/contradictions': '/tesla-physics',
+  '/tesla-physics/dictionary': '/tesla-physics',
+  '/tesla-physics/firmware-epochs': '/tesla-physics',
+  '/tesla-physics/life-tape': '/tesla-physics',
+  '/tesla-physics/logbook': '/tesla-physics',
+  '/tesla-physics/meters': '/tesla-physics',
+  '/tesla-physics/modes': '/tesla-physics',
+  '/tesla-physics/nervous-system': '/tesla-physics',
+  '/tesla-physics/range': '/tesla-physics',
+  '/tesla-physics/ledger': '/tesla-physics',
+  '/tesla-physics/unknown': '/tesla-physics',
+  '/tesla-physics/vault': '/tesla-physics',
 };
 
 /**

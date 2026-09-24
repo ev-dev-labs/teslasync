@@ -30,6 +30,7 @@ import {
   type RangeScenario,
 } from '@/api/hooks/useAnalytics';
 import { fmtNumber } from '@/lib/numberFormat';
+import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
 
 /* ── Static maps ── */
@@ -119,7 +120,11 @@ export function interpolateRange(
 export default function ProjectedRangePage() {
   const { t } = useTranslation();
   usePageTitle(t('range.title', 'Projected Range'));
-  const { formatEnergy, formatTemperature, formatSpeed, formatDistance } = useUnits();
+  const { formatEnergy, formatTemperature, formatSpeed, formatDistance, unitPrefs } = useUnits();
+  // Backend efficiency figures are SI Wh/km; mile users see converted values
+  // with a matching unit label (same boundary rule as every other metric).
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toDisplayEff = (whKm: number) => convertEfficiencyFromSI(whKm, unitPrefs.distance);
 
   // Header VehiclePicker is the source of truth.
   const { vehicleId: globalVehicleId } = useSelectedVehicle();
@@ -343,7 +348,7 @@ export default function ProjectedRangePage() {
                   <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1">
                     <Caption>{formatSpeed((s.speed_kmh ?? 0) / 3.6, { precision: 0 })}</Caption>
                     <Caption>{formatTemperature(s.temp_c ?? 0, { precision: 0 })}</Caption>
-                    <Caption>{fmtNumber(s.efficiency_wh_km ?? 0)} {t('range.whPerKm', 'Wh/km')}</Caption>
+                    <Caption>{fmtNumber(toDisplayEff(s.efficiency_wh_km ?? 0))} {efficiencyUnit}</Caption>
                     {(s.sample_count ?? 0) > 0 && <Caption>{t('range.drivesCount', '{{count}} drives', { count: s.sample_count })}</Caption>}
                   </div>
                   {(s.extras ?? []).length > 0 && (
@@ -360,11 +365,11 @@ export default function ProjectedRangePage() {
 
       {/* 5 — Efficiency matrix + What-if calculator, side-by-side on wide */}
       <FadeIn delay={0.2}>
-        <section aria-label={t('range.efficiencyMatrix', 'Personal Efficiency Matrix (Wh/km)')} className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-2">
+        <section aria-label={`${t('range.efficiencyMatrix', 'Personal Efficiency Matrix')} (${efficiencyUnit})`} className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-2">
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Grid3x3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('range.efficiencyMatrix', 'Personal Efficiency Matrix (Wh/km)')}
+              {`${t('range.efficiencyMatrix', 'Personal Efficiency Matrix')} (${efficiencyUnit})`}
             </PanelTitle>
             {isLoading && !data ? (
               <Skeleton height={200} />
@@ -390,7 +395,7 @@ export default function ProjectedRangePage() {
                           <div key={speed} className="p-1 text-center">
                             {bucket ? (
                               <div className={cn('rounded-lg px-3 py-2', effColor(bucket.wh_km), 'bg-opacity-20')}>
-                                <Text as="span" size="xs" weight="bold" color="primary">{fmtNumber(bucket.wh_km, 0)}</Text>
+                                <Text as="span" size="xs" weight="bold" color="primary">{fmtNumber(toDisplayEff(bucket.wh_km), 0)}</Text>
                                 <Caption className="block">({bucket.samples ?? 0})</Caption>
                               </div>
                             ) : (
@@ -459,7 +464,7 @@ export default function ProjectedRangePage() {
                   {whatIfResult ? (
                     <div className="text-center">
                       <Text as="p" size="3xl" weight="bold" className="text-cyan-300 tabular-nums">{formatDistance(whatIfResult.rangeKm * 1000, { precision: 0 })}</Text>
-                      <HelperText className="mt-1">{fmtNumber(whatIfResult.effWhKm)} {t('range.whPerKm', 'Wh/km')}</HelperText>
+                      <HelperText className="mt-1">{fmtNumber(toDisplayEff(whatIfResult.effWhKm))} {efficiencyUnit}</HelperText>
                       <HelperText className="mt-1">{t('range.whatIfConditions', 'at {{speed}}, {{temp}}', { speed: formatSpeed(whatIfSpeed / 3.6, { precision: 0 }), temp: formatTemperature(whatIfTemp, { precision: 0 }) })}</HelperText>
                     </div>
                   ) : (

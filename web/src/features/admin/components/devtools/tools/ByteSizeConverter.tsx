@@ -44,30 +44,30 @@ export function ByteSizeConverterTool() {
 
   const emptyMessage =
     value.trim() === ''
-      ? t('Byte Size Empty', 'Enter a value to convert it across every unit.')
-      : t('Byte Size Invalid', 'Enter a valid, non-negative number.')
+      ? t('devtools.utils.byteSizeEmpty', 'Enter a value to convert it across every unit.')
+      : t('devtools.utils.byteSizeInvalid', 'Enter a valid, non-negative number.')
 
   return (
     <ToolCard
       icon={HardDrive}
       color="cyan"
-      title={t('Byte Size', 'Byte Size')}
-      description={t('Byte Size Desc', 'Convert a value between B, KB, MB, GB, and TB.')}
+      title={t('devtools.utils.byteSize', 'Byte Size')}
+      description={t('devtools.utils.byteSizeDesc', 'Convert a value between B, KB, MB, GB, and TB.')}
     >
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            label={t('Value')}
+            label={t('devtools.utils.byteSizeValue', 'Value')}
             placeholder="1024"
             inputMode="decimal"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             icon={<HardDrive className="h-4 w-4" aria-hidden="true" />}
           />
-          <Select label={t('Unit')} options={UNIT_OPTIONS} value={unit} onChange={(e) => setUnit(e.target.value)} />
+          <Select label={t('devtools.utils.byteSizeUnit', 'Unit')} options={UNIT_OPTIONS} value={unit} onChange={(e) => setUnit(e.target.value)} />
         </div>
         {conversions ? (
-          <ul className="grid grid-cols-5 gap-2" aria-label={t('Byte Size Results', 'Converted byte sizes')}>
+          <ul className="grid grid-cols-5 gap-2" aria-label={t('devtools.utils.byteSizeResults', 'Converted byte sizes')}>
             {conversions.map((c) => {
               const isActive = c.unit === unit
               return (

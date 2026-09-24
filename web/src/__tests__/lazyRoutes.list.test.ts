@@ -202,12 +202,12 @@ describe('LAZY_ROUTE_IMPORTS manifest', () => {
   })
 
   it('exposes callable loaders that resolve to a module with a default export', async () => {
-    // LegacyAlertsRedirect only imports react-router-dom at module scope, so
+    // LegacyAlertRulesRedirect only imports react-router-dom at module scope, so
     // its chunk evaluates cheaply and deterministically — no network, no heavy
     // chart/leaflet transform — while still exercising the real load() path.
-    const entry = LAZY_ROUTE_IMPORTS.find((r) => r.name === 'LegacyAlertsRedirect')
+    const entry = LAZY_ROUTE_IMPORTS.find((r) => r.name === 'LegacyAlertRulesRedirect')
     expect(entry).toBeDefined()
-    if (!entry) throw new Error('LegacyAlertsRedirect entry is missing from the manifest')
+    if (!entry) throw new Error('LegacyAlertRulesRedirect entry is missing from the manifest')
 
     const pending = entry.load()
     expect(typeof (pending as Promise<unknown>).then).toBe('function')

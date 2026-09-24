@@ -17,6 +17,7 @@ import {
 import { ListSkeleton, EmptyState, useToast } from '@/components/feedback'
 import { VisuallyHidden } from '@/components/a11y'
 import { FadeIn } from '@/components/motion'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
 import {
   useQuietHours,
@@ -201,6 +202,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const { data: rawWindows, isLoading } = useQuietHours()
   const save = useSaveQuietHours()
   const remove = useDeleteQuietHours()
+  const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
   const windows = useMemo(() => rawWindows ?? [], [rawWindows])
 
   const [draft, setDraft] = useState<DraftWindow | null>(null)
@@ -331,7 +333,17 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
     })
   }
 
-  const removeWindow = (w: QuietHoursWindow) => {
+  const removeWindow = async (w: QuietHoursWindow) => {
+    const ok = await confirmDelete({
+      title: t('quietHours.deleteConfirm.title', 'Delete this quiet-hours window?'),
+      message: t(
+        'quietHours.deleteConfirm.message',
+        'Notifications will no longer be deferred during this window. This cannot be undone.',
+      ),
+      variant: 'danger',
+      confirmLabel: t('quietHours.delete', 'Delete'),
+    })
+    if (!ok) return
     remove.mutate(w.id, {
       onSuccess: () => {
         toast.success(t('toast.quietHours.deleted', 'Quiet hours window removed'))
@@ -441,7 +453,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                         variant="danger"
                         size="sm"
                         icon={<Trash2 className="h-3.5 w-3.5" />}
-                        onClick={() => removeWindow(w)}
+                        onClick={() => void removeWindow(w)}
                         loading={remove.isPending && remove.variables === w.id}
                       >
                         {t('quietHours.delete', 'Delete')}
@@ -644,6 +656,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
           </form>
         )}
         {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
+        {deleteDialogProps && <ConfirmDialog {...deleteDialogProps} />}
       </GlassPanel>
     </FadeIn>
   )

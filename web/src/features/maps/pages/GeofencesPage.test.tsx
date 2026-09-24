@@ -6,19 +6,18 @@
  * plus a create/edit modal with vehicle / browser / map-drawn location capture.
  * Its own responsibilities (what these tests exercise) are:
  *
- *   1. A KPI band derived from the geofences (total / active / entry / exit),
+ *   1. A KPI band derived from the geofences (total / reviewed / pending),
  *      always visible with a 0 placeholder — loading shows skeletons.
  *   2. Section-local loading / error / empty / no-search-match branches for the
  *      Zones panel — no panel is gated away or left blank.
- *   3. Per-card behaviour: alert-type badges, enable toggle (partial PUT),
- *      inline rename (full PUT), edit → modal prefill, delete → confirm → DELETE.
- *   4. Client-side search + active-filter chips, and bulk select → bulk delete.
+ *   3. Per-place behaviour: review status, edit → modal prefill, delete → confirm → DELETE.
+ *   4. Client-side search and bulk select → bulk delete.
  *   5. The create modal: zod validation, a valid create POST, dirty-cancel
  *      discard confirmation, and all three location sources — vehicle position,
  *      browser geolocation (denied + unsupported), and map-drawn capture.
  *   6. The AI section gate (absent in off-mode, present + wired in on-mode) and
  *      its visited-location id parsing + apply-draft → modal prefill.
- *   7. a11y: labelled regions, an accessible name ON the enable switch, and the
+ *   7. a11y: labelled regions, no enabled/status control, and the
  *      snake_case / no-`/api/v1` data contract.
  *
  * Strategy mirrors ChargingHeatmapPage: render the REAL page + REAL shared
@@ -188,11 +187,10 @@ function makeGeofence(o: Partial<Geofence> & { id: string; name: string }): Geof
   };
 }
 
-// Home = both alerts / active; Work = entry-only / inactive; Gym = none / active.
-// stats → total 3, active 2, entryAlerts 2, exitAlerts 1.
+// Work is a provisional charging discovery; reviewed places remain enabled.
 const GEOFENCES: Geofence[] = [
   makeGeofence({ id: '1', name: 'Home', latitude: 37.7749, longitude: -122.4194, radius: 100, alertOnEntry: true, alertOnExit: true, enabled: true }),
-  makeGeofence({ id: '2', name: 'Work', latitude: 40.7128, longitude: -74.006, radius: 250, alertOnEntry: true, alertOnExit: false, enabled: false }),
+  makeGeofence({ id: '2', name: 'Work', latitude: 40.7128, longitude: -74.006, radius: 250, enabled: false, needsReview: true, origin: 'charging_discovery' }),
   makeGeofence({ id: '3', name: 'Gym', latitude: 34.0522, longitude: -118.2437, radius: 50, alertOnEntry: false, alertOnExit: false, enabled: true }),
 ];
 
@@ -219,6 +217,7 @@ interface Store {
   vehicles: unknown[];
   positions: unknown[];
   pinned: unknown[];
+  candidates: unknown[];
 }
 let store: Store;
 
@@ -250,6 +249,7 @@ function installRequest() {
       );
     }
     if (u === '/geofences/needs-review' && method === 'GET') return Promise.resolve([]);
+    if (u === '/geofences/visited-candidates' && method === 'GET') return Promise.resolve(store.candidates);
     if (u === '/geofences/rates/current' && method === 'GET') return Promise.resolve([]);
     if (u === '/geofences/bulk' && method === 'POST') {
       return Promise.resolve({ deleted: 1, failed: [] });
@@ -266,6 +266,7 @@ function installRequest() {
       return Promise.resolve({ id: 1, item_type: 'geofence', item_id: '1', position: 0 });
     }
     if (u.includes('/positions')) return Promise.resolve(store.positions);
+    if (u.startsWith('/geofences/resolve?')) return Promise.resolve({ name: null, geofence_id: null });
     if (u.startsWith('/geocode/reverse')) return Promise.resolve(GEOCODE);
     return Promise.resolve({});
   });
@@ -336,6 +337,7 @@ beforeEach(() => {
     vehicles: [],
     positions: POSITIONS,
     pinned: [],
+    candidates: [],
   };
   installRequest();
 });
@@ -353,9 +355,46 @@ describe('GeofencesPage — KPI band', () => {
 
     expect(summary().getByText('Total Geofences')).toBeInTheDocument();
     expect(kpiValue('Total Geofences')).toBe('3');
-    expect(kpiValue('Active')).toBe('2');
-    expect(kpiValue('Entry Alerts')).toBe('2');
-    expect(kpiValue('Exit Alerts')).toBe('1');
+    expect(kpiValue('Reviewed places')).toBe('2');
+    expect(kpiValue('Awaiting review')).toBe('1');
+    expect(kpiValue('Visited candidates')).toBe('0');
+  });
+
+  describe('GeofencesPage — visited place review', () => {
+    it('reviews a completed-drive candidate, confirms noncharging, and saves an enabled place without alert flags', async () => {
+      store.candidates = [{
+        id: 42, name: 'Office Garage', latitude: 41, longitude: -76,
+        visit_count: 3, charge_count: 2, first_charge_at: '2026-09-20T12:00:00Z',
+        last_visited: '2026-09-22T12:00:00Z',
+      }];
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: 'Review place' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Create Geofence' });
+      expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('Office Garage');
+      expect((within(dialog).getByLabelText('Radius (meters)') as HTMLInputElement).value).toBe('75');
+      fireEvent.click(within(dialog).getByRole('switch', { name: 'This is a charging location' }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+      await waitFor(() => expect(callsMatching('POST', (url) => url === '/geofences')).toHaveLength(1));
+      const body = JSON.parse((callsMatching('POST', (url) => url === '/geofences')[0][1] as { body: string }).body);
+      expect(body).toMatchObject({
+        name: 'Office Garage', latitude: 41, longitude: -76, radius: 75,
+        is_charging_location: false,
+      });
+      expect(body).not.toHaveProperty('enabled');
+    });
+
+    it('selects a named visited place for the opt-in template assistant', async () => {
+      aiEnabledMock.mockReturnValue(true);
+      store.candidates = [{
+        id: 42, name: 'Depot', latitude: 41, longitude: -76,
+        visit_count: 2, charge_count: 0, first_charge_at: null,
+        last_visited: '2026-09-22T12:00:00Z',
+      }];
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: 'Use in template' }));
+      expect((screen.getByLabelText('Pick a visited location to draft a geofence around') as HTMLSelectElement).value).toBe('42');
+      expect(screen.getByTestId('ai-location-id')).toHaveTextContent('42');
+    });
   });
 
   it('shows skeletons (not KPI cards) while the geofences feed is in flight', () => {
@@ -373,30 +412,20 @@ describe('GeofencesPage — KPI band', () => {
 
     // KPI band never disappears — it degrades to zeros.
     await waitFor(() => expect(kpiValue('Total Geofences')).toBe('0'));
-    expect(kpiValue('Active')).toBe('0');
+    expect(kpiValue('Reviewed places')).toBe('0');
   });
 });
 
 // ── Zones panel states ───────────────────────────────────────────────────────
 describe('GeofencesPage — zones panel states', () => {
-  it('renders every place with its entry and exit alert controls', async () => {
+  it('renders every place without alert controls in the directory', async () => {
     renderPage();
     await zones().findByText('Home');
 
     expect(zones().getByText('Work')).toBeInTheDocument();
     expect(zones().getByText('Gym')).toBeInTheDocument();
-    expect(
-      zones().getByRole('switch', { name: 'Entry alert for Home' }),
-    ).toHaveAttribute('aria-checked', 'true');
-    expect(
-      zones().getByRole('switch', { name: 'Exit alert for Home' }),
-    ).toHaveAttribute('aria-checked', 'true');
-    expect(
-      zones().getByRole('switch', { name: 'Entry alert for Work' }),
-    ).toHaveAttribute('aria-checked', 'true');
-    expect(
-      zones().getByRole('switch', { name: 'Exit alert for Work' }),
-    ).toHaveAttribute('aria-checked', 'false');
+    expect(zones().queryByRole('switch', { name: 'Entry alert for Home' })).toBeNull();
+    expect(zones().queryByRole('switch', { name: 'Exit alert for Home' })).toBeNull();
   });
 
   it('renders a retry-able QueryError (not cards) when the feed fails', async () => {
@@ -462,20 +491,13 @@ describe('GeofencesPage — search and filtering', () => {
 
 // ── Per-card mutations ───────────────────────────────────────────────────────
 describe('GeofencesPage — card mutations', () => {
-  it('toggles a geofence via a partial PUT carrying only { enabled }', async () => {
+  it('shows review state without offering a place status switch', async () => {
     renderPage();
     await zones().findByText('Work');
-
-    // Work is inactive → flipping the switch enables it.
-    fireEvent.click(screen.getByRole('switch', { name: 'Toggle geofence Work' }));
-
-    await waitFor(() => {
-      const puts = callsMatching('PUT', (u) => u === '/geofences/2');
-      expect(puts.length).toBeGreaterThan(0);
-    });
-    const put = callsMatching('PUT', (u) => u === '/geofences/2')[0];
-    const body = JSON.parse((put[1] as { body: string }).body);
-    expect(body).toEqual({ enabled: true });
+    expect(zones().getByText('Review')).toBeInTheDocument();
+    expect(zones().getAllByText('Reviewed')).toHaveLength(2);
+    expect(zones().queryByRole('switch', { name: 'Toggle geofence Work' })).toBeNull();
+    expect(callsMatching('PUT', (u) => u === '/geofences/2')).toHaveLength(0);
   });
 
   it('deletes a geofence only after the confirm dialog is accepted', async () => {
@@ -592,10 +614,9 @@ describe('GeofencesPage — create modal', () => {
       longitude: -122.5,
       radius: 150,
       category: 'custom',
-      alertOnEntry: true,
-      alertOnExit: true,
-      enabled: true,
+      is_charging_location: false,
     });
+    expect(body).not.toHaveProperty('enabled');
     expect(body).not.toHaveProperty('costPerKwh');
     expect(toastMock.success).toHaveBeenCalledWith('Geofence created');
   });
@@ -634,6 +655,25 @@ describe('GeofencesPage — create modal', () => {
     expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('Test Road, Test City');
     // snake_case, no /api/v1 prefix on the positions read.
     expect(callsMatching('GET', (u) => u.startsWith('/vehicles/5/positions')).length).toBe(1);
+  });
+
+  it('uses a saved directory name before external reverse geocoding', async () => {
+    store.vehicles = VEHICLES;
+    const defaultRequest = mockRequest.getMockImplementation();
+    mockRequest.mockImplementation((url: unknown, options?: { method?: string }) =>
+      String(url).startsWith('/geofences/resolve?')
+        ? Promise.resolve({ name: 'Saved Depot', geofence_id: 7 })
+        : defaultRequest?.(url, options),
+    );
+    renderPage();
+    await zones().findByText('Home');
+    const dialog = await openCreateModal();
+    fireEvent.change(within(dialog).getByLabelText('Select Vehicle'), { target: { value: '5' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Get Location' }));
+    await waitFor(() =>
+      expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('Saved Depot'),
+    );
+    expect(callsMatching('GET', (url) => url.startsWith('/geocode/reverse'))).toHaveLength(0);
   });
 
   it('surfaces a friendly message when browser geolocation is denied', async () => {
@@ -723,10 +763,9 @@ describe('GeofencesPage — AI Helix section', () => {
 
     expect(screen.getByTestId('ai-suggest')).toBeInTheDocument();
     expect(screen.getByText('Helix')).toBeInTheDocument();
-    // Empty input → id 0; a positive integer flows straight through.
+    // Without candidate visits the template selector has no valid location.
     expect(screen.getByTestId('ai-location-id')).toHaveTextContent('0');
-    fireEvent.change(screen.getByPlaceholderText('501'), { target: { value: '42' } });
-    expect(screen.getByTestId('ai-location-id')).toHaveTextContent('42');
+    expect(screen.getByLabelText('Pick a visited location to draft a geofence around')).toBeInTheDocument();
   });
 
   it('applies an AI draft into a prefilled create modal', async () => {
@@ -746,15 +785,16 @@ describe('GeofencesPage — AI Helix section', () => {
 
 // ── a11y & data contract ─────────────────────────────────────────────────────
 describe('GeofencesPage — a11y & data contract', () => {
-  it('names the labelled regions and exposes an accessible name on the enable switch', async () => {
+  it('names the labelled regions and keeps enabled controls out of the directory and modal', async () => {
     renderPage();
     await zones().findByText('Home');
 
     expect(screen.getByRole('region', { name: 'Geofence summary' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Places and charging zones' })).toBeInTheDocument();
-    // The switch's accessible name must live ON the switch button, not the wrapper.
-    expect(screen.getByRole('switch', { name: 'Toggle geofence Home' })).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Toggle geofence Home' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Edit geofence Gym' })).toBeInTheDocument();
+    const dialog = await openCreateModal();
+    expect(within(dialog).queryByRole('switch', { name: 'Active' })).toBeNull();
   });
 
   it('reads geofences and pins without an /api/v1 prefix or camelCase params', async () => {

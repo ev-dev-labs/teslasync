@@ -4,16 +4,10 @@
     "breadcrumbHome": "Dashboard",
     "dataFreshness": "Data freshness: {{state}}",
     "helpFor": "Help for {{field}}",
-    "loading": "Loading",
     "pagination": "Pagination",
     "primaryHeader": "Site header",
     "primaryNav": "Primary",
     "skipToContent": "Skip to main content"
-  },
-  "achievements": {
-    "dismiss": "Dismiss achievement notification",
-    "toastEyebrow": "Achievement Unlocked",
-    "view": "View"
   },
   "alerts": {
     "ack": {
@@ -94,12 +88,9 @@
     "clearAria": "Clear selection",
     "closeListAria": "Hide options",
     "loading": "Loading",
-    "maxReached": "Maximum reached",
     "moreHidden": "{{count}} more — refine search",
     "noResults": "No results",
     "openListAria": "Show options",
-    "removeChip": "Remove {{label}}",
-    "removedChip": "Removed {{label}}",
     "resultsCount": "{{count}} results",
     "resultsCountOne": "1 result"
   },
@@ -291,8 +282,6 @@
   },
   "common": {
     "actions": "Actions",
-    "cancel": "Cancel",
-    "clear": "Clear",
     "close": "Close",
     "copyButton": {
       "copied": "Copied",
@@ -316,8 +305,7 @@
     "loading": "Loading...",
     "printButton": {
       "print": "Print"
-    },
-    "refresh": "Refresh"
+    }
   },
   "compat": {
     "banner": {
@@ -392,7 +380,6 @@
   "date": {
     "preset": {
       "all": "All time",
-      "label": "Quick date range",
       "last1y": "Last year",
       "last24h": "Last 24 hours",
       "last30": "Last 30 days",
@@ -407,16 +394,9 @@
       "ytd": "Year to date"
     },
     "range": {
-      "apply": "Apply",
-      "cancel": "Cancel",
       "compare": "Compare to previous period",
       "end": "End date",
-      "pickRange": "Custom range",
-      "popoverLabel": "Date range picker",
-      "start": "Start date",
-      "summaryDays_one": "{{count}} day",
-      "summaryDays_other": "{{count}} days",
-      "trigger": "Date range"
+      "start": "Start date"
     }
   },
   "density": {
@@ -427,7 +407,6 @@
     "groupLabel": "List density"
   },
   "draft": {
-    "discardDraft": "Discard draft",
     "recovery": {
       "close": "Close",
       "discard": "Discard",
@@ -443,19 +422,6 @@
       "resume": "Resume",
       "review": "Review",
       "savedAt": "Saved {{when}}"
-    },
-    "restored": "Draft restored from {{when}}.",
-    "restoredItem": "{{noun}} draft restored from {{when}}.",
-    "unknownTime": "a moment ago",
-    "useDraft": "Use draft"
-  },
-  "editConflict": {
-    "banner": {
-      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
-      "switchHint": "Or switch to your other tab to keep editing there.",
-      "takeOver": "Take over editing",
-      "title": "Another browser tab is editing this"
     }
   },
   "editableText": {
@@ -470,12 +436,6 @@
     "rename": {
       "geofence": "Rename geofence {{name}}",
       "alertRule": "Rename alert rule {{name}}"
-    }
-  },
-  "emptyState": {
-    "threshold": {
-      "defaultItem": "items",
-      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
     }
   },
   "error": {
@@ -515,54 +475,6 @@
       "tableTitle": "This table failed to render",
       "widgetTitle": "Widget failed to load"
     }
-  },
-  "export": {
-    "jobDrawer": {
-      "activeCount": "{{count}} export running",
-      "activeCount_other": "{{count}} exports running",
-      "activeEmpty": "No active exports",
-      "activeHeading": "In progress",
-      "activePill": "{{count}} active",
-      "close": "Dismiss",
-      "completedLine": "{{size}} · {{relative}}",
-      "download": "Download",
-      "expand": "Show export jobs ({{count}} active)",
-      "label": "Export job progress",
-      "loading": "Loading export jobs…",
-      "minimize": "Minimize",
-      "recentEmpty": "No recent exports",
-      "recentHeading": "Recent",
-      "recentLabel": "Exports",
-      "statusLine": "{{status}} · started {{relative}}",
-      "title": "Export jobs"
-    },
-    "status": {
-      "expired": "Expired",
-      "failed": "Failed",
-      "processing": "Processing",
-      "queued": "Queued",
-      "ready": "Ready"
-    },
-    "types": {
-      "account": "Account export",
-      "analytics": "Analytics",
-      "backup": "Backup",
-      "charging": "Charging",
-      "drives": "Drives",
-      "importCharging": "Import charging",
-      "importDrives": "Import drives"
-    }
-  },
-  "feedback": {},
-  "filters": {
-    "reset": "Reset filters",
-    "activeLabel": "Active filters",
-    "clearAll": "Clear all",
-    "clearedAll": "All filters cleared",
-    "moreCount": "+{{count}} more",
-    "moreLabel": "Additional active filters",
-    "removed": "Filter removed",
-    "removeAria": "Remove filter {{label}}"
   },
   "form": {
     "required": "required"
@@ -660,9 +572,6 @@
     "install": "Install",
     "dismiss": "Dismiss install prompt"
   },
-  "lifetime": {
-    "unlocked": "✓ Unlocked"
-  },
   "lightbox": {
     "counter": "{{current}} / {{total}}",
     "close": "Close image viewer",
@@ -673,31 +582,26 @@
     "zoomReset": "Reset zoom",
     "zoomPercent": "{{value}}%"
   },
-  "listExport": {
-    "button": "Export",
-    "csv": "Download as CSV",
-    "disabledTooltip": "No data to export",
-    "exporting": "Preparing {{format}} export…",
-    "failed": "Could not prepare the {{format}} export.",
-    "json": "Download as JSON",
-    "menuLabel": "Export list",
-    "scopeLegend": "Export scope",
-    "selectedWithCount": "Selected ({{count}})",
-    "visible": "Visible",
-    "visibleWithCount": "Visible ({{count}})"
-  },
-  "live": {
-    "staleBanner": {
-      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
-      "title": "Live data unavailable"
-    }
-  },
   "mask": {
     "reveal": "Reveal value",
     "hide": "Hide value",
     "copy": "Copy value"
   },
   "nav": {
+    "diagnosticGroups": {
+      "systemHealth": "System Health",
+      "dataHealth": "Database & Data Health",
+      "telemetry": "Telemetry Troubleshooting",
+      "signalAnalysis": "Signal Analysis",
+      "vehicle": "Vehicle Diagnostics",
+      "sections": "{{group}} sections"
+    },
+    "reportGroups": {
+      "fleetInsights": "Fleet Insights",
+      "drivingEfficiency": "Driving Efficiency",
+      "costs": "Costs",
+      "sections": "{{group}} sections"
+    },
     "workspaceContext": "Fleet operations",
     "workspaceHeader": "Workspace command bar",
     "quickAccess": "Quick access",
@@ -870,7 +774,250 @@
     "routeDetailAria": "Route details",
     "historyAria": "Location history",
     "speedHistoryAria": "Speed and distance-to-arrival area chart over time",
-    "speedHistoryTitle": "Speed & Distance History"
+    "speedHistoryTitle": "Speed & Distance History",
+    "items": {
+      "account_2fa": "Two-Factor Auth",
+      "account_privacy": "Privacy",
+      "account_sessions": "Active Sessions",
+      "action-center": "Action Center",
+      "activity": "Activity Timeline",
+      "admin_audit-log": "Audit Log",
+      "admin_data-quality": "Data Quality",
+      "admin_disk-forecast": "Disk Forecast",
+      "admin_dlq": "DLQ Inspector",
+      "admin_flags": "Feature Flags",
+      "admin_gdpr-exports": "GDPR Exports",
+      "admin_ingest-xray": "Ingest X-Ray",
+      "admin_live-signals": "Live Signal Inspector",
+      "admin_schema-drift": "Schema Drift",
+      "admin_secret-rotation": "Secret Rotation",
+      "admin_slow-queries": "Slow Queries",
+      "admin_telemetry_coverage": "Telemetry Coverage",
+      "admin_vehicle-cost": "Vehicle Cost",
+      "alert-fatigue": "Alert Fatigue",
+      "analytics": "Analytics",
+      "analytics_carbon": "Carbon Intelligence",
+      "anomaly-detection": "Anomaly Detection",
+      "api-keys": "API Keys",
+      "api-logs": "API Logs",
+      "api-playground": "API Playground",
+      "arrival-reliability": "Arrival Reliability",
+      "automations": "Automations",
+      "backup": "Backup & Restore",
+      "battery": "Battery Health",
+      "battery-care": "Battery Care",
+      "battery-cells": "Battery Cells",
+      "battery-degradation": "Battery Degradation",
+      "battery-passport": "Battery Passport",
+      "benchmarks_privacy": "Private Benchmarks",
+      "cabin-thermal": "Cabin Thermal Model",
+      "charge-advisor": "Charge Advisor",
+      "charge-departure-alignment": "Charge Alignment",
+      "charge-interruption": "Charge Interruption",
+      "charger-health": "Charger Health",
+      "charger-resilience": "Charger Resilience",
+      "charging": "Charging Overview",
+      "charging-curve": "Charging Curve",
+      "charging-heatmap": "Charging Patterns",
+      "charging-thermal-tax": "Charging Thermal Tax",
+      "chatbot": "Helix Chat",
+      "climate-control": "Climate Control",
+      "cold-start": "Cold Start Cost",
+      "comfort-consistency": "Comfort Consistency",
+      "command-history": "Command History",
+      "command-reliability": "Command Reliability",
+      "commands": "Send Commands",
+      "cost-analysis": "Cost Analysis",
+      "cycle-stress": "Battery Cycle Stress",
+      "dashboard": "Dashboard",
+      "dashcam": "Dashcam & Sentry",
+      "data-export": "Data Export",
+      "data-repair": "Data Repair",
+      "day-log": "Day Log",
+      "db-health": "Database Health",
+      "departure-forecast": "Departure Forecast",
+      "destination-transitions": "Destination Transitions",
+      "dev-tools": "Developer Tools",
+      "diagnostics_root-cause": "Root-Cause Intelligence",
+      "diagnostics_rul": "Remaining Useful Life",
+      "diagnostics_service-evidence": "Service Evidence Pack",
+      "digital-twin": "Vehicle Live View",
+      "drive-archetypes": "Drive Archetypes",
+      "drive-calendar": "Drive Calendar",
+      "drive-compare": "Drive Compare",
+      "drive-dna": "Drive DNA",
+      "drive-score": "Drive Score",
+      "drives": "Drives",
+      "drivetrain-health": "Drivetrain Health",
+      "driving-dynamics": "Driving Dynamics",
+      "driving-rhythm": "Driving Rhythm",
+      "efficiency": "Efficiency",
+      "efficiency-target": "Efficiency Target",
+      "energy": "Energy Usage",
+      "energy-flow": "Energy Flow",
+      "energy-ledger": "Energy Ledger",
+      "energy-orchestrator": "Energy Orchestrator",
+      "energy-products": "Solar & Powerwall",
+      "explore": "Explore Features",
+      "explorer": "Explorer",
+      "firmware-impact": "Firmware Impact",
+      "fleet-api": "Fleet API",
+      "fleet-operations": "Fleet Operations",
+      "fsd": "FSD Insights",
+      "gas-price": "Gas Prices",
+      "geofences": "Geofences",
+      "guard-mode": "Guard Mode",
+      "hvac-cycling": "HVAC Cycling",
+      "integrations_helix": "Helix",
+      "intelligence-packs": "Intelligence Packs",
+      "intelligence_behavioral-sentinel": "Behavioral Sentinel",
+      "intelligence_causal-lab": "Causal Experiment Lab",
+      "intelligence_charging-forensics": "Charging Forensics",
+      "intelligence_charging-site-twin": "Charging Site Twin",
+      "intelligence_component-survival": "Component Survival",
+      "intelligence_emergency-resilience": "Emergency Resilience",
+      "intelligence_federated-learning": "Federated Learning",
+      "intelligence_firmware-canary": "Firmware Canary",
+      "intelligence_journey-assurance": "Journey Assurance",
+      "intelligence_road-hazards": "Road Hazard Mesh",
+      "intelligence_tco-optimizer": "TCO Optimizer",
+      "intelligence_twin-lab": "Vehicle Twin Lab",
+      "journey-fragmentation": "Journey Fragmentation",
+      "journeys": "Journeys",
+      "lifetime-stats": "Lifetime Stats",
+      "live": "Live Map",
+      "locations": "Saved Locations",
+      "logbook": "Trip Logbook",
+      "maintenance": "Maintenance",
+      "me_activity": "My Activity",
+      "media-player": "Media Player",
+      "mileage": "Mileage Log",
+      "mileage-budget": "Mileage Budget",
+      "milestones": "Milestones",
+      "mqtt-inspector": "MQTT Inspector",
+      "navigation": "Navigation",
+      "notification-burn-rate": "Notification Burn Rate",
+      "notification-latency": "Notification Latency",
+      "notifications_health": "Notification Health",
+      "notifications_browser": "Browser Notifications",
+      "notifications_channels": "Notification Channels",
+      "notifications_inbox": "All Notifications",
+      "notifications_quiet-hours": "Quiet Hours",
+      "notifications_rules": "Alert Rules",
+      "notifications_packs": "Alert Packs",
+      "notifications_studio": "Alert Studio",
+      "notifications_webhooks": "Webhooks",
+      "outage": "Outage Autobiography",
+      "ownership_charging-reconciliation": "Invoice Reconciliation",
+      "ownership_consumables-lifecycle": "Consumables Lifecycle",
+      "ownership_data-governance": "Data Governance",
+      "ownership_driver-attribution": "Driver Attribution",
+      "ownership_insurance-telematics": "Insurance Telematics",
+      "ownership_jurisdiction-compliance": "Jurisdiction Compliance",
+      "ownership_model-trust": "Model Trust Lab",
+      "ownership_subscription-roi": "Subscription ROI",
+      "ownership_tariff-lab": "Utility Tariff Lab",
+      "ownership_warranty-command": "Warranty Command",
+      "pack-capacity": "Pack Capacity",
+      "parking": "Parking Analytics",
+      "period-compare": "Period Comparison",
+      "physics-cockpit": "Physics Cockpit",
+      "power-flow": "Power Flow",
+      "powershare": "Powershare",
+      "preconditioning-effectiveness": "Preconditioning Effectiveness",
+      "projected-range": "Projected Range",
+      "range-buffer": "Range Buffer",
+      "redis-signals": "Redis Signals",
+      "regen-efficiency": "Regen Braking",
+      "resale-vault": "Warranty & Resale Vault",
+      "roadmap": "Roadmap",
+      "route-efficiency": "Route Efficiency",
+      "safety-settings": "Safety Settings",
+      "science": "Science Lab",
+      "seasonal-efficiency": "Seasonal Efficiency",
+      "security-access": "Security & Access",
+      "segments": "Ghost Racing",
+      "service-intelligence": "Recall & Service Intelligence",
+      "settings": "General Settings",
+      "settings_fleet-setup": "Fleet Setup",
+      "share-card": "Share Card Studio",
+      "signal-change-points": "Signal Change Points",
+      "signal-correlation": "Signal Correlation",
+      "signal-deadband": "Signal Deadband Advisor",
+      "signal-entropy": "Signal Entropy",
+      "signal-mutual-information": "Nonlinear Signal Coupling",
+      "signal-trend": "Signal Trend",
+      "signals": "Live Signals",
+      "sleep-efficiency": "Sleep Efficiency",
+      "smart-charge": "Smart Charging",
+      "software-updates": "Software Updates",
+      "speed-profile": "Speed Profile",
+      "speed-sweetspot": "Speed Sweet Spot",
+      "state-debugger": "State Debugger",
+      "statistics": "Statistics",
+      "system-status": "System Status",
+      "tco": "Cost of Ownership",
+      "temperature-impact": "Temperature Impact",
+      "tesla-account": "Tesla Account",
+      "tesla-api-usage": "Tesla API Usage",
+      "tesla-charging-history": "Charge History",
+      "tesla-features": "Feature Flags",
+      "tesla-physics": "Physics hub",
+      "tesla-physics_black-box": "Black Box 90s",
+      "tesla-physics_car-kept-living": "Car Kept Living",
+      "tesla-physics_charge-port": "Charge-Port Court",
+      "tesla-physics_clocks": "Three Clocks",
+      "tesla-physics_contradictions": "Contradiction Court",
+      "tesla-physics_dictionary": "Owner Dictionary",
+      "tesla-physics_firmware-epochs": "Firmware Epochs",
+      "tesla-physics_life-tape": "Life Tape",
+      "tesla-physics_logbook": "Tesla-Language Logbook",
+      "tesla-physics_meters": "Trip-Meter Genealogy",
+      "tesla-physics_modes": "Mode Laws",
+      "tesla-physics_nervous-system": "Nervous System",
+      "tesla-physics_range": "Range Disagreement",
+      "tesla-physics_unknown": "Unknown OS",
+      "tesla-physics_vault": "Physics Vault",
+      "tesla-orders": "Active Orders",
+      "tesla-region": "Region & API",
+      "time-machine": "Time Machine",
+      "timeline": "Timeline",
+      "tire-differential-drift": "Tire Differential Drift",
+      "tire-pressure": "Tire Pressure",
+      "trip-planner": "Trip Planner",
+      "trips": "Trips",
+      "utilization": "Utilization",
+      "vampire-drain": "Vampire Drain",
+      "vehicle-comparison": "Compare Vehicles",
+      "vehicle-management": "Vehicle Management",
+      "vehicles": "My Vehicles",
+      "weekly-digest": "Weekly Digest",
+      "what-if": "What-If Simulator"
+    },
+    "groups": {
+      "about": "About",
+      "account": "Account",
+      "advanced_intelligence": "Advanced Intelligence",
+      "automation": "Automation",
+      "battery": "Battery",
+      "cabin": "Cabin",
+      "charging": "Charging",
+      "commands": "Commands",
+      "data": "Data",
+      "diagnostics": "Diagnostics",
+      "driving": "Driving",
+      "energy": "Energy",
+      "home": "Home",
+      "integrations": "Integrations",
+      "notifications": "Notifications",
+      "ownership_intelligence": "Ownership Intelligence",
+      "reports": "Reports",
+      "security": "Security",
+      "service": "Service",
+      "settings": "Settings",
+      "tesla_physics": "Tesla Physics",
+      "vehicles": "Vehicles"
+    }
   },
   "notFound": {
     "title": "Page not found",
@@ -883,19 +1030,6 @@
     "suggestionsLabel": "Suggested pages"
   },
   "notifications": {
-    "alertStudio": {
-      "editor": {
-        "vehiclesAllOption": "All vehicles (current + future)",
-        "vehiclesEmptyFleetHelp": "Add a vehicle in Settings → Vehicles to use this rule.",
-        "vehiclesSummaryAll": "All vehicles",
-        "vehiclesSummaryCount": "{{count}} vehicles",
-        "vehiclesSummaryNone": "No vehicles selected",
-        "vehiclesSummaryOne": "{{name}}",
-        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
-        "vehiclesUnknownBadge": "Unknown",
-        "vehiclesUnknownLabel": "Vehicle #{{id}}"
-      }
-    },
     "bellPopover": {
       "allRead": "All caught up",
       "emptyMessage": "No unread notifications right now.",
@@ -926,10 +1060,6 @@
       "description": "Current data with live actions available.",
       "label": "Live",
       "shortLabel": "Live"
-    },
-    "writeBlocked": "Return to live mode before making operational changes.",
-    "writeNotice": {
-      "title": "Operational changes are read-only"
     }
   },
   "operations": {
@@ -1060,29 +1190,6 @@
       "open": "Open report view"
     }
   },
-  "productPreferences": {
-    "persona": {
-      "label": "Workspace profile"
-    },
-    "personas": {
-      "administrator": {
-        "description": "Prioritize system administration and operational controls.",
-        "label": "Administrator"
-      },
-      "analyst": {
-        "description": "Prioritize trends, reports, and historical analysis.",
-        "label": "Analyst"
-      },
-      "fleetOperator": {
-        "description": "Prioritize active fleet operations and current vehicle state.",
-        "label": "Fleet operator"
-      },
-      "owner": {
-        "description": "Keep the most useful everyday vehicle information close at hand.",
-        "label": "Owner"
-      }
-    }
-  },
   "pwa": {
     "newVersion": "New version available",
     "reloadingIn": "Reloading in {{seconds}}s...",
@@ -1136,9 +1243,6 @@
       "title": "Trip replay shortcuts"
     }
   },
-  "requiresAuth": {
-    "title": "{{feature}} requires authentication mode"
-  },
   "routes": {
     "behavioralSentinel": "Behavioral Sentinel",
     "causalExperimentLab": "Causal Experiment Lab",
@@ -1151,17 +1255,15 @@
     "firmwareCanary": "Firmware Canary",
     "journeyAssurance": "Journey Assurance",
     "journeys": "Journeys",
+    "notificationHealth": "Notification Health",
     "roadHazardMesh": "Road Hazard Mesh",
     "tCOOptimizer": "TCO Optimizer",
+    "teslaApiUsage": "Tesla API usage",
+    "teslaPhysics": "Tesla Physics",
     "twinLab": "Vehicle Twin Lab",
     "vehicleManagement": "Vehicle Management"
   },
   "search": {
-    "history": {
-      "clear": "Clear history",
-      "removeAria": "Remove \"{{query}}\" from search history",
-      "title": "Recent searches"
-    },
     "palette": {
       "viewAll": "View all results for \"{{query}}\""
     },
@@ -1206,15 +1308,36 @@
       "unsavedTitle": "Unsaved drafts"
     }
   },
+  "settings": {
+    "typographyAgent": {
+      "baseSize": "Base text size ({{size}}px)",
+      "density": "Density",
+      "densityHint": "Density tunes type leading only; workspace spacing stays in Display settings.",
+      "density_comfortable": "Comfortable",
+      "density_compact": "Compact",
+      "density_relaxed": "Relaxed",
+      "findings": "Loop findings ({{count}})",
+      "healing": "Self-healing engaged",
+      "hudLabel": "Typography agent controller",
+      "ratio": "Harmonic ratio",
+      "ratio_goldenRatio": "Golden Ratio",
+      "ratio_majorSecond": "Major Second",
+      "ratio_majorThird": "Major Third",
+      "ratio_minorSecond": "Minor Second",
+      "ratio_minorThird": "Minor Third",
+      "ratio_perfectFourth": "Perfect Fourth",
+      "reset": "Reset to defaults",
+      "score": "Score: {{score}}/100",
+      "specimen": "Live specimen",
+      "specimenBody": "Body copy follows the modular ratio across viewports.",
+      "specimenHeading": "Harmonized headings scale fluidly",
+      "subtitle": "Connected harmonic runtime",
+      "title": "Typography Agent",
+      "verified": "Harmony verified"
+    }
+  },
   "shortcuts": {
     "close": "Close modal / cancel",
-    "empty": "No shortcuts match your search.",
-    "filter": {
-      "all": "All",
-      "global": "Global",
-      "label": "Filter shortcuts",
-      "page": "This page"
-    },
     "goto": "Go to {{label}}",
     "gotoPrompt": "Go to…",
     "groups": {
@@ -1225,9 +1348,7 @@
     },
     "openPalette": "Open command palette",
     "openPaletteAlt": "Open command palette",
-    "openShortcuts": "Show keyboard shortcuts",
-    "search": "Search shortcuts…",
-    "title": "Keyboard Shortcuts"
+    "openShortcuts": "Show keyboard shortcuts"
   },
   "slider": {
     "thumbMin": "{{label}} minimum",
@@ -1299,6 +1420,9 @@
       "unavailable": "Diagnostics are temporarily unavailable.",
       "unknown": "Unknown"
     },
+    "fleet": {
+      "label": "Fleet"
+    },
     "help": {
       "about": "About TeslaSync",
       "buildNews": "Update or release notes available",
@@ -1316,6 +1440,9 @@
       "stale": "Stale",
       "tooltip": "Live telemetry stream",
       "unknown": "Idle"
+    },
+    "mode": {
+      "now": "Now"
     },
     "more": {
       "backgroundComplete": "Background work completed",
@@ -1395,19 +1522,6 @@
       "selectRow": "Select row"
     }
   },
-  "tagInput": {
-    "added": "{{count}} tags added",
-    "addedOne": "Tag added",
-    "duplicate": "{{tag}} is already added",
-    "maxReached": "Tag limit reached",
-    "maxReachedAnnounce": "Tag limit reached",
-    "maxReachedHint": "Maximum {{count}} tags",
-    "placeholder": "Add a tag…",
-    "removeTag": "Remove {{tag}}",
-    "removed": "Removed {{tag}}",
-    "tagsList": "Tags: {{tags}}",
-    "tagsNone": "No tags yet"
-  },
   "tesla": {
     "reauth": {
       "body": "Reconnect to resume live data and commands.",
@@ -1444,8 +1558,6 @@
   },
   "toast": {},
   "tour": {
-    "close": "Close tour",
-    "finish": "Get Started!",
     "launcher": {
       "close": "Close",
       "completed": "Completed",
@@ -1458,9 +1570,6 @@
       "subtitle": "Guided walkthroughs for every major feature.",
       "title": "Take a tour"
     },
-    "next": "Next",
-    "prev": "Back",
-    "skip": "Skip tour",
     "tours": {
       "alerts": {
         "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",
@@ -1504,9 +1613,6 @@
     "label": "Vehicle",
     "fallbackName": "Vehicle {{id}}"
   },
-  "vehicleSelect": {
-    "aria": "Select vehicle"
-  },
   "workspace": {
     "analysis": {
       "activeRange": "{{start}} to {{end}}",
@@ -1533,6 +1639,22 @@
     "statusOnline": "Online",
     "statusIdle": "Idle",
     "statusOffline": "Offline"
+  },
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
+    }
+  },
+  "filters": {
+    "reset": "Reset filters",
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removed": "Filter removed",
+    "removeAria": "Remove filter {{label}}"
   },
   "mobile": {
     "refresh": {
@@ -1577,6 +1699,9 @@
     }
   },
   "vehicle": "vehicle",
+  "vehicleSelect": {
+    "aria": "Select vehicle"
+  },
   "watch": {
     "noVehicle": "No vehicle found",
     "timeToFull": "{{minutes}}m to full",

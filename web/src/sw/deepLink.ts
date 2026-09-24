@@ -52,7 +52,6 @@ export const ALLOWED_DEEP_LINK_PATTERNS: readonly string[] = [
   '/data-repair',
   '/notifications/inbox',
   '/notifications/archived',
-  '/notifications/alerts',
   '/notifications/channels',
   '/notifications/browser',
   '/notifications/quiet-hours',
@@ -71,7 +70,7 @@ export const ALLOWED_DEEP_LINK_PATTERNS: readonly string[] = [
 const ALLOWED_QUERY_PARAMS: Record<string, (value: string) => boolean> = {
   /** Numeric vehicle id used by drill-through pages. */
   vehicle_id: isPositiveInt,
-  /** Numeric alert id (`/notifications/alerts`). */
+  /** Numeric notification id (`/notifications/inbox`). */
   alert: isPositiveInt,
   /** Numeric notification-log / event id (`/notifications/inbox`). */
   event: isPositiveInt,

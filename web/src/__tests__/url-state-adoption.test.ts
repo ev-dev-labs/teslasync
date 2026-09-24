@@ -17,7 +17,6 @@ const FILTER_PAGES = [
   'src/features/driving/pages/DrivesListPage.tsx',
   'src/features/charging/pages/ChargingListPage.tsx',
   'src/features/notifications/components/InboxBody.tsx',
-  'src/features/notifications/pages/AlertsListPage.tsx',
   'src/features/telemetry/pages/SignalExplorerPage.tsx',
   'src/features/telemetry/pages/SignalDiffPage.tsx',
   'src/features/telemetry/pages/SignalLogViewerPage.tsx',

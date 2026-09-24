@@ -547,6 +547,7 @@ export default function AuditLogPage() {
               <DataTable
                 tableId="admin:audit-log"
                 columns={columns}
+                mobileColumns={['action', 'success', 'ts']}
                 data={rows}
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('admin.auditLog.emptyTable', 'No entries')}

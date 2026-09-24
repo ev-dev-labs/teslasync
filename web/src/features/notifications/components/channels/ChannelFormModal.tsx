@@ -10,17 +10,19 @@ import { useTranslation } from 'react-i18next';
 import { CheckCircle, TestTube, XCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
-  Button, ConfirmDialog, ErrorText, GlassPanel, HelpIcon, Input, Modal, Text, Toggle,
+  Button, ConfirmDialog, ErrorText, GlassPanel, HelpIcon, Input, Modal, Select, Text, Toggle,
 } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useToast } from '@/components/feedback';
 import { useSaveChannel, useTestChannel } from '@/api/hooks/useNotifications';
+import { useTestWebhookChannel } from '@/api/hooks/useNotificationChannels';
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import type { NotificationChannel } from '@/api/types';
 import {
   buildChannelPayload, channelToFormConfig, CHANNEL_TYPES, FIELD_HELP,
   getChannelMeta, type ChannelType,
 } from './channelMeta';
+import { WebhookSignaturePreview } from './WebhookSignaturePreview';
 
 interface ChannelFormModalProps {
   channel: NotificationChannel | null;
@@ -49,6 +51,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
   const meta = getChannelMeta(kind);
   const saveMut = useSaveChannel();
   const testMut = useTestChannel();
+  const webhookTestMut = useTestWebhookChannel();
   const isDirty = kind !== initialValues.kind
     || name !== initialValues.name
     || enabled !== initialValues.enabled
@@ -73,6 +76,15 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
       setNameError(t('notifications.channels.nameRequired', 'Name is required'));
       return;
     }
+    if (kind === 'webhook') {
+      try {
+        const url = new URL(config.url ?? '');
+        if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('invalid protocol');
+      } catch {
+        setFormError(t('webhookChannels.form.urlInvalid', 'URL must start with http:// or https://.'));
+        return;
+      }
+    }
     const payload = buildChannelPayload(kind, name, enabled, config, isEdit && channel ? channel.id : undefined);
     saveMut.mutate(payload, {
       onSuccess: () => { onSaved(); },
@@ -82,6 +94,24 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
 
   const handleTest = () => {
     if (!isEdit || !channel) return;
+    if (channel.kind === 'webhook') {
+      webhookTestMut.mutate({ id: channel.id }, {
+        onSuccess: data => {
+          setTestResult({
+            success: data.success,
+            message: data.success
+              ? t('notifications.channels.testSuccess', 'Test notification sent successfully!')
+              : data.error || t('notifications.channels.testFailed', 'Test failed'),
+          });
+          if (!data.success) toast.error(t('notifications.channels.testFailed', 'Test failed'), data.error);
+        },
+        onError: err => {
+          setTestResult({ success: false, message: err.message });
+          toast.error(t('notifications.channels.testFailed', 'Test failed'), err.message);
+        },
+      });
+      return;
+    }
     testMut.mutate(channel.id, {
       onSuccess: (data) => {
         if (data?.success) {
@@ -192,6 +222,19 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
                 placeholder={f.placeholder}
               />
             ))}
+            {kind === 'webhook' && (
+              <>
+                <Select
+                  label={t('webhookChannels.form.method', 'HTTP method')}
+                  value={config.method ?? 'POST'}
+                  onChange={e => setConfig(prev => ({ ...prev, method: e.target.value }))}
+                  options={[{ value: 'POST', label: 'POST' }, { value: 'PUT', label: 'PUT' }]}
+                />
+                <Text variant="helper">{t('webhookChannels.form.secretHelp', 'When set, every request includes X-TeslaSync-Signature: sha256=<hmac> so the receiver can verify authenticity.')}</Text>
+                {isEdit && <Text variant="helper">{t('webhookChannels.form.keepSecret', 'Leave the signing secret blank to keep the existing secret.')}</Text>}
+                <WebhookSignaturePreview secret={config.bearer_token ?? ''} />
+              </>
+            )}
             <Text as="p" variant="helper" className="flex items-center gap-1">
               <HelpIcon
                 i18nKey="help.fields.channels.testHint"
@@ -234,10 +277,10 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
                 type="button"
                 variant="secondary"
                 icon={<TestTube className="h-4 w-4" aria-hidden="true" />}
-                loading={testMut.isPending}
+                loading={testMut.isPending || webhookTestMut.isPending}
                 onClick={handleTest}
               >
-                {testMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.test', 'Test Connection')}
+                {testMut.isPending || webhookTestMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.test', 'Test Connection')}
               </Button>
             )}
             <div className="flex-1" />

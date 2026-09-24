@@ -19,7 +19,7 @@
  *                 em-dash (regression guard: it must not fabricate "Active"),
  *                 the master switch panel surfaces <QueryError>, and the other
  *                 KPIs stay truthful because their sources resolved.
- *   8. Degraded — MongoDB off hides the retention select and shows the
+ *   8. Removed MongoDB capture controls do not appear or request statistics.
  *                 "not configured" badge; an empty version payload shows the
  *                 configured-endpoints empty state; a known 0 stays a truthful 0.
  *   9. a11y     — the KPI region is labelled and every switch + the retention
@@ -101,14 +101,14 @@ interface ReqOpts {
 }
 
 // Every boolean polling key the tally counts (mirrors ALL_ENDPOINT_KEYS in the
-// page). telemetry_capture_retention_days is a number and is excluded.
+// page).
 const POLLING_BOOL_KEYS = [
   'vehicle_discovery', 'charge_state', 'climate_state', 'drive_state',
   'location_data', 'vehicle_state', 'vehicle_config',
   'on_demand_vehicle_discovery', 'on_demand_charge_state', 'on_demand_climate_state',
   'on_demand_drive_state', 'on_demand_location_data', 'on_demand_vehicle_state',
   'on_demand_vehicle_config', 'nearby_charging_sites', 'release_notes',
-  'recent_alerts', 'service_data', 'wake_up', 'commands', 'telemetry_capture',
+  'recent_alerts', 'service_data', 'wake_up', 'commands',
 ];
 
 const DEFAULT_ENDPOINTS = {
@@ -125,12 +125,7 @@ function makeSettings(overrides: Record<string, unknown> = {}) {
 function makePolling(overrides: Record<string, boolean | number> = {}) {
   const base: Record<string, boolean | number> = {};
   for (const k of POLLING_BOOL_KEYS) base[k] = false;
-  base.telemetry_capture_retention_days = 7;
   return { ...base, ...overrides };
-}
-
-function makeCapture(overrides: Record<string, unknown> = {}) {
-  return { mongodb_enabled: true, total_documents: 512, distinct_vins: ['VIN_A', 'VIN_B'], ...overrides };
 }
 
 function makeVersion(overrides: Record<string, unknown> = {}) {
@@ -140,7 +135,6 @@ function makeVersion(overrides: Record<string, unknown> = {}) {
 interface InstallCfg {
   settings?: unknown;
   polling?: unknown;
-  capture?: unknown;
   version?: unknown;
   /** GET paths that should reject with a plain network Error. */
   rejectGet?: string[];
@@ -150,11 +144,11 @@ interface InstallCfg {
 function installRequest(cfg: InstallCfg = {}) {
   const {
     settings = makeSettings(),
-    polling = makePolling({ charge_state: true, drive_state: true, telemetry_capture: true }),
-    capture = makeCapture(),
+    polling = makePolling({ charge_state: true, drive_state: true }),
     version = makeVersion(),
     rejectGet = [],
   } = cfg;
+  let currentPolling = polling;
 
   mockedRequest.mockImplementation((path: string, opts?: ReqOpts) => {
     const method = opts?.method ?? 'GET';
@@ -163,11 +157,12 @@ function installRequest(cfg: InstallCfg = {}) {
     }
     switch (`${method} ${path}`) {
       case 'GET /settings': return Promise.resolve(settings);
-      case 'GET /settings/polling-config': return Promise.resolve(polling);
-      case 'GET /dev-tools/telemetry-capture/stats': return Promise.resolve(capture);
+      case 'GET /settings/polling-config': return Promise.resolve(currentPolling);
       case 'GET /system/version': return Promise.resolve(version);
       case 'POST /settings/suspend-api': return Promise.resolve({ api_suspended: true });
-      case 'PUT /settings/polling-config': return Promise.resolve(polling);
+      case 'PUT /settings/polling-config':
+        currentPolling = JSON.parse(opts?.body ?? '{}') as unknown;
+        return Promise.resolve(currentPolling);
       default: return Promise.reject(new Error(`unexpected ${method} ${path}`));
     }
   });
@@ -220,7 +215,7 @@ describe('FleetAPIPage', () => {
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
   });
 
-  it('renders truthful KPIs, named switches, retention select, and configured endpoints', async () => {
+  it('renders truthful KPIs, named switches, and configured endpoints', async () => {
     installRequest();
 
     renderPage();
@@ -228,10 +223,7 @@ describe('FleetAPIPage', () => {
     const region = kpiRegion();
     // API status resolves to the true "Active" state (api_suspended === false).
     expect(await within(region).findByText('Active')).toBeInTheDocument();
-    // 3 of 21 endpoint keys enabled (charge_state, drive_state, telemetry_capture).
-    expect(within(region).getByText('3 / 21')).toBeInTheDocument();
-    expect(within(region).getByText('On')).toBeInTheDocument();
-    expect(within(region).getByText('512')).toBeInTheDocument();
+    expect(within(region).getByText('2 / 20')).toBeInTheDocument();
 
     // The master switch is named AND reflects the un-suspended (checked) state.
     const master = screen.getByRole('switch', { name: 'Toggle Tesla API polling' });
@@ -241,13 +233,12 @@ describe('FleetAPIPage', () => {
     expect(screen.getAllByRole('switch', { name: 'Charge State' })).toHaveLength(2);
     expect(screen.getByRole('switch', { name: 'Nearby Charging' })).toBeInTheDocument();
 
-    // MongoDB connected → the retention select + captured summary are shown.
-    expect(screen.getByRole('combobox', { name: 'Retention Period' })).toBeInTheDocument();
-    expect(screen.getByText('512 signals captured from 2 vehicle(s)')).toBeInTheDocument();
-    expect(screen.getByText('MongoDB Connected')).toBeInTheDocument();
+    expect(screen.queryByText('Telemetry Capture')).toBeNull();
+    expect(screen.queryByText(/MongoDB/)).toBeNull();
+    expect(mockedRequest.mock.calls.some(([path]) => path === '/dev-tools/telemetry-capture/stats')).toBe(false);
 
     // Header tally badge + a configured endpoint URL surface.
-    expect(screen.getByText('3/21 enabled')).toBeInTheDocument();
+    expect(screen.getByText('2/20 enabled')).toBeInTheDocument();
     expect(screen.getByText('https://fleet-api.prd.na.vn.cloud.tesla.com')).toBeInTheDocument();
   });
 
@@ -302,26 +293,7 @@ describe('FleetAPIPage', () => {
     );
     // The disabled endpoint is flipped on.
     expect(findRequestBody('/settings/polling-config', 'PUT').nearby_charging_sites).toBe(true);
-  });
-
-  it('PUTs the new retention period when the select changes', async () => {
-    installRequest();
-
-    renderPage();
-
-    const select = (await screen.findByRole('combobox', { name: 'Retention Period' })) as HTMLSelectElement;
-    // Default retention is 7 days.
-    expect(select.value).toBe('7');
-
-    fireEvent.change(select, { target: { value: '30' } });
-
-    await waitFor(() =>
-      expect(mockedRequest).toHaveBeenCalledWith(
-        '/settings/polling-config',
-        expect.objectContaining({ method: 'PUT' }),
-      ),
-    );
-    expect(findRequestBody('/settings/polling-config', 'PUT').telemetry_capture_retention_days).toBe(30);
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Nearby Charging' })).toHaveAttribute('aria-checked', 'true'));
   });
 
   it('degrades the API-status KPI to an em-dash (not a fabricated Active) when only /settings fails', async () => {
@@ -336,36 +308,33 @@ describe('FleetAPIPage', () => {
     expect(within(region).queryByText('Suspended')).toBeNull();
 
     // The other three sources resolved, so their KPIs stay truthful.
-    expect(within(region).getByText('3 / 21')).toBeInTheDocument();
+    expect(within(region).getByText('2 / 20')).toBeInTheDocument();
 
     // The master switch panel surfaces the error and hides the header toggle.
     expect(screen.queryByRole('switch', { name: 'Toggle Tesla API polling' })).toBeNull();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
   });
 
-  it('degrades gracefully when MongoDB is off and the version payload has no endpoints', async () => {
+  it('omits retired capture controls when endpoint metadata is missing', async () => {
     installRequest({
-      capture: makeCapture({ mongodb_enabled: false, total_documents: 0, distinct_vins: [] }),
       version: makeVersion({ endpoints: {} }),
     });
 
     renderPage();
 
-    // MongoDB not configured → badge shown and retention select withheld.
-    expect(await screen.findByText('MongoDB Not Configured')).toBeInTheDocument();
+    expect(await screen.findByText('Endpoint metadata unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('MongoDB Not Configured')).toBeNull();
     expect(screen.queryByRole('combobox', { name: 'Retention Period' })).toBeNull();
-    expect(screen.getByText(/Set MONGODB_ENABLED=true/)).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Raw Signal Recording' })).toBeNull();
 
     // Empty version endpoints → configured-endpoints empty state.
     expect(screen.getByText('Endpoint metadata unavailable')).toBeInTheDocument();
     expect(screen.getByText(/did not publish any configured endpoint URLs/)).toBeInTheDocument();
     expect(screen.getByText(/Configure the public and Tesla Fleet API URLs/)).toBeInTheDocument();
 
-    // Capture stats are known, so a real 0 is shown (not an em-dash).
-    expect(within(kpiRegion()).getByText('0')).toBeInTheDocument();
   });
 
-  it('is accessible: labelled KPI region, named switches, and a named retention control', async () => {
+  it('is accessible: labelled KPI region and named endpoint switches', async () => {
     installRequest();
 
     renderPage();
@@ -375,10 +344,7 @@ describe('FleetAPIPage', () => {
     expect(await screen.findByRole('switch', { name: 'Toggle Tesla API polling' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Fleet API summary' })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Wake Up' })).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Raw Signal Recording' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Retention Period' })).toBeInTheDocument();
-
-    // Master (1) + raw-signal (1) + polling (7) + on-demand (11) + commands (2).
-    expect(screen.getAllByRole('switch')).toHaveLength(22);
+    // Master (1) + polling (7) + on-demand (11) + commands (2).
+    expect(screen.getAllByRole('switch')).toHaveLength(21);
   });
 });

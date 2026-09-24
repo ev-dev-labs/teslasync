@@ -61,7 +61,7 @@ const PER_PAGE_OPTIONS = [
 
 export default function SignalExplorerPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Signal Explorer'));
+  usePageTitle(t('signalExplorer.title', 'Signal Explorer'));
 
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
   const vehicleId = storeVehicleId ?? 0;
@@ -234,8 +234,8 @@ export default function SignalExplorerPage() {
 
   return (
     <PageContainer
-      title={t('Signal Explorer')}
-      subtitle={t('Visualise signal history with chart and stats — or stream live')}
+      title={t('signalExplorer.title', 'Signal Explorer')}
+      subtitle={t('signalExplorer.subtitle', 'Visualise signal history with chart and stats — or stream live')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <VehicleSelect />
@@ -325,7 +325,7 @@ export default function SignalExplorerPage() {
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="space-y-1.5">
-                  <Label className="block">{t('Time Range')}</Label>
+                  <Label className="block">{t('signalExplorer.timeRange', 'Time Range')}</Label>
                   <RangePicker
                     value={{ start, end }}
                     onChange={setRange}
@@ -337,7 +337,7 @@ export default function SignalExplorerPage() {
                 <div className="flex flex-wrap items-end gap-2 sm:gap-3">
                   {!isLive ? (
                     <Select
-                      label={t('Per Page')}
+                      label={t('signalExplorer.perPage', 'Per Page')}
                       value={String(perPage)}
                       onChange={(e) => {
                         // Atomic update — resetting to page 1 alongside the new
@@ -363,7 +363,7 @@ export default function SignalExplorerPage() {
                       disabled={!canExplore}
                       loading={isFetching}
                     >
-                      {t('Explore')}
+                      {t('signalExplorer.explore', 'Explore')}
                     </Button>
                   ) : null}
                   <Button

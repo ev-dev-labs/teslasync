@@ -192,6 +192,7 @@ import (
 	apiteslaenergyhist "github.com/ev-dev-labs/teslasync/internal/api/teslaenergyhist"
 	apitels "github.com/ev-dev-labs/teslasync/internal/api/teslaenergylivestatus"
 	apiphysics "github.com/ev-dev-labs/teslasync/internal/api/teslaphysics"
+	apiteslausage "github.com/ev-dev-labs/teslasync/internal/api/teslausage"
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
@@ -3602,6 +3603,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// {geofenceID} subrouter so chi matches the static path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", geofenceHandler.BulkUpdate)
 			r.Get("/needs-review", geofenceHandler.NeedsReview)
+			r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/visited-candidates", geofenceHandler.VisitedCandidates)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/resolve", geofenceHandler.ResolveName)
 			r.Get("/rates/current", geofenceHandler.CurrentRates)
 			r.Route("/{geofenceID}", func(r chi.Router) {
 				r.Get("/", geofenceHandler.Get)
@@ -3630,6 +3633,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// Read-only charging-activity views for this place.
 				r.Get("/charging-summary", geofenceHandler.ChargingSummary)
 				r.Get("/charging-activity", geofenceHandler.ChargingActivity)
+				r.Get("/first-charging-session", geofenceHandler.FirstChargingSession)
 			})
 		})
 
@@ -4008,6 +4012,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", notificationHandler.CreateChannel)
 			r.Get("/logs", notificationHandler.GetLogs)
 			r.Get("/stats", notificationHandler.GetStats)
+			r.Get("/report", notificationHandler.GetReport)
 			r.Get("/unread-count", notificationHandler.UnreadCount)
 			r.Post("/mark-read", notificationHandler.MarkRead)
 			r.Post("/mark-unread", notificationHandler.MarkUnread)
@@ -4353,7 +4358,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/auth-mode", systemAuthModeHandler.ServeHTTP)
 
-			r.Get("/api-usage", APIUsageHandler(db))
+			r.Get("/api-usage", apiteslausage.NewTeslaUsageHandler(db).Get)
+			r.Get("/api-usage/history", apiteslausage.NewTeslaUsageHandler(db).History)
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
 			r.Get("/backup/stats", backupHandler.BackupStats)

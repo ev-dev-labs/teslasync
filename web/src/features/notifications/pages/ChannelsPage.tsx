@@ -22,7 +22,6 @@ import { ChannelStatsBand } from '../components/channels/ChannelStatsBand';
 import { ChannelsGrid } from '../components/channels/ChannelsGrid';
 import { ChannelProvidersPanel } from '../components/channels/ChannelProvidersPanel';
 import { ChannelFormModal } from '../components/channels/ChannelFormModal';
-import { HealthAlertPreferencesPanel } from '../components/channels/HealthAlertPreferencesPanel';
 
 export default function ChannelsPage() {
   const { t } = useTranslation();
@@ -86,7 +85,12 @@ export default function ChannelsPage() {
       {/* 1 — Delivery-health KPI band (full-width) */}
       <FadeIn>
         <section aria-label={t('notifications.channels.statsAria', 'Notification delivery summary')}>
-          <ChannelStatsBand stats={statsQuery.data} isLoading={statsQuery.isLoading} />
+          <ChannelStatsBand
+            stats={statsQuery.data}
+            isLoading={statsQuery.isLoading}
+            error={statsQuery.error}
+            onRetry={() => statsQuery.refetch()}
+          />
         </section>
       </FadeIn>
 
@@ -113,15 +117,8 @@ export default function ChannelsPage() {
         </section>
       </FadeIn>
 
-      {/* 3 — Per-channel component outage/recovery preferences */}
+      {/* 3 — Per-device browser push + provider reference */}
       <FadeIn delay={0.2}>
-        <section aria-label={t('notifications.healthAlerts.section', 'Component health notification preferences')}>
-          <HealthAlertPreferencesPanel channels={channels} onAddChannel={openAdd} />
-        </section>
-      </FadeIn>
-
-      {/* 4 — Secondary band: per-device browser push + provider reference */}
-      <FadeIn delay={0.3}>
         <section aria-labelledby="devices-heading" className="space-y-3 sm:space-y-4">
           <SectionTitle id="devices-heading">
             {t('notifications.channels.devicesTitle', 'Devices & providers')}

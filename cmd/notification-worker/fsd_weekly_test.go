@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/fsdweekly"
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/fsddigest"
@@ -28,6 +29,12 @@ type fakeDeduper struct {
 	exists bool
 	err    error
 	title  string
+	events []*notificationmodel.NotificationLog
+}
+
+func (f *fakeDeduper) CreateEvent(_ context.Context, event *notificationmodel.NotificationLog) error {
+	f.events = append(f.events, event)
+	return nil
 }
 
 func (f *fakeDeduper) ExistsTitleSince(_ context.Context, title string, _ time.Time) (bool, error) {
@@ -83,7 +90,15 @@ func TestRunFsdWeeklyDigestTick_PublishesOnceWhenMeasured(t *testing.T) {
 	if len(reqs) != 1 {
 		t.Fatalf("published %d, want 1", len(reqs))
 	}
+	if len(deduper.events) != 1 || deduper.events[0].Status != "triggered" {
+		t.Fatalf("WebPush-only digest must persist one event, got %+v", deduper.events)
+	}
 	req := reqs[0]
+	if deduper.events[0].ChannelID != 0 || deduper.events[0].TriggerID == nil ||
+		*deduper.events[0].TriggerID != req.TriggerID || deduper.events[0].EventType == nil ||
+		*deduper.events[0].EventType != "digest.fsd_weekly" {
+		t.Fatalf("WebPush-only event not correlated with request: event=%+v request=%+v", deduper.events[0], req)
+	}
 	if req.ChannelType != notification.ChannelTypeWebPush {
 		t.Fatalf("channel = %s, want webpush", req.ChannelType)
 	}
@@ -108,8 +123,8 @@ func TestRunFsdWeeklyDigestTick_PublishesOnceWhenMeasured(t *testing.T) {
 		now,
 		testSpan(),
 	)
-	if mqtt.count() != 1 {
-		t.Fatalf("second tick published %d, want 1 total", mqtt.count())
+	if mqtt.count() != 1 || len(deduper.events) != 1 {
+		t.Fatalf("second tick: published=%d events=%d, want one each", mqtt.count(), len(deduper.events))
 	}
 }
 

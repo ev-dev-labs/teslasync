@@ -26,8 +26,9 @@ import { AlertBanner } from '@/components/feedback';
 import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -105,6 +106,21 @@ export default function TariffLabPage() {
   const create = useCreateTariff();
   const remove = useDeleteTariff();
   const simulate = useSimulateTariffs();
+  const { confirm, dialogProps } = useConfirm();
+
+  const handleRemove = async (row: Tariff) => {
+    const ok = await confirm({
+      title: t('ownership.tariff.delete.title', 'Delete this tariff?'),
+      message: t(
+        'ownership.tariff.delete.message',
+        '“{{name}}” and its rate bands will be removed permanently. This cannot be undone.',
+        { name: row.name },
+      ),
+      variant: 'danger',
+      confirmLabel: t('common.delete', 'Delete'),
+    });
+    if (ok) remove.mutate(row.id);
+  };
 
   const tariffs = useMemo(() => tariffQuery.data?.items ?? [], [tariffQuery.data?.items]);
   const result = simulate.data;
@@ -249,7 +265,8 @@ export default function TariffLabPage() {
           variant="ghost"
           size="sm"
           icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-          onClick={() => remove.mutate(row.id)}
+          loading={remove.isPending && remove.variables === row.id}
+          onClick={() => void handleRemove(row)}
         >
           {t('ownership.action.remove', 'Remove')}
         </Button>
@@ -531,6 +548,7 @@ export default function TariffLabPage() {
         >
           <DataTable
             columns={resultColumns}
+            mobileColumns={['name', 'annual', 'delta']}
             data={results}
             keyExtractor={(row) => row.tariff_id}
             tableId="ownership-tariff-results"
@@ -842,6 +860,7 @@ export default function TariffLabPage() {
 
           <DataTable
             columns={planColumns}
+            mobileColumns={['name', 'structure', 'current']}
             data={tariffs}
             keyExtractor={(row) => row.id}
             tableId="ownership-tariff-plans"
@@ -870,6 +889,7 @@ export default function TariffLabPage() {
           ]}
         />
       </FadeIn>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageContainer>
   );
 }

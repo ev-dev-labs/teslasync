@@ -1,7 +1,7 @@
 /**
  * ChannelStatsBand — full behavioural coverage.
  *
- * The band has exactly two branches and one derived value, and every one is
+ * The band has three branches and one derived value, and every one is
  * pinned here:
  *
  *   1. Loaded — the four KPI cards render with their English labels, the
@@ -16,10 +16,13 @@
  *      wait), and none of the metric labels leak through. A background refetch
  *      (isLoading true but stats already cached) keeps the cards up rather than
  *      flashing back to the skeleton — the `!stats` guard.
- *   3. Null safety — an undefined payload degrades every count to `0` and the
+ *   3. Error — a failed stats query with nothing cached renders a compact
+ *      error with retry instead of zeros that would read as healthy. Cached
+ *      stats still win over the error (stale-but-honest beats blank).
+ *   4. Null safety — an undefined payload degrades every count to `0` and the
  *      ratio to `0/0` (never blank, never `NaN`), and individually-missing
  *      numeric fields fall back to `0` field-by-field.
- *   4. Accessibility — the four lucide glyphs are decorative and hidden from
+ *   5. Accessibility — the four lucide glyphs are decorative and hidden from
  *      assistive tech.
  *
  * `@/components/data-display` (pulled in via MetricCard) drags motion-driven
@@ -28,7 +31,8 @@
  * fallback so copy is deterministic without booting the real catalog.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { NotificationStats } from '@/api/types';
@@ -130,6 +134,34 @@ describe('ChannelStatsBand — loading', () => {
     expect(screen.getByText('Total Sent')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+describe('ChannelStatsBand — error', () => {
+  it('renders a retryable error instead of healthy-looking zeros when the stats query fails', () => {
+    const onRetry = vi.fn();
+    // QueryError calls useNavigate unconditionally, so the error branch needs
+    // a Router even though the band itself is router-free.
+    render(
+      <MemoryRouter>
+        <ChannelStatsBand stats={undefined} isLoading={false} error={new Error('stats down')} onRetry={onRetry} />
+      </MemoryRouter>,
+    );
+
+    // No zeroed cards ("Total Sent 0, Failed 0…") that would read as healthy.
+    expect(screen.queryByText('Total Sent')).not.toBeInTheDocument();
+    expect(screen.queryByText('Failed')).not.toBeInTheDocument();
+    const retry = screen.getByRole('button', { name: 'Retry' });
+    fireEvent.click(retry);
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps cached stats up when a background refetch errors', () => {
+    render(<ChannelStatsBand stats={FULL} isLoading={false} error={new Error('stats down')} />);
+
+    expect(screen.getByText('Total Sent')).toBeInTheDocument();
+    expect(screen.getByText('42')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 });
 

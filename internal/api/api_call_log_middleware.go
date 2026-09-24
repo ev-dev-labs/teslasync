@@ -204,12 +204,14 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 				sanitizedURL, _ := redactURLAndHeaders(r)
 
 				entry := &teslamodel.APICallLog{
-					Ts:         start.UTC(),
-					Service:    APILogServiceTag,
-					HTTPMethod: r.Method,
-					Endpoint:   sanitizedURL,
-					StatusCode: int16(ww.Status()),
-					DurationMs: int32(duration.Milliseconds()),
+					Ts:              start.UTC(),
+					Service:         APILogServiceTag,
+					HTTPMethod:      r.Method,
+					Endpoint:        sanitizedURL,
+					StatusCode:      int16(ww.Status()),
+					DurationMs:      int32(duration.Milliseconds()),
+					RequestHeaders:  httputil.SafeHeaders(r.Header),
+					ResponseHeaders: httputil.SafeHeaders(ww.Header()),
 				}
 				if entry.StatusCode == 0 {
 					entry.StatusCode = http.StatusOK

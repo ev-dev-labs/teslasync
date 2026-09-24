@@ -1,6 +1,7 @@
-import { Database, History, Radio } from 'lucide-react';
+import { Clock3, Database, History } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button, Tooltip } from '@/components/ui/runtime';
-import { TIME_MACHINE_OPEN_PICKER_EVENT } from '@/components/feedback';
+import { TIME_MACHINE_OPEN_PICKER_EVENT } from '../../feedback/TimeMachineBanner';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { cn } from '@/lib/cn';
 
@@ -11,10 +12,11 @@ interface OperationalModeSegmentProps {
 export function OperationalModeSegment({
   iconOnly = false,
 }: OperationalModeSegmentProps) {
+  const { t } = useTranslation();
   const operationalMode = useOperationalMode();
   const config = {
     live: {
-      Icon: Radio,
+      Icon: Clock3,
       tone: 'text-emerald-300',
       dot: 'bg-emerald-400',
     },
@@ -55,7 +57,9 @@ export function OperationalModeSegment({
         <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
         {!iconOnly && (
           <span className="max-w-32 truncate font-medium">
-            {operationalMode.label}
+            {operationalMode.mode === 'live'
+              ? t('statusBar.mode.now', 'Now')
+              : operationalMode.label}
           </span>
         )}
       </Button>

@@ -928,7 +928,7 @@ export default function MaintenancePage() {
                 {
                   key: 'alerts',
                   label: t('entityContext.alerts', 'Alerts'),
-                  to: buildContextHref('/notifications/alerts', {
+                  to: buildContextHref('/notifications/inbox', {
                     from: previewDay,
                     to: previewDay,
                   }),

@@ -33,6 +33,7 @@ vi.mock('@/api/client', async () => {
 import { request } from '@/api/client';
 import {
   useCommandHistory,
+  useCommandReliabilityHistory,
   useCommandLatest,
   commandKeys,
   type CommandLogEntry,
@@ -191,6 +192,24 @@ describe('useCommandHistory', () => {
 // ---------------------------------------------------------------------------
 // useCommandLatest
 // ---------------------------------------------------------------------------
+
+describe('useCommandReliabilityHistory', () => {
+  it('pages through every attempt in the selected window without a 200-row cutoff', async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, index) => ({
+      ...sampleEntry, id: 2000 - index,
+    }));
+    mockedRequest.mockResolvedValueOnce(firstPage).mockResolvedValueOnce([{ ...sampleEntry, id: 1000 }]);
+    const { result } = renderHook(
+      () => useCommandReliabilityHistory(42, '2026-01-01', '2026-09-23'), { wrapper },
+    );
+    await waitFor(() => expect(result.current.data).toHaveLength(1001));
+    expect(mockedRequest.mock.calls[0][0]).toBe(
+      '/vehicles/42/commands/history?from=2026-01-01&to=2026-09-23&limit=1000',
+    );
+    expect(mockedRequest.mock.calls[1][0]).toContain('before_id=1001');
+    expect(mockedRequest.mock.calls[1][0]).toContain('before_created_at=');
+  });
+});
 
 describe('useCommandLatest', () => {
   it('GETs the latest endpoint and passes the array through', async () => {

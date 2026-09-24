@@ -85,8 +85,14 @@ func TestCreate(t *testing.T) {
 		{
 			name:   "success assigns returned id",
 			row:    fakeRow{vals: []any{int64(42)}},
-			input:  &systemmodel.Geofence{Name: "Home", PolygonWKT: squareWKT(40, -75), Category: cat, Enabled: true, AlertOnEntry: true},
+			input:  &systemmodel.Geofence{Name: "Home", PolygonWKT: squareWKT(40, -75), Category: cat, AlertOnEntry: true},
 			wantID: 42,
+		},
+		{
+			name:   "provisional discovery stays disabled even when enabled is requested",
+			row:    fakeRow{vals: []any{int64(43)}},
+			input:  &systemmodel.Geofence{Name: "Candidate", PolygonWKT: squareWKT(40, -75), Category: cat, Enabled: true, NeedsReview: true},
+			wantID: 43,
 		},
 		{
 			name:      "scan error is wrapped",
@@ -126,8 +132,8 @@ func TestCreate(t *testing.T) {
 					t.Errorf("SQL missing %q:\n%s", sub, got.sql)
 				}
 			}
-			if len(got.args) != 9 {
-				t.Fatalf("want 9 args, got %d (%v)", len(got.args), got.args)
+			if len(got.args) != 10 {
+				t.Fatalf("want 10 args, got %d (%v)", len(got.args), got.args)
 			}
 			if got.args[0] != tc.input.Name {
 				t.Errorf("args[0] name: want %q got %v", tc.input.Name, got.args[0])
@@ -135,8 +141,8 @@ func TestCreate(t *testing.T) {
 			if gotCat, ok := got.args[2].(*systemmodel.GeofenceCategory); !ok || gotCat == nil || *gotCat != *cat {
 				t.Errorf("args[2] category: want %v got %v", *cat, got.args[2])
 			}
-			if got.args[3] != true {
-				t.Errorf("args[3] enabled: want true got %v", got.args[3])
+			if got.args[3] != !tc.input.NeedsReview || tc.input.Enabled != !tc.input.NeedsReview {
+				t.Errorf("enabled must reflect review state: arg=%v input=%v", got.args[3], tc.input.Enabled)
 			}
 		})
 	}
@@ -277,14 +283,28 @@ func TestUpdate(t *testing.T) {
 				t.Errorf("SQL missing %q:\n%s", sub, call.sql)
 			}
 		}
-		if len(call.args) != 9 {
-			t.Fatalf("want 9 args, got %d (%v)", len(call.args), call.args)
+		if len(call.args) != 10 {
+			t.Fatalf("want 10 args, got %d (%v)", len(call.args), call.args)
 		}
 		if call.args[0] != int64(5) {
 			t.Errorf("args[0] id: want 5 got %v", call.args[0])
 		}
+		if call.args[4] != true || !g.Enabled {
+			t.Errorf("reviewed place must be enabled: arg=%v input=%v", call.args[4], g.Enabled)
+		}
 		if call.args[1] != "Zone" {
 			t.Errorf("args[1] name: want Zone got %v", call.args[1])
+		}
+	})
+
+	t.Run("pending review cannot be enabled by update", func(t *testing.T) {
+		candidate := &systemmodel.Geofence{ID: 6, Name: "Candidate", Enabled: true, NeedsReview: true}
+		pool := &fakePool{execQueue: []execResult{{tag: tag(1)}}}
+		if err := newRepo(pool).Update(context.Background(), candidate); err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if candidate.Enabled || pool.execCalls[0].args[4] != false {
+			t.Fatalf("pending place was enabled: input=%v args=%v", candidate.Enabled, pool.execCalls[0].args)
 		}
 	})
 

@@ -126,7 +126,7 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
       '/climate-control',
       '/maintenance',
       '/software-updates',
-      '/tesla-only',
+      '/tesla-physics',
     ],
   },
   {
@@ -144,7 +144,6 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
       '/tesla-charging-history',
       '/charging-curve',
       '/smart-charge',
-      '/cost-analysis',
     ],
   },
   {
@@ -165,7 +164,16 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
     title: 'Insights',
     tier: 'primary',
     capability: 'core',
-    paths: ['/statistics', '/analytics', '/efficiency', '/tco', '/weekly-digest', '/data-export'],
+    paths: [
+      '/statistics',
+      '/efficiency',
+      '/cost-analysis',
+      '/analytics/carbon',
+      '/share-card',
+      '/benchmarks/privacy',
+      '/weekly-digest',
+      '/data-export',
+    ],
   },
   {
     title: 'Operations',
@@ -174,11 +182,11 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
     paths: [
       '/automations',
       '/notifications/inbox',
-      '/notifications/alerts',
       '/notifications/rules',
       '/notifications/channels',
       '/security-access',
       '/system-status',
+      '/tesla-api-usage',
     ],
   },
   {
@@ -188,7 +196,6 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
     paths: [
       '/intelligence-packs',
       '/anomaly-detection',
-      '/period-compare',
       '/what-if',
       '/drive-dna',
       '/time-machine',
@@ -420,8 +427,8 @@ export function isCompactActivePath(pathname: string, to: string): boolean {
 
 /**
  * Among catalog destinations that cover `pathname`, the longest `to` wins.
- * `/settings/fleet-setup` must not also light `/settings`; `/tesla-only/clocks`
- * must not also light `/tesla-only`. Unlisted children still fall back to the
+ * `/settings/fleet-setup` must not also light `/settings`; `/tesla-physics/clocks`
+ * must not also light `/tesla-physics`. Unlisted children still fall back to the
  * parent (`/drives/42` → `/drives`).
  */
 export function bestMatchingNavPath(

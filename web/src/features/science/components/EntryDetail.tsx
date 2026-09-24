@@ -8,7 +8,7 @@ import {
 } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
-import { unknown, useT } from './helpers';
+import { asList, unknown, useT } from './helpers';
 
 export function EntryDetail({ entry }: { entry: ScienceNotebookEntry }) {
   const t = useT();
@@ -41,6 +41,19 @@ export function EntryDetail({ entry }: { entry: ScienceNotebookEntry }) {
         ) : null}
         <Badge variant="neutral" size="sm">{entry.firmware_epoch || unknown(t)}</Badge>
       </div>
+      <Text as="p" size="sm" color="secondary">
+        {t('science.notebook.signalsUsed', 'Signals used')}: {asList(entry.signals_used).join(', ') || unknown(t)}
+      </Text>
+      <Text as="p" size="sm" color="secondary">
+        {t('science.notebook.missingSignals', 'Missing signals')}: {asList(entry.missing_signals).join(', ') || t('science.notebook.noneReported', 'None reported')}
+      </Text>
+      <Text as="p" size="sm" color="secondary">
+        {t('science.notebook.residual', 'Fit residual (mean / RMSE)')}:{' '}
+        {entry.residual_mean != null ? fmtNumber(entry.residual_mean, 3) : unknown(t)} / {entry.residual_rmse != null ? fmtNumber(entry.residual_rmse, 3) : unknown(t)}
+      </Text>
+      <Text as="p" size="sm" color="secondary">
+        {t('science.notebook.recordId', 'Generated record')}: {entry.id}
+      </Text>
       {kv(entry.parameters)}
       {kv(entry.ci)}
       <Caption>{formatDateTime(entry.start)} → {formatDateTime(entry.end)}</Caption>

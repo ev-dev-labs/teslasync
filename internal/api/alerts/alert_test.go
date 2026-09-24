@@ -278,6 +278,19 @@ func TestAlertTestContract(t *testing.T) {
 	}
 }
 
+func TestAlertTestRecordsEventWithNoChannels(t *testing.T) {
+	h := newAlertHandlerForTest()
+	repo := h.notifRepo.(*fakeNotificationRepo)
+	rec := httptest.NewRecorder()
+	h.TestRule(rec, httptest.NewRequest(http.MethodPost, "/alerts/test", strings.NewReader(`{"message":"test"}`)))
+	if rec.Code != http.StatusOK || len(repo.logs) != 1 {
+		t.Fatalf("status=%d events=%d body=%s", rec.Code, len(repo.logs), rec.Body.String())
+	}
+	if repo.logs[0].Status != "triggered" || repo.logs[0].ChannelID != 0 {
+		t.Fatalf("expected only a canonical zero-channel event, got %+v", repo.logs[0])
+	}
+}
+
 // ─── trigger_mode + snooze contract tests ──────────────────────────────────
 
 func TestCreateRule_DefaultTriggerMode(t *testing.T) {
@@ -704,6 +717,13 @@ func (f *fakeNotificationRepo) CreateLog(_ context.Context, log *notificationmod
 	}
 	log.ID = 1
 	log.CreatedAt = time.Now().UTC()
+	return nil
+}
+
+func (f *fakeNotificationRepo) CreateEvent(_ context.Context, event *notificationmodel.NotificationLog) error {
+	event.ID = 1
+	event.CreatedAt = time.Now().UTC()
+	f.logs = append(f.logs, event)
 	return nil
 }
 

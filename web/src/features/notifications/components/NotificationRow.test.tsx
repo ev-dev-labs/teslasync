@@ -117,6 +117,22 @@ function renderRow(opts: RenderOpts = {}) {
 }
 
 describe('NotificationRow', () => {
+  it('renders a Web-Push-only event without a channel delivery row', () => {
+    renderRow({
+      log: makeLog({
+        channel_id: null,
+        alert_id: null,
+        status: 'triggered',
+        event_type: 'system.web_push',
+        title: 'Push received',
+      }),
+      rule: undefined,
+      vehicle: undefined,
+    });
+    expect(screen.getByText('Push received')).toBeInTheDocument();
+    expect(screen.getByText(/system\.web_push/)).toBeInTheDocument();
+  });
+
   it('renders severity, title, message, vehicle name, and rule name', () => {
     renderRow();
     expect(screen.getByText('warn')).toBeInTheDocument();
@@ -141,7 +157,7 @@ describe('NotificationRow', () => {
     );
     const checkbox = screen.getByRole('checkbox', { name: /select notification/i });
     expect(checkbox).not.toBeChecked();
-    expect(screen.getByRole('row')).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('group', { name: 'Tire pressure low' })).toBeInTheDocument();
 
     rerender(
       <MemoryRouter>
@@ -155,7 +171,7 @@ describe('NotificationRow', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('checkbox', { name: /select notification/i })).toBeChecked();
-    expect(screen.getByRole('row')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('group', { name: 'Tire pressure low' })).toBeInTheDocument();
   });
 
   it('toggling the checkbox fires onSelectionChange with (id, checked) but not onActivate', () => {
@@ -178,20 +194,19 @@ describe('NotificationRow', () => {
     expect(onActivate).toHaveBeenCalledWith(log);
   });
 
-  it('activates via Enter and Space on the row, but not from a focused control', () => {
+  it('uses a native action button for keyboard access without nesting selection controls', () => {
     const onActivate = vi.fn();
     renderRow({ onActivate });
-    const row = screen.getByRole('row');
-
-    fireEvent.keyDown(row, { key: 'Enter' });
-    fireEvent.keyDown(row, { key: ' ' });
-    expect(onActivate).toHaveBeenCalledTimes(2);
+    const button = screen.getByRole('button', { name: 'Open notification: Tire pressure low' });
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onActivate).toHaveBeenCalledTimes(1);
 
     // A key press that originates on the checkbox must be ignored by the row.
     fireEvent.keyDown(screen.getByRole('checkbox', { name: /select notification/i }), {
       key: 'Enter',
     });
-    expect(onActivate).toHaveBeenCalledTimes(2);
+    expect(onActivate).toHaveBeenCalledTimes(1);
   });
 
   it('shows "Mark as read" only while unread and wired, firing onMarkRead(id)', () => {
@@ -254,8 +269,8 @@ describe('NotificationRow', () => {
     renderRow({ rule: undefined });
     expect(screen.queryByRole('link', { name: /view context/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Tire Pressure Low/)).not.toBeInTheDocument();
-    // With no rule the severity falls back to the neutral "info" default.
-    expect(screen.getByText('info')).toBeInTheDocument();
+    // The persisted severity remains visible even without a rule.
+    expect(screen.getByText('warn')).toBeInTheDocument();
   });
 
   it('hides the vehicle chip when the row has no vehicle', () => {

@@ -232,8 +232,52 @@ beforeEach(() => {
 describe('ScienceLabPage', () => {
   it('renders all five domain panels with data', () => {
     renderPage();
+    const overview = screen.getByTestId('science-overview');
+    expect(overview).toHaveTextContent('1 rest points · 2 resistance steps');
+    expect(overview).toHaveTextContent('1 qualified cooldown fits');
+    expect(overview).toHaveTextContent('1 drives joined to archive weather');
+    expect(overview).toHaveTextContent('4 of 4 corners reported');
+    expect(overview).toHaveTextContent('1 of 1 rows with a result');
+    expect(overview.querySelectorAll('a[href^="#science-"]')).toHaveLength(5);
     for (const testId of ['science-electrochem', 'science-thermal', 'science-weather', 'science-tires', 'science-notebook']) {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
+    }
+    for (const id of ['electrochem', 'thermal', 'weather', 'tires', 'notebook']) {
+      expect(document.getElementById(`science-${id}`)).toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: 'Last 7d' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('exposes observed inputs, fit diagnostics, and linked source drives', () => {
+    scienceMocks.electrochem.mockReturnValue(queryState({ data: electrochem({
+      pulse_ir: [{ at: '2026-09-02T03:00:00Z', ir_pack_ohm: 0.07, temp_c: 19, soc_pct: 62, delta_i_a: 25, delta_v_v: 1.75, dt_s: 5, context: 'charge_step' }],
+    }) }));
+    renderPage();
+    const battery = screen.getByTestId('science-electrochem');
+    expect(battery).toHaveTextContent('Rest-voltage evidence');
+    expect(battery).toHaveTextContent('400.00 V');
+    expect(battery).toHaveTextContent('50.00 mΩ');
+    expect(battery).toHaveTextContent('1 charging pulse steps');
+    expect(battery).toHaveTextContent('70.00 mΩ');
+    const thermalPanel = screen.getByTestId('science-thermal');
+    expect(thermalPanel).toHaveTextContent('R²');
+    expect(thermalPanel).toHaveTextContent('0.99');
+    expect(thermalPanel).toHaveTextContent('Residual RMSE');
+    const weatherPanel = screen.getByTestId('science-weather');
+    expect(weatherPanel).toHaveTextContent('1.225 kg/m³');
+    expect(weatherPanel).toHaveTextContent('Session energy / distance');
+    expect(weatherPanel.querySelector('a[href="/drives/7"]')).toBeInTheDocument();
+    expect(weatherPanel).toHaveTextContent('r(density, residual)');
+  });
+
+  it('allows the full supported 30-day window without hiding any report', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Last 30d' }));
+    expect(screen.getByRole('button', { name: 'Last 30d' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('science-overview')).toBeInTheDocument();
+    for (const id of ['electrochem', 'thermal', 'weather', 'tires', 'notebook']) {
+      expect(document.getElementById(`science-${id}`)).toBeInTheDocument();
     }
   });
 
@@ -266,6 +310,7 @@ describe('ScienceLabPage', () => {
     renderPage();
     const panel = screen.getByTestId('science-electrochem');
     expect(panel.textContent).toMatch(/No fit inputs/);
+    expect(screen.getByTestId('science-overview')).toHaveTextContent('Limited evidence');
     fireEvent.click(within(panel).getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();
     expect(screen.getByTestId('science-thermal')).toBeInTheDocument();
@@ -277,6 +322,8 @@ describe('ScienceLabPage', () => {
     }));
     renderPage();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('science-overview')).toHaveTextContent('Cached · refresh failed');
+    expect(screen.getByTestId('science-overview')).toHaveTextContent('1 rest points');
     expect(screen.getByLabelText('Pack resistance over the window')).toBeInTheDocument();
   });
 
@@ -291,6 +338,10 @@ describe('ScienceLabPage', () => {
     expect(screen.getByTestId('science-electrochem')).toBeInTheDocument();
     expect(screen.getByTestId('science-thermal')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    const overview = screen.getByTestId('science-overview');
+    expect(overview).toHaveTextContent('Loading');
+    expect(overview).toHaveTextContent('Unavailable');
+    expect(overview).toHaveTextContent('Awaiting a successful report');
   });
 
   it('renders the notebook entry with n, method, and honesty', async () => {
@@ -298,9 +349,12 @@ describe('ScienceLabPage', () => {
     renderPage();
     const panel = screen.getByTestId('science-notebook');
     expect(panel.textContent).toMatch(/n=4/);
-    fireEvent.click(screen.getByText(/electrochem · electrochem\.ocv/));
+    fireEvent.click(screen.getByText(/electrochem · Rest voltage maps SOC/));
     expect(panel.textContent).toMatch(/Rest voltage maps SOC/);
     expect(panel.textContent).toMatch(/rest_ocv_binned/);
+    expect(panel).toHaveTextContent('Signals used: PackVoltage');
+    expect(panel).toHaveTextContent('Fit residual (mean / RMSE): unknown / unknown');
+    expect(panel).toHaveTextContent('Generated record: electrochem.ocv:1:2026');
   });
 
   it('shows metric and imperial pressures at the unit boundary', () => {
@@ -326,6 +380,7 @@ describe('ScienceLabPage', () => {
         ocv_bins: null as unknown as ScienceElectrochem['ocv_bins'],
         hysteresis: null as unknown as ScienceElectrochem['hysteresis'],
         ir_points: null as unknown as ScienceElectrochem['ir_points'],
+        pulse_ir: null as unknown as ScienceElectrochem['pulse_ir'],
       }),
     }));
     scienceMocks.thermal.mockReturnValue(queryState({
@@ -342,6 +397,23 @@ describe('ScienceLabPage', () => {
     expect(screen.getByTestId('science-electrochem').textContent).toMatch(/n=0/);
     expect(screen.getByTestId('science-thermal').textContent).toMatch(/No Park cooldown/);
     expect(screen.getByTestId('science-notebook').textContent).toMatch(/No notebook rows/);
+    expect(screen.getByTestId('science-overview')).toHaveTextContent('0 rest points · 0 resistance steps');
+  });
+
+  it('does not substitute zero for missing weather and thermal measurements', () => {
+    scienceMocks.thermal.mockReturnValue(queryState({ data: thermal({ fits: [{
+      start: '2026-09-02T00:00:00Z', end: '2026-09-02T06:00:00Z', kind: 'pack_cooldown',
+      tau_s: null, tau_ci95_low: null, tau_ci95_high: null, t_inf_c: null, n: 2,
+      r2: null, residual_rmse_c: null, solar_unknown: true, unknown: true,
+    }] }) }));
+    scienceMocks.weather.mockReturnValue(queryState({ data: weather({
+      points: [{ ...weather().points[0], temp_c: null, density_kg_m3: null, residual_wh_per_m: null, session_wh_per_m: null }],
+    }) }));
+    renderPage();
+    expect(screen.getByTestId('science-thermal')).toHaveTextContent('unknown');
+    expect(screen.getByTestId('science-overview')).toHaveTextContent('0 qualified cooldown fits');
+    expect(screen.getByTestId('science-weather')).toHaveTextContent('unknown');
+    expect(screen.getByTestId('science-weather')).not.toHaveTextContent('0.000 kg/m³');
   });
 
   it('renders the pack-IR chart as real SVG', () => {

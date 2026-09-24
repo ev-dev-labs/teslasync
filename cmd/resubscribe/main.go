@@ -48,6 +48,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
+	"github.com/ev-dev-labs/teslasync/internal/adapter/teslausage"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslabudgetdb "github.com/ev-dev-labs/teslasync/internal/database/teslabudget"
@@ -205,6 +206,7 @@ func run(args []string, stdout, stderr *os.File, getenv func(string) string) int
 	defer db.Close()
 
 	teslaClient := tesla.NewClient(cfg.Tesla)
+	teslausage.BindClient(ctx, teslaClient, db)
 	budgetPolicy := tesla.NewBudgetPolicy(cfg.Tesla.DailyBudgetUSD, cfg.Tesla.CommandReserveUSD)
 	if budgetPolicy.Enabled() {
 		teslaClient.SetRequestBudget(teslabudgetdb.New(db.Pool, budgetPolicy))

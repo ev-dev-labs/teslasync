@@ -27,8 +27,9 @@ import { AlertBanner } from '@/components/feedback';
 import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -119,6 +120,21 @@ export default function SubscriptionROIPage() {
   const subsQuery = useSubscriptions(vehicleId);
   const create = useCreateSubscription();
   const remove = useDeleteSubscription();
+  const { confirm, dialogProps } = useConfirm();
+
+  const handleRemove = async (row: Subscription) => {
+    const ok = await confirm({
+      title: t('ownership.subscription.delete.title', 'Delete this subscription?'),
+      message: t(
+        'ownership.subscription.delete.message',
+        '“{{name}}” and its ROI history will be removed permanently. This cannot be undone.',
+        { name: row.name },
+      ),
+      variant: 'danger',
+      confirmLabel: t('common.delete', 'Delete'),
+    });
+    if (ok) remove.mutate(row.id);
+  };
 
   const report = roiQuery.data;
   const items = useMemo(() => report?.items ?? [], [report?.items]);
@@ -345,7 +361,8 @@ export default function SubscriptionROIPage() {
           variant="ghost"
           size="sm"
           icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-          onClick={() => remove.mutate(row.id)}
+          loading={remove.isPending && remove.variables === row.id}
+          onClick={() => void handleRemove(row)}
         >
           {t('ownership.action.remove', 'Remove')}
         </Button>
@@ -491,6 +508,7 @@ export default function SubscriptionROIPage() {
         >
           <DataTable
             columns={roiColumns}
+            mobileColumns={['name', 'verdict', 'roi']}
             data={items}
             keyExtractor={(row) => row.subscription.id}
             tableId="ownership-subscription-roi"
@@ -647,6 +665,7 @@ export default function SubscriptionROIPage() {
 
           <DataTable
             columns={subscriptionColumns}
+            mobileColumns={['name', 'price', 'period']}
             data={subscriptions}
             keyExtractor={(row) => row.id}
             tableId="ownership-subscription-list"
@@ -675,6 +694,7 @@ export default function SubscriptionROIPage() {
           ]}
         />
       </FadeIn>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageContainer>
   );
 }

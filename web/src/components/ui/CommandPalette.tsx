@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { Input } from '@/components/ui'
+import { Input } from './Input'
 import { cn } from '@/lib/cn'
 import { navSearchKeywords, navSections } from '@/components/layout/Layout'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
@@ -517,16 +517,17 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
         .filter(item => !('requiresAuth' in item) || !(item as { requiresAuth?: boolean }).requiresAuth || isForwardAuth)
         .map(item => {
           const keywords = navSearchKeywords[item.to] ?? []
+          const sectionLabel = section.titleKey ? t(section.titleKey, section.title) : section.title
           const sublabel = keywords.length > 0
-            ? `${section.title} · ${keywords.slice(0, 3).join(', ')}`
-            : section.title
+            ? `${sectionLabel} · ${keywords.slice(0, 3).join(', ')}`
+            : sectionLabel
           return {
             id: item.to,
-            label: item.label,
+            label: t(item.labelKey, item.label),
             section: t('palette.section.pages', 'Pages'),
             icon: <item.icon className="h-4 w-4" />,
             action: () => go(item.to),
-            keywords,
+            keywords: [...keywords, item.label],
             sublabel,
             type: 'navigate' as const,
           }

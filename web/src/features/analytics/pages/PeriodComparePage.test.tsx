@@ -9,7 +9,7 @@
  *   2. SI → display-unit conversion of the KPI band (km/Wh·km here — the global
  *      useSettings stub reports metric units).
  *   3. Section-local loading / error / empty branches for EVERY panel (KPI band,
- *      side-by-side chart, insights, comparison table) — no panel is gated away.
+ *      % change chart, insights, comparison table) — no panel is gated away.
  *   4. Deterministic percent-change derivations (`fmtNumber(pct, 1)`) surfaced in
  *      the insight sentences, KPI pills, and table.
  *   5. The disambiguation banner: shown for multi-vehicle accounts, hidden for
@@ -19,10 +19,10 @@
  *      narration section receiving the active-vehicle context.
  *
  * Strategy: render the REAL page + REAL shared subtree (PageContainer, MetricCard,
- * DataTable, QueryError, FadeIn, charts). Only the network `request` helper, the
- * chart-palette hook, and the AI narration section are mocked. `useVehicles` runs
- * for real (driven by the mocked `request`) precisely so its async `undefined →
- * []` transition reproduces the banner-suppression bug the fix addresses.
+ * DataTable, QueryError, FadeIn, charts). Only the network `request` helper and
+ * the AI narration section are mocked. `useVehicles` runs for real (driven by
+ * the mocked `request`) precisely so its async `undefined → []` transition
+ * reproduces the banner-suppression bug the fix addresses.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
@@ -67,11 +67,6 @@ vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: mockRequest };
 });
-
-// Deterministic palette — the real hook reads the settings query we don't stub.
-vi.mock('@/hooks/useChartPalette', () => ({
-  useChartPalette: () => ['#0ea5e9', '#a855f7', '#22c55e', '#f59e0b'],
-}));
 
 // Stub the AI narration section (its own off-contract suite covers it) and
 // capture the props the page hands it so we can assert the active-vehicle wiring.
@@ -235,7 +230,7 @@ describe('PeriodComparePage — happy path', () => {
 
     // The three lower panels each render their title (mounted, not hidden).
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Side-by-Side Comparison' }),
+      screen.getByRole('heading', { level: 3, name: 'Change vs Period B (%)' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: 'Insights' })).toBeInTheDocument();
     expect(
@@ -251,8 +246,11 @@ describe('PeriodComparePage — happy path', () => {
     expect(
       await screen.findByText(/Distance traveled was -50\.0% less in Period A vs Period B\./),
     ).toBeInTheDocument();
+    // Fixture: A=200 Wh/km beats B=210 Wh/km, so efficiency IMPROVED — lower
+    // consumption is better (the old "declined by -4.8%" expectation had the
+    // direction inverted). Magnitude is unsigned so the sentence reads naturally.
     expect(
-      screen.getByText(/Efficiency declined by -4\.8% compared to Period B\./),
+      screen.getByText(/Efficiency improved by 4\.8% compared to Period B\./),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Costs were -54\.5% lower in Period A\./),
@@ -284,6 +282,46 @@ describe('PeriodComparePage — happy path', () => {
 });
 
 describe('PeriodComparePage — loading / error / empty branches', () => {
+  it('does not chart invented zero percent deltas when Period B has no baseline', async () => {
+    installRequest();
+    const zeroBaseline: PeriodStats = {
+      total_distance: 0, total_drives: 0, energy_used: 0,
+      avg_efficiency: 0, total_cost: 0, co2_saved: 0,
+    };
+    mockRequest.mockImplementation((url: unknown) => {
+      const path = String(url);
+      if (path.includes('/vehicles')) return Promise.resolve(TWO_VEHICLES);
+      if (path.includes('period-stats')) {
+        return Promise.resolve(path.includes('days=90') ? zeroBaseline : STATS_30);
+      }
+      return Promise.resolve({});
+    });
+    renderPage();
+
+    expect(await screen.findByText(/Percent change requires a nonzero Period B baseline/)).toBeInTheDocument();
+    expect(screen.getByText('Distance change is unavailable: Period B has no baseline.')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency change is unavailable: Period B has no baseline.')).toBeInTheDocument();
+    expect(screen.getByText('Cost change is unavailable: Period B has no baseline.')).toBeInTheDocument();
+    expect(screen.queryByText(/Distance traveled was — more/)).not.toBeInTheDocument();
+  });
+
+  it('keeps comparable chart metrics when only one baseline is missing', async () => {
+    installRequest();
+    mockRequest.mockImplementation((url: unknown) => {
+      const path = String(url);
+      if (path.includes('/vehicles')) return Promise.resolve(TWO_VEHICLES);
+      if (path.includes('period-stats')) {
+        return Promise.resolve(path.includes('days=90') ? { ...STATS_90, total_distance: 0 } : STATS_30);
+      }
+      return Promise.resolve({});
+    });
+    renderPage();
+
+    expect(await screen.findByText('One metric with no Period B baseline is omitted from the chart.')).toBeInTheDocument();
+    expect(screen.getByText('Distance change is unavailable: Period B has no baseline.')).toBeInTheDocument();
+    expect(screen.queryByText(/Percent change requires a nonzero Period B baseline/)).not.toBeInTheDocument();
+  });
+
   it('shows skeleton placeholders (never a blank panel) while the feeds are in flight', async () => {
     installRequest({ statsMode: 'pending' });
     const { container } = renderPage();
@@ -294,7 +332,7 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
     );
     // The chart panel is still mounted (title present) — only its body is a skeleton.
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Side-by-Side Comparison' }),
+      screen.getByRole('heading', { level: 3, name: 'Change vs Period B (%)' }),
     ).toBeInTheDocument();
     // No KPI card content leaks while loading.
     expect(screen.queryByText(/Total Distance/)).toBeNull();

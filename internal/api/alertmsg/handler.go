@@ -2,8 +2,10 @@ package alertmsg
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	alertmsgcore "github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -59,6 +61,10 @@ type alertMessagePreviewRequest struct {
 	MetricWindow    *string  `json:"metric_window"`
 	MetricThreshold *float64 `json:"metric_threshold"`
 	MetricOp        *string  `json:"metric_op"`
+	ComponentName   *string  `json:"component_name"`
+	Transition      *string  `json:"transition"`
+	PlaceID         *int64   `json:"place_id"`
+	PlaceName       string   `json:"place_name"`
 
 	MsgTemplate  *string `json:"msg_template"`
 	IncludeTitle *bool   `json:"include_title"`
@@ -102,6 +108,12 @@ func (h *AlertMessageHandler) MessagePlaceholders(w http.ResponseWriter, r *http
 	}
 	if mid := q.Get("metric_id"); mid != "" {
 		rule.MetricID = &mid
+	}
+	if component := q.Get("component_name"); component != "" {
+		rule.ComponentName = &component
+	}
+	if transition := q.Get("transition"); transition != "" {
+		rule.Transition = &transition
 	}
 	out := alertmsgcore.Placeholders(rule)
 	httpx.WriteJSON(w, http.StatusOK, out)
@@ -162,8 +174,37 @@ func (h *AlertMessageHandler) MessagePreview(w http.ResponseWriter, r *http.Requ
 			builtins["MetricChangePct"] = 12.0
 		}
 	}
+	if rule.Kind == alertmodel.AlertRuleKindPlace {
+		placeName := strings.TrimSpace(req.PlaceName)
+		if placeName == "" {
+			placeName = "Sample place"
+			if rule.PlaceID != nil && *rule.PlaceID > 0 {
+				placeName = fmt.Sprintf("Place #%d", *rule.PlaceID)
+			}
+		}
+		builtins["PlaceName"] = placeName
+	}
 
-	ctx := alertmsgcore.BuildContext(rule, req.VehicleName, signals, builtins)
+	vehicleName := req.VehicleName
+	if rule.Kind == alertmodel.AlertRuleKindPlace && vehicleName == "" {
+		vehicleName = "Sample vehicle"
+	}
+	ctx := alertmsgcore.BuildContext(rule, vehicleName, signals, builtins)
+	if rule.Kind == alertmodel.AlertRuleKindSystemComponent || rule.Kind == alertmodel.AlertRuleKindPlace {
+		if rule.Transition == nil || strings.TrimSpace(*rule.Transition) == "" {
+			ctx["Transition"] = "transition"
+		}
+		if rule.Kind == alertmodel.AlertRuleKindSystemComponent &&
+			(rule.ComponentName == nil || strings.TrimSpace(*rule.ComponentName) == "") {
+			ctx["ComponentName"] = "System component"
+		}
+		if rule.Kind == alertmodel.AlertRuleKindPlace && (rule.PlaceID == nil || *rule.PlaceID <= 0) {
+			ctx["PlaceID"] = "sample ID"
+		}
+		sampleEvent := alertmsgcore.RenderDefaultBody(rule, ctx)
+		ctx["EventTitle"] = sampleEvent
+		ctx["EventMessage"] = sampleEvent
+	}
 	title := alertmsgcore.RenderTitle(rule, ctx)
 	bodyOut := alertmsgcore.RenderBody(rule, ctx)
 	if !rule.IncludeTitle && bodyOut == "" {
@@ -193,6 +234,9 @@ func previewRuleFromRequest(req *alertMessagePreviewRequest) *alertmodel.AlertRu
 		MetricWindow:    req.MetricWindow,
 		MetricThreshold: req.MetricThreshold,
 		MetricOp:        req.MetricOp,
+		ComponentName:   req.ComponentName,
+		Transition:      req.Transition,
+		PlaceID:         req.PlaceID,
 		MsgTemplate:     req.MsgTemplate,
 		// Default IncludeTitle to TRUE so the preview matches the
 		// editor's default-on behaviour for new rules. Callers that

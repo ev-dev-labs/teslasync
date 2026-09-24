@@ -11,7 +11,7 @@ on:
         options:
           - arc-runner
           - ubuntu-latest
-        default: arc-runner
+        default: ubuntu-latest
 
 permissions:
   contents: read
@@ -20,7 +20,7 @@ permissions:
 jobs:
   label:
     name: Label PR
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     steps:
       - uses: actions/labeler@v5
         with:

@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
-
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/rs/zerolog/log"
@@ -344,6 +342,15 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	if fieldPresent(fields, "metric_op") {
 		existing.MetricOp = body.MetricOp
 	}
+	if fieldPresent(fields, "component_name") {
+		existing.ComponentName = body.ComponentName
+	}
+	if fieldPresent(fields, "transition") {
+		existing.Transition = body.Transition
+	}
+	if fieldPresent(fields, "place_id") {
+		existing.PlaceID = body.PlaceID
+	}
 	if fieldPresent(fields, "kind") {
 		kind, err := validateAlertRuleKind(body.Kind)
 		if err != nil {
@@ -456,6 +463,9 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		MetricWindow:          body.MetricWindow,
 		MetricThreshold:       body.MetricThreshold,
 		MetricOp:              body.MetricOp,
+		ComponentName:         body.ComponentName,
+		Transition:            body.Transition,
+		PlaceID:               body.PlaceID,
 		MaxFiresPerResolution: body.MaxFiresPerResolution,
 		EscalationAfterMin:    body.EscalationAfterMin,
 		EscalationSeverity:    body.EscalationSeverity,
@@ -633,27 +643,26 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	// + the SSE toast, matching the production dispatch path.
 	suppressTransportTitle := body.IncludeTitle != nil && !*body.IncludeTitle
 
-	// Create a notification log entry
-	nlog := &notificationmodel.NotificationLog{
-		Title:   title,
-		Message: message,
-		Status:  "sent",
-	}
-	if err := h.notifRepo.CreateLog(r.Context(), nlog); err != nil {
-		log.Error().Err(err).Msg("failed to create test notification log")
-		writeError(w, http.StatusInternalServerError, "failed to create test notification")
+	triggerID := notification.NewTriggerID()
+	eventRow, err := notification.RecordTrigger(r.Context(), h.notifRepo, &notification.Request{
+		Title: title, Message: message, EventType: "test.alert_rule",
+		Severity: severity, TriggerID: triggerID,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("alert test: event persistence failed")
+		writeError(w, http.StatusInternalServerError, "failed to record test notification")
 		return
 	}
 
 	// Broadcast via SSE
 	if h.eventHub != nil {
 		h.eventHub.BroadcastWithContext(r.Context(), "alert", map[string]interface{}{
-			"id":        nlog.ID,
+			"id":        eventRow.ID,
 			"type":      "test",
 			"severity":  severity,
 			"title":     title,
 			"message":   message,
-			"timestamp": nlog.CreatedAt,
+			"timestamp": time.Now().UTC(),
 			"is_test":   true,
 		})
 	}
@@ -672,6 +681,9 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 				Title:                  title,
 				Message:                message,
 				ChannelID:              ch.ID,
+				TriggerID:              triggerID,
+				EventType:              "test.alert_rule",
+				Severity:               severity,
 				SuppressTransportTitle: suppressTransportTitle,
 			}
 			if pubErr := notification.PublishCtx(r.Context(), h.mqttClient, req); pubErr == nil {
@@ -691,6 +703,9 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 					Title:                  title,
 					Message:                message,
 					ChannelID:              ch.ID,
+					TriggerID:              triggerID,
+					EventType:              "test.alert_rule",
+					Severity:               severity,
 					SuppressTransportTitle: suppressTransportTitle,
 				}
 				if pubErr := notification.PublishCtx(r.Context(), h.mqttClient, req); pubErr == nil {
@@ -715,8 +730,11 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 				"url":       "/notifications",
 				"alert_tag": "alert-test",
 			},
-			Title:   title,
-			Message: message,
+			Title:     title,
+			Message:   message,
+			TriggerID: triggerID,
+			EventType: "test.alert_rule",
+			Severity:  severity,
 		}
 		if pubErr := notification.PublishCtx(r.Context(), h.mqttClient, pushReq); pubErr == nil {
 			dispatched++
@@ -908,15 +926,63 @@ func validateAlertRule(rule *alertmodel.AlertRule) error {
 	}
 	switch rule.Kind {
 	case "", alertmodel.AlertRuleKindSignal:
+		if rule.ComponentName != nil || rule.Transition != nil || rule.PlaceID != nil {
+			return errors.New("signal rules cannot specify component_name, transition, or place_id")
+		}
 		if strings.TrimSpace(rule.SignalName) == "" {
 			return errors.New("signal_name is required")
 		}
 		return validateAlertRuleOperand(rule)
 	case alertmodel.AlertRuleKindComputedMetric:
+		if rule.ComponentName != nil || rule.Transition != nil || rule.PlaceID != nil {
+			return errors.New("computed_metric rules cannot specify component_name, transition, or place_id")
+		}
 		return validateComputedMetricRule(rule)
+	case alertmodel.AlertRuleKindSystemComponent:
+		if !rule.AllVehicles {
+			return errors.New("system_component requires all_vehicles=true")
+		}
+		if rule.ComponentName == nil || rule.Transition == nil {
+			return errors.New("system_component requires component_name and transition")
+		}
+		if outage, _ := componentAlertEventTypes(*rule.ComponentName); outage == "" {
+			return errors.New("unknown component_name")
+		}
+		if *rule.Transition != "outage" && *rule.Transition != "recovery" {
+			return errors.New("transition must be outage or recovery")
+		}
+		if rule.PlaceID != nil || hasRuleOperands(rule) {
+			return errors.New("system_component does not accept place_id or signal/metric operands")
+		}
+		return nil
+	case alertmodel.AlertRuleKindPlace:
+		if rule.PlaceID == nil || *rule.PlaceID <= 0 || rule.Transition == nil {
+			return errors.New("place requires a positive place_id and transition")
+		}
+		if *rule.Transition != "enter" && *rule.Transition != "exit" {
+			return errors.New("transition must be enter or exit")
+		}
+		if rule.ComponentName != nil || hasRuleOperands(rule) {
+			return errors.New("place does not accept component_name or signal/metric operands")
+		}
+		return nil
 	default:
-		return fmt.Errorf("kind must be %q or %q", alertmodel.AlertRuleKindSignal, alertmodel.AlertRuleKindComputedMetric)
+		return errors.New("kind must be signal, computed_metric, system_component, or place")
 	}
+}
+
+func componentAlertEventTypes(name string) (string, string) {
+	switch name {
+	case "telemetry", "mqtt", "database", "redis", "tesla_api", "worker":
+		return name, name
+	}
+	return "", ""
+}
+
+func hasRuleOperands(rule *alertmodel.AlertRule) bool {
+	return rule.SignalName != "" || rule.Op != "" || countAlertValueOperands(rule) != 0 ||
+		rule.ValueMin != nil || rule.ValueMax != nil || rule.MetricID != nil ||
+		rule.MetricWindow != nil || rule.MetricThreshold != nil || rule.MetricOp != nil
 }
 
 // validateComputedMetricRule enforces that all four metric_* fields are set
@@ -954,6 +1020,7 @@ func validateComputedMetricRule(rule *alertmodel.AlertRule) error {
 func normalizeAlertRuleByKind(rule *alertmodel.AlertRule) {
 	switch rule.Kind {
 	case alertmodel.AlertRuleKindComputedMetric:
+		rule.ComponentName, rule.Transition, rule.PlaceID = nil, nil, nil
 		rule.SignalName = ""
 		rule.Op = ""
 		rule.ValueNum = nil
@@ -961,8 +1028,18 @@ func normalizeAlertRuleByKind(rule *alertmodel.AlertRule) {
 		rule.ValueBool = nil
 		rule.ValueMin = nil
 		rule.ValueMax = nil
+	case alertmodel.AlertRuleKindSystemComponent, alertmodel.AlertRuleKindPlace:
+		rule.SignalName, rule.Op = "", ""
+		rule.ValueNum, rule.ValueText, rule.ValueBool, rule.ValueMin, rule.ValueMax = nil, nil, nil, nil, nil
+		rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp = nil, nil, nil, nil
+		if rule.Kind == alertmodel.AlertRuleKindPlace {
+			rule.ComponentName = nil
+		} else {
+			rule.PlaceID = nil
+		}
 	default:
 		rule.Kind = alertmodel.AlertRuleKindSignal
+		rule.ComponentName, rule.Transition, rule.PlaceID = nil, nil, nil
 		rule.MetricID = nil
 		rule.MetricWindow = nil
 		rule.MetricThreshold = nil
@@ -977,10 +1054,10 @@ func validateAlertRuleKind(kind *string) (string, error) {
 		return alertmodel.AlertRuleKindSignal, nil
 	}
 	switch *kind {
-	case alertmodel.AlertRuleKindSignal, alertmodel.AlertRuleKindComputedMetric:
+	case alertmodel.AlertRuleKindSignal, alertmodel.AlertRuleKindComputedMetric, alertmodel.AlertRuleKindSystemComponent, alertmodel.AlertRuleKindPlace:
 		return *kind, nil
 	default:
-		return "", fmt.Errorf("kind must be %q or %q", alertmodel.AlertRuleKindSignal, alertmodel.AlertRuleKindComputedMetric)
+		return "", errors.New("kind must be signal, computed_metric, system_component, or place")
 	}
 }
 

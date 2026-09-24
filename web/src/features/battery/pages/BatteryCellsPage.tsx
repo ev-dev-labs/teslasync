@@ -417,7 +417,7 @@ export default function BatteryCellsPage() {
 
       {/* 2 — Hero bento: heatmap/bar toggle (span 2) + voltage distribution */}
       <FadeIn delay={0.05}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+        <section className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3 xl:gap-5">
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <PanelTitle className="flex items-center gap-2">
@@ -788,6 +788,7 @@ export default function BatteryCellsPage() {
             <DataTable
               tableId="battery:cells"
               columns={columns}
+              mobileColumns={['cell_number', 'voltage', 'status']}
               data={sortedCells}
               keyExtractor={(r) => r.cell_number}
               sortKey={sortKey}

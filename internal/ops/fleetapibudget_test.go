@@ -173,8 +173,7 @@ fleetAPIBudgetUnavailableWarning
 `)},
 		"health.go": &fstest.MapFile{Data: []byte(`
 func usage() {
-tesla.ClassifyBudgetCharge(method, endpoint)
-tesla.EstimatedCostUSD(tesla.BudgetCategoryVehicleData)
+NewTeslaUsageHandler(db)
 }
 `)},
 		"docs.md": &fstest.MapFile{Data: []byte(`
@@ -220,7 +219,7 @@ func TestValidateFleetAPIBudgetRejectsDrift(t *testing.T) {
 		{"policy lifecycle call drift", FleetAPIBudgetPolicyPath, "poll_lifecycle_call: PollEngine.ReconcileFleet(vins)", "poll_lifecycle_call: PollEngine.SetFleetSize(len(vehicles))", "must pin PollEngine.ReconcileFleet(vins)"},
 		{"worker wiring missing", "automation.go", "SetRequestBudget", "IgnoreBudget", "shared PostgreSQL budget"},
 		{"operator visibility missing", "status.go", "RateLimitScopeTeslaDailySpend", "OldScope", "missing operator visibility"},
-		{"API usage canonical price missing", "health.go", "tesla.EstimatedCostUSD", "legacyEstimatedCostUSD", "canonical Tesla budget contract"},
+		{"API usage handler missing", "health.go", "NewTeslaUsageHandler(", "legacyHandler(", "dedicated Fleet traffic handler"},
 		{"API usage stale price", "health.go", "func usage() {", "func usage() {\nconst oldPrice = 0.00222", "stale Fleet API price"},
 	}
 	for _, tt := range tests {

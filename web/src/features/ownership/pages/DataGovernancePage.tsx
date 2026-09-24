@@ -11,8 +11,9 @@ import {
 import { AlertBanner } from '@/components/feedback';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -44,6 +45,21 @@ export default function DataGovernancePage() {
   const runsQuery = useRetentionRuns(50, 0);
   const upsert = useUpsertRetentionPolicy();
   const remove = useDeleteRetentionPolicy();
+  const { confirm, dialogProps } = useConfirm();
+
+  const handleRemove = async (row: RetentionPolicy) => {
+    const ok = await confirm({
+      title: t('ownership.governance.delete.title', 'Delete this retention policy?'),
+      message: t(
+        'ownership.governance.delete.message',
+        'The retention policy for “{{name}}” will be removed permanently. This cannot be undone.',
+        { name: row.dataset },
+      ),
+      variant: 'danger',
+      confirmLabel: t('common.delete', 'Delete'),
+    });
+    if (ok) remove.mutate(row.id);
+  };
   const simulate = useSimulateGovernance();
 
   const overview = overviewQuery.data;
@@ -233,7 +249,8 @@ export default function DataGovernancePage() {
             variant="ghost"
             size="sm"
             icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-            onClick={() => remove.mutate(row.id)}
+            loading={remove.isPending && remove.variables === row.id}
+            onClick={() => void handleRemove(row)}
           >
             {t('ownership.action.remove', 'Remove')}
           </Button>
@@ -474,6 +491,7 @@ export default function DataGovernancePage() {
         >
           <DataTable
             columns={inventoryColumns}
+            mobileColumns={['dataset', 'bytes', 'span']}
             data={inventory}
             keyExtractor={(row) => row.dataset}
             tableId="ownership-governance-inventory"
@@ -574,6 +592,7 @@ export default function DataGovernancePage() {
 
           <DataTable
             columns={policyColumns}
+            mobileColumns={['dataset', 'retention', 'downsample']}
             data={policies}
             keyExtractor={(row) => row.id}
             tableId="ownership-governance-policies"
@@ -626,6 +645,7 @@ export default function DataGovernancePage() {
           <div className="mt-4">
             <DataTable
               columns={impactColumns}
+              mobileColumns={['dataset', 'reclaim', 'flags']}
               data={impacts}
               keyExtractor={(row) => row.dataset}
               tableId="ownership-governance-impact"
@@ -648,6 +668,7 @@ export default function DataGovernancePage() {
         >
           <DataTable
             columns={runColumns}
+            mobileColumns={['executed', 'dataset', 'mode']}
             data={runs}
             keyExtractor={(row) => row.id}
             tableId="ownership-governance-runs"
@@ -671,6 +692,7 @@ export default function DataGovernancePage() {
           ]}
         />
       </FadeIn>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageContainer>
   );
 }

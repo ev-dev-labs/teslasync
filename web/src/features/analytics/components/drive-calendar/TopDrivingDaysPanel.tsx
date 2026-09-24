@@ -42,7 +42,7 @@ export function TopDrivingDaysPanel({
         <Caption className="mt-1 block">
           {t(
             'driveCalendar.topDays.subtitle',
-            'Highest-distance days in the last 52 weeks',
+            'Highest-distance days in the selected period',
           )}
         </Caption>
       </div>

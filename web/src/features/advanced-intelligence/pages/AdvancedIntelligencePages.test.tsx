@@ -1,9 +1,14 @@
+// Force a non-UTC zone BEFORE anything renders so datetime-local defaults
+// built from UTC slices (rather than local wall-clock) fail the specs below.
+process.env.TZ = 'America/New_York';
+
 import { type ComponentType, type ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
+import { toLocalDatetimeStr } from '@/lib/dateFormat';
 
 const mocks = vi.hoisted(() => {
   const noData: unknown = undefined;
@@ -212,6 +217,41 @@ describe('critical advanced intelligence interactions', () => {
       confirmed: true,
     }));
     expect(typeof mocks.causalMutate.mock.calls[0]?.[1]?.onSuccess).toBe('function');
+  });
+
+  it('seeds the journey departure default in local wall-clock, not UTC', () => {
+    renderPage(JourneyAssurancePage);
+    const input = screen.getByLabelText(/departure/i) as HTMLInputElement;
+    // The page stamps its default just before this assertion runs; accept an
+    // exact match or a one-minute-older value if a minute edge intervened.
+    const candidates = [0, -60_000].map((skew) =>
+      toLocalDatetimeStr(new Date(Date.now() + 24 * 3_600_000 + skew)).slice(0, 16),
+    );
+    expect(candidates).toContain(input.value);
+    // … and it must never be the raw UTC slice the old code produced here.
+    expect(input.value).not.toBe(
+      new Date(Date.now() + 24 * 3_600_000).toISOString().slice(0, 16),
+    );
+  });
+
+  it('seeds the causal experiment window defaults in local wall-clock, not UTC', () => {
+    renderPage(CausalExperimentationPage);
+    const cases: Array<[RegExp, number]> = [
+      [/baseline start/i, 8],
+      [/baseline end/i, 6],
+      [/treatment start/i, 5],
+      [/treatment end/i, 2],
+    ];
+    for (const [label, daysAgo] of cases) {
+      const input = screen.getByLabelText(label) as HTMLInputElement;
+      const candidates = [0, -60_000].map((skew) =>
+        toLocalDatetimeStr(new Date(Date.now() - daysAgo * 86_400_000 + skew)).slice(0, 16),
+      );
+      expect(candidates).toContain(input.value);
+      expect(input.value).not.toBe(
+        new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 16),
+      );
+    }
   });
 
   it('renders unsupported charging fields as unsupported rather than zero', () => {

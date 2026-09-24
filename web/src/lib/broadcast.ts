@@ -50,6 +50,7 @@ export type BroadcastMessage =
   // the persisted `teslasync-font-*` values and re-apply the CSS vars; the
   // payload is a hint only (subscribers reconcile from their own state).
   | { type: 'font.changed' }
+  | { type: 'typography.spec.changed' }
   // ── Auth ─────────────────────────────────────────────────────────────────
   | { type: 'auth.logout' }
   // ── Notifications ────────────────────────────────────────────────────────

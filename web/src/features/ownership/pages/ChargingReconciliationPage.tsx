@@ -12,12 +12,13 @@ import { AlertBanner } from '@/components/feedback';
 import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Input, Text, Textarea } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, isoUtcToLocalDatetimeInput, localDatetimeInputToIso } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type {
   ChargingInvoice,
@@ -74,6 +75,23 @@ export default function ChargingReconciliationPage() {
   const reportQuery = useReconciliationReport(activeInvoice);
   const create = useCreateInvoice();
   const remove = useDeleteInvoice();
+  const { confirm, dialogProps } = useConfirm();
+
+  const handleRemove = async (row: ChargingInvoice) => {
+    const ok = await confirm({
+      title: t('ownership.reconcile.delete.title', 'Delete this invoice?'),
+      message: t(
+        'ownership.reconcile.delete.message',
+        'Invoice “{{name}}” and its reconciled lines will be removed permanently. This cannot be undone.',
+        { name: row.invoice_ref },
+      ),
+      variant: 'danger',
+      confirmLabel: t('common.delete', 'Delete'),
+    });
+    if (!ok) return;
+    if (activeInvoice === row.id) setActiveInvoice(null);
+    remove.mutate(row.id);
+  };
   const openDispute = useCreateDispute(activeInvoice);
 
   const invoices = useMemo(() => invoicesQuery.data?.items ?? [], [invoicesQuery.data?.items]);
@@ -178,10 +196,8 @@ export default function ChargingReconciliationPage() {
             variant="ghost"
             size="sm"
             icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-            onClick={() => {
-              if (activeInvoice === row.id) setActiveInvoice(null);
-              remove.mutate(row.id);
-            }}
+            loading={remove.isPending && remove.variables === row.id}
+            onClick={() => void handleRemove(row)}
           >
             {t('ownership.action.remove', 'Remove')}
           </Button>
@@ -539,7 +555,7 @@ export default function ChargingReconciliationPage() {
                     <Input
                       type="datetime-local"
                       label={t('ownership.reconcile.form.lineWhen', 'Occurred at')}
-                      value={line.occurred_at.slice(0, 16)}
+                      value={isoUtcToLocalDatetimeInput(line.occurred_at)}
                       onChange={(event) =>
                         setDraft((current) => ({
                           ...current,
@@ -547,7 +563,8 @@ export default function ChargingReconciliationPage() {
                             itemIndex === index
                               ? {
                                   ...item,
-                                  occurred_at: new Date(event.target.value).toISOString(),
+                                  // Cleared/invalid input keeps the previous instant (never throws).
+                                  occurred_at: localDatetimeInputToIso(event.target.value) ?? item.occurred_at,
                                 }
                               : item,
                           ),
@@ -615,6 +632,7 @@ export default function ChargingReconciliationPage() {
 
           <DataTable
             columns={invoiceColumns}
+            mobileColumns={['ref', 'total', 'status']}
             data={invoices}
             keyExtractor={(row) => row.id}
             tableId="ownership-reconcile-invoices"
@@ -719,6 +737,7 @@ export default function ChargingReconciliationPage() {
         >
           <DataTable
             columns={lineColumns}
+            mobileColumns={['ref', 'match', 'variance']}
             data={lines}
             keyExtractor={(row) => row.line.id || row.line.line_ref}
             tableId="ownership-reconcile-lines"
@@ -760,6 +779,7 @@ export default function ChargingReconciliationPage() {
         >
           <DataTable
             columns={bucketColumns}
+            mobileColumns={['label', 'amount', 'recoverable']}
             data={buckets}
             keyExtractor={(row) => row.reason}
             tableId="ownership-reconcile-buckets"
@@ -792,6 +812,7 @@ export default function ChargingReconciliationPage() {
         >
           <DataTable
             columns={uninvoicedColumns}
+            mobileColumns={['session', 'location', 'energy']}
             data={uninvoiced}
             keyExtractor={(row) => row.session_id}
             tableId="ownership-reconcile-uninvoiced"
@@ -936,6 +957,7 @@ export default function ChargingReconciliationPage() {
           ]}
         />
       </FadeIn>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageContainer>
   );
 }

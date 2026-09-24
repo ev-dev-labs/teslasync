@@ -8,12 +8,14 @@ const {
   pageTitleMock,
   sectionPropsMock,
   selectedVehicleMock,
-  useDrivesMock,
+  useHistoryMock,
+  rangeOptionsMock,
 } = vi.hoisted(() => ({
   pageTitleMock: vi.fn(),
   sectionPropsMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
-  useDrivesMock: vi.fn(),
+  useHistoryMock: vi.fn(),
+  rangeOptionsMock: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -28,7 +30,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/api/hooks/useDriving', () => ({
-  useDrives: (...args: unknown[]) => useDrivesMock(...args),
+  useDriveCalendarHistory: (...args: unknown[]) => useHistoryMock(...args),
 }));
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
@@ -42,7 +44,8 @@ vi.mock('@/hooks/usePageTitle', () => ({
 vi.mock('@/hooks/useRangeState', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
-    useRangeState: () => {
+    useRangeState: (options: unknown) => {
+      rangeOptionsMock(options);
       const [range, setRange] = React.useState({
         start: '2025-01-01',
         end: '2026-08-07',
@@ -227,7 +230,7 @@ const SECTION_IDS = [
 beforeEach(() => {
   vi.clearAllMocks();
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
-  useDrivesMock.mockReturnValue(query({ data: [drive(1)] }));
+  useHistoryMock.mockReturnValue(query({ data: [drive(1)] }));
 });
 
 describe('DrivingRhythmPage', () => {
@@ -240,10 +243,11 @@ describe('DrivingRhythmPage', () => {
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
-    expect(useDrivesMock).toHaveBeenCalledWith('42', {
-      start: '2025-01-01',
-      end: '2026-08-07',
-      limit: 1000,
+    expect(useHistoryMock).toHaveBeenCalledWith('42', '2025-01-01', '2026-08-07');
+    expect(rangeOptionsMock).toHaveBeenCalledWith({
+      persistKey: 'driving-rhythm.range',
+      defaultPresetId: 'all',
+      inheritSharedPreference: false,
     });
     expect(screen.getByTestId('driving-rhythm-range')).toHaveAttribute(
       'data-range',
@@ -257,12 +261,21 @@ describe('DrivingRhythmPage', () => {
     fireEvent.click(screen.getByTestId('driving-rhythm-range'));
 
     await waitFor(() =>
-      expect(useDrivesMock).toHaveBeenLastCalledWith('42', {
-        start: '2026-07-01',
-        end: '2026-07-31',
-        limit: 1000,
-      }),
+      expect(useHistoryMock).toHaveBeenLastCalledWith('42', '2026-07-01', '2026-07-31'),
     );
+  });
+
+  it('includes all 1,001 loaded drives rather than truncating the rhythm analysis', () => {
+    useHistoryMock.mockReturnValue(query({
+      data: Array.from({ length: 1001 }, (_, index) => ({ ...drive(1), id: index + 1 })),
+    }));
+    render(<DrivingRhythmPage />);
+
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    const summary = sectionPropsMock.mock.calls.find(([id]) => id === 'driving-rhythm-method')?.[1]?.summary;
+    expect(summary).toMatchObject({ total: 1001, observed: 1001, historyCapReached: false, windowLimit: null });
   });
 
   it.each([
@@ -272,7 +285,7 @@ describe('DrivingRhythmPage', () => {
       query({ isError: true, error: new Error('rhythm unavailable') }),
     ],
   ])('propagates the %s state to every mounted section', (expected, result) => {
-    useDrivesMock.mockReturnValue(result);
+    useHistoryMock.mockReturnValue(result);
     render(<DrivingRhythmPage />);
 
     for (const id of SECTION_IDS) {
@@ -281,7 +294,7 @@ describe('DrivingRhythmPage', () => {
   });
 
   it('propagates an empty returned window while keeping every shell mounted', () => {
-    useDrivesMock.mockReturnValue(query({ data: [] }));
+    useHistoryMock.mockReturnValue(query({ data: [] }));
     render(<DrivingRhythmPage />);
 
     for (const id of SECTION_IDS) {
@@ -291,7 +304,7 @@ describe('DrivingRhythmPage', () => {
 
   it('shares one retry callback across all error sections', () => {
     const refetch = vi.fn();
-    useDrivesMock.mockReturnValue(
+    useHistoryMock.mockReturnValue(
       query({
         isError: true,
         error: new Error('offline'),
@@ -318,11 +331,7 @@ describe('DrivingRhythmPage', () => {
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent(
       'Driving Rhythm',
     );
-    expect(useDrivesMock).toHaveBeenCalledWith(undefined, {
-      start: '2025-01-01',
-      end: '2026-08-07',
-      limit: 1000,
-    });
+    expect(useHistoryMock).toHaveBeenCalledWith(undefined, '2025-01-01', '2026-08-07');
     expect(
       screen.queryByTestId('driving-rhythm-punchcard'),
     ).not.toBeInTheDocument();

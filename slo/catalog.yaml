@@ -14,6 +14,36 @@
 version: 1
 
 slos:
+  - name: notification_report_availability
+    description: "Bounded UTC notification report reads must not return server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/notifications/report\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/notifications/report\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: notifications
+    tags: [http, notifications]
+
+  - name: tesla_usage_availability
+    description: "The read-only Tesla usage estimate must not return server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, tesla]
+
+  - name: tesla_usage_history_availability
+    description: "The bounded daily/weekly Tesla usage history query must not return server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage/history\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/system/api-usage/history\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, tesla]
+
   - name: alert_packs_availability
     description: "Alert pack catalog, installations, removal and bulk rule deletion endpoints must avoid server errors."
     sli:
@@ -444,10 +474,10 @@ slos:
     tags: [http, privacy, benchmarks]
 
   - name: geofence_pricing_read_availability
-    description: "Charging-place rate history, preview, and activity reads must avoid server errors."
+    description: "Place discovery, name resolution, and charging-place rate/activity reads must avoid server errors."
     sli:
-      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[5m]))"
-      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[5m]))"
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|visited-candidates|resolve|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity|first-charging-session))\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|visited-candidates|resolve|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity|first-charging-session))\"}[5m]))"
     objective: 99.5
     window: 30d
     owner: platform

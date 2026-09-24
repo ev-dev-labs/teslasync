@@ -13,8 +13,11 @@ import (
 	"time"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+	"github.com/ev-dev-labs/teslasync/internal/notification"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -56,14 +59,21 @@ func notifyOutboundClient(name string) *http.Client {
 
 // Handler handles notification channel CRUD and test delivery.
 type Handler struct {
-	repo  *dbnotif.NotificationRepo
-	inbox notificationInboxStore
+	repo   *dbnotif.NotificationRepo
+	inbox  notificationInboxStore
+	report notificationReportStore
+}
+
+type notificationReportStore interface {
+	GetReport(ctx context.Context, from, until time.Time) (*dbnotif.Report, error)
 }
 
 // notificationInboxStore is the slice of NotificationRepo used by the inbox
 // handlers (filter, bulk, unread-count). Extracted so tests can stub the DB.
 type notificationInboxStore interface {
 	GetLogsFiltered(ctx context.Context, f dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error)
+	CountLogsFiltered(ctx context.Context, f dbnotif.NotificationLogFilters) (int64, error)
+	CountGroupsFiltered(ctx context.Context, f dbnotif.NotificationLogFilters) (int64, error)
 	ListGrouped(ctx context.Context, f dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error)
 	GetUnreadCount(ctx context.Context) (int64, error)
 	BulkSetRead(ctx context.Context, ids []int64, read bool) (int64, error)
@@ -75,7 +85,7 @@ type notificationInboxStore interface {
 
 func NewHandler(db *database.DB) *Handler {
 	repo := dbnotif.NewNotificationRepo(db)
-	return &Handler{repo: repo, inbox: repo}
+	return &Handler{repo: repo, inbox: repo, report: repo}
 }
 
 func (h *Handler) ListChannels(w http.ResponseWriter, r *http.Request) {
@@ -237,7 +247,13 @@ func normalizeChannelResponse(ch *notificationmodel.NotificationChannel) map[str
 		"updated_at": ch.UpdatedAt,
 	}
 	for k, v := range ch.Config {
+		if ch.Type == "webhook" && k == "bearer_token" {
+			continue
+		}
 		resp[k] = v
+	}
+	if method, ok := ch.Config["http_method"]; ch.Type == "webhook" && ok {
+		resp["method"] = method
 	}
 	return resp
 }
@@ -294,6 +310,16 @@ func (h *Handler) TestChannel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	testMsg := "TeslaSync test notification — your channel is configured correctly!"
+	triggerID := notification.NewTriggerID()
+	eventType := "test.channel"
+	if _, err := notification.RecordTrigger(r.Context(), h.repo, &notification.Request{
+		Title: "TeslaSync Test", Message: testMsg, TriggerID: triggerID, EventType: eventType,
+		Severity: "info",
+	}); err != nil {
+		log.Error().Err(err).Msg("channel test: event persistence failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to record test notification")
+		return
+	}
 	sendErr := sendNotification(ch, "TeslaSync Test", testMsg)
 
 	status := "sent"
@@ -311,22 +337,41 @@ func (h *Handler) TestChannel(w http.ResponseWriter, r *http.Request) {
 		Status:    status,
 		Error:     errStr,
 	}
+	logEntry.TriggerID = &triggerID
+	logEntry.EventType = &eventType
+	logEntry.Severity = "info"
 	if status == "sent" {
 		logEntry.SentAt = &now
 	}
+
 	_ = h.repo.CreateLog(r.Context(), logEntry)
 
 	if sendErr != nil {
 		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"success": false, "error": sendErr.Error()})
 		return
 	}
+
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Test notification sent"})
 }
 
 func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("count_only") == "true" {
+		h.CountLogs(w, r)
+		return
+	}
+	ctx, span := otel.Tracer("api").Start(r.Context(), "notifications.logs")
+	defer span.End()
 	filters, err := parseNotificationLogFilters(r)
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	switch r.URL.Query().Get("view") {
+	case "", "inbox":
+	case "deliveries":
+		filters.DeliveryOnly = true
+	default:
+		httpx.WriteError(w, http.StatusBadRequest, "view must be inbox or deliveries")
 		return
 	}
 	// ?grouped=true switches the response shape
@@ -336,14 +381,25 @@ func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 	// group AND requesting them grouped is a contradiction (and would
 	// return at most one bucket on success).
 	groupedRequested := strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("grouped")), "true")
+	if groupedRequested && filters.DeliveryOnly {
+		httpx.WriteError(w, http.StatusBadRequest, "grouped=true is not supported for deliveries")
+		return
+	}
 	if groupedRequested && filters.GroupKey != "" {
 		httpx.WriteError(w, http.StatusBadRequest, "grouped=true and group_key are mutually exclusive")
 		return
 	}
+	if groupedRequested && !filters.BeforeCreatedAt.IsZero() {
+		httpx.WriteError(w, http.StatusBadRequest, "grouped=true does not support a log cursor")
+		return
+	}
 	if groupedRequested {
-		groups, gErr := h.inbox.ListGrouped(r.Context(), filters)
+		groups, gErr := h.inbox.ListGrouped(ctx, filters)
 		if gErr != nil {
-			log.Error().Err(gErr).Msg("failed to list notification log groups")
+			span.RecordError(gErr)
+			span.SetStatus(codes.Error, "notification groups failed")
+			log.Ctx(ctx).Error().Err(gErr).Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("failed to list notification log groups")
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to get logs")
 			return
 		}
@@ -353,9 +409,12 @@ func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, groups)
 		return
 	}
-	logs, err := h.inbox.GetLogsFiltered(r.Context(), filters)
+	logs, err := h.inbox.GetLogsFiltered(ctx, filters)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get notification logs")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "notification logs failed")
+		log.Ctx(ctx).Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to get notification logs")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get logs")
 		return
 	}
@@ -363,6 +422,39 @@ func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 		logs = []*notificationmodel.NotificationLog{}
 	}
 	httpx.WriteJSON(w, http.StatusOK, logs)
+}
+
+// CountLogs returns the total matching inbox rows independently of pagination.
+func (h *Handler) CountLogs(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "notifications.logs.count")
+	defer span.End()
+	filters, err := parseNotificationLogFilters(r)
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	grouped := r.URL.Query().Get("grouped")
+	if grouped != "" && grouped != "true" {
+		httpx.WriteError(w, http.StatusBadRequest, "grouped must be true")
+		return
+	}
+	var count int64
+	if grouped == "true" {
+		count, err = h.inbox.CountGroupsFiltered(ctx, filters)
+	} else {
+		count, err = h.inbox.CountLogsFiltered(ctx, filters)
+	}
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "notification count failed")
+		log.Ctx(ctx).Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to count notification logs")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to count logs")
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, struct {
+		Total int64 `json:"total"`
+	}{Total: count})
 }
 
 // parseNotificationLogFilters turns query params into a NotificationLogFilters.
@@ -398,6 +490,12 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 		}
 		f.RuleIDs = ids
 	}
+	if source := q.Get("source"); source != "" {
+		if source != "rule" {
+			return f, fmt.Errorf("invalid source %q", source)
+		}
+		f.Source = source
+	}
 	if s := q.Get("from"); s != "" {
 		t, err := parseFlexibleTime(s)
 		if err != nil {
@@ -410,7 +508,24 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 		if err != nil {
 			return f, fmt.Errorf("invalid to: %w", err)
 		}
+		if len(s) == len(time.DateOnly) {
+			t = t.AddDate(0, 0, 1).Add(-time.Nanosecond)
+		}
 		f.To = t
+	}
+	if q.Has("before_created_at") || q.Has("before_id") {
+		if q.Get("before_created_at") == "" || q.Get("before_id") == "" {
+			return f, fmt.Errorf("before_created_at and before_id must be provided together")
+		}
+		before, err := time.Parse(time.RFC3339Nano, q.Get("before_created_at"))
+		if err != nil {
+			return f, fmt.Errorf("invalid before_created_at: %w", err)
+		}
+		id, err := strconv.ParseInt(q.Get("before_id"), 10, 64)
+		if err != nil || id <= 0 {
+			return f, fmt.Errorf("invalid before_id: must be a positive integer")
+		}
+		f.BeforeCreatedAt, f.BeforeID = before, id
 	}
 	if s := q.Get("read"); s != "" {
 		v, err := parseBoolish(s)
@@ -422,7 +537,9 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 	// Default the inbox view to non-archived. Callers must opt into
 	// archived=true to switch to the Archived tab.
 	f.Archived = boolPtr(false)
-	if s := q.Get("archived"); s != "" {
+	if s := q.Get("archived"); s == "all" {
+		f.Archived = nil
+	} else if s != "" {
 		v, err := parseBoolish(s)
 		if err != nil {
 			return f, fmt.Errorf("invalid archived: %w", err)

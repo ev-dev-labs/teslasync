@@ -67,16 +67,22 @@ vi.mock('@/api/devtools', async () => {
     ...actual,
     getAPICallLogs: vi.fn(),
     getAPICallLogStats: vi.fn(),
+    getErrorStats: vi.fn(),
   };
 });
 
-import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
+vi.mock('@/api/hooks/useAdmin', () => ({
+  useWebErrorsSummary: () => ({ data: { total: 0, top: [] }, isLoading: false }),
+}));
+
+import { getAPICallLogs, getAPICallLogStats, getErrorStats } from '@/api/devtools';
 import { ToastProvider } from '@/components/feedback/Toast';
 import ApiLogsPage from './ApiLogsPage';
 import type { APICallLog, APICallLogResponse, APICallLogStats } from '@/api/types';
 
 const mockedLogs = getAPICallLogs as unknown as Mock;
 const mockedStats = getAPICallLogStats as unknown as Mock;
+const mockedRuntime = getErrorStats as unknown as Mock;
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
@@ -96,6 +102,8 @@ function makeLog(overrides: Partial<APICallLog> = {}): APICallLog {
     rate_limited: false,
     request_body: null,
     response_body: '{"ok":true}',
+    request_headers: { 'Content-Type': 'application/json', Authorization: 'REDACTED' },
+    response_headers: { 'Content-Type': 'application/json' },
     ...overrides,
   };
 }
@@ -157,6 +165,8 @@ function railChip(name: RegExp): HTMLElement {
 beforeEach(() => {
   mockedLogs.mockReset();
   mockedStats.mockReset();
+  mockedRuntime.mockReset();
+  mockedRuntime.mockResolvedValue({ total_errors: 0, uptime: '2h', by_code: {} });
 });
 
 afterEach(() => {
@@ -168,6 +178,36 @@ afterEach(() => {
 /* ------------------------------------------------------------------ */
 
 describe('ApiLogsPage', () => {
+  it('labels the independent scopes and shows backend and browser summaries alongside outbound calls', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse());
+    mockedRuntime.mockResolvedValue({
+      total_errors: 3,
+      uptime: '2h',
+      by_code: { TIMEOUT: { count: 3, last_seen: '2026-01-02T03:04:05Z', last_message: 'upstream timeout' } },
+    });
+    renderPage('/api-logs?status=5xx');
+    expect(await screen.findByText('3 errors · uptime 2h')).toBeInTheDocument();
+    expect(screen.getByText('upstream timeout')).toBeInTheDocument();
+    expect(screen.getByText(/API call totals are all-time across services/)).toBeInTheDocument();
+    expect(screen.getByText(/Since the current API process started/)).toBeInTheDocument();
+    expect(screen.getByText('Frontend errors (last hour)')).toBeInTheDocument();
+    expect(mockedRuntime).toHaveBeenCalledTimes(1);
+  });
+
+  it('distinguishes a clean backend from a failed runtime-summary request', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({ data: [], total: 0 }));
+    const page = renderPage();
+    expect(await screen.findByText('No backend runtime errors in this process.')).toBeInTheDocument();
+    page.unmount();
+
+    mockedRuntime.mockRejectedValue(new Error('runtime summary offline'));
+    renderPage();
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('No backend runtime errors in this process.')).not.toBeInTheDocument();
+  });
+
   it('fires both fetchers and shows no data rows while the queries are pending', () => {
     // Never-resolving promises keep both queries in the loading state.
     mockedStats.mockReturnValue(new Promise<APICallLogStats>(() => {}));
@@ -237,6 +277,10 @@ describe('ApiLogsPage', () => {
     expect(screen.getByText('No request body')).toBeInTheDocument();
     // Per-body copy affordance carries an accessible label.
     expect(screen.getByRole('button', { name: 'Copy Response Body' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy Request Headers' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy Response Headers' })).toBeInTheDocument();
+    expect(screen.getByText(/Bodies are recorded only when API_LOG_CAPTURE_BODIES/)).toBeInTheDocument();
+    expect(screen.getByText('Rate limited: No')).toBeInTheDocument();
 
     // Collapsing hides the detail again.
     fireEvent.click(row);

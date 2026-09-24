@@ -206,6 +206,7 @@ type fakeChannelSource struct {
 	channels []*notificationmodel.NotificationChannel
 	listErr  error
 	logs     []*notificationmodel.NotificationLog
+	events   []*notificationmodel.NotificationLog
 }
 
 func (f *fakeChannelSource) GetAllChannels(_ context.Context) ([]*notificationmodel.NotificationChannel, error) {
@@ -217,6 +218,11 @@ func (f *fakeChannelSource) GetAllChannels(_ context.Context) ([]*notificationmo
 
 func (f *fakeChannelSource) CreateLog(_ context.Context, l *notificationmodel.NotificationLog) error {
 	f.logs = append(f.logs, l)
+	return nil
+}
+
+func (f *fakeChannelSource) CreateEvent(_ context.Context, l *notificationmodel.NotificationLog) error {
+	f.events = append(f.events, l)
 	return nil
 }
 
@@ -258,6 +264,22 @@ func testEvent() componentTransitionEvent {
 		Severity:  "critical",
 		Title:     "MQTT Broker is unhealthy",
 		Message:   "Component mqtt has 10 consecutive failures.",
+	}
+}
+
+func TestDispatchComponentNotification_RecordsEventWithoutChannels(t *testing.T) {
+	channels := &fakeChannelSource{}
+	calls := 0
+	dispatchComponentNotification(context.Background(), channels, nil, nil,
+		func(_ context.Context, _ pahomqtt.Client, _ *notification.Request) error {
+			calls++
+			return nil
+		}, testEvent())
+	if calls != 0 || len(channels.events) != 1 || len(channels.logs) != 0 {
+		t.Fatalf("publish=%d events=%d deliveries=%d; want 0,1,0", calls, len(channels.events), len(channels.logs))
+	}
+	if event := channels.events[0]; event.Status != "triggered" || event.ChannelID != 0 || event.EventType == nil {
+		t.Fatalf("canonical event: %+v", event)
 	}
 }
 

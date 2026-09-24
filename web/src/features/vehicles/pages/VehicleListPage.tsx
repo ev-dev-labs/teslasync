@@ -1787,7 +1787,7 @@ export default function VehicleListPage() {
                 {
                   key: 'alerts',
                   label: t('entityContext.alerts', 'Alerts'),
-                  to: '/notifications/alerts',
+                  to: '/notifications/inbox',
                   icon: <Bell className="h-4 w-4" aria-hidden="true" />,
                   onNavigate: () => setVehicleId(previewTarget.vehicle.id),
                 },

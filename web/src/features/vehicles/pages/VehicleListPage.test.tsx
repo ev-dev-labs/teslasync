@@ -597,7 +597,7 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     expect(within(drawer).getByRole('link', { name: 'Visited locations' }))
       .toHaveAttribute('href', '/locations');
     expect(within(drawer).getByRole('link', { name: 'Alerts' }))
-      .toHaveAttribute('href', '/notifications/alerts');
+      .toHaveAttribute('href', '/notifications/inbox');
     expect(within(drawer).getByRole('link', { name: 'Service history' }))
       .toHaveAttribute('href', '/maintenance');
     expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))

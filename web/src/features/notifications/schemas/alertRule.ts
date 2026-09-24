@@ -25,7 +25,10 @@ export const ALERT_RULE_SEVERITIES = ['info', 'warn', 'critical'] as const
 
 export const ALERT_RULE_TRIGGER_MODES = ['once', 'repeat'] as const
 
-export const ALERT_RULE_KINDS = ['signal', 'computed_metric'] as const
+export const ALERT_RULE_KINDS = ['signal', 'computed_metric', 'system_component', 'place'] as const
+export const SYSTEM_COMPONENTS = ['telemetry', 'mqtt', 'database', 'redis', 'tesla_api', 'worker'] as const
+export const SYSTEM_TRANSITIONS = ['outage', 'recovery'] as const
+export const PLACE_TRANSITIONS = ['enter', 'exit'] as const
 
 export const COMPUTED_METRIC_OPS = [
   '>',
@@ -60,6 +63,8 @@ export const alertRuleSchema = z
       .trim()
       .min(1, 'Name is required')
       .max(120, 'Name must be 120 characters or fewer'),
+    // null inherits enabled channels; [] routes only to in-app history/toasts.
+    channel_ids: z.array(z.number().int().positive()).nullable().optional(),
     description: z.string().max(500).optional().nullable(),
     enabled: z.boolean().optional(),
     vehicle_id: z.number().int().positive().optional().nullable(),
@@ -125,6 +130,9 @@ export const alertRuleSchema = z
       .optional(),
     escalation_severity: z.enum(ALERT_RULE_SEVERITIES).nullable().optional(),
     kind: z.enum(ALERT_RULE_KINDS).optional(),
+    component_name: z.enum(SYSTEM_COMPONENTS).optional().nullable(),
+    place_id: z.number().int().positive().optional().nullable(),
+    transition: z.enum([...SYSTEM_TRANSITIONS, ...PLACE_TRANSITIONS]).optional().nullable(),
     metric_id: z.string().trim().max(120).optional().nullable(),
     metric_window: z.string().trim().max(60).optional().nullable(),
     metric_threshold: z.number().finite().optional().nullable(),
@@ -186,6 +194,29 @@ export const alertRuleSchema = z
     }
 
     const kind = data.kind ?? 'signal'
+
+    if (kind === 'system_component') {
+      if (!data.component_name || !SYSTEM_COMPONENTS.includes(data.component_name)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['component_name'], message: 'Component is required' })
+      }
+      if (!data.transition || !SYSTEM_TRANSITIONS.includes(data.transition as typeof SYSTEM_TRANSITIONS[number])) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['transition'], message: 'Choose an outage or recovery' })
+      }
+      if (data.all_vehicles !== true || (data.vehicle_ids?.length ?? 0) > 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['all_vehicles'], message: 'System rules apply to the whole fleet' })
+      }
+      return
+    }
+
+    if (kind === 'place') {
+      if (data.place_id == null) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['place_id'], message: 'Choose a place' })
+      }
+      if (!data.transition || !PLACE_TRANSITIONS.includes(data.transition as typeof PLACE_TRANSITIONS[number])) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['transition'], message: 'Choose an arrival or departure' })
+      }
+      return
+    }
 
     if (kind === 'computed_metric') {
       if (!data.metric_id || data.metric_id.trim() === '') {

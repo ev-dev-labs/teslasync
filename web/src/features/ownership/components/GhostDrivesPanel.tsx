@@ -169,6 +169,7 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
       ) : null}
       <DataTable
         columns={columns}
+        mobileColumns={['drive', 'score', 'reason']}
         data={ghosts}
         keyExtractor={(row) => row.drive_id}
         tableId="ownership-ghost-drives"

@@ -71,9 +71,9 @@ describe('ALERTS_TOUR routeMatch', () => {
   it('is a RegExp that matches the alerts and studio routes plus sub-paths', () => {
     expect(ALERTS_TOUR.routeMatch).toBeInstanceOf(RegExp)
     const re = ALERTS_TOUR.routeMatch as RegExp
-    expect(re.test('/notifications/alerts')).toBe(true)
+    expect(re.test('/notifications/inbox')).toBe(true)
     expect(re.test('/notifications/studio')).toBe(true)
-    expect(re.test('/notifications/alerts/42')).toBe(true)
+    expect(re.test('/notifications/inbox/42')).toBe(true)
   })
 
   it('does not match the bare inbox root or unrelated routes', () => {
@@ -84,17 +84,17 @@ describe('ALERTS_TOUR routeMatch', () => {
   })
 
   it('is recommended for alerts/studio via the registry helper, not elsewhere', () => {
-    expect(isRecommendedForRoute(ALERTS_TOUR, '/notifications/alerts')).toBe(true)
+    expect(isRecommendedForRoute(ALERTS_TOUR, '/notifications/inbox')).toBe(true)
     expect(isRecommendedForRoute(ALERTS_TOUR, '/notifications/studio')).toBe(true)
     expect(isRecommendedForRoute(ALERTS_TOUR, '/vehicles')).toBe(false)
   })
 })
 
 describe('ALERTS_TOUR onShow navigation', () => {
-  it('sends the inbox step to /notifications/alerts and fires popstate', () => {
+  it('sends the inbox step to /notifications/inbox and fires popstate', () => {
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
     ALERTS_TOUR.steps[0].onShow!()
-    expect(window.location.pathname).toBe('/notifications/alerts')
+    expect(window.location.pathname).toBe('/notifications/inbox')
     expect(dispatchSpy).toHaveBeenCalledTimes(1)
     const event = dispatchSpy.mock.calls[0][0]
     expect(event).toBeInstanceOf(PopStateEvent)
@@ -114,13 +114,13 @@ describe('ALERTS_TOUR onShow navigation', () => {
   })
 
   it('is a no-op that skips pushState when already on the target route', () => {
-    setPath('/notifications/alerts')
+    setPath('/notifications/inbox')
     const pushSpy = vi.spyOn(window.history, 'pushState')
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
     ALERTS_TOUR.steps[0].onShow!()
     expect(pushSpy).not.toHaveBeenCalled()
     expect(dispatchSpy).not.toHaveBeenCalled()
-    expect(window.location.pathname).toBe('/notifications/alerts')
+    expect(window.location.pathname).toBe('/notifications/inbox')
   })
 
   it('every onShow lands on a route the tour is recommended for', () => {

@@ -561,6 +561,7 @@ export default function TimelinePage() {
           <DataTable
             tableId="analytics:timeline-transitions"
             columns={columns}
+            mobileColumns={['ts', 'from_state', 'to_state']}
             data={transitions}
             keyExtractor={(row) => row.index}
             emptyMessage={t('timeline.noTransitions', 'No state transitions recorded')}
@@ -670,7 +671,7 @@ export default function TimelinePage() {
                 {
                   key: 'alerts',
                   label: t('entityContext.alerts', 'Alerts'),
-                  to: buildContextHref('/notifications/alerts', {
+                  to: buildContextHref('/notifications/inbox', {
                     from: previewDay,
                     to: previewDay,
                   }),

@@ -117,6 +117,7 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
           <DataTable
             tableId="maps:charging-place-activity"
             columns={columns}
+            mobileColumns={['started_at', 'cost_decimal', 'cost_source']}
             data={rows}
             keyExtractor={(r) => r.session_id}
             emptyMessage={t('chargingPlaces.activity.empty', 'No charging sessions recorded at this place yet.')}

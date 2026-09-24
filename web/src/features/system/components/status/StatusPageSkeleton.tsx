@@ -34,7 +34,7 @@ export function StatusPageSkeleton() {
       className="space-y-5 max-w-3xl mx-auto"
       role="status"
       aria-busy="true"
-      aria-label={t('Loading system status')}
+      aria-label={t('systemStatus.skeletonLoading', 'Loading system status')}
       data-testid="status-page-skeleton"
     >
       {/* Hero */}

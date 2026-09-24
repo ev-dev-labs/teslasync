@@ -24,7 +24,6 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
-	"github.com/ev-dev-labs/teslasync/internal/fsdweekly"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
@@ -32,6 +31,7 @@ import (
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	"github.com/ev-dev-labs/teslasync/internal/fsdweekly"
 	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
@@ -71,6 +71,7 @@ type fleetVehicleLister interface {
 // channelLister loads all configured notification channels.
 type channelLister interface {
 	GetAllChannels(ctx context.Context) ([]*notificationmodel.NotificationChannel, error)
+	notification.EventRecorder
 }
 
 // computedMetricEvaluator evaluates one (rule, vehicle) pair on a tick.
@@ -303,8 +304,30 @@ func main() {
 						Title:       s.Title,
 						Message:     s.Message,
 						ChannelID:   ch.ID,
+						TriggerID:   notification.NewTriggerID(),
+						EventType:   "schedule.due",
 					}
-					if pubErr := notification.PublishCtx(tickCtx, mqttClient, req); pubErr != nil {
+					if _, err := notification.RecordTrigger(tickCtx, dbnotif.NewNotificationRepo(db), req); err != nil {
+						span.RecordError(err)
+						log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+							Int64("schedule_id", s.ID).Msg("schedule: event persistence failed")
+						continue
+					}
+					pubErr := notification.PublishCtx(tickCtx, mqttClient, req)
+					if mqttClient == nil || !mqttClient.IsConnected() {
+						status, errText := "sent", ""
+						if pubErr != nil {
+							status, errText = "failed", pubErr.Error()
+						}
+						eventType := req.EventType
+						if err := dbnotif.NewNotificationRepo(db).CreateLog(tickCtx, &notificationmodel.NotificationLog{
+							ChannelID: ch.ID, Title: s.Title, Message: s.Message, Status: status,
+							Error: errText, TriggerID: &req.TriggerID, EventType: &eventType,
+						}); err != nil {
+							log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("schedule_id", s.ID).Msg("schedule: direct-delivery log failed")
+						}
+					}
+					if pubErr != nil {
 						span.RecordError(pubErr)
 						log.Error().Err(pubErr).Int64("schedule_id", s.ID).Msg("schedule: failed to publish")
 					} else {
@@ -485,9 +508,9 @@ func runComputedMetricTick(
 	channels, err := notifRepo.GetAllChannels(ctx)
 	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "load channels failed")
+		span.SetStatus(codes.Error, "load channels failed; recording events without deliveries")
 		log.Error().Err(err).Msg("computed-metric: failed to load channels")
-		return
+		channels = nil
 	}
 
 	triggered := 0
@@ -522,7 +545,7 @@ func runComputedMetricTick(
 					break
 				}
 			}
-			dispatchComputedMetricNotification(ctx, rule, vid, vehicleName, result, channels, mqttClient)
+			dispatchComputedMetricNotification(ctx, rule, vid, vehicleName, result, channels, mqttClient, notifRepo)
 		}
 	}
 	span.SetAttributes(attribute.Int("notification.computed_metric.triggered", triggered))
@@ -570,6 +593,7 @@ func dispatchComputedMetricNotification(
 	result computed.Result,
 	channels []*notificationmodel.NotificationChannel,
 	mqttClient pahomqtt.Client,
+	logStore notification.EventRecorder,
 ) {
 	// Route computed-metric dispatch through the shared alertmsg package so it
 	// renders identically to telemetry alerts. Without this, custom msg_template
@@ -586,7 +610,14 @@ func dispatchComputedMetricNotification(
 		body = rule.Name
 	}
 	suppressTransportTitle := !rule.IncludeTitle
-
+	triggerID := notification.NewTriggerID()
+	if _, err := notification.RecordTrigger(ctx, logStore, &notification.Request{
+		Title: title, Message: body, AlertID: rule.ID,
+		Severity: rule.Severity, EventType: "alert.computed_metric", TriggerID: triggerID,
+	}); err != nil {
+		log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).
+			Int64("rule_id", rule.ID).Msg("computed-metric: event persistence failed")
+	}
 	dispatched := 0
 	for _, ch := range channels {
 		if ch == nil || !ch.Enabled {
@@ -599,10 +630,31 @@ func dispatchComputedMetricNotification(
 			Message:                body,
 			ChannelID:              ch.ID,
 			AlertID:                rule.ID,
+			TriggerID:              triggerID,
+			EventType:              "alert.computed_metric",
 			Severity:               rule.Severity,
 			SuppressTransportTitle: suppressTransportTitle,
 		}
-		if pubErr := notification.PublishCtx(ctx, mqttClient, req); pubErr != nil {
+		pubErr := notification.PublishCtx(ctx, mqttClient, req)
+		if mqttClient == nil || !mqttClient.IsConnected() {
+			if logs, ok := logStore.(interface {
+				CreateLog(context.Context, *notificationmodel.NotificationLog) error
+			}); ok {
+				status, errText := "sent", ""
+				if pubErr != nil {
+					status, errText = "failed", pubErr.Error()
+				}
+				eventType, id := req.EventType, rule.ID
+				if err := logs.CreateLog(ctx, &notificationmodel.NotificationLog{
+					ChannelID: ch.ID, AlertID: &id, Title: title, Message: body,
+					Status: status, Error: errText, Severity: rule.Severity,
+					TriggerID: &triggerID, EventType: &eventType,
+				}); err != nil {
+					log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).Int64("rule_id", rule.ID).Msg("computed-metric: direct-delivery log failed")
+				}
+			}
+		}
+		if pubErr != nil {
 			log.Error().
 				Err(pubErr).
 				Int64("rule_id", rule.ID).

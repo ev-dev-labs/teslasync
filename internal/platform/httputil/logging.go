@@ -49,9 +49,10 @@ func (t *LoggedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	var record APICallRecord
 	if t.Sink != nil {
 		record = APICallRecord{
-			Service: t.Name,
-			Method:  req.Method,
-			URL:     sanitized,
+			Service:        t.Name,
+			Method:         req.Method,
+			URL:            sanitized,
+			RequestHeaders: SafeHeaders(req.Header),
 		}
 	}
 
@@ -115,6 +116,7 @@ func (t *LoggedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	if t.Sink != nil {
 		record.StatusCode = resp.StatusCode
+		record.ResponseHeaders = SafeHeaders(resp.Header)
 	}
 
 	// Capture the response body via io.LimitReader so it remains readable

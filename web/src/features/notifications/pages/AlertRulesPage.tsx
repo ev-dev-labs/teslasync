@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { PageContainer } from '@/components/layout';
 import {
@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   DataTable,
+  Select,
   PanelTitle,
   Text,
   EditableText,
@@ -32,6 +33,7 @@ import {
   EditConflictBanner,
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { SearchInput } from '@/components/forms';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useEditLease } from '@/hooks/useEditLease';
@@ -39,15 +41,17 @@ import { useConfirm } from '@/hooks/useConfirm';
 
 import {
   useAlertRules,
+  useNotificationChannels,
   useBulkEnableRules,
   useBulkDisableRules,
   useDeleteAlertRule,
   useSaveAlertRule,
 } from '@/api/hooks/useNotifications';
-import type { AlertRule } from '@/api/types';
+import type { AlertRule, AlertRuleKind } from '@/api/types';
 import { Icons } from '@/lib/icons';
 import { normalizeSeverity, chartTokens } from '@/lib/tokens';
 import { fmtInt } from '@/lib/numberFormat';
+import { AlertRuleEditor } from '../components/AlertRuleEditor';
 
 /* ─── Constants ──────────────────────────────────────────── */
 
@@ -78,6 +82,8 @@ const SEVERITY_RANK: Record<string, number> = {
  *  rules, the metric id for computed-metric rules. */
 export function subjectOf(r: AlertRule): string {
   if (r.kind === 'computed_metric') return r.metric_id ?? '—';
+  if (r.kind === 'system_component') return `${r.component_name ?? '—'} · ${r.transition ?? '—'}`;
+  if (r.kind === 'place') return `#${r.place_id ?? '—'} · ${r.transition ?? '—'}`;
   return r.signal_name ?? '—';
 }
 
@@ -96,13 +102,20 @@ export function isSnoozed(r: AlertRule, now: number): boolean {
  * sortable, multi-select rules table with inline rename plus bulk
  * enable / disable / delete.
  *
- * The full CRUD studio lives at /notifications/studio (`AlertStudioPage`); rule
- * names deep-link there for editing.
+ * Rule creation lives in Studio; this page owns edits and bulk management.
  */
 export default function AlertRulesPage() {
   const { t } = useTranslation();
+  const kindLabels: Record<AlertRuleKind, string> = {
+    signal: t('alertRules.kind.signal', 'Signal'),
+    computed_metric: t('alertRules.kind.metric', 'Metric'),
+    system_component: t('alertRules.kind.system', 'System service'),
+    place: t('alertRules.kind.place', 'Place event'),
+  };
   const navigate = useNavigate();
-  usePageTitle(t('alertRules.title', 'Alert rules'));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editIdParam = searchParams.get('rule');
+  usePageTitle(editIdParam ? t('alertRules.editTitle', 'Edit notification rule') : t('alertRules.title', 'Alert rules'));
 
   // Claim an edit lease so a second tab opening the same bulk-rules surface
   // sees a banner before its renames / bulk-enables silently race this tab.
@@ -114,6 +127,10 @@ export default function AlertRulesPage() {
   const rulesQuery = useAlertRules();
   const { data: rulesRaw, isLoading, isError, error, refetch } = rulesQuery;
   const rules: AlertRule[] = useMemo(() => rulesRaw ?? [], [rulesRaw]);
+  const channelsQuery = useNotificationChannels();
+  const channels = useMemo(() => channelsQuery.data ?? [], [channelsQuery.data]);
+  const [search, setSearch] = useState('');
+  const [channelFilter, setChannelFilter] = useState('');
 
   const bulkEnable = useBulkEnableRules();
   const bulkDisable = useBulkDisableRules();
@@ -197,9 +214,18 @@ export default function AlertRulesPage() {
 
   /* ─── Sorting (client-side, DataTable-controlled) ─── */
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle('name', 'asc');
+  const filteredRules = useMemo(() => rules.filter((rule) => {
+    const matchSearch = !search.trim() ||
+      `${rule.name} ${subjectOf(rule)}`.toLowerCase().includes(search.trim().toLowerCase());
+    const matchChannel = !channelFilter ||
+      (channelFilter === 'all' ? rule.channel_ids == null
+        : channelFilter === 'none' ? rule.channel_ids?.length === 0
+          : rule.channel_ids == null || rule.channel_ids.includes(Number(channelFilter)));
+    return matchSearch && matchChannel;
+  }), [rules, search, channelFilter]);
   const sortedRules = useMemo(
     () =>
-      sortFn(rules, (r, key) => {
+      sortFn(filteredRules, (r, key) => {
         switch (key) {
           case 'name':
             return (r.name ?? '').toLowerCase();
@@ -213,7 +239,7 @@ export default function AlertRulesPage() {
             return '';
         }
       }),
-    [rules, sortFn],
+    [filteredRules, sortFn],
   );
 
   /* ─── Bulk actions ─── */
@@ -324,7 +350,7 @@ export default function AlertRulesPage() {
             display={({ value, onStartEdit }) => (
               <span className="inline-flex items-center gap-2">
                 <Link
-                  to={`/notifications/studio?rule=${r.id}`}
+                  to={`/notifications/rules?rule=${r.id}`}
                   className="font-medium text-cyan-300 underline-offset-2 hover:underline"
                 >
                   {value}
@@ -346,15 +372,13 @@ export default function AlertRulesPage() {
         header: t('alertRules.col.type', 'Type'),
         render: (r) => (
           <Badge variant="neutral" size="sm">
-            {r.kind === 'computed_metric'
-              ? t('alertRules.kind.metric', 'Metric')
-              : t('alertRules.kind.signal', 'Signal')}
+            {kindLabels[r.kind ?? 'signal']}
           </Badge>
         ),
       },
       {
         key: 'signal_name',
-        header: t('alertRules.col.signal', 'Signal'),
+        header: t('alertRules.col.signal', 'Subject'),
         sortable: true,
         render: (r) => (
           <Text as="span" color="secondary">
@@ -428,17 +452,51 @@ export default function AlertRulesPage() {
         onClick={() => navigate('/notifications/studio')}
         icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
       >
-        {t('alertRules.openStudio', 'Open Alert Studio')}
+        {t('alertRules.openStudio', 'Create rule')}
       </Button>
     </div>
   );
+
+  if (editIdParam !== null) {
+    const editId = /^\d+$/.test(editIdParam) ? Number(editIdParam) : NaN;
+    const editingRule = Number.isSafeInteger(editId) ? rules.find(rule => rule.id === editId) : undefined;
+    return (
+      <PageContainer
+        title={editingRule
+          ? t('alertRules.editNamed', 'Edit {{name}}', { name: editingRule.name })
+          : t('alertRules.editTitle', 'Edit notification rule')}
+        actions={
+          <Button variant="secondary" onClick={() => setSearchParams({}, { replace: true })}>
+            {t('alertRules.backToRules', 'Back to rules')}
+          </Button>
+        }
+        query={rulesQuery}
+      >
+        {isLoading ? <Skeleton height={240} /> : isError ? (
+          <QueryError error={error} onRetry={() => refetch()} />
+        ) : editingRule ? (
+          <AlertRuleEditor
+            key={editingRule.id}
+            rule={editingRule}
+            onCancel={() => setSearchParams({}, { replace: true })}
+          />
+        ) : (
+          <EmptyState
+            title={t('alertRules.editMissing', 'Rule not found')}
+            message={t('alertRules.editMissingDetail', 'This rule may have been deleted. Return to the list to choose another.')}
+            actionTo={{ label: t('alertRules.backToRules', 'Back to rules'), to: '/notifications/rules' }}
+          />
+        )}
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer
       title={t('alertRules.title', 'Alert rules')}
       subtitle={t(
         'alertRules.subtitle',
-        'Bulk-manage alert rules. Click a rule to edit it in Alert Studio.',
+        'Manage and edit notification rules. Create new rules in Studio.',
       )}
       actions={actions}
       query={rulesQuery}
@@ -510,7 +568,7 @@ export default function AlertRulesPage() {
               <EmptyState
                 icon={<Icons.alertCircle className="h-8 w-8" />}
                 message={t('alertRules.insights.noSeverity', 'No rules to summarise yet')}
-                actionTo={{ label: t('alertRules.empty.cta', 'Open Alert Studio'), to: '/notifications/studio' }}
+                actionTo={{ label: t('alertRules.empty.cta', 'Create rule'), to: '/notifications/studio' }}
               />
             ) : (
               <>
@@ -581,7 +639,7 @@ export default function AlertRulesPage() {
               <EmptyState
                 icon={<Icons.power className="h-8 w-8" />}
                 message={t('alertRules.insights.noStatus', 'No rules to summarise yet')}
-                actionTo={{ label: t('alertRules.empty.cta', 'Open Alert Studio'), to: '/notifications/studio' }}
+                actionTo={{ label: t('alertRules.empty.cta', 'Create rule'), to: '/notifications/studio' }}
               />
             ) : (
               <div className="space-y-4">
@@ -613,7 +671,7 @@ export default function AlertRulesPage() {
               <EmptyState
                 icon={<Icons.filter className="h-8 w-8" />}
                 message={t('alertRules.insights.noSignals', 'No monitored signals yet')}
-                actionTo={{ label: t('alertRules.empty.cta', 'Open Alert Studio'), to: '/notifications/studio' }}
+                actionTo={{ label: t('alertRules.empty.cta', 'Create rule'), to: '/notifications/studio' }}
               />
             ) : (
               <div className="space-y-4">
@@ -640,6 +698,31 @@ export default function AlertRulesPage() {
             <Icons.notifications className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('alertRules.table.title', 'All rules')}
           </PanelTitle>
+          {rules.length > 0 && (
+            <div className="mb-4 grid gap-2 sm:grid-cols-2">
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={t('notifications.alertStudio.rules.searchPlaceholder', 'Search rules...')}
+                ariaLabel={t('notifications.alertStudio.rules.searchPlaceholder', 'Search rules...')}
+              />
+              <Select
+                aria-label={t('alertPacks.channelFilter', 'Filter by notification channel')}
+                value={channelFilter}
+                onChange={(event) => setChannelFilter(event.target.value)}
+                disabled={channelsQuery.isLoading || channelsQuery.isError}
+                options={[
+                  { value: '', label: t('alertPacks.filterAllChannels', 'All channels') },
+                  { value: 'all', label: t('alertPacks.filterAutomatic', 'Automatic routing') },
+                  { value: 'none', label: t('alertPacks.noExternal', 'No external channels') },
+                  ...channels.map(channel => ({ value: String(channel.id), label: channel.name })),
+                ]}
+              />
+            </div>
+          )}
+          {channelsQuery.isError && (
+            <QueryError error={channelsQuery.error} onRetry={() => channelsQuery.refetch()} />
+          )}
           {isLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
@@ -653,10 +736,10 @@ export default function AlertRulesPage() {
               title={t('alertRules.empty.title', 'No alert rules yet')}
               message={t(
                 'alertRules.empty.body',
-                'Create your first alert rule in the Alert Studio.',
+                'Create your first notification rule in Studio.',
               )}
               actionTo={{
-                label: t('alertRules.empty.cta', 'Open Alert Studio'),
+                label: t('alertRules.empty.cta', 'Create rule'),
                 to: '/notifications/studio',
               }}
             />
@@ -682,10 +765,7 @@ export default function AlertRulesPage() {
               exportFilename="alert-rules"
               exportRow={(rule) => ({
                 name: rule.name,
-                kind:
-                  rule.kind === 'computed_metric'
-                    ? t('alertRules.kind.metric', 'Metric')
-                    : t('alertRules.kind.signal', 'Signal'),
+                kind: kindLabels[rule.kind ?? 'signal'],
                 signal_name: subjectOf(rule),
                 severity: rule.severity,
                 scope: rule.all_vehicles

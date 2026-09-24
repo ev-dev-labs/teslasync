@@ -295,6 +295,7 @@ export interface Geofence {
   alert_on_exit: boolean
   origin: GeofenceOrigin
   needs_review: boolean
+  is_charging_location: boolean
   archived_at?: string | null
   created_at: string
   updated_at: string
@@ -304,6 +305,18 @@ export interface Geofence {
   longitude: number
   /** Computed bounding radius, meters — see MarshalJSON note above. */
   radius: number
+}
+
+/** Completed-drive endpoint cluster; charging evidence is from completed sessions. */
+export interface VisitedPlaceCandidate {
+  id: number
+  name: string
+  latitude: number
+  longitude: number
+  visit_count: number
+  charge_count: number
+  last_visited: string
+  first_charge_at: string | null
 }
 
 /**
@@ -714,7 +727,8 @@ export interface AlertDetail extends Alert {
 export type AlertRuleSeverity = 'info' | 'warn' | 'critical'
 export type AlertRuleOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'changed' | 'between' | 'outside'
 export type AlertRuleTriggerMode = 'once' | 'repeat'
-export type AlertRuleKind = 'signal' | 'computed_metric'
+export type AlertRuleKind = 'signal' | 'computed_metric' | 'system_component' | 'place'
+export type AlertRuleTransition = 'outage' | 'recovery' | 'enter' | 'exit'
 export type ComputedMetricOp = '>' | '>=' | '<' | '<=' | '=' | '!=' | '%_change_>' | '%_change_<'
 
 export interface AlertRule {
@@ -751,6 +765,9 @@ export interface AlertRule {
   trigger_mode: AlertRuleTriggerMode
   snoozed_until?: string | null
   kind?: AlertRuleKind
+  component_name?: string | null
+  place_id?: number | null
+  transition?: AlertRuleTransition | null
   metric_id?: string | null
   metric_window?: string | null
   metric_threshold?: number | null
@@ -823,6 +840,9 @@ export interface AlertRuleInput {
   trigger_mode?: AlertRuleTriggerMode
   snoozed_until?: string | null
   kind?: AlertRuleKind
+  component_name?: string | null
+  place_id?: number | null
+  transition?: AlertRuleTransition | null
   metric_id?: string | null
   metric_window?: string | null
   metric_threshold?: number | null
@@ -844,6 +864,7 @@ export interface AlertRuleInput {
 export interface ComputedMetricSummary {
   id: string
   label: string
+  category: 'driving' | 'energy' | 'charging' | 'cost' | 'battery'
   unit: string
   windows: string[]
   ops: ComputedMetricOp[]
@@ -922,6 +943,9 @@ export interface AlertMessagePreset {
 export interface AlertMessagePreviewRequest {
   name?: string
   kind?: AlertRuleKind
+  component_name?: string | null
+  place_id?: number | null
+  transition?: AlertRuleTransition | null
   signal_name?: string
   op?: AlertRuleOp
   severity?: AlertRuleSeverity
@@ -1053,12 +1077,13 @@ export interface WebhookSignaturePreviewResult {
 
 export interface NotificationLog {
   id: number
-  channel_id: number
+  channel_id: number | null
   alert_id: number | null
   title: string
   message: string
-  status: 'pending' | 'sent' | 'failed' | 'deferred_dnd'
+  status: 'triggered' | 'pending' | 'sent' | 'failed' | 'deferred_dnd'
   severity?: string
+  event_type?: string
   error: string
   created_at: string
   sent_at: string | null
@@ -1066,6 +1091,20 @@ export interface NotificationLog {
   latency_ms?: number
   read_at?: string | null
   archived_at?: string | null
+}
+
+export interface NotificationReport {
+  from: string
+  to: string
+  triggered: number
+  deliveries: number
+  uncorrelated_deliveries: number
+  by_source: { key: string; count: number }[]
+  by_type: { key: string; count: number }[]
+  by_severity: { key: string; count: number }[]
+  by_channel: { key: string; count: number }[]
+  by_status: { key: string; count: number }[]
+  daily: { day: string; triggered: number; deliveries: number }[]
 }
 
 // server-aggregated notification "thread".
@@ -1637,12 +1676,37 @@ export interface AuditLog {
 // === System / Admin ===
 
 export interface APIUsage {
-  total_requests: number
-  skipped_polls: number
-  estimated_cost: number
-  cost_per_request: number
-  monthly_credit: number
-  estimated_remaining: number
+  current: TeslaUsageCycle
+  history: TeslaUsageCycle[]
+  rate_source: string
+  disclaimer: string
+}
+
+export interface TeslaUsageCycle {
+  start: string
+  end: string
+  signals: number
+  commands: number
+  data_requests: number
+  wakes: number
+  estimated_usd: number
+}
+
+export interface TeslaUsagePoint {
+  bucket_start: string
+  signals: number
+  commands: number
+  data_requests: number
+  wakes: number
+  estimated_usd: number
+}
+
+export interface TeslaUsageSeries {
+  start: string
+  end: string
+  bucket: 'day' | 'week'
+  total: TeslaUsageCycle
+  points: TeslaUsagePoint[]
 }
 
 export interface CompressionStats {
@@ -1748,6 +1812,8 @@ export interface APICallLog {
   rate_limited: boolean
   request_body: string | null
   response_body: string | null
+  request_headers?: Record<string, string> | null
+  response_headers?: Record<string, string> | null
 }
 
 export interface APICallLogResponse {

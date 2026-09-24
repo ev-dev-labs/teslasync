@@ -80,10 +80,21 @@ import App, {
   RecentPagesRecorder,
   SafeRoute,
   resolvePreferredLandingRedirect,
+  legacyTeslaPhysicsTarget,
   resolveReturnRedirect,
   stripTitleSuffix,
   RECENT_PAGES_RECORD_DELAY_MS,
 } from './App'
+
+describe('legacy Tesla Physics bookmarks', () => {
+  it('preserves nested paths, query filters and anchors while renaming the prefix', () => {
+    expect(legacyTeslaPhysicsTarget('/tesla-only', '?vehicle_id=7', '#sources'))
+      .toBe('/tesla-physics?vehicle_id=7#sources')
+    expect(legacyTeslaPhysicsTarget('/tesla-only/clocks', '?from=2026-09-01', '#timeline'))
+      .toBe('/tesla-physics/clocks?from=2026-09-01#timeline')
+    expect(legacyTeslaPhysicsTarget('/tesla-only-other', '', '')).toBe('/tesla-only-other')
+  })
+})
 
 const RETURN_URL_KEY = 'teslasync-return-url'
 

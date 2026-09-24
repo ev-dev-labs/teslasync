@@ -20,6 +20,7 @@
       "start": "Start date",
       "end": "End date",
       "apply": "Apply",
+      "newRange": "New range",
       "cancel": "Cancel",
       "trigger": "Date range",
       "pickRange": "Custom range",

@@ -14,21 +14,27 @@ import {
 } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner, QueryError } from '@/components/feedback';
+import { VisuallyHidden } from '@/components/a11y';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip, ChartLegend, EmbeddedChart,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, chartMarginLabeled, axisTick, chartAnimation,
+  ChartTooltip, EmbeddedChart,
+  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
+  ResponsiveContainer, axisTick, chartAnimation,
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useUrlEnum } from '@/hooks/useUrlState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import {
+  COMPARE_METRIC_SEMANTICS,
+  DELTA_FILL,
+  assessDelta,
+  pctChange,
+} from '../lib/periodCompare';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import { AIPeriodCompareNarration } from '@/components/ai/AIPeriodCompareNarration';
@@ -51,14 +57,8 @@ interface ComparisonRow {
   change: number;
   pctChange: string;
   positive: boolean;
-}
-
-/* ── Helpers ───────────────────────────────────────────── */
-
-function pctChange(a: number, b: number): { value: string; positive: boolean } {
-  if (b === 0) return { value: '—', positive: true };
-  const pct = ((a - b) / b) * 100;
-  return { value: `${pct > 0 ? '+' : ''}${fmtNumber(pct, 1)}%`, positive: pct >= 0 };
+  /** Null = no judgment (neutral metric, zero baseline, or zero movement). */
+  favorable: boolean | null;
 }
 
 const PERIOD_DAYS: Record<string, number> = {
@@ -88,9 +88,6 @@ export default function PeriodComparePage() {
   const { vehicleId, setVehicleId } = useSelectedVehicle();
   const [periodA, setPeriodA] = useUrlEnum<PeriodValue>('period_a', PERIOD_VALUES, '30');
   const [periodB, setPeriodB] = useUrlEnum<PeriodValue>('period_b', PERIOD_VALUES, '90');
-
-  // Reactive chart palette (color-blind-safe or neon, per user preference).
-  const palette = useChartPalette();
 
   // Disambiguation banner — defaults to visible, persists dismissal.
   const [bannerVisible, setBannerVisible] = useState<boolean>(() => {
@@ -192,17 +189,34 @@ export default function PeriodComparePage() {
     const effA = distanceUnit === 'mi' ? (a.avg_efficiency ?? 0) * KM_PER_MILE : (a.avg_efficiency ?? 0);
     const effB = distanceUnit === 'mi' ? (b.avg_efficiency ?? 0) * KM_PER_MILE : (b.avg_efficiency ?? 0);
     return [
-      { key: 'distance', label: t('compare.totalDistance', 'Total Distance'), icon: <Car className="h-4 w-4" aria-hidden="true" />, a: distA, b: distB, unit: distanceUnit, color: 'cyan' as const },
-      { key: 'drives', label: t('compare.totalDrives', 'Total Drives'), icon: <TrendingUp className="h-4 w-4" aria-hidden="true" />, a: a.total_drives ?? 0, b: b.total_drives ?? 0, unit: '', color: 'green' as const },
-      { key: 'energy', label: t('compare.energyUsed', 'Energy Used'), icon: <Zap className="h-4 w-4" aria-hidden="true" />, a: a.energy_used ?? 0, b: b.energy_used ?? 0, unit: 'kWh', color: 'purple' as const },
-      { key: 'efficiency', label: t('compare.avgEfficiency', 'Avg Efficiency'), icon: <Gauge className="h-4 w-4" aria-hidden="true" />, a: effA, b: effB, unit: efficiencyUnit, color: 'cyan' as const },
-      { key: 'cost', label: t('compare.totalCost', 'Total Cost'), icon: <DollarSign className="h-4 w-4" aria-hidden="true" />, a: a.total_cost ?? 0, b: b.total_cost ?? 0, unit: '$', color: 'green' as const },
-      { key: 'co2', label: t('compare.co2Saved', 'CO₂ Saved'), icon: <Leaf className="h-4 w-4" aria-hidden="true" />, a: a.co2_saved ?? 0, b: b.co2_saved ?? 0, unit: 'kg', color: 'purple' as const },
+      { key: 'distance', label: t('compare.totalDistance', 'Total Distance'), icon: <Car className="h-4 w-4" aria-hidden="true" />, a: distA, b: distB, unit: distanceUnit, color: 'cyan' as const, semantic: COMPARE_METRIC_SEMANTICS.distance },
+      { key: 'drives', label: t('compare.totalDrives', 'Total Drives'), icon: <TrendingUp className="h-4 w-4" aria-hidden="true" />, a: a.total_drives ?? 0, b: b.total_drives ?? 0, unit: '', color: 'green' as const, semantic: COMPARE_METRIC_SEMANTICS.drives },
+      { key: 'energy', label: t('compare.energyUsed', 'Energy Used'), icon: <Zap className="h-4 w-4" aria-hidden="true" />, a: a.energy_used ?? 0, b: b.energy_used ?? 0, unit: 'kWh', color: 'purple' as const, semantic: COMPARE_METRIC_SEMANTICS.energy },
+      { key: 'efficiency', label: t('compare.avgEfficiency', 'Avg Efficiency'), icon: <Gauge className="h-4 w-4" aria-hidden="true" />, a: effA, b: effB, unit: efficiencyUnit, color: 'cyan' as const, semantic: COMPARE_METRIC_SEMANTICS.efficiency },
+      { key: 'cost', label: t('compare.totalCost', 'Total Cost'), icon: <DollarSign className="h-4 w-4" aria-hidden="true" />, a: a.total_cost ?? 0, b: b.total_cost ?? 0, unit: '$', color: 'green' as const, semantic: COMPARE_METRIC_SEMANTICS.cost },
+      { key: 'co2', label: t('compare.co2Saved', 'CO₂ Saved'), icon: <Leaf className="h-4 w-4" aria-hidden="true" />, a: a.co2_saved ?? 0, b: b.co2_saved ?? 0, unit: 'kg', color: 'purple' as const, semantic: COMPARE_METRIC_SEMANTICS.co2 },
     ];
   }, [a, b, t, distanceUnit, efficiencyUnit]);
 
-  const chartData = useMemo(
-    () => metrics.map((m) => ({ name: m.label, A: m.a, B: m.b })),
+  // Hero chart plots per-metric % change vs Period B (unitless, so a shared
+  // % axis is honest) instead of raw values with incompatible units.
+  // (Rows stay string|number-only per the ChartDataRow contract; the tooltip
+  // resolves baselines from `metrics` instead of carrying a boolean column.)
+  const deltaChartData = useMemo(
+    () =>
+      metrics.filter((m) => m.b !== 0).map((m) => {
+        const favorable = assessDelta(m.semantic, m.a, m.b).favorable;
+        return {
+          name: m.label,
+          delta: ((m.a - m.b) / Math.abs(m.b)) * 100,
+          fill:
+            favorable == null
+              ? DELTA_FILL.neutral
+              : favorable
+                ? DELTA_FILL.favorable
+                : DELTA_FILL.unfavorable,
+        };
+      }),
     [metrics],
   );
 
@@ -218,6 +232,7 @@ export default function PeriodComparePage() {
           change: delta,
           pctChange: pct.value,
           positive: pct.positive,
+          favorable: assessDelta(m.semantic, m.a, m.b).favorable,
         };
       }),
     [metrics],
@@ -246,17 +261,27 @@ export default function PeriodComparePage() {
         key: 'change',
         header: t('compare.change', 'Change'),
         sortable: true,
-        render: (r) => (
-          <Text variant="body" className={cn('tabular-nums', r.positive ? 'text-emerald-300' : 'text-rose-300')}>
-            {r.positive ? '↑' : '↓'} {fmtNumber(Math.abs(r.change))}
-          </Text>
-        ),
+        render: (r) => {
+          const arrow = r.change > 0 ? '↑' : r.change < 0 ? '↓' : '→';
+          const spoken =
+            r.change > 0
+              ? t('compare.increasedBy', 'Increased by {{value}}', { value: fmtNumber(Math.abs(r.change)) })
+              : r.change < 0
+                ? t('compare.decreasedBy', 'Decreased by {{value}}', { value: fmtNumber(Math.abs(r.change)) })
+                : t('compare.noChange', 'No change');
+          return (
+            <Text variant="body" className={cn('tabular-nums', r.favorable == null ? 'text-[var(--text-muted)]' : r.favorable ? 'text-emerald-300' : 'text-rose-300')}>
+              <VisuallyHidden>{spoken}</VisuallyHidden>
+              <span aria-hidden="true">{arrow} {fmtNumber(Math.abs(r.change))}</span>
+            </Text>
+          );
+        },
       },
       {
         key: 'pctChange',
         header: t('compare.pctChange', '% Change'),
         render: (r) => (
-          <Badge variant={r.positive ? 'success' : 'danger'} size="sm">
+          <Badge variant={r.favorable == null ? 'neutral' : r.favorable ? 'success' : 'danger'} size="sm">
             {r.pctChange}
           </Badge>
         ),
@@ -268,21 +293,38 @@ export default function PeriodComparePage() {
   const insights = useMemo(() => {
     if (!a || !b) return [];
     const distPct = pctChange(a.total_distance ?? 0, b.total_distance ?? 0);
-    const effPct = pctChange(a.avg_efficiency ?? 0, b.avg_efficiency ?? 0);
+    const effA = a.avg_efficiency ?? 0;
+    const effB = b.avg_efficiency ?? 0;
+    const effPct = pctChange(effA, effB);
+    // Efficiency is consumption (Wh/km): lower is better, so the verdict comes
+    // from direction semantics, not the raw sign. Magnitude is unsigned so the
+    // sentence reads naturally ("improved by 4.8%", never "improved by -4.8%").
+    const effFav = assessDelta(COMPARE_METRIC_SEMANTICS.efficiency, effA, effB).favorable;
+    const effNum = effB === 0 ? null : ((effA - effB) / Math.abs(effB)) * 100;
     const costPct = pctChange(a.total_cost ?? 0, b.total_cost ?? 0);
     return [
-      t('compare.insightDistance', 'Distance traveled was {{pct}} {{dir}} in Period A vs Period B.', {
-        pct: distPct.value,
-        dir: distPct.positive ? t('compare.more', 'more') : t('compare.less', 'less'),
-      }),
-      t('compare.insightEfficiency', 'Efficiency {{dir}} by {{pct}} compared to Period B.', {
-        pct: effPct.value,
-        dir: effPct.positive ? t('compare.improved', 'improved') : t('compare.declined', 'declined'),
-      }),
-      t('compare.insightCost', 'Costs were {{pct}} {{dir}} in Period A.', {
-        pct: costPct.value,
-        dir: costPct.positive ? t('compare.higher', 'higher') : t('compare.lower', 'lower'),
-      }),
+      distPct.neutral
+        ? t('compare.distanceNoBaseline', 'Distance change is unavailable: Period B has no baseline.')
+        : t('compare.insightDistance', 'Distance traveled was {{pct}} {{dir}} in Period A vs Period B.', {
+          pct: distPct.value,
+          dir: distPct.positive ? t('compare.more', 'more') : t('compare.less', 'less'),
+        }),
+      effPct.neutral
+        ? t('compare.efficiencyNoBaseline', 'Efficiency change is unavailable: Period B has no baseline.')
+        : t('compare.insightEfficiency', 'Efficiency {{dir}} by {{pct}} compared to Period B.', {
+          pct: effNum == null ? effPct.value : `${fmtNumber(Math.abs(effNum), 1)}%`,
+          dir: effA === effB
+            ? t('compare.unchanged', 'unchanged')
+            : effFav
+              ? t('compare.improved', 'improved')
+              : t('compare.declined', 'declined'),
+        }),
+      costPct.neutral
+        ? t('compare.costNoBaseline', 'Cost change is unavailable: Period B has no baseline.')
+        : t('compare.insightCost', 'Costs were {{pct}} {{dir}} in Period A.', {
+          pct: costPct.value,
+          dir: costPct.positive ? t('compare.higher', 'higher') : t('compare.lower', 'lower'),
+        }),
     ];
   }, [a, b, t]);
 
@@ -390,97 +432,118 @@ export default function PeriodComparePage() {
             </GlassPanel>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
-              {metrics.map((m) => {
-                const pct = pctChange(m.a, m.b);
-                return (
-                  <MetricCard
-                    key={m.key}
-                    label={m.label}
-                    value={`${fmtNumber(m.a)} ${m.unit}`.trim()}
-                    icon={m.icon}
-                    color={m.color}
-                    subtitle={`${t('compare.periodB', 'Period B')}: ${fmtNumber(m.b)} ${m.unit}`.trim()}
-                    change={pct}
-                  />
-                );
-              })}
+              {metrics.map((m) => (
+                <MetricCard
+                  key={m.key}
+                  label={m.label}
+                  value={`${fmtNumber(m.a)} ${m.unit}`.trim()}
+                  icon={m.icon}
+                  color={m.color}
+                  subtitle={`${t('compare.periodB', 'Period B')}: ${fmtNumber(m.b)} ${m.unit}`.trim()}
+                  delta={{
+                    metric: m.semantic,
+                    current: m.a,
+                    previous: m.b,
+                    comparedTo: `${t('compare.vs', 'vs')} ${t('compare.periodB', 'Period B')}`,
+                  }}
+                />
+              ))}
             </div>
           )}
         </section>
       </FadeIn>
 
-      {/* 2 — Primary bento: side-by-side chart (hero) + insights column. */}
+      {/* 2 — Primary bento: % change chart (hero) + insights column. */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          {/* Side-by-side comparison — the hero, spans two of three columns. */}
+          {/* Change-vs-B comparison — the hero, spans two of three columns. */}
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('compare.chartTitle', 'Side-by-Side Comparison')}
+              {t('compare.deltaChartTitle', 'Change vs Period B (%)')}
             </PanelTitle>
             {loadError ? (
               <QueryError error={loadError} onRetry={refetchAll} />
             ) : bothLoading ? (
               <Skeleton height={288} />
-            ) : chartData.length === 0 ? (
-              <EmptyState /* no-action: transient empty state — no comparable metrics until both periods load */
+            ) : deltaChartData.length === 0 ? (
+              <EmptyState /* no-action: no valid percent baseline in the selected windows */
                 icon={<BarChart3 className="h-8 w-8" aria-hidden="true" />}
-                message={t('compare.empty', 'Select a vehicle and two periods to compare.')}
+                message={metrics.length === 0
+                  ? t('compare.empty', 'Select a vehicle and two periods to compare.')
+                  : t('compare.noChartBaseline', 'Percent change requires a nonzero Period B baseline. Try another window.')}
               />
             ) : (
+              <>
+              {deltaChartData.length < metrics.length && (
+                <Text as="p" size="sm" color="secondary">
+                  {metrics.length - deltaChartData.length === 1
+                    ? t('compare.omittedBaseline', 'One metric with no Period B baseline is omitted from the chart.')
+                    : t('compare.omittedBaselines', '{{count}} metrics with no Period B baseline are omitted from the chart.', {
+                      count: metrics.length - deltaChartData.length,
+                    })}
+                </Text>
+              )}
               <EmbeddedChart
-                title={t('compare.chartTitle', 'Side-by-Side Comparison')}
-                ariaLabel={t('compare.chartAria', 'Comparison of selected metrics between two periods')}
-                data={chartData}
+                title={t('compare.deltaChartTitle', 'Change vs Period B (%)')}
+                ariaLabel={t('compare.deltaChartAria', 'Percent change of each metric in Period A relative to Period B')}
+                data={deltaChartData}
                 dataColumns={[
                   { key: 'name', label: t('compare.metric', 'Metric') },
                   {
-                    key: 'A',
-                    label: t('compare.periodA', 'Period A'),
-                    format: (value) => fmtNumber(Number(value ?? 0)),
-                  },
-                  {
-                    key: 'B',
-                    label: t('compare.periodB', 'Period B'),
-                    format: (value) => fmtNumber(Number(value ?? 0)),
+                    key: 'delta',
+                    label: t('compare.pctChange', '% Change'),
+                    format: (value) => `${fmtNumber(Number(value ?? 0), 1)}%`,
                   },
                 ]}
                 height={320}
-                mobileHeight={256}
-                chartKey="period-compare-side-by-side"
+                mobileHeight={280}
+                chartKey="period-compare-delta-vs-b"
               >
-                {({ hiddenSeries }) => (
+                {() => (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={chartMarginLabeled}>
+                    <BarChart data={deltaChartData} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke="var(--glass-border)"
                         strokeOpacity={0.4}
+                        horizontal={false}
                       />
-                      <XAxis dataKey="name" tick={axisTick} />
-                      <YAxis tick={axisTick} />
-                      <Tooltip content={({ active, payload, label }) => <ChartTooltip active={active} payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]} label={label as string} />} />
-                      <ChartLegend />
+                      <XAxis
+                        type="number"
+                        tick={axisTick}
+                        tickFormatter={(v) => `${fmtNumber(Number(v), 0)}%`}
+                        domain={[(dataMin: number) => Math.min(0, dataMin), (dataMax: number) => Math.max(0, dataMax)]}
+                      />
+                      <YAxis type="category" dataKey="name" tick={axisTick} width={112} />
+                      <Tooltip content={({ active, payload, label }) => (
+                        <ChartTooltip
+                          active={active}
+                          payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
+                          label={label as string}
+                          valueFormatter={(value) =>
+                            metrics.find((m) => m.label === label)?.b === 0
+                              ? '—'
+                              : `${fmtNumber(Number(value ?? 0), 1)}%`
+                          }
+                        />
+                      )} />
+                      <ReferenceLine x={0} stroke="var(--glass-border)" />
                       <Bar
-                        dataKey="A"
-                        name={t('compare.periodA', 'Period A')}
-                        fill={palette[0]}
-                        radius={[4, 4, 0, 0]}
-                        hide={hiddenSeries?.isHidden('A')}
+                        dataKey="delta"
+                        name={t('compare.pctChange', '% Change')}
+                        radius={4}
                         {...chartAnimation}
-                      />
-                      <Bar
-                        dataKey="B"
-                        name={t('compare.periodB', 'Period B')}
-                        fill={palette[1]}
-                        radius={[4, 4, 0, 0]}
-                        hide={hiddenSeries?.isHidden('B')}
-                        {...chartAnimation}
-                      />
+                      >
+                        {deltaChartData.map((d) => (
+                          <Cell key={d.name} fill={d.fill} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 )}
               </EmbeddedChart>
+              </>
             )}
           </GlassPanel>
 
@@ -533,6 +596,7 @@ export default function PeriodComparePage() {
               data={tableRows}
               keyExtractor={(r) => r.metric}
               emptyMessage={t('compare.empty', 'Select a vehicle and two periods to compare.')}
+              mobileColumns={['metric', 'change', 'pctChange']}
               compact
               pagination
             />

@@ -77,6 +77,7 @@ export function TelemetryErrorsPanel({
         <DataTable
           tableId="admin:fleet-api-errors"
           columns={columns}
+          mobileColumns={[]}
           data={rows}
           keyExtractor={(r) => r.rowKey}
           compact

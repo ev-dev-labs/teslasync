@@ -10,11 +10,35 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
+
+func TestNormalizeWebhookResponseOmitsSigningSecret(t *testing.T) {
+	ch := &notificationmodel.NotificationChannel{
+		ID:   3,
+		Type: "webhook",
+		Name: "Automation",
+		Config: map[string]string{
+			"url":          "https://example.test/events",
+			"bearer_token": "do-not-return",
+			"http_method":  "PUT",
+		},
+	}
+	resp := normalizeChannelResponse(ch)
+	if _, ok := resp["bearer_token"]; ok {
+		t.Fatal("webhook signing secret exposed in API response")
+	}
+	if resp["url"] != ch.Config["url"] {
+		t.Fatalf("url = %v, want stored URL", resp["url"])
+	}
+	if resp["method"] != "PUT" {
+		t.Fatalf("method = %v, want persisted PUT method", resp["method"])
+	}
+}
 
 // fakeInboxStore is an in-memory stub of notificationInboxStore so handler
 // tests can exercise filter parsing and bulk endpoints without a live DB.
@@ -22,6 +46,8 @@ type fakeInboxStore struct {
 	lastFilters dbnotif.NotificationLogFilters
 	rows        []*notificationmodel.NotificationLog
 	listErr     error
+	count       int64
+	countErr    error
 
 	groups        []*notificationmodel.NotificationLogGroup
 	listGroupErr  error
@@ -64,6 +90,33 @@ func (f *fakeInboxStore) GetLogsFiltered(_ context.Context, filters dbnotif.Noti
 		return nil, f.listErr
 	}
 	return f.rows, nil
+}
+
+func (f *fakeInboxStore) CountLogsFiltered(_ context.Context, filters dbnotif.NotificationLogFilters) (int64, error) {
+	f.lastFilters = filters
+	return f.count, f.countErr
+}
+
+func (f *fakeInboxStore) CountGroupsFiltered(ctx context.Context, filters dbnotif.NotificationLogFilters) (int64, error) {
+	return f.CountLogsFiltered(ctx, filters)
+}
+
+func TestCountLogsRuleSource(t *testing.T) {
+	store := &fakeInboxStore{count: 73}
+	h := &Handler{inbox: store}
+	rec := httptest.NewRecorder()
+	h.CountLogs(rec, httptest.NewRequest(http.MethodGet, "/notifications/logs/count?source=rule&limit=25&offset=50", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"total":73`) {
+		t.Fatalf("count response: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if store.lastFilters.Source != "rule" || store.lastFilters.Offset != 50 {
+		t.Fatalf("count filters: %+v", store.lastFilters)
+	}
+	rec = httptest.NewRecorder()
+	h.CountLogs(rec, httptest.NewRequest(http.MethodGet, "/notifications/logs/count?source=invalid", nil))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid source status=%d", rec.Code)
+	}
 }
 
 func (f *fakeInboxStore) ListGrouped(_ context.Context, filters dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error) {
@@ -218,6 +271,26 @@ func TestParseNotificationLogFilters(t *testing.T) {
 			},
 		},
 		{
+			name:  "to date-only includes the entire selected day",
+			query: "from=2026-09-22&to=2026-09-23",
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
+				want := time.Date(2026, 9, 24, 0, 0, 0, -1, time.UTC)
+				if !f.To.Equal(want) {
+					t.Fatalf("to = %s, want %s", f.To.Format(time.RFC3339Nano), want.Format(time.RFC3339Nano))
+				}
+			},
+		},
+		{
+			name:  "to timestamp remains exact",
+			query: "to=2026-09-23T12%3A30%3A00Z",
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
+				want := time.Date(2026, 9, 23, 12, 30, 0, 0, time.UTC)
+				if !f.To.Equal(want) {
+					t.Fatalf("to = %s, want %s", f.To.Format(time.RFC3339Nano), want.Format(time.RFC3339Nano))
+				}
+			},
+		},
+		{
 			name:    "invalid from",
 			query:   "from=not-a-date",
 			wantErr: true,
@@ -263,6 +336,28 @@ func TestParseNotificationLogFilters(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:  "all archived states for historical analysis",
+			query: "archived=all",
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
+				if f.Archived != nil {
+					t.Fatalf("archived filter = %v, want none", *f.Archived)
+				}
+			},
+		},
+		{
+			name:  "cursor for complete historical analysis",
+			query: "before_created_at=2026-09-15T12%3A30%3A00Z&before_id=42",
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
+				if f.BeforeCreatedAt.Format(time.RFC3339) != "2026-09-15T12:30:00Z" || f.BeforeID != 42 {
+					t.Fatalf("cursor = %v, %d", f.BeforeCreatedAt, f.BeforeID)
+				}
+			},
+		},
+		{name: "cursor missing id", query: "before_created_at=2026-09-15T12%3A30%3A00Z", wantErr: true},
+		{name: "cursor missing time", query: "before_id=42", wantErr: true},
+		{name: "cursor invalid time", query: "before_created_at=tomorrow&before_id=42", wantErr: true},
+		{name: "cursor invalid id", query: "before_created_at=2026-09-15T12%3A30%3A00Z&before_id=-1", wantErr: true},
 		{
 			name:  "free text query",
 			query: "q=%20%20battery%20low%20%20",
@@ -327,6 +422,23 @@ func TestGetLogsHandler(t *testing.T) {
 	}
 	if len(out) != 1 || out[0].ID != 1 {
 		t.Fatalf("body = %+v", out)
+	}
+}
+
+func TestGetLogsHandlerDeliveryView(t *testing.T) {
+	store := &fakeInboxStore{rows: []*notificationmodel.NotificationLog{{ID: 2, ChannelID: 1, Status: "sent"}}}
+	h := newTestHandler(store)
+	rec := httptest.NewRecorder()
+	h.GetLogs(rec, httptest.NewRequest(http.MethodGet, "/notifications/logs?view=deliveries&limit=1000", nil))
+	if rec.Code != http.StatusOK || !store.lastFilters.DeliveryOnly || store.lastFilters.Limit != 1000 {
+		t.Fatalf("delivery view: status=%d filters=%+v", rec.Code, store.lastFilters)
+	}
+	for _, query := range []string{"view=unknown", "view=deliveries&grouped=true"} {
+		rec = httptest.NewRecorder()
+		h.GetLogs(rec, httptest.NewRequest(http.MethodGet, "/notifications/logs?"+query, nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: got %d, want 400", query, rec.Code)
+		}
 	}
 }
 

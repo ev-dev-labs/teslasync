@@ -65,7 +65,10 @@ type AlertRule struct {
 	// (kind="signal") and aggregated computed-metric rules
 	// (kind="computed_metric"). Defaults to "signal" for backward compat;
 	// added in migration 000158_alert_rule_kinds.
-	Kind string `db:"kind" json:"kind"`
+	Kind          string  `db:"kind" json:"kind"`
+	ComponentName *string `db:"component_name" json:"component_name,omitempty"`
+	Transition    *string `db:"transition" json:"transition,omitempty"`
+	PlaceID       *int64  `db:"place_id" json:"place_id,omitempty"`
 	// MetricID names a registered computed metric (e.g. "charging_cost").
 	// Required when Kind=="computed_metric"; nil otherwise.
 	MetricID *string `db:"metric_id" json:"metric_id,omitempty"`
@@ -162,8 +165,10 @@ func (r *AlertRule) AppliesTo(vehicleID int64) bool {
 
 // Kind constants. See migration 000158_alert_rule_kinds.up.sql.
 const (
-	AlertRuleKindSignal         = "signal"
-	AlertRuleKindComputedMetric = "computed_metric"
+	AlertRuleKindSignal          = "signal"
+	AlertRuleKindComputedMetric  = "computed_metric"
+	AlertRuleKindSystemComponent = "system_component"
+	AlertRuleKindPlace           = "place"
 )
 
 // NotificationLogEvent represents one entry in the per-alert audit timeline.

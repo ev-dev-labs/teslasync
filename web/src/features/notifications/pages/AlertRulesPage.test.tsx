@@ -27,6 +27,15 @@ vi.mock('@/components/charts', async (importOriginal) => {
   return { ...actual, ...chartTestDoubles };
 });
 
+vi.mock('../components/AlertRuleEditor', () => ({
+  AlertRuleEditor: ({ rule, onCancel }: { rule: AlertRule; onCancel: () => void }) => (
+    <div data-testid="full-rule-editor">
+      {rule.name}
+      <button onClick={onCancel}>Cancel edit</button>
+    </div>
+  ),
+}));
+
 import type { AlertRule } from '@/api/types';
 import AlertRulesPage, { subjectOf, isSnoozed } from './AlertRulesPage';
 
@@ -54,6 +63,7 @@ vi.hoisted(() => {
 // instances.
 const H = vi.hoisted(() => ({
   rules: { current: null as unknown },
+  channels: { current: { data: [{ id: 2, name: 'Team' }], isLoading: false, isError: false, error: null, refetch: vi.fn() } },
   bulkEnable: vi.fn(),
   bulkDisable: vi.fn(),
   del: vi.fn(),
@@ -102,6 +112,7 @@ vi.mock('@/api/hooks/useNotifications', async () => {
   return {
     ...actual,
     useAlertRules: () => H.rules.current,
+    useNotificationChannels: () => H.channels.current,
     useBulkEnableRules: () => ({ mutateAsync: H.bulkEnable, isPending: false }),
     useBulkDisableRules: () => ({ mutateAsync: H.bulkDisable, isPending: false }),
     useDeleteAlertRule: () => ({ mutateAsync: H.del, isPending: false }),
@@ -167,11 +178,11 @@ function setRules(q: Partial<RulesQuery>) {
   H.rules.current = makeQuery(q);
 }
 
-function renderPage() {
+function renderPage(path = '/notifications/rules') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/notifications/rules']}>
+      <MemoryRouter initialEntries={[path]}>
         <AlertRulesPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -275,6 +286,43 @@ describe('AlertRulesPage — data state', () => {
     ).toBeInTheDocument();
   });
 
+  it('moves Studio search and channel filtering into the Rules page', async () => {
+    setRules({ data: [
+      makeRule({ id: 1, name: 'Automatic battery', channel_ids: null }),
+      makeRule({ id: 2, name: 'Team charging', channel_ids: [2] }),
+      makeRule({ id: 3, name: 'Inbox only', channel_ids: [] }),
+    ] });
+    renderPage();
+    const filter = screen.getByRole('combobox', { name: 'Filter by notification channel' });
+    fireEvent.change(filter, { target: { value: 'none' } });
+    expect(screen.getByRole('link', { name: 'Inbox only' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Team charging' })).toBeNull();
+    fireEvent.change(filter, { target: { value: '2' } });
+    expect(screen.getByRole('link', { name: 'Team charging' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Automatic battery' })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search rules...' }), { target: { value: 'battery' } });
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Automatic battery' })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Team charging' })).toBeNull();
+    });
+  });
+
+  it('opens full editing on the Rules route and returns to the list', () => {
+    const { container } = renderPage();
+    expect(screen.getByRole('link', { name: 'Alpha' })).toHaveAttribute('href', '/notifications/rules?rule=2');
+    fireEvent.click(screen.getByRole('link', { name: 'Alpha' }));
+    expect(within(container).getByTestId('full-rule-editor')).toHaveTextContent('Alpha');
+    expect(screen.queryByRole('table')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel edit' }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('handles a removed rule deep link without redirecting to Studio', () => {
+    renderPage('/notifications/rules?rule=999');
+    expect(screen.getAllByText('Rule not found').length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: 'Back to rules' })).toHaveAttribute('href', '/notifications/rules');
+  });
+
   it('shows the severity legend with the computed critical count', () => {
     renderPage();
     // `{label} · {value}` — critical bucket has exactly one rule (Zebra). Match
@@ -317,8 +365,8 @@ describe('AlertRulesPage — loading / error / empty', () => {
     setRules({ data: [] });
     renderPage();
     expect(screen.getByText('No alert rules yet')).toBeInTheDocument();
-    // Empty-state CTA link + header button both read "Open Alert Studio".
-    expect(screen.getAllByText('Open Alert Studio').length).toBeGreaterThan(0);
+    // Empty-state CTA link + header button both create a rule in Studio.
+    expect(screen.getAllByText('Create rule').length).toBeGreaterThan(0);
     expect(screen.queryByRole('table')).toBeNull();
   });
 });
@@ -396,7 +444,7 @@ describe('AlertRulesPage — header actions & a11y', () => {
     // The page header renders its own icon-only "Refresh" alongside the
     // PageContainer freshness chip's refresh. Scope to the actions cluster (the
     // refresh + studio buttons share a parent) so we target the page control.
-    const studio = screen.getByRole('button', { name: 'Open Alert Studio' });
+    const studio = screen.getByRole('button', { name: 'Create rule' });
     const actions = studio.parentElement as HTMLElement;
     fireEvent.click(within(actions).getByRole('button', { name: 'Refresh' }));
     expect(H.refetch).toHaveBeenCalledTimes(1);
@@ -404,7 +452,7 @@ describe('AlertRulesPage — header actions & a11y', () => {
 
   it('navigates to the studio from the header CTA', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Open Alert Studio' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create rule' }));
     expect(H.navigate).toHaveBeenCalledWith('/notifications/studio');
   });
 

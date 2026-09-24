@@ -33,7 +33,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act, within, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@/components/feedback';
@@ -584,6 +584,19 @@ describe('DashboardPage — edit-mode header', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(h.layout.setEditMode).toHaveBeenCalledWith(false);
   });
+
+  it('confirm-gates the header Reset button instead of resetting on click', async () => {
+    h.layout.editMode = true;
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Reset dashboard to default?')).toBeInTheDocument();
+    expect(h.layout.resetToDefault).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reset' }));
+    await waitFor(() => expect(h.layout.resetToDefault).toHaveBeenCalledTimes(1));
+  });
 });
 
 describe('DashboardPage — data states', () => {
@@ -786,20 +799,32 @@ describe('DashboardPage — command palette bridge', () => {
     expect(h.layout.setEditMode).toHaveBeenCalledWith(true);
   });
 
-  it('runs reset only when the reset command is confirmed', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  it('routes the reset command through a danger confirm dialog', async () => {
     renderPage();
     act(() => {
       window.dispatchEvent(new Event('dashboard:reset'));
     });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Reset dashboard to default?')).toBeInTheDocument();
     expect(h.layout.resetToDefault).not.toHaveBeenCalled();
 
-    confirmSpy.mockReturnValue(true);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reset' }));
+    await waitFor(() => expect(h.layout.resetToDefault).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('does not reset when the palette reset confirm is cancelled', async () => {
+    renderPage();
     act(() => {
       window.dispatchEvent(new Event('dashboard:reset'));
     });
-    expect(h.layout.resetToDefault).toHaveBeenCalledTimes(1);
-    confirmSpy.mockRestore();
+
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(h.layout.resetToDefault).not.toHaveBeenCalled();
   });
 });
 
@@ -833,5 +858,20 @@ describe('DashboardPage — URL import', () => {
     window.location.hash = '';
     renderPage();
     expect(screen.queryByTestId('import-modal')).toBeNull();
+  });
+});
+
+describe('DashboardPage — kiosk deep-link', () => {
+  it('opens kiosk settings from ?kiosk=settings', () => {
+    window.history.replaceState({}, '', '/?kiosk=settings');
+    renderPage();
+    expect(screen.getByTestId('kiosk-settings')).toBeInTheDocument();
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('does not open kiosk settings without the query param', () => {
+    window.history.replaceState({}, '', '/');
+    renderPage();
+    expect(screen.queryByTestId('kiosk-settings')).toBeNull();
   });
 });

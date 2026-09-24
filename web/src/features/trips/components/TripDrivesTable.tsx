@@ -126,6 +126,7 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
         <DataTable
           tableId="trips:trip-detail-drives"
           columns={columns}
+          mobileColumns={['route', 'started_at', 'distance_m']}
           data={sortedDrives}
           keyExtractor={(d) => d.id}
           sortKey={sortKey}

@@ -145,6 +145,7 @@ function AcDcTable({ ac, dc }: { ac?: AcDcBucket; dc?: AcDcBucket }) {
     <DataTable<AcDcTableRow>
       tableId="charging:ac-dc-stats"
       columns={columns}
+      mobileColumns={['type', 'energy', 'cost']}
       data={data}
       keyExtractor={(r) => r.label}
       emptyMessage={t('charging.stats.noData', 'No AC/DC charging data')}

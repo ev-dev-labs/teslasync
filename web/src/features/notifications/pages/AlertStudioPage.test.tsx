@@ -1,6 +1,5 @@
 /**
- * AlertStudioPage integration tests for the
- * multi-vehicle picker wiring.
+ * AlertStudioPage create-only and multi-vehicle picker integration tests.
  *
  * Component-level tests (sticky-all toggling, unknown-id rendering,
  * empty-fleet behaviour, hydration, payload shape) live in
@@ -8,11 +7,7 @@
  *
  * This file pins the integration touch-points:
  *   1. New rule defaults to all-sticky.
- *   2. Editing a legacy `vehicle_id` rule hydrates the picker.
- *   3. Editing a new-shape rule (`all_vehicles + vehicle_ids`) hydrates.
- *   4. Save payload contains `all_vehicles` + `vehicle_ids` (never
- *      legacy `vehicle_id`).
- *   5. Save is disabled when picker is in `specific` with empty array.
+ * Existing-rule editing belongs on /notifications/rules, not in Studio.
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -22,6 +17,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import '../../../i18n';
 
 import AlertStudioPage from './AlertStudioPage';
+import { AlertRuleEditor } from '../components/AlertRuleEditor';
 import type { AlertRule, AlertRuleInput } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import { ToastProvider } from '@/components/feedback/Toast';
@@ -89,7 +85,16 @@ vi.mock('@/api/hooks/useSignals', () => ({
   }),
 }));
 
+vi.mock('@/api/hooks/useLocations', () => ({
+  useGeofencesFull: () => ({
+    data: [{ id: 7, name: 'Home', enabled: true }],
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 const recordedSavePayloads: AlertRuleInput[] = [];
+const onEditorSaved = vi.fn<(rule: AlertRule) => void>();
 
 vi.mock('@/api/hooks/useNotifications', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useNotifications')>(
@@ -101,7 +106,10 @@ vi.mock('@/api/hooks/useNotifications', async () => {
     useNotificationChannels: () => ({ data: [], isLoading: false, error: null }),
     useAlertMetrics: () => ({ data: [], isLoading: false }),
     useSaveAlertRule: () => ({
-      mutate: vi.fn((input: AlertRuleInput) => { recordedSavePayloads.push(input); }),
+      mutate: vi.fn((input: AlertRuleInput, options?: { onSuccess?: (result: AlertRule) => void }) => {
+        recordedSavePayloads.push(input);
+        options?.onSuccess?.({ ...input, id: 'id' in input ? input.id : 999 } as AlertRule);
+      }),
       mutateAsync: vi.fn(async (input: AlertRuleInput) => {
         recordedSavePayloads.push(input);
         return { id: 999, ...input } as unknown as AlertRule;
@@ -118,20 +126,22 @@ vi.mock('@/api/hooks/useNotifications', async () => {
 });
 
 function CurrentLocation() {
-  const { pathname } = useLocation();
-  return <span data-testid="current-location">{pathname}</span>;
+  const { pathname, search } = useLocation();
+  return <span data-testid="current-location">{pathname}{search}</span>;
 }
 
-function renderPage() {
+function renderPage(path = '/notifications/studio', editRule?: AlertRule) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/notifications/rules']}>
+      <MemoryRouter initialEntries={[path]}>
         <ToastProvider>
           <NavigationGuardProvider>
             <CurrentLocation />
             <GuardedLink to="/vehicles">Leave studio</GuardedLink>
-            <AlertStudioPage />
+            {editRule
+              ? <AlertRuleEditor key={editRule.id} rule={editRule} onSaved={onEditorSaved} onCancel={vi.fn()} />
+              : <AlertStudioPage />}
           </NavigationGuardProvider>
         </ToastProvider>
       </MemoryRouter>
@@ -146,11 +156,111 @@ describe('AlertStudioPage navigation protection', () => {
     window.localStorage.clear();
   });
 
+  describe('Shared AlertRuleEditor controlled edit mode', () => {
+    beforeEach(() => {
+      RULES = [];
+      recordedSavePayloads.length = 0;
+      onEditorSaved.mockClear();
+      window.localStorage.clear();
+    });
+
+    it('hydrates an existing signal rule and persists its channel routing with PUT identity', async () => {
+      const rule = {
+        id: 42, name: 'Battery warning', enabled: true, severity: 'warn',
+        all_vehicles: true, vehicle_ids: [], signal_name: 'BatteryLevel',
+        op: '<', value_num: 20, cooldown_min: 15, trigger_mode: 'repeat',
+        kind: 'signal', channel_ids: [], created_at: '', updated_at: '',
+      } as AlertRule;
+      renderPage('/notifications/rules', rule);
+      expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Battery warning');
+      expect(screen.getByLabelText('Rule delivery channels')).toHaveValue('none');
+      fireEvent.click(screen.getByRole('button', { name: 'Update Rule' }));
+      await waitFor(() => expect(onEditorSaved).toHaveBeenCalledTimes(1));
+      expect(recordedSavePayloads[0]).toMatchObject({ id: 42, kind: 'signal', channel_ids: [] });
+    });
+
+    it('hydrates computed-metric rules in the same edit form', async () => {
+      const rule = {
+        id: 43, name: 'Charging cost', enabled: true, severity: 'warn',
+        all_vehicles: true, vehicle_ids: [], signal_name: '',
+        op: '=', cooldown_min: 15, trigger_mode: 'once', kind: 'computed_metric',
+        metric_id: 'charging_cost', metric_window: 'day', metric_op: '>',
+        metric_threshold: 12, channel_ids: null, created_at: '', updated_at: '',
+      } as AlertRule;
+      renderPage('/notifications/rules', rule);
+      expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Charging cost');
+      expect(screen.getByLabelText('Rule delivery channels')).toHaveValue('inherit');
+      expect(screen.getByRole('button', { name: 'Update Rule' })).toBeInTheDocument();
+    });
+
+    it('edits a system-service outage rule without converting it to a signal rule', async () => {
+      const rule = {
+        id: 46, name: 'Broker outage', enabled: true, severity: 'warn',
+        all_vehicles: true, vehicle_ids: [], signal_name: '',
+        op: '=', cooldown_min: 15, trigger_mode: 'repeat', kind: 'system_component',
+        component_name: 'mqtt', transition: 'outage', created_at: '', updated_at: '',
+      } as AlertRule;
+      renderPage('/notifications/rules', rule);
+      expect(screen.getByLabelText('Service')).toHaveValue('mqtt');
+      expect(screen.queryByLabelText('Vehicles')).not.toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('When'), { target: { value: 'recovery' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Update Rule' }));
+      await waitFor(() => expect(onEditorSaved).toHaveBeenCalledTimes(1));
+      expect(recordedSavePayloads[0]).toMatchObject({
+        id: 46, kind: 'system_component', component_name: 'mqtt',
+        transition: 'recovery', all_vehicles: true, vehicle_ids: [],
+      });
+    });
+
+    it('edits a place arrival rule with its place and vehicle scope intact', async () => {
+      const rule = {
+        id: 47, name: 'Home arrival', enabled: true, severity: 'info',
+        all_vehicles: false, vehicle_ids: [1], signal_name: '',
+        op: '=', cooldown_min: 15, trigger_mode: 'repeat', kind: 'place',
+        place_id: 7, transition: 'enter', created_at: '', updated_at: '',
+      } as AlertRule;
+      renderPage('/notifications/rules', rule);
+      expect(screen.getByLabelText('Place')).toHaveValue('7');
+      fireEvent.change(screen.getByLabelText('When'), { target: { value: 'exit' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Update Rule' }));
+      await waitFor(() => expect(onEditorSaved).toHaveBeenCalledTimes(1));
+      expect(recordedSavePayloads[0]).toMatchObject({
+        id: 47, kind: 'place', place_id: 7, transition: 'exit',
+        all_vehicles: false, vehicle_ids: [1],
+      });
+    });
+
+    it('treats legacy rules without channel_ids as inheriting enabled channels', () => {
+      const rule = {
+        id: 45, name: 'Legacy rule', enabled: true, severity: 'warn',
+        all_vehicles: true, vehicle_ids: [], signal_name: 'BatteryLevel',
+        op: '<', value_num: 20, cooldown_min: 15, trigger_mode: 'once',
+        kind: 'signal', created_at: '', updated_at: '',
+      } as AlertRule;
+      renderPage('/notifications/rules', rule);
+      expect(screen.getByLabelText('Rule delivery channels')).toHaveValue('inherit');
+      expect(screen.getByRole('button', { name: 'Update Rule' })).toBeInTheDocument();
+    });
+
+    it('fails closed rather than overwriting an unsupported future kind as a signal', () => {
+      const rule = {
+        id: 44, name: 'Future event', enabled: true, severity: 'warn',
+        all_vehicles: true, vehicle_ids: [], signal_name: '',
+        op: '=', cooldown_min: 15, trigger_mode: 'once', kind: 'future_event',
+        created_at: '', updated_at: '',
+      } as unknown as AlertRule;
+      renderPage('/notifications/rules', rule);
+      expect(screen.getByText(/This rule type cannot be edited/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Update Rule' })).toBeDisabled();
+      expect(recordedSavePayloads).toHaveLength(0);
+    });
+  });
+
   it('does not warn just for restoring a locally saved draft, but warns for new edits', async () => {
     const first = renderPage();
     fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Recovered draft' } });
     await waitFor(() => {
-      expect(window.localStorage.getItem('teslasync:draft:v5:alertstudio:rule:new')).toContain('Recovered draft');
+      expect(window.localStorage.getItem('teslasync:draft:v6:alertstudio:rule:new')).toContain('Recovered draft');
     }, { timeout: 2000 });
     first.unmount();
     renderPage();
@@ -163,17 +273,58 @@ describe('AlertStudioPage navigation protection', () => {
     expect(await screen.findByText('Unsaved changes')).toBeInTheDocument();
   });
 
+  it('creates system and place rules using the corresponding typed condition fields', async () => {
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Broker unavailable' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'System service' }));
+    expect(screen.queryByLabelText('Vehicles')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create Rule' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Service'), { target: { value: 'mqtt' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Rule' }));
+    await waitFor(() => expect(recordedSavePayloads).toHaveLength(1));
+    expect(recordedSavePayloads[0]).toMatchObject({
+      kind: 'system_component', component_name: 'mqtt', transition: 'outage',
+      all_vehicles: true, vehicle_ids: [],
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Arrived home' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Place event' }));
+    expect(screen.getByRole('button', { name: 'Create Rule' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Place'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Rule' }));
+    await waitFor(() => expect(recordedSavePayloads).toHaveLength(2));
+    expect(recordedSavePayloads[1]).toMatchObject({
+      kind: 'place', place_id: 7, transition: 'enter',
+    });
+  });
+
+  it.each([
+    { channel_ids: undefined, vehicle_selection: { kind: 'all_sticky' } },
+    { channel_ids: null, vehicle_selection: { kind: 'specific' } },
+  ])('rejects an incomplete persisted draft without crashing the editor: %j', (value) => {
+    const key = 'teslasync:draft:v6:alertstudio:rule:new';
+    window.localStorage.setItem(key, JSON.stringify({
+      version: 6,
+      savedAt: Date.now(),
+      value,
+    }));
+    renderPage();
+    expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('');
+    expect(screen.getByLabelText('Rule delivery channels')).toHaveValue('inherit');
+    expect(window.localStorage.getItem(key)).toBeNull();
+  });
+
   it('discarding a recovered draft leaves a clean editor and removes the stored draft', async () => {
     const first = renderPage();
     fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Discard me' } });
     await waitFor(() => {
-      expect(window.localStorage.getItem('teslasync:draft:v5:alertstudio:rule:new')).toContain('Discard me');
+      expect(window.localStorage.getItem('teslasync:draft:v6:alertstudio:rule:new')).toContain('Discard me');
     }, { timeout: 2000 });
     first.unmount();
     renderPage();
     fireEvent.click(screen.getByTestId('draft-recovery-discard'));
     expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('');
-    expect(window.localStorage.getItem('teslasync:draft:v5:alertstudio:rule:new')).toBeNull();
+    expect(window.localStorage.getItem('teslasync:draft:v6:alertstudio:rule:new')).toBeNull();
     fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
     await waitFor(() => expect(screen.getByTestId('current-location')).toHaveTextContent('/vehicles'));
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
@@ -197,7 +348,7 @@ describe('AlertStudioPage navigation protection', () => {
     fireEvent.change(name, { target: { value: 'Unsaved rule' } });
     fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
     expect(await screen.findByText('Unsaved changes')).toBeInTheDocument();
-    expect(screen.getByTestId('current-location')).toHaveTextContent('/notifications/rules');
+    expect(screen.getByTestId('current-location')).toHaveTextContent('/notifications/studio');
     const event = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
@@ -210,32 +361,32 @@ describe('AlertStudioPage navigation protection', () => {
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
   });
 
-  it('does not warn when inspecting an existing saved rule without edits', async () => {
+  it('redirects legacy edit URLs to Rules without exposing an editor in Studio', async () => {
+    renderPage('/notifications/studio?rule=42');
+    await waitFor(() => expect(screen.getByTestId('current-location'))
+      .toHaveTextContent('/notifications/rules?rule=42'));
+    expect(screen.queryByRole('button', { name: 'Update Rule' })).not.toBeInTheDocument();
+  });
+
+  it('does not pass untrusted rule IDs through the redirect', async () => {
+    renderPage('/notifications/studio?rule=not-an-id');
+    await waitFor(() => expect(screen.getByTestId('current-location'))
+      .toHaveTextContent('/notifications/rules'));
+    expect(screen.getByTestId('current-location')).not.toHaveTextContent('not-an-id');
+  });
+
+  it('keeps the rules list on the Rules page, not in Studio', () => {
     RULES = [{
-      id: 42, name: 'Saved rule', enabled: true, severity: 'warn',
+      id: 42, name: 'Only on Rules page', enabled: true, severity: 'warn',
       all_vehicles: true, vehicle_ids: [], signal_name: 'BatteryLevel',
       op: '<', value_num: 20, cooldown_min: 15, trigger_mode: 'once',
       kind: 'signal', created_at: '', updated_at: '',
     } as AlertRule];
     renderPage();
-    selectRule('Saved rule');
-    await waitFor(() => expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Saved rule'));
-    fireEvent.click(screen.getByRole('link', { name: 'Leave studio' }));
-    await waitFor(() => expect(screen.getByTestId('current-location')).toHaveTextContent('/vehicles'));
-    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+    expect(screen.queryByText('Only on Rules page')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('My alert rule')).toBeInTheDocument();
   });
 });
-
-function selectRule(name: string) {
-  const span = screen.getByText(name);
-  // The clickable wrapper is the role="button" parent div.
-  const wrapper = span.closest('[role="button"]');
-  if (wrapper) {
-    fireEvent.click(wrapper);
-  } else {
-    fireEvent.click(span);
-  }
-}
 
 describe('AlertStudioPage — canonical signal units', () => {
   beforeEach(() => {
@@ -279,93 +430,24 @@ describe('AlertStudioPage — multi-vehicle picker integration (Phase-49 / Slice
     expect(screen.getAllByText('All vehicles').length).toBeGreaterThan(0);
   });
 
-  it('editing a legacy rule (vehicle_id=2 only) hydrates picker showing Plaid', async () => {
-    RULES = [
-      {
-        id: 42, name: 'LegacyRule', enabled: true, severity: 'warn',
-        vehicle_id: 2, signal_name: 'VehicleSpeed', op: '>', value_num: 70,
-        cooldown_min: 15, trigger_mode: 'repeat', kind: 'signal',
-        created_at: '', updated_at: '',
-      } as AlertRule,
-    ];
+  it('persists an independent delivery-channel choice when creating a rule', async () => {
     renderPage();
-    selectRule('LegacyRule');
-    await waitFor(() => {
-      expect(screen.getAllByText('Plaid').length).toBeGreaterThan(0);
-    });
+    fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Low battery' } });
+    fireEvent.change(document.getElementById('alert-signal') as HTMLSelectElement, { target: { value: 'BatteryLevel' } });
+    fireEvent.change(document.getElementById('alert-operator') as HTMLSelectElement, { target: { value: '<' } });
+    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } });
+    fireEvent.change(document.getElementById('alert-trigger-mode') as HTMLSelectElement, { target: { value: 'once' } });
+    fireEvent.change(screen.getByLabelText('Rule delivery channels'), { target: { value: 'none' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Rule' }));
+    await waitFor(() => expect(recordedSavePayloads[0]?.channel_ids).toEqual([]));
   });
 
-  it('editing a new-shape rule (all_vehicles=true) hydrates picker as All vehicles', async () => {
-    RULES = [
-      {
-        id: 43, name: 'StickyAll', enabled: true, severity: 'warn',
-        all_vehicles: true, vehicle_ids: [], vehicle_id: null,
-        signal_name: 'VehicleSpeed', op: '>', value_num: 70,
-        cooldown_min: 15, trigger_mode: 'repeat', kind: 'signal',
-        created_at: '', updated_at: '',
-      } as AlertRule,
-    ];
-    renderPage();
-    selectRule('StickyAll');
-    await waitFor(() => {
-      // 1 occurrence in rule list + 1 in picker trigger.
-      expect(screen.getAllByText('All vehicles').length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  it('editing a new-shape rule (all_vehicles=false, vehicle_ids=[1,2]) shows partial-count summary', async () => {
-    RULES = [
-      {
-        id: 44, name: 'TwoVehicles', enabled: true, severity: 'warn',
-        all_vehicles: false, vehicle_ids: [1, 2], vehicle_id: 1,
-        signal_name: 'VehicleSpeed', op: '>', value_num: 70,
-        cooldown_min: 15, trigger_mode: 'repeat', kind: 'signal',
-        created_at: '', updated_at: '',
-      } as AlertRule,
-    ];
-    renderPage();
-    selectRule('TwoVehicles');
-    // 2 of 2 = "all in known fleet", but kind='specific' so it shows "2 vehicles" (count-only).
-    await waitFor(() => {
-      expect(screen.getAllByText('2 vehicles').length).toBeGreaterThan(0);
-    });
-  });
-
-  it('save payload includes all_vehicles + vehicle_ids and OMITS legacy vehicle_id', async () => {
-    RULES = [
-      {
-        id: 50, name: 'EditAndSave', enabled: true, severity: 'warn',
-        all_vehicles: false, vehicle_ids: [1], vehicle_id: 1,
-        signal_name: 'VehicleSpeed', op: '>', value_num: 70,
-        cooldown_min: 15, trigger_mode: 'repeat', kind: 'signal',
-        created_at: '', updated_at: '',
-      } as AlertRule,
-    ];
-    renderPage();
-    selectRule('EditAndSave');
-    // Wait for hydration.
-    await waitFor(() => {
-      expect(screen.getAllByText('Roadster').length).toBeGreaterThan(0);
-    });
-    const saveBtn = await screen.findByRole('button', { name: /update rule/i });
-    fireEvent.click(saveBtn);
-    await waitFor(() => expect(recordedSavePayloads.length).toBeGreaterThan(0));
-    const payload = recordedSavePayloads[0] as Record<string, unknown>;
-    expect(payload.all_vehicles).toBe(false);
-    expect(payload.vehicle_ids).toEqual([1]);
-    expect('vehicle_id' in payload).toBe(false);
-  });
 });
 
 /**
- * Smart Defaults + Force-Choose for Alert Behavior.
- *
- * Decisions covered:
- *   D2: smart default by op (recommendedTriggerMode)
- *   D3: force user to choose at create time (no implicit 'repeat')
- *   R7: existing rules preserve their stored trigger_mode (no force-choose)
+ * New rules default to notify on event regardless of operator.
  */
-describe('AlertStudioPage — alert-behavior force-choose + recommendation (Phase-49 / Slice 0008)', () => {
+describe('AlertStudioPage — alert-behavior defaults', () => {
   beforeEach(() => {
     RULES = [];
     recordedSavePayloads.length = 0;
@@ -411,119 +493,54 @@ describe('AlertStudioPage — alert-behavior force-choose + recommendation (Phas
     fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: name } })
   }
 
-  it('new rule defaults trigger_mode to "unset" (placeholder shown, Save disabled)', () => {
+  it('new rule defaults to notify on event and excludes notification titles', () => {
     renderPage()
-    expect(getTriggerSelect().value).toBe('')
+    expect(getTriggerSelect().value).toBe('once')
+    expect(screen.getByRole('checkbox', { name: /Include title in notifications/i })).not.toBeChecked()
     expect(getSaveButton()).toBeDisabled()
   });
 
-  it('new rule with op="=" recommends "Notify on event"', async () => {
+  it('places behavior guidance and comparison recommendation below the field', () => {
     renderPage()
-    fillName('Test rule')
     pickSignal('BatteryLevel')
     pickOperator('=')
-    await waitFor(() => {
-      const banner = screen.queryByTestId('alert-behavior-recommend-banner')
-      expect(banner).not.toBeNull()
-      expect(banner!.textContent).toMatch(/Notify on event/)
-    })
-  });
+    const select = getTriggerSelect()
+    const guide = screen.getByText(/Pick 'Notify on event' for one-time confirmations/)
+    const recommendation = screen.getByTestId('alert-behavior-recommend-banner')
+    expect(select.getAttribute('aria-describedby')).toContain('alert-trigger-mode-help')
+    expect(select.compareDocumentPosition(guide) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(guide.compareDocumentPosition(recommendation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(recommendation).toHaveTextContent(/Recommended for "=" comparisons: Notify on event/)
+    expect(recommendation).toHaveTextContent(/Re-alert until resolved is also valid/)
+  })
 
-  it('new rule with op=">" recommends "Re-alert until resolved"', async () => {
+  it('keeps notify on event selected when the signal operator changes', async () => {
     renderPage()
     fillName('Test rule')
     pickSignal('BatteryLevel')
     pickOperator('>')
-    await waitFor(() => {
-      const banner = screen.queryByTestId('alert-behavior-recommend-banner')
-      expect(banner).not.toBeNull()
-      expect(banner!.textContent).toMatch(/Re-alert until resolved/)
-    })
+    expect(getTriggerSelect().value).toBe('once')
+    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } })
+    expect(getSaveButton()).not.toBeDisabled()
+    fireEvent.click(getSaveButton())
+    await waitFor(() => expect(recordedSavePayloads[0]).toMatchObject({
+      trigger_mode: 'once',
+      include_title: false,
+    }))
   });
 
-  it('changing op while still unset updates the recommendation banner', async () => {
-    renderPage()
-    fillName('Test rule')
-    pickSignal('BatteryLevel')
-    pickOperator('=')
-    await waitFor(() => {
-      const b = screen.getByTestId('alert-behavior-recommend-banner')
-      expect(b.textContent).toMatch(/Notify on event/)
-    })
-    pickOperator('>')
-    await waitFor(() => {
-      const b = screen.getByTestId('alert-behavior-recommend-banner')
-      expect(b.textContent).toMatch(/Re-alert until resolved/)
-    })
-  });
-
-  it('after picking a value, the recommendation banner disappears', async () => {
-    renderPage()
-    fillName('Test rule')
-    pickSignal('BatteryLevel')
-    pickOperator('=')
-    await waitFor(() => expect(screen.queryByTestId('alert-behavior-recommend-banner')).not.toBeNull())
-    fireEvent.change(getTriggerSelect(), { target: { value: 'once' } })
-    await waitFor(() => expect(screen.queryByTestId('alert-behavior-recommend-banner')).toBeNull())
-  });
-
-  it('Save stays disabled until the user picks a trigger mode (force-choose)', async () => {
+  it('allows choosing re-alert instead of the default', async () => {
     renderPage()
     fillName('Test rule')
     pickSignal('BatteryLevel')
     pickOperator('<')
     fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } })
-    // Form is otherwise complete (name + signal + op + value), so the
-    // ONLY thing blocking Save now is the unset trigger_mode.
-    expect(getSaveButton()).toBeDisabled()
-    expect(screen.queryByTestId('alert-behavior-force-choose')).not.toBeNull()
-  });
-
-  it('picking a trigger mode enables Save (once form is otherwise complete)', async () => {
-    renderPage()
-    fillName('Test rule')
-    pickSignal('BatteryLevel')
-    pickOperator('<')
-    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } })
-    fireEvent.change(getTriggerSelect(), { target: { value: 'once' } })
+    fireEvent.change(getTriggerSelect(), { target: { value: 'repeat' } })
     await waitFor(() => expect(getSaveButton()).not.toBeDisabled())
-    expect(screen.queryByTestId('alert-behavior-force-choose')).toBeNull()
+    fireEvent.click(getSaveButton())
+    await waitFor(() => expect(recordedSavePayloads[0]?.trigger_mode).toBe('repeat'))
   });
 
-  it('existing rule with trigger_mode="repeat" renders selected, no banner, Save enabled', async () => {
-    RULES = [
-      {
-        id: 60, name: 'Existing', enabled: true, severity: 'warn',
-        all_vehicles: true, vehicle_ids: [], vehicle_id: null,
-        signal_name: 'BatteryLevel', op: '<', value_num: 20,
-        cooldown_min: 15, trigger_mode: 'repeat', kind: 'signal',
-        created_at: '', updated_at: '',
-      } as AlertRule,
-    ];
-    renderPage()
-    selectRule('Existing')
-    await waitFor(() => expect(getTriggerSelect().value).toBe('repeat'))
-    expect(screen.queryByTestId('alert-behavior-recommend-banner')).toBeNull()
-    expect(screen.queryByTestId('alert-behavior-force-choose')).toBeNull()
-    const saveBtn = await screen.findByRole('button', { name: /update rule/i })
-    expect(saveBtn).not.toBeDisabled()
-  });
-
-  it('existing rule does NOT show recommendation banner even with op="="', async () => {
-    RULES = [
-      {
-        id: 61, name: 'EqExisting', enabled: true, severity: 'warn',
-        all_vehicles: true, vehicle_ids: [], vehicle_id: null,
-        signal_name: 'Locked', op: '=', value_bool: true,
-        cooldown_min: 15, trigger_mode: 'once', kind: 'signal',
-        created_at: '', updated_at: '',
-      } as AlertRule,
-    ];
-    renderPage()
-    selectRule('EqExisting')
-    await waitFor(() => expect(getTriggerSelect().value).toBe('once'))
-    expect(screen.queryByTestId('alert-behavior-recommend-banner')).toBeNull()
-  });
 });
 
 describe('AlertStudioPage — two-tier severity escalation (Phase-49 / Slice 0009)', () => {

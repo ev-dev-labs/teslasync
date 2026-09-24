@@ -194,7 +194,9 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 				Title:     req.Title,
 				Message:   req.Message,
 				Status:    "sent",
+				Severity:  req.Severity,
 			}
+			applyRequestMetadata(logEntry, req)
 			if req.AlertID > 0 {
 				alertID := req.AlertID
 				logEntry.AlertID = &alertID
@@ -236,7 +238,9 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 			Message:   req.Message,
 			Status:    "failed",
 			Error:     errStr,
+			Severity:  req.Severity,
 		}
+		applyRequestMetadata(logEntry, req)
 		if req.AlertID > 0 {
 			alertID := req.AlertID
 			logEntry.AlertID = &alertID
@@ -279,10 +283,12 @@ func (w *Worker) persistDeferred(ctx context.Context, req *Request, win *models.
 		Status:    StatusDeferredDND,
 		Severity:  req.Severity,
 	}
+	applyRequestMetadata(logEntry, req)
 	if req.AlertID > 0 {
 		alertID := req.AlertID
 		logEntry.AlertID = &alertID
 	}
+
 	if err := w.repo.CreateLog(ctx, logEntry); err != nil {
 		log.Warn().Err(err).Msg("notification: failed to create deferred_dnd log row")
 	}
@@ -297,6 +303,15 @@ func (w *Worker) persistDeferred(ctx context.Context, req *Request, win *models.
 			Str("quiet_hours_tz", win.Timezone)
 	}
 	ev.Msg("notification deferred (DND active)")
+}
+
+func applyRequestMetadata(entry *notificationmodel.NotificationLog, req *Request) {
+	if req.TriggerID != "" {
+		entry.TriggerID = &req.TriggerID
+	}
+	if req.EventType != "" {
+		entry.EventType = &req.EventType
+	}
 }
 
 // ReplayDeferred examines every deferred_dnd row and re-dispatches the

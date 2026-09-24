@@ -17,6 +17,9 @@ import {
 } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { cn } from '@/lib/cn'
+import { useTypographyAgentOptional } from '@/components/typography-agent'
+import { RATIO_VALUES } from '@/lib/typography-agent/harmonizer'
+import type { DensityMode, ModularRatio } from '@/lib/typography-agent/types'
 import {
   useFont,
   SANS_FAMILY_IDS,
@@ -106,6 +109,10 @@ function Segmented<T extends string | number>({
 
 export function TypographySettings() {
   const { t } = useTranslation('settings')
+  // Agent keys are absolute (`settings.typographyAgent.*`) so they resolve
+  // to real catalog entries (and pass the namespace audit) instead of
+  // relying on inline fallbacks like the legacy relative `typography.*` keys.
+  const { t: tAgent } = useTranslation()
   const {
     prefs,
     setSans,
@@ -160,6 +167,38 @@ export function TypographySettings() {
       { value: HEADING_WEIGHT_OPTIONS[2], label: t('typography.weight.bold', 'Bold') },
     ],
     [t],
+  )
+
+  // Connected-typography agent: same dispatch store as the ambient HUD.
+  // Null outside TypographyAgentProvider (isolated tests) — the section
+  // below simply doesn't render there.
+  const agentCtx = useTypographyAgentOptional()
+  const ratioNames = useMemo<Record<ModularRatio, string>>(
+    () => ({
+      minorSecond: tAgent('settings.typographyAgent.ratio_minorSecond', 'Minor Second'),
+      majorSecond: tAgent('settings.typographyAgent.ratio_majorSecond', 'Major Second'),
+      minorThird: tAgent('settings.typographyAgent.ratio_minorThird', 'Minor Third'),
+      majorThird: tAgent('settings.typographyAgent.ratio_majorThird', 'Major Third'),
+      perfectFourth: tAgent('settings.typographyAgent.ratio_perfectFourth', 'Perfect Fourth'),
+      goldenRatio: tAgent('settings.typographyAgent.ratio_goldenRatio', 'Golden Ratio'),
+    }),
+    [tAgent],
+  )
+  const ratioOptions = useMemo<SelectOption[]>(
+    () =>
+      (Object.keys(RATIO_VALUES) as ModularRatio[]).map((id) => ({
+        value: id,
+        label: `${ratioNames[id]} (${RATIO_VALUES[id].toFixed(3)})`,
+      })),
+    [ratioNames],
+  )
+  const agentDensityOptions = useMemo<SegmentedOption<DensityMode>[]>(
+    () => [
+      { value: 'compact', label: tAgent('settings.typographyAgent.density_compact', 'Compact') },
+      { value: 'comfortable', label: tAgent('settings.typographyAgent.density_comfortable', 'Comfortable') },
+      { value: 'relaxed', label: tAgent('settings.typographyAgent.density_relaxed', 'Relaxed') },
+    ],
+    [tAgent],
   )
 
   const presets = useMemo<{ id: ReadingPresetId; label: string }[]>(
@@ -298,6 +337,54 @@ export function TypographySettings() {
             <Segmented options={weightOptions} value={prefs.headingWeight} onChange={setHeadingWeight} ariaLabel={weightLabel} />
           </div>
         </div>
+
+        {/* Harmonic scale — connected-typography agent store (shared with the
+            ambient HUD). Renders only inside TypographyAgentProvider. */}
+        {agentCtx && (
+          <div className="space-y-5 border-t border-[var(--glass-border)] pt-4">
+            <div>
+              <Heading level="panel">{tAgent('settings.typographyAgent.sectionTitle', 'Harmonic scale')}</Heading>
+              <HelperText>
+                {tAgent(
+                  'settings.typographyAgent.sectionSubtitle',
+                  'A modular-ratio fluid scale compiled to live tokens. Same store as the ambient HUD (Ctrl/⌘+Shift+T).',
+                )}
+              </HelperText>
+            </div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <Select
+                  label={tAgent('settings.typographyAgent.ratio', 'Harmonic ratio')}
+                  options={ratioOptions}
+                  value={agentCtx.spec.ratio}
+                  onChange={(e) => void agentCtx.dispatch({ ratio: e.target.value as ModularRatio })}
+                />
+              </div>
+              <div>
+                <FieldLabel>{tAgent('settings.typographyAgent.density', 'Density')}</FieldLabel>
+                <Segmented
+                  options={agentDensityOptions}
+                  value={agentCtx.spec.density}
+                  onChange={(mode) => void agentCtx.dispatch({ density: mode })}
+                  ariaLabel={tAgent('settings.typographyAgent.density', 'Density')}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <HelperText>
+                {agentCtx.verification
+                  ? tAgent('settings.typographyAgent.loopStatus', 'Loop verified · score {{score}}/100', {
+                      score: agentCtx.verification.score,
+                    })
+                  : tAgent('settings.typographyAgent.loopPending', 'Loop calibrating…')}
+              </HelperText>
+              <Button variant="ghost" size="sm" onClick={() => agentCtx.setHudOpen(true)}>
+                <Type className="mr-2 h-4 w-4" aria-hidden="true" />
+                {tAgent('settings.typographyAgent.openHud', 'Open ambient HUD')}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Reset */}
         <div className="flex items-center justify-between gap-3 border-t border-[var(--glass-border)] pt-4">

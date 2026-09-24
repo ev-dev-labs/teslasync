@@ -24,6 +24,12 @@ Matches `tailwind.config.js` (default Tailwind breakpoints, no overrides):
    ```tsx
    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
    ```
+   Exception: compact metric/gauge/KPI strips (`MetricCard`, `LinearGauge`,
+   skeleton placeholders) may keep a `grid-cols-2` (or fixed small-count)
+   base when every cell holds short numeric content verified to fit a 360px
+   viewport — stacking them 1-up wastes the small screen on near-empty rows.
+   The mobile audit flags these for human review; do not "fix" them
+   mechanically.
 2. **Sidebar is collapsed by default below `lg`** and accessed via a hamburger
    in the top app bar. We use `lg` (not `md`) because the sidebar's navigation
    tree is dense (15+ sections, 70+ links) and only fits comfortably alongside

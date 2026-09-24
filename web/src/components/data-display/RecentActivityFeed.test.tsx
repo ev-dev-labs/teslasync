@@ -73,7 +73,7 @@ describe('RecentActivityFeed — routable entities (entityHref table)', () => {
     ['drive.view', 'drive', '42', '/drives/42'],
     ['charge.view', 'charging_session', '9', '/charging/9'],
     ['charge.view', 'charge', '3', '/charging/3'],
-    ['alert.rule.create', 'alert_rule', '5', '/notifications/alerts'],
+    ['alert.rule.create', 'alert_rule', '5', '/notifications/inbox'],
     ['automation.create', 'automation', '2', '/automations'],
     ['geofence.create', 'geofence', '1', '/geofences'],
     ['data_export.create', 'data_export', '8', '/data-export'],

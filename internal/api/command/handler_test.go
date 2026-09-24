@@ -2,11 +2,35 @@ package command
 
 import (
 	"testing"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	cmdFSM "github.com/ev-dev-labs/teslasync/internal/fsm/command"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
+
+func TestParseCommandHistoryWindow(t *testing.T) {
+	from, until, before, id, err := parseCommandHistoryWindow(
+		"2015-01-01", "2026-09-23", "2026-09-22T10:15:00Z", "42",
+	)
+	if err != nil || from.Format(time.DateOnly) != "2015-01-01" ||
+		until.Format(time.DateOnly) != "2026-09-24" || before == nil ||
+		before.Format(time.RFC3339) != "2026-09-22T10:15:00Z" || id != 42 {
+		t.Fatalf("all-time command scope: from=%v until=%v cursor=%v id=%d err=%v", from, until, before, id, err)
+	}
+	for _, tc := range []struct{ from, to, before, id string }{
+		{"2026-02-30", "2026-09-23", "", ""},
+		{"2026-09-23", "2026-01-01", "", ""},
+		{"1900-01-01", "2026-09-23", "", ""},
+		{"2026-01-01", "2026-09-23", "invalid", "42"},
+		{"2026-01-01", "2026-09-23", "", "42"},
+		{"2026-01-01", "2026-09-23", "2026-01-02T00:00:00Z", "0"},
+	} {
+		if _, _, _, _, err := parseCommandHistoryWindow(tc.from, tc.to, tc.before, tc.id); err == nil {
+			t.Errorf("accepted invalid scope %+v", tc)
+		}
+	}
+}
 
 func TestAllowedCommandsWhitelist(t *testing.T) {
 	allowed := []string{"lock", "unlock", "wake_up", "climate_on", "climate_off",

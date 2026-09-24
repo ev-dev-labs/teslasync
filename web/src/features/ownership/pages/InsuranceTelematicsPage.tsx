@@ -24,14 +24,15 @@ import { AlertBanner } from '@/components/feedback';
 import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Button, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
+import { Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
-import type { RiskFactor, RiskLever, UpsertInsurancePolicyRequest } from '@/types/ownership';
+import type { InsurancePolicy, RiskFactor, RiskLever, UpsertInsurancePolicyRequest } from '@/types/ownership';
 import {
   EvidencePanel,
   MoneyInput,
@@ -77,6 +78,21 @@ export default function InsuranceTelematicsPage() {
   const { data, isLoading, error } = useInsuranceRiskProfile(vehicleId, windowDays);
   const upsert = useUpsertInsurancePolicy();
   const remove = useDeleteInsurancePolicy();
+  const { confirm, dialogProps } = useConfirm();
+
+  const handleRemove = async (policy: InsurancePolicy) => {
+    const ok = await confirm({
+      title: t('ownership.insurance.delete.title', 'Delete this policy?'),
+      message: t(
+        'ownership.insurance.delete.message',
+        'Policy “{{name}}” and its telematics program enrolment will be removed permanently. This cannot be undone.',
+        { name: policy.policy_ref },
+      ),
+      variant: 'danger',
+      confirmLabel: t('common.delete', 'Delete'),
+    });
+    if (ok) remove.mutate(policy.id);
+  };
 
   const policy = data?.policy ?? null;
   const currency = policy?.currency ?? data?.premium?.currency ?? 'USD';
@@ -480,9 +496,9 @@ export default function InsuranceTelematicsPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                loading={remove.isPending}
+                loading={remove.isPending && remove.variables === policy.id}
                 icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-                onClick={() => remove.mutate(policy.id)}
+                onClick={() => void handleRemove(policy)}
               >
                 {t('ownership.action.remove', 'Remove')}
               </Button>
@@ -692,6 +708,7 @@ export default function InsuranceTelematicsPage() {
         >
           <DataTable
             columns={factorColumns}
+            mobileColumns={['label', 'score', 'contribution']}
             data={factors}
             keyExtractor={(row) => row.code}
             tableId="ownership-insurance-factors"
@@ -715,6 +732,7 @@ export default function InsuranceTelematicsPage() {
         >
           <DataTable
             columns={leverColumns}
+            mobileColumns={['label', 'save', 'difficulty']}
             data={levers}
             keyExtractor={(row) => row.factor_code}
             tableId="ownership-insurance-levers"
@@ -762,6 +780,7 @@ export default function InsuranceTelematicsPage() {
           ]}
         />
       </FadeIn>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageContainer>
   );
 }

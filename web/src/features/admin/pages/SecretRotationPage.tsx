@@ -588,6 +588,7 @@ export default function SecretRotationPage() {
                 <DataTable
                   tableId="admin:secret-rotation"
                   columns={columns}
+                  mobileColumns={['kind', 'age', 'severity']}
                   data={items}
                   keyExtractor={rowKey}
                   emptyMessage={t('admin.secretRotation.emptyTable', 'No tracked secrets')}

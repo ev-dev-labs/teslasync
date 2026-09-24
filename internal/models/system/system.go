@@ -117,18 +117,19 @@ const (
 //     with sessions/rates keep their history resolvable, but are excluded
 //     from default active listings (GetAll).
 type Geofence struct {
-	ID           int64             `db:"id" json:"id"`
-	Name         string            `db:"name" json:"name"`
-	PolygonWKT   string            `db:"polygon_wkt" json:"polygon_wkt"`
-	Category     *GeofenceCategory `db:"category" json:"category,omitempty"`
-	Enabled      bool              `db:"enabled" json:"enabled"`
-	AlertOnEntry bool              `db:"alert_on_entry" json:"alert_on_entry"`
-	AlertOnExit  bool              `db:"alert_on_exit" json:"alert_on_exit"`
-	Origin       GeofenceOrigin    `db:"origin" json:"origin"`
-	NeedsReview  bool              `db:"needs_review" json:"needs_review"`
-	ArchivedAt   *time.Time        `db:"archived_at" json:"archived_at,omitempty"`
-	CreatedAt    time.Time         `db:"created_at" json:"created_at"`
-	UpdatedAt    time.Time         `db:"updated_at" json:"updated_at"`
+	ID                 int64             `db:"id" json:"id"`
+	Name               string            `db:"name" json:"name"`
+	PolygonWKT         string            `db:"polygon_wkt" json:"polygon_wkt"`
+	Category           *GeofenceCategory `db:"category" json:"category,omitempty"`
+	Enabled            bool              `db:"enabled" json:"enabled"`
+	AlertOnEntry       bool              `db:"alert_on_entry" json:"alert_on_entry"`
+	AlertOnExit        bool              `db:"alert_on_exit" json:"alert_on_exit"`
+	Origin             GeofenceOrigin    `db:"origin" json:"origin"`
+	NeedsReview        bool              `db:"needs_review" json:"needs_review"`
+	IsChargingLocation bool              `db:"is_charging_location" json:"is_charging_location"`
+	ArchivedAt         *time.Time        `db:"archived_at" json:"archived_at,omitempty"`
+	CreatedAt          time.Time         `db:"created_at" json:"created_at"`
+	UpdatedAt          time.Time         `db:"updated_at" json:"updated_at"`
 }
 
 // IsArchived reports whether this geofence has been archived (soft-deleted).

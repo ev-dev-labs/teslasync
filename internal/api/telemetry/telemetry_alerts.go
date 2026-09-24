@@ -6,9 +6,11 @@ import (
 	"time"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/api/sse"
@@ -161,6 +163,14 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 	if !rule.IncludeTitle && body == "" {
 		body = rule.Name
 	}
+	triggerID := notification.NewTriggerID()
+	if _, err := notification.RecordTrigger(ctx, e.notifRepo, &notification.Request{
+		Title: title, Message: body, AlertID: rule.ID,
+		Severity: severity, EventType: "alert.rule", TriggerID: triggerID,
+	}); err != nil {
+		log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).
+			Int64("rule_id", rule.ID).Msg("alert_rules: event persistence failed")
+	}
 
 	// 1. Record the alert firing timestamp
 	now := time.Now().UTC()
@@ -227,7 +237,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 	if !quietSuppressed {
 		suppressTransportTitle := !rule.IncludeTitle
 		safeGo("notification-dispatch", func() {
-			e.dispatchNotifications(title, body, severity, rule, suppressTransportTitle)
+			e.dispatchNotifications(title, body, severity, rule, suppressTransportTitle, triggerID)
 		})
 	}
 
@@ -244,7 +254,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 // body-only output when the rule has IncludeTitle=false. Transports
 // that REQUIRE a title (WebPush, email Subject, Pushover) ignore the
 // flag and use the canonical title regardless.
-func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity string, rule *alertmodel.AlertRule, suppressTransportTitle bool) {
+func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity string, rule *alertmodel.AlertRule, suppressTransportTitle bool, triggerID string) {
 	ruleID := rule.ID
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -265,9 +275,28 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 			Message:                message,
 			ChannelID:              ch.ID,
 			AlertID:                ruleID,
+			TriggerID:              triggerID,
+			EventType:              "alert.rule",
+			Severity:               severity,
 			SuppressTransportTitle: suppressTransportTitle,
 		}
-		if err := notification.PublishCtx(ctx, e.mqttClient, req); err != nil {
+		publishErr := notification.PublishCtx(ctx, e.mqttClient, req)
+		if e.mqttClient == nil || !e.mqttClient.IsConnected() {
+			status, errText := "sent", ""
+			if publishErr != nil {
+				status, errText = "failed", publishErr.Error()
+			}
+			eventType := req.EventType
+			id := ruleID
+			if logErr := e.notifRepo.CreateLog(ctx, &notificationmodel.NotificationLog{
+				ChannelID: ch.ID, AlertID: &id, Title: title, Message: message,
+				Status: status, Error: errText, Severity: severity,
+				TriggerID: &triggerID, EventType: &eventType,
+			}); logErr != nil {
+				log.Error().Err(logErr).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).Int64("channel_id", ch.ID).Msg("alert_rules: direct-delivery log failed")
+			}
+		}
+		if err := publishErr; err != nil {
 			log.Warn().Int64("channel_id", ch.ID).Str("type", ch.Type).Err(err).Msg("alert_rules: notification dispatch failed")
 		} else {
 			metrics.NotificationsDispatched.WithLabelValues(ch.Type).Inc()
@@ -289,12 +318,15 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 		ChannelType: notification.ChannelTypeWebPush,
 		Config: map[string]string{
 			"severity":  severity,
-			"url":       fmt.Sprintf("/alerts?rule=%d", ruleID),
+			"url":       "/notifications/inbox",
 			"alert_tag": fmt.Sprintf("alert-rule-%d", ruleID),
 		},
-		Title:   title,
-		Message: message,
-		AlertID: ruleID,
+		Title:     title,
+		Message:   message,
+		AlertID:   ruleID,
+		TriggerID: triggerID,
+		EventType: "alert.rule",
+		Severity:  severity,
 	}
 	if err := notification.PublishCtx(ctx, e.mqttClient, pushReq); err != nil {
 		log.Warn().Err(err).Msg("alert_rules: webpush fan-out dispatch failed")

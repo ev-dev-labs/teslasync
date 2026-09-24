@@ -145,7 +145,7 @@
         "cooldown": "Minimum minutes between repeat firings of this rule. Prevents the same condition from spamming your channels (e.g. battery at 19% triggering once per minute).",
         "severity": "Visual / routing priority — info, warn, or critical. Channels can subscribe to specific severities to keep critical alerts from being drowned out by chatty info ones.",
         "alertBehavior": "Pick 'Notify on event' for one-time confirmations like 'vehicle locked' or 'charging done'. Pick 'Re-alert until resolved' for ongoing safety concerns like 'vehicle unlocked' or 'door open'.",
-        "kind": "Signal threshold compares a single live telemetry value (e.g. BatteryLevel < 20). Computed metric aggregates over a time window (e.g. cost > $5 in last 24h).",
+        "kind": "Signal threshold compares live telemetry; computed metric aggregates over a time window. System service watches outage or recovery for the whole fleet. Place event watches arrival or departure from a saved place.",
         "vehicleId": "Restricts the rule to a single vehicle. Leave blank to apply across every vehicle on the account.",
         "operator": "Comparison applied to the signal value: =, !=, <, <=, >, >=, between, any change. Some operators only apply to numeric signals.",
         "testMessage": "Message body sent when the rule fires. Use {{SignalName}} placeholders to interpolate the current value into the notification."

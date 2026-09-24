@@ -94,6 +94,7 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
   return (
     <DataTable
       columns={columns}
+      mobileColumns={['stop', 'score', 'wait']}
       data={safeArray(stops)}
       keyExtractor={(row) => row.site}
       tableId={tableId}

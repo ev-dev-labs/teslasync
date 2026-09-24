@@ -13,6 +13,7 @@ import {
 } from '@/components/ui';
 import { StatCard, DateTime } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
+import { FrontendErrorsCard } from '@/components/status';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { ListExportMenu, RangePicker } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -22,8 +23,8 @@ import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
-import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
-import type { APICallLog, APICallLogStats } from '@/api/types';
+import { getAPICallLogs, getAPICallLogStats, getErrorStats } from '@/api/devtools';
+import type { APICallLog, APICallLogStats, ErrorStats } from '@/api/types';
 import { deriveServiceOptions } from '../lib/serviceOptions';
 
 /* ------------------------------------------------------------------ */
@@ -175,6 +176,16 @@ export default function ApiLogsPage() {
     refetchInterval: 10_000,
   });
   const { data, isLoading: logsLoading, error: logsError, refetch: refetchLogs } = logsQuery;
+  const {
+    data: runtimeErrors,
+    isLoading: runtimeLoading,
+    error: runtimeError,
+    refetch: refetchRuntime,
+  } = useQuery<ErrorStats>({
+    queryKey: ['system-error-stats'],
+    queryFn: getErrorStats,
+    refetchInterval: 30_000,
+  });
 
   const logs = data?.data ?? [];
   const total = data?.total ?? 0;
@@ -251,6 +262,8 @@ export default function ApiLogsPage() {
         error: log.error_message,
         request_body: log.request_body,
         response_body: log.response_body,
+        request_headers: log.request_headers,
+        response_headers: log.response_headers,
       })),
     [logs],
   );
@@ -311,6 +324,60 @@ export default function ApiLogsPage() {
             label={t('apiLogs.last24h', 'Last 24h')}
             value={stats?.last_24h != null ? fmtInt(stats.last_24h) : '—'}
           />
+        </section>
+      </FadeIn>
+
+      <FadeIn delay={0.05}>
+        <Caption className="block">
+          {t('apiLogs.statsScope', 'API call totals are all-time across services; the date and filters below apply only to the request list.')}
+        </Caption>
+        <section
+          aria-label={t('apiLogs.errorDiagnostics', 'Error diagnostics')}
+          className="mt-4 grid gap-4 lg:grid-cols-2"
+        >
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle>{t('apiLogs.backendErrors', 'Backend runtime errors')}</PanelTitle>
+            <Caption className="mt-1 block">
+              {t('apiLogs.backendScope', 'Since the current API process started; independent of API call filters.')}
+            </Caption>
+            {runtimeLoading && !runtimeErrors ? (
+              <Skeleton className="mt-4 h-16" />
+            ) : runtimeError ? (
+              <QueryError error={runtimeError} onRetry={() => refetchRuntime()} />
+            ) : runtimeErrors ? (
+              <>
+                <Text as="p" className="mt-3">
+                  {t('apiLogs.runtimeTotal', '{{count}} errors · uptime {{uptime}}', {
+                    count: runtimeErrors.total_errors ?? 0,
+                    uptime: runtimeErrors.uptime || '—',
+                  })}
+                </Text>
+                {Object.keys(runtimeErrors.by_code ?? {}).length ? (
+                  <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto">
+                    {Object.entries(runtimeErrors.by_code ?? {})
+                      .sort((a, b) => b[1].count - a[1].count)
+                      .map(([code, entry]) => (
+                        <li key={code} className="flex items-start justify-between gap-3 border-t border-[var(--glass-border)] pt-2">
+                          <div className="min-w-0">
+                            <Text as="p" variant="bodySm" weight="medium">{code}</Text>
+                            <Caption className="block break-words">{entry.last_message || '—'}</Caption>
+                            {entry.last_seen && <Caption className="block"><DateTime value={entry.last_seen} in="utc" /></Caption>}
+                          </div>
+                          <Badge variant="warning" size="sm">{fmtInt(entry.count)}</Badge>
+                        </li>
+                      ))}
+                  </ul>
+                ) : (
+                  <Caption className="mt-3 block">{t('apiLogs.noRuntimeErrors', 'No backend runtime errors in this process.')}</Caption>
+                )}
+              </>
+            ) : (
+              <Caption className="mt-3 block">{t('apiLogs.runtimeUnavailable', 'Backend runtime error summary unavailable.')}</Caption>
+            )}
+          </GlassPanel>
+          <GlassPanel className="p-4 sm:p-5">
+            <FrontendErrorsCard />
+          </GlassPanel>
         </section>
       </FadeIn>
 
@@ -549,6 +616,13 @@ export default function ApiLogsPage() {
                               {log.http_method} {log.endpoint}
                             </GlassPanel>
                           </div>
+                          <div className="flex flex-wrap gap-x-6 gap-y-1">
+                            <Text as="span" variant="bodySm">{t('apiLogs.service', 'Service')}: {serviceBadgeConfig(log.service).label}</Text>
+                            <Text as="span" variant="bodySm">{t('apiLogs.status', 'Status')}: {log.status_code ?? t('apiLogs.na', 'N/A')}</Text>
+                            <Text as="span" variant="bodySm">{t('apiLogs.duration', 'Duration')}: {fmtInt(log.duration_ms ?? 0)}ms</Text>
+                            <Text as="span" variant="bodySm">{t('apiLogs.vehicleId', 'Vehicle ID')}: {log.vehicle_id ?? '—'}</Text>
+                            <Text as="span" variant="bodySm">{t('apiLogs.rateLimited', 'Rate limited')}: {log.rate_limited ? t('apiLogs.yes', 'Yes') : t('apiLogs.no', 'No')}</Text>
+                          </div>
                           {log.error_message && (
                             <div className="space-y-1">
                               <Text as="span" size="xs" weight="medium" className="uppercase tracking-wider text-rose-300">
@@ -560,9 +634,20 @@ export default function ApiLogsPage() {
                             </div>
                           )}
                           <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                            <JsonViewer
+                              data={log.request_headers ? JSON.stringify(log.request_headers) : null}
+                              label={t('apiLogs.requestHeaders', 'Request Headers')}
+                            />
+                            <JsonViewer
+                              data={log.response_headers ? JSON.stringify(log.response_headers) : null}
+                              label={t('apiLogs.responseHeaders', 'Response Headers')}
+                            />
                             <JsonViewer data={log.request_body} label={t('apiLogs.requestBody', 'Request Body')} />
                             <JsonViewer data={log.response_body} label={t('apiLogs.responseBody', 'Response Body')} />
                           </div>
+                          <Caption className="block">
+                            {t('apiLogs.captureNote', 'Bodies are recorded only when API_LOG_CAPTURE_BODIES is enabled; payloads are capped at 10 KB. Header values are limited to safe diagnostic fields; credentials are redacted. Missing fields on older records cannot be recovered.')}
+                          </Caption>
                         </div>
                       )}
                     </li>

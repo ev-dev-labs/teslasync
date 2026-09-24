@@ -1,11 +1,23 @@
 // Package notification owns the /notifications/* HTTP surface — channel
-// CRUD, channel test delivery, inbox bulk operations, webhook signature
-// preview/test, and scheduled notifications.
+// CRUD, channel test delivery, inbox bulk operations, bounded historical
+// reporting, webhook signature preview/test, and scheduled notifications.
+//
+// GET /notifications/report takes UTC calendar dates from/to (inclusive),
+// defaults to the most recent 30 days including today, and accepts up to
+// 3660 days. triggered counts canonical status=triggered event rows, including
+// zero-channel and WebPush-only events; deliveries counts only channel attempts.
+// by_source, by_type and by_severity count events; by_channel and by_status
+// count delivery attempts. Daily counts are UTC and include zero-filled days.
+// Rows without trigger_id remain historical deliveries only and are separately
+// reported as uncorrelated_deliveries: historical fan-out cannot be inferred.
+// GET /notifications/logs?view=deliveries returns channel attempts for
+// latency and burn-rate analysis; the default view returns one inbox row per
+// recorded event plus older uncorrelated deliveries.
 //
 // This package owns three handler types, all wired from the parent router:
 //
 //   - Handler: channel CRUD, /channels test delivery, inbox bulk
-//     (mark-read/archive/delete), unread-count, stats. Owns the legacy
+//     (mark-read/archive/delete), unread-count, stats and report. Owns the legacy
 //     non-HMAC outbound adapters (sendDiscord/sendSlack/sendTelegram/
 //     sendWebhook/sendNtfy/sendPushover/postJSON) routed through
 //     notifyOutboundClient + httputil.

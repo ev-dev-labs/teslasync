@@ -30,14 +30,21 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: unknown) => {
-      if (typeof opts === 'string') return opts
-      if (opts && typeof opts === 'object') {
-        return key.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
-          String((opts as Record<string, unknown>)[name] ?? ''),
+    t: (key: string, second?: unknown, third?: unknown) => {
+      let template = key
+      let vars: Record<string, unknown> | undefined
+      if (typeof second === 'string') {
+        template = second
+        if (third && typeof third === 'object') vars = third as Record<string, unknown>
+      } else if (second && typeof second === 'object') {
+        vars = second as Record<string, unknown>
+      }
+      if (vars) {
+        return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
+          String(vars[name] ?? ''),
         )
       }
-      return key
+      return template
     },
     i18n: { language: 'en', changeLanguage: () => Promise.resolve() },
   }),
@@ -223,6 +230,10 @@ describe('SLOTrackingCard — historical-source caveat', () => {
 
     const note = await screen.findByRole('note')
     expect(note).toHaveTextContent(/heartbeat history backend/i)
+    expect(screen.queryByText('99.98%')).not.toBeInTheDocument()
+    expect(screen.getByText(/Current component health/)).toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
   })
 
   it('prefers a server-supplied note over the default caveat copy', async () => {
@@ -327,11 +338,10 @@ describe('SLOTrackingCard — accessibility', () => {
     requestMock.mockResolvedValue(makePayload({ historical_source: 'snapshot' }))
     const { container } = renderCard()
 
-    await screen.findByText('99.98%')
-    expect(
-      screen.getByRole('tablist', { name: 'Uptime window selector' }),
-    ).toBeInTheDocument()
-    expect(container.querySelector('[aria-live="polite"]')).toBeInTheDocument()
+    await screen.findByRole('note')
+    expect(screen.queryByText('99.98%')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent('—')
 
     // Both the header Target glyph and the caveat Info glyph are decorative.
     const decorativeIcons = container.querySelectorAll('svg[aria-hidden="true"]')

@@ -44,7 +44,7 @@ func (r *GeofenceRepo) Archive(ctx context.Context, id int64) error {
 // listing. Idempotent: unarchiving an already-active geofence is a no-op
 // success.
 func (r *GeofenceRepo) Unarchive(ctx context.Context, id int64) error {
-	tag, err := r.pool.Exec(ctx, `UPDATE geofences SET archived_at = NULL, updated_at = now() WHERE id = $1 AND archived_at IS NOT NULL`, id)
+	tag, err := r.pool.Exec(ctx, `UPDATE geofences SET archived_at = NULL, enabled = NOT needs_review, updated_at = now() WHERE id = $1 AND archived_at IS NOT NULL`, id)
 	if err != nil {
 		return fmt.Errorf("geofences unarchive %d: %w", id, err)
 	}

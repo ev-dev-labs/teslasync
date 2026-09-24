@@ -7,9 +7,9 @@
  * bulk toolbar, rows, group rows, context menu) against a mocked `request()`
  * boundary and asserts the observable contracts:
  *
- *   1. Flat view — day-grouped rows, count label, loading skeletons, retryable
+ *   1. Flat view — selectable table, count label, loading skeletons, retryable
  *      error, and an honest empty state (never a blank panel).
- *   2. Grouped view — the default; threads render and the flat query stays
+ *   2. Grouped view — opt-in; threads render and the flat query stays
  *      disabled so we don't double-fetch. Empty grouped state has its own copy.
  *   3. View toggle — grouped↔flat, only shown on the inbox tab, keyboard/ARIA
  *      accessible (aria-pressed + an explicit aria-label so the icon-only
@@ -25,7 +25,7 @@
  *      params with no `/api/v1` double-prefix.
  *   9. Right-click opens the per-row context menu with the correct items.
  *  10. CSV / JSON export supports visible rows, selected rows, and grouped
- *      thread summaries without flattening the inbox into a table.
+ *      thread summaries as well as the default table.
  *
  * Network is mocked at the `@/api/client` boundary (repo convention — see
  * ArchivedPage.test.tsx). `react-i18next` is stubbed to echo the inline
@@ -121,6 +121,7 @@ import { ToastProvider } from '@/components/feedback/Toast';
 import { ContextMenuRoot } from '@/components/ui';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
+import { SHARED_RANGE_STORAGE_KEY } from '@/hooks/useRangeState';
 import type { NotificationLog, NotificationLogGroup, AlertRule, Vehicle } from '@/api/types';
 import { InboxBody } from './InboxBody';
 
@@ -189,6 +190,7 @@ interface Handlers {
   logs?: () => Promise<unknown>;
   groups?: () => Promise<unknown>;
   members?: () => Promise<unknown>;
+  total?: number;
 }
 
 function installRequest(h: Handlers = {}) {
@@ -201,6 +203,7 @@ function installRequest(h: Handlers = {}) {
       if (path.startsWith('/notifications/logs')) return Promise.resolve({ deleted: 1 });
       return Promise.resolve({});
     }
+    if (path.includes('count_only=true')) return Promise.resolve({ total: h.total ?? 2 });
     if (path.includes('group_key=')) return (h.members ?? (() => Promise.resolve([])))();
     if (path.includes('grouped=true')) return (h.groups ?? (() => Promise.resolve([])))();
     if (path.startsWith('/notifications/logs')) return (h.logs ?? (() => Promise.resolve([])))();
@@ -217,10 +220,11 @@ function callsFor(pred: (path: string, method: string | undefined) => boolean) {
 const flatCalls = () =>
   callsFor(
     (p, m) =>
-      !m && p.startsWith('/notifications/logs') && !p.includes('grouped=true') && !p.includes('group_key='),
+      !m && p.startsWith('/notifications/logs?') && !p.includes('count_only=true') && !p.includes('grouped=true') && !p.includes('group_key='),
   );
 const groupedCalls = () => callsFor((p, m) => !m && p.includes('grouped=true'));
 const markReadPosts = () => callsFor((p, m) => m === 'POST' && p.includes('mark-read'));
+const deleteCalls = () => callsFor((p, m) => m === 'DELETE' && p.startsWith('/notifications/logs'));
 
 function bodyOf(call: unknown[]): Record<string, unknown> {
   const opts = call[1] as { body?: string } | undefined;
@@ -263,7 +267,69 @@ beforeEach(() => {
 /* ── 1. Flat view ─────────────────────────────────────── */
 
 describe('InboxBody — flat view', () => {
-  it('renders day-grouped rows, the count label, and fetches the SI-clean flat path', async () => {
+  it('pages through older notifications instead of stopping at the first 50', async () => {
+    installRequest({
+      total: 100,
+      logs: () => Promise.resolve(Array.from({ length: 50 }, (_, index) => makeLog({
+        id: index + 1,
+        title: `Message ${index + 1}`,
+      }))),
+    });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Next page' }));
+    await waitFor(() => {
+      expect(flatCalls().some(([path]) => String(path).includes('offset=50'))).toBe(true);
+    });
+    expect(screen.getByLabelText('Page 2 of 2')).toBeInTheDocument();
+  });
+
+  it('opens and marks read a channel-less system event without a rule', async () => {
+    installRequest({
+      logs: () => Promise.resolve([
+        makeLog({
+          id: 23,
+          channel_id: null,
+          alert_id: null,
+          status: 'triggered',
+          title: 'MQTT recovered',
+          message: 'The message broker is receiving telemetry again.',
+          event_type: 'system.mqtt.recovery',
+        }),
+      ]),
+    });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+    fireEvent.click(await screen.findByText('MQTT recovered'));
+    expect(screen.getByRole('dialog', { name: 'MQTT recovered' })).toHaveTextContent(
+      'The message broker is receiving telemetry again.',
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent('system.mqtt.recovery');
+    await waitFor(() => expect(markReadPosts().some(call => JSON.stringify(bodyOf(call)).includes('23'))).toBe(true));
+  });
+
+  it('filters rule-triggered history and opens the full text of a legacy delivery', async () => {
+    installRequest({
+      logs: () => Promise.resolve([
+        makeLog({
+          id: 24, title: 'Recovered', message: 'Full first line\nFull second line',
+          channel_id: 2, alert_id: null, event_type: undefined,
+        }),
+      ]),
+    });
+    renderInbox();
+    await screen.findByText('Recovered');
+    expect(screen.getByText('Legacy channel delivery')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Read full message: Recovered' }));
+    expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full first line');
+    expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full second line');
+    fireEvent.click(screen.getByRole('button', { name: /close/i }));
+    fireEvent.change(screen.getByLabelText('Source'), { target: { value: 'rule' } });
+    await waitFor(() => {
+      expect(flatCalls().some(([path]) => String(path).includes('source=rule'))).toBe(true);
+      expect(callsFor((path) => path.includes('count_only=true') && path.includes('source=rule')).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('renders a column table, the count label, and fetches the SI-clean flat path by default', async () => {
     installRequest({
       logs: () =>
         Promise.resolve([
@@ -271,13 +337,14 @@ describe('InboxBody — flat view', () => {
           makeLog({ id: 2, title: 'Charging complete', alert_id: null }),
         ]),
     });
-    renderInbox({ route: '/notifications/inbox?view=flat' });
+    renderInbox();
 
     expect(await screen.findByText('Battery critical')).toBeInTheDocument();
     expect(screen.getByText('Charging complete')).toBeInTheDocument();
-    // Both rows land under a single "Today" header and the count label reflects
-    // the row total (interpolated by the i18n stub).
-    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Inbox' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Received' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Notification' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Message' })).toBeInTheDocument();
     expect(screen.getByText('2 notifications')).toBeInTheDocument();
 
     // Flat query used; grouped query never fired (flat view disables grouping).
@@ -286,6 +353,29 @@ describe('InboxBody — flat view', () => {
     const path = String(flatCalls()[0][0]);
     expect(path).toContain('archived=false');
     expect(path).not.toContain('/api/v1');
+  });
+
+  it('shows a current-day Slack delivery without an alert rule and opens its detail', async () => {
+    installRequest({
+      logs: () => Promise.resolve([
+        makeLog({
+          id: 28,
+          title: 'Weekly digest sent to Slack',
+          message: 'Your weekly driving summary',
+          channel_id: 2,
+          alert_id: null,
+          event_type: 'digest.fsd.weekly',
+          created_at: NOW_ISO,
+        }),
+      ]),
+    });
+    renderInbox();
+
+    expect(await screen.findByText('Weekly digest sent to Slack')).toBeInTheDocument();
+    expect(screen.getByText('Digest FSD Weekly')).toHaveAttribute('title', 'digest.fsd.weekly');
+    expect(screen.getByRole('checkbox', { name: 'Select Weekly digest sent to Slack' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open notification: Weekly digest sent to Slack' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Your weekly driving summary');
   });
 
   it('shows five loading skeletons (never a blank panel) while the flat query is in flight', () => {
@@ -317,10 +407,10 @@ describe('InboxBody — flat view', () => {
   });
 });
 
-/* ── 2. Grouped view (default) ────────────────────────── */
+/* ── 2. Grouped view (opt-in) ─────────────────────────── */
 
 describe('InboxBody — grouped view', () => {
-  it('is the default view: renders threads and keeps the flat query disabled', async () => {
+  it('renders threads when requested and keeps the flat query disabled', async () => {
     installRequest({
       groups: () =>
         Promise.resolve([
@@ -334,13 +424,13 @@ describe('InboxBody — grouped view', () => {
           }),
         ]),
     });
-    renderInbox({ route: '/notifications/inbox' });
+    renderInbox({ route: '/notifications/inbox?view=grouped' });
 
     expect(await screen.findByTestId('notification-groups')).toBeInTheDocument();
     expect(screen.getByText('Battery thread')).toBeInTheDocument();
     expect(screen.getByText('One-off ping')).toBeInTheDocument();
     expect(screen.getByTestId('inbox-result-count')).toHaveTextContent(
-      '2 threads · 4 deliveries',
+      '2 threads · 4 notifications',
     );
 
     // Grouped endpoint used; the flat endpoint stays untouched.
@@ -351,7 +441,7 @@ describe('InboxBody — grouped view', () => {
 
   it('shows the thread-specific empty copy when there are no groups', async () => {
     installRequest({ groups: () => Promise.resolve([]) });
-    renderInbox({ route: '/notifications/inbox' });
+    renderInbox({ route: '/notifications/inbox?view=grouped' });
 
     expect(await screen.findByText('No notification threads')).toBeInTheDocument();
   });
@@ -371,7 +461,7 @@ describe('InboxBody — export', () => {
     renderInbox({ route: '/notifications/inbox?view=flat' });
 
     await screen.findByText('Selected row');
-    fireEvent.click(screen.getAllByLabelText('Select notification')[0]);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Selected row' }));
     fireEvent.click(screen.getByTestId('notification-export-trigger'));
 
     expect(screen.getByTestId('notification-export-scope-selected')).toBeChecked();
@@ -396,7 +486,7 @@ describe('InboxBody — export', () => {
           }),
         ]),
     });
-    renderInbox({ route: '/notifications/inbox' });
+    renderInbox({ route: '/notifications/inbox?view=grouped' });
 
     await screen.findByText('Battery thread');
     fireEvent.click(screen.getByTestId('notification-export-trigger'));
@@ -425,7 +515,7 @@ describe('InboxBody — view toggle', () => {
       groups: () => Promise.resolve([makeGroup({ latest: makeLog({ id: 1, title: 'Battery thread' }) })]),
       logs: () => Promise.resolve([makeLog({ id: 5, title: 'Flat row visible' })]),
     });
-    renderInbox({ route: '/notifications/inbox' });
+    renderInbox({ route: '/notifications/inbox?view=grouped' });
 
     const grouped = await screen.findByTestId('view-toggle-grouped');
     const flat = screen.getByTestId('view-toggle-flat');
@@ -454,7 +544,7 @@ describe('InboxBody — archived mode', () => {
     // Archived is always flat — no grouped/flat switch is offered.
     expect(screen.queryByTestId('view-toggle-grouped')).toBeNull();
 
-    fireEvent.click(screen.getAllByLabelText('Select notification')[0]);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Archived row' }));
 
     expect(await screen.findByRole('button', { name: 'Restore' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
@@ -484,11 +574,14 @@ describe('InboxBody — bulk selection', () => {
     renderInbox({ route: '/notifications/inbox?view=flat' });
 
     await screen.findByText('Row one');
-    const header = screen.getByLabelText('Select all visible') as HTMLInputElement;
+    const header = screen.getByLabelText('Select all rows') as HTMLInputElement;
     expect(header.checked).toBe(false);
     expect(header.indeterminate).toBe(false);
 
-    const rowBoxes = screen.getAllByLabelText('Select notification');
+    const rowBoxes = [
+      screen.getByRole('checkbox', { name: 'Select Row one' }),
+      screen.getByRole('checkbox', { name: 'Select Row two' }),
+    ];
     // Partial selection → the header reflects the "some" state as indeterminate
     // rather than silently unchecked (hardening fix).
     fireEvent.click(rowBoxes[0]);
@@ -512,7 +605,7 @@ describe('InboxBody — bulk selection', () => {
     renderInbox({ route: '/notifications/inbox?view=flat' });
 
     await screen.findByText('Selectable row');
-    fireEvent.click(screen.getAllByLabelText('Select notification')[0]);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Selectable row' }));
 
     const markRead = await screen.findByRole('button', { name: 'Mark read' });
     fireEvent.click(markRead);
@@ -579,11 +672,23 @@ describe('InboxBody — mark all read', () => {
 /* ── 9. URL-backed filters ────────────────────────────── */
 
 describe('InboxBody — URL filters', () => {
-  it('applies a visible seven-day range when the URL has no dates', async () => {
-    installRequest({ logs: () => Promise.resolve([]) });
+  it('includes historical Alert Studio events by default despite a seven-day workspace range', async () => {
+    localStorage.setItem(SHARED_RANGE_STORAGE_KEY, JSON.stringify({
+      version: 2, start: '2026-09-01', end: '2026-09-07', presetId: '7d',
+    }));
+    installRequest({
+      logs: () => Promise.resolve([
+        makeLog({
+          id: 42, channel_id: null, status: 'triggered',
+          event_type: 'alert.rule', title: 'Battery alert from Studio',
+          created_at: '2026-08-01T12:00:00Z',
+        }),
+      ]),
+    });
     renderInbox({ route: '/notifications/inbox?view=flat' });
 
-    await waitFor(() => expect(flatCalls().length).toBeGreaterThanOrEqual(1));
+    expect(await screen.findByText('Battery alert from Studio')).toBeInTheDocument();
+    expect(within(screen.getByRole('table', { name: 'Inbox' })).getByText('Battery Low')).toBeInTheDocument();
     const params = new URL(
       String(flatCalls()[0][0]),
       'http://teslasync.local',
@@ -591,15 +696,18 @@ describe('InboxBody — URL filters', () => {
     const from = params.get('from');
     const to = params.get('to');
 
-    expect(from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(from).toBe('2015-01-01');
     expect(to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    const inclusiveDays =
-      Math.round(
-        (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) /
-          86_400_000,
-      ) + 1;
-    expect(inclusiveDays).toBe(7);
-    expect(screen.getByText('Last 7 days')).toBeInTheDocument();
+    expect(screen.getByText('All time')).toBeInTheDocument();
+    expect(callsFor((path) => path.includes('count_only=true') && path.includes('from=2015-01-01')).length).toBeGreaterThan(0);
+  });
+
+  it('respects an explicit inbox date range', async () => {
+    renderInbox({ route: '/notifications/inbox?from=2026-09-01&to=2026-09-07' });
+    await waitFor(() => expect(flatCalls().length).toBeGreaterThanOrEqual(1));
+    const params = new URL(String(flatCalls()[0][0]), 'http://teslasync.local').searchParams;
+    expect(params.get('from')).toBe('2026-09-01');
+    expect(params.get('to')).toBe('2026-09-07');
   });
 
   it('threads URL filters into the request as snake_case params without the /api/v1 prefix', async () => {
@@ -624,12 +732,53 @@ describe('InboxBody — row context menu', () => {
     });
     renderInbox({ route: '/notifications/inbox?view=flat' });
 
-    const rowEl = (await screen.findByText('Context row')).closest('[role="row"]');
+    const rowEl = (await screen.findByText('Context row')).closest('tr');
     expect(rowEl).not.toBeNull();
     fireEvent.contextMenu(rowEl as Element);
 
     const menu = await screen.findByTestId('context-menu');
     expect(within(menu).getByText('Mark as read')).toBeInTheDocument();
     expect(within(menu).getByText('Delete')).toBeInTheDocument();
+  });
+
+  it('confirm-gates the single-row delete from the context menu', async () => {
+    installRequest({
+      logs: () => Promise.resolve([makeLog({ id: 1, title: 'Context row', read_at: null })]),
+    });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+
+    const rowEl = (await screen.findByText('Context row')).closest('tr');
+    fireEvent.contextMenu(rowEl as Element);
+    const menu = await screen.findByTestId('context-menu');
+    fireEvent.click(within(menu).getByText('Delete'));
+
+    // A danger confirm naming the notification — no DELETE yet.
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Delete this notification?')).toBeInTheDocument();
+    expect(dialog.textContent).toContain('Context row');
+    expect(deleteCalls().length).toBe(0);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(deleteCalls().length).toBe(1));
+    expect(bodyOf(deleteCalls()[0] ?? [])).toEqual({ ids: [1] });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('does not delete when the single-row confirm is cancelled', async () => {
+    installRequest({
+      logs: () => Promise.resolve([makeLog({ id: 1, title: 'Context row', read_at: null })]),
+    });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+
+    const rowEl = (await screen.findByText('Context row')).closest('tr');
+    fireEvent.contextMenu(rowEl as Element);
+    const menu = await screen.findByTestId('context-menu');
+    fireEvent.click(within(menu).getByText('Delete'));
+
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(deleteCalls().length).toBe(0);
   });
 });

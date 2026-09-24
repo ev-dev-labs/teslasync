@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -23,18 +24,19 @@ import (
 
 // Client is a resilient Tesla Fleet API client with circuit breaker and rate limiter.
 type Client struct {
-	httpClient      *http.Client
-	proxyClient     *http.Client
-	baseURL         string
-	commandProxyURL string
-	authURL         string
-	clientID        string
-	clientSec       string
-	redirectURI     string
-	cb              *gobreaker.CircuitBreaker
-	limiter         *rate.Limiter
-	budgetMu        sync.RWMutex
-	requestBudget   RequestBudget
+	httpClient       *http.Client
+	proxyClient      *http.Client
+	baseURL          string
+	commandProxyURL  string
+	authURL          string
+	clientID         string
+	clientSec        string
+	redirectURI      string
+	cb               *gobreaker.CircuitBreaker
+	limiter          *rate.Limiter
+	budgetMu         sync.RWMutex
+	requestBudget    RequestBudget
+	endpointControls EndpointControlsReader
 
 	mu          sync.RWMutex
 	accessToken string
@@ -43,6 +45,20 @@ type Client struct {
 
 	// logCallback is called after each API request for audit logging.
 	logCallback func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, err error)
+}
+
+// EndpointControlsReader supplies fresh installation-wide controls for each
+// Fleet API operation, including calls sent through the command proxy.
+type EndpointControlsReader interface {
+	GetEndpointControls(context.Context) (settingsmodel.LegacyPollingConfig, error)
+}
+
+// SetEndpointControlsReader is called by the composition root before requests
+// begin. A nil reader leaves standalone Tesla clients unrestricted.
+func (c *Client) SetEndpointControlsReader(reader EndpointControlsReader) {
+	c.budgetMu.Lock()
+	c.endpointControls = reader
+	c.budgetMu.Unlock()
 }
 
 // NewClient creates a Tesla API client with rate limiting and a circuit
@@ -281,6 +297,9 @@ var ErrRateLimited = fmt.Errorf("rate limited (429): too many requests")
 
 // doRequest performs an authenticated API request through the circuit breaker.
 func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) (respBody []byte, statusCode int, err error) {
+	if err := c.checkEndpointControls(ctx, method, path); err != nil {
+		return nil, http.StatusForbidden, err
+	}
 	ctx, span := startSpan(ctx, "tesla.HTTP "+method+" "+path,
 		attribute.String("http.request.method", method),
 		attribute.String("tesla.api.path", path),

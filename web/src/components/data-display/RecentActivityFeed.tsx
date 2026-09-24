@@ -43,7 +43,7 @@ function entityHref(entityType: string | null, entityId: string | null): string 
     case 'charge':
       return `/charging/${encodeURIComponent(entityId)}`;
     case 'alert_rule':
-      return `/notifications/alerts`;
+      return `/notifications/inbox`;
     case 'automation':
       return `/automations`;
     case 'geofence':

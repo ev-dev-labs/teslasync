@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -65,6 +66,52 @@ type geofenceRateRepo interface {
 	ApplyRate(ctx context.Context, scope systemmodel.GeofenceRateApplyScope) (*systemmodel.GeofenceRateApplyResult, error)
 	ChargingSummaryByCurrency(ctx context.Context, geofenceID int64) ([]*systemmodel.GeofenceChargingSummary, error)
 	ChargingActivity(ctx context.Context, geofenceID int64, limit, offset int) ([]*systemmodel.GeofenceChargingActivity, error)
+	FirstChargingSessionAt(ctx context.Context, geofenceID int64) (*time.Time, error)
+	ListVisitedCandidates(ctx context.Context) ([]geofencedb.VisitedPlaceCandidate, error)
+	FindByCoordinates(ctx context.Context, lat, lon float64) ([]*systemmodel.Geofence, error)
+}
+
+// ResolveName uses the user's saved geofences as the first-party place-name
+// directory. Unlike the alert evaluator, disabled places still resolve names.
+func (h *Handler) ResolveName(w http.ResponseWriter, r *http.Request) {
+	ctx, span := tracing.HandlerSpan(r.Context(), "geofence.resolve_name")
+	defer span.End()
+	lat, latErr := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
+	lon, lonErr := strconv.ParseFloat(r.URL.Query().Get("lon"), 64)
+	if latErr != nil || lonErr != nil || !geofencedb.ValidCoordinate(lat, lon) {
+		apperror.Write(w, r, apperror.ErrGeofenceInvalidCoords)
+		return
+	}
+	places, err := h.rateRepo.FindByCoordinates(ctx, lat, lon)
+	if err != nil {
+		tracing.EndSpan(span, err)
+		log.Error().Err(err).Msg("failed to resolve place name")
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to resolve place name"))
+		return
+	}
+	if len(places) == 0 {
+		httpx.WriteJSON(w, http.StatusOK, map[string]any{"name": nil, "geofence_id": nil})
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"name": places[0].Name, "geofence_id": places[0].ID})
+}
+
+// VisitedCandidates exposes evidence-backed proposals; it does not persist
+// or enable any place until the user saves a reviewed place.
+func (h *Handler) VisitedCandidates(w http.ResponseWriter, r *http.Request) {
+	ctx, span := tracing.HandlerSpan(r.Context(), "geofence.visited_candidates")
+	defer span.End()
+	candidates, err := h.rateRepo.ListVisitedCandidates(ctx)
+	if err != nil {
+		tracing.EndSpan(span, err)
+		log.Error().Err(err).Msg("failed to discover visited places")
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to discover visited places"))
+		return
+	}
+	if candidates == nil {
+		candidates = []geofencedb.VisitedPlaceCandidate{}
+	}
+	httpx.WriteJSON(w, http.StatusOK, candidates)
 }
 
 // NeedsReview serves GET /geofences/needs-review — the "Needs Setup" queue
@@ -551,6 +598,7 @@ func (h *Handler) ChargingActivity(w http.ResponseWriter, r *http.Request) {
 		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid geofence ID"))
 		return
 	}
+
 	span.SetAttributes(tracing.GeofenceID(id))
 
 	if _, ok := h.loadGeofenceOr404(ctx, w, r, id); !ok {
@@ -565,4 +613,27 @@ func (h *Handler) ChargingActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, activity)
+}
+
+// FirstChargingSession returns the earliest associated session, including unpriced ones.
+func (h *Handler) FirstChargingSession(w http.ResponseWriter, r *http.Request) {
+	ctx, span := tracing.HandlerSpan(r.Context(), "geofence.first_charging_session")
+	defer span.End()
+	id, err := apiparams.URLParamInt64(r, "geofenceID")
+	if err != nil {
+		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid geofence ID"))
+		return
+	}
+	span.SetAttributes(tracing.GeofenceID(id))
+	if _, ok := h.loadGeofenceOr404(ctx, w, r, id); !ok {
+		return
+	}
+	startedAt, err := h.rateRepo.FirstChargingSessionAt(ctx, id)
+	if err != nil {
+		tracing.EndSpan(span, err)
+		log.Error().Err(err).Int64("geofence_id", id).Msg("failed to load first charging session")
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to load first charging session"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]*time.Time{"started_at": startedAt})
 }

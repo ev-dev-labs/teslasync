@@ -119,7 +119,11 @@
     "emptyRange": "No signal samples were recorded in this time range.",
     "emptyRangeDescription": "Expand the range or select another signal to inspect available history.",
     "histAria": "Historical signal chart",
-    "liveAria": "Live signal stream chart"
+    "liveAria": "Live signal stream chart",
+    "liveTitle": "Live Signal Stream",
+    "histTitle": "Signal Chart",
+    "loading": "Loading chart…",
+    "pointsLoaded": "points loaded"
   },
   "signalDeadband": {
     "title": "Signal Deadband",
@@ -305,6 +309,20 @@
     "range": "Observed range",
     "rangeText": "{{min}} to {{max}} across {{n}} samples in the last {{h}}h window"
   },
+  "signalExplorer": {
+    "start": {
+      "title": "Pick signals and click Explore",
+      "message": "Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.",
+      "description": "Historical queries use the selected range; Live begins streaming new samples without changing it."
+    },
+    "title": "Signal Explorer",
+    "subtitle": "Visualise signal history with chart and stats — or stream live",
+    "timeRange": "Time Range",
+    "perPage": "Per Page",
+    "explore": "Explore",
+    "signals": "Signals",
+    "searchSignals": "Search signals…"
+  },
   "signalGap": {
     "status": "Status",
     "signal": "Signal",
@@ -352,7 +370,13 @@
   "signalHistory": {
     "emptyTitle": "No signal samples",
     "emptyMessage": "No signal data matches the selected signals and time range.",
-    "emptyDescription": "Expand the time range or choose another signal, then run the query again."
+    "emptyDescription": "Expand the time range or choose another signal, then run the query again.",
+    "title": "Signal Data",
+    "signal": "Signal",
+    "value": "Value",
+    "type": "Type",
+    "page": "Page",
+    "loading": "Loading signal data"
   },
   "signalLog": {
     "records": "records"
@@ -403,7 +427,13 @@
   },
   "signalStats": {
     "emptyMessage": "No aggregate statistics are available.",
-    "emptyDescription": "Select a signal with numeric samples or expand the queried time range."
+    "emptyDescription": "Select a signal with numeric samples or expand the queried time range.",
+    "signal": "Signal",
+    "min": "Min",
+    "max": "Max",
+    "avg": "Avg",
+    "count": "Count",
+    "title": "Stats Summary"
   },
   "signalTransportAgreement": {
     "title": "HTTP / MQTT Agreement",

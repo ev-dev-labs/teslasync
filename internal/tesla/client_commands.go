@@ -215,6 +215,9 @@ func (c *Client) SendCommand(ctx context.Context, vin string, command string, pa
 
 // doProxyRequest sends a command through the Vehicle Command Proxy for signing.
 func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader) (err error) {
+	if err := c.checkEndpointControls(ctx, http.MethodPost, path); err != nil {
+		return err
+	}
 	ctx, span := startSpan(ctx, "tesla.proxy POST "+path,
 		attribute.String("http.request.method", http.MethodPost),
 		attribute.String("tesla.proxy.path", path),

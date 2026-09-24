@@ -5,12 +5,14 @@ import {
   seedBrowserState,
   waitForHarnessReady,
 } from './mockApi';
+import { monitorPage } from './qualityAssertions';
 import { FIXTURE_MATRIX } from './routeRegistry';
 
 for (const { route, scenario } of FIXTURE_MATRIX) {
   test(`${route.name} renders the ${scenario} fixture`, async ({ page }) => {
     await seedBrowserState(page, 'dark', route.path);
     const mockApi = await installApiMocks(page, scenario);
+    const diagnostics = monitorPage(page);
     await page.goto(route.path, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('main')).toBeVisible();
     await expect(page.getByText(/page failed to load/i)).toHaveCount(0);
@@ -23,6 +25,13 @@ for (const { route, scenario } of FIXTURE_MATRIX) {
       await expect(page.getByText(/failure|could not|unable|unavailable|error/i).first()).toBeVisible();
     }
     await waitForHarnessReady(page, mockApi);
+    await expect(page.getByText('Something went wrong', { exact: true })).toHaveCount(0);
+    expect(diagnostics.pageErrors, 'uncaught render errors').toEqual([]);
+    expect(
+      diagnostics.consoleErrors.filter(message =>
+        /Cannot read (?:properties of|property) (?:undefined|null).*length/i.test(message)),
+      'null or undefined length access in browser console',
+    ).toEqual([]);
     if (route.name === 'fsd') {
       const focusableInsideChartImage = page
         .locator('[role="img"]')

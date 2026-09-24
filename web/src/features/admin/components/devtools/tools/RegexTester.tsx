@@ -67,33 +67,33 @@ export function RegexTesterTool() {
       { value: 'gi', label: 'gi (global, case-insensitive)' },
       { value: 'gm', label: 'gm (global, multiline)' },
       { value: 'gim', label: 'gim (all)' },
-      { value: '', label: t('No Flags') },
+      { value: '', label: t('devtools.utils.regexNoFlags', 'No Flags') },
     ],
     [t],
   )
 
   return (
-    <ToolCard icon={Regex} color="red" title={t('Regex Tester')} description={t('Regex Tester Desc')}>
+    <ToolCard icon={Regex} color="red" title={t('devtools.utils.regex', 'Regex Tester')} description={t('devtools.utils.regexDesc', 'Regex Tester Desc')}>
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input label={t('Pattern')} placeholder="\\d+" value={pattern} onChange={(e) => setPattern(e.target.value)} icon={<Regex className="h-4 w-4" />} error={error ? t('Invalid pattern') : undefined} />
-          <Select label={t('Flags')} options={flagOptions} value={flags} onChange={(e) => setFlags(e.target.value)} />
+          <Input label={t('devtools.utils.regexPattern', 'Pattern')} placeholder="\\d+" value={pattern} onChange={(e) => setPattern(e.target.value)} icon={<Regex className="h-4 w-4" />} error={error ? t('devtools.utils.regexInvalidPattern', 'Invalid pattern') : undefined} />
+          <Select label={t('devtools.utils.regexFlags', 'Flags')} options={flagOptions} value={flags} onChange={(e) => setFlags(e.target.value)} />
         </div>
-        <Textarea label={t('Test String')} rows={3} value={testStr} onChange={(e) => setTestStr(e.target.value)} placeholder={t('Test String Placeholder')} />
+        <Textarea label={t('devtools.utils.regexTestString', 'Test String')} rows={3} value={testStr} onChange={(e) => setTestStr(e.target.value)} placeholder={t('devtools.utils.regexTestStringPlaceholder', 'Test String Placeholder')} />
 
         {error ? (
           <div role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
-            <p className="text-xs text-[var(--text-secondary)]">{t('Invalid regular expression')}</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.regexInvalid', 'Invalid regular expression')}</p>
             <code className="text-xs font-mono text-rose-300">{error}</code>
           </div>
         ) : (
           <>
             <div className="flex items-center gap-2">
               <Badge variant={matches.length > 0 ? 'success' : 'neutral'} size="sm">
-                {matches.length}{truncated ? '+' : ''} {t('Matches')}
+                {matches.length}{truncated ? '+' : ''} {t('devtools.utils.regexMatches', 'Matches')}
               </Badge>
               {truncated && (
-                <span className="text-xs text-[var(--text-muted)]">{t('Result limit reached')}</span>
+                <span className="text-xs text-[var(--text-muted)]">{t('devtools.utils.regexLimitReached', 'Result limit reached')}</span>
               )}
             </div>
             {matches.length > 0 ? (
@@ -102,13 +102,13 @@ export function RegexTesterTool() {
                   <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
                     <Badge variant="info" size="sm">{i + 1}</Badge>
                     <code className="text-xs font-mono text-rose-300">{m.match || t('(empty match)')}</code>
-                    <span className="text-xs text-[var(--text-muted)]">{t('At Index')} {m.index}</span>
+                    <span className="text-xs text-[var(--text-muted)]">{t('devtools.utils.regexAtIndex', 'At Index')} {m.index}</span>
                   </div>
                 ))}
               </div>
             ) : (
               pattern !== '' && testStr !== '' && (
-                <p className="text-xs text-[var(--text-secondary)]">{t('No matches found')}</p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.regexNoMatches', 'No matches found')}</p>
               )
             )}
           </>

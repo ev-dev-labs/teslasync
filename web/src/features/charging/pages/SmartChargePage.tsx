@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Zap,
@@ -111,7 +111,12 @@ export default function SmartChargePage() {
 
   // Data hooks
   const { vehicleId: selectedId } = useSelectedVehicle();
-  const { data: ratePlans } = useRatePlans();
+  const {
+    data: ratePlans,
+    isError: ratePlansError,
+    error: ratePlansErrorObj,
+    refetch: refetchRatePlans,
+  } = useRatePlans();
   const optimizeMutation = useOptimizeCharge();
   const applyMutation = useApplySchedule();
 
@@ -119,9 +124,15 @@ export default function SmartChargePage() {
   const vehicleIdNum = selectedId ?? undefined;
   const [targetSoc, setTargetSoc] = useState(80);
   const [departBy, setDepartBy] = useState(defaultDepartBy);
-  const [ratePlanId, setRatePlanId] = useState('pge-ev2a');
+  // No hardcoded plan: the effect below defaults to the first available plan
+  // (backend plans win over the built-in fallback) without ever clobbering an
+  // explicit user choice.
+  const [ratePlanId, setRatePlanId] = useState('');
   const [maxAmps, setMaxAmps] = useState(32);
   const [batteryCapacity, setBatteryCapacity] = useState(75);
+  const [departByError, setDepartByError] = useState('');
+  const [maxAmpsError, setMaxAmpsError] = useState('');
+  const [capacityError, setCapacityError] = useState('');
 
   // Result state
   const [result, setResult] = useState<OptimizeChargeResponse | null>(null);
@@ -146,14 +157,28 @@ export default function SmartChargePage() {
     [ratePlans],
   );
 
-  const ratePlanSelectOptions =
-    ratePlanOptions.length > 0
-      ? ratePlanOptions
-      : [
-          { value: 'pge-ev2a', label: 'PG&E EV2-A' },
-          { value: 'sce-tou-d', label: 'SCE TOU-D' },
-          { value: 'sdge-tou-dr1', label: 'SDG&E TOU-DR1' },
-        ];
+  const ratePlanSelectOptions = useMemo(
+    () =>
+      ratePlanOptions.length > 0
+        ? ratePlanOptions
+        : [
+            { value: 'pge-ev2a', label: 'PG&E EV2-A' },
+            { value: 'sce-tou-d', label: 'SCE TOU-D' },
+            { value: 'sdge-tou-dr1', label: 'SDG&E TOU-DR1' },
+          ],
+    [ratePlanOptions],
+  );
+
+  // Keep the selection valid as the option list resolves: backend plans
+  // replace the fallback default, but a value the user picked is left alone.
+  useEffect(() => {
+    if (
+      ratePlanSelectOptions.length > 0 &&
+      !ratePlanSelectOptions.some((o) => o.value === ratePlanId)
+    ) {
+      setRatePlanId(ratePlanSelectOptions[0].value);
+    }
+  }, [ratePlanSelectOptions, ratePlanId]);
 
   const chargeWindow = useMemo(() => {
     if (!result) return undefined;
@@ -164,6 +189,26 @@ export default function SmartChargePage() {
 
   const handleOptimize = () => {
     if (!vehicleIdNum) return;
+    // Validate before mutating: a cleared Depart By field parses to Invalid
+    // Date, whose toISOString() throws an uncaught RangeError, and cleared
+    // numerics collapse to 0 (Number('') / UnitInput null → 0).
+    const departTs = new Date(departBy).getTime();
+    const nextDepartByError =
+      !departBy || Number.isNaN(departTs)
+        ? t('chargePlanner.invalidDepartBy', 'Enter a valid departure date and time.')
+        : '';
+    const nextMaxAmpsError =
+      !Number.isFinite(maxAmps) || maxAmps < 8 || maxAmps > 80
+        ? t('chargePlanner.invalidMaxAmps', 'Enter an amperage between 8 and 80.')
+        : '';
+    const nextCapacityError =
+      !Number.isFinite(batteryCapacity) || batteryCapacity <= 0
+        ? t('chargePlanner.invalidCapacity', 'Enter a battery capacity greater than 0.')
+        : '';
+    setDepartByError(nextDepartByError);
+    setMaxAmpsError(nextMaxAmpsError);
+    setCapacityError(nextCapacityError);
+    if (nextDepartByError || nextMaxAmpsError || nextCapacityError) return;
     setApplied(false);
     setResult(null);
     optimizeMutation.mutate(
@@ -355,6 +400,16 @@ export default function SmartChargePage() {
               </PanelTitle>
 
               <div className="space-y-4">
+                {/* Live plans failed: say so with a retry instead of silently
+                    substituting the built-in fallback list below. */}
+                {ratePlansError && (
+                  <QueryError
+                    error={ratePlansErrorObj}
+                    onRetry={() => void refetchRatePlans()}
+                    compact
+                    resourceName={t('chargePlanner.ratePlansResource', 'rate plans')}
+                  />
+                )}
                 <Select
                   id="smart-charge-rate-plan"
                   label={t('chargePlanner.ratePlan', 'Rate Plan')}
@@ -378,7 +433,11 @@ export default function SmartChargePage() {
                   label={t('chargePlanner.departBy', 'Depart By')}
                   type="datetime-local"
                   value={departBy}
-                  onChange={(e) => setDepartBy(e.target.value)}
+                  error={departByError || undefined}
+                  onChange={(e) => {
+                    setDepartBy(e.target.value);
+                    if (departByError) setDepartByError('');
+                  }}
                 />
 
                 <Input
@@ -388,14 +447,22 @@ export default function SmartChargePage() {
                   min={8}
                   max={80}
                   value={String(maxAmps)}
-                  onChange={(e) => setMaxAmps(Number(e.target.value))}
+                  error={maxAmpsError || undefined}
+                  onChange={(e) => {
+                    setMaxAmps(Number(e.target.value));
+                    if (maxAmpsError) setMaxAmpsError('');
+                  }}
                 />
 
                 <UnitInput
                   label={t('chargePlanner.batteryCapacity', 'Battery Capacity')}
                   unit="energy"
                   value={batteryCapacity}
-                  onChange={(v) => setBatteryCapacity(v ?? 0)}
+                  error={capacityError || undefined}
+                  onChange={(v) => {
+                    setBatteryCapacity(v ?? 0);
+                    if (capacityError) setCapacityError('');
+                  }}
                 />
 
                 <Button
@@ -582,6 +649,7 @@ export default function SmartChargePage() {
               <DataTable
                 tableId="charging:smart-charge-history"
                 columns={historyColumns}
+                mobileColumns={['created_at', 'savings', 'status']}
                 data={historyItems}
                 keyExtractor={(p) => p.id}
                 emptyMessage={t(

@@ -1,12 +1,12 @@
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Activity } from 'lucide-react'
+import { Activity, AlertCircle } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, PanelTitle, SectionTitle } from '@/components/ui'
 import { DataProvenanceBadge, LiveIndicator } from '@/components/data-display'
-import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton, QueryError } from '@/components/feedback'
+import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton, QueryError, EmptyState } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -81,7 +81,13 @@ function VehicleDetailSkeleton() {
 export default function VehicleDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
-  const vehicleId = Number(id)
+  // Guard the deep-link id: a non-numeric/zero/negative id previously flowed
+  // into every query as NaN (silently disabled) and rendered an empty page
+  // shell. Clamp to 0 (which every `enabled`/`> 0` gate already treats as
+  // absent) and render an explicit not-found branch below instead.
+  const rawId = Number(id)
+  const hasValidId = Number.isFinite(rawId) && rawId > 0
+  const vehicleId = hasValidId ? rawId : 0
   usePageTitle(t('vehicles.detail.title', 'Vehicle Detail'))
 
   /* ─── Queries ─── */
@@ -189,6 +195,23 @@ export default function VehicleDetailPage() {
   /* ─── Loading short-circuit ─────────── */
   if (vehicleLoading) {
     return <VehicleDetailSkeleton />
+  }
+
+  if (!hasValidId) {
+    return (
+      <PageContainer title={t('vehicles.detail.title', 'Vehicle Detail')}>
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-5">
+            <EmptyState
+              icon={<AlertCircle className="h-8 w-8" aria-hidden="true" />}
+              title={t('vehicles.detail.invalidIdTitle', 'Vehicle not found')}
+              message={t('vehicles.detail.invalidIdBody', 'That vehicle link looks wrong. Check the URL or pick a vehicle from the list.')}
+              actionTo={{ label: t('vehicles.detail.backToVehicles', 'Back to Vehicles'), to: '/vehicles' }}
+            />
+          </GlassPanel>
+        </FadeIn>
+      </PageContainer>
+    )
   }
 
   /* ─── Render ─── */

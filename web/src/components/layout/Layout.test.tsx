@@ -404,6 +404,7 @@ vi.mock('@/components/ui/ThemePicker', () => ({
 
 // Import AFTER the mocks so the shell wires the stubs.
 import Layout, { navSections, navSearchKeywords, reconcileNavPaths } from './Layout'
+import { DIAGNOSTIC_GROUPS } from './diagnosticGroups'
 import {
   CANONICAL_SECTION_TO_COMPACT_GROUP,
   COMPACT_GROUP_TITLES,
@@ -530,6 +531,28 @@ describe('navSections (data export)', () => {
     const twoFactor = allItems.find((i) => i.to === '/account/2fa') as { requiresAuth?: boolean }
     expect(twoFactor?.requiresAuth).toBe(true)
   })
+
+  it('gives every item a unique stable labelKey and every section a titleKey', () => {
+    const labelKeys = allItems.map((i) => i.labelKey)
+    expect(labelKeys.every((k) => typeof k === 'string' && k.startsWith('nav.items.'))).toBe(true)
+    expect(new Set(labelKeys).size).toBe(labelKeys.length)
+    const titleKeys = navSections.map((s) => s.titleKey)
+    expect(titleKeys.every((k) => typeof k === 'string' && (k as string).startsWith('nav.groups.'))).toBe(true)
+    expect(new Set(titleKeys).size).toBe(titleKeys.length)
+  })
+
+  it('resolves every nav labelKey/titleKey in the en catalog with the authored label', async () => {
+    const en = (await import('@/i18n/en.json')).default as Record<string, any>
+    const nav = en.nav as { items: Record<string, string>; groups: Record<string, string> }
+    for (const item of allItems) {
+      const slug = item.labelKey.slice('nav.items.'.length)
+      expect(nav.items[slug]).toBe(item.label)
+    }
+    for (const section of navSections) {
+      const slug = (section.titleKey as string).slice('nav.groups.'.length)
+      expect(nav.groups[slug]).toBe(section.title)
+    }
+  })
 })
 
 describe('navSearchKeywords (data export)', () => {
@@ -623,7 +646,7 @@ describe('compact nav blueprint ↔ navSections catalog', () => {
       '/charging',
       '/energy',
       '/battery',
-      '/analytics',
+      '/statistics',
       '/automations',
       '/settings',
     ]) {
@@ -748,6 +771,83 @@ describe('Layout — compact Linear sidebar wiring', () => {
     expect(props.sections.map((s) => s.title)).toContain('Diagnostics')
     expect(props.sections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
     expect(props.activeSectionTitle).toBe('Diagnostics')
+  })
+
+  it('shows six Reports entries in the Notion sidebar while keeping every route in the catalog', () => {
+    H.sidebarStyle.value = 'notion'
+    renderLayout('/analytics')
+
+    const props = H.sidebarProps.notion as unknown as {
+      pathname: string
+      sections: Array<{ title: string; items: Array<{ to: string; label: string }> }>
+    }
+    const reports = props.sections.find(section => section.title === 'Reports')
+    expect(reports?.items.map(item => item.to)).toEqual([
+      '/statistics', '/efficiency', '/cost-analysis',
+      '/share-card', '/analytics/carbon', '/benchmarks/privacy',
+    ])
+    expect(reports?.items.slice(0, 3).map(item => item.label)).toEqual([
+      'Fleet Insights', 'Driving Efficiency', 'Costs',
+    ])
+    expect(props.pathname).toBe('/statistics')
+    expect(navSections.find(section => section.title === 'Reports')?.items).toHaveLength(11)
+  })
+
+  it('groups secondary report routes under their primary sidebar link', () => {
+    renderLayout('/tco')
+    const reports = document.querySelector('#nav-section-reports')
+    expect(reports).toBeInTheDocument()
+    expect(within(reports as HTMLElement).getAllByRole('link')).toHaveLength(6)
+    expect(within(reports as HTMLElement).getByRole('link', { name: 'Costs' }))
+      .toHaveAttribute('aria-current', 'page')
+  })
+
+  it('groups diagnostics in the detailed sidebar without removing any catalog destinations', () => {
+    H.sidebarStyle.value = 'notion'
+    renderLayout('/admin/ingest-xray')
+
+    const props = H.sidebarProps.notion as unknown as {
+      pathname: string
+      sections: Array<{ title: string; items: Array<{ to: string; label: string }> }>
+    }
+    const diagnostics = props.sections.find(section => section.title === 'Diagnostics')
+    expect(diagnostics?.items.map(item => item.to)).toEqual([
+      '/system-status', '/db-health', '/anomaly-detection', '/dashcam',
+      '/signals', '/admin/flags', '/admin/vehicle-cost', '/admin/secret-rotation',
+      '/admin/audit-log', '/admin/gdpr-exports', '/signal-correlation', '/api-playground',
+    ])
+    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry Troubleshooting')
+    expect(props.pathname).toBe('/signals')
+    expect(navSections.find(section => section.title === 'Diagnostics')?.items).toHaveLength(33)
+    expect(DIAGNOSTIC_GROUPS.every(group => group.pages.every(page =>
+      navSections.find(section => section.title === 'Diagnostics')?.items
+        .some(item => item.to === page.to && item.labelKey === page.labelKey),
+    ))).toBe(true)
+  })
+
+  it('keeps grouped diagnostics active in the detailed sidebar and compact navigation', () => {
+    renderLayout('/signal-entropy')
+    const diagnostics = document.querySelector('#nav-section-diagnostics')
+    expect(diagnostics).toBeInTheDocument()
+    expect(within(diagnostics as HTMLElement).getAllByRole('link')).toHaveLength(12)
+    expect(within(diagnostics as HTMLElement).getByRole('link', { name: 'Signal Analysis' }))
+      .toHaveAttribute('aria-current', 'page')
+
+    cleanup()
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/signal-entropy')
+    expect(linearProps().activeSectionTitle).toBe('Developer')
+    expect(linearProps().sections.find(section => section.title === 'Developer')?.items
+      .some(item => item.to === '/signal-correlation')).toBe(true)
+  })
+
+  it('uses distinct icons for system status and Tesla API usage', () => {
+    const diagnostics = navSections.find((section) => section.title === 'Diagnostics')
+    const status = diagnostics?.items.find((item) => item.to === '/system-status')
+    const usage = diagnostics?.items.find((item) => item.to === '/tesla-api-usage')
+    expect(status?.icon).toBeDefined()
+    expect(usage?.icon).toBeDefined()
+    expect(status?.icon).not.toBe(usage?.icon)
   })
 })
 
@@ -913,10 +1013,10 @@ describe('Layout — live nav badges', () => {
     })
   })
 
-  it('shows the unread-alert badge on the "Alert Center" link', async () => {
-    renderLayout('/notifications/alerts')
+  it('shows the unread-alert badge on the inbox link', async () => {
+    renderLayout('/notifications/inbox')
     await waitFor(() => {
-      const link = screen.getByRole('link', { name: 'Alert Center' })
+      const link = screen.getByRole('link', { name: 'All Notifications' })
       // ALERTS fixture has exactly one unread entry.
       expect(within(link).getByText('1')).toBeInTheDocument()
     })

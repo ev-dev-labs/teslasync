@@ -224,7 +224,8 @@ func (r *NotificationRepo) upsertChannelConfig(ctx context.Context, ch *notifica
 		_, err := r.db.Pool.Exec(ctx,
 			`INSERT INTO notification_channel_webhook (channel_id, url, http_method, bearer_token)
 			 VALUES ($1, $2, $3, $4)
-			 ON CONFLICT (channel_id) DO UPDATE SET url=$2, http_method=$3, bearer_token=$4`,
+			 ON CONFLICT (channel_id) DO UPDATE SET url=$2, http_method=$3,
+			   bearer_token=COALESCE($4, notification_channel_webhook.bearer_token)`,
 			ch.ID, cfg["url"], method, nilIfEmpty(cfg["bearer_token"]),
 		)
 		return err
@@ -404,6 +405,9 @@ func (r *NotificationRepo) ToggleChannel(ctx context.Context, id int64, enabled 
 // --- Logs ---
 
 func (r *NotificationRepo) CreateLog(ctx context.Context, l *notificationmodel.NotificationLog) error {
+	if l == nil || l.ChannelID <= 0 || l.Status == "triggered" {
+		return fmt.Errorf("create delivery log: valid channel and delivery status required")
+	}
 	severity := strings.TrimSpace(strings.ToLower(l.Severity))
 	var sevArg any
 	if severity == "" {
@@ -422,10 +426,43 @@ func (r *NotificationRepo) CreateLog(ctx context.Context, l *notificationmodel.N
 		groupKeyArg = nil
 	}
 	return r.db.Pool.QueryRow(ctx,
-		`INSERT INTO notification_logs (channel_id, alert_id, title, message, status, severity, error, created_at, sent_at, group_key)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-		l.ChannelID, l.AlertID, l.Title, l.Message, l.Status, sevArg, l.Error, time.Now().UTC(), l.SentAt, groupKeyArg,
+		`INSERT INTO notification_logs (channel_id, alert_id, title, message, status, severity, error, created_at, sent_at, group_key, trigger_id, event_type)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+		l.ChannelID, l.AlertID, l.Title, l.Message, l.Status, sevArg, l.Error, time.Now().UTC(), l.SentAt, groupKeyArg, l.TriggerID, l.EventType,
 	).Scan(&l.ID)
+}
+
+// CreateEvent records one canonical inbox event before any channel fan-out.
+// The unique trigger ID makes retries idempotent and allows zero-channel
+// events to remain visible independently of delivery success.
+func (r *NotificationRepo) CreateEvent(ctx context.Context, l *notificationmodel.NotificationLog) error {
+	if l == nil || l.TriggerID == nil || *l.TriggerID == "" || l.EventType == nil || *l.EventType == "" {
+		return fmt.Errorf("create notification event: trigger_id and event_type required")
+	}
+	severity := strings.ToLower(strings.TrimSpace(l.Severity))
+	var severityArg any
+	if severity != "" {
+		severityArg = severity
+	}
+	now := time.Now().UTC()
+	err := r.db.Pool.QueryRow(ctx,
+		`INSERT INTO notification_logs (channel_id, alert_id, title, message, status, severity, created_at, trigger_id, event_type, group_key)
+		 VALUES (NULL, $1, $2, $3, 'triggered', $4, $5, $6, $7, $8)
+		 ON CONFLICT DO NOTHING RETURNING id, created_at`,
+		l.AlertID, l.Title, l.Message, severityArg, now, l.TriggerID, l.EventType,
+		deriveNotificationLogGroupKey(l.AlertID, severity),
+	).Scan(&l.ID, &l.CreatedAt)
+	if err == pgx.ErrNoRows {
+		err = r.db.Pool.QueryRow(ctx,
+			`SELECT id, created_at FROM notification_logs WHERE trigger_id = $1 AND status = 'triggered'`, l.TriggerID,
+		).Scan(&l.ID, &l.CreatedAt)
+	}
+	if err != nil {
+		return fmt.Errorf("create notification event: %w", err)
+	}
+	l.ChannelID = 0
+	l.Status = "triggered"
+	return nil
 }
 
 // ExistsTitleSince reports whether a non-failed notification_logs row with
@@ -495,20 +532,35 @@ func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg s
 // `severity` and `error` are nullable in the DB but the model uses non-pointer
 // `string` fields, so both columns must be COALESCEd to ” to avoid pgx
 // "cannot scan NULL into *string" failures on rows with no error message.
-const notificationLogColumns = `id, channel_id, alert_id, title, message, status, COALESCE(severity, ''), COALESCE(error, ''), created_at, sent_at, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note`
+const notificationLogColumns = `id, COALESCE(channel_id, 0), alert_id, title, message, status, COALESCE(severity, ''), COALESCE(error, ''), created_at, sent_at, scheduled_at, latency_ms, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note, trigger_id, event_type`
+
+// Keep a correlated delivery visible only when its canonical event is missing.
+// The earliest delivery is a stable representative even when several channels
+// succeeded; a late delivery must not create another inbox row for the trigger.
+const inboxLogPredicate = `(nl.status = 'triggered' OR (
+	nl.status <> 'triggered' AND (
+		nl.trigger_id IS NULL OR (
+			NOT EXISTS (SELECT 1 FROM notification_logs event
+				WHERE event.trigger_id = nl.trigger_id AND event.status = 'triggered')
+			AND nl.id = (SELECT MIN(delivery.id) FROM notification_logs delivery
+				WHERE delivery.trigger_id = nl.trigger_id AND delivery.status <> 'triggered')
+		)
+	)
+))`
 
 func scanNotificationLog(rows pgx.Row, l *notificationmodel.NotificationLog) error {
 	return rows.Scan(
 		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Severity, &l.Error,
-		&l.CreatedAt, &l.SentAt, &l.ReadAt, &l.ArchivedAt,
-		&l.AcknowledgedAt, &l.AcknowledgedBy, &l.AcknowledgementNote,
+		&l.CreatedAt, &l.SentAt, &l.ScheduledAt, &l.LatencyMs, &l.ReadAt, &l.ArchivedAt,
+		&l.AcknowledgedAt, &l.AcknowledgedBy, &l.AcknowledgementNote, &l.TriggerID, &l.EventType,
 	)
 }
 
 func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT `+notificationLogColumns+`
-		 FROM notification_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset,
+		 FROM notification_logs nl WHERE `+inboxLogPredicate+`
+		 ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset,
 	)
 	if err != nil {
 		return nil, err
@@ -538,8 +590,8 @@ func (r *NotificationRepo) GetAlertLogs(ctx context.Context, limit, offset int) 
 	}
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT `+notificationLogColumns+`
-		 FROM notification_logs
-		 WHERE alert_id IS NOT NULL
+		 FROM notification_logs nl
+		 WHERE nl.alert_id IS NOT NULL AND `+inboxLogPredicate+`
 		 ORDER BY created_at DESC
 		 LIMIT $1 OFFSET $2`, limit, offset,
 	)
@@ -619,10 +671,12 @@ func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*noti
 // = inbox only, true = archived only) because the inbox view defaults to the
 // non-archived list.
 type NotificationLogFilters struct {
+	DeliveryOnly               bool      // delivery analytics include attempts, not canonical event rows
 	Severities                 []string  // wire severities as stored on alert_rules: info, warn, critical
 	IncludeFailedInfoAsWarning bool      // match the /alerts DTO warning floor for failed info deliveries
 	VehicleIDs                 []int64   // rule applies to any requested vehicle; unscoped system rows remain visible
 	RuleIDs                    []int64   // notification_logs.alert_id (== alert_rules.id)
+	Source                     string    // empty = all; rule = notification with an alert rule
 	From                       time.Time // inclusive lower bound on created_at
 	To                         time.Time // inclusive upper bound on created_at
 	BeforeCreatedAt            time.Time // keyset cursor: rows strictly before this created_at/id tuple
@@ -662,6 +716,9 @@ func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
 
 	if len(f.RuleIDs) > 0 {
 		addClause("nl.alert_id = ANY("+ph(1)+")", f.RuleIDs)
+	}
+	if f.Source == "rule" {
+		w.clauses = append(w.clauses, "nl.alert_id IS NOT NULL")
 	}
 	if !f.From.IsZero() {
 		addClause("nl.created_at >= "+ph(1), f.From.UTC())
@@ -708,11 +765,11 @@ func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
 		if len(f.Severities) > 0 {
 			if f.IncludeFailedInfoAsWarning {
 				addClause(
-					"(CASE WHEN nl.status = 'failed' AND COALESCE(ar.severity, 'info') = 'info' THEN 'warn' ELSE COALESCE(ar.severity, 'info') END) = ANY("+ph(1)+")",
+					"(CASE WHEN nl.status = 'failed' AND COALESCE(NULLIF(nl.severity, ''), ar.severity, 'info') = 'info' THEN 'warn' ELSE COALESCE(NULLIF(nl.severity, ''), ar.severity, 'info') END) = ANY("+ph(1)+")",
 					f.Severities,
 				)
 			} else {
-				addClause("ar.severity = ANY("+ph(1)+")", f.Severities)
+				addClause("COALESCE(NULLIF(nl.severity, ''), ar.severity, 'info') = ANY("+ph(1)+")", f.Severities)
 			}
 		}
 		if len(f.VehicleIDs) > 0 {
@@ -725,6 +782,41 @@ func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
 		}
 	}
 	return w
+}
+
+// CountLogsFiltered uses the same filters and inbox predicate as the flat list.
+func (r *NotificationRepo) CountLogsFiltered(ctx context.Context, f NotificationLogFilters) (int64, error) {
+	w := buildNotificationLogWhere(f)
+	if f.DeliveryOnly {
+		w.clauses = append(w.clauses, "nl.status <> 'triggered'")
+	} else {
+		w.clauses = append(w.clauses, inboxLogPredicate)
+	}
+	query := "SELECT COUNT(*) FROM notification_logs nl"
+	if w.needsRuleJoin {
+		query += " LEFT JOIN alert_rules ar ON ar.id = nl.alert_id"
+	}
+	query += " WHERE " + strings.Join(w.clauses, " AND ")
+	var count int64
+	if err := r.db.Pool.QueryRow(ctx, query, w.args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count notification logs: %w", err)
+	}
+	return count, nil
+}
+
+func (r *NotificationRepo) CountGroupsFiltered(ctx context.Context, f NotificationLogFilters) (int64, error) {
+	w := buildNotificationLogWhere(f)
+	w.clauses = append(w.clauses, inboxLogPredicate)
+	query := "SELECT COUNT(DISTINCT COALESCE(nl.group_key, 'singleton:' || nl.id::text)) FROM notification_logs nl"
+	if w.needsRuleJoin {
+		query += " LEFT JOIN alert_rules ar ON ar.id = nl.alert_id"
+	}
+	query += " WHERE " + strings.Join(w.clauses, " AND ")
+	var count int64
+	if err := r.db.Pool.QueryRow(ctx, query, w.args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count notification groups: %w", err)
+	}
+	return count, nil
 }
 
 // GetLogsFiltered returns notification_logs matching the supplied filters.
@@ -740,12 +832,17 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 	}
 
 	w := buildNotificationLogWhere(f)
+	if f.DeliveryOnly {
+		w.clauses = append(w.clauses, "nl.status <> 'triggered'")
+	} else {
+		w.clauses = append(w.clauses, inboxLogPredicate)
+	}
 	args := w.args
 	ph := func(offset int) string { return fmt.Sprintf("$%d", len(args)+offset) }
 
-	const aliasedCols = `nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status, COALESCE(nl.severity, ''), COALESCE(nl.error, ''),
-		nl.created_at, nl.sent_at, nl.read_at, nl.archived_at,
-		nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note`
+	const aliasedCols = `nl.id, COALESCE(nl.channel_id, 0), nl.alert_id, nl.title, nl.message, nl.status, COALESCE(nl.severity, ''), COALESCE(nl.error, ''),
+		nl.created_at, nl.sent_at, nl.scheduled_at, nl.latency_ms, nl.read_at, nl.archived_at,
+		nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note, nl.trigger_id, nl.event_type`
 
 	query := "SELECT " + aliasedCols + " FROM notification_logs nl"
 	if w.needsRuleJoin {
@@ -808,6 +905,7 @@ func (r *NotificationRepo) ListGrouped(ctx context.Context, f NotificationLogFil
 	}
 
 	w := buildNotificationLogWhere(f)
+	w.clauses = append(w.clauses, inboxLogPredicate)
 	args := w.args
 	ph := func(offset int) string { return fmt.Sprintf("$%d", len(args)+offset) }
 
@@ -846,10 +944,10 @@ SELECT
   agg.total,
   agg.unread,
   agg.vehicle_ids,
-  nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status,
+  nl.id, COALESCE(nl.channel_id, 0), nl.alert_id, nl.title, nl.message, nl.status,
   COALESCE(nl.severity, ''), COALESCE(nl.error, ''),
   nl.created_at, nl.sent_at, nl.read_at, nl.archived_at,
-  nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note
+  nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note, nl.trigger_id, nl.event_type
 FROM agg
 JOIN notification_logs nl ON nl.id = agg.latest_id
 ORDER BY agg.latest_at DESC, nl.id DESC`
@@ -877,7 +975,7 @@ ORDER BY agg.latest_at DESC, nl.id DESC`
 			&vehicleIDs,
 			&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Severity, &l.Error,
 			&l.CreatedAt, &l.SentAt, &l.ReadAt, &l.ArchivedAt,
-			&l.AcknowledgedAt, &l.AcknowledgedBy, &l.AcknowledgementNote,
+			&l.AcknowledgedAt, &l.AcknowledgedBy, &l.AcknowledgementNote, &l.TriggerID, &l.EventType,
 		); err != nil {
 			return nil, fmt.Errorf("scan notification log group: %w", err)
 		}
@@ -900,7 +998,8 @@ ORDER BY agg.latest_at DESC, nl.id DESC`
 func (r *NotificationRepo) GetUnreadCount(ctx context.Context) (int64, error) {
 	var n int64
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM notification_logs WHERE read_at IS NULL AND archived_at IS NULL`,
+		`SELECT COUNT(*) FROM notification_logs nl
+		 WHERE `+inboxLogPredicate+` AND nl.read_at IS NULL AND nl.archived_at IS NULL`,
 	).Scan(&n)
 	if err != nil {
 		return 0, err
@@ -921,12 +1020,14 @@ func (r *NotificationRepo) BulkSetRead(ctx context.Context, ids []int64, read bo
 	)
 	if read {
 		ct, err = r.db.Pool.Exec(ctx,
-			`UPDATE notification_logs SET read_at = COALESCE(read_at, $1) WHERE id = ANY($2)`,
+			`UPDATE notification_logs AS nl SET read_at = COALESCE(read_at, $1)
+			 WHERE nl.id = ANY($2) AND `+inboxLogPredicate,
 			time.Now().UTC(), ids,
 		)
 	} else {
 		ct, err = r.db.Pool.Exec(ctx,
-			`UPDATE notification_logs SET read_at = NULL WHERE id = ANY($1)`, ids,
+			`UPDATE notification_logs AS nl SET read_at = NULL WHERE nl.id = ANY($1)
+			 AND `+inboxLogPredicate, ids,
 		)
 	}
 	if err != nil {
@@ -946,9 +1047,10 @@ func (r *NotificationRepo) BulkSetRead(ctx context.Context, ids []int64, read bo
 // because the badge contract excludes archived from "unread" anyway.
 func (r *NotificationRepo) BulkSetReadAll(ctx context.Context) (int64, error) {
 	ct, err := r.db.Pool.Exec(ctx,
-		`UPDATE notification_logs
+		`UPDATE notification_logs AS nl
 		    SET read_at = $1
-		  WHERE read_at IS NULL AND archived_at IS NULL`,
+		  WHERE `+inboxLogPredicate+`
+		    AND nl.read_at IS NULL AND nl.archived_at IS NULL`,
 		time.Now().UTC(),
 	)
 	if err != nil {
@@ -977,11 +1079,12 @@ func (r *NotificationRepo) BulkSetReadByGroupKey(ctx context.Context, groupKey s
 		return 0, nil
 	}
 	ct, err := r.db.Pool.Exec(ctx,
-		`UPDATE notification_logs
+		`UPDATE notification_logs AS nl
 		    SET read_at = COALESCE(read_at, $1)
-		  WHERE group_key = $2
-		    AND read_at IS NULL
-		    AND archived_at IS NULL`,
+		  WHERE nl.group_key = $2
+		    AND `+inboxLogPredicate+`
+		    AND nl.read_at IS NULL
+		    AND nl.archived_at IS NULL`,
 		time.Now().UTC(), gk,
 	)
 	if err != nil {
@@ -1004,15 +1107,16 @@ func (r *NotificationRepo) BulkSetArchived(ctx context.Context, ids []int64, arc
 	if archived {
 		now := time.Now().UTC()
 		ct, err = r.db.Pool.Exec(ctx,
-			`UPDATE notification_logs
+			`UPDATE notification_logs AS nl
 			    SET archived_at = COALESCE(archived_at, $1),
 			        read_at     = COALESCE(read_at, $1)
-			  WHERE id = ANY($2)`,
+			  WHERE nl.id = ANY($2) AND `+inboxLogPredicate,
 			now, ids,
 		)
 	} else {
 		ct, err = r.db.Pool.Exec(ctx,
-			`UPDATE notification_logs SET archived_at = NULL WHERE id = ANY($1)`, ids,
+			`UPDATE notification_logs AS nl SET archived_at = NULL WHERE nl.id = ANY($1)
+			 AND `+inboxLogPredicate, ids,
 		)
 	}
 	if err != nil {
@@ -1028,7 +1132,8 @@ func (r *NotificationRepo) BulkDelete(ctx context.Context, ids []int64) (int64, 
 		return 0, nil
 	}
 	ct, err := r.db.Pool.Exec(ctx,
-		`DELETE FROM notification_logs WHERE id = ANY($1)`, ids,
+		`DELETE FROM notification_logs AS nl WHERE nl.id = ANY($1)
+		 AND `+inboxLogPredicate, ids,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("bulk delete logs: %w", err)
@@ -1042,7 +1147,7 @@ func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}
 	var total, sent, failed, pending, channels, enabled int64
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT
-			(SELECT COUNT(*) FROM notification_logs),
+			(SELECT COUNT(*) FROM notification_logs WHERE status <> 'triggered'),
 			(SELECT COUNT(*) FROM notification_logs WHERE status='sent'),
 			(SELECT COUNT(*) FROM notification_logs WHERE status='failed'),
 			(SELECT COUNT(*) FROM notification_logs WHERE status='pending'),
@@ -1070,7 +1175,7 @@ func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}
 func (r *NotificationRepo) GetLog(ctx context.Context, id int64) (*notificationmodel.NotificationLog, error) {
 	row := r.db.Pool.QueryRow(ctx,
 		`SELECT `+notificationLogColumns+`
-		 FROM notification_logs WHERE id = $1`, id,
+		 FROM notification_logs nl WHERE nl.id = $1 AND `+inboxLogPredicate, id,
 	)
 	l := &notificationmodel.NotificationLog{}
 	if err := scanNotificationLog(row, l); err != nil {
@@ -1108,7 +1213,7 @@ func (r *NotificationRepo) AcknowledgeLog(ctx context.Context, id int64, actor, 
 		// concurrent DELETE just removed the row.
 		existing := &notificationmodel.NotificationLog{}
 		err := scanNotificationLog(
-			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs nl WHERE nl.id = $1 AND `+inboxLogPredicate, id),
 			existing,
 		)
 		if err != nil {
@@ -1190,7 +1295,7 @@ func (r *NotificationRepo) ReopenLog(ctx context.Context, id int64, actor string
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		existing := &notificationmodel.NotificationLog{}
 		err := scanNotificationLog(
-			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs nl WHERE nl.id = $1 AND `+inboxLogPredicate, id),
 			existing,
 		)
 		if err != nil {
@@ -1259,7 +1364,7 @@ func (r *NotificationRepo) CommentOnLog(ctx context.Context, id int64, actor, no
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var exists bool
 		if err := tx.QueryRow(ctx,
-			`SELECT EXISTS(SELECT 1 FROM notification_logs WHERE id = $1)`, id,
+			`SELECT EXISTS(SELECT 1 FROM notification_logs nl WHERE nl.id = $1 AND `+inboxLogPredicate+`)`, id,
 		).Scan(&exists); err != nil {
 			return fmt.Errorf("notification_logs comment pre-read: %w", err)
 		}

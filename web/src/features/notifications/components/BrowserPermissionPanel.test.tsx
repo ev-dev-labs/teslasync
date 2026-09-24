@@ -22,7 +22,7 @@
  * mutators purely via props — so no MSW/QueryClient scaffolding is needed.
  */
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import '../../../i18n';
 
 import { BrowserPermissionPanel } from './BrowserPermissionPanel';
@@ -162,7 +162,7 @@ describe('BrowserPermissionPanel', () => {
   // Hardening — a browser that rejects the permission request (policy block,
   // dismissed prompt) must not surface an unhandled promise rejection. The
   // panel catches it; the button stays available for retry.
-  it('swallows a rejected requestPermission() without an unhandled rejection', async () => {
+  it('surfaces a rejected permission request and leaves retry available', async () => {
     const onUnhandled = vi.fn();
     process.on('unhandledRejection', onUnhandled);
     try {
@@ -173,11 +173,12 @@ describe('BrowserPermissionPanel', () => {
       fireEvent.click(
         screen.getByRole('button', { name: /enable browser notifications/i }),
       );
-      // Flush the rejected microtask + a macrotask so any unhandled rejection
-      // would have been reported by the runtime by now.
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await waitFor(() => expect(screen.getByText(
+        'Could not request browser permission. Check site settings and try again.',
+      )).toBeInTheDocument());
       expect(requestPermission).toHaveBeenCalledTimes(1);
       expect(onUnhandled).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /enable browser notifications/i })).toBeEnabled();
     } finally {
       process.off('unhandledRejection', onUnhandled);
     }

@@ -235,6 +235,20 @@ func TestMessagePlaceholders(t *testing.T) {
 			wantKeys:   []string{"MetricID", "MetricWindow", "MetricThreshold", "MetricValue", "MetricPrevValue", "MetricChangePct", "avg_speed"},
 			wantGroups: []string{"Computed Metric"},
 		},
+		{
+			name:       "system component lists only usable event fields",
+			query:      "kind=system_component&component_name=mqtt&transition=outage",
+			wantKeys:   []string{"RuleName", "Severity", "Now", "ComponentName", "Transition", "EventMessage"},
+			omitKeys:   []string{"Value", "SignalName", "VehicleName", "PlaceName", "PlaceID"},
+			wantGroups: []string{"Built-in", "Event"},
+		},
+		{
+			name:       "place lists location and vehicle fields without signal fields",
+			query:      "kind=place&place_id=71&transition=enter",
+			wantKeys:   []string{"RuleName", "Severity", "Now", "PlaceID", "PlaceName", "VehicleName", "Transition", "EventMessage"},
+			omitKeys:   []string{"Value", "SignalName", "ComponentName"},
+			wantGroups: []string{"Built-in", "Event"},
+		},
 	}
 
 	for _, tc := range cases {
@@ -366,6 +380,48 @@ func TestMessagePreview(t *testing.T) {
 			body:      `{"name":"S","kind":"signal","signal_name":"Soc","op":"<","value_num":20,"severity":"critical","msg_template":"sev={{Severity}}"}`,
 			wantTitle: "S",
 			wantBody:  "sev=critical",
+		},
+		{
+			name:      "system component default preview",
+			body:      `{"name":"MQTT unavailable","kind":"system_component","component_name":"mqtt","transition":"outage"}`,
+			wantTitle: "MQTT unavailable: mqtt outage",
+			wantBody:  "mqtt outage",
+		},
+		{
+			name:      "system component draft without event fields remains neutral",
+			body:      `{"kind":"system_component","component_name":"","transition":"","msg_template":"{{ComponentName}} {{Transition}}"}`,
+			wantTitle: "Sample Rule: System component transition",
+			wantBody:  "System component transition",
+		},
+		{
+			name:      "system component template renders event fields",
+			body:      `{"name":"MQTT","kind":"system_component","component_name":"mqtt","transition":"recovery","msg_template":"{{ComponentName}} {{Transition}}: {{EventMessage}}"}`,
+			wantTitle: "MQTT: mqtt recovery",
+			wantBody:  "mqtt recovery: mqtt recovery",
+		},
+		{
+			name:      "place default preview",
+			body:      `{"name":"Arrived","kind":"place","place_id":71,"place_name":"Home","transition":"enter"}`,
+			wantTitle: "Arrived: Home enter",
+			wantBody:  "Home enter",
+		},
+		{
+			name:      "selected place without name identifies place ID",
+			body:      `{"name":"Arrived","kind":"place","place_id":71,"transition":"enter","msg_template":"{{PlaceName}} {{Transition}} (#{{PlaceID}})"}`,
+			wantTitle: "Arrived: Place #71 enter",
+			wantBody:  "Place #71 enter (#71)",
+		},
+		{
+			name:      "place draft without event fields remains neutral",
+			body:      `{"kind":"place"}`,
+			wantTitle: "Sample Rule: Sample place transition",
+			wantBody:  "Sample place transition",
+		},
+		{
+			name:      "place template substitutes values even with title suppressed",
+			body:      `{"name":"Arrived","kind":"place","place_id":71,"place_name":"Home","transition":"enter","include_title":false,"msg_template":"{{VehicleName}} {{Transition}} {{PlaceName}} (#{{PlaceID}}): {{EventMessage}}"}`,
+			wantTitle: "Arrived: Home enter",
+			wantBody:  "Sample vehicle enter Home (#71): Home enter",
 		},
 	}
 

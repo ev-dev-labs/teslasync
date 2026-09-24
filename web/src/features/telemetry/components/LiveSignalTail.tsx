@@ -199,6 +199,7 @@ export function LiveSignalTail({
           <DataTable<SignalEntry>
             tableId="telemetry:live-signal-tail"
             columns={columns}
+            mobileColumns={['signal', 'value', 'time']}
             data={filtered}
             keyExtractor={(entry) => entry.id}
             compact

@@ -47,6 +47,7 @@ export function EpochsPanel({ ledger }: { ledger: PhysicsLedger }) {
         <DataTable
           tableId="physics-ledger:epochs"
           columns={columns}
+          mobileColumns={['firmware', 'measured', 'unexplained']}
           data={epochs}
           keyExtractor={(row) => row.firmware}
           emptyMessage={t('physicsLedger.epochs.empty', 'No firmware-labelled samples in this window.')}

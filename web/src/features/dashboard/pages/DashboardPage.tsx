@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -18,12 +18,14 @@ import {
   BUTTON_BASE,
   BUTTON_VARIANTS,
   Caption,
+  ConfirmDialog,
   GlassPanel,
   Heading,
   Popover,
   PrintButton,
   Text,
 } from '@/components/ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, LiveStaleDataBanner, Skeleton } from '@/components/feedback';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
@@ -291,7 +293,14 @@ export default function DashboardPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importJson, setImportJson] = useState<string | null>(null);
-  const [showKioskSettings, setShowKioskSettings] = useState(false);
+  // Deep-link affordance: /?kiosk=settings (linked from Appearance settings;
+  // the dashboard is the index route) opens kiosk settings on load. Read
+  // from window.location directly so no router context is required.
+  const [showKioskSettings, setShowKioskSettings] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('kiosk') === 'settings',
+  );
   const [showDashSettings, setShowDashSettings] = useState<string | null>(null);
   useLayoutKeyboard({
     editMode, setEditMode, canUndo, canRedo, onUndo: undo, onRedo: redo,
@@ -397,6 +406,23 @@ export default function DashboardPage() {
     importDashboardFromData(dashboard);
   };
 
+  /* ——— Reset-to-default ——— */
+  // Both reset paths (the header button and the command-palette event) route
+  // through the same danger confirm as LayoutSwitcher's own reset flow.
+  const { confirm, dialogProps: resetDialogProps } = useConfirm();
+  const handleResetRequest = useCallback(async () => {
+    const ok = await confirm({
+      title: t('layout.resetTitle', 'Reset dashboard to default?'),
+      message: t(
+        'layout.resetMessage',
+        'This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.',
+      ),
+      variant: 'danger',
+      confirmLabel: t('layout.resetConfirm', 'Reset'),
+    });
+    if (ok) resetToDefault();
+  }, [confirm, resetToDefault, t]);
+
   /* ——— URL import detection ——— */
   useEffect(() => {
     const hash = window.location.hash;
@@ -420,14 +446,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const onToggleEdit = () => setEditMode(!editMode);
     const onAddWidget = () => setShowPicker(true);
-    const onReset = () => {
-      // Defer to LayoutSwitcher's confirm flow next time the user opens it.
-      // For palette invocation, run the destructive op behind window.confirm
-      // so power users still get a one-click path.
-      if (window.confirm(t('layout.resetMessage', 'This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.'))) {
-        resetToDefault();
-      }
-    };
+    const onReset = () => void handleResetRequest();
     window.addEventListener('dashboard:toggle-edit', onToggleEdit);
     window.addEventListener('dashboard:add-widget', onAddWidget);
     window.addEventListener('dashboard:reset', onReset);
@@ -439,7 +458,7 @@ export default function DashboardPage() {
       window.removeEventListener('dashboard:add-widget', onAddWidget);
       window.removeEventListener('dashboard:reset', onReset);
     };
-  }, [editMode, setEditMode, resetToDefault, t]);
+  }, [editMode, setEditMode, handleResetRequest]);
 
   /* ——— Template gallery handler ——— */
   const handleApplyTemplate = (presetId: string) => {
@@ -507,7 +526,7 @@ export default function DashboardPage() {
             <Icons.layoutTemplate className="h-3.5 w-3.5 me-1" />
             {t('dashboard.templates', 'Templates')}
           </Button>
-          <Button variant="ghost" size="sm" onClick={resetToDefault} className="hidden sm:flex">
+          <Button variant="ghost" size="sm" onClick={() => void handleResetRequest()} className="hidden sm:flex">
             <Icons.undo className="h-3.5 w-3.5 me-1" />
             {t('dashboard.reset', 'Reset')}
           </Button>
@@ -834,6 +853,7 @@ export default function DashboardPage() {
         </div>,
         document.body,
       )}
+      {resetDialogProps && <ConfirmDialog {...resetDialogProps} />}
     </PageContainer>
   );
 }

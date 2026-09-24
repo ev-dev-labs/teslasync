@@ -119,9 +119,17 @@ describe('deferred English resources', () => {
     expect(i18n.t('date.range.summaryDays', { count: 2 })).toBe('2 days')
     expect(i18n.t('statusBar.recent.count', { count: 1 })).toBe('1 page')
     expect(i18n.t('statusBar.recent.count', { count: 2 })).toBe('2 pages')
-    expect(i18n.t('export.jobDrawer.activeCount', { count: 2 })).toBe('2 exports running')
     expect(i18n.t('palette.recent.minutesAgo', { count: 1 })).toBe('1m ago')
     expect(i18n.t('palette.recent.minutesAgo', { count: 2 })).toBe('2m ago')
+  })
+
+  it('serves lazy-route plural keys through the deferred detail bundle', async () => {
+    // export.* renders only in the lazy DataExportPage, so the shell carries
+    // no copy (shellSourceClosure follows precise static imports); the
+    // per-namespace detail bundle answers it after one explicit load.
+    expect(i18n.t('export.jobDrawer.activeCount', { count: 2 })).toBe('export.jobDrawer.activeCount')
+    await loadEnglishNamespace('export')
+    expect(i18n.t('export.jobDrawer.activeCount', { count: 2 })).toBe('2 exports running')
   })
 
   it('batches concurrent resource notifications without changing the language', async () => {

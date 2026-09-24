@@ -37,7 +37,7 @@ func intentLinks(intent string) []ChatLink {
 	case "lastcharge":
 		return link("Charging", "/charging")
 	case "alerts":
-		return link("Alerts", "/notifications/alerts")
+		return link("Alerts", "/notifications/inbox")
 	case "geofences":
 		return link("Geofences", "/geofences")
 	case "status":

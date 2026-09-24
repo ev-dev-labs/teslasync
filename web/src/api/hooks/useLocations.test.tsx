@@ -67,6 +67,7 @@ import {
   useMarkGeofenceReviewed,
   useRenameGeofence,
   useUpdateGeofenceCategory,
+  useUpdateGeofenceAlerts,
   useGeofenceRates,
   useCreateGeofenceRate,
   useDeleteGeofenceRate,
@@ -490,6 +491,24 @@ describe('useUpdateGeofenceCategory', () => {
       'toast.geofence.category.success',
       'Category updated',
     );
+  });
+});
+
+describe('useUpdateGeofenceAlerts', () => {
+  it('updates only the requested event flag and refreshes place queries', async () => {
+    mockedRequest.mockResolvedValueOnce(makeApiGeofence({ id: 7, alert_on_entry: true }));
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useUpdateGeofenceAlerts(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync({ geofenceId: 7, alertOnEntry: true });
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/7');
+    expect(opts).toMatchObject({ method: 'PUT', requiresLiveMode: true });
+    expect(JSON.parse(opts.body as string)).toEqual({ alert_on_entry: true });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
+    expect(successToast).toHaveBeenCalledWith('toast.geofence.alerts.success', 'Place notifications updated');
   });
 });
 

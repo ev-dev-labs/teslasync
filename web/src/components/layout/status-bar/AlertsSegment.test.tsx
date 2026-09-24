@@ -102,7 +102,7 @@ describe('AlertsSegment', () => {
     );
     expect(within(dialog).getByRole('link')).toHaveAttribute(
       'href',
-      '/notifications/alerts',
+      '/notifications/inbox?read=unread',
     );
   });
 
@@ -158,7 +158,7 @@ describe('AlertsSegment', () => {
       'href',
       '/battery?vehicle_id=7&t=2026-07-05T12%3A00%3A00.000Z&signal=BatteryLevel',
     );
-    expect(links.at(-1)).toHaveAttribute('href', '/notifications/alerts');
+    expect(links.at(-1)).toHaveAttribute('href', '/notifications/inbox?read=unread');
   });
 
   it('caps previews at four while retaining the full unread count', () => {

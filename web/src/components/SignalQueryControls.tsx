@@ -434,6 +434,7 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
     <GlassPanel className="overflow-hidden">
       <DataTable
         columns={columns}
+        mobileColumns={['signal', 'value', 'created_at']}
         data={indexedRows}
         keyExtractor={(row) => row._rowNum}
         emptyMessage={t('signalQuery.noResults', 'No results')}

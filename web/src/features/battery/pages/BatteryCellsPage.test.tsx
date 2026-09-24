@@ -277,6 +277,7 @@ describe('BatteryCellsPage', () => {
 
     // KPI band — space-before-unit strings are unique to the KPI cards.
     expect(screen.getByText('3.9025 V')).toBeInTheDocument(); // avg voltage
+    expect(screen.getByText('Cell Voltage Heatmap').closest('section')).toHaveClass('items-start');
     expect(screen.getByText('#3 3.8500 V')).toBeInTheDocument(); // min cell → cell 3
     expect(screen.getByText('#4 3.9500 V')).toBeInTheDocument(); // max cell → cell 4
     expect(screen.getByText('12.5 mV')).toBeInTheDocument(); // imbalance

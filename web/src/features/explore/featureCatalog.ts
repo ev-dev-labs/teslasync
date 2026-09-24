@@ -30,8 +30,12 @@ type NavItem = (typeof navSections)[number]['items'][number];
 export interface FeatureCatalogEntry {
   to: string;
   label: string;
+  /** Stable catalog key for the label (`nav.items.*`). */
+  labelKey: string;
   /** Section title from navSections (e.g. "Home", "Driving"). */
   section: string;
+  /** Stable catalog key for the section (`nav.groups.*`). */
+  sectionKey: string;
   /** Lucide icon component OR a custom React icon. */
   icon: LucideIcon | ComponentType<{ className?: string }>;
   /** Color class for the icon (Tailwind text-XYZ). */
@@ -71,22 +75,22 @@ const DESCRIPTIONS: Record<string, string> = {
   '/utilization': 'Vehicle availability and productive use across your fleet.',
   '/time-machine': 'Reconstruct vehicle state at any recorded point in time.',
   '/physics-cockpit': 'Live Gear, charge state, port latch, BMS, and trip meters.',
-  '/tesla-only': 'Fifteen Tesla physics views Tesla app and TeslaMate cannot own.',
-  '/tesla-only/clocks': 'Event, ingest, and display time. Ingest stays unknown if not stored.',
-  '/tesla-only/life-tape': 'Every second is Park, Neutral, Drive, Charge, or Unknown — not GPS.',
-  '/tesla-only/contradictions': 'Gear=P with speed is a contradiction. Complete still latched is not.',
-  '/tesla-only/meters': 'Odometer and FSD trip meters. A drop is a reset. Null is not zero.',
-  '/tesla-only/unknown': 'Unknown hours are a budget, never a measured zero of missing physics.',
-  '/tesla-only/car-kept-living': 'After MQTT or carbon loss: queued, replayed event time, never-received.',
-  '/tesla-only/logbook': 'Park, Drive, Neutral, Charging, Complete, Disconnected — Tesla words.',
-  '/tesla-only/firmware-epochs': 'Each software version as this VIN physics baseline, not fleet proof.',
-  '/tesla-only/charge-port': 'Latch, door, pack current, and ChargeState as one evidence chain.',
-  '/tesla-only/black-box': 'High-resolution samples in the 90s before Park, unplug, or a gap.',
-  '/tesla-only/dictionary': 'This car Complete-to-unplug, Park dwell, and unscheduled Complete.',
-  '/tesla-only/vault': 'Hashed session boundaries, unknown hours, firmware, etiquette dwells.',
-  '/tesla-only/modes': 'Valet, Service, Transport laws. Unknown mode stays unknown.',
-  '/tesla-only/nervous-system': 'BMS, Gear, latch, and trip meters: alive, silent, or contradicting.',
-  '/tesla-only/range': 'Rated, typical, ideal, and energy remaining. Never a true range.',
+  '/tesla-physics': 'Fifteen Tesla physics views Tesla app and TeslaMate cannot own.',
+  '/tesla-physics/clocks': 'Event, ingest, and display time. Ingest stays unknown if not stored.',
+  '/tesla-physics/life-tape': 'Every second is Park, Neutral, Drive, Charge, or Unknown — not GPS.',
+  '/tesla-physics/contradictions': 'Gear=P with speed is a contradiction. Complete still latched is not.',
+  '/tesla-physics/meters': 'Odometer and FSD trip meters. A drop is a reset. Null is not zero.',
+  '/tesla-physics/unknown': 'Unknown hours are a budget, never a measured zero of missing physics.',
+  '/tesla-physics/car-kept-living': 'After MQTT or carbon loss: queued, replayed event time, never-received.',
+  '/tesla-physics/logbook': 'Park, Drive, Neutral, Charging, Complete, Disconnected — Tesla words.',
+  '/tesla-physics/firmware-epochs': 'Each software version as this VIN physics baseline, not fleet proof.',
+  '/tesla-physics/charge-port': 'Latch, door, pack current, and ChargeState as one evidence chain.',
+  '/tesla-physics/black-box': 'High-resolution samples in the 90s before Park, unplug, or a gap.',
+  '/tesla-physics/dictionary': 'This car Complete-to-unplug, Park dwell, and unscheduled Complete.',
+  '/tesla-physics/vault': 'Hashed session boundaries, unknown hours, firmware, etiquette dwells.',
+  '/tesla-physics/modes': 'Valet, Service, Transport laws. Unknown mode stays unknown.',
+  '/tesla-physics/nervous-system': 'BMS, Gear, latch, and trip meters: alive, silent, or contradicting.',
+  '/tesla-physics/range': 'Rated, typical, ideal, and energy remaining. Never a true range.',
   '/science': 'OCV, DCIR, thermal, weather, and tire claims with n, CI, and residuals.',
   '/fleet-operations': 'Coordinate drivers, bookings, policies, work orders, and utilization.',
   '/resale-vault': 'Create verifiable, selectively disclosed vehicle-history reports.',
@@ -214,17 +218,14 @@ const DESCRIPTIONS: Record<string, string> = {
   '/automations': 'Trigger actions on geofence, time, or vehicle state.',
   '/notifications/studio': 'Build a custom alert rule with conditions and channels.',
   '/notifications/rules': 'Manage existing alert rules.',
+  '/notifications/packs': 'Preview curated or AI-proposed alert groups, install them, and manage installed packs.',
 
   // ── Notifications ──────────────────────────────────────────────────
   '/notifications/inbox': 'Recent alerts and system messages.',
-  '/notifications/alerts': 'Active and acknowledged alerts grouped by severity.',
   '/notifications/channels': 'Where alerts are sent — email, SMS, push, webhook.',
-  '/notifications/webhooks': 'POST alerts to your own URL for downstream automation.',
   '/notifications/browser': 'Enable browser push notifications for this device.',
   '/notifications/quiet-hours': 'Mute non-critical alerts during set times.',
-  '/alert-fatigue': 'Identify noisy alert rules and reduce repetitive notifications.',
-  '/notification-burn-rate': 'Track notification reliability against its error budget.',
-  '/notification-latency': 'Measure delivery speed and tail latency by channel.',
+  '/notifications/health': 'Understand alert fatigue, notification delivery error budgets, and tail latency together.',
 
   // ── Security ───────────────────────────────────────────────────────
   '/security-access': 'Manage who can drive, charge, and unlock your vehicle.',
@@ -261,6 +262,7 @@ const DESCRIPTIONS: Record<string, string> = {
 
   // ── Diagnostics ────────────────────────────────────────────────────
   '/system-status': 'Health of every dependent service — MQTT, Redis, DB, Tesla API.',
+  '/tesla-api-usage': 'Explore observed Tesla signal and request costs across selected dates.',
   '/outage': 'What queued, replayed with original event time, or stayed unknown.',
   '/db-health': 'Database size, query latency, and replication lag.',
   '/anomaly-detection': 'Auto-detected outliers in charging, range, and drives.',
@@ -325,7 +327,9 @@ export function buildFeatureCatalog(): FeatureCatalogEntry[] {
       out.push({
         to: item.to,
         label: item.label,
+        labelKey: item.labelKey,
         section: section.title,
+        sectionKey: section.titleKey,
         icon: item.icon,
         color: item.color,
         description:
@@ -342,7 +346,7 @@ export function buildFeatureCatalog(): FeatureCatalogEntry[] {
 /** Group a flat catalog by section, preserving navSections order. */
 export function groupFeatureCatalog(
   entries: FeatureCatalogEntry[],
-): { section: string; entries: FeatureCatalogEntry[] }[] {
+): { section: string; sectionKey: string; entries: FeatureCatalogEntry[] }[] {
   const order = navSections.map((s) => s.title);
   const buckets = new Map<string, FeatureCatalogEntry[]>();
   for (const e of entries) {
@@ -352,7 +356,10 @@ export function groupFeatureCatalog(
   }
   return order
     .filter((title) => buckets.has(title))
-    .map((title) => ({ section: title, entries: buckets.get(title)! }));
+    .map((title) => {
+      const bucket = buckets.get(title)!;
+      return { section: title, sectionKey: bucket[0].sectionKey, entries: bucket };
+    });
 }
 
 /**
@@ -363,14 +370,18 @@ export function groupFeatureCatalog(
 export function filterFeatureCatalog(
   entries: FeatureCatalogEntry[],
   query: string,
+  translate: (key: string, fallback: string) => string = (_key, fallback) => fallback,
 ): FeatureCatalogEntry[] {
   const q = query.trim().toLowerCase();
   if (!q) return entries;
-  const exactSection = entries.find((entry) => entry.section.toLowerCase() === q)?.section;
+  const exactSection = entries.find((entry) =>
+    entry.section.toLowerCase() === q ||
+    translate(entry.sectionKey, entry.section).toLowerCase() === q
+  )?.section;
   if (exactSection) return entries.filter((entry) => entry.section === exactSection);
   const tokens = q.split(/\s+/);
   return entries.filter((e) => {
-    const haystack = `${e.label} ${e.section} ${e.description} ${e.to}`.toLowerCase();
+    const haystack = `${e.label} ${translate(e.labelKey, e.label)} ${e.section} ${translate(e.sectionKey, e.section)} ${e.description} ${e.to}`.toLowerCase();
     return tokens.every((tok) => haystack.includes(tok));
   });
 }

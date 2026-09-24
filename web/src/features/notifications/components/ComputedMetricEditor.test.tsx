@@ -82,6 +82,7 @@ const metrics: ComputedMetricSummary[] = [
   {
     id: 'cost_per_mi',
     label: 'Cost per mile',
+    category: 'cost',
     unit: 'currency_per_mi',
     windows: ['7d', '30d'],
     ops: ['>', '>=', '<'],
@@ -89,6 +90,7 @@ const metrics: ComputedMetricSummary[] = [
   {
     id: 'energy_used',
     label: 'Energy used',
+    category: 'energy',
     unit: 'kwh',
     windows: ['24h', '7d'],
     ops: ['%_change_>', '%_change_<'],
@@ -168,8 +170,11 @@ describe('ComputedMetricEditor', () => {
   it('lists every registry metric as an option', () => {
     renderEditor(makeValue())
     const select = metricSelect()
-    expect(within(select).getByRole('option', { name: 'Cost per mile' })).toBeInTheDocument()
-    expect(within(select).getByRole('option', { name: 'Energy used' })).toBeInTheDocument()
+    expect(within(select).getByRole('option', { name: 'Cost · Cost per mile (/mi)' })).toBeInTheDocument()
+    expect(within(select).getByRole('option', { name: 'Energy · Energy used (kWh)' })).toBeInTheDocument()
+    expect(within(select).getAllByRole('option').map(option => option.textContent)).toEqual([
+      'Choose a metric', 'Energy · Energy used (kWh)', 'Cost · Cost per mile (/mi)',
+    ])
     // Placeholder option is present while nothing is chosen.
     expect(within(select).getByRole('option', { name: 'Choose a metric' })).toBeInTheDocument()
   })
@@ -192,7 +197,7 @@ describe('ComputedMetricEditor', () => {
     // `def.windows.length` and threw a TypeError here; the hardened code uses
     // optional chaining and falls back to an empty window + the current op.
     const malformed = [
-      { id: 'broken', label: 'Broken metric', unit: 'count' },
+      { id: 'broken', label: 'Broken metric', category: 'charging', unit: 'count' },
     ] as unknown as ComputedMetricSummary[]
     const { onChange } = renderEditor(makeValue({ metric_op: '<' }), { metrics: malformed })
 

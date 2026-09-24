@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Grid, Stack } from '@/components/layout';
-import { useCommandHistory, useCommandLatest } from '@/api/hooks/useCommands';
+import { Stack } from '@/components/layout';
+import { useCommandLatest } from '@/api/hooks/useCommands';
 import {
   type CommandResult,
   useVehicleCommand,
@@ -12,10 +12,7 @@ import { isTeslaAuthExpiredError } from '@/lib/resilience';
 import type { Vehicle } from '../commands';
 import { CommandCenterHero } from './command-center/CommandCenterHero';
 import { CommandReadinessStrip } from './command-center/CommandReadinessStrip';
-import { CommandSafetyPanel } from './command-center/CommandSafetyPanel';
 import { CommandWorkspace } from './command-center/CommandWorkspace';
-import { RecentCommandActivity } from './command-center/RecentCommandActivity';
-import { VehicleFreshnessWarning } from './command-center/VehicleFreshnessWarning';
 import {
   COMMAND_STATE_REFRESH_MS,
 } from './command-center/commandDomains';
@@ -26,14 +23,12 @@ interface VehicleCommandCenterProps {
   vehicle: Vehicle;
 }
 
-const LOWER_GRID_COLUMNS = { default: 1, lg: 2 } as const;
-
 /**
  * Selected-vehicle command orchestrator.
  *
  * Data comes exclusively from the shared TanStack Query hooks. Visual
  * sections are intentionally split into focused components so hero,
- * readiness, actions, safety, and activity each own their loading/error/empty
+ * readiness, and actions each own their loading/error/empty
  * presentation instead of disappearing behind one broad data guard.
  */
 export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
@@ -43,7 +38,6 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
     refetchInterval: COMMAND_STATE_REFRESH_MS,
   });
   const latestQuery = useCommandLatest(vehicle.id);
-  const historyQuery = useCommandHistory(vehicle.id);
   const {
     mutate: sendCommand,
     isPending: commandPending,
@@ -54,7 +48,6 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
 
   const state = stateQuery.data?.state ?? null;
   const latestCommands = latestQuery.data ?? [];
-  const history = historyQuery.data ?? [];
   const pendingLabel = pendingCommand
     ? getCommandLabel(pendingCommand, t)
     : null;
@@ -143,8 +136,6 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
         onRetry={() => void stateQuery.refetch()}
       />
 
-      <VehicleFreshnessWarning timestamp={vehicle.updated_at} />
-
       <CommandReadinessStrip
         vehicle={vehicle}
         state={state}
@@ -164,15 +155,6 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
         onExecute={executeCommand}
       />
 
-      <Grid cols={LOWER_GRID_COLUMNS} gap={4}>
-        <CommandSafetyPanel vehicleStatus={state?.state || vehicle.state} />
-        <RecentCommandActivity
-          entries={history}
-          loading={historyQuery.isLoading}
-          error={historyQuery.error}
-          onRetry={() => void historyQuery.refetch()}
-        />
-      </Grid>
     </Stack>
   );
 }

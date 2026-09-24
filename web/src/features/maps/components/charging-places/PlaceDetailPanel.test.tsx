@@ -56,6 +56,8 @@ vi.mock('@/api/hooks/useLocations', () => ({
   useGeofenceChargingSummary: vi.fn(),
   useRenameGeofence: vi.fn(),
   useUpdateGeofenceCategory: vi.fn(),
+  useUpdateGeofencePurpose: vi.fn(),
+  useGeofenceFirstChargingSession: vi.fn(),
 }));
 
 vi.mock('@/components/feedback/Toast', () => {
@@ -126,6 +128,8 @@ import {
   useGeofenceChargingSummary,
   useRenameGeofence,
   useUpdateGeofenceCategory,
+  useUpdateGeofencePurpose,
+  useGeofenceFirstChargingSession,
 } from '@/api/hooks/useLocations';
 import { PlaceDetailPanel } from './PlaceDetailPanel';
 import type { Geofence, GeofenceRate } from '@/api/types';
@@ -138,6 +142,8 @@ const mockedMarkReviewed = useMarkGeofenceReviewed as unknown as ReturnType<type
 const mockedSummary = useGeofenceChargingSummary as unknown as ReturnType<typeof vi.fn>;
 const mockedRename = useRenameGeofence as unknown as ReturnType<typeof vi.fn>;
 const mockedUpdateCategory = useUpdateGeofenceCategory as unknown as ReturnType<typeof vi.fn>;
+const mockedUpdatePurpose = useUpdateGeofencePurpose as unknown as ReturnType<typeof vi.fn>;
+const mockedFirstSession = useGeofenceFirstChargingSession as unknown as ReturnType<typeof vi.fn>;
 
 let deleteMutate: ReturnType<typeof vi.fn>;
 let archiveMutate: ReturnType<typeof vi.fn>;
@@ -157,6 +163,7 @@ function makePlace(overrides: Partial<Geofence> = {}): Geofence {
     alert_on_exit: false,
     origin: 'manual',
     needs_review: false,
+    is_charging_location: false,
     archived_at: null,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
@@ -198,6 +205,8 @@ beforeEach(() => {
   mockedMarkReviewed.mockReturnValue({ mutate: markReviewedMutate, isPending: false });
   mockedRename.mockReturnValue({ mutateAsync: renameMutateAsync, isPending: false });
   mockedUpdateCategory.mockReturnValue({ mutate: categoryMutate, isPending: false });
+  mockedUpdatePurpose.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false });
+  mockedFirstSession.mockReturnValue({ data: { started_at: null }, isLoading: false, error: null });
 });
 
 describe('PlaceDetailPanel — closed state', () => {
@@ -267,7 +276,7 @@ describe('PlaceDetailPanel — needs-review lifecycle', () => {
   it('shows the needs-review badge and Mark reviewed button when needs_review is true', () => {
     render(<PlaceDetailPanel place={makePlace({ needs_review: true })} onClose={vi.fn()} />);
     expect(screen.getByText('Needs review')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Mark reviewed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark reviewed & enable' })).toBeInTheDocument();
   });
 
   it('omits the needs-review badge/button when needs_review is false', () => {
@@ -278,8 +287,30 @@ describe('PlaceDetailPanel — needs-review lifecycle', () => {
 
   it('calls the mark-reviewed mutation with the place id when clicked', () => {
     render(<PlaceDetailPanel place={makePlace({ id: 42, needs_review: true })} onClose={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Mark reviewed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mark reviewed & enable' }));
     expect(markReviewedMutate).toHaveBeenCalledWith(42);
+  });
+
+  it('persists a corrected noncharging purpose before enabling a discovered place', async () => {
+    const savePurpose = vi.fn().mockResolvedValue(undefined);
+    mockedUpdatePurpose.mockReturnValue({ mutate: vi.fn(), mutateAsync: savePurpose, isPending: false });
+    render(<PlaceDetailPanel place={makePlace({ id: 42, needs_review: true, is_charging_location: true })} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('switch', { name: 'This is a charging location' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mark reviewed & enable' }));
+    await waitFor(() => expect(markReviewedMutate).toHaveBeenCalledWith(42));
+    expect(savePurpose).toHaveBeenCalledWith({ geofenceId: 42, isChargingLocation: false });
+    expect(savePurpose.mock.invocationCallOrder[0]).toBeLessThan(markReviewedMutate.mock.invocationCallOrder[0]);
+  });
+
+  it('does not enable when the corrected purpose fails to save', async () => {
+    mockedUpdatePurpose.mockReturnValue({
+      mutate: vi.fn(), mutateAsync: vi.fn().mockRejectedValue(new Error('storage offline')), isPending: false,
+    });
+    render(<PlaceDetailPanel place={makePlace({ id: 42, needs_review: true, is_charging_location: true })} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('switch', { name: 'This is a charging location' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mark reviewed & enable' }));
+    await waitFor(() => expect(mockedUpdatePurpose().mutateAsync).toHaveBeenCalled());
+    expect(markReviewedMutate).not.toHaveBeenCalled();
   });
 });
 

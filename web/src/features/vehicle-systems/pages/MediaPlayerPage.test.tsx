@@ -28,6 +28,9 @@
  *     history table, and the stringified hook wiring.
  *   - avgVolume bug fix: snapshots missing a volume reading are excluded from the
  *     mean instead of being counted as 0.
+ *   - volume-chart bug fix: the same volumeless snapshots are dropped from the
+ *     charted series (no phantom drops to silence); an all-missing history
+ *     renders the no-volume empty state instead of a flat zero chart.
  *   - fmtPlayTime + progressbar aria bug fix: a negative elapsed clamps to 0:00
  *     and aria-valuenow 0 instead of rendering "-1:-05" / a negative value.
  *   - volume-axis clip bug fix: when the latest snapshot is missing, the Y-axis
@@ -97,7 +100,11 @@ vi.mock('@/components/charts', async () => {
     ResponsiveContainer: Passthrough,
     // Real <svg> so the page's <defs> gradient node is valid markup (no
     // "unrecognized tag" warning) while children still mount.
-    AreaChart: ({ children }: { children?: ReactNode }) => <svg>{children}</svg>,
+    AreaChart: ({ children, data }: { children?: ReactNode; data?: unknown[] }) => (
+      <svg data-testid="volume-chart" data-points={String(Array.isArray(data) ? data.length : -1)}>
+        {children}
+      </svg>
+    ),
     Area: Null,
     XAxis: Null,
     CartesianGrid: Null,
@@ -450,6 +457,40 @@ describe('MediaPlayerPage — avgVolume excludes missing readings (bug fix)', ()
 
     expect(kpiValue('Avg Volume')).toBe('6');
     expect(kpiValue('Avg Volume')).not.toBe('3');
+  });
+});
+
+describe('MediaPlayerPage — volume chart excludes missing readings (bug fix)', () => {
+  it('charts only snapshots that carry a volume, never phantom drops to 0', () => {
+    mockMedia.mockReturnValue(makeQuery({ data: undefined }));
+    mockHistory.mockReturnValue(
+      makeQuery({
+        data: [
+          snapshot({ id: 1, now_playing_title: 'A', audio_volume: 3, created_at: '2026-06-10T10:00:00Z' }),
+          snapshot({ id: 2, now_playing_title: 'B', audio_volume: undefined, created_at: '2026-06-11T10:00:00Z' }),
+          snapshot({ id: 3, now_playing_title: 'C', audio_volume: 9, created_at: '2026-06-12T10:00:00Z' }),
+        ],
+      }),
+    );
+    renderPage();
+
+    // Two charted points (the volumeless row is dropped, not zeroed).
+    expect(screen.getByTestId('volume-chart')).toHaveAttribute('data-points', '2');
+  });
+
+  it('shows the no-volume empty state when no snapshot carries a reading', () => {
+    mockMedia.mockReturnValue(makeQuery({ data: undefined }));
+    mockHistory.mockReturnValue(
+      makeQuery({
+        data: [
+          snapshot({ id: 1, now_playing_title: 'A', audio_volume: undefined, created_at: '2026-06-10T10:00:00Z' }),
+        ],
+      }),
+    );
+    renderPage();
+
+    expect(screen.getByText('No volume data for this period')).toBeInTheDocument();
+    expect(screen.queryByTestId('volume-chart')).not.toBeInTheDocument();
   });
 });
 

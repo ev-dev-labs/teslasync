@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Radio } from 'lucide-react'
+import { Gauge } from 'lucide-react'
 
 import { Tooltip } from '@/components/ui/runtime'
 import { useLiveConnection } from '@/hooks/useLiveConnection'
@@ -78,10 +78,12 @@ export function HonestyMeterSegment({ iconOnly = false }: { iconOnly?: boolean }
           TONE[headline],
         )}
       >
-        <Radio className="h-3 w-3 shrink-0" aria-hidden />
+        <Gauge className="h-3 w-3 shrink-0" aria-hidden />
         {!iconOnly && (
           <span className="font-medium">
-            {t(`honesty.${headline}`, headline)}
+            {headline === 'live'
+              ? t('statusBar.fleet.label', 'Fleet')
+              : t(`honesty.${headline}`, headline)}
             {vehicles.length > 0 && (
               <span className="text-[var(--text-muted)]">
                 {' '}· {counts.live}/{vehicles.length}

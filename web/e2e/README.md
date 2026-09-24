@@ -27,6 +27,13 @@ are enabled by default; set `E2E_MOCKS=0` for production smoke tests and
 Storage-state files must never be committed.
 
 `e2e:performance` and `e2e:a11y` are deliberately serial one-worker projects.
+The `chromium-smoke` project in `e2e:quality` checks every configured loading,
+empty, partial, error, and populated state for uncaught render errors and
+error-boundary fallbacks. Its null-data tests feed `null` arrays and missing
+signal metadata to Alert Studio; a regression such as reading `.length` from
+an absent response fails the PR check. Add a route and fixture here when a
+new API shape has a nullable collection; TypeScript alone cannot detect an
+incorrectly typed JSON response.
 The authenticated CI smoke sets `E2E_SENSITIVE=1`, which disables traces,
 videos, screenshots, HTML/JSON reports, and raw artifact upload. If no
 storage-state secret is supplied, the variable is omitted rather than pointed

@@ -399,3 +399,84 @@ migrations:
     reversible: true
     reviewed_by: "@Copilot"
     reviewed_on: "2026-09-18"
+
+  - version: 247
+    name: tesla_stream_usage
+    forward_compatible: true
+    forward_compatibility_notes: New stream usage evidence table; existing service/ts audit index reused. Removes automatic API log chunk expiry to preserve Tesla history.
+    rollback_notes: Leave applied during binary rollback to preserve accumulated evidence. Down drops stream evidence and restores 365-day log expiry; only run with explicit approval.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Indexes only the new empty table; retention policy removal is metadata-only.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-22"
+
+  - version: 248
+    name: notification_trigger_reporting
+    forward_compatible: true
+    forward_compatibility_notes: Nullable trigger correlation and event type do not change old writers or readers.
+    rollback_notes: Leave applied on binary rollback to preserve attribution. Down removes newly collected metadata only if explicitly approved.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Two nullable columns take a brief ACCESS EXCLUSIVE metadata lock; no table rewrite or backfill.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-22"
+
+  - version: 249
+    name: notification_event_rows
+    forward_compatible: false
+    forward_compatibility_notes: Old binaries scan channel_id into non-nullable Go ints and cannot read new event rows.
+    requires_downtime: true
+    rollback_notes: Leave migration applied on binary rollback to retain event/inbox rows. Down fails safely while event rows exist; export and remove them only with explicit operator approval.
+    expected_duration: <10s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Brief ACCESS EXCLUSIVE lock for nullable channel and constraint changes; partial unique index scans the existing delivery log without CONCURRENTLY.
+    reversible: false
+    irreversible_justification: Rolling back after storing event-only rows would erase real inbox history; leave the additive schema in place on binary rollback.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-22"
+
+  - version: 250
+    name: api_log_headers
+    forward_compatible: true
+    forward_compatibility_notes: Previous binaries ignore nullable header columns; new binaries require the migration before deployment.
+    rollback_notes: Leave columns on binary rollback to preserve diagnostics. Down drops saved header snapshots only if explicitly approved.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Two nullable JSONB columns take a brief ACCESS EXCLUSIVE metadata lock without rewriting rows.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-23"
+
+  - version: 251
+    name: geofence_charging_classification
+    forward_compatible: true
+    forward_compatibility_notes: Old binaries ignore the new boolean. Previously disabled reviewed places become enabled intentionally; old binaries can still run against this schema.
+    rollback_notes: Leave the column on binary rollback to preserve reviewed charging classifications. Explicit down loses those decisions.
+    expected_duration: <10s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Brief ACCESS EXCLUSIVE metadata lock and updates of discovered geofences and previously disabled reviewed places.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-23"
+
+  - version: 252
+    name: persistent_event_alert_rules
+    forward_compatible: true
+    forward_compatibility_notes: Existing signal and computed rules remain unchanged; old binaries ignore new columns and tables. Legacy notification writers can still write historical IDs without a foreign key.
+    rollback_notes: Leave applied on binary rollback; down drops event rule definitions, occupancy and cooldown history and must only run after exporting them. The old notification_logs alert_id FK must not be recreated while rule-linked rows exist.
+    expected_duration: <10s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Brief ACCESS EXCLUSIVE locks for kind/metric constraint replacement, column additions and removal of the obsolete notification_logs FK; validation scans existing alert rules. New tables have no existing data.
+    reversible: false
+    irreversible_justification: Down removes persistent geofence observations and rule attributes that cannot be reconstructed.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-23"

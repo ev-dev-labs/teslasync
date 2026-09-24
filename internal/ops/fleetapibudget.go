@@ -343,14 +343,8 @@ func ValidateFleetAPIBudget(fsys fs.FS, policy *FleetAPIBudgetPolicy) []Finding 
 	if strings.Contains(apiUsageHandler, "0.00222") {
 		out = append(out, errf(check, policy.Sources.APIUsageHandler, "stale Fleet API price 0.00222 must not appear in the API usage surface"))
 	}
-	for _, required := range []string{
-		"tesla.ClassifyBudgetCharge(",
-		"tesla.EstimatedCostUSD(",
-		"tesla.BudgetCategoryVehicleData",
-	} {
-		if !strings.Contains(apiUsageHandler, required) {
-			out = append(out, errf(check, policy.Sources.APIUsageHandler, "API usage pricing must use canonical Tesla budget contract %q", required))
-		}
+	if !strings.Contains(apiUsageHandler, "NewTeslaUsageHandler(") {
+		out = append(out, errf(check, policy.Sources.APIUsageHandler, "API usage must use the dedicated Fleet traffic handler"))
 	}
 
 	documentation := sources["documentation"]

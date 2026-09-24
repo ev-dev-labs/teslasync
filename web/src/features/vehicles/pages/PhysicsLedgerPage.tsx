@@ -70,7 +70,7 @@ export default function PhysicsLedgerPage() {
       <StaleRefreshWarning state={state} label={title} />
       <Text as="p" size="sm" color="secondary">
         <Link
-          to="/tesla-only"
+          to="/tesla-physics"
           className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
         >
           {t('teslaOnly.hub', 'All Tesla physics')}

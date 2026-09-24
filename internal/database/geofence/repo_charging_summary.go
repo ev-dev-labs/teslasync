@@ -101,6 +101,39 @@ LIMIT $2 OFFSET $3`
 	return out, nil
 }
 
+// FirstChargingSessionAt includes unpriced sessions when seeding a review rate.
+func (r *GeofenceRepo) FirstChargingSessionAt(ctx context.Context, geofenceID int64) (*time.Time, error) {
+	g, err := r.GetByID(ctx, geofenceID)
+	if err != nil {
+		return nil, fmt.Errorf("geofence first charging session place: %w", err)
+	}
+	if g == nil {
+		return nil, ErrGeofenceNotFound
+	}
+	lat, lon := g.Centroid()
+	radius := g.Radius()
+	var startedAt *time.Time
+	err = r.pool.QueryRow(ctx,
+		`SELECT MIN(started_at) FROM charging_sessions
+WHERE geofence_id = $1 OR (
+  geofence_id IS NULL AND $4::double precision > 0
+  AND start_lat BETWEEN $2 - $4 / 111000.0 AND $2 + $4 / 111000.0
+  AND start_lng BETWEEN $3 - $4 / (111000.0 * GREATEST(ABS(COS(RADIANS($2))), 0.01))
+                    AND $3 + $4 / (111000.0 * GREATEST(ABS(COS(RADIANS($2))), 0.01))
+  AND 6371000.0 * 2 * ASIN(LEAST(1.0, SQRT(
+    POWER(SIN(RADIANS(start_lat - $2) / 2), 2) +
+    COS(RADIANS($2)) * COS(RADIANS(start_lat)) *
+    POWER(SIN(RADIANS(start_lng - $3) / 2), 2)
+  ))) <= $4
+)`,
+		geofenceID, lat, lon, radius,
+	).Scan(&startedAt)
+	if err != nil {
+		return nil, fmt.Errorf("geofence first charging session: %w", err)
+	}
+	return startedAt, nil
+}
+
 // teslaBillUsageWhSQL is a scalar subquery that requires charging_sessions
 // aliased as cs. It returns Tesla invoice cabinet energy (Wh) for the closest
 // CHARGING fee within ±2h of session start, or NULL when no invoice is imported.

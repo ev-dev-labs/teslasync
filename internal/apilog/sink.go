@@ -37,12 +37,14 @@ func (a *sinkAdapter) Enqueue(record httputil.APICallRecord) {
 		return
 	}
 	entry := &teslamodel.APICallLog{
-		Ts:         time.Now().UTC(),
-		Service:    record.Service,
-		HTTPMethod: record.Method,
-		Endpoint:   record.URL,
-		StatusCode: int16(record.StatusCode),
-		DurationMs: int32(record.DurationMs),
+		Ts:              time.Now().UTC(),
+		Service:         record.Service,
+		HTTPMethod:      record.Method,
+		Endpoint:        record.URL,
+		StatusCode:      int16(record.StatusCode),
+		DurationMs:      int32(record.DurationMs),
+		RequestHeaders:  record.RequestHeaders,
+		ResponseHeaders: record.ResponseHeaders,
 	}
 	if record.ErrorMessage != "" {
 		s := record.ErrorMessage

@@ -218,7 +218,7 @@ export default function SettingsPage() {
           <div className="space-y-1">
             <SectionTitle>{activeSection.title}</SectionTitle>
             <Text as="p" variant="bodySm">{activeSection.description}</Text>
-            <Text as="p" variant="caption">{t('settings.organization.saveHint', 'Each section keeps its existing save controls. Switching categories keeps your unsaved edits.')}</Text>
+            <Text as="p" variant="caption" className="max-w-prose">{t('settings.organization.saveHint', 'Each section keeps its existing save controls. Switching categories keeps your unsaved edits.')}</Text>
           </div>
           <div id="settings-category-overview" hidden={activeSection.id !== 'overview'} className="space-y-6">
             <section id="overview" aria-label={t('settings.organization.overview', 'Overview')} className="space-y-6 scroll-mt-6">

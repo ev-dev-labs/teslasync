@@ -400,6 +400,7 @@ export default function TripLogbookPage() {
               <DataTable
                 tableId="driving:trip-logbook"
                 columns={columns}
+                mobileColumns={['date', 'route', 'category']}
                 data={rows}
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('logbook.noneInFilter', 'No drives in this category yet.')}

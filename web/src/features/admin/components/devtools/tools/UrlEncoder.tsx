@@ -49,7 +49,7 @@ export function UrlEncoderTool() {
   const selectDecode = useCallback(() => setMode('decode'), [])
 
   return (
-    <ToolCard icon={Link} color="cyan" title={t('Url Encoder')} description={t('Url Encoder Desc')}>
+    <ToolCard icon={Link} color="cyan" title={t('devtools.utils.url', 'Url Encoder')} description={t('devtools.utils.urlDesc', 'Url Encoder Desc')}>
       <div className="space-y-3">
         <div className="flex gap-2" role="group" aria-label={t('devtools.url.modeGroup', 'Encoding mode')}>
           <Button
@@ -58,7 +58,7 @@ export function UrlEncoderTool() {
             aria-pressed={mode === 'encode'}
             onClick={selectEncode}
           >
-            {t('Encode')}
+            {t('devtools.utils.encode', 'Encode')}
           </Button>
           <Button
             variant={mode === 'decode' ? 'primary' : 'ghost'}
@@ -66,11 +66,11 @@ export function UrlEncoderTool() {
             aria-pressed={mode === 'decode'}
             onClick={selectDecode}
           >
-            {t('Decode')}
+            {t('devtools.utils.decode', 'Decode')}
           </Button>
         </div>
         <Textarea
-          label={t('Input Label')}
+          label={t('devtools.utils.urlInputLabel', 'Input Label')}
           rows={2}
           value={inputVal}
           onChange={handleInputChange}
@@ -78,13 +78,13 @@ export function UrlEncoderTool() {
         />
         {result.error && (
           <p role="alert" className="text-sm text-rose-300">
-            {t('Invalid Input')}
+            {t('devtools.utils.urlInvalidInput', 'Invalid Input')}
           </p>
         )}
         {result.output && (
           <div className="rounded bg-[var(--surface-overlay)] p-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-secondary)]">{t('Output Label')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.urlOutputLabel', 'Output Label')}</span>
               <CopyButton text={result.output} />
             </div>
             <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-cyan-300">{result.output}</pre>

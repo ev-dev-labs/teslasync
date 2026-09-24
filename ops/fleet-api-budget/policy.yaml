@@ -61,5 +61,5 @@ sources:
   automation_wiring: cmd/automation-worker/main.go
   resubscribe_wiring: cmd/resubscribe/main.go
   status_handler: internal/api/ratelimit/handler.go
-  api_usage_handler: internal/api/health.go
+  api_usage_handler: internal/api/router.go
   documentation: docs/operations/fleet-api-budget.md

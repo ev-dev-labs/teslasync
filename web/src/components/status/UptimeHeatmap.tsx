@@ -5,8 +5,8 @@
  * the day's status + (optional) summary in a Popover. Caption shows
  * overall uptime % across the window.
  *
- * Some callers pass synthesized data (today = current status, prior days
- * = healthy by default) until day-by-day health history is available.
+ * Only pass observed day-level health. Missing historical observations
+ * must not be represented as healthy days.
  */
 
 import { useMemo } from 'react'

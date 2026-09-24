@@ -117,6 +117,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
       <DataTable<MonthlyBucket>
         tableId="charging:cost-monthly"
         columns={columns}
+        mobileColumns={['month', 'cost', 'savings']}
         data={sortedData}
         keyExtractor={(row) => row.month}
         sortKey={tableSortKey}

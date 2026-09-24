@@ -88,8 +88,8 @@ export default function ExplorePage() {
   }, [vehicleCount, isForwardAuth]);
 
   const filtered = useMemo(
-    () => filterFeatureCatalog(visibleCatalog, query),
-    [visibleCatalog, query],
+    () => filterFeatureCatalog(visibleCatalog, query, (key, fallback) => t(key, fallback)),
+    [visibleCatalog, query, t],
   );
   const grouped = useMemo(() => groupFeatureCatalog(filtered), [filtered]);
 
@@ -217,6 +217,7 @@ export default function ExplorePage() {
               <SectionAnchorStrip
                 groups={grouped.map((g) => ({
                   section: g.section,
+                  sectionKey: g.sectionKey,
                   count: g.entries.length,
                 }))}
               />
@@ -239,10 +240,11 @@ export default function ExplorePage() {
             />
           ) : (
             <div className="space-y-8">
-              {grouped.map(({ section, entries }) => (
+              {grouped.map(({ section, sectionKey, entries }) => (
                 <SectionBand
                   key={section}
                   section={section}
+                  sectionKey={sectionKey}
                   entries={entries}
                   query={query}
                   onNavigate={(to) => navigate(to)}
@@ -261,7 +263,7 @@ export default function ExplorePage() {
 function SectionAnchorStrip({
   groups,
 }: {
-  groups: { section: string; count: number }[];
+  groups: { section: string; sectionKey: string; count: number }[];
 }) {
   const { t } = useTranslation();
   return (
@@ -270,7 +272,7 @@ function SectionAnchorStrip({
       aria-label={t('explore.sectionsAriaLabel', 'Jump to section')}
       data-testid="explore-anchor-strip"
     >
-      {groups.map(({ section, count }) => (
+      {groups.map(({ section, sectionKey, count }) => (
         <a
           key={section}
           href={`#explore-section-${slugify(section)}`}
@@ -283,7 +285,7 @@ function SectionAnchorStrip({
             'transition-colors',
           )}
         >
-          <Text as="span" size="sm">{section}</Text>
+          <Text as="span" size="sm">{t(sectionKey, section)}</Text>
           <Caption
             className="tabular-nums"
             aria-label={t('explore.anchorCountAria', '{{count}} features', { count })}
@@ -300,15 +302,18 @@ function SectionAnchorStrip({
 
 function SectionBand({
   section,
+  sectionKey,
   entries,
   query,
   onNavigate,
 }: {
   section: string;
+  sectionKey: string;
   entries: FeatureCatalogEntry[];
   query: string;
   onNavigate: (to: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <section
       id={`explore-section-${slugify(section)}`}
@@ -317,7 +322,7 @@ function SectionBand({
     >
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <SectionTitle id={`explore-section-heading-${slugify(section)}`} className="truncate">
-          {section}
+          {t(sectionKey, section)}
         </SectionTitle>
         <Badge variant="neutral" size="sm" className="shrink-0 tabular-nums">
           {entries.length}
@@ -348,6 +353,7 @@ function FeatureCard({
   query: string;
   onNavigate: (to: string) => void;
 }) {
+  const { t } = useTranslation();
   const Icon = entry.icon;
   return (
     <li>
@@ -379,7 +385,7 @@ function FeatureCard({
           </div>
           <div className="min-w-0 flex-1">
             <Text as="div" size="sm" weight="medium" color="primary">
-              <Highlight text={entry.label} query={query} />
+              <Highlight text={t(entry.labelKey, entry.label)} query={query} />
             </Text>
             <Text
               as="p"

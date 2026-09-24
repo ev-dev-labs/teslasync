@@ -132,9 +132,11 @@ export function SessionsTable({
           <DataTable<ActiveSession>
             tableId="settings:active-sessions"
             columns={columns}
+            mobileColumns={['device', 'last_seen_at', 'actions']}
             data={sessions ?? []}
             keyExtractor={keyExtractor}
             emptyMessage={t('account.sessions.empty', 'No active sessions for this account.')}
+            pagination
           />
         )}
       </GlassPanel>

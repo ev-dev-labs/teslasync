@@ -5,6 +5,7 @@
  * mutation instances so loading state and toasts are scoped to this channel.
  */
 
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pencil, TestTube, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -13,7 +14,8 @@ import { useToast } from '@/components/feedback/Toast';
 import {
   useDeleteChannel, useTestChannel, useToggleChannel,
 } from '@/api/hooks/useNotifications';
-import type { NotificationChannel } from '@/api/types';
+import { useTestWebhookChannel } from '@/api/hooks/useNotificationChannels';
+import type { NotificationChannel, WebhookTestResult } from '@/api/types';
 import { channelToFormConfig, getChannelMeta, isSecretField } from './channelMeta';
 
 interface ChannelCardProps {
@@ -27,6 +29,8 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
   const toggleMut = useToggleChannel();
   const deleteMut = useDeleteChannel();
   const testMut = useTestChannel();
+  const webhookTestMut = useTestWebhookChannel();
+  const [webhookResult, setWebhookResult] = useState<WebhookTestResult | null>(null);
 
   const meta = getChannelMeta(channel.kind);
   const Icon = meta.icon;
@@ -43,6 +47,17 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
   };
 
   const handleTest = () => {
+    if (channel.kind === 'webhook') {
+      setWebhookResult(null);
+      webhookTestMut.mutate({ id: channel.id }, {
+        onSuccess: result => {
+          setWebhookResult(result);
+          if (!result.success) toast.error(`${channel.name}: ${t('notifications.channels.testFailed', 'Test failed')}`, result.error);
+        },
+        onError: err => toast.error(`${channel.name}: ${t('notifications.channels.testFailed', 'Test failed')}`, err.message),
+      });
+      return;
+    }
     testMut.mutate(channel.id, {
       onSuccess: (data) => {
         if (data?.success) toast.success(`${channel.name}: ${t('notifications.channels.testSuccessShort', 'Test sent!')}`);
@@ -107,15 +122,27 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
         )}
       </div>
 
+      {webhookResult && (
+        <div role="status" className="space-y-1 rounded-lg border border-[var(--border-subtle)] p-2.5">
+          <Badge variant={webhookResult.success ? 'success' : 'danger'}>
+            {webhookResult.success ? t('webhookChannels.test.success', 'Success') : t('webhookChannels.test.failure', 'Failed')}
+          </Badge>
+          <Text variant="caption">{t('webhookChannels.test.status', 'Status {{status}}', { status: webhookResult.status_code })} · {t('webhookChannels.test.latency', '{{ms}} ms', { ms: webhookResult.latency_ms })}</Text>
+          {webhookResult.error && <Text variant="bodySm" className="text-rose-300">{webhookResult.error}</Text>}
+          {webhookResult.signature && <Text variant="caption">{t('webhookChannels.test.signature', 'Signature:')} <code className="break-all">{webhookResult.signature}</code></Text>}
+          {webhookResult.body_preview && <Text variant="caption" className="break-all">{webhookResult.body_preview}</Text>}
+        </div>
+      )}
+
       <div className="mt-auto flex items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
         <Button
           variant="primary"
           size="sm"
           icon={<TestTube className="h-3.5 w-3.5" aria-hidden="true" />}
-          loading={testMut.isPending}
+          loading={testMut.isPending || webhookTestMut.isPending}
           onClick={handleTest}
         >
-          {testMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.testShort', 'Test')}
+          {testMut.isPending || webhookTestMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.testShort', 'Test')}
         </Button>
         <Button
           variant="ghost"

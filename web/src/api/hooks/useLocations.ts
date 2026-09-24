@@ -17,6 +17,7 @@ import type {
   GeofenceChargingSummary,
   GeofenceChargingActivity,
   GeofenceCategory,
+  VisitedPlaceCandidate,
 } from '../types';
 
 export const locationKeys = {
@@ -25,6 +26,7 @@ export const locationKeys = {
   geofencesFull: (includeArchived: boolean) =>
     ['geofences', 'full', includeArchived ? 'with-archived' : 'active'] as const,
   geofencesNeedsReview: ['geofences', 'needs-review'] as const,
+  visitedCandidates: ['geofences', 'visited-candidates'] as const,
   geofenceRatesCurrent: ['geofences', 'rates', 'current'] as const,
   geofenceRates: (geofenceId: number) => ['geofences', geofenceId, 'rates'] as const,
   geofenceRatePreview: (geofenceId: number, rateId: number, from?: string, to?: string) =>
@@ -166,6 +168,23 @@ export function useGeofenceNeedsReview() {
   });
 }
 
+export function useVisitedPlaceCandidates() {
+  return useQuery({
+    queryKey: locationKeys.visitedCandidates,
+    queryFn: ({ signal }) => request<VisitedPlaceCandidate[]>('/geofences/visited-candidates', { signal }),
+    select: safeArray,
+    staleTime: 30_000,
+  });
+}
+
+export async function resolveSavedPlaceName(latitude: number, longitude: number): Promise<string | null> {
+  const params = new URLSearchParams({ lat: String(latitude), lon: String(longitude) });
+  const result = await request<{ name: string | null; geofence_id: number | null }>(
+    `/geofences/resolve?${params}`,
+  );
+  return result.name;
+}
+
 /**
  * useGeofenceCurrentRates — GET /geofences/rates/current
  *
@@ -242,7 +261,7 @@ export function useUnarchiveGeofence() {
  *
  * Clears `needs_review` once a human has confirmed/edited an
  * auto-discovered place's name, category, or location — removes it from
- * the "Needs Setup" queue without any other change.
+ * the "Needs Setup" queue and enables the reviewed place.
  */
 export function useMarkGeofenceReviewed() {
   const qc = useQueryClient();
@@ -303,6 +322,47 @@ export function useUpdateGeofenceCategory() {
     },
     onError: (err) =>
       error(err, 'toast.geofence.category.error', 'Failed to update category'),
+  });
+}
+
+export function useUpdateGeofencePurpose() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ geofenceId, isChargingLocation }: { geofenceId: number; isChargingLocation: boolean }) =>
+      request<ApiGeofence>(`/geofences/${geofenceId}`, {
+        method: 'PUT',
+        requiresLiveMode: true,
+        body: JSON.stringify({ is_charging_location: isChargingLocation }),
+      }),
+    onSuccess: () => {
+      invalidateGeofenceLifecycle(qc);
+      success('toast.geofence.purpose.success', 'Place purpose saved');
+    },
+    onError: (err) => error(err, 'toast.geofence.purpose.error', 'Failed to save place purpose'),
+  });
+}
+
+/** Configure place entry/exit notifications without changing its directory details. */
+export function useUpdateGeofenceAlerts() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ geofenceId, alertOnEntry, alertOnExit }: {
+      geofenceId: number;
+      alertOnEntry?: boolean;
+      alertOnExit?: boolean;
+    }) =>
+      request<ApiGeofence>(`/geofences/${geofenceId}`, {
+        method: 'PUT',
+        requiresLiveMode: true,
+        body: JSON.stringify({ alert_on_entry: alertOnEntry, alert_on_exit: alertOnExit }),
+      }),
+    onSuccess: () => {
+      invalidateGeofenceLifecycle(qc);
+      success('toast.geofence.alerts.success', 'Place notifications updated');
+    },
+    onError: (err) => error(err, 'toast.geofence.alerts.error', 'Failed to update place notifications'),
   });
 }
 
@@ -505,5 +565,14 @@ export function useGeofenceChargingActivity(
       ),
     enabled: !!geofenceId,
     select: safeArray,
+  });
+}
+
+export function useGeofenceFirstChargingSession(geofenceId?: number, enabled = true) {
+  return useQuery({
+    queryKey: ['geofences', geofenceId, 'first-charging-session'],
+    queryFn: ({ signal }) =>
+      request<{ started_at: string | null }>(`/geofences/${geofenceId}/first-charging-session`, { signal }),
+    enabled: enabled && !!geofenceId,
   });
 }

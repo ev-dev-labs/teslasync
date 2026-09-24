@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -17,6 +19,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle) {
@@ -31,7 +34,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 		endpoints = w.pollingConfig.EnabledVehicleDataEndpoints()
 	}
 
-	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VIN, endpoints...)
+	data, err := w.teslaClient.GetVehicleData(tesla.AutomaticPollingContext(pollCtx), vehicle.VIN, endpoints...)
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
 		w.publishMQTT(vehicle, "state", enums.StateAsleep)
 		w.recordVehicleAsleep(vehicle.ID)
@@ -100,7 +103,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 		if w.doRefreshToken(ctx) {
 			retryCtx, retryCancel := context.WithTimeout(ctx, 30*time.Second)
 			defer retryCancel()
-			data, err = w.teslaClient.GetVehicleData(retryCtx, vehicle.VIN, endpoints...)
+			data, err = w.teslaClient.GetVehicleData(tesla.AutomaticPollingContext(retryCtx), vehicle.VIN, endpoints...)
 			if err != nil {
 				logger.Warn().Err(err).Msg("retry after token refresh still failed")
 				w.recordVehicleFailure(vehicle.ID)
@@ -282,7 +285,7 @@ func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *vehiclemodel.Vehic
 				})
 			}
 
-			w.sendAlertNotifications(ctx, vehicle, rule.Name, message)
+			w.sendAlertNotifications(ctx, vehicle, rule, message)
 		}
 	}
 }
@@ -306,8 +309,17 @@ func alertNumericOp(val float64, op string, threshold float64) bool {
 	return false
 }
 
-func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *vehiclemodel.Vehicle, title, message string) {
+func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *vehiclemodel.Vehicle, rule *alertmodel.AlertRule, message string) {
 	notifRepo := dbnotif.NewNotificationRepo(w.db)
+	triggerID := notification.NewTriggerID()
+	fullTitle := fmt.Sprintf("🚗 %s: %s", vehicle.DisplayName, rule.Name)
+	if _, err := notification.RecordTrigger(ctx, notifRepo, &notification.Request{
+		Title: fullTitle, Message: message, AlertID: rule.ID,
+		Severity: rule.Severity, TriggerID: triggerID, EventType: "alert.polling",
+	}); err != nil {
+		log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).
+			Int64("rule_id", rule.ID).Msg("polling alert: event persistence failed")
+	}
 	channels, err := notifRepo.GetAllChannels(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("alert: failed to fetch notification channels")
@@ -317,7 +329,6 @@ func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *vehiclemod
 		if !ch.Enabled {
 			continue
 		}
-		fullTitle := fmt.Sprintf("🚗 %s: %s", vehicle.DisplayName, title)
 		if w.mqttClient != nil {
 			req := &notification.Request{
 				ChannelType: ch.Type,
@@ -325,8 +336,28 @@ func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *vehiclemod
 				Title:       fullTitle,
 				Message:     message,
 				ChannelID:   ch.ID,
+				AlertID:     rule.ID,
+				TriggerID:   triggerID,
+				EventType:   "alert.polling",
+				Severity:    rule.Severity,
 			}
-			if err := notification.PublishCtx(ctx, w.mqttClient.Underlying(), req); err != nil {
+			transport := w.mqttClient.Underlying()
+			publishErr := notification.PublishCtx(ctx, transport, req)
+			if transport == nil || !transport.IsConnected() {
+				status, errText := "sent", ""
+				if publishErr != nil {
+					status, errText = "failed", publishErr.Error()
+				}
+				eventType, id := req.EventType, rule.ID
+				if err := notifRepo.CreateLog(ctx, &notificationmodel.NotificationLog{
+					ChannelID: ch.ID, AlertID: &id, Title: fullTitle, Message: message,
+					Status: status, Error: errText, Severity: rule.Severity,
+					TriggerID: &triggerID, EventType: &eventType,
+				}); err != nil {
+					log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).Int64("channel_id", ch.ID).Msg("polling alert: direct-delivery log failed")
+				}
+			}
+			if err := publishErr; err != nil {
 				log.Warn().Err(err).Int64("channel_id", ch.ID).Msg("alert: failed to publish notification")
 			}
 		}

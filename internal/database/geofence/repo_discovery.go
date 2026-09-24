@@ -184,11 +184,15 @@ func validCoordinate(lat, lon float64) bool {
 	if math.IsNaN(lat) || math.IsNaN(lon) || math.IsInf(lat, 0) || math.IsInf(lon, 0) {
 		return false
 	}
+
 	if lat == 0 && lon == 0 {
 		return false
 	}
 	return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
 }
+
+// ValidCoordinate is shared with the HTTP name resolver's input validation.
+func ValidCoordinate(lat, lon float64) bool { return validCoordinate(lat, lon) }
 
 // FindOrCreateForCharging resolves the charging-place geofence for a
 // confirmed charging session at (lat, lon). It first matches an existing
@@ -255,21 +259,22 @@ func (r *GeofenceRepo) FindOrCreateForCharging(ctx context.Context, lat, lon flo
 		name = "Unnamed Charging Place"
 	}
 	g := &systemmodel.Geofence{
-		Name:         name,
-		PolygonWKT:   systemmodel.CircleToPolygonWKT(lat, lon, DiscoveryRadiusMeters),
-		Enabled:      false,
-		AlertOnEntry: false,
-		AlertOnExit:  false,
-		Origin:       systemmodel.GeofenceOriginChargingDiscovery,
-		NeedsReview:  true,
+		Name:               name,
+		PolygonWKT:         systemmodel.CircleToPolygonWKT(lat, lon, DiscoveryRadiusMeters),
+		Enabled:            false,
+		AlertOnEntry:       false,
+		AlertOnExit:        false,
+		Origin:             systemmodel.GeofenceOriginChargingDiscovery,
+		NeedsReview:        true,
+		IsChargingLocation: true,
 	}
 	now := time.Now().UTC()
 	const insertSQL = `
-INSERT INTO geofences (name, polygon_wkt, category, enabled, alert_on_entry, alert_on_exit, created_at, updated_at, origin, needs_review)
-VALUES ($1, $2, NULL, $3, $4, $5, $6, $6, $7, $8)
+INSERT INTO geofences (name, polygon_wkt, category, enabled, alert_on_entry, alert_on_exit, created_at, updated_at, origin, needs_review, is_charging_location)
+VALUES ($1, $2, NULL, $3, $4, $5, $6, $6, $7, $8, $9)
 RETURNING id`
 	if err := tx.QueryRow(ctx, insertSQL,
-		g.Name, g.PolygonWKT, g.Enabled, g.AlertOnEntry, g.AlertOnExit, now, g.Origin, g.NeedsReview,
+		g.Name, g.PolygonWKT, g.Enabled, g.AlertOnEntry, g.AlertOnExit, now, g.Origin, g.NeedsReview, g.IsChargingLocation,
 	).Scan(&g.ID); err != nil {
 		return nil, false, fmt.Errorf("geofence discovery insert: %w", err)
 	}
@@ -312,7 +317,7 @@ func (r *GeofenceRepo) ListNeedsReview(ctx context.Context) ([]*systemmodel.Geof
 // never Origin, which stays "charging_discovery" forever as a provenance
 // record even after review).
 func (r *GeofenceRepo) MarkReviewed(ctx context.Context, id int64) error {
-	tag, err := r.pool.Exec(ctx, `UPDATE geofences SET needs_review = false, updated_at = now() WHERE id = $1`, id)
+	tag, err := r.pool.Exec(ctx, `UPDATE geofences SET needs_review = false, enabled = true, updated_at = now() WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("geofences mark_reviewed %d: %w", id, err)
 	}

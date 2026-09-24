@@ -8,7 +8,7 @@
  *   - Auto-mark-read on open (opt-out via localStorage)
  *   - Per-row context menu (view context, mark read/unread, archive/restore,
  *     delete)
- *   - Day-grouped flat list AND threaded grouped list
+ *   - Selectable flat table AND threaded grouped list
  *
  * Used by InboxPage (`archived=false`) and ArchivedPage (`archived=true`).
  * Was previously an inner component of the now-removed NotificationsPage.
@@ -19,6 +19,7 @@ import {
   useMemo,
   useRef,
   useCallback,
+  useState,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -38,8 +39,11 @@ import {
 import { cn } from '@/lib/cn';
 import {
   Button,
-  Checkbox,
+  ConfirmDialog,
   GlassPanel,
+  Modal,
+  Pagination,
+  Text,
   useContextMenu,
   type ContextMenuItem,
 } from '@/components/ui';
@@ -50,11 +54,13 @@ import { useToast } from '@/components/feedback/Toast';
 import { ListExportMenu, type ExportScope } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
+import { useConfirm } from '@/hooks/useConfirm';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
 import {
   useNotificationLogs,
+  useNotificationLogCount,
   useNotificationGroups,
   useArchiveNotifications,
   useUnarchiveNotifications,
@@ -62,16 +68,20 @@ import {
   useMarkNotificationsUnread,
   useBulkMarkRead,
   useDeleteNotifications,
+  useAlertDetail,
+  useAcknowledgeAlert,
+  useReopenAlert,
   type NotificationFilters,
 } from '@/api/hooks/useNotifications';
 import type { NotificationLog, AlertRule, Vehicle, Alert } from '@/api/types';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { NotificationFilterBar } from './NotificationFilterBar';
 import { AIInboxAutoCategorization } from '@/components/ai/AIInboxAutoCategorization';
-import { NotificationRow } from './NotificationRow';
 import { NotificationGroupRow } from './NotificationGroupRow';
-import { PullToRefresh, SwipeRow } from '@/components/mobile';
+import { AlertDetailDrawer } from './AlertDetailDrawer';
+import { PullToRefresh } from '@/components/mobile';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
+import { NotificationInboxTable } from './NotificationInboxTable';
 
 const SEVERITY_VALUES = ['info', 'warn', 'critical'] as const;
 type SeverityValue = (typeof SEVERITY_VALUES)[number];
@@ -79,12 +89,10 @@ type SeverityValue = (typeof SEVERITY_VALUES)[number];
 const READ_VALUES = ['all', 'read', 'unread'] as const;
 type ReadValue = (typeof READ_VALUES)[number];
 
-// Grouped/threaded vs flat inbox view. Default
-// is grouped because power users with many alert rules drown in flat
-// duplicates; flat remains available for the historical workflow and
-// for users who want to see every individual delivery.
+// Show each notification on arrival; grouped threads remain an opt-in view.
 const VIEW_VALUES = ['grouped', 'flat'] as const;
 type ViewValue = (typeof VIEW_VALUES)[number];
+const INBOX_PAGE_SIZE = 50;
 
 function notificationExportRow(log: NotificationLog): Record<string, unknown> {
   return {
@@ -119,47 +127,6 @@ function readPref(key: string): boolean {
   }
 }
 
-/**
- * Group ISO timestamps into "Today" / "Yesterday" / dated buckets keyed by
- * the user's local day. Rows are returned in the order they came in (newest
- * first); the day grouping just adds headers.
- */
-function groupByDay<T extends { created_at: string }>(rows: T[]): { day: string; rows: T[] }[] {
-  if (rows.length === 0) return [];
-  const fmt = new Intl.DateTimeFormat(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const labelFor = (d: Date): string => {
-    const day = new Date(d);
-    day.setHours(0, 0, 0, 0);
-    if (day.getTime() === today.getTime()) return 'Today';
-    if (day.getTime() === yesterday.getTime()) return 'Yesterday';
-    return fmt.format(d);
-  };
-
-  const out: { day: string; rows: T[] }[] = [];
-  let current: { day: string; rows: T[] } | null = null;
-  for (const row of rows) {
-    const d = new Date(row.created_at);
-    if (Number.isNaN(d.getTime())) continue;
-    const label = labelFor(d);
-    if (!current || current.day !== label) {
-      current = { day: label, rows: [] };
-      out.push(current);
-    }
-    current.rows.push(row);
-  }
-  return out;
-}
-
 export interface InboxBodyProps {
   archived: boolean;
   vehicles: Vehicle[];
@@ -175,6 +142,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const [severityRaw] = useUrlArray('severity');
   const [vehicleIdsRaw] = useUrlArray('vehicle_id');
   const [ruleIdsRaw] = useUrlArray('rule_id');
+  const [source] = useUrlEnum<'all' | 'rule'>('source', ['all', 'rule'], 'all');
   const [search] = useUrlString('q', '');
   const [readState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
   const {
@@ -184,11 +152,14 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     setRangeWithUrlUpdates,
     resetWithUrlUpdates: resetRangeWithUrlUpdates,
   } = useRangeState({
-    persistKey: 'notifications.inbox.range',
+    defaultPresetId: 'all',
+    inheritSharedPreference: false,
+    persistKey: 'notifications.inbox.full-history.range',
   });
   // View mode is URL-backed too so a deep link can
   // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
-  const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'grouped');
+  const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'flat');
+  const [page, setPage] = useState(1);
   const setFiltersBatch = useUrlBatch();
   const isGrouped = view === 'grouped' && !archived;
 
@@ -214,11 +185,19 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     severity: severity.length ? severity : undefined,
     vehicle_id: vehicleIds.length ? vehicleIds : undefined,
     rule_id: ruleIds.length ? ruleIds : undefined,
+    source: source === 'rule' ? 'rule' : undefined,
     q: search || undefined,
     from: from || undefined,
     to: to || undefined,
     read: readState === 'all' ? undefined : readState === 'read',
-  }), [archived, severity, vehicleIds, ruleIds, search, from, to, readState]);
+    limit: INBOX_PAGE_SIZE,
+    offset: (page - 1) * INBOX_PAGE_SIZE,
+  }), [archived, severity, vehicleIds, ruleIds, source, search, from, to, readState, page]);
+
+  const severityKey = severityRaw.join(',');
+  const vehicleKey = vehicleIdsRaw.join(',');
+  const ruleKey = ruleIdsRaw.join(',');
+  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, source, search, from, to, readState, view]);
 
   const handleFiltersChange = useCallback((next: NotificationFilters) => {
     // Bridge the existing controlled-component contract back into the
@@ -232,6 +211,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       severity: (next.severity ?? []).join(',') || null,
       vehicle_id: (next.vehicle_id ?? []).map(String).join(',') || null,
       rule_id: (next.rule_id ?? []).map(String).join(',') || null,
+      source: next.source ?? null,
       q: next.q ?? null,
       read: readValue,
     };
@@ -272,7 +252,12 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   }, [setFiltersBatch]);
 
   const { data: rawRows, isLoading, error, refetch } = useNotificationLogs(filters, { enabled: !isGrouped });
+  const { data: countData, error: countError } = useNotificationLogCount(filters, { grouped: isGrouped });
   const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);
+  const [openedLog, setOpenedLog] = useState<NotificationLog | null>(null);
+  const alertDetail = useAlertDetail(openedLog?.alert_id != null ? openedLog.id : null);
+  const acknowledgeAlert = useAcknowledgeAlert();
+  const reopenAlert = useReopenAlert();
 
   // Grouped/threaded fetch. Only enabled in
   // grouped mode AND on the inbox tab (archived doesn't group; the
@@ -284,7 +269,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     refetch: groupsRefetch,
   } = useNotificationGroups(filters, { enabled: isGrouped });
   const groups = useMemo(() => rawGroups ?? [], [rawGroups]);
-  const groupedDeliveryCount = useMemo(
+  const groupedNotificationCount = useMemo(
     () => groups.reduce((total, group) => total + Math.max(0, group.count), 0),
     [groups],
   );
@@ -306,8 +291,26 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const archiveMut = useArchiveNotifications();
   const unarchiveMut = useUnarchiveNotifications();
   const deleteMut = useDeleteNotifications();
+  const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm();
   const toast = useToast();
   const { announce } = useAnnouncer();
+
+  const handleSingleDelete = useCallback(
+    async (log: NotificationLog) => {
+      const ok = await confirmDelete({
+        title: t('notifications.inbox.single.deleteConfirmTitle', 'Delete this notification?'),
+        message: t(
+          'notifications.inbox.single.deleteConfirmBody',
+          '“{{title}}” will be permanently removed. Archive is usually the safer choice.',
+          { title: log.title },
+        ),
+        variant: 'danger',
+        confirmLabel: t('common.delete', 'Delete'),
+      });
+      if (ok) deleteMut.mutate([log.id]);
+    },
+    [confirmDelete, deleteMut, t],
+  );
 
   // Auto-mark-read on inbox open (only on the Inbox tab, flat view; in
   // grouped view this would dismiss every thread head and defeat the
@@ -333,7 +336,18 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     (id: number, on: boolean) => bulkSelection.setSelected(id, on),
     [bulkSelection],
   );
-  const visibleIds = useMemo(() => rows.map(r => r.id), [rows]);
+  const setTableSelection = useCallback(
+    (ids: number[]) => {
+      const next = new Set(ids);
+      for (const id of selected) {
+        if (!next.has(id)) toggleSelected(id, false);
+      }
+      for (const id of ids) {
+        if (!selected.has(id)) toggleSelected(id, true);
+      }
+    },
+    [selected, toggleSelected],
+  );
   const visibleExportRows = useMemo(
     () =>
       isGrouped
@@ -380,21 +394,9 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     },
     [exportFilename, exportRows],
   );
-  const selectAllVisible = useCallback(
-    () => bulkSelection.selectAll(visibleIds),
-    [bulkSelection, visibleIds],
-  );
-  // Derive the master-checkbox tri-state once so the header checkbox can
-  // reflect the "some but not all visible rows selected" case as a native
-  // `indeterminate` control instead of silently showing an unchecked box.
-  const visibleSelectionState = bulkSelection.masterState(visibleIds);
-  const allVisibleSelected = visibleSelectionState === 'all';
-  const someVisibleSelected = visibleSelectionState === 'some';
   // Drop selections when filter changes — selection should never carry over
   // across a different result set.
   useEffect(() => { clearSelection(); }, [filters, clearSelection]);
-
-  const grouped = useMemo(() => groupByDay(rows), [rows]);
 
   const unreadCount = useMemo(
     () => rows.reduce((acc, r) => (r.read_at ? acc : acc + 1), 0),
@@ -516,10 +518,25 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   }, [archived, t, handleBulkArchive, handleBulkUnarchive, handleBulkMarkRead, handleBulkDelete]);
 
   const handleRowActivate = (log: NotificationLog) => {
-    if (log.read_at) return;
-    if (!readPref(PREF_MARK_ON_CLICK)) return;
-    markReadMut.mutate([log.id]);
+    setOpenedLog(log);
+    if (!log.read_at && readPref(PREF_MARK_ON_CLICK)) markReadMut.mutate([log.id]);
   };
+
+  const openedRule = openedLog?.alert_id != null ? ruleMap[openedLog.alert_id] : undefined;
+  const openedVehicle = openedRule?.vehicle_id != null ? vehicleMap[openedRule.vehicle_id] : undefined;
+  const openedAlert: Alert | null = openedLog?.alert_id != null ? {
+    id: openedLog.id,
+    vehicle_id: openedVehicle?.id ?? openedRule?.vehicle_id ?? 0,
+    type: openedRule?.name ?? openedLog.event_type ?? openedLog.title,
+    severity: (openedRule?.severity ?? openedLog.severity ?? 'info') as Alert['severity'],
+    title: openedLog.title,
+    message: openedLog.message,
+    is_read: !!openedLog.read_at,
+    created_at: openedLog.created_at,
+    rule_id: openedRule?.id,
+    rule_signal: openedRule?.signal_name,
+    acknowledged_at: alertDetail.data?.acknowledged_at ?? null,
+  } : null;
 
   const navigate = useNavigate();
   const { openMenu: openRowContextMenu } = useContextMenu();
@@ -591,11 +608,11 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         label: t('common.delete', 'Delete'),
         icon: <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />,
         destructive: true,
-        onClick: () => deleteMut.mutate([log.id]),
+        onClick: () => void handleSingleDelete(log),
       });
       return items;
     },
-    [ruleMap, vehicleMap, t, archiveMut, unarchiveMut, markReadMut, markUnreadMut, deleteMut, navigate],
+    [ruleMap, vehicleMap, t, archiveMut, unarchiveMut, markReadMut, markUnreadMut, handleSingleDelete, navigate],
   );
   const handleRowContextMenu = useCallback(
     (log: NotificationLog) =>
@@ -611,9 +628,33 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   );
 
   return (
+    <>
+    <AlertDetailDrawer
+      alert={openedAlert}
+      detail={alertDetail.data}
+      isLoading={alertDetail.isLoading}
+      error={alertDetail.error}
+      vehicleName={openedVehicle?.display_name}
+      onClose={() => setOpenedLog(null)}
+      onAcknowledge={id => acknowledgeAlert.mutate({ id })}
+      onReopen={id => reopenAlert.mutate(id)}
+      onRetry={() => { void alertDetail.refetch(); }}
+    />
+    <Modal
+      open={openedLog !== null && openedLog.alert_id == null}
+      onClose={() => setOpenedLog(null)}
+      title={openedLog?.title || t('notifications.inbox.detail.title', 'Notification details')}
+    >
+      <div className="space-y-3">
+        <Text variant="body" className="whitespace-pre-wrap break-words">{openedLog?.message ?? ''}</Text>
+        <Text variant="caption">{openedLog?.event_type ?? t('notifications.inbox.legacyDelivery', 'Legacy channel delivery (original source not recorded)')}</Text>
+        <Text variant="caption">{openedLog?.created_at ? new Date(openedLog.created_at).toLocaleString() : ''}</Text>
+      </div>
+    </Modal>
     <PullToRefresh onRefresh={async () => { await (isGrouped ? groupsRefetch() : refetch()); }}>
     <div className="space-y-4">
       <FadeIn>
+        <div data-tour="alerts-filters">
         <NotificationFilterBar
           filters={filters}
           onChange={handleFiltersChange}
@@ -621,6 +662,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           vehicles={vehicles}
           rules={rules}
         />
+        </div>
       </FadeIn>
 
       {/* Inbox auto-categorization. The
@@ -647,16 +689,8 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         }}
       />
 
-      <GlassPanel className="p-3 sm:p-4">
+      <GlassPanel className="p-3 sm:p-4" data-tour="alerts-list">
         <div className="mb-2 flex items-center gap-3 px-1 pb-2 border-b border-white/[0.04]">
-          {!isGrouped && (
-            <Checkbox
-              checked={allVisibleSelected}
-              indeterminate={someVisibleSelected}
-              onChange={checked => (checked ? selectAllVisible() : clearSelection())}
-              aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
-            />
-          )}
           <span
             className="text-xs text-[var(--text-muted)]"
             data-testid="inbox-result-count"
@@ -664,15 +698,15 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             {isGrouped ? (
               <>
                 {t('notifications.inbox.threadCountLabel', '{{count}} threads', {
-                  count: groups.length,
+                  count: countData?.total ?? groups.length,
                 })}
                 <span aria-hidden="true"> · </span>
-                {t('notifications.inbox.deliveryCountLabel', '{{count}} deliveries', {
-                  count: groupedDeliveryCount,
+                {t('notifications.inbox.notificationCountLabel', '{{count}} notifications', {
+                  count: groupedNotificationCount,
                 })}
               </>
             ) : (
-              t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })
+              t('notifications.inbox.countLabel', '{{count}} notifications', { count: countData?.total ?? rows.length })
             )}
           </span>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
@@ -781,7 +815,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           />
         )}
 
-        {!isGrouped && !isLoading && !error && grouped.length === 0 && (
+        {!isGrouped && !isLoading && !error && rows.length === 0 && (
           <EmptyState
             icon={<Bell className="h-8 w-8" />}
             title={archived
@@ -789,7 +823,9 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
               : t('notifications.inbox.empty.title', 'No notifications')}
             message={archived
               ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
-              : t('notifications.inbox.empty.message', 'When alert rules fire, the resulting notifications appear here.')}
+              : source === 'rule'
+                ? t('notifications.inbox.empty.ruleTriggers', 'No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert Studio.')
+                : t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}
             actionTo={archived ? undefined : {
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
               to: '/notifications/studio',
@@ -801,7 +837,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           <EmptyState
             icon={<Bell className="h-8 w-8" />}
             title={t('notifications.group.emptyTitle', 'No notification threads')}
-            message={t('notifications.group.emptyMessage', 'When alert rules fire repeatedly, related notifications will be grouped here.')}
+            message={t('notifications.group.emptyMessage', 'Related notifications are grouped here when they occur repeatedly.')}
             actionTo={{
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
               to: '/notifications/studio',
@@ -809,55 +845,17 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           />
         )}
 
-        {!isGrouped && !isLoading && !error && grouped.length > 0 && (
-          <div className="space-y-4">
-            {grouped.map(group => (
-              <div key={group.day}>
-                <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  {group.day === 'Today'
-                    ? t('common.today', 'Today')
-                    : group.day === 'Yesterday'
-                      ? t('common.yesterday', 'Yesterday')
-                      : group.day}
-                </div>
-                <div className="space-y-1">
-                  {group.rows.map(log => (
-                    <SwipeRow
-                      key={log.id}
-                      rightAction={!archived
-                        ? {
-                            label: t('mobile.swipe.archive', 'Archive'),
-                            onAction: () => archiveMut.mutate([log.id]),
-                            tone: 'default',
-                          }
-                        : {
-                            label: t('mobile.swipe.restore', 'Restore'),
-                            onAction: () => unarchiveMut.mutate([log.id]),
-                            tone: 'default',
-                          }}
-                    >
-                      <div onContextMenu={handleRowContextMenu(log)}>
-                        <NotificationRow
-                          log={log}
-                          rule={log.alert_id != null ? ruleMap[log.alert_id] : undefined}
-                          vehicle={log.alert_id != null && ruleMap[log.alert_id]?.vehicle_id != null
-                            ? vehicleMap[ruleMap[log.alert_id]!.vehicle_id!]
-                            : undefined}
-                          selected={selected.has(log.id)}
-                          onSelectionChange={toggleSelected}
-                          onActivate={handleRowActivate}
-                          onArchive={!archived ? (id) => archiveMut.mutate([id]) : undefined}
-                          onUnarchive={archived ? (id) => unarchiveMut.mutate([id]) : undefined}
-                          onMarkRead={!log.read_at ? (id) => markReadMut.mutate([id]) : undefined}
-                          onMarkUnread={log.read_at ? (id) => markUnreadMut.mutate([id]) : undefined}
-                        />
-                      </div>
-                    </SwipeRow>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+        {!isGrouped && !isLoading && !error && rows.length > 0 && (
+          <NotificationInboxTable
+            rows={rows}
+            selectedIds={Array.from(selected)}
+            onSelectionChange={setTableSelection}
+            onActivate={handleRowActivate}
+            onContextMenu={buildRowContextMenu}
+            ruleMap={ruleMap}
+            vehicleMap={vehicleMap}
+            archived={archived}
+          />
         )}
 
         {isGrouped && !groupsLoading && !groupsError && groups.length > 0 && (
@@ -886,8 +884,14 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           </div>
         )}
       </GlassPanel>
+      {countError && <Text variant="bodySm">{t('notifications.inbox.countError', 'Could not load the notification count: {{error}}', { error: String(countError) })}</Text>}
+      {countData && countData.total > 0 && (
+        <Pagination page={page} pageSize={INBOX_PAGE_SIZE} total={countData.total} onPageChange={setPage} />
+      )}
     </div>
     </PullToRefresh>
+      {deleteDialogProps && <ConfirmDialog {...deleteDialogProps} />}
+    </>
   );
 }
 

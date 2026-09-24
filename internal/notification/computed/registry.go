@@ -17,21 +17,23 @@ type MetricFn func(ctx context.Context, db *database.DB, vehicleID int64, start,
 
 // MetricDef is a single entry in the computed-metric registry.
 type MetricDef struct {
-	ID      string   // stable identifier persisted in alert_rules.metric_id
-	Label   string   // human label for the rule builder UI
-	Unit    string   // 'currency'|'kwh'|'mi'|'wh_per_mi'|'h'|'count'|'currency_per_mi'
-	Windows []string // allowed values for alert_rules.metric_window
-	Compute MetricFn
+	ID       string   // stable identifier persisted in alert_rules.metric_id
+	Label    string   // human label for the rule builder UI
+	Category string   // driving|energy|charging|cost|battery
+	Unit     string   // currency|kwh|mi|wh_per_mi|h|count|currency_per_mi|mph|kw|pp
+	Windows  []string // allowed values for alert_rules.metric_window
+	Compute  MetricFn
 }
 
 // MetricSummary is the wire shape returned by GET /alerts/metrics. The
 // frontend uses it to build the Metric / Window / Operator dropdowns.
 type MetricSummary struct {
-	ID      string   `json:"id"`
-	Label   string   `json:"label"`
-	Unit    string   `json:"unit"`
-	Windows []string `json:"windows"`
-	Ops     []string `json:"ops"`
+	ID       string   `json:"id"`
+	Label    string   `json:"label"`
+	Category string   `json:"category"`
+	Unit     string   `json:"unit"`
+	Windows  []string `json:"windows"`
+	Ops      []string `json:"ops"`
 }
 
 // ComputedMetricOps is the full operator set supported by the comparator.
@@ -52,67 +54,116 @@ var ErrUnknownMetric = errors.New("unknown computed metric")
 // must match alert_rules.metric_id values exactly.
 var ComputedMetrics = map[string]MetricDef{
 	"charging_cost": {
-		ID:      "charging_cost",
-		Label:   "Charging cost",
-		Unit:    "currency",
-		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"},
-		Compute: chargingCost,
+		ID:       "charging_cost",
+		Label:    "Charging cost",
+		Category: "cost",
+		Unit:     "currency",
+		Windows:  []string{"day", "week", "month", "rolling_7d", "rolling_30d"},
+		Compute:  chargingCost,
 	},
 	"distance": {
-		ID:      "distance",
-		Label:   "Distance driven",
-		Unit:    "mi",
-		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"},
-		Compute: distanceDriven,
+		ID:       "distance",
+		Label:    "Distance driven",
+		Category: "driving",
+		Unit:     "mi",
+		Windows:  []string{"day", "week", "month", "rolling_7d", "rolling_30d"},
+		Compute:  distanceDriven,
 	},
 	"energy_consumed": {
-		ID:      "energy_consumed",
-		Label:   "Energy consumed",
-		Unit:    "kwh",
-		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"},
-		Compute: energyConsumed,
+		ID:       "energy_consumed",
+		Label:    "Energy consumed",
+		Category: "energy",
+		Unit:     "kwh",
+		Windows:  []string{"day", "week", "month", "rolling_7d", "rolling_30d"},
+		Compute:  energyConsumed,
 	},
 	"energy_charged": {
-		ID:      "energy_charged",
-		Label:   "Energy charged",
-		Unit:    "kwh",
-		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"},
-		Compute: energyCharged,
+		ID:       "energy_charged",
+		Label:    "Energy charged",
+		Category: "energy",
+		Unit:     "kwh",
+		Windows:  []string{"day", "week", "month", "rolling_7d", "rolling_30d"},
+		Compute:  energyCharged,
 	},
 	"avg_efficiency": {
-		ID:      "avg_efficiency",
-		Label:   "Average efficiency",
-		Unit:    "wh_per_mi",
-		Windows: []string{"day", "rolling_7d", "rolling_30d"},
-		Compute: avgEfficiency,
+		ID:       "avg_efficiency",
+		Label:    "Average efficiency",
+		Category: "energy",
+		Unit:     "wh_per_mi",
+		Windows:  []string{"day", "rolling_7d", "rolling_30d"},
+		Compute:  avgEfficiency,
 	},
 	"idle_time": {
-		ID:      "idle_time",
-		Label:   "Idle time",
-		Unit:    "h",
-		Windows: []string{"day", "week", "rolling_7d"},
-		Compute: idleTime,
+		ID:       "idle_time",
+		Label:    "Idle time",
+		Category: "driving",
+		Unit:     "h",
+		Windows:  []string{"day", "week", "rolling_7d"},
+		Compute:  idleTime,
 	},
 	"drive_count": {
-		ID:      "drive_count",
-		Label:   "Number of drives",
-		Unit:    "count",
-		Windows: []string{"day", "week", "month"},
-		Compute: driveCount,
+		ID:       "drive_count",
+		Label:    "Number of drives",
+		Category: "driving",
+		Unit:     "count",
+		Windows:  []string{"day", "week", "month"},
+		Compute:  driveCount,
 	},
 	"supercharger_sessions": {
-		ID:      "supercharger_sessions",
-		Label:   "Supercharger sessions",
-		Unit:    "count",
-		Windows: []string{"week", "month"},
-		Compute: superchargerSessions,
+		ID:       "supercharger_sessions",
+		Label:    "Supercharger sessions",
+		Category: "charging",
+		Unit:     "count",
+		Windows:  []string{"week", "month"},
+		Compute:  superchargerSessions,
 	},
 	"cost_per_mile": {
-		ID:      "cost_per_mile",
-		Label:   "Cost per mile",
-		Unit:    "currency_per_mi",
-		Windows: []string{"week", "month", "rolling_30d"},
-		Compute: costPerMile,
+		ID:       "cost_per_mile",
+		Label:    "Cost per mile",
+		Category: "cost",
+		Unit:     "currency_per_mi",
+		Windows:  []string{"week", "month", "rolling_30d"},
+		Compute:  costPerMile,
+	},
+	"drive_hours": {
+		ID: "drive_hours", Label: "Driving time", Category: "driving", Unit: "h",
+		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"}, Compute: driveHours,
+	},
+	"longest_drive": {
+		ID: "longest_drive", Label: "Longest drive", Category: "driving", Unit: "mi",
+		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"}, Compute: longestDrive,
+	},
+	"peak_drive_speed": {
+		ID: "peak_drive_speed", Label: "Peak driving speed", Category: "driving", Unit: "mph",
+		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"}, Compute: peakDriveSpeed,
+	},
+	"regen_energy": {
+		ID: "regen_energy", Label: "Regenerated energy", Category: "energy", Unit: "kwh",
+		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"}, Compute: regenEnergy,
+	},
+	"charging_sessions": {
+		ID: "charging_sessions", Label: "Charging sessions", Category: "charging", Unit: "count",
+		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"}, Compute: chargingSessionCount,
+	},
+	"charging_hours": {
+		ID: "charging_hours", Label: "Charging time", Category: "charging", Unit: "h",
+		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"}, Compute: chargingHours,
+	},
+	"peak_charging_power": {
+		ID: "peak_charging_power", Label: "Peak charging power", Category: "charging", Unit: "kw",
+		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"}, Compute: peakChargingPower,
+	},
+	"supercharger_energy": {
+		ID: "supercharger_energy", Label: "Supercharger energy", Category: "charging", Unit: "kwh",
+		Windows: []string{"week", "month", "rolling_30d"}, Compute: superchargerEnergy,
+	},
+	"soc_gained_charging": {
+		ID: "soc_gained_charging", Label: "Charge gained (percentage points)", Category: "battery", Unit: "pp",
+		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"}, Compute: socGainedCharging,
+	},
+	"soc_used_driving": {
+		ID: "soc_used_driving", Label: "Charge used driving (percentage points)", Category: "battery", Unit: "pp",
+		Windows: []string{"day", "week", "month", "rolling_7d", "rolling_30d"}, Compute: socUsedDriving,
 	},
 }
 
@@ -122,11 +173,12 @@ func ListMetricSummaries() []MetricSummary {
 	out := make([]MetricSummary, 0, len(ComputedMetrics))
 	for _, m := range ComputedMetrics {
 		out = append(out, MetricSummary{
-			ID:      m.ID,
-			Label:   m.Label,
-			Unit:    m.Unit,
-			Windows: append([]string(nil), m.Windows...),
-			Ops:     append([]string(nil), ComputedMetricOps...),
+			ID:       m.ID,
+			Label:    m.Label,
+			Category: m.Category,
+			Unit:     m.Unit,
+			Windows:  append([]string(nil), m.Windows...),
+			Ops:      append([]string(nil), ComputedMetricOps...),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
@@ -313,4 +365,91 @@ func costPerMile(ctx context.Context, db *database.DB, vehicleID int64, start, e
 		return 0, nil
 	}
 	return *cost / *dist, nil
+}
+
+// Each aggregate uses the same indexed (vehicle_id, started_at) range as the
+// existing metrics. Missing readings produce zero, not a fabricated sample.
+// Session totals are attributed to the window in which the session started.
+func aggregateMetric(ctx context.Context, db *database.DB, id, query string, vehicleID int64, start, end time.Time) (float64, error) {
+	var value *float64
+	if err := db.Pool.QueryRow(ctx, query, vehicleID, start, end).Scan(&value); err != nil {
+		return 0, fmt.Errorf("%s: %w", id, err)
+	}
+	if value == nil {
+		return 0, nil
+	}
+	return *value, nil
+}
+
+func driveHours(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "drive_hours",
+		`SELECT SUM(duration_s) / 3600.0 FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, end)
+}
+
+func longestDrive(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "longest_drive",
+		`SELECT MAX(distance_m) / 1609.344 FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, end)
+}
+
+func peakDriveSpeed(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "peak_drive_speed",
+		`SELECT MAX(max_speed_mps) * 2.2369362921 FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, end)
+}
+
+func regenEnergy(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "regen_energy",
+		`SELECT SUM(regen_energy_wh) / 1000.0 FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, end)
+}
+
+func chargingSessionCount(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "charging_sessions",
+		`SELECT COUNT(*)::float8 FROM charging_sessions
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, end)
+}
+
+func chargingHours(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "charging_hours",
+		`SELECT SUM(EXTRACT(EPOCH FROM (ended_at - started_at))) / 3600.0
+		   FROM charging_sessions
+		  WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3
+		    AND ended_at IS NOT NULL`,
+		vehicleID, start, end)
+}
+
+func peakChargingPower(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "peak_charging_power",
+		`SELECT MAX(peak_power_w) / 1000.0 FROM charging_sessions
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, end)
+}
+
+func superchargerEnergy(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "supercharger_energy",
+		`SELECT SUM(total_energy_added_wh) / 1000.0 FROM charging_sessions
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3
+		   AND charger_type = 'Supercharger'`,
+		vehicleID, start, end)
+}
+
+func socGainedCharging(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "soc_gained_charging",
+		`SELECT SUM(GREATEST(delta_soc_pct, 0)) FROM charging_sessions
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, end)
+}
+
+func socUsedDriving(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
+	return aggregateMetric(ctx, db, "soc_used_driving",
+		`SELECT SUM(GREATEST(start_soc_pct - end_soc_pct, 0)) FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, end)
 }

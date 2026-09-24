@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, BellOff } from 'lucide-react';
 import {
@@ -40,16 +40,11 @@ export function BrowserPermissionPanel({
   setPushPrefs,
 }: BrowserPermissionPanelProps) {
   const { t } = useTranslation();
+  const [permissionError, setPermissionError] = useState(false);
 
-  // `requestPermission()` returns a Promise that can reject in some browsers
-  // (e.g. when the permission prompt is dismissed by a policy). Catch it so a
-  // click never surfaces an unhandled rejection — the resolved permission
-  // flows back in through the `permission` prop, so there is nothing to do on
-  // failure beyond letting the user retry.
   const handleEnable = useCallback(() => {
-    requestPermission().catch(() => {
-      /* prompt failed — state stays 'default'; the button remains for retry */
-    });
+    setPermissionError(false);
+    void requestPermission().catch(() => setPermissionError(true));
   }, [requestPermission]);
 
   return (
@@ -88,6 +83,11 @@ export function BrowserPermissionPanel({
                 >
                   {t('browserNotifications.enable', 'Enable Browser Notifications')}
                 </Button>
+              )}
+              {permission === 'default' && permissionError && (
+                <InlineCallout variant="warning" icon={<BellOff aria-hidden="true" />}>
+                  {t('browserNotifications.permissionError', 'Could not request browser permission. Check site settings and try again.')}
+                </InlineCallout>
               )}
               {permission === 'granted' && (
                 <Badge variant="success">{t('browserNotifications.enabled', 'Enabled')}</Badge>

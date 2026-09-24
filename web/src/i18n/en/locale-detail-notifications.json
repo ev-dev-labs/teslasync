@@ -1,25 +1,163 @@
 {
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Inbox of fired alerts plus delivery channels.",
+    "subtitle": "All notification sources and delivery channels.",
+    "healthAlerts": {
+      "title": "Component health alerts",
+      "subtitle": "Choose which system outages and recoveries are delivered to each channel. These are system events, separate from vehicle alert rules.",
+      "channelLabel": "Delivery channel",
+      "disabledChannel": "{{name}} (disabled)",
+      "noChannelsTitle": "Add a delivery channel first",
+      "noChannels": "Health alerts need a notification destination such as Discord, Slack, ntfy, or a webhook.",
+      "addChannel": "Add notification channel",
+      "noEvents": "No component health event types are available from this server.",
+      "refreshEvents": "Refresh event types",
+      "channelOff": "This channel is disabled. Your choices are saved, but no alerts will be delivered until you enable the channel above.",
+      "routingTitle": "Delivery settings",
+      "enabledCount": "{{enabled}} of {{total}} events enabled",
+      "channelActive": "Channel active",
+      "channelInactive": "Channel disabled",
+      "search": "Search components",
+      "filterLabel": "Show",
+      "all": "All components",
+      "someEnabled": "Sending alerts",
+      "someDisabled": "Needs attention",
+      "saveError": "Could not save this choice. Check your connection and try again.",
+      "noMatches": "No components match your search or filter.",
+      "off": "Off",
+      "bothOn": "Outage + recovery",
+      "partial": "{{count}} of {{total}} on",
+      "outage": "{{component}} outage",
+      "recovery": "{{component}} recovery",
+      "saving": "Saving…",
+      "components": {
+        "telemetry": "Fleet Telemetry",
+        "mqtt": "MQTT",
+        "database": "Database",
+        "redis": "Redis",
+        "tesla_api": "Tesla API authorization",
+        "worker": "Background worker"
+      },
+      "events": {
+        "telemetry": {
+          "outage": "Fleet Telemetry ingest has gone quiet across the entire fleet — not the same as a single vehicle sleeping.",
+          "recovery": "Fleet Telemetry ingest is receiving signals again."
+        },
+        "mqtt": {
+          "outage": "The MQTT broker is disconnected or the Fleet Telemetry subscription is no longer active.",
+          "recovery": "The MQTT broker connection is back up."
+        },
+        "database": {
+          "outage": "The PostgreSQL database is failing health checks.",
+          "recovery": "The PostgreSQL database is healthy again."
+        },
+        "redis": {
+          "outage": "Redis is enabled but unreachable (only fires when Redis is actually configured).",
+          "recovery": "Redis is reachable again."
+        },
+        "tesla_api": {
+          "outage": "The Tesla Fleet API token is missing or expired.",
+          "recovery": "The Tesla Fleet API token is valid again."
+        },
+        "worker": {
+          "outage": "Every actively-polled vehicle is failing to sync with the Tesla API.",
+          "recovery": "Vehicle polling has recovered."
+        }
+      }
+    },
+    "browser": {
+      "title": "Browser notifications",
+      "subtitle": "Receive background push on this device and tune what happens while the tab is open.",
+      "inTabTitle": "While this tab is open",
+      "inTabHelp": "These controls affect notifications and indicators in this browser tab. Browser push above delivers even when TeslaSync is closed.",
+      "controlsAria": "Notification delivery controls"
+    },
+    "report": {
+      "title": "Notification activity",
+      "description": "Explore triggers and delivery outcomes across every notification source. Historical periods remain available.",
+      "triggered": "Triggers recorded",
+      "deliveries": "Channel deliveries",
+      "fanout": "Linked deliveries per trigger",
+      "uncorrelated": "Deliveries without a linked trigger",
+      "countNote": "Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.",
+      "timeline": "Daily activity",
+      "day": "Day",
+      "period": "Period",
+      "timelineAnnual": "Annual activity",
+      "timelineMonthly": "Monthly activity",
+      "timelineAria": "Daily notification triggers and channel deliveries",
+      "timelineAriaAnnual": "Annual notification triggers and channel deliveries",
+      "timelineAriaMonthly": "Monthly notification triggers and channel deliveries",
+      "sources": "Trigger sources",
+      "types": "Event types",
+      "severities": "Severities",
+      "channels": "Delivery channels",
+      "statuses": "Delivery outcomes",
+      "noActivity": "No activity in this period",
+      "inbox": "Open inbox",
+      "values": {
+        "digest.fsd.weekly": "Weekly FSD digest",
+        "system.database.recovery": "Database recovery",
+        "system": "System",
+        "alert": "Alert rules",
+        "automation": "Automation",
+        "schedule": "Schedules",
+        "test": "Tests",
+        "other": "Other",
+        "unknown": "Unattributed"
+      }
+    },
     "tab": {
       "inbox": "Inbox",
       "archived": "Archived",
       "channels": "Channels"
     },
     "inbox": {
+      "title": "Inbox",
+      "subtitle": "All system, alert, automation, and scheduled notifications in one place.",
+      "columns": {
+        "received": "Received",
+        "title": "Notification",
+        "message": "Message",
+        "type": "Type",
+        "source": "Source",
+        "severity": "Severity",
+        "status": "Status",
+        "read": "Read",
+        "unread": "Unread"
+      },
+      "detail": {
+        "title": "Notification details"
+      },
+      "legacyDelivery": "Legacy channel delivery (original source not recorded)",
+      "countError": "Could not load the notification count: {{error}}",
+      "source": {
+        "ruleId": "Rule #{{id}}",
+        "legacyDelivery": "Legacy channel delivery",
+        "legacyHint": "Original source was not recorded for this older channel delivery.",
+        "unknown": "Unknown source"
+      },
+      "previousPage": "Previous",
+      "nextPage": "Next",
+      "pageNumber": "Page {{page}}",
+      "summary": {
+        "total": "Recent notifications"
+      },
       "selectAll": "Select all visible",
       "countLabel": "{{count}} notifications",
       "threadCountLabel": "{{count}} threads",
       "threadCountLabel_one": "{{count}} thread",
       "threadCountLabel_other": "{{count}} threads",
-      "deliveryCountLabel": "{{count}} deliveries",
-      "deliveryCountLabel_one": "{{count}} delivery",
-      "deliveryCountLabel_other": "{{count}} deliveries",
+      "notificationCountLabel": "{{count}} notifications",
+      "notificationCountLabel_one": "{{count}} notification",
+      "notificationCountLabel_other": "{{count}} notifications",
       "filter": {
         "severity": "Severity",
         "vehicle": "Vehicle",
         "rule": "Rule",
+        "source": "Source",
+        "allSources": "All sources",
+        "ruleTriggers": "Rule triggers",
         "allVehicles": "All vehicles",
         "allRules": "All rules",
         "searchPlaceholder": "Search messages…",
@@ -32,6 +170,8 @@
       },
       "row": {
         "select": "Select notification",
+        "open": "Open notification: {{title}}",
+        "readMessage": "Read full message: {{title}}",
         "markRead": "Mark as read",
         "markUnread": "Mark as unread",
         "archive": "Archive",
@@ -51,9 +191,14 @@
         "announceRestored_one": "{{count}} item restored",
         "announceRestored_other": "{{count}} items restored"
       },
+      "single": {
+        "deleteConfirmTitle": "Delete this notification?",
+        "deleteConfirmBody": "“{{title}}” will be permanently removed. Archive is usually the safer choice."
+      },
       "empty": {
         "title": "No notifications",
-        "message": "When alert rules fire, the resulting notifications appear here.",
+        "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
+        "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert Studio.",
         "archivedTitle": "No archived notifications",
         "archivedMessage": "Archived notifications will appear here.",
         "cta": "Configure alert rules"
@@ -112,17 +257,21 @@
       "membersError": "Could not load thread members",
       "noMembers": "No thread members found",
       "emptyTitle": "No notification threads",
-      "emptyMessage": "When alert rules fire repeatedly, related notifications will be grouped here."
+      "emptyMessage": "Related notifications are grouped here when they occur repeatedly."
     },
     "stats": {
       "sent": "Total Sent",
       "failed": "Failed",
       "pending": "Pending",
       "activeChannels": "Active Channels",
-      "loading": "Loading notification statistics"
+      "loading": "Loading notification statistics",
+      "resource": "notification statistics"
     },
     "channels": {
       "add": "Add Channel",
+      "fields": {
+        "signingSecret": "Signing secret"
+      },
       "addTitle": "Add Channel",
       "editTitle": "Edit Channel",
       "active": "Active",
@@ -152,7 +301,20 @@
     },
     "alertStudio": {
       "title": "Alert Studio",
-      "subtitle": "Create custom rules from Fleet Telemetry signals",
+      "subtitle": "Create rules for vehicle signals, computed metrics, system health, and places",
+      "placeEvents": {
+        "title": "Place arrival and departure alerts",
+        "place": "Place",
+        "entry": "On entry",
+        "exit": "On exit",
+        "entryFor": "Alert on entry: {{name}}",
+        "exitFor": "Alert on exit: {{name}}",
+        "description": "Choose which reviewed places notify you when a vehicle enters or leaves. Manage place names and boundaries in Places.",
+        "manage": "Manage places",
+        "reviewFirst": "Review this place before enabling its notifications.",
+        "empty": "No places yet. Add or review a place to configure its alerts.",
+        "saveError": "Could not save place alerts. Try again."
+      },
       "aiBuilder": {
         "title": "Draft from natural language",
         "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
@@ -353,7 +515,36 @@
       },
       "kind": {
         "signal": "Signal threshold",
-        "computedMetric": "Computed metric"
+        "computedMetric": "Computed metric",
+        "system": "System service",
+        "place": "Place event",
+        "systemHint": "Notify when a monitored system service fails or recovers.",
+        "placeHint": "Notify when a vehicle arrives at or departs from a saved place."
+      },
+      "system": {
+        "telemetry": "TELEMETRY",
+        "mqtt": "MQTT",
+        "database": "DATABASE",
+        "redis": "REDIS",
+        "tesla_api": "TESLA API",
+        "worker": "WORKER",
+        "scope": "System health rules monitor a service for the entire fleet.",
+        "component": "Service",
+        "choose": "Choose a service",
+        "transition": "When",
+        "outage": "Becomes unavailable",
+        "recovery": "Recovers"
+      },
+      "place": {
+        "unavailable": "Place #{{id}} (unavailable)",
+        "emptyTitle": "No places configured",
+        "empty": "Add a place before creating an arrival or departure rule.",
+        "add": "Manage places",
+        "label": "Place",
+        "choose": "Choose a place",
+        "transition": "When",
+        "enter": "Arrives",
+        "exit": "Departs"
       }
     },
     "log": {

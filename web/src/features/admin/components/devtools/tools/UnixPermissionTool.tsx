@@ -56,13 +56,13 @@ export function UnixPermissionTool() {
     <ToolCard
       icon={Lock}
       color="green"
-      title={t('Unix Perm', 'Unix Permissions')}
-      description={t('Unix Perm Desc', 'Convert an octal permission (e.g. 755) to rwx symbolic notation.')}
+      title={t('devtools.utils.unixPerm', 'Unix Permissions')}
+      description={t('devtools.utils.unixPermDesc', 'Convert an octal permission (e.g. 755) to rwx symbolic notation.')}
     >
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            label={t('Octal Perm', 'Octal Permission')}
+            label={t('devtools.utils.unixPermOctal', 'Octal Permission')}
             placeholder="755"
             inputMode="numeric"
             value={octal}
@@ -70,7 +70,7 @@ export function UnixPermissionTool() {
             icon={<Lock className="h-4 w-4" aria-hidden="true" />}
           />
           <Select
-            label={t('Presets', 'Presets')}
+            label={t('devtools.utils.unixPermPresets', 'Presets')}
             options={PRESET_OPTIONS}
             value={octal}
             onChange={(e) => setOctal(e.target.value)}
@@ -80,18 +80,18 @@ export function UnixPermissionTool() {
           <>
             <ul
               className="grid gap-2 sm:grid-cols-3"
-              aria-label={t('Unix Perm Results', 'Permission breakdown by scope')}
+              aria-label={t('devtools.utils.unixPermResults', 'Permission breakdown by scope')}
             >
               <li className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
-                <span className="text-xs text-[var(--text-secondary)]">{t('Owner', 'Owner')}</span>
+                <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermOwner', 'Owner')}</span>
                 <p className="font-mono text-sm text-emerald-300">{result.owner}</p>
               </li>
               <li className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
-                <span className="text-xs text-[var(--text-secondary)]">{t('Group', 'Group')}</span>
+                <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermGroup', 'Group')}</span>
                 <p className="font-mono text-sm text-cyan-300">{result.group}</p>
               </li>
               <li className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
-                <span className="text-xs text-[var(--text-secondary)]">{t('Other', 'Other')}</span>
+                <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermOther', 'Other')}</span>
                 <p className="font-mono text-sm text-amber-300">{result.other}</p>
               </li>
             </ul>
@@ -106,8 +106,8 @@ export function UnixPermissionTool() {
           <EmptyState
             message={
               result.kind === 'empty'
-                ? t('Unix Perm Empty', 'Enter a 3-digit octal value to see its symbolic notation.')
-                : t('Unix Perm Invalid', 'Enter a valid 3-digit octal value (digits 0–7), e.g. 755.')
+                ? t('devtools.utils.unixPermEmpty', 'Enter a 3-digit octal value to see its symbolic notation.')
+                : t('devtools.utils.unixPermInvalid', 'Enter a valid 3-digit octal value (digits 0–7), e.g. 755.')
             }
             className="py-8"
           />

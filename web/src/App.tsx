@@ -38,7 +38,22 @@ const VehicleManagement = lazy(() => import('./features/vehicles/pages/VehicleMa
 const DigitalTwin = lazy(() => import('./features/vehicles/pages/DigitalTwinPage'))
 const TimeMachine = lazy(() => import('./features/vehicles/pages/TimeMachinePage'))
 const PhysicsCockpit = lazy(() => import('./features/vehicles/pages/PhysicsCockpitPage'))
-const TeslaOnly = lazy(() => import('./features/vehicles/pages/TeslaOnlyPage'))
+const TeslaPhysics = lazy(() => import('./features/vehicles/pages/TeslaPhysicsPage'))
+const PhysicsClocks = lazy(() => import('./features/vehicles/pages/PhysicsClocksPage'))
+const PhysicsLifeTape = lazy(() => import('./features/vehicles/pages/PhysicsLifeTapePage'))
+const PhysicsContradictions = lazy(() => import('./features/vehicles/pages/PhysicsContradictionsPage'))
+const PhysicsMeters = lazy(() => import('./features/vehicles/pages/PhysicsMetersPage'))
+const PhysicsUnknown = lazy(() => import('./features/vehicles/pages/PhysicsUnknownPage'))
+const PhysicsCarKeptLiving = lazy(() => import('./features/vehicles/pages/PhysicsCarKeptLivingPage'))
+const PhysicsLogbook = lazy(() => import('./features/vehicles/pages/PhysicsLogbookPage'))
+const PhysicsFirmwareEpochs = lazy(() => import('./features/vehicles/pages/PhysicsFirmwareEpochsPage'))
+const PhysicsChargePort = lazy(() => import('./features/vehicles/pages/PhysicsChargePortPage'))
+const PhysicsBlackBox = lazy(() => import('./features/vehicles/pages/PhysicsBlackBoxPage'))
+const PhysicsDictionary = lazy(() => import('./features/vehicles/pages/PhysicsDictionaryPage'))
+const PhysicsVault = lazy(() => import('./features/vehicles/pages/PhysicsVaultPage'))
+const PhysicsModes = lazy(() => import('./features/vehicles/pages/PhysicsModesPage'))
+const PhysicsNervousSystem = lazy(() => import('./features/vehicles/pages/PhysicsNervousSystemPage'))
+const PhysicsRange = lazy(() => import('./features/vehicles/pages/PhysicsRangePage'))
 const PhysicsLedger = lazy(() => import('./features/vehicles/pages/PhysicsLedgerPage'))
 const ScienceLab = lazy(() => import('./features/science/pages/ScienceLabPage'))
 
@@ -81,7 +96,7 @@ const DriveArchetypes = lazy(() => import('./features/analytics/pages/DriveArche
 const FirmwareImpact = lazy(() => import('./features/analytics/pages/FirmwareImpactPage'))
 const CabinThermal = lazy(() => import('./features/vehicle-systems/pages/CabinThermalPage'))
 const ChargerHealth = lazy(() => import('./features/charging/pages/ChargerHealthPage'))
-const AlertFatigue = lazy(() => import('./features/notifications/pages/AlertFatiguePage'))
+const NotificationHealth = lazy(() => import('./features/notifications/pages/NotificationHealthPage'))
 const CommandReliability = lazy(() => import('./features/system/pages/CommandReliabilityPage'))
 const SignalCorrelation = lazy(() => import('./features/telemetry/pages/SignalCorrelationPage'))
 
@@ -106,8 +121,6 @@ const SignalTrend = lazy(() => import('./features/telemetry/pages/SignalTrendPag
 const SignalChangePoints = lazy(() => import('./features/telemetry/pages/SignalChangePointsPage'))
 const SignalDeadband = lazy(() => import('./features/telemetry/pages/SignalDeadbandPage'))
 const SignalMutualInformation = lazy(() => import('./features/telemetry/pages/SignalMutualInformationPage'))
-const NotificationBurnRate = lazy(() => import('./features/notifications/pages/NotificationBurnRatePage'))
-const NotificationLatency = lazy(() => import('./features/notifications/pages/NotificationLatencyPage'))
 
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
@@ -185,17 +198,14 @@ const AutomationListPage = lazy(() => import('./features/automations/pages/Autom
 const AutomationBuilderPage = lazy(() => import('./features/automations/pages/AutomationBuilderPage'))
 
 // Notifications & Alerts
-const AlertsListPage = lazy(() => import('./features/notifications/pages/AlertsListPage'))
 const AlertStudio = lazy(() => import('./features/notifications/pages/AlertStudioPage'))
 const AlertRulesPage = lazy(() => import('./features/notifications/pages/AlertRulesPage'))
+const AlertPacksPage = lazy(() => import('./features/notifications/pages/AlertPacksPage'))
 const InboxPage = lazy(() => import('./features/notifications/pages/InboxPage'))
 const ArchivedPage = lazy(() => import('./features/notifications/pages/ArchivedPage'))
 const ChannelsPage = lazy(() => import('./features/notifications/pages/ChannelsPage'))
-const WebhooksPage = lazy(() => import('./features/notifications/pages/WebhooksPage'))
 const BrowserNotificationsPage = lazy(() => import('./features/notifications/pages/BrowserNotificationsPage'))
 const QuietHoursPage = lazy(() => import('./features/notifications/pages/QuietHoursPage'))
-const LegacyAlertsRedirect = lazy(() => import('./features/notifications/components/LegacyAlertsRedirect'))
-const LegacyNotificationsRedirect = lazy(() => import('./features/notifications/components/LegacyNotificationsRedirect'))
 const LegacyAlertRulesRedirect = lazy(() => import('./features/notifications/components/LegacyAlertRulesRedirect'))
 const LegacyAlertStudioRedirect = lazy(() => import('./features/notifications/components/LegacyAlertStudioRedirect'))
 
@@ -288,6 +298,7 @@ const PowerDashboards = lazy(() => import('./features/power-user/pages/Dashboard
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
+const TeslaApiUsage = lazy(() => import('./features/system/pages/TeslaApiUsagePage'))
 const OutageAutobiography = lazy(() => import('./features/system/pages/OutageAutobiographyPage'))
 const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
 const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))
@@ -468,6 +479,15 @@ export function resolvePreferredLandingRedirect(
   return preferredLandingPage
 }
 
+export function legacyTeslaPhysicsTarget(pathname: string, search: string, hash: string): string {
+  return `${pathname.replace(/^\/tesla-only(?=\/|$)/, '/tesla-physics')}${search}${hash}`
+}
+
+function LegacyTeslaPhysicsRedirect() {
+  const { pathname, search, hash } = useLocation()
+  return <Navigate to={legacyTeslaPhysicsTarget(pathname, search, hash)} replace />
+}
+
 export default function App() {
   const navigate = useNavigate()
   const startupRoutingHandled = useRef(false)
@@ -558,23 +578,25 @@ export default function App() {
         <Route path="digital-twin" element={<SafeRoute name="DigitalTwin"><DigitalTwin /></SafeRoute>} />
         <Route path="time-machine" element={<SafeRoute name="TimeMachine"><TimeMachine /></SafeRoute>} />
         <Route path="physics-cockpit" element={<SafeRoute name="PhysicsCockpit"><PhysicsCockpit /></SafeRoute>} />
-        <Route path="tesla-only" element={<SafeRoute name="TeslaOnly"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/clocks" element={<SafeRoute name="TeslaOnlyClocks"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/life-tape" element={<SafeRoute name="TeslaOnlyLifeTape"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/contradictions" element={<SafeRoute name="TeslaOnlyContradictions"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/meters" element={<SafeRoute name="TeslaOnlyMeters"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/unknown" element={<SafeRoute name="TeslaOnlyUnknown"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/car-kept-living" element={<SafeRoute name="TeslaOnlyCarKeptLiving"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/logbook" element={<SafeRoute name="TeslaOnlyLogbook"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/firmware-epochs" element={<SafeRoute name="TeslaOnlyFirmwareEpochs"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/charge-port" element={<SafeRoute name="TeslaOnlyChargePort"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/black-box" element={<SafeRoute name="TeslaOnlyBlackBox"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/dictionary" element={<SafeRoute name="TeslaOnlyDictionary"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/vault" element={<SafeRoute name="TeslaOnlyVault"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/modes" element={<SafeRoute name="TeslaOnlyModes"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/nervous-system" element={<SafeRoute name="TeslaOnlyNervousSystem"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/range" element={<SafeRoute name="TeslaOnlyRange"><TeslaOnly /></SafeRoute>} />
-        <Route path="tesla-only/ledger" element={<SafeRoute name="PhysicsLedger"><PhysicsLedger /></SafeRoute>} />
+        <Route path="tesla-physics" element={<SafeRoute name="TeslaPhysics"><TeslaPhysics /></SafeRoute>} />
+        <Route path="tesla-physics/clocks" element={<SafeRoute name="PhysicsClocks"><PhysicsClocks /></SafeRoute>} />
+        <Route path="tesla-physics/life-tape" element={<SafeRoute name="PhysicsLifeTape"><PhysicsLifeTape /></SafeRoute>} />
+        <Route path="tesla-physics/contradictions" element={<SafeRoute name="PhysicsContradictions"><PhysicsContradictions /></SafeRoute>} />
+        <Route path="tesla-physics/meters" element={<SafeRoute name="PhysicsMeters"><PhysicsMeters /></SafeRoute>} />
+        <Route path="tesla-physics/unknown" element={<SafeRoute name="PhysicsUnknown"><PhysicsUnknown /></SafeRoute>} />
+        <Route path="tesla-physics/car-kept-living" element={<SafeRoute name="PhysicsCarKeptLiving"><PhysicsCarKeptLiving /></SafeRoute>} />
+        <Route path="tesla-physics/logbook" element={<SafeRoute name="PhysicsLogbook"><PhysicsLogbook /></SafeRoute>} />
+        <Route path="tesla-physics/firmware-epochs" element={<SafeRoute name="PhysicsFirmwareEpochs"><PhysicsFirmwareEpochs /></SafeRoute>} />
+        <Route path="tesla-physics/charge-port" element={<SafeRoute name="PhysicsChargePort"><PhysicsChargePort /></SafeRoute>} />
+        <Route path="tesla-physics/black-box" element={<SafeRoute name="PhysicsBlackBox"><PhysicsBlackBox /></SafeRoute>} />
+        <Route path="tesla-physics/dictionary" element={<SafeRoute name="PhysicsDictionary"><PhysicsDictionary /></SafeRoute>} />
+        <Route path="tesla-physics/vault" element={<SafeRoute name="PhysicsVault"><PhysicsVault /></SafeRoute>} />
+        <Route path="tesla-physics/modes" element={<SafeRoute name="PhysicsModes"><PhysicsModes /></SafeRoute>} />
+        <Route path="tesla-physics/nervous-system" element={<SafeRoute name="PhysicsNervousSystem"><PhysicsNervousSystem /></SafeRoute>} />
+        <Route path="tesla-physics/range" element={<SafeRoute name="PhysicsRange"><PhysicsRange /></SafeRoute>} />
+        <Route path="tesla-physics/ledger" element={<SafeRoute name="PhysicsLedger"><PhysicsLedger /></SafeRoute>} />
+        <Route path="tesla-only" element={<LegacyTeslaPhysicsRedirect />} />
+        <Route path="tesla-only/*" element={<LegacyTeslaPhysicsRedirect />} />
         <Route path="science" element={<SafeRoute name="ScienceLab"><ScienceLab /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
@@ -588,18 +610,17 @@ export default function App() {
         <Route path="automations/list" element={<SafeRoute name="AutomationList"><AutomationListPage /></SafeRoute>} />
         <Route path="automations/new" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="automations/:id/edit" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
-        <Route path="alerts" element={<SafeRoute name="LegacyAlertsRedirect"><LegacyAlertsRedirect /></SafeRoute>} />
         <Route path="alert-studio" element={<SafeRoute name="LegacyAlertStudioRedirect"><LegacyAlertStudioRedirect /></SafeRoute>} />
         <Route path="alert-rules" element={<SafeRoute name="LegacyAlertRulesRedirect"><LegacyAlertRulesRedirect /></SafeRoute>} />
-        <Route path="notifications" element={<SafeRoute name="LegacyNotificationsRedirect"><LegacyNotificationsRedirect /></SafeRoute>} />
+        <Route path="notifications" element={<SafeRoute name="NotificationsInbox"><InboxPage /></SafeRoute>} />
         <Route path="notifications/inbox" element={<SafeRoute name="NotificationsInbox"><InboxPage /></SafeRoute>} />
         <Route path="notifications/archived" element={<SafeRoute name="NotificationsArchived"><ArchivedPage /></SafeRoute>} />
-        <Route path="notifications/alerts" element={<SafeRoute name="NotificationsAlerts"><AlertsListPage /></SafeRoute>} />
         <Route path="notifications/channels" element={<SafeRoute name="NotificationsChannels"><ChannelsPage /></SafeRoute>} />
-        <Route path="notifications/webhooks" element={<SafeRoute name="NotificationsWebhooks"><WebhooksPage /></SafeRoute>} />
+        <Route path="notifications/webhooks" element={<Navigate to="/notifications/channels" replace />} />
         <Route path="notifications/browser" element={<SafeRoute name="NotificationsBrowser"><BrowserNotificationsPage /></SafeRoute>} />
         <Route path="notifications/quiet-hours" element={<SafeRoute name="NotificationsQuietHours"><QuietHoursPage /></SafeRoute>} />
         <Route path="notifications/rules" element={<SafeRoute name="NotificationsRules"><AlertRulesPage /></SafeRoute>} />
+        <Route path="notifications/packs" element={<SafeRoute name="NotificationsPacks"><AlertPacksPage /></SafeRoute>} />
         <Route path="notifications/studio" element={<SafeRoute name="NotificationsStudio"><AlertStudio /></SafeRoute>} />
         <Route path="notifications/audit" element={<SafeRoute name="NotificationsAudit"><NotificationsAudit /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
@@ -659,6 +680,7 @@ export default function App() {
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
         <Route path="analytics/lifetime" element={<Navigate to="/lifetime-stats" replace />} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
+        <Route path="tesla-api-usage" element={<SafeRoute name="TeslaApiUsage"><TeslaApiUsage /></SafeRoute>} />
         <Route path="outage" element={<SafeRoute name="OutageAutobiography"><OutageAutobiography /></SafeRoute>} />
         <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
         <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />
@@ -832,7 +854,7 @@ export default function App() {
         <Route path="firmware-impact" element={<SafeRoute name="FirmwareImpact"><FirmwareImpact /></SafeRoute>} />
         <Route path="cabin-thermal" element={<SafeRoute name="CabinThermal"><CabinThermal /></SafeRoute>} />
         <Route path="charger-health" element={<SafeRoute name="ChargerHealth"><ChargerHealth /></SafeRoute>} />
-        <Route path="alert-fatigue" element={<SafeRoute name="AlertFatigue"><AlertFatigue /></SafeRoute>} />
+        <Route path="alert-fatigue" element={<Navigate to="/notifications/health#fatigue" replace />} />
         <Route path="command-reliability" element={<SafeRoute name="CommandReliability"><CommandReliability /></SafeRoute>} />
         <Route path="signal-correlation" element={<SafeRoute name="SignalCorrelation"><SignalCorrelation /></SafeRoute>} />
         {/* Phase-52 — decision intelligence family. */}
@@ -854,8 +876,9 @@ export default function App() {
         <Route path="signal-change-points" element={<SafeRoute name="SignalChangePoints"><SignalChangePoints /></SafeRoute>} />
         <Route path="signal-deadband" element={<SafeRoute name="SignalDeadband"><SignalDeadband /></SafeRoute>} />
         <Route path="signal-mutual-information" element={<SafeRoute name="SignalMutualInformation"><SignalMutualInformation /></SafeRoute>} />
-        <Route path="notification-burn-rate" element={<SafeRoute name="NotificationBurnRate"><NotificationBurnRate /></SafeRoute>} />
-        <Route path="notification-latency" element={<SafeRoute name="NotificationLatency"><NotificationLatency /></SafeRoute>} />
+        <Route path="notification-burn-rate" element={<Navigate to="/notifications/health#burn-rate" replace />} />
+        <Route path="notification-latency" element={<Navigate to="/notifications/health#latency" replace />} />
+        <Route path="notifications/health" element={<SafeRoute name="NotificationHealth"><NotificationHealth /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
             against frontend route `/analytics/tco`; the canonical app path

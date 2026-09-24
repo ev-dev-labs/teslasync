@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useDrives } from '@/api/hooks/useDriving';
+import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -23,7 +23,6 @@ import {
 } from '../components/driving-rhythm';
 import { buildDrivingRhythm } from '../lib/drivingRhythm';
 
-const DRIVE_WINDOW_LIMIT = 1_000;
 const SPLIT_COLUMNS = { default: 1, xl: 5 } as const;
 
 export default function DrivingRhythmPage() {
@@ -35,14 +34,11 @@ export default function DrivingRhythmPage() {
   const { start, end, timezone, setRange } = useRangeState({
     persistKey: 'driving-rhythm.range',
     defaultPresetId: 'all',
+    inheritSharedPreference: false,
   });
   const [analysisNowMs] = useState(() => Date.now());
 
-  const drivesQuery = useDrives(vehicleIdStr, {
-    start,
-    end,
-    limit: DRIVE_WINDOW_LIMIT,
-  });
+  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, start, end);
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
   const summary = useMemo(
     () =>
@@ -51,7 +47,6 @@ export default function DrivingRhythmPage() {
         timeZone: timezone,
         rangeStart: start,
         rangeEnd: end,
-        windowLimit: DRIVE_WINDOW_LIMIT,
       }),
     [analysisNowMs, drives, end, start, timezone],
   );
@@ -139,7 +134,6 @@ export default function DrivingRhythmPage() {
           summary={summary}
           start={start}
           end={end}
-          windowLimit={DRIVE_WINDOW_LIMIT}
           state={sectionState}
         />
       </FadeIn>

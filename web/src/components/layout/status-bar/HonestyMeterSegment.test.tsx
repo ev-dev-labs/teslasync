@@ -34,6 +34,8 @@ describe('HonestyMeterSegment', () => {
       </MemoryRouter>,
     )
     expect(screen.getByLabelText('Telemetry honesty meter')).toBeInTheDocument()
-    expect(screen.getByText(/Live/)).toBeInTheDocument()
+    expect(screen.getByText(/Fleet/)).toHaveTextContent('Fleet · 1/1')
+    expect(screen.getByRole('link', { name: 'Telemetry honesty meter' })).not.toHaveTextContent('Live')
+    expect(screen.getByRole('link', { name: 'Telemetry honesty meter' }).querySelector('.lucide-gauge')).not.toBeNull()
   })
 })

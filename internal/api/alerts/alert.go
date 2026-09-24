@@ -58,6 +58,7 @@ type notificationRepository interface {
 	GetLogsFiltered(context.Context, dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error)
 	BulkSetRead(context.Context, []int64, bool) (int64, error)
 	CreateLog(context.Context, *notificationmodel.NotificationLog) error
+	CreateEvent(context.Context, *notificationmodel.NotificationLog) error
 	GetChannel(context.Context, int64) (*notificationmodel.NotificationChannel, error)
 	GetAllChannels(context.Context) ([]*notificationmodel.NotificationChannel, error)
 

@@ -60,16 +60,17 @@ vi.mock('react-i18next', () => ({
 }))
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
-const homeItem = { to: '/', icon: Icons.home, label: 'Home' }
+const homeItem = { to: '/', icon: Icons.home, label: 'Home', labelKey: 'nav.items.dashboard' }
 const vehiclesItem = {
   to: '/vehicles',
   icon: Icons.vehicle,
   label: 'Vehicles',
+  labelKey: 'nav.items.vehicles',
   dataTour: 'vehicles-tour',
 }
-const alertsItem = { to: '/notifications/alerts', icon: Icons.notifications, label: 'Alerts' }
-const chargingItem = { to: '/charging', icon: Icons.charging, label: 'Charging', color: 'text-emerald-300' }
-const dataRepairItem = { to: '/data-repair', icon: Icons.database, label: 'Data Repair' }
+const alertsItem = { to: '/notifications/inbox', icon: Icons.notifications, label: 'Alerts', labelKey: 'nav.items.notifications_inbox' }
+const chargingItem = { to: '/charging', icon: Icons.charging, label: 'Charging', labelKey: 'nav.items.charging', color: 'text-emerald-300' }
+const dataRepairItem = { to: '/data-repair', icon: Icons.database, label: 'Data Repair', labelKey: 'nav.items.data-repair' }
 
 function makeSections(): NotionSidebarSectionInput[] {
   return [
@@ -83,7 +84,7 @@ function baseProps(overrides: Partial<NotionSidebarProps> = {}): NotionSidebarPr
     sections: makeSections(),
     pinnedItems: [],
     pathname: '/',
-    navLabel: (label: string) => label,
+    navLabel: (item: { label: string }) => item.label,
     onPin: vi.fn(),
     onUnpin: vi.fn(),
     ...overrides,

@@ -501,7 +501,7 @@
   },
   "alertRules": {
     "title": "Alert rules",
-    "subtitle": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio.",
+    "subtitle": "Manage and edit notification rules here. Create new rules in Alert Studio.",
     "kpis": "Alert rule metrics",
     "noun": {
       "one": "rule",
@@ -519,14 +519,16 @@
       "noSeverity": "No rules to summarise yet",
       "status": "Status breakdown",
       "noStatus": "No rules to summarise yet",
-      "topSignals": "Top monitored signals",
-      "noSignals": "No monitored signals yet",
+      "topSignals": "Top monitored subjects",
+      "noSignals": "No monitored subjects yet",
       "ruleCount": "Rules",
       "severityLabel": "Severity"
     },
     "kind": {
       "signal": "Signal",
-      "metric": "Metric"
+      "metric": "Metric",
+      "system": "System service",
+      "place": "Place event"
     },
     "scope": {
       "all": "All vehicles",
@@ -548,13 +550,13 @@
     },
     "empty": {
       "title": "No alert rules yet",
-      "body": "Create your first alert rule in the Alert Studio.",
-      "cta": "Open Alert Studio"
+      "body": "Create your first notification rule in Alert Studio.",
+      "cta": "Create rule"
     },
     "col": {
       "name": "Name",
       "type": "Type",
-      "signal": "Signal",
+      "signal": "Subject",
       "severity": "Severity",
       "scope": "Scope",
       "status": "Status"
@@ -563,11 +565,29 @@
     "error": {
       "nameTooLong": "Max 120 characters"
     },
-    "openStudio": "Open Alert Studio"
+    "openStudio": "Create rule"
+  },
+  "audit": {
+    "title": "Audit Log",
+    "time": "Time",
+    "action": "Action",
+    "resource": "Resource",
+    "details": "Details",
+    "subtitle": "Recent system-level changes recorded by the audit subsystem",
+    "recentActivity": "Recent Activity",
+    "loadFailed": "Failed to load audit logs",
+    "noEntries": "No audit entries found",
+    "noMatches": "No audit entries match your search.",
+    "loadError": {
+      "unknown": "Unknown error"
+    },
+    "filterLabel": {
+      "search": "Search"
+    }
   },
   "notificationBurnRate": {
     "title": "Notification Burn Rate",
-    "subtitle": "Track notification delivery reliability against a 99% SLO with short and long error-budget windows",
+    "subtitle": "Track all recorded notification delivery attempts against a 99% SLO with short and long error-budget windows",
     "kpis": {
       "label": "Delivery SLO metrics",
       "delivery": "24h Delivery SLO",
@@ -600,6 +620,11 @@
       "outcomes": "{{sent}} sent · {{failed}} failed · {{deferred}} deferred · {{pending}} pending"
     }
   },
+  "notificationHealth": {
+    "title": "Notification Health",
+    "subtitle": "Understand alert noise, delivery reliability, and delivery speed in one place.",
+    "navigation": "Notification health sections"
+  },
   "notificationLatency": {
     "title": "Notification Latency",
     "units": {
@@ -612,7 +637,7 @@
       "subtitle": "Apdex bands are anchored to the documented 1-second satisfied threshold",
       "aria": "Bar chart of notification deliveries grouped into latency ranges"
     },
-    "subtitle": "Measure delivery speed from backend latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records",
+    "subtitle": "Measure all recorded delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records",
     "kpis": {
       "label": "Notification latency metrics",
       "p50": "p50 Latency",
@@ -631,7 +656,8 @@
     },
     "cohorts": {
       "title": "Severity and Status Cohorts",
-      "empty": "No notification records include a usable delivery latency yet.",
+      "empty": "No measured channel deliveries yet. Configure a channel and send a test notification to measure latency.",
+      "configure": "Manage delivery channels",
       "severity": "By severity",
       "status": "By status",
       "samples": "{{count}} samples · {{tail}} tail"
@@ -663,24 +689,80 @@
       "achievement": "Achievements"
     }
   },
-  "pinned": {
-    "section": {
-      "title": "Pinned",
-      "watching": "Watching"
-    },
-    "empty": {
-      "vehicle": "Pin frequently-used vehicles to keep them at the top.",
-      "alert_rule": "Pin alert rules to keep them under \"Watching\".",
-      "widget": "Pin widgets to keep them at the top of your dashboard.",
-      "geofence": "Pin geofences to keep them at the top of the list.",
-      "automation": "Pin automations to keep them at the top of the list.",
-      "default": "Nothing pinned yet."
-    }
-  },
   "severity": {
     "info": "Info",
     "warn": "Warning",
     "critical": "Critical"
+  },
+  "webhookChannels": {
+    "title": "Webhook channels",
+    "subtitle": "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver. Each channel can be HMAC-signed so receivers can verify authenticity.",
+    "addButton": "Add webhook",
+    "loadError": "Failed to load webhook channels: {{error}}",
+    "savingAnnouncement": "Saving webhook…",
+    "empty": {
+      "title": "No webhooks yet",
+      "message": "Add a webhook to forward TeslaSync events to your favourite chat or automation tool.",
+      "action": "Add your first webhook"
+    },
+    "row": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "toggle": "Active",
+      "test": "Test webhook",
+      "edit": "Edit webhook",
+      "delete": "Delete webhook"
+    },
+    "test": {
+      "success": "Success",
+      "failure": "Failed",
+      "status": "Status {{status}}",
+      "latency": "{{ms}} ms",
+      "signature": "Signature:",
+      "body": "Response body",
+      "truncated": "… (truncated)"
+    },
+    "form": {
+      "addTitle": "Add webhook",
+      "editTitle": "Edit webhook",
+      "name": "Name",
+      "namePlaceholder": "Discord #alerts",
+      "nameRequired": "Name is required.",
+      "url": "URL",
+      "urlPlaceholder": "https://discord.com/api/webhooks/...",
+      "urlInvalid": "URL must start with http:// or https://.",
+      "urlHelp": "Compatible with Discord, Slack, n8n, Home Assistant, and any HTTP receiver.",
+      "method": "HTTP method",
+      "secret": "Signing secret",
+      "secretPlaceholder": "Optional — used for HMAC signing",
+      "secretPlaceholderEdit": "Leave blank to keep existing",
+      "keepSecret": "Leave the signing secret blank to keep the existing secret.",
+      "secretHelp": "When set, every request includes X-TeslaSync-Signature: sha256=<hmac> so the receiver can verify authenticity.",
+      "showSecret": "Show secret",
+      "hideSecret": "Hide secret",
+      "enabled": "Enabled",
+      "cancel": "Cancel",
+      "save": "Add webhook",
+      "saveEdit": "Save changes",
+      "saving": "Saving…"
+    },
+    "signature": {
+      "label": "Signature preview",
+      "loading": "Computing signature…",
+      "error": "Failed to compute signature: {{error}}",
+      "empty": "Add a signing secret to preview the X-TeslaSync-Signature header.",
+      "help": "Send this header value with every webhook so receivers can verify authenticity."
+    },
+    "delete": {
+      "title": "Delete webhook?",
+      "message": "This will permanently remove the webhook. TeslaSync will stop sending notifications to it immediately.",
+      "confirm": "Delete webhook",
+      "cancel": "Cancel"
+    },
+    "docs": {
+      "title": "Available payload variables",
+      "intro": "Webhook receivers get a JSON envelope with these fields:"
+    }
   },
   "webpush": {
     "title": "Browser push",
@@ -709,7 +791,8 @@
     },
     "checking": "Checking browser push availability…",
     "error": {
-      "load": "Couldn't check browser push availability."
+      "load": "Couldn't check browser push availability.",
+      "action": "This device could not update its browser push subscription. Check browser permission and service-worker availability, then retry."
     },
     "retry": "Retry"
   }

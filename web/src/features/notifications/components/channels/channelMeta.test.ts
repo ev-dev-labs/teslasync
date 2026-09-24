@@ -189,17 +189,23 @@ describe('channelToFormConfig', () => {
     expect(cfg.smtp_host).toBe('smtp.example.com');
   });
 
-  it('serialises webhook headers to JSON', () => {
+  it('prepares webhook editing without exposing a stored signing secret', () => {
     const cfg = channelToFormConfig(channels.webhook);
     expect(cfg.url).toBe('https://example.com/hook');
-    expect(JSON.parse(cfg.headers)).toEqual({ Authorization: 'Bearer t' });
+    expect(cfg.method).toBe('POST');
+    expect(cfg.bearer_token).toBe('');
+    expect(cfg).not.toHaveProperty('headers');
+    expect(cfg).not.toHaveProperty('body_template');
   });
 
-  it('tolerates a null recipients list and null headers without throwing', () => {
+  it('preserves the persisted webhook HTTP method when editing', () => {
+    const cfg = channelToFormConfig({ ...channels.webhook, method: 'PUT' });
+    expect(buildChannelPayload('webhook', 'Automation', true, cfg, channels.webhook.id).method).toBe('PUT');
+  });
+
+  it('tolerates a null recipients list without throwing', () => {
     const email = { ...channels.email, to_addresses: undefined } as unknown as NotificationChannel;
     expect(channelToFormConfig(email).to_addresses).toBe('');
-    const hook = { ...channels.webhook, headers: undefined } as unknown as NotificationChannel;
-    expect(channelToFormConfig(hook).headers).toBe('{}');
   });
 
   it('returns an empty config (never undefined) for a corrupt/unknown kind', () => {
@@ -246,16 +252,15 @@ describe('buildChannelPayload', () => {
 
   it('normalises the webhook method and rejects unsupported verbs', () => {
     expect(asRec(buildChannelPayload('webhook', 'W', true, { method: 'put' })).method).toBe('PUT');
-    expect(asRec(buildChannelPayload('webhook', 'W', true, { method: 'get' })).method).toBe('GET');
+    expect(asRec(buildChannelPayload('webhook', 'W', true, { method: 'get' })).method).toBe('POST');
     expect(asRec(buildChannelPayload('webhook', 'W', true, { method: 'delete' })).method).toBe('POST');
     expect(asRec(buildChannelPayload('webhook', 'W', true, {})).method).toBe('POST');
   });
 
-  it('accepts an object header map but ignores malformed or array-shaped JSON', () => {
-    expect(asRec(buildChannelPayload('webhook', 'W', true, { headers: '{"A":"B"}' })).headers).toEqual({ A: 'B' });
-    expect(asRec(buildChannelPayload('webhook', 'W', true, { headers: 'not-json' })).headers).toEqual({});
-    // Arrays are typeof 'object' but must not become a header map.
-    expect(asRec(buildChannelPayload('webhook', 'W', true, { headers: '["a","b"]' })).headers).toEqual({});
+  it('sends a new signing secret but leaves existing secrets alone when blank', () => {
+    const payload = asRec(buildChannelPayload('webhook', 'W', true, { url: 'https://receiver.test', bearer_token: 'new-secret' }));
+    expect(payload).toMatchObject({ url: 'https://receiver.test', bearer_token: 'new-secret' });
+    expect(asRec(buildChannelPayload('webhook', 'W', true, {}, 5)).bearer_token).toBeUndefined();
   });
 
   it('applies the ntfy server default and pushover defaults', () => {

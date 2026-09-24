@@ -9,10 +9,6 @@
 import { z } from 'zod'
 import { GEOFENCE_CATEGORY_VALUES } from '../geofenceCategories'
 
-export const GEOFENCE_ALERT_TYPES = ['entry', 'exit', 'both', 'none'] as const
-
-export type GeofenceAlertType = (typeof GEOFENCE_ALERT_TYPES)[number]
-
 const numericString = (label: string, opts: { min: number; max: number }) =>
   z
     .string()
@@ -53,8 +49,6 @@ export const geofenceFormSchema = z.object({
   longitude: numericString('Longitude', { min: -180, max: 180 }),
   radius: numericString('Radius', { min: 10, max: 50000 }),
   category: z.enum(GEOFENCE_CATEGORY_VALUES),
-  alertType: z.enum(GEOFENCE_ALERT_TYPES),
-  enabled: z.boolean(),
 })
 
 export type GeofenceFormData = z.infer<typeof geofenceFormSchema>
@@ -66,23 +60,15 @@ export interface GeofencePayload {
   longitude: number
   radius: number
   category: (typeof GEOFENCE_CATEGORY_VALUES)[number]
-  alertOnEntry: boolean
-  alertOnExit: boolean
-  enabled: boolean
 }
 
 /** Converts a validated {@link GeofenceFormData} into the wire payload. */
 export function toGeofencePayload(form: GeofenceFormData): GeofencePayload {
-  const alertOnEntry = form.alertType === 'entry' || form.alertType === 'both'
-  const alertOnExit = form.alertType === 'exit' || form.alertType === 'both'
   return {
     name: form.name,
     latitude: Number(form.latitude),
     longitude: Number(form.longitude),
     radius: Number(form.radius),
     category: form.category,
-    alertOnEntry,
-    alertOnExit,
-    enabled: form.enabled,
   }
 }

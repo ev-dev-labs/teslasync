@@ -15,6 +15,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/adapter/teslausage"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
@@ -29,10 +30,10 @@ import (
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	teslabudgetdb "github.com/ev-dev-labs/teslasync/internal/database/teslabudget"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
-	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -157,6 +158,7 @@ func main() {
 
 	// ── Tesla Client ──────────────────────────────────────────────────
 	teslaClient := tesla.NewClient(cfg.Tesla)
+	teslausage.BindClient(ctx, teslaClient, db)
 	budgetPolicy := tesla.NewBudgetPolicy(cfg.Tesla.DailyBudgetUSD, cfg.Tesla.CommandReserveUSD)
 	if budgetPolicy.Enabled() {
 		teslaClient.SetRequestBudget(teslabudgetdb.New(db.Pool, budgetPolicy))

@@ -1,10 +1,25 @@
 # Diagnostics
 
-Sidebar group **Diagnostics**. In the app, expand this section in the left nav (or search `/explore`).
+The detailed sidebar groups **Diagnostics** under five linked destinations:
+**System Health** (System Status, Outage Autobiography, Tesla API Usage, API Logs),
+**Database & Data Health** (Database Health, Schema Drift, Slow Queries,
+Data Quality, Disk Forecast), **Telemetry Troubleshooting** (Live Signals,
+Live Signal Inspector, Ingest X-Ray, MQTT Inspector, DLQ Inspector,
+Redis Signals, Telemetry Coverage, State Debugger), **Signal Analysis**
+(Correlation, Entropy, Trend, Change Points, Deadband, Nonlinear Coupling),
+and **Vehicle Diagnostics** (Anomaly Detection, Remaining Useful Life,
+Root-Cause Intelligence). Dashcam & Sentry, Feature Flags, Vehicle Cost,
+Secret Rotation, Audit Log, GDPR Exports, and API Playground remain
+standalone sidebar destinations.
+
+All 33 screens retain their original URLs and functionality. Related screens
+have in-page navigation; every screen remains accessible from the feature
+catalog, search, and direct bookmarks. The compact sidebar still curates
+destinations without removing them from the catalog.
 
 | Screen | Path | What it does | When empty |
 | ------ | ---- | ------------ | ---------- |
-| System Status | `/system-status` | Health of every dependent service — MQTT, Redis, DB, Tesla API. | Renders an empty state when no data is available — the page is not hidden. |
+| System Status | `/system-status` | At-a-glance current status, component health, actionable issues, and recorded incidents; operator diagnostics expand on demand. No historical uptime is inferred from missing heartbeat history. | Shows status as unknown when live health is unavailable; never paints missing history as healthy. |
 | Outage Autobiography | `/outage` | What queued, replayed with original event time, or stayed unknown. | Renders an empty state when no data is available — the page is not hidden. |
 | Database Health | `/db-health` | Database size, query latency, and replication lag. | Renders an empty state when no data is available — the page is not hidden. |
 | Anomaly Detection | `/anomaly-detection` | Auto-detected outliers in charging, range, and drives. | Renders an empty state when no data is available — the page is not hidden. |
@@ -34,7 +49,9 @@ Sidebar group **Diagnostics**. In the app, expand this section in the left nav (
 | Nonlinear Signal Coupling | `/signal-mutual-information` | Discover nonlinear dependencies between telemetry signals. | Renders an empty state when no data is available — the page is not hidden. |
 | Redis Signals | `/redis-signals` | Dump the Redis live-signal cache for a vehicle. | Operator surface — needs a healthy API, MQTT, and DB. |
 | Telemetry Coverage | `/admin/telemetry/coverage` | Which Fleet Telemetry fields are wired vs missing. | Operator surface — needs a healthy API, MQTT, and DB. |
-| API Logs | `/api-logs` | Recent HTTP requests with status, duration, and payload size. | Renders an empty state when no data is available — the page is not hidden. |
+| API Logs | `/api-logs` | Filterable outbound API requests with status, duration, and response details; separate backend runtime-error (process uptime) and browser-error (last hour) summaries. All-time API-call totals and service counts are not filtered by the request-list date or controls. | Request list and each error summary show their own loading, empty, or failure state. |
 | API Playground | `/api-playground` | Try any API endpoint with parameter forms. | Renders an empty state when no data is available — the page is not hidden. |
+
+Expand an API Logs row for method, URL, status, duration, vehicle ID, rate-limit flag, error, request/response headers and bodies. Header values are redacted except for a small allowlist of safe diagnostic fields. Body capture is disabled by default (`API_LOG_CAPTURE_BODIES=false`); when enabled, captured payloads are limited to 10 KB. Older records cannot retroactively gain headers or bodies.
 
 [← All groups](./catalogue.md)

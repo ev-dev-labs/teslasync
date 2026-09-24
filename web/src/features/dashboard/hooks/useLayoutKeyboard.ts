@@ -35,7 +35,7 @@ export function useLayoutKeyboard({
   const { t } = useTranslation();
 
   const dashboardShortcuts = useMemo<ShortcutDefinition[]>(() => {
-    const group = t('shortcuts.groups.dashboard', 'Dashboard');
+    const group = t('dashboard.shortcuts.group', 'Dashboard');
     const make = (
       id: string,
       keys: string[],
@@ -128,4 +128,3 @@ export function useLayoutKeyboard({
     return () => window.removeEventListener('keydown', handler);
   }, [editMode, setEditMode, canUndo, canRedo, onUndo, onRedo, dashboards, switchDashboard]);
 }
-

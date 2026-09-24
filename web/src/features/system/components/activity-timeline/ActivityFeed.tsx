@@ -171,7 +171,7 @@ export function ActivityFeed({
                   color={KIND_ACCENT[item.kind]}
                   title={title}
                   subtitle={summary || undefined}
-                  time={formatTime(item.occurred_at)}
+                  time={formatTime(item.occurred_at, { tz: timezone })}
                   href={item.path ?? undefined}
                   isLast={i === group.items.length - 1}
                   badges={

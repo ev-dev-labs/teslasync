@@ -175,9 +175,9 @@ describe('isCompactActivePath', () => {
 describe('isExclusiveActivePath', () => {
   const settingsCatalog = ['/settings', '/settings/fleet-setup', '/chatbot', '/dev-tools']
   const physicsCatalog = [
-    '/tesla-only',
-    '/tesla-only/clocks',
-    '/tesla-only/life-tape',
+    '/tesla-physics',
+    '/tesla-physics/clocks',
+    '/tesla-physics/life-tape',
     '/physics-cockpit',
   ]
 
@@ -192,9 +192,9 @@ describe('isExclusiveActivePath', () => {
   })
 
   it('lights only the Tesla Physics child, not the hub, on nested routes', () => {
-    expect(isExclusiveActivePath('/tesla-only/clocks', '/tesla-only/clocks', physicsCatalog)).toBe(true)
-    expect(isExclusiveActivePath('/tesla-only/clocks', '/tesla-only', physicsCatalog)).toBe(false)
-    expect(isExclusiveActivePath('/tesla-only', '/tesla-only', physicsCatalog)).toBe(true)
+    expect(isExclusiveActivePath('/tesla-physics/clocks', '/tesla-physics/clocks', physicsCatalog)).toBe(true)
+    expect(isExclusiveActivePath('/tesla-physics/clocks', '/tesla-physics', physicsCatalog)).toBe(false)
+    expect(isExclusiveActivePath('/tesla-physics', '/tesla-physics', physicsCatalog)).toBe(true)
   })
 })
 
@@ -244,7 +244,7 @@ describe('buildCompactNavTree', () => {
       s.items.map((i) => i.to),
     )
     expect(paths).not.toContain('/dashcam')
-    expect(paths).not.toContain('/analytics/carbon')
+    expect(paths).toContain('/analytics/carbon')
     expect(paths).not.toContain('/segments')
   })
 
@@ -279,13 +279,13 @@ describe('buildCompactNavTree', () => {
   })
 
   it('injects the most specific long-tail route rather than its curated parent', () => {
-    const { sections, activeSectionTitle } = buildCompactNavTree(catalog(), '/analytics/carbon')
-    expect(activeSectionTitle).toBe('Insights')
-    const group = sections.find((s) => s.title === 'Insights')
+    const { sections, activeSectionTitle } = buildCompactNavTree(catalog(), '/segments')
+    expect(activeSectionTitle).toBe('Drives')
+    const group = sections.find((s) => s.title === 'Drives')
     const paths = group!.items.map((i) => i.to)
-    expect(paths).toContain('/analytics/carbon')
+    expect(paths).toContain('/segments')
     // The curated parent stays put — it is not replaced or duplicated.
-    expect(paths.filter((p) => p === '/analytics')).toHaveLength(1)
+    expect(paths.filter((p) => p === '/drives')).toHaveLength(1)
   })
 
   it('keeps location context even when the owning group is restricted', () => {

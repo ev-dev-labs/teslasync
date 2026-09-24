@@ -557,6 +557,7 @@ export default function DiskForecastPage() {
                 <DataTable
                   tableId="admin:disk-forecast"
                   columns={columns}
+                  mobileColumns={['hypertable', 'severity', 'days']}
                   data={rows}
                   keyExtractor={(r) => r.hypertable_name}
                   emptyMessage={t('admin.diskForecast.emptyTable', 'No hypertables')}

@@ -11,7 +11,7 @@ on:
         options:
           - arc-runner
           - ubuntu-latest
-        default: arc-runner
+        default: ubuntu-latest
       delete_packages:
         description: 'Delete eligible versions (review a dry-run report first)'
         type: boolean
@@ -27,7 +27,7 @@ permissions:
 jobs:
   package-retention:
     name: Package retention
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     concurrency:
       group: package-retention
       cancel-in-progress: false
@@ -60,7 +60,7 @@ jobs:
 
   maintenance:
     name: Stale issues and PRs
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     permissions:
       issues: write
       pull-requests: write

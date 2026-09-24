@@ -139,6 +139,7 @@ type App struct {
 	onboardingRepo      *dbuser.OnboardingRepo
 	onboardingStateRepo *dbuser.OnboardingStateRepo
 	healthNotifications *componentNotificationCache
+	eventAlerts         *eventAlertObserver
 
 	// OpenAPI spec (best-effort; nil if not found at startup)
 	openAPISpec []byte

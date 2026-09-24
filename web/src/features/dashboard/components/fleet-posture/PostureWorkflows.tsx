@@ -23,7 +23,7 @@ export function PostureWorkflows() {
       description: t('dashboard.fleetPosture.workflow.liveHelp', 'Position and movement'),
     },
     {
-      to: '/notifications/alerts',
+      to: '/notifications/inbox',
       icon: Icons.notificationsActive,
       label: t('dashboard.fleetPosture.workflow.alerts', 'Review alerts'),
       description: t('dashboard.fleetPosture.workflow.alertsHelp', 'Exceptions requiring attention'),

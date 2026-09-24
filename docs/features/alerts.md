@@ -9,9 +9,10 @@ If you want one paragraph: **rules fire when typed predicates over live signals 
 | Piece                    | What it is                                                                  | Where it lives                                     |
 | ------------------------ | --------------------------------------------------------------------------- | -------------------------------------------------- |
 | Alert rule               | Typed predicate + scope + throttle config                                   | `alert_rules` table; UI at **Alert Studio**         |
-| Alert (firing)           | An instance of a rule that became true                                      | `alerts` table; UI at **Alerts**                    |
+| Alert (firing)           | An alert-backed notification event                                          | Unified **Notifications → Inbox**                  |
 | Notification channel     | A way to deliver an alert (email, push, webhook, Pushover, Discord, etc.)   | `notification_channels` table; UI at **Notifications** |
-| Notification log         | One row per delivery attempt with provider response                         | `notification_logs` table                          |
+| Notification event       | One recorded trigger, even without a configured channel; alert-backed events can be acknowledged | Unified **Inbox** and activity report |
+| Notification delivery    | One recorded attempt per configured channel, correlated to its trigger when available | Delivery statistics in the activity report |
 | Automation               | A workflow that reacts to a trigger and runs a chain of actions             | `automations` table; UI at **Automations**          |
 | Guard Mode               | A special anti-theft/panic vehicle workflow                                 | `guard_mode_*` tables; UI at **Guard Mode**         |
 
@@ -45,7 +46,7 @@ sequenceDiagram
     participant Tel as Telemetry ingest
     participant L1 as signal.Store
     participant Eval as Typed-rule evaluator
-    participant DB as alerts table
+    participant DB as notification history
     participant Disp as Notification dispatcher
     participant Ch as Channels
     participant Auto as Automation engine
@@ -53,10 +54,10 @@ sequenceDiagram
     Tel->>L1: Update signal X
     L1-->>Eval: Subscriber callback
     Eval->>Eval: Re-evaluate rules touching X
-    Eval->>DB: Insert alert row (if predicate true & throttle clears)
-    DB-->>Disp: New alert
+    Eval-->>Disp: Trigger alert (if predicate true & throttle clears)
+    Disp->>DB: Record trigger once (including no-channel events)
     Disp->>Ch: Fan-out to user's channels
-    Ch-->>DB: Write notification_log row per attempt
+    Ch-->>DB: Record each delivery attempt separately
     DB-->>Auto: New alert may also trigger automations
 ```
 

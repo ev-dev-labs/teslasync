@@ -30,7 +30,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 vi.mock('react-i18next', async () => {
@@ -150,6 +150,51 @@ describe('SessionsTable — loaded table content + field wiring', () => {
     expect(screen.getByText('dt:2026-05-05T12:00:00Z')).toBeInTheDocument() // current.last_seen_at
     expect(screen.getByText('dt:2026-05-04T08:00:00Z')).toBeInTheDocument() // other.created_at
     expect(screen.getByText('dt:2026-05-05T11:30:00Z')).toBeInTheDocument() // other.last_seen_at
+  })
+})
+
+describe('SessionsTable — pagination', () => {
+  const sessions = [
+    CURRENT,
+    ...Array.from({ length: 29 }, (_, index): ActiveSession => ({
+      ...OTHER,
+      id: `sess-other-${index}`,
+    })),
+  ]
+
+  it('pages through every device and returns to page one when the list shrinks', async () => {
+    localStorage.removeItem('teslasync.table.settings:active-sessions.page-size')
+    const { rerender, props } = renderTable({ sessions })
+
+    expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument()
+    expect(screen.getByTestId('active-sessions-current-pill-sess-current')).toBeInTheDocument()
+    expect(screen.queryByTestId('active-sessions-revoke-sess-other-28')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+    expect(screen.getByText('Showing 26–30 of 30')).toBeInTheDocument()
+    expect(screen.getByTestId('active-sessions-revoke-sess-other-28')).toBeInTheDocument()
+    expect(screen.queryByTestId('active-sessions-current-pill-sess-current')).toBeNull()
+
+    rerender(
+      <MemoryRouter>
+        <SessionsTable {...props} sessions={[CURRENT, OTHER]} />
+      </MemoryRouter>,
+    )
+    await waitFor(() => {
+      expect(screen.getByText('Showing 1–2 of 2')).toBeInTheDocument()
+      expect(screen.getByTestId('active-sessions-current-pill-sess-current')).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
+  })
+
+  it('offers the shared rows-per-page selector', () => {
+    localStorage.removeItem('teslasync.table.settings:active-sessions.page-size')
+    renderTable({ sessions })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Rows per page' }), {
+      target: { value: '50' },
+    })
+    expect(screen.getByText('Showing 1–30 of 30')).toBeInTheDocument()
+    expect(screen.getByTestId('active-sessions-revoke-sess-other-28')).toBeInTheDocument()
   })
 })
 

@@ -89,6 +89,29 @@ func TestBuildContradictionCourt_ParkSpeedAndCompleteLatched(t *testing.T) {
 	}
 }
 
+func TestBuildContradictionCourt_GroupsRepeatedSamplesButNotAcrossGaps(t *testing.T) {
+	base := at(t, "2026-03-01T12:00:00Z")
+	court := BuildContradictionCourt(7, []PhysicsFrame{
+		{At: base, ChargeState: enums.ChargeStateDisconnected, Latch: "Engaged"},
+		{At: base.Add(10 * time.Second), ChargeState: enums.ChargeStateDisconnected, Latch: "Engaged"},
+		{At: base.Add(10 * time.Second), ChargeState: enums.ChargeStateDisconnected, Latch: "Engaged"},
+		{At: base.Add(20 * time.Second), ChargeState: enums.ChargeStateDisconnected, Latch: "Released"},
+		{At: base.Add(30 * time.Second), ChargeState: enums.ChargeStateDisconnected, Latch: "Engaged"},
+		{At: base.Add(10 * time.Minute), ChargeState: enums.ChargeStateDisconnected, Latch: "Engaged"},
+		{At: base.Add(10*time.Minute + time.Second), ChargeState: enums.ChargeStateDisconnected, Latch: "Engaged", Live: true},
+	})
+	if len(court.Findings) != 3 {
+		t.Fatalf("want three episodes after resolution and gap, got %+v", court.Findings)
+	}
+	first := court.Findings[0]
+	if first.Observations != 2 || !first.At.Equal(base) || !first.LastAt.Equal(base.Add(10*time.Second)) {
+		t.Fatalf("first episode = %+v", first)
+	}
+	if court.Findings[1].Observations != 1 || court.Findings[2].Observations != 1 {
+		t.Fatalf("resolved and gap-separated findings must not be merged: %+v", court.Findings)
+	}
+}
+
 func TestBuildMeterGenealogy_NullIsNotZeroReset(t *testing.T) {
 	gen := BuildMeterGenealogy(7, []PhysicsFrame{
 		{At: at(t, "2026-03-01T12:00:00Z")},
@@ -155,11 +178,45 @@ func TestBuildExclusiveReport_LogbookUsesTeslaWords(t *testing.T) {
 	if report.Logbook.Entries[0].Word != "Drive" {
 		t.Fatalf("logbook = %+v", report.Logbook.Entries)
 	}
+
 	if report.Range.TrueRangeM != nil {
 		t.Fatal("exclusive report must not invent true range")
 	}
 	if report.Clocks.Latest.IngestTime != nil {
 		t.Fatal("exclusive report must not invent ingest time")
+	}
+}
+
+func TestBuildExclusiveReport_LiveOverlayIsNotRecordedHistory(t *testing.T) {
+	now := at(t, "2026-03-01T12:00:00Z")
+	report := BuildExclusiveReport(7, []PhysicsFrame{{At: now, Live: true, Gear: "P"}},
+		now, nil, nil, nil, nil)
+	if report.CarKeptLiving.LastTelemetryAt != nil || report.CarKeptLiving.NeverReceivedGapS != nil {
+		t.Fatalf("a live overlay is not an accepted telemetry event: %+v", report.CarKeptLiving)
+	}
+	if report.UnknownOS.WindowHours != maxExclusiveLookback.Hours() ||
+		report.UnknownOS.UnknownHours == nil || *report.UnknownOS.UnknownHours == 0 {
+		t.Fatalf("live-only window must not appear fully sampled: %+v", report.UnknownOS)
+	}
+}
+
+func TestBuildTeslaLogbook_RecordsObservedTransitionsWithoutInventingLiveEvents(t *testing.T) {
+	base := at(t, "2026-03-01T10:00:00Z")
+	logbook := BuildTeslaLogbook(7, nil, nil, []PhysicsFrame{
+		{At: base, Gear: "P", ChargeState: enums.ChargeStateStarting},
+		{At: base.Add(time.Minute), Gear: "P", ChargeState: enums.ChargeStateCharging},
+		{At: base.Add(2 * time.Minute), Gear: "D", ChargeState: enums.ChargeStateStopped},
+		{At: base.Add(3 * time.Minute), Gear: "D", ChargeState: enums.ChargeStateDisconnected},
+		{At: base.Add(4 * time.Minute), Gear: "N", Live: true},
+	})
+	want := []string{"Park", "Starting", "Charging", "Drive", "Stopped", "Disconnected"}
+	if len(logbook.Entries) != len(want) {
+		t.Fatalf("entries = %+v, want %d", logbook.Entries, len(want))
+	}
+	for i, word := range want {
+		if logbook.Entries[i].Word != word || !logbook.Entries[i].At.Before(base.Add(4*time.Minute)) {
+			t.Fatalf("entry %d = %+v, want %s from recorded history", i, logbook.Entries[i], word)
+		}
 	}
 }
 
@@ -198,6 +255,8 @@ func TestBuildChargePortCourt_KeepsEveryEvidenceRow(t *testing.T) {
 	for i := range frames {
 		frames[i] = PhysicsFrame{
 			At:          start.Add(time.Duration(i) * time.Minute),
+			Gear:        "P",
+			Firmware:    "2026.20.3",
 			Latch:       "Engaged",
 			ChargeState: enums.ChargeStateComplete,
 		}
@@ -205,5 +264,8 @@ func TestBuildChargePortCourt_KeepsEveryEvidenceRow(t *testing.T) {
 	court := BuildChargePortCourt(7, frames)
 	if len(court.Evidence) != 50 {
 		t.Fatalf("evidence = %d, want all 50 in the window", len(court.Evidence))
+	}
+	if court.Evidence[0].Gear != enums.GearPark || court.Evidence[0].Firmware != "2026.20.3" {
+		t.Fatalf("port context lost: %+v", court.Evidence[0])
 	}
 }

@@ -11,6 +11,7 @@ import { Badge, Button, Input, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { toLocalDatetimeStr } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { SI } from '@/lib/unitConversion';
 import type { JourneyAssuranceRequest } from '@/types/advancedIntelligence';
@@ -21,8 +22,10 @@ type JourneyForm = Omit<JourneyAssuranceRequest, 'vehicle_id' | 'confirmed' | 'd
 };
 
 function defaultDeparture(): string {
+  // datetime-local values are local wall-clock: build the default from local
+  // fields, not a UTC slice (SmartCharge defaultDepartBy precedent).
   const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  return date.toISOString().slice(0, 16);
+  return toLocalDatetimeStr(date).slice(0, 16);
 }
 
 export default function JourneyAssurancePage() {
