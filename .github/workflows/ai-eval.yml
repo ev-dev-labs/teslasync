@@ -67,8 +67,8 @@ jobs:
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
@@ -89,8 +89,8 @@ jobs:
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
@@ -100,7 +100,7 @@ jobs:
         run: make ai-eval-full
       - name: Upload JUnit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ai-eval-junit
           path: ai-eval.junit.xml
@@ -115,8 +115,8 @@ jobs:
       JUDGE_PROVIDER: ${{ secrets.JUDGE_PROVIDER }}
       JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
@@ -134,7 +134,7 @@ jobs:
         run: make ai-eval-judged
       - name: Upload judged JUnit report
         if: steps.gate.outputs.judge == 'enabled'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ai-eval-judged-junit
           path: ai-eval.judged.junit.xml

@@ -31,7 +31,7 @@ jobs:
 
       # ── Go toolchain ──────────────────────────────────────────
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
@@ -52,7 +52,7 @@ jobs:
           sudo apt-get install --no-install-recommends -y libatomic1
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "26"
           cache: "npm"

@@ -63,7 +63,7 @@ jobs:
             fi
           done
 
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
@@ -187,8 +187,8 @@ jobs:
           - image: fleet-telemetry
             file: Dockerfile.fleet-telemetry
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Prepare the promotion directory
         run: |
@@ -314,7 +314,7 @@ jobs:
           timeout: 30m
 
       - name: Upload vulnerability scan
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: vuln-${{ matrix.image }}-${{ needs.version.outputs.version }}
           path: vuln-${{ matrix.image }}.json
@@ -324,7 +324,7 @@ jobs:
       # version, so legs cannot collide and a publish job cannot pick up
       # another image's bytes.
       - name: Upload the promotable image archive
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: image-${{ matrix.image }}-${{ needs.version.outputs.version }}
           path: |
@@ -347,7 +347,7 @@ jobs:
       summary: ${{ steps.aggregate.outputs.summary }}
       blocking: ${{ steps.aggregate.outputs.blocking }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Download vulnerability scans
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -405,7 +405,7 @@ jobs:
 
       - name: Upload vulnerability status
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: vulnerability-status-${{ needs.version.outputs.version }}
           path: vulnerability-status.md
@@ -427,9 +427,9 @@ jobs:
         # No `file` / `build-args` here: this stage does NOT build.
         image: [api, web, notification-worker, export-worker, automation-worker, fleet-telemetry]
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: '1.25'
 
@@ -440,7 +440,7 @@ jobs:
         run: go install github.com/google/go-containerregistry/cmd/crane@v0.20.2
 
       - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -606,7 +606,7 @@ jobs:
           echo "✅ Attested CycloneDX SBOM to ${PRIMARY}@${DIGEST}"
 
       - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: sbom-${{ matrix.image }}-${{ needs.version.outputs.version }}
           path: |
@@ -625,7 +625,7 @@ jobs:
       # It is bound to the DIGEST, not the tag, so re-tagging cannot
       # transplant provenance onto different bytes.
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-name: ghcr.io/${{ github.repository }}-${{ matrix.image }}
           subject-digest: ${{ steps.promote.outputs.digest }}
@@ -639,7 +639,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Install Helm
         uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
@@ -678,7 +678,7 @@ jobs:
       contents: write
       packages: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
@@ -814,7 +814,7 @@ jobs:
           NOTES_EOF
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ needs.version.outputs.new_tag }}
           name: TeslaSync ${{ needs.version.outputs.new_tag }}
@@ -831,7 +831,7 @@ jobs:
       #
       # No-ops (exit 0) when GRAFANA_URL is unset. An annotation must
       # never be able to fail a release.
-      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: '1.25'
 
