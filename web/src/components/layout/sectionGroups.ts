@@ -28,11 +28,9 @@ export function sectionSidebarItems<T extends { to: string; label: string; label
   groups: readonly SectionGroup[],
   standalonePaths?: readonly string[],
 ): T[] {
-  const hidden = new Set(groups.flatMap(group =>
-    group.pages.filter(page => page.to !== group.primary).map(page => page.to),
-  ))
-  const shown = standalonePaths && new Set([...groups.map(group => group.primary), ...standalonePaths])
   return labelSectionPrimaries(items.filter(item =>
-    !hidden.has(item.to) && (!shown || shown.has(item.to)),
+    standalonePaths
+      ? standalonePaths.includes(item.to) || groups.some(group => group.primary === item.to)
+      : sectionPrimaryPath(groups, item.to) === item.to,
   ), groups)
 }

@@ -100,6 +100,9 @@ describe('Diagnostics grouping', () => {
     expect(new Set(paths).size).toBe(paths.length)
     expect(paths).toHaveLength(33)
     expect(paths.every(path => registeredPaths.has(path))).toBe(true)
+    expect(DIAGNOSTIC_GROUPS.every(group => group.pages.every(page =>
+      page.labelKey === `nav.items.${page.to.slice(1).replace(/\//g, '_')}`,
+    ))).toBe(true)
     expect(sidebar.map(item => item.to)).toEqual([
       ...DIAGNOSTIC_GROUPS.map(group => group.primary), ...standalonePaths,
     ])

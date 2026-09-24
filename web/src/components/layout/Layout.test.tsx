@@ -404,6 +404,7 @@ vi.mock('@/components/ui/ThemePicker', () => ({
 
 // Import AFTER the mocks so the shell wires the stubs.
 import Layout, { navSections, navSearchKeywords, reconcileNavPaths } from './Layout'
+import { DIAGNOSTIC_GROUPS } from './diagnosticGroups'
 import {
   CANONICAL_SECTION_TO_COMPACT_GROUP,
   COMPACT_GROUP_TITLES,
@@ -818,6 +819,10 @@ describe('Layout — compact Linear sidebar wiring', () => {
     expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry Troubleshooting')
     expect(props.pathname).toBe('/signals')
     expect(navSections.find(section => section.title === 'Diagnostics')?.items).toHaveLength(33)
+    expect(DIAGNOSTIC_GROUPS.every(group => group.pages.every(page =>
+      navSections.find(section => section.title === 'Diagnostics')?.items
+        .some(item => item.to === page.to && item.labelKey === page.labelKey),
+    ))).toBe(true)
   })
 
   it('keeps grouped diagnostics active in the detailed sidebar and compact navigation', () => {
