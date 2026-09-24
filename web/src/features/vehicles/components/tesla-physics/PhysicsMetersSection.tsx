@@ -3,11 +3,10 @@ import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, time, unknown, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, time, unknown } from './PhysicsPageShell';
 
-export default function PhysicsMetersPage() {
-  const physics = usePhysicsPage('meters');
+export default function PhysicsMetersSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const { formatDistance } = useUnits();
   const distance = (m: number | null | undefined) => m == null ? unknown(t) : formatDistance(m, { precision: 1 });
@@ -21,7 +20,7 @@ export default function PhysicsMetersPage() {
   const modes = report?.modes;
   const fsdFraction = meter?.fsd_distance_m != null && meter.driving_distance_m != null && meter.driving_distance_m > 0
     ? 100 * meter.fsd_distance_m / meter.driving_distance_m : null;
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={meter?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.odometer', 'Odometer')} value={distance(meter?.odometer_m)} color="cyan" />
@@ -71,5 +70,5 @@ export default function PhysicsMetersPage() {
           { key: 'cause', header: t('teslaOnly.cause', 'Cause'), render: (r) => r.cause },
         ]} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

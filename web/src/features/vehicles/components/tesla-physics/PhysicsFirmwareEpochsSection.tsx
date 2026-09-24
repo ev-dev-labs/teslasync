@@ -3,11 +3,10 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Select, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, seconds, time, unknown, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, seconds, time, unknown } from './PhysicsPageShell';
 
-export default function PhysicsFirmwareEpochsPage() {
-  const physics = usePhysicsPage('firmware-epochs');
+export default function PhysicsFirmwareEpochsSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const { formatDistance } = useUnits();
   const distance = (m: number | null | undefined) => m == null ? unknown(t) : formatDistance(m, { precision: 1 });
@@ -22,7 +21,7 @@ export default function PhysicsFirmwareEpochsPage() {
     row.fsd_meter_end_m < row.fsd_meter_start_m);
   const dwellObserved = epochs.filter((row) => row.complete_to_unplug_s != null);
   const latestBounded = bounded.length ? bounded[bounded.length - 1] : undefined;
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={report?.firmware_epochs?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.epochCount', 'Observed firmware epochs')} value={epochs.length} color="cyan" />
@@ -63,5 +62,5 @@ export default function PhysicsFirmwareEpochsPage() {
           { key: 'dwell', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (r) => seconds(r.complete_to_unplug_s, t) },
         ]} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

@@ -3,12 +3,11 @@ import { Link } from 'react-router-dom';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, DataTable, Select, Text } from '@/components/ui';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, pagination, time, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, pagination, time } from './PhysicsPageShell';
 import type { LogbookEntry } from '@/types/teslaPhysics';
 
-export default function PhysicsLogbookPage() {
-  const physics = usePhysicsPage('logbook');
+export default function PhysicsLogbookSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const log = report?.logbook;
   const entries = log?.entries ?? [];
@@ -32,7 +31,7 @@ export default function PhysicsLogbookPage() {
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (r: LogbookEntry) => time(r.at, t) },
     { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (r: LogbookEntry) => time(r.ended_at, t) },
   ];
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={log?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.logbookEntries', 'Returned entries')} value={entries.length} color="cyan" />
@@ -61,5 +60,5 @@ export default function PhysicsLogbookPage() {
       <RawRows title={physics.title} rows={[...visible].reverse()} columns={columns} tableId="physics:logbook"
         mobileColumns={['word', 'at']} keyExtractor={(r) => `${r.kind}-${r.id}-${r.at}-${r.word}`} t={t} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

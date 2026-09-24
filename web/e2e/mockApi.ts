@@ -1286,12 +1286,13 @@ export async function seedBrowserState(
     const sidebarSection =
       activePath.startsWith('/settings') ? 'Settings'
         : activePath.startsWith('/data-repair') ? 'Data'
-          : activePath.startsWith('/vehicles') ? 'Vehicles'
-            : activePath.startsWith('/drives') ? 'Driving'
-              : activePath.startsWith('/charging') ? 'Charging'
-                : activePath.startsWith('/battery') ? 'Battery'
-                  : activePath.startsWith('/notifications') ? 'Notifications'
-                    : 'Home';
+          : activePath.startsWith('/tesla-physics') ? 'Tesla Physics'
+            : activePath.startsWith('/vehicles') ? 'Vehicles'
+              : activePath.startsWith('/drives') ? 'Driving'
+                : activePath.startsWith('/charging') ? 'Charging'
+                  : activePath.startsWith('/battery') ? 'Battery'
+                    : activePath.startsWith('/notifications') ? 'Notifications'
+                      : 'Home';
     localStorage.setItem('teslasync-expanded-nav-sections', JSON.stringify([sidebarSection]));
     for (const tourId of ['main', 'alerts', 'charging', 'drives', 'vehicles', 'automations', 'settings', 'debugger']) {
       for (let version = 1; version <= 5; version += 1) {

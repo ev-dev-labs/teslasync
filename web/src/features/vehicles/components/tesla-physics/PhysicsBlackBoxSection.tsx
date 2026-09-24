@@ -2,11 +2,10 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, time, unknown, usePhysicsPage, yesNo } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, time, unknown, yesNo } from './PhysicsPageShell';
 
-export default function PhysicsBlackBoxPage() {
-  const physics = usePhysicsPage('black-box');
+export default function PhysicsBlackBoxSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const box = report?.black_box;
   const frames = box?.frames ?? [];
@@ -21,7 +20,7 @@ export default function PhysicsBlackBoxPage() {
     ? (Date.parse(box.to) - Date.parse(box.from)) / 1000 : null;
   const gears = [...new Set(frames.map((frame) => frame.gear).filter((gear): gear is string => !!gear))];
   const versions = [...new Set(frames.map((frame) => frame.firmware).filter((version): version is string => !!version))];
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={box?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.blackBoxTrigger', 'Latest selected trigger')} value={box?.trigger || unknown(t)} color="amber" />
@@ -68,5 +67,5 @@ export default function PhysicsBlackBoxPage() {
           { key: 'schedule', header: t('teslaOnly.scheduleMode', 'Schedule mode'), render: (r) => r.scheduled_mode || unknown(t) },
         ]} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

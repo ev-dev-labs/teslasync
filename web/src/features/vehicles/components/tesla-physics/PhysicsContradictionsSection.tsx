@@ -3,11 +3,10 @@ import { MetricCard } from '@/components/data-display';
 import { Select } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { Badge, DataTable, Text } from '@/components/ui';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { pagination, PhysicsPageShell, time, usePhysicsPage, yesNo } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, pagination, time, yesNo } from './PhysicsPageShell';
 
-export default function PhysicsContradictionsPage() {
-  const physics = usePhysicsPage('contradictions');
+export default function PhysicsContradictionsSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const findings = report?.contradictions?.findings ?? [];
   const [filter, setFilter] = useState('');
@@ -24,7 +23,7 @@ export default function PhysicsContradictionsPage() {
   const nearbyPort = port.filter((row) => Number.isFinite(eventTime) &&
     Number.isFinite(Date.parse(row.at)) && Math.abs(Date.parse(row.at) - eventTime) <= 120_000)
     .sort((a, b) => Math.abs(Date.parse(a.at) - eventTime) - Math.abs(Date.parse(b.at) - eventTime))[0];
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={report?.contradictions?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.contradictionEpisodes', 'Returned episodes')} value={findings.length} color="amber" />
@@ -79,5 +78,5 @@ export default function PhysicsContradictionsPage() {
           { key: 'detail', header: t('teslaOnly.detail', 'Detail'), render: (r) => r.detail },
         ]} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

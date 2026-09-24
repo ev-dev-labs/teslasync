@@ -2,11 +2,10 @@ import { Link } from 'react-router-dom';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
-import { Evidence } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, seconds, time, unknown, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence } from './Evidence';
+import { type PhysicsPage, seconds, time, unknown } from './PhysicsPageShell';
 
-export default function PhysicsCarKeptLivingPage() {
-  const physics = usePhysicsPage('car-kept-living');
+export default function PhysicsCarKeptLivingSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const living = report?.car_kept_living;
   const clock = report?.clocks?.latest;
@@ -19,7 +18,7 @@ export default function PhysicsCarKeptLivingPage() {
     Number.isFinite(Date.parse(clock.event_time)) && Number.isFinite(Date.parse(clock.ingest_time))
     ? (Date.parse(clock.ingest_time) - Date.parse(clock.event_time)) / 1000 : null;
   const scope = report?.evidence;
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={living?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.lastTelemetry', 'Last recorded telemetry')} value={time(last, t)} color="cyan" />
@@ -57,5 +56,5 @@ export default function PhysicsCarKeptLivingPage() {
         <Link to="/tesla-physics/unknown" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.livingOpenUnknown', 'Inspect unknown-hour budgets')} →</Link>
       </div>
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

@@ -3,11 +3,10 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Select, Text } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
-import { Evidence, RawRows } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, seconds, time, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence, RawRows } from './Evidence';
+import { type PhysicsPage, seconds, time } from './PhysicsPageShell';
 
-export default function PhysicsLifeTapePage() {
-  const physics = usePhysicsPage('life-tape');
+export default function PhysicsLifeTapeSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const tape = report?.life_tape;
   const segments = tape?.segments ?? [];
@@ -26,7 +25,7 @@ export default function PhysicsLifeTapePage() {
   const windowS = Number.isFinite(from) && Number.isFinite(to) && to > from ? (to - from) / 1000 : null;
   const classifiedShare = segments.length > 0 && windowS != null && total <= windowS ? 100 * total / windowS : null;
   const longest = segments.length ? segments.reduce((a, b) => a.duration_s >= b.duration_s ? a : b) : null;
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={tape?.honesty}>
       <Text as="p" variant="bodySm">{t('teslaOnly.lifeWindow', 'Observed window: {{from}} to {{to}}', { from: time(tape?.from, t), to: time(tape?.to, t) })}</Text>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
@@ -67,5 +66,5 @@ export default function PhysicsLifeTapePage() {
           { key: 'duration', header: t('teslaOnly.duration', 'Duration'), render: (r) => seconds(r.duration_s, t) },
         ]} />
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

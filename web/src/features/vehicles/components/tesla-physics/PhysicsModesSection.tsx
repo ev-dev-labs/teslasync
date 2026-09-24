@@ -2,11 +2,10 @@ import { Link } from 'react-router-dom';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
-import { Evidence } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, time, unknown, usePhysicsPage, yesNo } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence } from './Evidence';
+import { type PhysicsPage, time, unknown, yesNo } from './PhysicsPageShell';
 
-export default function PhysicsModesPage() {
-  const physics = usePhysicsPage('modes');
+export default function PhysicsModesSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const modes = report?.modes;
   const active = [modes?.valet, modes?.service, modes?.transport].filter((v) => v === true).length;
@@ -14,7 +13,7 @@ export default function PhysicsModesPage() {
   const meterDrops = report?.meters?.resets;
   const uncertainDrops = meterDrops?.filter((row) => row.unknown).length;
   const versions = report?.firmware_epochs?.epochs ?? [];
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={modes?.honesty}>
       <Grid cols={{ default: 1, md: 3 }} gap={3}>
         <MetricCard label={t('teslaOnly.valet', 'Valet')} value={yesNo(modes?.valet, t)} color="cyan" />
@@ -57,5 +56,5 @@ export default function PhysicsModesPage() {
         <Link to="/tesla-physics/firmware-epochs" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.modesOpenEpochs', 'Inspect observed firmware epochs')} →</Link>
       </div>
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }

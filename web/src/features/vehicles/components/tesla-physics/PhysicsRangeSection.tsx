@@ -3,11 +3,10 @@ import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
-import { Evidence } from '../components/tesla-physics/Evidence';
-import { PhysicsPageShell, unknown, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { Evidence } from './Evidence';
+import { type PhysicsPage, unknown } from './PhysicsPageShell';
 
-export default function PhysicsRangePage() {
-  const physics = usePhysicsPage('range');
+export default function PhysicsRangeSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const { formatDistance, formatEnergy } = useUnits();
   const range = report?.range;
@@ -24,7 +23,7 @@ export default function PhysicsRangePage() {
   const pairs = known.flatMap((first, index) => known.slice(index + 1).map((second) => ({
     first, second, difference: first.value - second.value,
   })));
-  return <PhysicsPageShell physics={physics}>
+  return <>
     <Evidence title={physics.title} honesty={range?.honesty}>
       <Grid cols={{ default: 1, md: 2, xl: 4 }} gap={3}>
         <MetricCard label={t('teslaOnly.rated', 'Rated')} value={distance(range?.rated_range_m)} color="cyan" />
@@ -60,5 +59,5 @@ export default function PhysicsRangePage() {
       </div>) : <Text as="p" variant="bodySm">{t('teslaOnly.rangeInsufficient', 'At least two estimates are needed for a comparison. Missing estimates cannot be replaced by energy remaining.')}</Text>}
       <Text as="p" variant="caption">{t('teslaOnly.rangeSnapshot', 'These values are a returned snapshot without a calibrated error distribution or actual distance-to-empty observation. A difference does not identify a faulty estimator.')}</Text>
     </Evidence>
-  </PhysicsPageShell>;
+  </>;
 }
