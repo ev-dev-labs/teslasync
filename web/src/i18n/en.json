@@ -4532,6 +4532,7 @@
   "nav": {
     "collections": {
       "toggle": "{{group}}, {{count}} views",
+      "viewCount": "{{count}} views",
       "timeline": "Vehicle History",
       "vehicles": "Fleet",
       "digital_twin": "Live Vehicle",
@@ -4541,7 +4542,7 @@
       "journeys": "Journeys",
       "drive_score": "Driving Insights",
       "driving_dynamics": "Driving Dynamics",
-      "charging": "Charging",
+      "charging": "Charging Activity",
       "smart_charge": "Charge Planning",
       "charger_health": "Charger Health",
       "battery": "Battery Health",

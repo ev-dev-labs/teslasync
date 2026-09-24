@@ -791,11 +791,11 @@ describe('Layout — compact Linear sidebar wiring', () => {
     expect(navSections.find(section => section.title === 'Reports')?.items).toHaveLength(11)
   })
 
-  it('shows the report siblings inline on their original routes', () => {
+  it('shows the report siblings inline on their original routes', async () => {
     renderLayout('/tco')
     const reports = document.querySelector('#nav-section-reports')
     expect(reports).toBeInTheDocument()
-    expect(within(reports as HTMLElement).getAllByRole('link')).toHaveLength(5)
+    await waitFor(() => expect(within(reports as HTMLElement).getAllByRole('link')).toHaveLength(5))
     expect(within(reports as HTMLElement).getByRole('button', { name: 'Costs, 2 views' }))
       .toHaveAttribute('aria-expanded', 'true')
     expect(within(reports as HTMLElement).getByRole('link', { name: 'Cost of Ownership' }))
@@ -824,11 +824,11 @@ describe('Layout — compact Linear sidebar wiring', () => {
     ))).toBe(true)
   })
 
-  it('keeps grouped diagnostics active in the detailed sidebar and compact navigation', () => {
+  it('keeps grouped diagnostics active in the detailed sidebar and compact navigation', async () => {
     renderLayout('/signal-entropy')
     const diagnostics = document.querySelector('#nav-section-diagnostics')
     expect(diagnostics).toBeInTheDocument()
-    expect(within(diagnostics as HTMLElement).getAllByRole('link')).toHaveLength(7)
+    await waitFor(() => expect(within(diagnostics as HTMLElement).getAllByRole('link')).toHaveLength(7))
     expect(within(diagnostics as HTMLElement).getByRole('link', { name: 'Signal Entropy' }))
       .toHaveAttribute('aria-current', 'page')
 
@@ -1015,18 +1015,18 @@ describe('Layout — live nav badges', () => {
   it('shows the unread-alert badge on the inbox link', async () => {
     renderLayout('/notifications/inbox')
     await waitFor(() => {
-      const link = screen.getByRole('button', { name: 'Notifications, 5 views' })
+      const link = screen.getByRole('link', { name: 'All Notifications' })
       // ALERTS fixture has exactly one unread entry.
-      expect(within(link).getByText('1')).toBeInTheDocument()
+      expect(within(link.parentElement as HTMLElement).getByText('1')).toBeInTheDocument()
     })
   })
 
   it('shows the active durable-case badge on the "Data Repair" link', async () => {
     renderLayout('/data-repair')
     await waitFor(() => {
-      const link = screen.getByRole('button', { name: 'Data Management, 5 views' })
+      const link = screen.getByRole('link', { name: 'Data Repair' })
       // REPAIR_STATS fixture: 1 open + 2 in review = 3.
-      expect(within(link).getByText('3')).toBeInTheDocument()
+      expect(within(link.parentElement as HTMLElement).getByText('3')).toBeInTheDocument()
     })
   })
 
@@ -1088,7 +1088,7 @@ describe('Layout — section expand/collapse', () => {
 
     fireEvent.click(chargingToggle)
     expect(chargingToggle).toHaveAttribute('aria-expanded', 'true')
-    const chargingGroup = await screen.findByRole('button', { name: 'Charging, 6 views' })
+    const chargingGroup = await screen.findByRole('button', { name: 'Charging Activity, 6 views' })
     fireEvent.click(chargingGroup)
     expect(await screen.findByRole('link', { name: 'Charging Overview' })).toBeInTheDocument()
 
@@ -1105,7 +1105,7 @@ describe('Layout — section expand/collapse', () => {
     expect(expandAll).not.toBeDisabled()
     fireEvent.click(expandAll)
     // The collection is visible without opening its children.
-    const chargingGroup = await screen.findByRole('button', { name: 'Charging, 6 views' })
+    const chargingGroup = await screen.findByRole('button', { name: 'Charging Activity, 6 views' })
     fireEvent.click(chargingGroup)
     expect(await screen.findByRole('link', { name: 'Charging Overview' })).toBeInTheDocument()
     await waitFor(() => expect(expandAll).toBeDisabled())

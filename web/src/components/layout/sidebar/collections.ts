@@ -17,7 +17,7 @@ const DEFINITIONS = [
   ['Journeys', '/journeys', '/trip-planner', '/navigation', '/departure-forecast', '/arrival-reliability', '/destination-transitions', '/journey-fragmentation', '/intelligence/journey-assurance'],
   ['Driving Insights', '/drive-score', '/driving-rhythm', '/speed-sweetspot', '/efficiency-target', '/cold-start', '/milestones', '/lifetime-stats', '/fsd'],
   ['Driving Dynamics', '/driving-dynamics', '/speed-profile', '/regen-efficiency', '/route-efficiency', '/drive-dna', '/seasonal-efficiency', '/what-if'],
-  ['Charging', '/charging', '/tesla-charging-history', '/charging-curve', '/charging-heatmap', '/charge-departure-alignment', '/charging-thermal-tax'],
+  ['Charging Activity', '/charging', '/tesla-charging-history', '/charging-curve', '/charging-heatmap', '/charge-departure-alignment', '/charging-thermal-tax'],
   ['Charge Planning', '/smart-charge', '/charge-advisor', '/energy-orchestrator', '/powershare'],
   ['Charger Health', '/charger-health', '/charge-interruption', '/charger-resilience', '/intelligence/charging-forensics', '/intelligence/charging-site-twin'],
   ['Battery Health', '/battery', '/battery-cells', '/battery-degradation', '/battery-passport', '/pack-capacity', '/cycle-stress', '/battery-care'],
@@ -65,6 +65,11 @@ export function collectionGroups<T extends Item>(sections: readonly Section<T>[]
 
 export function collectionPrimaryPath(groups: readonly SectionGroup[], pathname: string) {
   return sectionPrimaryPath(groups, pathname)
+}
+
+export function soleCollection<T extends Item>(section: Section<T>, groups: readonly SectionGroup[]) {
+  if (section.items.length !== 1) return undefined
+  return groups.find(group => group.primary === section.items[0].to)
 }
 
 export function collectionSidebarSections<T extends Item>(

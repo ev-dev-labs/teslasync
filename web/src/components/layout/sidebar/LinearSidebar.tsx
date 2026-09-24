@@ -34,6 +34,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PrefetchNavLink } from '../PrefetchLink'
 import { CollectionTreeRow } from './CollectionTreeRow'
+import { soleCollection } from './collections'
 import type { SectionGroup } from '../sectionGroups'
 import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
@@ -438,6 +439,7 @@ export function LinearSidebar({
           {expandedSections.map((section, index) => {
             const expanded = isExpanded(section.title)
             const active = section.title === activeSectionTitle
+            const singleCollection = soleCollection(section, collections)
             const sectionIcon = section.items[0]?.icon ?? Icons.home
             const tier = section.tier ?? compactGroupTier(section.title)
             const previousTier =
@@ -471,7 +473,7 @@ export function LinearSidebar({
                   expanded={expanded}
                   active={active}
                   onToggle={() => toggleSection(section.title)}
-                  count={section.items.length}
+                  count={singleCollection?.pages.length ?? section.items.length}
                 />
                 {expanded && (
                   <div className="ms-4 space-y-px border-s border-[var(--border-default)] ps-2.5" role="group" aria-label={sectionLabel(section.title)}>
@@ -481,11 +483,12 @@ export function LinearSidebar({
                         ? <CollectionTreeRow
                             key={item.to}
                             group={group}
-                            icon={item.icon}
                             pathname={location.pathname}
+                            flattened={group === singleCollection}
                             onSelect={onItemSelect}
                             dataTour={item.dataTour}
                             statusCount={item.to === '/vehicles' ? vehicleCount : item.to === '/notifications/inbox' ? alertCount : item.to === '/data-export' ? staleCount : undefined}
+                            statusPath={item.to === '/data-export' ? '/data-repair' : undefined}
                             pinnedPaths={pinnedSet}
                             onPin={onPin}
                             onUnpin={onUnpin}

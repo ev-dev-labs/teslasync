@@ -34,6 +34,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PrefetchNavLink } from '../PrefetchLink'
 import { CollectionTreeRow } from './CollectionTreeRow'
+import { soleCollection } from './collections'
 import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
@@ -422,6 +423,7 @@ export function NotionSidebar({
         <div className="space-y-1" aria-labelledby="notion-pages-label">
           {expandedSections.map(section => {
             const expanded = isExpanded(section.title)
+            const singleCollection = soleCollection(section, collections)
             const glyph = sectionGlyph(section)
             return (
               <div key={section.title} className="space-y-0.5">
@@ -432,7 +434,7 @@ export function NotionSidebar({
                   expanded={expanded}
                   active={section.title === activeSectionTitle}
                   onToggle={() => toggleSection(section.title)}
-                  count={section.items.length}
+                  count={singleCollection?.pages.length ?? section.items.length}
                 />
                 {expanded && (
                   <div className="space-y-0.5" role="group" aria-label={section.titleKey ? t(section.titleKey, section.title) : section.title}>
@@ -442,11 +444,12 @@ export function NotionSidebar({
                         ? <CollectionTreeRow
                             key={item.to}
                             group={group}
-                            icon={item.icon}
                             pathname={location.pathname}
+                            flattened={group === singleCollection}
                             onSelect={onItemSelect}
                             dataTour={item.dataTour}
                             statusCount={item.to === '/vehicles' ? vehicleCount : item.to === '/notifications/inbox' ? alertCount : item.to === '/data-export' ? staleCount : undefined}
+                            statusPath={item.to === '/data-export' ? '/data-repair' : undefined}
                             pinnedPaths={pinnedSet}
                             onPin={onPin}
                             onUnpin={onUnpin}

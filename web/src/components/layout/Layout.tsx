@@ -45,8 +45,7 @@ import {
   prioritizeCanonicalNavSections,
   prioritizeCompactNavTree,
 } from './sidebar/compactNav'
-import { collectionGroups, collectionPrimaryPath, collectionSidebarSections } from './sidebar/collections'
-import { CollectionTreeRow } from './sidebar/CollectionTreeRow'
+import { collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection } from './sidebar/collections'
 import { labelSectionPrimaries } from './sectionGroups'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
@@ -114,6 +113,11 @@ const ReportMasthead = lazy(async () => {
 const LazyFeedbackModal = lazy(async () => {
   const module = await import('../feedback/FeedbackModal')
   return { default: module.FeedbackModal }
+})
+
+const LazyCollectionTreeRow = lazy(async () => {
+  const module = await import('./sidebar/CollectionTreeRow')
+  return { default: module.CollectionTreeRow }
 })
 
 const TourOverlay = lazy(async () => {
@@ -1764,6 +1768,7 @@ export default function Layout() {
             {groupedSidebarSections.map(section => {
               const isExpanded = expandedSections.has(section.title)
               const isActiveSection = section.title === activeSectionTitle
+              const singleCollection = soleCollection(section, visibleCollections)
               const sectionStyle = SECTION_ICON_STYLES[section.title]
               const SectionIcon = sectionStyle?.icon ?? Icons.sparkles
               return (
@@ -1819,7 +1824,7 @@ export default function Layout() {
                             : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
                         )}
                       >
-                        {section.items.length}
+                        {singleCollection?.pages.length ?? section.items.length}
                       </span>
                       <Icons.expand
                         className={cn(
@@ -1844,18 +1849,23 @@ export default function Layout() {
                           {section.items.map(item => {
                             const group = visibleCollections.find(candidate => candidate.primary === item.to)
                             return group
-                              ? <CollectionTreeRow
+                              ? <Suspense
                                   key={item.to}
-                                  group={group}
-                                  icon={item.icon}
-                                  pathname={location.pathname}
-                                  onSelect={() => setSidebarOpen(false)}
-                                  dataTour={'dataTour' in item ? item.dataTour : undefined}
-                                  statusCount={item.to === '/vehicles' ? vehicleCount : item.to === '/notifications/inbox' ? unreadAlerts : item.to === '/data-export' ? staleCount : undefined}
-                                  pinnedPaths={pinnedNavSet}
-                                  onPin={pinNavPath}
-                                  onUnpin={unpinNavPath}
-                                />
+                                  fallback={renderNavLink(item, true, `section-${section.title}`)}
+                                >
+                                  <LazyCollectionTreeRow
+                                    group={group}
+                                    pathname={location.pathname}
+                                    flattened={group === singleCollection}
+                                    onSelect={() => setSidebarOpen(false)}
+                                    dataTour={'dataTour' in item ? item.dataTour : undefined}
+                                    statusCount={item.to === '/vehicles' ? vehicleCount : item.to === '/notifications/inbox' ? unreadAlerts : item.to === '/data-export' ? staleCount : undefined}
+                                    statusPath={item.to === '/data-export' ? '/data-repair' : undefined}
+                                    pinnedPaths={pinnedNavSet}
+                                    onPin={pinNavPath}
+                                    onUnpin={unpinNavPath}
+                                  />
+                                </Suspense>
                               : renderNavLink(item, true, `section-${section.title}`)
                           })}
                         </div>

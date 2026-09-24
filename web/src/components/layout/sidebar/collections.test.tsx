@@ -3,9 +3,8 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { navSections } from '../Layout'
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry'
-import { Icons } from '@/lib/icons'
 import { CollectionTreeRow } from './CollectionTreeRow'
-import { COLLECTION_DEFINITIONS, collectionGroups, collectionPrimaryPath, collectionSidebarSections } from './collections'
+import { COLLECTION_DEFINITIONS, collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection } from './collections'
 
 function CurrentPath() {
   return <span data-testid="current-path">{useLocation().pathname}</span>
@@ -38,12 +37,31 @@ describe('sidebar collections', () => {
     expect(visible).not.toContain('/account/2fa')
   })
 
+  it('lists pages directly when a section has only one collection', () => {
+    const sections = collectionSidebarSections(navSections, groups)
+    const commands = sections.find(section => section.title === 'Commands')
+    expect(commands).toBeDefined()
+    const group = soleCollection(commands!, groups)
+    expect(group?.pages.map(page => page.to)).toEqual(['/commands', '/command-history', '/command-reliability'])
+    render(
+      <MemoryRouter>
+        <CollectionTreeRow group={group!} pathname="/commands" flattened statusCount={2} />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByRole('button', { name: 'Commands, 3 views' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Send Commands' })).toHaveAttribute('href', '/commands')
+    expect(screen.getByRole('link', { name: 'Command History' })).toHaveAttribute('href', '/command-history')
+    expect(screen.getByRole('link', { name: 'Command Reliability' })).toHaveAttribute('href', '/command-reliability')
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(soleCollection(sections.find(section => section.title === 'Charging')!, groups)).toBeUndefined()
+  })
+
   it('opens the active group inline and switches between original routes without a detour', async () => {
     const group = groups.find(candidate => candidate.primary === '/driving-dynamics')
     expect(group).toBeDefined()
     function Collection() {
       const { pathname } = useLocation()
-      return <CollectionTreeRow group={group!} icon={Icons.drive} pathname={pathname} />
+      return <CollectionTreeRow group={group!} pathname={pathname} />
     }
     render(
       <MemoryRouter initialEntries={['/driving-dynamics']}>
