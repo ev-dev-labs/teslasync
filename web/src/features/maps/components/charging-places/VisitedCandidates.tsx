@@ -35,7 +35,7 @@ export function VisitedCandidates({ onReview, onSelectForTemplate }: {
         <div className="max-h-96 space-y-2 overflow-y-auto">
           {candidates.map((candidate) => (
             <div key={candidate.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-3">
-              <div className="min-w-0">
+              <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
                 <Text variant="body" className="font-medium">{candidate.name || `${candidate.latitude.toFixed(4)}, ${candidate.longitude.toFixed(4)}`}</Text>
                 <Text size="sm" color="muted">
                   {t('geofences.visits.evidence', '{{visits}} visits · {{charges}} confirmed charges', { visits: candidate.visit_count, charges: candidate.charge_count })}
