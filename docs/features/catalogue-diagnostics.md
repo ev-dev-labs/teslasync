@@ -1,6 +1,21 @@
 # Diagnostics
 
-Sidebar group **Diagnostics**. In the app, expand this section in the left nav (or search `/explore`).
+The detailed sidebar groups **Diagnostics** under five linked destinations:
+**System Health** (System Status, Outage Autobiography, Tesla API Usage, API Logs),
+**Database & Data Health** (Database Health, Schema Drift, Slow Queries,
+Data Quality, Disk Forecast), **Telemetry Troubleshooting** (Live Signals,
+Live Signal Inspector, Ingest X-Ray, MQTT Inspector, DLQ Inspector,
+Redis Signals, Telemetry Coverage, State Debugger), **Signal Analysis**
+(Correlation, Entropy, Trend, Change Points, Deadband, Nonlinear Coupling),
+and **Vehicle Diagnostics** (Anomaly Detection, Remaining Useful Life,
+Root-Cause Intelligence). Dashcam & Sentry, Feature Flags, Vehicle Cost,
+Secret Rotation, Audit Log, GDPR Exports, and API Playground remain
+standalone sidebar destinations.
+
+All 33 screens retain their original URLs and functionality. Related screens
+have in-page navigation; every screen remains accessible from the feature
+catalog, search, and direct bookmarks. The compact sidebar still curates
+destinations without removing them from the catalog.
 
 | Screen | Path | What it does | When empty |
 | ------ | ---- | ------------ | ---------- |

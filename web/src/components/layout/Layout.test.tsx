@@ -801,6 +801,41 @@ describe('Layout — compact Linear sidebar wiring', () => {
       .toHaveAttribute('aria-current', 'page')
   })
 
+  it('groups diagnostics in the detailed sidebar without removing any catalog destinations', () => {
+    H.sidebarStyle.value = 'notion'
+    renderLayout('/admin/ingest-xray')
+
+    const props = H.sidebarProps.notion as unknown as {
+      pathname: string
+      sections: Array<{ title: string; items: Array<{ to: string; label: string }> }>
+    }
+    const diagnostics = props.sections.find(section => section.title === 'Diagnostics')
+    expect(diagnostics?.items.map(item => item.to)).toEqual([
+      '/system-status', '/db-health', '/anomaly-detection', '/dashcam',
+      '/signals', '/admin/flags', '/admin/vehicle-cost', '/admin/secret-rotation',
+      '/admin/audit-log', '/admin/gdpr-exports', '/signal-correlation', '/api-playground',
+    ])
+    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry Troubleshooting')
+    expect(props.pathname).toBe('/signals')
+    expect(navSections.find(section => section.title === 'Diagnostics')?.items).toHaveLength(33)
+  })
+
+  it('keeps grouped diagnostics active in the detailed sidebar and compact navigation', () => {
+    renderLayout('/signal-entropy')
+    const diagnostics = document.querySelector('#nav-section-diagnostics')
+    expect(diagnostics).toBeInTheDocument()
+    expect(within(diagnostics as HTMLElement).getAllByRole('link')).toHaveLength(12)
+    expect(within(diagnostics as HTMLElement).getByRole('link', { name: 'Signal Analysis' }))
+      .toHaveAttribute('aria-current', 'page')
+
+    cleanup()
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/signal-entropy')
+    expect(linearProps().activeSectionTitle).toBe('Developer')
+    expect(linearProps().sections.find(section => section.title === 'Developer')?.items
+      .some(item => item.to === '/signal-correlation')).toBe(true)
+  })
+
   it('uses distinct icons for system status and Tesla API usage', () => {
     const diagnostics = navSections.find((section) => section.title === 'Diagnostics')
     const status = diagnostics?.items.find((item) => item.to === '/system-status')

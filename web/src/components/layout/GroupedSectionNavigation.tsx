@@ -2,18 +2,23 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { PrefetchNavLink } from './PrefetchLink'
-import { findReportGroup } from './reportGroups'
+import { findSectionGroup, type SectionGroup } from './sectionGroups'
 
-export function ReportGroupNavigation() {
+interface GroupedSectionNavigationProps {
+  groups: readonly SectionGroup[]
+  sectionsLabelKey: string
+}
+
+export function GroupedSectionNavigation({ groups, sectionsLabelKey }: GroupedSectionNavigationProps) {
   const { pathname } = useLocation()
   const { t } = useTranslation()
-  const group = findReportGroup(pathname)
+  const group = findSectionGroup(groups, pathname)
   if (!group) return null
 
   const groupLabel = t(group.labelKey, group.label)
   return (
     <nav
-      aria-label={t('nav.reportGroups.sections', '{{group}} sections', { group: groupLabel })}
+      aria-label={t(sectionsLabelKey, '{{group}} sections', { group: groupLabel })}
       className="mb-4 flex items-center gap-1 overflow-x-auto rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-1 scrollbar-thin"
     >
       {group.pages.map(page => (

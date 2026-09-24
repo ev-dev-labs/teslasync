@@ -4532,6 +4532,14 @@
     }
   },
   "nav": {
+    "diagnosticGroups": {
+      "systemHealth": "System Health",
+      "dataHealth": "Database & Data Health",
+      "telemetry": "Telemetry Troubleshooting",
+      "signalAnalysis": "Signal Analysis",
+      "vehicle": "Vehicle Diagnostics",
+      "sections": "{{group}} sections"
+    },
     "reportGroups": {
       "fleetInsights": "Fleet Insights",
       "drivingEfficiency": "Driving Efficiency",

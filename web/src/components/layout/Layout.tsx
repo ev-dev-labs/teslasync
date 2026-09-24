@@ -45,8 +45,9 @@ import {
   prioritizeCanonicalNavSections,
   prioritizeCompactNavTree,
 } from './sidebar/compactNav'
-import { ReportGroupNavigation } from './ReportGroupNavigation'
-import { labelReportPrimaries, reportPrimaryPath, reportSidebarItems } from './reportGroups'
+import { GroupedSectionNavigation } from './GroupedSectionNavigation'
+import { REPORT_GROUPS, labelReportPrimaries, reportPrimaryPath, reportSidebarItems } from './reportGroups'
+import { DIAGNOSTIC_GROUPS, diagnosticPrimaryPath, diagnosticSidebarItems, labelDiagnosticPrimaries } from './diagnosticGroups'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
@@ -1234,22 +1235,27 @@ export default function Layout() {
       productPreferences.persona,
     ],
   )
-  const reportSidebarSections = useMemo(
+  const groupedSidebarSections = useMemo(
     () => visibleNavSections.map(section =>
       section.title === 'Reports'
         ? { ...section, items: reportSidebarItems(section.items) }
-        : section,
+        : section.title === 'Diagnostics'
+          ? { ...section, items: diagnosticSidebarItems(section.items) }
+          : section,
     ),
     [visibleNavSections],
   )
-  const compactReportSections = useMemo(
+  const compactGroupedSections = useMemo(
     () => visibleNavSections.map(section =>
       section.title === 'Reports'
         ? { ...section, items: labelReportPrimaries(section.items) }
-        : section,
+        : section.title === 'Diagnostics'
+          ? { ...section, items: labelDiagnosticPrimaries(section.items) }
+          : section,
     ),
     [visibleNavSections],
   )
+  const groupedPathname = diagnosticPrimaryPath(reportPrimaryPath(location.pathname))
   const pinnedNavItems = useMemo(() =>
     pinnedNavPaths
       .map(path => findNavItemByExactPath(path))
@@ -1275,7 +1281,7 @@ export default function Layout() {
   // Progressive disclosure for the DEFAULT (Linear) sidebar only.
   //
   // `visibleNavSections` remains the complete catalog for `/explore`, search,
-  // and pinning. Report links are grouped only in the rendered sidebars. The
+  // and pinning. Report and diagnostic links are grouped only in the rendered sidebars. The
   // Linear style instead renders a curated two-tier tree: seven everyday
   // primary groups (Overview · Vehicles · Drives · Charging · Energy ·
   // Insights · Operations) followed by intentional advanced groups. Nothing
@@ -1293,14 +1299,14 @@ export default function Layout() {
   const compactNav = useMemo(
     () =>
       prioritizeCompactNavTree(
-        buildCompactNavTree(compactReportSections, reportPrimaryPath(location.pathname), {
+        buildCompactNavTree(compactGroupedSections, groupedPathname, {
           capabilities: navCapabilities,
         }),
         productPreferences.persona,
       ),
     [
-      compactReportSections,
-      location.pathname,
+      compactGroupedSections,
+      groupedPathname,
       navCapabilities,
       productPreferences.persona,
     ],
@@ -1425,10 +1431,10 @@ export default function Layout() {
       return next
     })
   }, [activeSectionTitle])
-  const expandedSectionCount = reportSidebarSections.filter(section => expandedSections.has(section.title)).length
+  const expandedSectionCount = groupedSidebarSections.filter(section => expandedSections.has(section.title)).length
   const expandAllSections = useCallback(() => {
-    setExpandedSections(new Set(reportSidebarSections.map(section => section.title)))
-  }, [reportSidebarSections])
+    setExpandedSections(new Set(groupedSidebarSections.map(section => section.title)))
+  }, [groupedSidebarSections])
   const collapseAllSections = useCallback(() => {
     setExpandedSections(new Set())
   }, [])
@@ -1458,7 +1464,7 @@ export default function Layout() {
   const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
     const { to, icon: Icon, ...rest } = item
     const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined
-    const isActive = isExclusiveActivePath(reportPrimaryPath(location.pathname), to, NAV_CATALOG_PATHS)
+    const isActive = isExclusiveActivePath(groupedPathname, to, NAV_CATALOG_PATHS)
     const isInTabBar = BOTTOM_TAB_PATHS.has(to)
     return (
       <PrefetchNavLink
@@ -1644,9 +1650,9 @@ export default function Layout() {
         ) : sidebarStyle === 'notion' ? (
           <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
             <NotionSidebar
-              sections={reportSidebarSections}
+              sections={groupedSidebarSections}
               pinnedItems={pinnedNavItems}
-              pathname={reportPrimaryPath(location.pathname)}
+              pathname={groupedPathname}
               navLabel={navLabel}
               onPin={pinNavPath}
               onUnpin={unpinNavPath}
@@ -1752,7 +1758,7 @@ export default function Layout() {
                     size="sm"
                     aria-label={t('nav.expandAll', 'Expand all sections')}
                     title={t('nav.expandAll', 'Expand all sections')}
-                    disabled={expandedSectionCount === reportSidebarSections.length}
+                    disabled={expandedSectionCount === groupedSidebarSections.length}
                     onClick={expandAllSections}
                     className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
                   >
@@ -1773,7 +1779,7 @@ export default function Layout() {
                 </div>
               }
             />
-            {reportSidebarSections.map(section => {
+            {groupedSidebarSections.map(section => {
               const isExpanded = expandedSections.has(section.title)
               const isActiveSection = section.title === activeSectionTitle
               const sectionStyle = SECTION_ICON_STYLES[section.title]
@@ -1963,7 +1969,12 @@ export default function Layout() {
               </div>
             )}
             <RouteTransition>
-              {presentation.mode === 'standard' && <ReportGroupNavigation />}
+              {presentation.mode === 'standard' && (
+                <>
+                  <GroupedSectionNavigation groups={REPORT_GROUPS} sectionsLabelKey="nav.reportGroups.sections" />
+                  <GroupedSectionNavigation groups={DIAGNOSTIC_GROUPS} sectionsLabelKey="nav.diagnosticGroups.sections" />
+                </>
+              )}
               <Outlet />
             </RouteTransition>
           </div>

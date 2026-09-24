@@ -1,3 +1,10 @@
+import {
+  findSectionGroup,
+  labelSectionPrimaries,
+  sectionPrimaryPath,
+  sectionSidebarItems,
+} from './sectionGroups'
+
 export const REPORT_GROUPS = [
   {
     primary: '/statistics',
@@ -31,30 +38,22 @@ export const REPORT_GROUPS = [
 ] as const
 
 const REPORT_STANDALONE_PATHS = ['/share-card', '/analytics/carbon', '/benchmarks/privacy']
-const REPORT_PRIMARY_PATHS = new Set<string>([
-  ...REPORT_GROUPS.map(group => group.primary),
-  ...REPORT_STANDALONE_PATHS,
-])
-
 export function findReportGroup(pathname: string) {
-  return REPORT_GROUPS.find(group => group.pages.some(page => page.to === pathname))
+  return findSectionGroup(REPORT_GROUPS, pathname)
 }
 
 export function reportPrimaryPath(pathname: string) {
-  return findReportGroup(pathname)?.primary ?? pathname
+  return sectionPrimaryPath(REPORT_GROUPS, pathname)
 }
 
 export function labelReportPrimaries<T extends { to: string; label: string; labelKey: string }>(
   items: readonly T[],
 ): T[] {
-  return items.map(item => {
-    const group = REPORT_GROUPS.find(candidate => candidate.primary === item.to)
-    return group ? { ...item, label: group.label, labelKey: group.labelKey } : item
-  })
+  return labelSectionPrimaries(items, REPORT_GROUPS)
 }
 
 export function reportSidebarItems<T extends { to: string; label: string; labelKey: string }>(
   items: readonly T[],
 ): T[] {
-  return labelReportPrimaries(items.filter(item => REPORT_PRIMARY_PATHS.has(item.to)))
+  return sectionSidebarItems(items, REPORT_GROUPS, REPORT_STANDALONE_PATHS)
 }
