@@ -130,6 +130,7 @@ data:
   TESLA_COMMAND_PROXY_URL: {{ $proxyURL | quote }}
   {{- end }}
   TESLA_COMMAND_PROXY_CA_FILE: {{ .Values.commandProxy.caFile | quote }}
+  TESLA_COMMAND_PROXY_TLS_SERVER_NAME: {{ .Values.commandProxy.tlsServerName | quote }}
   {{- if .Values.gasPrice }}
   GAS_PRICE_ENABLED: {{ .Values.gasPrice.enabled | default false | quote }}
   GAS_PRICE_POLL_INTERVAL: {{ .Values.gasPrice.pollInterval | default "7d" | quote }}
