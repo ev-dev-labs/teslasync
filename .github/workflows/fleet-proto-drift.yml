@@ -1,0 +1,78 @@
+name: fleet-proto-drift
+
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fleet-proto-drift
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Test the drift detector
+        run: python3 -m unittest discover -s scripts -p 'test_check_fleet_proto_drift.py'
+      - name: Fetch the current upstream schema at a fixed revision
+        id: upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha="$(gh api repos/teslamotors/fleet-telemetry/commits/main --jq .sha)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/teslamotors/fleet-telemetry/$sha/protos/vehicle_data.proto" \
+            --output "$RUNNER_TEMP/upstream-vehicle_data.proto"
+      - name: Compare schema and identify field additions
+        id: compare
+        env:
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
+        run: |
+          set -euo pipefail
+          result=0
+          python3 scripts/check-fleet-proto-drift.py \
+            --upstream "$RUNNER_TEMP/upstream-vehicle_data.proto" \
+            --commit "$UPSTREAM_SHA" --report "$RUNNER_TEMP/drift.md" || result=$?
+          cat "$RUNNER_TEMP/drift.md" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$result" -eq 2 ]; then
+            echo 'drift=true' >> "$GITHUB_OUTPUT"
+          elif [ "$result" -ne 0 ]; then
+            exit "$result"
+          fi
+      - name: Open or update a tracking issue
+        if: steps.compare.outputs.drift == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          title='Tesla Fleet Telemetry proto drift'
+          number="$(gh issue list --state open --search '"Tesla Fleet Telemetry proto drift" in:title' --limit 100 --json number,title \
+            --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)"
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file "$RUNNER_TEMP/drift.md"
+          else
+            gh issue create --title "$title" --body-file "$RUNNER_TEMP/drift.md"
+          fi
+          echo 'Upstream proto drift requires review' >&2
+          exit 1
+      - name: Close a resolved drift issue
+        if: steps.compare.outputs.drift != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          title='Tesla Fleet Telemetry proto drift'
+          number="$(gh issue list --state open --search '"Tesla Fleet Telemetry proto drift" in:title' --limit 100 --json number,title \
+            --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)"
+          if [ -n "$number" ]; then
+            gh issue close "$number" --reason completed \
+              --comment 'The vendored vehicle_data.proto now matches upstream main.'
+          fi
