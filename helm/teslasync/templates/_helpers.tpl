@@ -47,7 +47,7 @@ Truncated at 63 chars to comply with DNS naming spec.
 Chart label.
 */}}
 {{- define "teslasync.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimAll "-_." }}
 {{- end }}
 
 {{/*
@@ -57,7 +57,7 @@ Common labels applied to every resource.
 helm.sh/chart: {{ include "teslasync.chart" . }}
 {{ include "teslasync.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | trunc 63 | quote }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | trunc 63 | trimAll "-_." | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
