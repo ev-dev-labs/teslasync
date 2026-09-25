@@ -98,9 +98,14 @@ export function unpinnedSidebarItems<T extends Item>(
 export function quickAccessSidebarItems<T extends Item>(
   items: readonly T[],
   groups: readonly SectionGroup[],
+  pathname: string,
 ): T[] {
   return items.filter(item =>
-    !groups.some(group => group.keepPrimaryVisibleWhenPinned && group.primary === item.to),
+    !groups.some(group =>
+      group.keepPrimaryVisibleWhenPinned
+      && group.primary === item.to
+      && group.pages.some(page => page.to === pathname),
+    ),
   )
 }
 

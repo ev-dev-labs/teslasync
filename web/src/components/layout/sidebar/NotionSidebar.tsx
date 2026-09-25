@@ -258,7 +258,7 @@ export function NotionSidebar({
   // instead of throwing on `.map` / `.filter` / `.length`.
   const safeSections = sections ?? []
   const safePinnedItems = pinnedItems ?? []
-  const visiblePinned = quickAccessSidebarItems(safePinnedItems, collections)
+  const visiblePinned = quickAccessSidebarItems(safePinnedItems, collections, effectivePath)
   const catalogPaths = useMemo(() => {
     const paths = safeSections.flatMap(section => section.items.map(item => item.to))
     for (const item of safePinnedItems) paths.push(item.to)

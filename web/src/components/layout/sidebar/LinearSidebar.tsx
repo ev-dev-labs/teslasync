@@ -276,7 +276,7 @@ export function LinearSidebar({
   // changes that bypass the parent re-render.
   const effectivePath = pathname ?? location.pathname
 
-  // A pinned destination is shown in Quick access, not repeated in its section.
+  // Charging Overview stays in its collection while that collection is active.
   const pinnedSet = useMemo(
     () => new Set(pinnedItems.map(item => item.to)),
     [pinnedItems],
@@ -322,7 +322,7 @@ export function LinearSidebar({
     })
   }
 
-  const visiblePinned = quickAccessSidebarItems(pinnedItems, collections)
+  const visiblePinned = quickAccessSidebarItems(pinnedItems, collections, effectivePath)
   const isExpanded = (title: string) => !collapsed.has(title)
 
   // ── Trailing-badge logic per item ──────────────────────────────────────

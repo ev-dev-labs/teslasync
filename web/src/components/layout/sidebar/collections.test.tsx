@@ -105,8 +105,10 @@ describe('sidebar collections', () => {
     const chargingSection = collectionSidebarSections(navSections, groups).find(section => section.title === 'Charging')!
     expect(unpinnedSidebarItems(chargingSection.items, groups, new Set(group.pages.map(page => page.to))))
       .toContainEqual(expect.objectContaining({ to: '/charging' }))
-    expect(quickAccessSidebarItems(group.pages.slice(0, 2), groups).map(page => page.to))
+    expect(quickAccessSidebarItems(group.pages.slice(0, 2), groups, '/charging').map(page => page.to))
       .toEqual(['/tesla-charging-history'])
+    expect(quickAccessSidebarItems(group.pages.slice(0, 2), groups, '/vehicles').map(page => page.to))
+      .toEqual(['/charging', '/tesla-charging-history'])
 
     render(
       <MemoryRouter initialEntries={['/charging']}>
