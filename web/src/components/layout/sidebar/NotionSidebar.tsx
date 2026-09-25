@@ -34,7 +34,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PrefetchNavLink } from '../PrefetchLink'
 import { CollectionTreeRow } from './CollectionTreeRow'
-import { soleCollection, unpinnedSidebarItems } from './collections'
+import { quickAccessSidebarItems, soleCollection, unpinnedSidebarItems } from './collections'
 import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
 import { routeIconColor } from './iconColors'
 import { Button } from '@/components/ui/runtime'
@@ -258,6 +258,7 @@ export function NotionSidebar({
   // instead of throwing on `.map` / `.filter` / `.length`.
   const safeSections = sections ?? []
   const safePinnedItems = pinnedItems ?? []
+  const visiblePinned = quickAccessSidebarItems(safePinnedItems, collections, effectivePath)
   const catalogPaths = useMemo(() => {
     const paths = safeSections.flatMap(section => section.items.map(item => item.to))
     for (const item of safePinnedItems) paths.push(item.to)
@@ -375,13 +376,13 @@ export function NotionSidebar({
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Favorites group — only when there's at least one pin. */}
-        {safePinnedItems.length > 0 && (
+        {visiblePinned.length > 0 && (
           <div className="mb-4 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)]/60 p-2">
             <GroupLabel id="notion-favorites-label">
               {t('nav.quickAccess', 'Quick access')}
             </GroupLabel>
             <div className="space-y-1" aria-labelledby="notion-favorites-label">
-              {safePinnedItems.map(item => (
+              {visiblePinned.map(item => (
                   <NotionRow
                     key={`fav-${item.to}`}
                     to={item.to}

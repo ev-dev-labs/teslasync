@@ -7,7 +7,7 @@
 import { useMemo, useState, type ElementType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Button as UiButton, Badge, Text, Caption } from '@/components/ui';
+import { GlassPanel, Button as UiButton, Badge, Text, Caption, Tooltip } from '@/components/ui';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { QueryError } from '@/components/feedback/QueryError';
@@ -79,8 +79,8 @@ function PresetCard({
   };
 
   return (
-    <GlassPanel hover glow="cyan" className="p-5 flex flex-col gap-3">
-      <div className="flex items-start gap-3">
+    <GlassPanel hover glow="cyan" className="flex h-full flex-col gap-3 p-5">
+      <div className="flex min-h-24 items-start gap-3">
         <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
           <Icon className="h-5 w-5 text-cyan-400" aria-hidden="true" />
         </div>
@@ -93,12 +93,26 @@ function PresetCard({
               ? t(triggerLabel.key, triggerLabel.fallback)
               : t('automations.builder.noTrigger', 'No trigger configured')}
           </Text>
+          <Badge variant="neutral" size="sm" className="mt-1">
+            {actionCount === 1
+              ? t('automations.presets.actionOne', '1 action')
+              : t('automations.presets.actionCount', '{{count}} actions', { count: actionCount })}
+          </Badge>
         </div>
-        <Badge variant="neutral" size="sm">
-          {t('automations.presets.actionCount', '{{count}} actions', {
-            count: actionCount,
-          })}
-        </Badge>
+        <Tooltip
+          multiline
+          content={<div className="max-w-xs space-y-1"><strong>{preset.name}</strong><p>{preset.description}</p></div>}
+        >
+          <UiButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={t('automations.presets.details', 'Details for {{name}}', { name: preset.name })}
+            className="h-8 w-8 shrink-0 p-0"
+          >
+            <Icons.info className="h-4 w-4" aria-hidden="true" />
+          </UiButton>
+        </Tooltip>
       </div>
 
       <Text as="p" variant="bodySm" className="leading-relaxed line-clamp-2">
@@ -114,7 +128,7 @@ function PresetCard({
         aria-label={t('automations.presets.installNamed', 'Install {{name}}', {
           name: preset.name,
         })}
-        className="mt-1 w-full"
+        className="mt-auto w-full"
       >
         <Icons.add className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
         {t('automations.presets.install', 'Install')}
@@ -125,7 +139,7 @@ function PresetCard({
 
 function PresetCardSkeleton() {
   return (
-    <GlassPanel className="p-5 flex flex-col gap-3">
+    <GlassPanel className="flex h-full flex-col gap-3 p-5">
       <div className="flex items-start gap-3">
         <Skeleton className="w-10 h-10 rounded-lg" />
         <div className="flex-1">
@@ -261,7 +275,7 @@ export function PresetGallery({
         <FadeIn>
           <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredPresets.map((preset) => (
-              <StaggerItem key={preset.id}>
+              <StaggerItem key={preset.id} className="h-full">
                 <PresetCard
                   preset={preset}
                   actionsDisabled={actionsDisabled}

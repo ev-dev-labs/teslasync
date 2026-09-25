@@ -479,7 +479,7 @@
         "categoryFilter": "Filter templates by category",
         "allCategory": "All",
         "showing": "{{count}} of {{total}} templates",
-        "use": "Use",
+        "use": "Use template",
         "noMatchesTitle": "No templates found",
         "noMatches": "No templates match your search"
       },

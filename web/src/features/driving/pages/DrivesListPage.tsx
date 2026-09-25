@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Route, Gauge, TrendingUp, Clock, Sparkles,
   ArrowUpDown, ArrowDown, Download, Activity,
-  Trash2, AlertTriangle, Star, Repeat, Tag, List as ListIcon,
+  Trash2, AlertTriangle,
   BatteryCharging, Bell, Car, GitCompareArrows, MapPin, Wrench,
 } from 'lucide-react';
 import { PageContainer, PageHeaderSticky } from '@/components/layout';
@@ -728,13 +728,13 @@ export default function DrivesListPage() {
     </InlineCallout>
   ) : null;
 
-  /* ---- Collections pill items ---- */
+  /* ---- Collection filters ---- */
   const collectionPills: PillItem[] = useMemo(() => [
-    { key: 'all',       label: t('drives.coll.all', 'All'),             count: dateFilteredDrives.length, accent: 'cyan',   icon: <ListIcon className="h-3 w-3" /> },
-    { key: 'anomalies', label: t('drives.coll.anomalies', 'Anomalies'), count: anomalyDrives.length,       accent: 'red',    icon: <AlertTriangle className="h-3 w-3" /> },
-    { key: 'notable',   label: t('drives.coll.notable', 'Notable'),     count: notableDrives.length,       accent: 'purple', icon: <Star className="h-3 w-3" /> },
-    { key: 'commutes',  label: t('drives.coll.commutes', 'Commutes'),   count: commuteDrives.length,       accent: 'green',  icon: <Repeat className="h-3 w-3" /> },
-    { key: 'tagged',    label: t('drives.coll.tagged', 'Tagged'),       count: 0,                          accent: 'amber',  icon: <Tag className="h-3 w-3" />, disabled: true },
+    { key: 'all',       label: t('drives.coll.all', 'All'),             count: dateFilteredDrives.length },
+    { key: 'anomalies', label: t('drives.coll.anomalies', 'Anomalies'), count: anomalyDrives.length },
+    { key: 'notable',   label: t('drives.coll.notable', 'Notable'),     count: notableDrives.length },
+    { key: 'commutes',  label: t('drives.coll.commutes', 'Commutes'),   count: commuteDrives.length },
+    { key: 'tagged',    label: t('drives.coll.tagged', 'Tagged'),       count: 0, disabled: true },
   ], [t, dateFilteredDrives.length, anomalyDrives.length, notableDrives.length, commuteDrives.length]);
 
   const fsdPills: PillItem[] = useMemo(() => {
@@ -748,7 +748,6 @@ export default function DrivesListPage() {
         key: 'all',
         label: t('drives.fsdFilter.all', 'All FSD data'),
         count: collectionFiltered.length,
-        accent: 'cyan',
       },
       {
         key: 'reported',
@@ -756,35 +755,30 @@ export default function DrivesListPage() {
         count: count((insight) => insight != null
           && insight.confidence !== 'unknown'
           && insight.fsd_distance_m != null),
-        accent: 'green',
         disabled: !fsdDataAvailable,
       },
       {
         key: 'high',
         label: t('drives.fsdFilter.high', 'High confidence'),
         count: count((insight) => insight?.confidence === 'high'),
-        accent: 'green',
         disabled: !fsdDataAvailable,
       },
       {
         key: 'estimated',
         label: t('drives.fsdFilter.estimated', 'Estimated'),
         count: count((insight) => insight?.confidence === 'estimated'),
-        accent: 'cyan',
         disabled: !fsdDataAvailable,
       },
       {
         key: 'ambiguous',
         label: t('drives.fsdFilter.ambiguous', 'Ambiguous'),
         count: count((insight) => insight?.confidence === 'ambiguous'),
-        accent: 'amber',
         disabled: !fsdDataAvailable,
       },
       {
         key: 'unknown',
         label: t('drives.fsdFilter.unknown', 'Unknown'),
         count: count((insight) => insight?.confidence === 'unknown'),
-        accent: 'red',
         disabled: !fsdDataAvailable,
       },
     ];

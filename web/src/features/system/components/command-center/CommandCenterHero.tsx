@@ -7,15 +7,18 @@ import {
   Heading,
   StatusPill,
 } from '@/components/ui';
-import { MetricTile, FreshnessIndicator } from '@/components/data-display';
+import { MetricTile, TimeStamp } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { deriveTrustedVehicleStatus } from '@/api/hooks/useVehicles';
+import type { VehicleState } from '@/api/types';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
-import type { Vehicle, VehicleState } from '../../commands';
+import type { Vehicle } from '../../commands';
 
 interface CommandCenterHeroProps {
   vehicle: Vehicle;
   state: VehicleState | null;
+  stateTrust: Parameters<typeof deriveTrustedVehicleStatus>[1];
   loading: boolean;
   error: unknown;
   onRetry: () => void;
@@ -32,6 +35,7 @@ const STATUS_COLORS: Record<string, string> = {
 export function CommandCenterHero({
   vehicle,
   state,
+  stateTrust,
   loading,
   error,
   onRetry,
@@ -43,10 +47,15 @@ export function CommandCenterHero({
     vehicle.vin ||
     t('commands.vehicle.fallbackName', 'Vehicle {{id}}', { id: vehicle.id });
   const rawStatus = (state?.state || vehicle.state || 'offline').toLowerCase();
-  const statusLabel = t(
-    `commands.status.${rawStatus}`,
-    rawStatus.replace(/_/g, ' ').replace(/\b\w/g, (value) => value.toUpperCase()),
+  const verifiedStatus = deriveTrustedVehicleStatus(state, stateTrust);
+  const status = verifiedStatus ?? rawStatus;
+  const knownStatus = t(
+    `commands.status.${status}`,
+    status.replace(/_/g, ' ').replace(/\b\w/g, (value) => value.toUpperCase()),
   );
+  const statusLabel = verifiedStatus
+    ? knownStatus
+    : t('commands.hero.lastKnownStatus', 'Last known: {{status}}', { status: knownStatus });
 
   const battery = state?.battery_level != null ? state.battery_level : null;
   const range =
@@ -91,12 +100,16 @@ export function CommandCenterHero({
 
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill
-              color={STATUS_COLORS[rawStatus] ?? 'bg-[var(--text-muted)]'}
-              pulse={rawStatus === 'online'}
+              color={verifiedStatus ? STATUS_COLORS[verifiedStatus] ?? 'bg-[var(--text-muted)]' : 'bg-[var(--text-muted)]'}
+              pulse={verifiedStatus === 'online'}
             >
               {statusLabel}
             </StatusPill>
-            <FreshnessIndicator timestamp={vehicle.updated_at} size="md" />
+            <Caption>
+              {stateTrust?.observedAt != null
+                ? <>{t('commands.hero.lastSignal', 'Last signal')}: <TimeStamp value={stateTrust.observedAt} format="relative" /></>
+                : t('commands.hero.noSignalTime', 'No verified signal time')}
+            </Caption>
           </div>
         </div>
 

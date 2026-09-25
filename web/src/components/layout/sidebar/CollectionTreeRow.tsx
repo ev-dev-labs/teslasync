@@ -33,7 +33,9 @@ export function CollectionTreeRow({
   }, [active, pathname])
 
   const label = t(group.labelKey, group.label)
-  const visiblePages = group.pages.filter(page => !pinnedPaths?.has(page.to))
+  const visiblePages = group.pages.filter(page =>
+    (group.keepPrimaryVisibleWhenPinned && page.to === group.primary) || !pinnedPaths?.has(page.to),
+  )
   const GroupIcon = SIDEBAR_COLLECTION_ICONS[group.primary] ?? group.pages[0]?.icon ?? Icons.folderOpen
   const childrenId = `collection-${group.primary.slice(1).replace(/\W/g, '-')}`
   return (

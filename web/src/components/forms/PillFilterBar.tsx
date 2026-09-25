@@ -1,4 +1,5 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { fmtInt } from '@/lib/numberFormat';
 
@@ -14,10 +15,7 @@ export interface PillItem {
   icon?: ReactNode;
   /** Optional count rendered as a muted suffix, e.g. `(12)`. */
   count?: number;
-  /**
-   * Optional accent colour used by the dot/active border. Falls back to
-   * cyan to match the rest of the app's neon palette.
-   */
+  /** Optional accent colour for the active underline in the `tabs` variant. */
   accent?: 'cyan' | 'green' | 'amber' | 'red' | 'purple' | 'blue';
   /** Disabled pills are skipped during arrow navigation. */
   disabled?: boolean;
@@ -31,7 +29,7 @@ export interface PillFilterBarProps {
   ariaLabel: string;
   /**
    * Render style:
-   *   - `pills` (default) — rounded-full chips with active fill
+   *   - `pills` (default) — outlined buttons with a solid active fill
    *   - `tabs`            — flat row with bottom-border underline
    */
   variant?: 'pills' | 'tabs';
@@ -42,15 +40,6 @@ export interface PillFilterBarProps {
   /** Test hook for the outer container. */
   testId?: string;
 }
-
-const ACCENT_PILL: Record<NonNullable<PillItem['accent']>, { active: string; dot: string }> = {
-  cyan:   { active: 'bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-400/40',   dot: 'bg-cyan-400' },
-  green:  { active: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/40', dot: 'bg-emerald-400' },
-  amber:  { active: 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/40', dot: 'bg-amber-400' },
-  red:    { active: 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/40',   dot: 'bg-rose-400' },
-  purple: { active: 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-400/40', dot: 'bg-purple-400' },
-  blue:   { active: 'bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-400/40', dot: 'bg-indigo-400' },
-};
 
 const ACCENT_TAB: Record<NonNullable<PillItem['accent']>, string> = {
   cyan:   'border-cyan-400 text-cyan-300',
@@ -64,8 +53,7 @@ const ACCENT_TAB: Record<NonNullable<PillItem['accent']>, string> = {
 /**
  * `PillFilterBar` — accessible single-select filter row used for trend
  * metric switchers, list-page collections (All / Anomalies / Notable / …),
- * and similar "pick one" surfaces where a tab-style affordance is too
- * heavy.
+ * and similar "pick one" surfaces.
  *
  * Implements the WAI-ARIA Tabs pattern: the row is a `tablist`, each pill
  * is a `tab`, and Left/Right/Home/End move focus + activation. Selected
@@ -135,14 +123,7 @@ export function PillFilterBar({
 
         const baseClass =
           variant === 'pills'
-            ? cn(
-                'inline-flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
-                selected
-                  ? ACCENT_PILL[accent].active
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-white/[0.04]',
-                item.disabled && 'cursor-not-allowed opacity-40',
-              )
+            ? 'shrink-0 gap-1.5 whitespace-nowrap rounded-shape-sm px-3 text-xs'
             : cn(
                 'inline-flex items-center gap-1.5 shrink-0 px-3 py-2 text-sm font-medium border-b-2 transition-colors',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
@@ -153,7 +134,7 @@ export function PillFilterBar({
               );
 
         return (
-          <button
+          <Button
             key={item.key}
             id={`${tablistId}-tab-${item.key}`}
             ref={(el) => {
@@ -161,6 +142,8 @@ export function PillFilterBar({
               else refs.current.delete(item.key);
             }}
             type="button"
+            variant={variant === 'pills' ? (selected ? 'primary' : 'outline') : 'ghost'}
+            size="sm"
             role="tab"
             aria-selected={selected}
             tabIndex={selected ? 0 : -1}
@@ -169,9 +152,6 @@ export function PillFilterBar({
             onKeyDown={(e) => handleKeyDown(e, item.key)}
             className={baseClass}
           >
-            {variant === 'pills' && selected && (
-              <span className={cn('h-1.5 w-1.5 rounded-full', ACCENT_PILL[accent].dot)} aria-hidden />
-            )}
             {item.icon && (
               <span className="inline-flex items-center [&>svg]:h-3.5 [&>svg]:w-3.5" aria-hidden>
                 {item.icon}
@@ -188,7 +168,7 @@ export function PillFilterBar({
                 ({fmtInt(item.count)})
               </span>
             )}
-          </button>
+          </Button>
         );
       })}
     </div>

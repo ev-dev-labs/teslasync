@@ -209,7 +209,7 @@ describe('CommandsPage', () => {
       'Cybertruck',
     );
     expect(screen.queryByTestId('vehicle-management-workspace')).not.toBeInTheDocument();
-    expect(screen.getByText('1/2 recently reachable')).toBeInTheDocument();
+    expect(screen.getByText('1/2 last reported active')).toBeInTheDocument();
 
     const picker = screen.getByLabelText('Select vehicle');
     expect(picker).toHaveValue('2');

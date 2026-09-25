@@ -42,7 +42,7 @@ import {
   prioritizeCanonicalNavSections,
   prioritizeCompactNavTree,
 } from './sidebar/compactNav'
-import { collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection, unpinnedSidebarItems } from './sidebar/collections'
+import { collectionGroups, collectionPrimaryPath, collectionSidebarSections, quickAccessSidebarItems, soleCollection, unpinnedSidebarItems } from './sidebar/collections'
 import { SIDEBAR_ROUTE_ICONS, SIDEBAR_SECTION_ICONS } from './sidebar/sidebarIcons'
 import { labelSectionPrimaries } from './sectionGroups'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
@@ -1539,14 +1539,14 @@ export default function Layout() {
             </div>
           )}
 
-          {pinnedNavItems.length > 0 && (
+          {quickAccessSidebarItems(pinnedNavItems, visibleCollections, location.pathname).length > 0 && (
             <div>
               <NavSectionHeader
                 id="nav-pinned-label"
                 label={t('nav.pinned', 'Pinned')}
               />
               <div className="space-y-0.5" aria-labelledby="nav-pinned-label">
-                {pinnedNavItems.map(item => (
+                {quickAccessSidebarItems(pinnedNavItems, visibleCollections, location.pathname).map(item => (
                   <div key={item.to} className="flex items-center gap-1">
                     <div className="min-w-0 flex-1">
                       {renderNavLink(item, true, 'pinned')}

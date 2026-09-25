@@ -297,6 +297,8 @@
       "title": "Quick Start Templates",
       "hint": "One-click install",
       "actionCount": "{{count}} actions",
+      "actionOne": "1 action",
+      "details": "Details for {{name}}",
       "install": "Install",
       "empty": "No preset templates available",
       "emptyCategory": "No templates match your filters",
