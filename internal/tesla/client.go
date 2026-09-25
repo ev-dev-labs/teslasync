@@ -83,7 +83,10 @@ func NewClient(cfg config.TeslaConfig) *Client {
 	limiter := rate.NewLimiter(rate.Every(100*time.Millisecond), 5)
 
 	// A private proxy CA is scoped to this transport, never Fleet API traffic.
-	proxyTLS := &tls.Config{MinVersion: tls.VersionTLS12}
+	proxyTLS := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		ServerName: cfg.CommandProxyTLSServerName,
+	}
 	if cfg.CommandProxyCAFile != "" {
 		proxyTLS.RootCAs = x509.NewCertPool()
 		pem, err := os.ReadFile(cfg.CommandProxyCAFile)
