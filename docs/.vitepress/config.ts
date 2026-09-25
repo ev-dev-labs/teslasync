@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 
-// GitHub Pages serves the site from /teslasync/; local dev and custom
-// domains serve from /. CI sets DOCS_BASE (see .github/workflows/docs.yml).
+// teslasync.dev serves the site from /. Forks without a custom domain can
+// set DOCS_BASE to their GitHub Pages project path (e.g. /teslasync/).
 const base = process.env.DOCS_BASE || '/'
 
 export default withMermaid(defineConfig({
@@ -56,11 +56,11 @@ export default withMermaid(defineConfig({
       },
     ],
     // Absolute by crawler requirement; custom-domain forks must update this.
-    ['meta', { property: 'og:image', content: 'https://ev-dev-labs.github.io/teslasync/og.png' }],
+    ['meta', { property: 'og:image', content: 'https://teslasync.dev/og.png' }],
     ['meta', { property: 'og:image:width', content: '1200' }],
     ['meta', { property: 'og:image:height', content: '630' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:image', content: 'https://ev-dev-labs.github.io/teslasync/og.png' }],
+    ['meta', { name: 'twitter:image', content: 'https://teslasync.dev/og.png' }],
   ],
 
   lastUpdated: true,

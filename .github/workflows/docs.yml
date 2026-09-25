@@ -44,11 +44,14 @@ jobs:
 
       - name: Install and build
         env:
-          DOCS_BASE: /teslasync/
+          DOCS_BASE: /
         run: |
           cd docs
           npm ci --legacy-peer-deps
           npm run docs:build
+
+      - name: Verify custom-domain asset paths
+        run: node docs/scripts/verify-pages-assets.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
