@@ -43,6 +43,8 @@ jobs:
           cache-dependency-path: docs/package-lock.json
 
       - name: Install and build
+        env:
+          DOCS_BASE: /teslasync/
         run: |
           cd docs
           npm ci --legacy-peer-deps
