@@ -95,6 +95,15 @@ export function unpinnedSidebarItems<T extends Item>(
   })
 }
 
+export function quickAccessSidebarItems<T extends Item>(
+  items: readonly T[],
+  groups: readonly SectionGroup[],
+): T[] {
+  return items.filter(item =>
+    !groups.some(group => group.keepPrimaryVisibleWhenPinned && group.primary === item.to),
+  )
+}
+
 export function collectionSidebarSections<T extends Item>(
   sections: readonly Section<T>[],
   groups: readonly SectionGroup[],

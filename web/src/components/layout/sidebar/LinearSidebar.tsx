@@ -34,7 +34,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PrefetchNavLink } from '../PrefetchLink'
 import { CollectionTreeRow } from './CollectionTreeRow'
-import { soleCollection, unpinnedSidebarItems } from './collections'
+import { quickAccessSidebarItems, soleCollection, unpinnedSidebarItems } from './collections'
 import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
 import { routeIconColor } from './iconColors'
 import type { SectionGroup } from '../sectionGroups'
@@ -322,7 +322,7 @@ export function LinearSidebar({
     })
   }
 
-  const visiblePinned = pinnedItems
+  const visiblePinned = quickAccessSidebarItems(pinnedItems, collections)
   const isExpanded = (title: string) => !collapsed.has(title)
 
   // ── Trailing-badge logic per item ──────────────────────────────────────

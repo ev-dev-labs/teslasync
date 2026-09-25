@@ -7,7 +7,7 @@ import en from '@/i18n/en.json'
 import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
 import { SIDEBAR_COLLECTION_ICONS } from './sidebarCollectionIcons'
 import { CollectionTreeRow } from './CollectionTreeRow'
-import { COLLECTION_DEFINITIONS, collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection, unpinnedSidebarItems } from './collections'
+import { COLLECTION_DEFINITIONS, collectionGroups, collectionPrimaryPath, collectionSidebarSections, quickAccessSidebarItems, soleCollection, unpinnedSidebarItems } from './collections'
 
 function CurrentPath() {
   return <span data-testid="current-path">{useLocation().pathname}</span>
@@ -105,6 +105,8 @@ describe('sidebar collections', () => {
     const chargingSection = collectionSidebarSections(navSections, groups).find(section => section.title === 'Charging')!
     expect(unpinnedSidebarItems(chargingSection.items, groups, new Set(group.pages.map(page => page.to))))
       .toContainEqual(expect.objectContaining({ to: '/charging' }))
+    expect(quickAccessSidebarItems(group.pages.slice(0, 2), groups).map(page => page.to))
+      .toEqual(['/tesla-charging-history'])
 
     render(
       <MemoryRouter initialEntries={['/charging']}>
