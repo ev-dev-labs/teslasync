@@ -280,6 +280,8 @@ const (
 	Field_SoftwareUpdateInProgress                  Field = 267
 	Field_RemoteStartActive                         Field = 268
 	Field_SemiCruiseSpeedLimitMph                   Field = 269
+	Field_Cabin12vPortKeepOn                        Field = 270
+	Field_Cabin48vPortKeepOn                        Field = 271
 )
 
 // Name returns the protobuf field name for this Field. Returns the empty
@@ -826,6 +828,10 @@ func (f Field) Name() string {
 		return "RemoteStartActive"
 	case Field_SemiCruiseSpeedLimitMph:
 		return "SemiCruiseSpeedLimitMph"
+	case Field_Cabin12vPortKeepOn:
+		return "Cabin12vPortKeepOn"
+	case Field_Cabin48vPortKeepOn:
+		return "Cabin48vPortKeepOn"
 	}
 	return ""
 }
@@ -1384,6 +1390,10 @@ func ParseField(s string) (Field, error) {
 		return Field_RemoteStartActive, nil
 	case "SemiCruiseSpeedLimitMph":
 		return Field_SemiCruiseSpeedLimitMph, nil
+	case "Cabin12vPortKeepOn":
+		return Field_Cabin12vPortKeepOn, nil
+	case "Cabin48vPortKeepOn":
+		return Field_Cabin48vPortKeepOn, nil
 	}
 	return Field(0), fmt.Errorf("protomodel: unknown Field name %q", s)
 }
@@ -1665,6 +1675,8 @@ var Signals = []SignalMeta{
 	{Field: "SoftwareUpdateInProgress", ProtoEnumNum: 267, Category: "vehicle_state", ValueKind: ValueKindBool, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "RemoteStartActive", ProtoEnumNum: 268, Category: "vehicle_state", ValueKind: ValueKindBool, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "SemiCruiseSpeedLimitMph", ProtoEnumNum: 269, Category: "driving", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "Cabin12vPortKeepOn", ProtoEnumNum: 270, Category: "vehicle_state", ValueKind: ValueKindEnum, EnumTypeName: "CabinPortKeepOnState", EnumStringPrefix: "CabinPortKeepOnState", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "Cabin48vPortKeepOn", ProtoEnumNum: 271, Category: "vehicle_state", ValueKind: ValueKindEnum, EnumTypeName: "CabinPortKeepOnState", EnumStringPrefix: "CabinPortKeepOnState", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 }
 
 // SignalsByName indexes Signals by canonical proto field name. The pointer

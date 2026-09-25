@@ -79,6 +79,10 @@ routes:
     dest: signal_log
   - field: BrickSocMinPercent
     dest: signal_log
+  - field: Cabin12vPortKeepOn
+    dest: signal_log
+  - field: Cabin48vPortKeepOn
+    dest: signal_log
   - field: CabinOverheatProtectionMode
     dest: climate_snapshot
     column: cabin_overheat_protection_mode

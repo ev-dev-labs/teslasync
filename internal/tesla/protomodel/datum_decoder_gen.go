@@ -240,6 +240,8 @@ func DecodeValue(v *ftproto.Value) (any, error) {
 		return strings.TrimPrefix(x.MediaStatusValue.String(), "MediaStatus"), nil
 	case *ftproto.Value_SunroofInstalledStateValue:
 		return strings.TrimPrefix(x.SunroofInstalledStateValue.String(), "SunroofInstalledState"), nil
+	case *ftproto.Value_CabinPortKeepOnValue:
+		return strings.TrimPrefix(x.CabinPortKeepOnValue.String(), "CabinPortKeepOnState"), nil
 	default:
 		// A type the upstream ftproto package added that this codegen has
 		// not yet classified. Returning a descriptive error keeps the

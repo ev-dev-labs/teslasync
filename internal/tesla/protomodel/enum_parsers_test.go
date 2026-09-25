@@ -84,6 +84,13 @@ func TestParseEnumKnownAndSuffix(t *testing.T) {
 			bareSuffix: "FEIM",
 			wantNumber: 5,
 		},
+		{
+			enum:       "CabinPortKeepOnState",
+			parse:      func(s string) (int32, error) { v, err := ParseCabinPortKeepOnState(s); return int32(v), err },
+			fullToken:  "CabinPortKeepOnStateOn",
+			bareSuffix: "On",
+			wantNumber: 2,
+		},
 	}
 
 	for _, tc := range cases {
