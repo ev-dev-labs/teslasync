@@ -1,10 +1,16 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 
+// GitHub Pages serves the site from /teslasync/; local dev and custom
+// domains serve from /. CI sets DOCS_BASE (see .github/workflows/docs.yml).
+const base = process.env.DOCS_BASE || '/'
+
 export default withMermaid(defineConfig({
   title: 'TeslaSync Docs',
-  description: 'Open-source Tesla intelligence on your infrastructure. Installation, Tesla connectivity, operations, and contributing.',
-  base: '/',
+  titleTemplate: ':title — TeslaSync Docs',
+  description:
+    'Self-hosted Tesla intelligence. Install TeslaSync, connect a vehicle, stream telemetry, and find every screen in the console.',
+  base,
 
   ignoreDeadLinks: true,
 
@@ -26,26 +32,60 @@ export default withMermaid(defineConfig({
   ],
 
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/teslasync/logo.svg' }],
-    ['meta', { name: 'theme-color', content: '#ffffff' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
+    ['meta', { name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#fafaf9' }],
+    ['meta', { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#131311' }],
+    ['meta', { name: 'color-scheme', content: 'dark light' }],
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
-    ['link', { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=IBM+Plex+Mono:wght@400;500&display=swap' }],
-    ['meta', { name: 'og:type', content: 'website' }],
-    ['meta', { name: 'og:title', content: 'TeslaSync Docs' }],
-    ['meta', { name: 'og:description', content: 'Install, connect Tesla, operate, and find every in-app screen.' }],
+    ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
+    [
+      'link',
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap',
+      },
+    ],
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:site_name', content: 'TeslaSync Docs' }],
+    ['meta', { property: 'og:title', content: 'TeslaSync Docs' }],
+    [
+      'meta',
+      {
+        property: 'og:description',
+        content: 'Your Tesla, on your infrastructure. Install, connect, stream telemetry, operate.',
+      },
+    ],
+    // Absolute by crawler requirement; custom-domain forks must update this.
+    ['meta', { property: 'og:image', content: 'https://ev-dev-labs.github.io/teslasync/og.png' }],
+    ['meta', { property: 'og:image:width', content: '1200' }],
+    ['meta', { property: 'og:image:height', content: '630' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:image', content: 'https://ev-dev-labs.github.io/teslasync/og.png' }],
   ],
 
   lastUpdated: true,
   cleanUrls: true,
-  appearance: false,
+  appearance: 'dark',
+
+  // Preload the landing hero image (homepage only) for a faster LCP.
+  async transformHead({ page }) {
+    if (page !== 'index.md') return []
+    return [
+      ['link', { rel: 'preload', as: 'image', href: `${base}hero/model3.jpg`, fetchpriority: 'high' }],
+    ]
+  },
+
+  markdown: {
+    theme: { light: 'github-light', dark: 'github-dark' },
+    image: { lazyLoading: true },
+  },
 
   themeConfig: {
     logo: '/logo.svg',
     siteTitle: 'TeslaSync',
 
     nav: [
-      { text: 'Product', link: '/', activeMatch: '^/$' },
-      { text: 'Docs', link: '/get-started', activeMatch: '/(get-started|guide/)' },
+      { text: 'Get started', link: '/get-started', activeMatch: '/(get-started|guide/getting-started)' },
       { text: 'Catalogue', link: '/features/catalogue', activeMatch: '/features/' },
       { text: 'Deploy', link: '/deployment/docker', activeMatch: '/deployment/' },
       { text: 'Operate', link: '/operations/release-verification', activeMatch: '/operations/' },
@@ -151,7 +191,7 @@ export default withMermaid(defineConfig({
     },
 
     footer: {
-      message: 'MIT License · Self-hosted Tesla intelligence',
+      message: 'Self-hosted Tesla intelligence · MIT licensed',
       copyright: `Copyright © ${new Date().getFullYear()} TeslaSync contributors`,
     },
 
@@ -162,7 +202,8 @@ export default withMermaid(defineConfig({
 
     returnToTopLabel: 'Back to top',
     sidebarMenuLabel: 'Menu',
-    darkModeSwitchLabel: 'Appearance',
+    darkModeSwitchLabel: 'Theme',
+    darkModeSwitchTitle: 'Switch theme',
 
     search: {
       provider: 'local',
@@ -179,11 +220,12 @@ export default withMermaid(defineConfig({
   mermaid: {
     theme: 'neutral',
     themeVariables: {
-      primaryColor: '#e3e8ee',
-      primaryTextColor: '#0a2540',
-      primaryBorderColor: '#0a5cff',
-      lineColor: '#425466',
-      secondaryColor: '#f6f9fc',
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      primaryColor: '#f5f4f0',
+      primaryTextColor: '#1c1917',
+      primaryBorderColor: '#e82127',
+      lineColor: '#78716c',
+      secondaryColor: '#fafaf9',
       tertiaryColor: '#ffffff',
     },
   },

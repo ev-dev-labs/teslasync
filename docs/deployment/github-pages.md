@@ -38,13 +38,28 @@ This serves `docs/.vitepress/dist` at `http://localhost:4173`. Use this to verif
 
 VitePress builds for a specific base path. The site is deployed at `https://ev-dev-labs.github.io/teslasync/`, not the root of a domain, so every asset URL needs the `/teslasync/` prefix.
 
-`docs/.vitepress/config.ts` sets:
+`docs/.vitepress/config.ts` reads the base path from the environment:
 
 ```ts
-base: '/teslasync/',
+const base = process.env.DOCS_BASE || '/'
 ```
 
-If you change the repo name or fork to a different org, change this value to match. A wrong base path produces a site that loads `index.html` but 404s on every JS, CSS, and image asset.
+CI (`.github/workflows/docs.yml`) builds with `DOCS_BASE=/teslasync/` so assets
+resolve under the project-pages URL. Local dev and `docs:preview` default to `/`.
+
+If you fork to a different org or repo name, change the `DOCS_BASE` value in the
+workflow to match. A wrong base path produces a site that loads `index.html`
+but 404s on every JS, CSS, and image asset.
+
+Markdown links and images get the base applied automatically, but raw HTML in
+markdown does not. Link cards and other raw-HTML anchors must use Vue bindings:
+
+```html
+<a :href="withBase('/guide/getting-started')">Install</a>
+```
+
+with `<script setup>import { withBase } from 'vitepress'</script>` at the top of
+the page. (Theme `.vue` files should use `withBase()` the same way.)
 
 ## What ships in `dist`
 
@@ -107,7 +122,7 @@ VitePress uses Vue Single-File Components for theme customisation. `docs/.vitepr
 | Symptom                                              | Likely cause                                              | Fix                                                       |
 | ---------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------- |
 | Build fails with `Element is missing end tag`        | A markdown file has Vue-style double-brace interpolation outside a fenced code block | Wrap the offending example in a fenced code block, or add the file to `srcExclude` |
-| Site loads but every page is 404                     | `base` is wrong for where you're publishing               | Set `base: '/<repo-name>/'` (or `'/'` for custom domain)   |
+| Site loads but every page is 404                     | `base` is wrong for where you're publishing               | Set `DOCS_BASE: /<repo-name>/` in `docs.yml` (or `'/'` for custom domain) |
 | Assets 404 in production but work in dev             | Same as above — base path mismatch                        | Same fix                                                  |
 | Search returns nothing                               | The local-search index didn't build (corrupt cache)        | Delete `docs/.vitepress/cache/` and rebuild               |
 | Build "succeeds" but the workflow fails              | Pages settings aren't set to deploy from Actions          | Settings → Pages → Source: GitHub Actions                 |
