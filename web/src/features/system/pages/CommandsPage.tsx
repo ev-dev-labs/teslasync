@@ -50,12 +50,8 @@ export default function CommandsPage() {
     vehicles[0] ??
     null;
 
-  /**
-   * Keep the existing fleet readiness summary, but make the language honest:
-   * roster state is a last-known connection state, not proof that a command
-   * will execute now.
-   */
-  const reachableCount = useMemo(
+  // Roster state is historical; it cannot establish current reachability.
+  const lastKnownActiveCount = useMemo(
     () =>
       vehicles.filter(
         (vehicle) =>
@@ -81,16 +77,16 @@ export default function CommandsPage() {
         <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:justify-end">
           {vehicles.length > 0 && (
             <Badge
-              variant={reachableCount > 0 ? 'success' : 'warning'}
+              variant="neutral"
               size="lg"
               className="min-h-11"
             >
               <Icons.wifi className="h-3.5 w-3.5" aria-hidden="true" />
               {t(
-                'commands.reachableCount',
-                '{{reachable}}/{{total}} recently reachable',
+                'commands.lastKnownActiveCount',
+                '{{active}}/{{total}} last reported active',
                 {
-                  reachable: reachableCount,
+                  active: lastKnownActiveCount,
                   total: vehicles.length,
                 },
               )}

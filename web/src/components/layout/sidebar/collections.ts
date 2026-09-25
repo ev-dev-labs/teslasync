@@ -47,14 +47,16 @@ export const COLLECTION_DEFINITIONS = DEFINITIONS.map(([label, primary, ...sibli
   primary,
   paths: [primary, ...siblings],
   labelKey: `nav.collections.${primary.slice(1).replace(/\W/g, '_')}`,
+  keepPrimaryVisibleWhenPinned: primary === '/charging',
 }))
 
 export function collectionGroups<T extends IconItem>(sections: readonly Section<T>[]): SectionGroup[] {
   const items = new Map(sections.flatMap(section => section.items.map(item => [item.to, item] as const)))
-  const custom = COLLECTION_DEFINITIONS.map(({ label, labelKey, primary, paths }) => ({
+  const custom = COLLECTION_DEFINITIONS.map(({ label, labelKey, primary, paths, keepPrimaryVisibleWhenPinned }) => ({
     primary,
     label,
     labelKey,
+    keepPrimaryVisibleWhenPinned,
     pages: paths.flatMap(path => {
       const item = items.get(path)
       return item ? [{ to: item.to, label: item.label, labelKey: item.labelKey, icon: item.icon, color: item.color }] : []
@@ -87,7 +89,9 @@ export function unpinnedSidebarItems<T extends Item>(
 ): T[] {
   return items.filter(item => {
     const group = groups.find(candidate => candidate.primary === item.to)
-    return group ? group.pages.some(page => !pinnedPaths.has(page.to)) : !pinnedPaths.has(item.to)
+    return group
+      ? group.keepPrimaryVisibleWhenPinned || group.pages.some(page => !pinnedPaths.has(page.to))
+      : !pinnedPaths.has(item.to)
   })
 }
 

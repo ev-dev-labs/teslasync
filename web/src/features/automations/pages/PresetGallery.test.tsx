@@ -196,7 +196,7 @@ describe('PresetGallery — error state', () => {
     );
     renderGallery();
 
-    expect(screen.getByText('Kept Preset')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Kept Preset' })).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -245,10 +245,28 @@ describe('PresetGallery — card content', () => {
 
     expect(screen.getByRole('heading', { name: 'Sentry Mode' })).toBeInTheDocument();
     expect(
-      screen.getByText('Enable Sentry when parked away from home.'),
+      screen.getAllByText('Enable Sentry when parked away from home.')[0],
     ).toBeInTheDocument();
     expect(screen.getByText('Schedule')).toBeInTheDocument();
     expect(screen.getByText('2 actions')).toBeInTheDocument();
+    const install = screen.getByRole('button', { name: 'Install Sentry Mode' });
+    const card = install.closest('[data-print-card]');
+    expect(card).toHaveClass('h-full');
+    expect(card?.parentElement).toHaveClass('h-full');
+    expect(install).toHaveClass('mt-auto', 'w-full');
+    const details = screen.getByRole('button', { name: 'Details for Sentry Mode' });
+    details.focus();
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Sentry Mode');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Enable Sentry when parked away from home.');
+    expect(screen.getByText('2 actions')).toBeInTheDocument();
+  });
+
+  it('uses the singular action label for a one-action preset', () => {
+    mockUsePresets.mockReturnValue(
+      hookResult({ data: { categories: [], presets: [makePreset()] } }),
+    );
+    renderGallery();
+    expect(screen.getByText('1 action')).toBeInTheDocument();
   });
 
   it('maps a known icon and falls back to Shield for an unknown icon', () => {
@@ -287,12 +305,12 @@ describe('PresetGallery — card content', () => {
     );
     renderGallery();
 
-    expect(screen.getByText('Night Lock')).toBeInTheDocument();
-    expect(screen.getByText('Morning HVAC')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Night Lock' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Morning HVAC' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Filter presets by category' })).toHaveClass('flex-wrap');
     fireEvent.click(screen.getByRole('button', { name: 'Security (1)' }));
-    expect(screen.getByText('Night Lock')).toBeInTheDocument();
-    expect(screen.queryByText('Morning HVAC')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Night Lock' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Morning HVAC' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Security (1)' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), {
       target: { value: 'morning' },
@@ -300,8 +318,8 @@ describe('PresetGallery — card content', () => {
     await waitFor(() => expect(screen.getByText('No templates match your filters')).toBeInTheDocument());
     expect(screen.getByText('0 of 2 templates')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'All (2)' }));
-    expect(screen.getByText('Morning HVAC')).toBeInTheDocument();
-    expect(screen.queryByText('Night Lock')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Morning HVAC' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Night Lock' })).not.toBeInTheDocument();
   });
 });
 

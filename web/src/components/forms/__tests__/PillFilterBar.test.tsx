@@ -58,6 +58,24 @@ describe('PillFilterBar', () => {
     expect(screen.getByText(/\(1\)/)).toBeInTheDocument();
   });
 
+  it('uses outlined rectangular buttons and a solid theme-blue selected button', () => {
+    render(
+      <PillFilterBar
+        items={items()}
+        activeKey="anomalies"
+        onChange={() => {}}
+        ariaLabel="Drive collections"
+      />,
+    );
+    const active = screen.getByRole('tab', { name: /anomalies/i });
+    const inactive = screen.getByRole('tab', { name: /all/i });
+    expect(active).toHaveClass('rounded-shape-sm', 'bg-[var(--theme-primary)]');
+    expect(inactive).toHaveClass('rounded-shape-sm', 'border-[var(--control-border)]');
+    expect(active).not.toHaveClass('rounded-full');
+    expect(active.querySelector('.rounded-full')).toBeNull();
+    expect(screen.getByRole('tab', { name: /tagged/i })).toBeDisabled();
+  });
+
   it('fires onChange with the clicked key', () => {
     const onChange = vi.fn();
     render(

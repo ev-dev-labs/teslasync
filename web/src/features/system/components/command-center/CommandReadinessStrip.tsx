@@ -8,12 +8,19 @@ import {
 import { GlassPanel, Heading, Text } from '@/components/ui';
 import { MetricTile, useIsStale } from '@/components/data-display';
 import { InlineCallout } from '@/components/feedback';
-import type { Vehicle, VehicleState } from '../../commands';
+import {
+  deriveTrustedVehicleStatus,
+  isVehicleStateFieldCurrent,
+  resolveVehicleStateFreshness,
+} from '@/api/hooks/useVehicles';
+import type { VehicleState } from '@/api/types';
+import type { Vehicle } from '../../commands';
 import type { CommandExecutionFeedback } from './types';
 
 interface CommandReadinessStripProps {
   vehicle: Vehicle;
   state: VehicleState | null;
+  stateTrust: Parameters<typeof deriveTrustedVehicleStatus>[1];
   stateLoading: boolean;
   stateError: unknown;
   pendingLabel: string | null;
@@ -23,29 +30,38 @@ interface CommandReadinessStripProps {
 export function CommandReadinessStrip({
   vehicle,
   state,
+  stateTrust,
   stateLoading,
   stateError,
   pendingLabel,
   feedback,
 }: CommandReadinessStripProps) {
   const { t } = useTranslation();
-  const { isStale, ageLabel } = useIsStale(vehicle.updated_at);
+  const observedAt = stateTrust?.observedAt;
+  const { ageLabel } = useIsStale(observedAt != null ? new Date(observedAt).toISOString() : null);
+  const verifiedStatus = deriveTrustedVehicleStatus(state, stateTrust);
   const rawStatus = (state?.state || vehicle.state || 'offline').toLowerCase();
-  const asleep = rawStatus === 'asleep';
-  const offline = rawStatus === 'offline';
-  const moving = state?.speed != null ? Math.abs(state.speed) > 0 : null;
+  const moving = isVehicleStateFieldCurrent(stateTrust, 'speed') && state?.speed != null
+    ? Math.abs(state.speed) > 0
+    : null;
 
-  const connection = t(
-    `commands.status.${rawStatus}`,
-    rawStatus.replace(/_/g, ' ').replace(/\b\w/g, (value) => value.toUpperCase()),
+  const status = verifiedStatus ?? rawStatus;
+  const asleep = status === 'asleep';
+  const offline = status === 'offline';
+  const statusLabel = t(
+    `commands.status.${status}`,
+    status.replace(/_/g, ' ').replace(/\b\w/g, (value) => value.toUpperCase()),
   );
+  const connection = verifiedStatus
+    ? statusLabel
+    : t('commands.hero.lastKnownStatus', 'Last known: {{status}}', { status: statusLabel });
   const availability = stateLoading
     ? t('commands.readiness.checking', 'Checking')
     : stateError
       ? t('commands.readiness.stateUnknown', 'State unknown')
-      : offline
+      : !verifiedStatus || verifiedStatus === 'offline'
         ? t('commands.readiness.deliveryUncertain', 'Delivery uncertain')
-        : asleep
+        : verifiedStatus === 'asleep'
           ? t('commands.readiness.wakeRecommended', 'Wake recommended')
           : t('commands.readiness.ready', 'Ready');
   const motion = moving == null
@@ -53,11 +69,14 @@ export function CommandReadinessStrip({
     : moving
       ? t('commands.readiness.moving', 'Vehicle moving')
       : t('commands.readiness.stationary', 'No motion reported');
-  const freshness = !vehicle.updated_at
+  const signalFreshness = observedAt != null
+    ? resolveVehicleStateFreshness(stateTrust?.freshness, observedAt)
+    : 'unknown';
+  const freshness = signalFreshness === 'unknown'
     ? t('commands.readiness.freshnessUnknown', 'Unknown')
-    : isStale
-      ? t('commands.readiness.outdated', 'Outdated')
-      : t('commands.readiness.current', 'Current');
+    : signalFreshness === 'fresh'
+      ? t('commands.readiness.current', 'Current')
+      : t('commands.readiness.outdated', 'Outdated');
 
   return (
     <GlassPanel
@@ -95,7 +114,7 @@ export function CommandReadinessStrip({
         <MetricTile
           value={freshness}
           label={t('commands.readiness.telemetry', 'Telemetry')}
-          sublabel={vehicle.updated_at ? ageLabel : '—'}
+          sublabel={observedAt != null ? ageLabel : '—'}
           align="start"
         />
       </div>
@@ -106,14 +125,24 @@ export function CommandReadinessStrip({
           icon={<Radio className="h-4 w-4" aria-hidden="true" />}
         >
           {asleep
-            ? t(
-                'commands.readiness.asleepHelp',
-                'The vehicle is asleep. Commands remain selectable; waking it first can improve delivery speed.',
-              )
-            : t(
-                'commands.readiness.offlineHelp',
-                'The vehicle reports offline. Commands remain selectable, but delivery may fail until connectivity returns.',
-              )}
+            ? verifiedStatus
+              ? t(
+                  'commands.readiness.asleepHelp',
+                  'The vehicle is asleep. Commands remain selectable; waking it first can improve delivery speed.',
+                )
+              : t(
+                  'commands.readiness.lastKnownAsleep',
+                  'Last reported asleep. Commands remain selectable; waking it first may improve delivery speed.',
+                )
+            : verifiedStatus
+              ? t(
+                  'commands.readiness.offlineHelp',
+                  'The vehicle reports offline. Commands remain selectable, but delivery may fail until connectivity returns.',
+                )
+              : t(
+                  'commands.readiness.lastKnownOffline',
+                  'Last reported offline. Commands remain selectable, but delivery may fail until connectivity returns.',
+                )}
         </InlineCallout>
       )}
 

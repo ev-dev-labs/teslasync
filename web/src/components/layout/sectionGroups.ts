@@ -4,6 +4,7 @@ export interface SectionGroup {
   primary: string
   label: string
   labelKey: string
+  keepPrimaryVisibleWhenPinned?: boolean
   pages: readonly { to: string; label: string; labelKey: string; icon?: typeof Icons.home; color?: string }[]
 }
 

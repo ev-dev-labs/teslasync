@@ -11599,6 +11599,8 @@
       "title": "Quick Start Templates",
       "hint": "One-click install",
       "actionCount": "{{count}} actions",
+      "actionOne": "1 action",
+      "details": "Details for {{name}}",
       "install": "Install",
       "empty": "No preset templates available",
       "emptyCategory": "No templates match your filters",
@@ -16581,7 +16583,7 @@
         "categoryFilter": "Filter templates by category",
         "allCategory": "All",
         "showing": "{{count}} of {{total}} templates",
-        "use": "Use",
+        "use": "Use template",
         "noMatchesTitle": "No templates found",
         "noMatches": "No templates match your search"
       },
@@ -17652,7 +17654,7 @@
     "viewHistory": "View history",
     "selectVehicle": "Select vehicle",
     "centerRegion": "Selected vehicle command center",
-    "reachableCount": "{{reachable}}/{{total}} recently reachable",
+    "lastKnownActiveCount": "{{active}}/{{total}} last reported active",
     "statesError": "Failed to load vehicle states",
     "noVehicles": "No vehicles found",
     "connectFleet": "Connect your Tesla account and sync your fleet to start sending commands.",
@@ -17716,6 +17718,9 @@
       "selectedVehicle": "Selected vehicle",
       "vehicleState": "Vehicle state",
       "loadingState": "Loading vehicle state",
+      "lastKnownStatus": "Last known: {{status}}",
+      "lastSignal": "Last signal",
+      "noSignalTime": "No verified signal time",
       "battery": "Battery",
       "range": "Estimated range",
       "cabin": "Cabin",
@@ -17744,7 +17749,9 @@
       "locked": "Locked",
       "unlocked": "Unlocked",
       "asleepHelp": "The vehicle is asleep. Commands remain selectable; waking it first can improve delivery speed.",
-      "offlineHelp": "The vehicle reports offline. Commands remain selectable, but delivery may fail until connectivity returns."
+      "offlineHelp": "The vehicle reports offline. Commands remain selectable, but delivery may fail until connectivity returns.",
+      "lastKnownAsleep": "Last reported asleep. Commands remain selectable; waking it first may improve delivery speed.",
+      "lastKnownOffline": "Last reported offline. Commands remain selectable, but delivery may fail until connectivity returns."
     },
     "freshness": {
       "title": "Telemetry may be outdated",

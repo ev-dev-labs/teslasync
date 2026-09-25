@@ -7,7 +7,7 @@ import en from '@/i18n/en.json'
 import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
 import { SIDEBAR_COLLECTION_ICONS } from './sidebarCollectionIcons'
 import { CollectionTreeRow } from './CollectionTreeRow'
-import { COLLECTION_DEFINITIONS, collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection } from './collections'
+import { COLLECTION_DEFINITIONS, collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection, unpinnedSidebarItems } from './collections'
 
 function CurrentPath() {
   return <span data-testid="current-path">{useLocation().pathname}</span>
@@ -98,6 +98,23 @@ describe('sidebar collections', () => {
     expect(screen.queryByRole('link', { name: 'Driving Dynamics' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Drive DNA' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Regen Braking' })).toBeInTheDocument()
+  })
+
+  it('keeps Charging Overview first in Charging Activity even when pinned', () => {
+    const group = groups.find(candidate => candidate.primary === '/charging')!
+    const chargingSection = collectionSidebarSections(navSections, groups).find(section => section.title === 'Charging')!
+    expect(unpinnedSidebarItems(chargingSection.items, groups, new Set(group.pages.map(page => page.to))))
+      .toContainEqual(expect.objectContaining({ to: '/charging' }))
+
+    render(
+      <MemoryRouter initialEntries={['/charging']}>
+        <CollectionTreeRow group={group} pathname="/charging" pinnedPaths={new Set(['/charging'])} />
+      </MemoryRouter>,
+    )
+    const activity = screen.getByRole('group', { name: 'Charging Activity' })
+    expect(within(activity).getAllByRole('link')[0]).toHaveAttribute('href', '/charging')
+    expect(within(activity).getByRole('link', { name: 'Charging Overview' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'Charging Activity, 6 views' })).toBeInTheDocument()
   })
 
   it('uses distinct icons for sibling destinations', () => {

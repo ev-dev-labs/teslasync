@@ -1224,10 +1224,10 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
                     key={item.key}
                     type="button"
                     size="sm"
-                    variant={selected ? 'primary' : 'ghost'}
+                    variant={selected ? 'primary' : 'outline'}
                     aria-pressed={selected}
                     onClick={() => setTemplateCategory(item.key === 'all' ? null : item.key)}
-                    className="min-h-9 rounded-shape-lg border border-[var(--border-default)] px-3"
+                    className="min-h-9 rounded-shape-sm px-3"
                   >
                     {item.label} ({fmtInt(item.count)})
                   </UiButton>
@@ -1248,38 +1248,33 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
                 return (
                   <GlassPanel
                     key={tpl.name}
-                    role="button"
-                    tabIndex={0}
-                    className="group cursor-pointer p-3 text-left transition-all hover:border-cyan-400/30"
-                    onClick={() => handleCloneTemplate(tpl)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        handleCloneTemplate(tpl)
-                      }
-                    }}
-                    aria-label={t('notifications.alertStudio.templates.useTemplate', 'Use template {{name}}', { name: getTemplateName(tpl) })}
+                    className="flex h-full flex-col gap-2 p-3 text-left"
                   >
-                    <div className="mb-1.5 flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <div className={cn('rounded-lg p-1.5', tokens.bg)}>
                         <Icon className={cn('h-3.5 w-3.5', tokens.fg)} aria-hidden="true" />
                       </div>
-                      <Text weight="medium" size="xs" color="primary" className="truncate transition-colors group-hover:text-cyan-300">
+                      <Text weight="medium" size="xs" color="primary" className="truncate">
                         {getTemplateName(tpl)}
                       </Text>
                     </div>
                     <Text as="p" size="2xs" color="muted" mono className="truncate">
                       {getTemplateMessage(tpl)}
                     </Text>
-                    <div className="mt-1.5 flex items-center justify-between">
-                      <SeverityBadge severity={tpl.severity} size="sm" showIcon={false}>
-                        {t(`notifications.alertStudio.severity.${tpl.severity}`, tpl.severity === 'warn' ? 'Warning' : tpl.severity)}
-                      </SeverityBadge>
-                      <span className="flex items-center gap-1 text-[var(--text-muted)]">
-                        <Icons.copy className="h-3 w-3" aria-hidden="true" />
-                        <Caption>{t('notifications.alertStudio.templates.use', 'Use')}</Caption>
-                      </span>
-                    </div>
+                    <SeverityBadge severity={tpl.severity} size="sm" showIcon={false} className="self-start">
+                      {t(`notifications.alertStudio.severity.${tpl.severity}`, tpl.severity === 'warn' ? 'Warning' : tpl.severity)}
+                    </SeverityBadge>
+                    <UiButton
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleCloneTemplate(tpl)}
+                      aria-label={t('notifications.alertStudio.templates.useTemplate', 'Use template {{name}}', { name: getTemplateName(tpl) })}
+                      className="mt-auto w-full"
+                    >
+                      <Icons.copy className="h-3.5 w-3.5" aria-hidden="true" />
+                      {t('notifications.alertStudio.templates.use', 'Use template')}
+                    </UiButton>
                   </GlassPanel>
                 )
               })}

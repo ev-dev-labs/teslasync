@@ -15,7 +15,6 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertOctagon, AlertTriangle, Info } from 'lucide-react';
-import { cn } from '@/lib/cn';
 import { Button, Select } from '@/components/ui';
 import {
   FilterBar,
@@ -29,9 +28,9 @@ import type { NotificationFilters } from '@/api/hooks/useNotifications';
 import type { Vehicle, AlertRule } from '@/api/types';
 
 const SEVERITY_OPTIONS = [
-  { value: 'info', label: 'Info', Icon: Info, ring: 'ring-blue-400/40', bg: 'bg-blue-500/15', text: 'text-blue-200' },
-  { value: 'warn', label: 'Warn', Icon: AlertTriangle, ring: 'ring-amber-400/40', bg: 'bg-amber-500/15', text: 'text-amber-200' },
-  { value: 'critical', label: 'Critical', Icon: AlertOctagon, ring: 'ring-rose-400/40', bg: 'bg-rose-500/15', text: 'text-rose-200' },
+  { value: 'info', label: 'Info', Icon: Info },
+  { value: 'warn', label: 'Warn', Icon: AlertTriangle },
+  { value: 'critical', label: 'Critical', Icon: AlertOctagon },
 ] as const;
 
 type Severity = (typeof SEVERITY_OPTIONS)[number]['value'];
@@ -201,17 +200,11 @@ export function NotificationFilterBar({
               <Button
                 key={opt.value}
                 type="button"
-                variant="ghost"
+                variant={active ? 'primary' : 'outline'}
                 size="sm"
                 onClick={() => toggleSeverity(opt.value)}
                 aria-pressed={active}
-                className={cn(
-                  'h-auto gap-1 rounded-full border px-2.5 py-1',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-                  active
-                    ? cn(opt.bg, opt.text, 'border-transparent ring-1', opt.ring)
-                    : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-white/[0.06]',
-                )}
+                className="gap-1 rounded-shape-sm px-2.5 text-xs"
               >
                 <Icon className="h-3 w-3" aria-hidden="true" />
                 <span>{t(`notifications.inbox.filter.severity.${opt.value}`, opt.label)}</span>
