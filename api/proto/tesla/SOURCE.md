@@ -6,10 +6,9 @@ single source of truth for all generated signal metadata, enum parsers, and
 `.github/instructions/tesla-pipeline.instructions.md` for the architectural
 rationale.
 
-> **Forward-only.** The hand-curated `internal/enums/signal_types.go::SignalRegistry`
-> is being replaced by code generated from this proto (phase-42 prompts 0030–0050).
-> Do not hand-edit the vendored `vehicle_data.proto` — re-vendor from upstream
-> instead, then re-run `go generate ./...`.
+> **Forward-only.** Signal metadata, enum parsers, and decoders are generated
+> from this proto. Do not hand-edit the vendored `vehicle_data.proto` — re-vendor
+> from upstream instead, then re-run `go generate ./internal/tesla/protomodel/...`.
 
 ## Provenance
 
@@ -17,21 +16,28 @@ rationale.
 |---|---|
 | Upstream repository | `github.com/teslamotors/fleet-telemetry` |
 | Upstream path | `protos/vehicle_data.proto` |
-| Upstream tag | untagged (`Add new streamable fields 260-269`, #546) |
-| Upstream commit | `8fbaa100bd365936dab6ecbf0e2d7070c4d765cb` |
-| Upstream commit date | 2026-09-14 |
-| Upstream raw URL | <https://raw.githubusercontent.com/teslamotors/fleet-telemetry/8fbaa100bd365936dab6ecbf0e2d7070c4d765cb/protos/vehicle_data.proto> |
-| Upstream tree URL | <https://github.com/teslamotors/fleet-telemetry/blob/8fbaa100bd365936dab6ecbf0e2d7070c4d765cb/protos/vehicle_data.proto> |
-| File size | 21,729 bytes |
-| SHA256 | `E8BE013478FC24DADE3B40DF10A269E6477D27FABB95C641A575A5214A101618` |
-| Fetched on | 2026-09-14 |
-| Vendored by | phase-42 prompt 0010 |
-| Reviewed by | Staff Engineer + Principal Engineer + Principal Architect (per ADR-004) |
+| Upstream tag | untagged (`Cabin12vPortKeepOn` / `Cabin48vPortKeepOn`) |
+| Upstream commit | `3d366a3da23c41b6fe4eb538409d071402c4884b` |
+| Upstream commit date | 2026-09-24 |
+| Upstream raw URL | <https://raw.githubusercontent.com/teslamotors/fleet-telemetry/3d366a3da23c41b6fe4eb538409d071402c4884b/protos/vehicle_data.proto> |
+| Upstream tree URL | <https://github.com/teslamotors/fleet-telemetry/blob/3d366a3da23c41b6fe4eb538409d071402c4884b/protos/vehicle_data.proto> |
+| File size | 22,007 bytes |
+| SHA256 | `7E82B52A098B156671DC75701928792DC84B69D1C3A80956CAC68693AA00A301` |
+| Fetched on | 2026-09-25 |
+| Vendored by | upstream proto refresh |
 
 The same checksum is recorded in `CHECKSUM` (one-line hex, uppercase) and the
 upstream pin is recorded in `VERSION`. Both files gate against silent drift —
 any divergence between the proto bytes and `CHECKSUM` will cause the prompt 0010
 gate (and downstream codegen prompts) to fail.
+
+The daily `fleet-proto-drift` workflow compares the vendored file to upstream
+`main`, opens or updates a tracking issue when it changes, and lists added or
+renumbered `Field` values and `Value` oneof variants. Review changes before
+re-vendoring; the workflow never modifies production code automatically.
+The two Semi cabin-port states are subscribed from generated metadata, decoded
+to canonical `Off` / `On` / `Unknown` strings, persisted in `signal_log`, and
+available in the existing live-signal explorer and signal history UI.
 
 ## Why we vendor instead of `go get`-ing
 
@@ -49,7 +55,7 @@ gate (and downstream codegen prompts) to fail.
 
 ## Regeneration procedure
 
-When Tesla publishes a new tag of `fleet-telemetry`:
+When Tesla publishes a new schema revision (tagged or untagged):
 
 ```powershell
 # 1. Fetch the new proto (replace <NEW_COMMIT> with the upstream commit SHA).
@@ -61,20 +67,25 @@ $h = (Get-FileHash api\proto\tesla\vehicle_data.proto -Algorithm SHA256).Hash.To
 $h | Set-Content -NoNewline api\proto\tesla\CHECKSUM
 Add-Content api\proto\tesla\CHECKSUM ""   # single trailing newline
 
-# 3. Update VERSION with the new tag + commit + fetch date.
+# 3. Update VERSION with the new upstream revision + fetch date.
 @(
-  "teslamotors/fleet-telemetry@<NEW_TAG>",
+  "teslamotors/fleet-telemetry@<NEW_COMMIT>",
   "commit=<NEW_COMMIT>",
   "fetched=$(Get-Date -Format yyyy-MM-dd)"
 ) | Set-Content api\proto\tesla\VERSION
 
 # 4. Update the Provenance table in SOURCE.md (tag, commit, date, SHA256).
 
-# 5. Regenerate Go code from the proto.
-go generate ./...
+# 5. Upgrade the matching upstream Go module (its generated protobuf types
+#    must include any new Field identifiers and Value oneof variants).
+go get github.com/teslamotors/fleet-telemetry@<NEW_COMMIT>
 
-# 6. Run the reflective coverage test.
-go test ./internal/tesla/normalize/... -run TestProtoCoverage -v
+# 6. Classify each new field in cmd/protogen-tesla/emit.go, regenerate
+#    metadata/decoders, and add one routing.yaml entry per atomic field.
+go generate ./internal/tesla/protomodel/...
+
+# 7. Run the reflective metadata and routing coverage tests.
+go test ./internal/tesla/protomodel/ ./internal/tesla/router/ -run 'TestCoverage|TestRoutingCoverage'
 ```
 
 A new vendored proto MUST land in its own commit, separate from any code
