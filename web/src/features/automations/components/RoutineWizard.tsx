@@ -68,7 +68,7 @@ function RoutineCard({
 
 /**
  * Geofence routine wizard: pick a place, one-click install arrival/departure
- * routines. Rendered above the static preset grid in PresetGallery.
+ * routines. Rendered alongside the automation rules in AutomationListPage.
  */
 export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }) {
   const { t } = useTranslation();

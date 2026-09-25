@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 
+const translationCalls = vi.hoisted(() => vi.fn())
+
 /**
  * SessionExpiringModal contract.
  *
@@ -32,6 +34,7 @@ vi.mock('react-i18next', () => ({
       defaultOrOpts?: string | Record<string, unknown>,
       opts?: Record<string, unknown>,
     ) => {
+      translationCalls(_key)
       if (typeof defaultOrOpts === 'string') {
         let out = defaultOrOpts
         const interp = opts ?? {}
@@ -60,6 +63,7 @@ function freshMonitor(overrides: Partial<MockMonitor> = {}): MockMonitor {
 
 describe('SessionExpiringModal', () => {
   beforeEach(() => {
+    translationCalls.mockClear()
     mockMonitor = freshMonitor()
     window.localStorage.clear()
     window.sessionStorage.clear()
@@ -80,6 +84,7 @@ describe('SessionExpiringModal', () => {
     mockMonitor = freshMonitor({ expiresInSeconds: 600, isExpiringSoon: false })
     render(<SessionExpiringModal />)
     expect(screen.queryByTestId('session-expiring-modal')).toBeNull()
+    expect(translationCalls).not.toHaveBeenCalledWith(expect.stringMatching(/^session\.expiring\./))
   })
 
   it('does NOT render when already expired (yields to SessionExpiredModal)', () => {

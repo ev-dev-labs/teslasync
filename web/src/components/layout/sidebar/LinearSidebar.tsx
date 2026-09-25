@@ -33,6 +33,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PrefetchNavLink } from '../PrefetchLink'
+import { CollectionTreeRow } from './CollectionTreeRow'
+import { soleCollection, unpinnedSidebarItems } from './collections'
+import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
+import { routeIconColor } from './iconColors'
+import type { SectionGroup } from '../sectionGroups'
 import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
@@ -95,6 +100,7 @@ export interface LinearSidebarProps {
   alertCount?: number
   vehicleCount?: number
   staleCount?: number
+  collections?: readonly SectionGroup[]
 }
 
 // ─── Tiny components ─────────────────────────────────────────────────────
@@ -103,6 +109,7 @@ interface LinearNavLinkProps {
   to: string
   label: string
   icon: typeof Icons.home
+  iconColor?: string
   active: boolean
   onSelect?: () => void
   /** Right-side hint (e.g., dot for unread, count for vehicles). */
@@ -116,6 +123,7 @@ function LinearNavLink({
   to,
   label,
   icon: Icon,
+  iconColor,
   active,
   onSelect,
   trailing,
@@ -148,11 +156,11 @@ function LinearNavLink({
         <Icon
           className={cn(
             'h-4 w-4 shrink-0 transition-colors',
-            active ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
+            active ? 'text-[var(--theme-primary)]' : routeIconColor(iconColor),
           )}
           aria-hidden
         />
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{label}</span>
         {trailing}
       </PrefetchNavLink>
       {hoverAction && (
@@ -207,11 +215,11 @@ function LinearSectionHeader({
       <Icon
         className={cn(
           'h-4 w-4 shrink-0',
-          active ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]',
+          'text-[var(--theme-primary)]',
         )}
         aria-hidden
       />
-      <span className="min-w-0 flex-1 truncate">{title}</span>
+      <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{title}</span>
       {typeof count === 'number' && count > 0 && (
         <span className="rounded-shape-sm bg-[var(--surface-3)] px-1.5 py-0.5 text-xs font-medium tabular-nums text-[var(--text-muted)]">
           {count}
@@ -259,6 +267,7 @@ export function LinearSidebar({
   alertCount = 0,
   vehicleCount = 0,
   staleCount = 0,
+  collections = [],
 }: LinearSidebarProps) {
   const { t } = useTranslation()
   const location = useLocation()
@@ -267,10 +276,7 @@ export function LinearSidebar({
   // changes that bypass the parent re-render.
   const effectivePath = pathname ?? location.pathname
 
-  // Fast lookup so we can hide the "pin" hover action for items that are
-  // already in Favorites (they would still appear in their source section,
-  // matching the legacy sidebar's behaviour — but the duplicate pin button
-  // would be confusing).
+  // A pinned destination is shown in Quick access, not repeated in its section.
   const pinnedSet = useMemo(
     () => new Set(pinnedItems.map(item => item.to)),
     [pinnedItems],
@@ -356,7 +362,7 @@ export function LinearSidebar({
   }
 
   // ── Render ─────────────────────────────────────────────────────────────
-  const expandedSections = sections.filter(s => s.items.length > 0)
+  const expandedSections = sections.filter(section => unpinnedSidebarItems(section.items, collections, pinnedSet).length > 0)
   const sectionLabel = (title: string) => {
     const key = COMPACT_GROUP_I18N_KEYS[title]
     return key ? t(key, title) : title
@@ -406,7 +412,8 @@ export function LinearSidebar({
                     to={item.to}
                     label={navLabel(item)}
                     icon={item.icon}
-                    active={false}
+                    iconColor={item.color}
+                    active={itemIsActive(item.to)}
                     onSelect={onItemSelect}
                     trailing={trailingFor(item.to)}
                     hoverAction={
@@ -430,11 +437,12 @@ export function LinearSidebar({
         )}
 
         {/* Sections */}
-        <div className="space-y-1.5">
+        <div className="ms-3 space-y-1.5 border-s border-[var(--border-default)] ps-2">
           {expandedSections.map((section, index) => {
             const expanded = isExpanded(section.title)
             const active = section.title === activeSectionTitle
-            const sectionIcon = section.items[0]?.icon ?? Icons.home
+            const singleCollection = soleCollection(section, collections)
+            const sectionIcon = SIDEBAR_SECTION_ICONS[section.title] ?? section.items[0]?.icon ?? Icons.home
             const tier = section.tier ?? compactGroupTier(section.title)
             const previousTier =
               index === 0
@@ -461,29 +469,49 @@ export function LinearSidebar({
                     <span>{t('nav.advancedGroups', 'Advanced')}</span>
                   </div>
                 )}
-                <LinearSectionHeader
-                  title={sectionLabel(section.title)}
-                  icon={sectionIcon}
-                  expanded={expanded}
-                  active={active}
-                  onToggle={() => toggleSection(section.title)}
-                  count={section.items.length}
-                />
+                <div className="relative before:absolute before:-start-2 before:top-5 before:h-px before:w-2 before:bg-[var(--border-default)]">
+                  <LinearSectionHeader
+                    title={sectionLabel(section.title)}
+                    icon={sectionIcon}
+                    expanded={expanded}
+                    active={active}
+                    onToggle={() => toggleSection(section.title)}
+                    count={singleCollection
+                      ? singleCollection.pages.filter(page => !pinnedSet.has(page.to)).length
+                      : unpinnedSidebarItems(section.items, collections, pinnedSet).length}
+                  />
+                </div>
                 {expanded && (
-                  <div className="ms-4 space-y-px border-s border-[var(--border-default)] ps-2.5" role="group" aria-label={sectionLabel(section.title)}>
-                    {section.items.map(item => (
-                      <LinearNavLink
-                        key={item.to}
-                        to={item.to}
-                        label={navLabel(item)}
-                        icon={item.icon}
-                        active={itemIsActive(item.to)}
-                        onSelect={onItemSelect}
-                        trailing={trailingFor(item.to)}
-                        hoverAction={pinActionFor(item)}
-                        dataTour={item.dataTour}
-                      />
-                    ))}
+                  <div className="ms-5 space-y-px border-s border-[var(--border-default)] ps-2" role="group" aria-label={sectionLabel(section.title)}>
+                    {unpinnedSidebarItems(section.items, collections, pinnedSet).map(item => {
+                      const group = collections.find(candidate => candidate.primary === item.to)
+                      return group
+                        ? <CollectionTreeRow
+                            key={item.to}
+                            group={group}
+                            pathname={location.pathname}
+                            flattened={group === singleCollection}
+                            onSelect={onItemSelect}
+                            dataTour={item.dataTour}
+                            statusCount={item.to === '/vehicles' ? vehicleCount : item.to === '/notifications/inbox' ? alertCount : item.to === '/data-export' ? staleCount : undefined}
+                            statusPath={item.to === '/data-export' ? '/data-repair' : undefined}
+                            pinnedPaths={pinnedSet}
+                            onPin={onPin}
+                            onUnpin={onUnpin}
+                          />
+                        : <LinearNavLink
+                            key={item.to}
+                            to={item.to}
+                            label={navLabel(item)}
+                            icon={item.icon}
+                            iconColor={item.color}
+                            active={itemIsActive(item.to)}
+                            onSelect={onItemSelect}
+                            trailing={trailingFor(item.to)}
+                            hoverAction={pinActionFor(item)}
+                            dataTour={item.dataTour}
+                          />
+                    })}
                   </div>
                 )}
               </div>

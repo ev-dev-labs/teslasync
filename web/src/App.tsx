@@ -180,6 +180,7 @@ const MediaPlayer = lazy(() => import('./features/vehicle-systems/pages/MediaPla
 // Automations
 const AutomationsListPage = lazy(() => import('./features/automations/pages/AutomationsListPage'))
 const AutomationListPage = lazy(() => import('./features/automations/pages/AutomationListPage'))
+const AutomationHistoryPage = lazy(() => import('./features/automations/pages/AutomationHistoryPage'))
 const AutomationBuilderPage = lazy(() => import('./features/automations/pages/AutomationBuilderPage'))
 
 // Notifications & Alerts
@@ -593,6 +594,7 @@ export default function App() {
         <Route path="command-history" element={<SafeRoute name="CommandHistory"><CommandHistory /></SafeRoute>} />
         <Route path="automations" element={<SafeRoute name="Automations"><AutomationsListPage /></SafeRoute>} />
         <Route path="automations/list" element={<SafeRoute name="AutomationList"><AutomationListPage /></SafeRoute>} />
+        <Route path="automations/history" element={<SafeRoute name="AutomationHistory"><AutomationHistoryPage /></SafeRoute>} />
         <Route path="automations/new" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="automations/:id/edit" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="alert-studio" element={<SafeRoute name="LegacyAlertStudioRedirect"><LegacyAlertStudioRedirect /></SafeRoute>} />

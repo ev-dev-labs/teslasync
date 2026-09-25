@@ -403,7 +403,8 @@ vi.mock('@/components/ui/ThemePicker', () => ({
 }))
 
 // Import AFTER the mocks so the shell wires the stubs.
-import Layout, { navSections, navSearchKeywords, reconcileNavPaths } from './Layout'
+import Layout, { navSections, reconcileNavPaths } from './Layout'
+import { navSearchKeywords } from './navSearchKeywords'
 import { DIAGNOSTIC_GROUPS } from './diagnosticGroups'
 import {
   CANONICAL_SECTION_TO_COMPACT_GROUP,
@@ -585,6 +586,26 @@ describe('Layout — sidebar style selection', () => {
     expect(screen.queryByTestId('notion-sidebar')).toBeNull()
   })
 
+  describe('Layout — sidebar width', () => {
+    it('restores a saved width and supports keyboard resizing across sidebar styles', async () => {
+      localStorage.setItem('teslasync-sidebar-width', '344')
+      H.sidebarStyle.value = 'notion'
+      renderLayout('/')
+      const handle = await screen.findByRole('separator', { name: 'Resize sidebar' })
+      const shell = handle.closest('[data-presentation-mode]')
+      expect(handle).toHaveAttribute('aria-valuenow', '344')
+      expect(shell).toHaveStyle({ '--shell-sidebar-width': '344px' })
+
+      fireEvent.keyDown(handle, { key: 'ArrowRight' })
+      expect(handle).toHaveAttribute('aria-valuenow', '360')
+      expect(localStorage.getItem('teslasync-sidebar-width')).toBe('360')
+      fireEvent.keyDown(handle, { key: 'Home' })
+      expect(handle).toHaveAttribute('aria-valuenow', '240')
+      fireEvent.keyDown(handle, { key: 'End' })
+      expect(handle).toHaveAttribute('aria-valuenow', '420')
+    })
+  })
+
   it('renders the NotionSidebar when the style preference is "notion"', async () => {
     H.sidebarStyle.value = 'notion'
     renderLayout('/')
@@ -733,19 +754,17 @@ describe('Layout — compact Linear sidebar wiring', () => {
     expect(linearProps().activeSectionTitle).toBe('Drives')
   })
 
-  it('injects a long-tail active route into its mapped compact group', () => {
+  it('keeps a long-tail route in its expanded compact collection', () => {
     H.sidebarStyle.value = 'linear'
-    // /dashcam lives in the canonical "Diagnostics" section and is NOT part
-    // of the curated set — it must still light up under Developer.
     renderLayout('/dashcam')
 
     const { sections, activeSectionTitle } = linearProps()
-    expect(activeSectionTitle).toBe('Developer')
-    const group = sections.find((s) => s.title === 'Developer')
-    expect(group?.items.map((i) => i.to)).toContain('/dashcam')
-    // Injection must not duplicate anything elsewhere in the tree.
+    expect(activeSectionTitle).toBe('Operations')
+    const group = sections.find((s) => s.title === 'Operations')
+    expect(group?.items.map((i) => i.to)).toContain('/security-access')
     const paths = sections.flatMap((s) => s.items.map((i) => i.to))
-    expect(paths.filter((p) => p === '/dashcam')).toHaveLength(1)
+    expect(paths.filter((p) => p === '/security-access')).toHaveLength(1)
+    expect(paths).not.toContain('/dashcam')
   })
 
   it('keeps every authorized admin destination present in the compact tree', () => {
@@ -770,7 +789,7 @@ describe('Layout — compact Linear sidebar wiring', () => {
     }
     expect(props.sections.map((s) => s.title)).toContain('Diagnostics')
     expect(props.sections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
-    expect(props.activeSectionTitle).toBe('Diagnostics')
+    expect(props.activeSectionTitle).toBe('Security')
   })
 
   it('shows six Reports entries in the Notion sidebar while keeping every route in the catalog', () => {
@@ -793,12 +812,14 @@ describe('Layout — compact Linear sidebar wiring', () => {
     expect(navSections.find(section => section.title === 'Reports')?.items).toHaveLength(11)
   })
 
-  it('groups secondary report routes under their primary sidebar link', () => {
+  it('shows the report siblings inline on their original routes', async () => {
     renderLayout('/tco')
     const reports = document.querySelector('#nav-section-reports')
     expect(reports).toBeInTheDocument()
-    expect(within(reports as HTMLElement).getAllByRole('link')).toHaveLength(6)
-    expect(within(reports as HTMLElement).getByRole('link', { name: 'Costs' }))
+    await waitFor(() => expect(within(reports as HTMLElement).getAllByRole('link')).toHaveLength(5))
+    expect(within(reports as HTMLElement).getByRole('button', { name: 'Costs, 2 views' }))
+      .toHaveAttribute('aria-expanded', 'true')
+    expect(within(reports as HTMLElement).getByRole('link', { name: 'Cost of Ownership' }))
       .toHaveAttribute('aria-current', 'page')
   })
 
@@ -812,9 +833,8 @@ describe('Layout — compact Linear sidebar wiring', () => {
     }
     const diagnostics = props.sections.find(section => section.title === 'Diagnostics')
     expect(diagnostics?.items.map(item => item.to)).toEqual([
-      '/system-status', '/db-health', '/anomaly-detection', '/dashcam',
-      '/signals', '/admin/flags', '/admin/vehicle-cost', '/admin/secret-rotation',
-      '/admin/audit-log', '/admin/gdpr-exports', '/signal-correlation', '/api-playground',
+      '/system-status', '/db-health', '/anomaly-detection',
+      '/signals', '/admin/flags', '/admin/vehicle-cost', '/signal-correlation',
     ])
     expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry Troubleshooting')
     expect(props.pathname).toBe('/signals')
@@ -825,12 +845,12 @@ describe('Layout — compact Linear sidebar wiring', () => {
     ))).toBe(true)
   })
 
-  it('keeps grouped diagnostics active in the detailed sidebar and compact navigation', () => {
+  it('keeps grouped diagnostics active in the detailed sidebar and compact navigation', async () => {
     renderLayout('/signal-entropy')
     const diagnostics = document.querySelector('#nav-section-diagnostics')
     expect(diagnostics).toBeInTheDocument()
-    expect(within(diagnostics as HTMLElement).getAllByRole('link')).toHaveLength(12)
-    expect(within(diagnostics as HTMLElement).getByRole('link', { name: 'Signal Analysis' }))
+    await waitFor(() => expect(within(diagnostics as HTMLElement).getAllByRole('link')).toHaveLength(7))
+    expect(within(diagnostics as HTMLElement).getByRole('link', { name: 'Signal Entropy' }))
       .toHaveAttribute('aria-current', 'page')
 
     cleanup()
@@ -1008,8 +1028,8 @@ describe('Layout — live nav badges', () => {
   it('shows the vehicle count badge on the "My Vehicles" link', async () => {
     renderLayout('/vehicles')
     await waitFor(() => {
-      const link = screen.getByRole('link', { name: 'My Vehicles' })
-      expect(within(link).getByText('2')).toBeInTheDocument()
+      const button = screen.getByRole('button', { name: 'Fleet, 5 views' })
+      expect(within(button).getByText('2')).toBeInTheDocument()
     })
   })
 
@@ -1018,7 +1038,7 @@ describe('Layout — live nav badges', () => {
     await waitFor(() => {
       const link = screen.getByRole('link', { name: 'All Notifications' })
       // ALERTS fixture has exactly one unread entry.
-      expect(within(link).getByText('1')).toBeInTheDocument()
+      expect(within(link.parentElement as HTMLElement).getByText('1')).toBeInTheDocument()
     })
   })
 
@@ -1027,7 +1047,7 @@ describe('Layout — live nav badges', () => {
     await waitFor(() => {
       const link = screen.getByRole('link', { name: 'Data Repair' })
       // REPAIR_STATS fixture: 1 open + 2 in review = 3.
-      expect(within(link).getByText('3')).toBeInTheDocument()
+      expect(within(link.parentElement as HTMLElement).getByText('3')).toBeInTheDocument()
     })
   })
 
@@ -1089,6 +1109,8 @@ describe('Layout — section expand/collapse', () => {
 
     fireEvent.click(chargingToggle)
     expect(chargingToggle).toHaveAttribute('aria-expanded', 'true')
+    const chargingGroup = await screen.findByRole('button', { name: 'Charging Activity, 6 views' })
+    fireEvent.click(chargingGroup)
     expect(await screen.findByRole('link', { name: 'Charging Overview' })).toBeInTheDocument()
 
     fireEvent.click(chargingToggle)
@@ -1103,7 +1125,9 @@ describe('Layout — section expand/collapse', () => {
     const expandAll = screen.getByRole('button', { name: 'Expand all sections' })
     expect(expandAll).not.toBeDisabled()
     fireEvent.click(expandAll)
-    // A deep-section link that was collapsed before now renders.
+    // The collection is visible without opening its children.
+    const chargingGroup = await screen.findByRole('button', { name: 'Charging Activity, 6 views' })
+    fireEvent.click(chargingGroup)
     expect(await screen.findByRole('link', { name: 'Charging Overview' })).toBeInTheDocument()
     await waitFor(() => expect(expandAll).toBeDisabled())
   })

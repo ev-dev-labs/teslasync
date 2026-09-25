@@ -32,7 +32,8 @@ export { DataTableBulkBar } from './DataTableBulkBar';
 export { DataTableResizer } from './DataTableResizer';
 export { DensityApplier } from './DensityApplier';
 export { Drawer, type DrawerProps, type DrawerSize } from './Drawer';
-export { CommandPalette } from './CommandPalette';
+// The palette is reached through CommandPaletteTrigger's dynamic import;
+// re-exporting it eagerly here pulls the entire navigation catalog into startup.
 export {
   CommandPaletteTrigger,
   loadCommandPalette,

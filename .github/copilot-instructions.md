@@ -297,6 +297,21 @@ Many bugs in this project stem from frontend TypeScript interfaces not matching 
 
 ## Frontend Architecture (Refactored)
 
+### Date ranges: one shared View settings control
+
+For a page whose data is scoped by date/time, use the existing **View settings**
+control in the application header. Register the route in
+`web/src/lib/workspaceScope.ts` (`RANGE_ENABLED_PATHS`), and consume the
+same `useRangeState()` preference and `from`/`to` URL state in the page.
+Pass its `startInstant` and `endInstantExclusive` through the typed API hook;
+the server must filter both list results and full-range charts/aggregates.
+Preserve rolling presets (for example 24 hours), custom ranges, and timezone
+semantics. **Do not add a second date picker or date-range card in the page,
+filter toolbar, or chart** when the header control already owns that range.
+If an existing endpoint cannot support both bounds, extend it rather than
+filtering only the currently loaded page. Keep page-specific non-date filters
+separate. Check `InboxPage` and `useRangeState` for the shared pattern.
+
 ### Directory Structure
 ```
 web/src/

@@ -11,12 +11,12 @@
 //     mutation callbacks (toggle / re-enable / delete / test-run)
 //   - typed import: valid envelope → mutate, legacy/invalid JSON → window.alert,
 //     pending → aria-busy button
-//   - create navigation + activity-feed prop plumbing
+//   - create navigation; recent activity moved to the dedicated history route
 //
 // Repo test conventions: framer-motion is mocked so FadeIn/Stagger render
 // eagerly, react-i18next is mocked with an interpolating fallback `t`, the
-// three heavy child components (AutomationCard / AutomationActivityFeed /
-// PresetGallery) are replaced with lightweight probes, and every data/mutation
+// heavy child components (AutomationCard / PresetGallery) are replaced with
+// lightweight probes, and every data/mutation
 // hook is mocked so the page never touches the network.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -157,30 +157,6 @@ vi.mock('./AutomationCard', () => ({
       <button type="button" onClick={() => onReEnable(automation.id)}>{`reenable:${automation.id}`}</button>
       <button type="button" onClick={() => onDelete(automation.id)}>{`delete:${automation.id}`}</button>
       <button type="button" onClick={() => onTestRun(automation.id)}>{`testrun:${automation.id}`}</button>
-    </div>
-  ),
-}));
-
-interface FeedProbeProps {
-  history?: unknown[];
-  historyStats?: unknown;
-  isLoading?: boolean;
-  error?: unknown;
-  liveEvents?: unknown[];
-  connectionState?: string;
-}
-
-vi.mock('./AutomationActivityFeed', () => ({
-  AutomationActivityFeed: ({
-    history, historyStats, isLoading, error, liveEvents, connectionState,
-  }: FeedProbeProps) => (
-    <div data-testid="activity-feed">
-      <span data-testid="feed-history-count">{(history ?? []).length}</span>
-      <span data-testid="feed-live-count">{(liveEvents ?? []).length}</span>
-      <span data-testid="feed-conn">{connectionState}</span>
-      <span data-testid="feed-loading">{isLoading ? 'loading' : 'idle'}</span>
-      <span data-testid="feed-error">{error ? 'error' : 'ok'}</span>
-      <span data-testid="feed-stats">{historyStats ? 'stats' : 'nostats'}</span>
     </div>
   ),
 }));
@@ -583,35 +559,20 @@ describe('AutomationsListPage — typed import', () => {
   });
 });
 
-// ═══ Navigation + activity feed ══════════════════════════════════════════════
+// ═══ Navigation + dedicated activity route ══════════════════════════════════
 
-describe('AutomationsListPage — navigation & activity feed', () => {
+describe('AutomationsListPage — navigation & activity', () => {
   it('navigates to the builder when Create is clicked', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     expect(m.navigate).toHaveBeenCalledWith('/automations/new');
+    fireEvent.click(screen.getByRole('button', { name: 'Manage rules' }));
+    expect(m.navigate).toHaveBeenCalledWith('/automations/list');
   });
 
-  it('passes history, live events, connection state and stats to the feed', () => {
-    m.useAutomationHistory.mockReturnValue({
-      data: { items: [{ id: 1 }, { id: 2 }], summary: { total_executions: 5 } },
-      isLoading: false,
-      error: undefined,
-    });
-    m.useAutomationEvents.mockReturnValue({
-      events: [{ id: 'e1' }], connectionState: 'reconnecting', firingNow: new Set<number>(), clearEvents: vi.fn(),
-    });
+  it('does not mount the recent-activity widget or fetch its limited history', () => {
     renderPage();
-    expect(screen.getByTestId('feed-history-count').textContent).toBe('2');
-    expect(screen.getByTestId('feed-live-count').textContent).toBe('1');
-    expect(screen.getByTestId('feed-conn').textContent).toBe('reconnecting');
-    expect(screen.getByTestId('feed-stats').textContent).toBe('stats');
-  });
-
-  it('defaults the feed to empty history and null stats when the response is absent', () => {
-    m.useAutomationHistory.mockReturnValue({ data: null, isLoading: false, error: undefined });
-    renderPage();
-    expect(screen.getByTestId('feed-history-count').textContent).toBe('0');
-    expect(screen.getByTestId('feed-stats').textContent).toBe('nostats');
+    expect(screen.queryByTestId('activity-feed')).not.toBeInTheDocument();
+    expect(m.useAutomationHistory).not.toHaveBeenCalled();
   });
 });

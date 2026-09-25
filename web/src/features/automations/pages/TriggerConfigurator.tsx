@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import {
   Input as UiInput,
   Select as UiSelect,
@@ -180,7 +181,7 @@ function signalValueFromInput(
 
 export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorProps) {
   const { t } = useTranslation();
-  const { data: geofences, isLoading: geofencesLoading, isError: geofencesError } = useGeofences();
+  const { data: geofences, isLoading: geofencesLoading, isError: geofencesError, refetch: refetchGeofences } = useGeofences();
   const [advancedMode, setAdvancedMode] = useState(false);
 
   const geofenceOptions = useMemo(
@@ -371,6 +372,20 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
               place_id: event.target.value ? Number(event.target.value) : 0,
             })}
           />
+          {!geofencesLoading && !geofencesError && (geofences ?? []).length === 0 && (
+            <Text as="p" variant="bodySm">
+              {t('automations.builder.geofenceHelp', 'Create a place first, then return here to choose when the vehicle arrives or leaves.')}
+              {' '}
+              <Link to="/geofences" className="font-medium text-[var(--theme-primary)] underline underline-offset-2">
+                {t('automations.builder.managePlaces', 'Manage places')}
+              </Link>
+            </Text>
+          )}
+          {geofencesError && (
+            <UiButton type="button" size="sm" variant="secondary" onClick={() => refetchGeofences()}>
+              {t('automations.builder.retryGeofences', 'Retry loading places')}
+            </UiButton>
+          )}
           <UiSelect
             label={t('automations.builder.geofenceEvent', 'Event')}
             options={geofenceEventOptions}

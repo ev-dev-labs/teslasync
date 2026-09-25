@@ -263,7 +263,22 @@ export function conditionNeedsPlace(condition: AutomationConditionStepInput): bo
 export function actionIsIncomplete(action: AutomationActionStepInput): boolean {
   switch (action.kind) {
     case 'action_command':
-      return action.command_name.trim() === '';
+      if (!action.command_name.trim()) return true;
+      if (action.command_name === 'set_charge_limit') {
+        const percent = action.command_params?.percent;
+        return typeof percent !== 'number' || !Number.isFinite(percent) || percent < 0 || percent > 100;
+      }
+      if (action.command_name === 'set_charging_amps') {
+        const amps = action.command_params?.charging_amps;
+        return typeof amps !== 'number' || !Number.isFinite(amps) || amps < 1;
+      }
+      if (action.command_name === 'set_temps') {
+        return ['driver_temp', 'passenger_temp'].some((key) => {
+          const temp = action.command_params?.[key];
+          return typeof temp !== 'number' || !Number.isFinite(temp) || temp < 15 || temp > 30;
+        });
+      }
+      return false;
     case 'action_notify':
       return action.channel_id <= 0 || action.template.trim() === '';
     case 'action_set_setting':

@@ -33,6 +33,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PrefetchNavLink } from '../PrefetchLink'
+import { CollectionTreeRow } from './CollectionTreeRow'
+import { soleCollection, unpinnedSidebarItems } from './collections'
+import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
+import { routeIconColor } from './iconColors'
 import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
@@ -105,14 +109,11 @@ function NotionRow({
         <Icon
           className={cn(
             'h-4 w-4 shrink-0 transition-colors',
-            iconColor && !active && 'opacity-90',
-            active
-              ? 'text-[var(--theme-primary)]'
-              : iconColor ?? 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
+            active ? 'text-[var(--theme-primary)]' : routeIconColor(iconColor),
           )}
           aria-hidden
         />
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{label}</span>
         {trailing}
       </PrefetchNavLink>
       {hoverAction && (
@@ -173,13 +174,11 @@ function NotionSectionRow({
       <Icon
         className={cn(
           'h-4 w-4 shrink-0',
-          active
-            ? 'text-[var(--theme-primary)]'
-            : (iconColor ?? 'text-[var(--text-muted)]'),
+          active ? 'text-[var(--theme-primary)]' : routeIconColor(iconColor),
         )}
         aria-hidden
       />
-      <span className="min-w-0 flex-1 truncate">{title}</span>
+      <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{title}</span>
       <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-2)] px-1 text-xs font-medium tabular-nums text-[var(--text-muted)]">
         {count}
       </span>
@@ -248,6 +247,7 @@ export function NotionSidebar({
   alertCount = 0,
   vehicleCount = 0,
   staleCount = 0,
+  collections = [],
 }: NotionSidebarProps) {
   const { t } = useTranslation()
   const location = useLocation()
@@ -304,7 +304,7 @@ export function NotionSidebar({
   const sectionGlyph = (section: NotionSidebarSectionInput) => {
     const first = section.items?.[0]
     return {
-      icon: first?.icon ?? Icons.home,
+      icon: SIDEBAR_SECTION_ICONS[section.title] ?? first?.icon ?? Icons.home,
       color: first?.color,
     }
   }
@@ -364,7 +364,7 @@ export function NotionSidebar({
   }
 
   // ── Render ─────────────────────────────────────────────────────────────
-  const expandedSections = safeSections.filter(s => s.items.length > 0)
+  const expandedSections = safeSections.filter(section => unpinnedSidebarItems(section.items, collections, pinnedSet).length > 0)
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-role="notion-sidebar">
@@ -388,7 +388,7 @@ export function NotionSidebar({
                     label={navLabel(item)}
                     icon={item.icon}
                     iconColor={item.color}
-                    active={false}
+                    active={itemIsActive(item.to)}
                     onSelect={onItemSelect}
                     trailing={trailingFor(item.to)}
                     hoverAction={
@@ -417,12 +417,13 @@ export function NotionSidebar({
 
         {/* Pages group — Notion calls everything below "Workspace"/"Private". */}
         <GroupLabel id="notion-pages-label">{t('nav.workspacePages', 'Workspace')}</GroupLabel>
-        <div className="space-y-1" aria-labelledby="notion-pages-label">
+        <div className="ms-3 space-y-1 border-s border-[var(--border-default)] ps-2" aria-labelledby="notion-pages-label">
           {expandedSections.map(section => {
             const expanded = isExpanded(section.title)
+            const singleCollection = soleCollection(section, collections)
             const glyph = sectionGlyph(section)
             return (
-              <div key={section.title} className="space-y-0.5">
+              <div key={section.title} className="relative space-y-0.5 before:absolute before:-start-2 before:top-5 before:h-px before:w-2 before:bg-[var(--border-default)]">
                 <NotionSectionRow
                   title={section.titleKey ? t(section.titleKey, section.title) : section.title}
                   icon={glyph.icon}
@@ -430,25 +431,42 @@ export function NotionSidebar({
                   expanded={expanded}
                   active={section.title === activeSectionTitle}
                   onToggle={() => toggleSection(section.title)}
-                  count={section.items.length}
+                  count={singleCollection
+                    ? singleCollection.pages.filter(page => !pinnedSet.has(page.to)).length
+                    : unpinnedSidebarItems(section.items, collections, pinnedSet).length}
                 />
                 {expanded && (
-                  <div className="space-y-0.5" role="group" aria-label={section.titleKey ? t(section.titleKey, section.title) : section.title}>
-                    {section.items.map(item => (
-                      <NotionRow
-                        key={item.to}
-                        to={item.to}
-                        label={navLabel(item)}
-                        icon={item.icon}
-                        iconColor={item.color}
-                        active={itemIsActive(item.to)}
-                        onSelect={onItemSelect}
-                        trailing={trailingFor(item.to)}
-                        hoverAction={pinAction(item)}
-                        dataTour={item.dataTour}
-                        indent="ps-7"
-                      />
-                    ))}
+                  <div className="ms-5 space-y-0.5 border-s border-[var(--border-default)] ps-2" role="group" aria-label={section.titleKey ? t(section.titleKey, section.title) : section.title}>
+                    {unpinnedSidebarItems(section.items, collections, pinnedSet).map(item => {
+                      const group = collections.find(candidate => candidate.primary === item.to)
+                      return group
+                        ? <CollectionTreeRow
+                            key={item.to}
+                            group={group}
+                            pathname={location.pathname}
+                            flattened={group === singleCollection}
+                            onSelect={onItemSelect}
+                            dataTour={item.dataTour}
+                            statusCount={item.to === '/vehicles' ? vehicleCount : item.to === '/notifications/inbox' ? alertCount : item.to === '/data-export' ? staleCount : undefined}
+                            statusPath={item.to === '/data-export' ? '/data-repair' : undefined}
+                            pinnedPaths={pinnedSet}
+                            onPin={onPin}
+                            onUnpin={onUnpin}
+                          />
+                        : <NotionRow
+                            key={item.to}
+                            to={item.to}
+                            label={navLabel(item)}
+                            icon={item.icon}
+                            iconColor={item.color}
+                            active={itemIsActive(item.to)}
+                            onSelect={onItemSelect}
+                            trailing={trailingFor(item.to)}
+                            hoverAction={pinAction(item)}
+                            dataTour={item.dataTour}
+                            indent="ps-7"
+                          />
+                    })}
                   </div>
                 )}
               </div>

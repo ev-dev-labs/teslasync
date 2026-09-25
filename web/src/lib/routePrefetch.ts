@@ -42,6 +42,7 @@ const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/automations': () => import('../features/automations/pages/AutomationsListPage'),
   '/automations/:id/edit': () => import('../features/automations/pages/AutomationBuilderPage'),
   '/automations/list': () => import('../features/automations/pages/AutomationListPage'),
+  '/automations/history': () => import('../features/automations/pages/AutomationHistoryPage'),
   '/automations/new': () => import('../features/automations/pages/AutomationBuilderPage'),
   '/backup': () => import('../features/admin/pages/BackupRestorePage'),
   '/benchmarks/privacy': () => import('../features/benchmarks/pages/PrivacyBenchmarksPage'),

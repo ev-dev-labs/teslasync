@@ -1,8 +1,10 @@
+import type { Icons } from '@/lib/icons'
+
 export interface SectionGroup {
   primary: string
   label: string
   labelKey: string
-  pages: readonly { to: string; label: string; labelKey: string }[]
+  pages: readonly { to: string; label: string; labelKey: string; icon?: typeof Icons.home; color?: string }[]
 }
 
 export function findSectionGroup(groups: readonly SectionGroup[], pathname: string) {

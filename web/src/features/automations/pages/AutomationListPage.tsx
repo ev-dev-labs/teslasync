@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { Button, Input, Select, type SelectOption } from '@/components/ui';
+import { Button, GlassPanel, Input, Select, type SelectOption } from '@/components/ui';
 import { BulkActionToolbar, MetricCard } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -18,6 +18,7 @@ import { fmtInt } from '@/lib/numberFormat';
 
 import { AutomationListTable } from './AutomationListTable';
 import { AutomationStatusPanel } from './AutomationStatusPanel';
+import { RoutineWizard } from '../components/RoutineWizard';
 
 type RowKey = string | number;
 type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
@@ -34,7 +35,7 @@ type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
 export default function AutomationListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  usePageTitle(t('automationList.title', 'Automations (list)'));
+  usePageTitle(t('automationList.title', 'Automation Rules'));
 
   const automationsQuery = useAutomations();
   const { data: rowsRaw, isLoading, error, refetch } = automationsQuery;
@@ -166,7 +167,7 @@ export default function AutomationListPage() {
 
   return (
     <PageContainer
-      title={t('automationList.title', 'Automations (list)')}
+      title={t('automationList.title', 'Automation Rules')}
       subtitle={t(
         'automationList.subtitle',
         'Bulk-manage automations. Click an automation to edit it in the builder.',
@@ -303,6 +304,11 @@ export default function AutomationListPage() {
             onRetry={refetch}
           />
         </section>
+      </FadeIn>
+      <FadeIn delay={0.15}>
+        <GlassPanel className="p-4 sm:p-5">
+          <RoutineWizard actionsDisabled={!operationalMode.canWrite} />
+        </GlassPanel>
       </FadeIn>
     </PageContainer>
   );

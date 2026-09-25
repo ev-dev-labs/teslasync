@@ -14,6 +14,7 @@
     "launcher": {
       "title": "Take a tour",
       "subtitle": "Guided walkthroughs for every major feature.",
+      "empty": "No tours are available yet.",
       "recommendedHere": "Recommended for this page",
       "completed": "Completed",
       "start": "Start",

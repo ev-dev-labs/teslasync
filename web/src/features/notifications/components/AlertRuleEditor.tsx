@@ -23,7 +23,8 @@ import { SeverityBadge } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { AlertBanner, DraftRecoveryBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
-import { PillFilterBar, type PillItem, SearchInput, VehicleMultiSelect, hydrateVehicleSelection, buildVehiclePayload, type VehicleSelection } from '@/components/forms'
+import { SearchInput, VehicleMultiSelect, hydrateVehicleSelection, buildVehiclePayload, type VehicleSelection } from '@/components/forms'
+import { fmtInt } from '@/lib/numberFormat'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { cn } from '@/lib/cn'
 import { severityTokens, typography } from '@/lib/tokens'
@@ -725,7 +726,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
   const allChannelIds = useMemo(() => channelsList.map(ch => ch.id), [channelsList])
   // Category pills for the template browser. "all" clears the filter; each
   // category pill carries its live template count.
-  const categoryPills = useMemo<PillItem[]>(() => [
+  const categoryPills = useMemo(() => [
     { key: 'all', label: t('notifications.alertStudio.templates.allCategory', 'All'), count: ruleTemplates.length },
     ...templateCategories.map(cat => ({
       key: cat,
@@ -1193,25 +1194,52 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
       {!rule && showTemplates && (
         <FadeIn>
           <GlassPanel className="p-4 sm:p-5">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-4">
               <PanelTitle>
                 {t('notifications.alertStudio.templates.header', 'Rule Templates - {{count}} pre-built rules', { count: ruleTemplates.length })}
               </PanelTitle>
+            </div>
+            <div className="mb-4">
+              <Caption className="mb-2 block">
+                {t('notifications.alertStudio.templates.searchLabel', 'Search templates')}
+              </Caption>
               <SearchInput
                 value={templateSearch}
                 onChange={setTemplateSearch}
                 placeholder={t('notifications.alertStudio.templates.searchPlaceholder', 'Search templates...')}
-                className="w-full sm:w-64"
+                ariaLabel={t('notifications.alertStudio.templates.searchLabel', 'Search templates')}
+                className="w-full"
               />
             </div>
 
-            <PillFilterBar
-              className="mb-4"
-              ariaLabel={t('notifications.alertStudio.templates.categoryFilter', 'Filter templates by category')}
-              items={categoryPills}
-              activeKey={templateCategory ?? 'all'}
-              onChange={key => setTemplateCategory(key === 'all' ? null : key)}
-            />
+            <div
+              role="group"
+              aria-label={t('notifications.alertStudio.templates.categoryFilter', 'Filter templates by category')}
+              className="mb-3 flex flex-wrap gap-2"
+            >
+              {categoryPills.map(item => {
+                const selected = (templateCategory ?? 'all') === item.key
+                return (
+                  <UiButton
+                    key={item.key}
+                    type="button"
+                    size="sm"
+                    variant={selected ? 'primary' : 'ghost'}
+                    aria-pressed={selected}
+                    onClick={() => setTemplateCategory(item.key === 'all' ? null : item.key)}
+                    className="min-h-9 rounded-shape-lg border border-[var(--border-default)] px-3"
+                  >
+                    {item.label} ({fmtInt(item.count)})
+                  </UiButton>
+                )
+              })}
+            </div>
+            <Caption role="status" className="mb-4 block">
+              {t('notifications.alertStudio.templates.showing', '{{count}} of {{total}} templates', {
+                count: filteredTemplates.length,
+                total: ruleTemplates.length,
+              })}
+            </Caption>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-6">
               {filteredTemplates.map(tpl => {

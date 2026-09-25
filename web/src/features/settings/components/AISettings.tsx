@@ -524,7 +524,7 @@ export function AISettings() {
               />
             </div>
             <div className="space-y-4">
-              <AIUsageCard />
+              <AIUsageCard enabled={settings?.ai_mode === 'local' || settings?.ai_mode === 'cloud'} />
               {/*
                 Cost-cap spend bar. Cloud-only (local providers don't bill
                 per token) and only when a non-zero cap is set. Reads

@@ -38,7 +38,7 @@ export default function AlertPacksPanel({ onEditRule }: Props) {
             <GlassPanel key={pack.id} className="flex flex-col gap-3 p-4">
               <PanelTitle>{packName(pack)}</PanelTitle>
               <Text variant="bodySm">{t(`alertPacks.catalog.${pack.id}.description`, pack.description)}</Text>
-              <Caption>{t('alertPacks.ruleCount', '{{count}} rules · version {{version}}', { count: pack.rules.length, version: pack.version })}</Caption>
+              <Caption className="mt-auto">{t('alertPacks.ruleCount', '{{count}} rules · version {{version}}', { count: pack.rules.length, version: pack.version })}</Caption>
               <Button variant="secondary" onClick={() => setSelected(pack)} aria-label={t('alertPacks.preview', 'Preview {{name}}', { name: packName(pack) })}>
                 {t('alertPacks.previewAction', 'Preview pack')}
               </Button>

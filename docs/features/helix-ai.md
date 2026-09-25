@@ -50,6 +50,8 @@ Log summarisation, trace summarisation, feedback queue prioritisation, data-repa
 
 A single feature ID — `chatbot-llm` — wires the **Helix** sidebar entry to a chat surface that has access to a curated tool set (fleet lookup, drive lookup, charging lookup, alert lookup, automation lookup, RAG over the docs corpus). The chatbot is the most visible Helix feature but it is also just one of the 56.
 
+The Helix icon at the right edge of the status bar opens a side chat without leaving the current view. On desktop the page narrows beside the chat; on smaller screens it opens as a drawer. When **Include visible page text** is on, each question includes a bounded snapshot of the current route, page title, and visible main-content text. Form entries, hidden panels, and the rest of the browser are not captured. Switch the toggle off before sending to ask without page context. Page snapshots are supplied only to an enabled `chatbot-llm` request and are not stored as chat messages; the usual AI provider, budget, and redaction controls still apply.
+
 Plus 3 ops-only registry entries (`__usage__`, `__redaction_bypass__`, `ai-provider-health`) that aren't user-toggleable — they exist so the platform itself can call the AI infrastructure without violating the off-by-default contract.
 
 ## Providers

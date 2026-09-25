@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
 import {
@@ -7,7 +7,6 @@ import {
   Input,
   PanelTitle,
   Popover,
-  Select,
   Text,
   Toggle,
 } from '@/components/ui/runtime'
@@ -15,16 +14,30 @@ import { useRangeState } from '@/hooks/useRangeState'
 import { useProductPreferences } from '@/hooks/useProductPreferences'
 import { getCurrentDensity } from '@/hooks/useDensitySync'
 import { getDatePreset } from '@/lib/datePresets'
+import { formatDate, formatDateShort } from '@/lib/dateFormat'
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
 import {
   WORKSPACE_DENSITY_EVENT,
   WORKSPACE_RANGE_EVENT,
-  WORKSPACE_RANGE_PRESETS,
   isWorkspaceDensity,
   isWorkspaceRangePreset,
+  type WorkspaceDensity,
+  type WorkspaceRangePreset,
 } from '@/lib/workspacePreferences'
 import { useStatusBarPopover } from './status-bar/StatusBarContext'
+
+const SHORT_PRESET_LABELS: Record<WorkspaceRangePreset, string> = {
+  live: 'Last 5 min',
+  '24h': '24 hours',
+  today: 'Today',
+  '7d': '7 days',
+  '30d': '30 days',
+  '90d': '90 days',
+  '1y': '1 year',
+  all: 'All time',
+}
+const QUICK_PRESETS = ['24h', '7d', '30d', '90d'] as const
 
 export interface WorkspaceContextControlProps {
   className?: string
@@ -54,17 +67,20 @@ export function WorkspaceContextControl({
     defaultPresetId: preferences.defaultAnalysisRange,
     enableCompare: true,
   })
-  const { data: settings } = useSettings()
+  const { data: settings, isLoading: settingsLoading, refetch: refetchSettings } = useSettings()
   const saveSettings = useSaveSettings()
-  const density = settings?.ui_density ?? getCurrentDensity()
+  const [pendingDensity, setPendingDensity] = useState<WorkspaceDensity | null>(null)
+  const density = pendingDensity ?? settings?.ui_density ?? getCurrentDensity()
   const [draftStart, setDraftStart] = useState(range.start)
   const [draftEnd, setDraftEnd] = useState(range.end)
+  const [showCustom, setShowCustom] = useState(!range.presetId)
 
   useEffect(() => {
     if (!open) return
     setDraftStart(range.start)
     setDraftEnd(range.end)
-  }, [open, range.start, range.end])
+    setShowCustom(!range.presetId)
+  }, [open, range.start, range.end, range.presetId])
 
   useEffect(() => {
     if (!listenForCommands) return
@@ -91,28 +107,9 @@ export function WorkspaceContextControl({
     if (hidden && open) close()
   }, [close, hidden, open])
 
-  const rangeOptions = useMemo(
-    () =>
-      WORKSPACE_RANGE_PRESETS.map((id) => {
-        const preset = getDatePreset(id)
-        return {
-          value: id,
-          label: preset
-            ? t(preset.i18nKey, preset.fallback)
-            : id,
-        }
-      }),
-    [t],
-  )
-
-  const densityOptions = useMemo(
-    () => [
-      { value: 'compact', label: t('density.compact', 'Compact') },
-      { value: 'comfortable', label: t('density.comfortable', 'Comfortable') },
-      { value: 'spacious', label: t('density.spacious', 'Spacious') },
-    ],
-    [t],
-  )
+  useEffect(() => {
+    if (pendingDensity && settings?.ui_density === pendingDensity) setPendingDensity(null)
+  }, [pendingDensity, settings?.ui_density])
 
   const activePreset = range.presetId
     ? getDatePreset(range.presetId)
@@ -133,10 +130,16 @@ export function WorkspaceContextControl({
     { range: visibleContextLabel },
   )
   const validDraft = draftStart.length > 0 && draftEnd.length > 0 && draftStart <= draftEnd
+  const visiblePresets = isWorkspaceRangePreset(range.presetId) && !QUICK_PRESETS.some(id => id === range.presetId)
+    ? [range.presetId, ...QUICK_PRESETS]
+    : QUICK_PRESETS
 
   const updateDensity = (next: string) => {
     if (!settings || !isWorkspaceDensity(next) || next === density) return
-    saveSettings.mutate({ ...settings, ui_density: next })
+    setPendingDensity(next)
+    saveSettings.mutate({ ...settings, ui_density: next }, {
+      onError: () => setPendingDensity(null),
+    })
   }
 
   if (hidden) return null
@@ -184,102 +187,205 @@ export function WorkspaceContextControl({
         anchorRef={triggerRef}
         side={variant === 'status' ? 'top' : 'bottom'}
         align="end"
-        ariaLabel={t('workspace.analysis.title', 'Workspace analysis context')}
-        className="w-[min(92vw,24rem)] p-4"
+        zIndex={70}
+        ariaLabel={t('workspace.analysis.title', 'View settings')}
+        className="w-[min(92vw,27rem)] max-h-[min(80vh,38rem)] overflow-y-auto rounded-shape-xl border-[var(--panel-border)] bg-[var(--panel-bg)] p-0 shadow-e3"
       >
-        <div className="space-y-4">
-          <div>
-            <PanelTitle className="flex items-center gap-2">
-              <Icons.preferences className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('workspace.analysis.title', 'Workspace analysis context')}
-            </PanelTitle>
-            <Text as="p" variant="bodySm" className="mt-1">
-              {t(
-                'workspace.analysis.description',
-                'Vehicle-aware pages inherit this analysis window and interface density.',
-              )}
-            </Text>
-            {(range.presetId === 'live' || range.presetId === '24h') && (
-              <Caption className="mt-2 block">
-                {t(
-                  'workspace.analysis.liveHint',
-                  'Live uses the latest available data. Precise-history views use rolling instants; calendar summaries include the local dates intersected by the selected window.',
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border-default)] px-5 py-3">
+          <PanelTitle className="flex items-center gap-2 text-base">
+            <Icons.preferences className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />
+            {t('workspace.analysis.title', 'View settings')}
+          </PanelTitle>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={!settings || saveSettings.isPending}
+              onClick={() => {
+                range.setPreset(preferences.defaultAnalysisRange)
+                range.setCompare(false)
+                updateDensity('comfortable')
+                setShowCustom(false)
+              }}
+              className="text-xs font-medium text-[var(--text-muted)]"
+            >
+              {t('workspace.analysis.reset', 'Reset')}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-label={t('workspace.analysis.close', 'Close view settings')}
+              onClick={close}
+              className="min-h-9 min-w-9 p-0 text-[var(--text-muted)]"
+            >
+              <Icons.close className="h-4 w-4" aria-hidden />
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-4">
+          <div className="space-y-2.5">
+            <Caption className="block font-semibold uppercase tracking-wide">
+              {t('workspace.analysis.range', 'Date range')}
+            </Caption>
+            <div
+              role="group"
+              aria-label={t('workspace.analysis.range', 'Date range')}
+              className="grid grid-cols-2 gap-1 rounded-shape-lg bg-[var(--surface-2)] p-1 min-[420px]:grid-cols-5"
+            >
+              {visiblePresets.map(id => (
+                <Button
+                  key={id}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-pressed={!showCustom && range.presetId === id}
+                  aria-label={id === '24h' ? t('date.preset.last24h', 'Last 24 hours') : undefined}
+                  onClick={() => {
+                    setShowCustom(false)
+                    range.setPreset(id)
+                  }}
+                  className={cn(
+                    'min-h-9 min-w-0 rounded-lg px-1 text-xs',
+                    !showCustom && range.presetId === id
+                      ? 'bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1 ring-1 ring-inset ring-[var(--theme-primary)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-3)]',
+                  )}
+                >
+                  {t(`workspace.analysis.presets.${id}`, SHORT_PRESET_LABELS[id])}
+                </Button>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-pressed={showCustom || !range.presetId}
+                onClick={() => setShowCustom(true)}
+                className={cn(
+                  'min-h-9 min-w-0 rounded-lg px-1 text-xs max-[419px]:col-span-2',
+                  showCustom || !range.presetId
+                    ? 'bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1 ring-1 ring-inset ring-[var(--theme-primary)]'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-3)]',
                 )}
+              >
+                {t('workspace.analysis.custom', 'Custom')}
+              </Button>
+            </div>
+            {(range.presetId === 'live' || range.presetId === '24h' || range.presetId === 'today') && !showCustom && (
+              <Caption className="block">
+                {range.presetId === 'today'
+                  ? t('workspace.analysis.todayHint', 'Today starts at midnight in your local timezone.')
+                  : t('workspace.analysis.rollingHint', 'Rolling window: the last {{minutes}} of available data, refreshed as time passes.', {
+                      minutes: range.presetId === 'live' ? '5 minutes' : '24 hours',
+                    })}
               </Caption>
+            )}
+            {showCustom && (
+              <div className="space-y-3 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Input
+                    type="date"
+                    label={t('date.range.start', 'Start date')}
+                    value={draftStart}
+                    max={draftEnd}
+                    onChange={(event) => setDraftStart(event.target.value)}
+                  />
+                  <Input
+                    type="date"
+                    label={t('date.range.end', 'End date')}
+                    value={draftEnd}
+                    min={draftStart}
+                    onChange={(event) => setDraftEnd(event.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  disabled={!validDraft}
+                  onClick={() => {
+                    range.setRange({ start: draftStart, end: draftEnd })
+                    close()
+                  }}
+                  className="w-full"
+                >
+                  {t('workspace.analysis.applyCustom', 'Apply custom range')}
+                </Button>
+              </div>
             )}
           </div>
 
-          <Select
-            label={t('workspace.analysis.range', 'Analysis window')}
-            value={range.presetId ?? ''}
-            placeholder={t('workspace.analysis.custom', 'Custom')}
-            options={rangeOptions}
-            size="sm"
-            onChange={(event) => {
-              if (isWorkspaceRangePreset(event.target.value)) {
-                range.setPreset(event.target.value)
-              }
-            }}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              type="date"
-              label={t('date.range.start', 'Start date')}
-              value={draftStart}
-              max={draftEnd}
-              onChange={(event) => setDraftStart(event.target.value)}
-            />
-            <Input
-              type="date"
-              label={t('date.range.end', 'End date')}
-              value={draftEnd}
-              min={draftStart}
-              onChange={(event) => setDraftEnd(event.target.value)}
-            />
-          </div>
-
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={!validDraft}
-            onClick={() => {
-              range.setRange({ start: draftStart, end: draftEnd })
-              close()
-            }}
-            className="w-full"
-          >
-            {t('workspace.analysis.applyCustom', 'Apply custom range')}
-          </Button>
-
-          <div className="border-t border-[var(--border-subtle)] pt-4">
+          <div className="border-t border-[var(--border-default)] pt-4">
             <Toggle
               size="sm"
               checked={range.compare}
               onChange={range.setCompare}
               label={t('date.range.compare', 'Compare to previous period')}
+              className="w-full flex-row-reverse justify-between"
             />
+            <Text as="p" variant="caption" className="mt-1">
+              {t('workspace.analysis.compareHint', 'Adds comparison variance to supported views.')}
+            </Text>
           </div>
 
-          <Select
-            label={t('workspace.analysis.density', 'Workspace density')}
-            value={density}
-            options={densityOptions}
-            size="sm"
-            disabled={!settings || saveSettings.isPending}
-            onChange={(event) => updateDensity(event.target.value)}
-          />
+          <div className="space-y-2 border-t border-[var(--border-default)] pt-4">
+            <Caption className="block font-semibold uppercase tracking-wide">
+              {t('workspace.analysis.density', 'Display density')}
+            </Caption>
+            <div role="group" aria-label={t('workspace.analysis.density', 'Display density')} className="grid grid-cols-3 gap-2">
+              {(['compact', 'comfortable', 'spacious'] as const).map(option => (
+                <Button
+                  key={option}
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  aria-pressed={density === option}
+                  disabled={!settings || saveSettings.isPending}
+                  onClick={() => updateDensity(option)}
+                  className={cn(
+                    'flex h-auto min-h-20 min-w-0 flex-col gap-2 rounded-shape-lg border px-1 py-2 text-xs',
+                    density === option
+                      ? 'border-[var(--theme-primary)] bg-[var(--surface-2)] text-[var(--text-primary)] shadow-e1'
+                      : 'border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-secondary)]',
+                  )}
+                >
+                  <span aria-hidden className="flex h-8 w-full max-w-24 flex-col justify-center gap-1 rounded-shape-sm bg-[var(--surface-3)] px-2">
+                    <span className={cn('h-1 rounded-full bg-[var(--theme-primary)]', option === 'spacious' ? 'w-1/2' : 'w-4/5')} />
+                    <span className={cn('h-1 rounded-full bg-[var(--border-strong)]', option === 'compact' ? 'w-3/5' : 'w-2/5')} />
+                  </span>
+                  {t(`density.${option}`, option.charAt(0).toUpperCase() + option.slice(1))}
+                </Button>
+              ))}
+            </div>
+            {!settings && (
+              <div className="flex items-center justify-between gap-2">
+                <Text as="p" variant="caption">
+                  {settingsLoading
+                    ? t('workspace.analysis.loadingDensity', 'Loading display settings…')
+                    : t('workspace.analysis.unavailableDensity', 'Display settings unavailable. Retry to change density.')}
+                </Text>
+                {!settingsLoading && (
+                  <Button type="button" size="sm" variant="ghost" onClick={() => void refetchSettings()}>
+                    {t('workspace.analysis.retry', 'Retry')}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
 
-          <Caption className="block">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-default)] bg-[var(--surface-2)] px-5 py-3">
+          <Caption>
             {t(
               'workspace.analysis.activeRange',
               '{{start}} to {{end}}',
-              { start: range.start, end: range.end },
+              { start: formatDateShort(`${range.start}T00:00:00`), end: formatDate(`${range.end}T00:00:00`) },
             )}
           </Caption>
           {range.compare && (
-            <Caption className="block text-cyan-300">
+            <Caption className="text-cyan-700 dark:text-cyan-300">
               {t(
                 'workspace.analysis.comparisonActive',
                 'Comparison active: previous matching period',

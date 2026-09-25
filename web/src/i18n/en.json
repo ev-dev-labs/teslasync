@@ -60,6 +60,9 @@
     "summary": "{{cost}} estimated this 30-day cycle (not an invoice)"
   },
   "alertPacks": {
+    "severityColumn": "Severity",
+    "scrollHint": "Scroll horizontally to review every rule setting. Use Tab to move between fields.",
+    "rulesEditor": "Rule settings editor",
     "defaultChannels": "Default channels",
     "valueColumn": "Value",
     "titleColumn": "Include title",
@@ -1117,6 +1120,10 @@
     "kpis": "Simulated drive outcome",
     "knobs": "Knobs",
     "reset": "Reset",
+    "close": "Close view settings",
+    "loadingDensity": "Loading display settings…",
+    "unavailableDensity": "Display settings unavailable. Retry to change density.",
+    "retry": "Retry",
     "speedLabel": "Average speed",
     "tires": "Tire pressure",
     "tireLow": "Under-inflated (−)",
@@ -4086,14 +4093,26 @@
   },
   "workspace": {
     "analysis": {
-      "title": "Workspace analysis context",
+      "title": "View settings",
       "trigger": "Analysis window: {{range}}",
-      "description": "Vehicle-aware pages inherit this analysis window and interface density.",
-      "liveHint": "Live uses the latest available data. Precise-history views use rolling instants; calendar summaries include the local dates intersected by the selected window.",
-      "range": "Analysis window",
+      "rollingHint": "Rolling window: the last {{minutes}} of available data, refreshed as time passes.",
+      "todayHint": "Today starts at midnight in your local timezone.",
+      "range": "Date range",
       "custom": "Custom",
+      "presets": {
+        "live": "Last 5 min",
+        "24h": "24 hours",
+        "today": "Today",
+        "7d": "7 days",
+        "30d": "30 days",
+        "90d": "90 days",
+        "1y": "1 year",
+        "all": "All time"
+      },
       "applyCustom": "Apply custom range",
-      "density": "Workspace density",
+      "density": "Display density",
+      "reset": "Reset",
+      "compareHint": "Adds comparison variance to supported views.",
       "activeRange": "{{start}} to {{end}}",
       "rangeWithComparison": "{{range}} · Compare",
       "comparisonActive": "Comparison active: previous matching period"
@@ -4530,6 +4549,39 @@
     }
   },
   "nav": {
+    "collections": {
+      "toggle": "{{group}}, {{count}} views",
+      "timeline": "Vehicle History",
+      "vehicles": "Fleet",
+      "digital_twin": "Live Vehicle",
+      "locations": "Places",
+      "drives": "Drive Records",
+      "trips": "Trip Records",
+      "journeys": "Journey Planning",
+      "drive_score": "Driving Insights",
+      "driving_dynamics": "Driving Performance",
+      "charging": "Charging Activity",
+      "smart_charge": "Charge Planning",
+      "charger_health": "Charging Reliability",
+      "battery": "Battery Insights",
+      "projected_range": "Range & Standby",
+      "energy": "Energy Insights",
+      "maintenance": "Service & Maintenance",
+      "tire_pressure": "Vehicle Health",
+      "software_updates": "Firmware",
+      "climate_control": "Cabin Climate",
+      "commands": "Command Center",
+      "automations": "Alerts & Automation",
+      "notifications_inbox": "Notification Center",
+      "security_access": "Safety & Security",
+      "tesla_account": "Tesla Account & Services",
+      "chatbot": "Helix Tools",
+      "data_export": "Data Management",
+      "ownership_tariff_lab": "Ownership Costs",
+      "ownership_driver_attribution": "Driver Insights",
+      "admin_flags": "Administration",
+      "dev_tools": "Developer Workspace"
+    },
     "diagnosticGroups": {
       "systemHealth": "System Health",
       "dataHealth": "Database & Data Health",
@@ -4727,7 +4779,7 @@
         "admin_data-quality": "Data Quality",
         "admin_disk-forecast": "Disk Forecast",
         "admin_dlq": "DLQ Inspector",
-        "admin_flags": "Feature Flags",
+        "admin_flags": "Platform Feature Flags",
         "admin_gdpr-exports": "GDPR Exports",
         "admin_ingest-xray": "Ingest X-Ray",
         "admin_live-signals": "Live Signal Inspector",
@@ -4745,6 +4797,7 @@
         "api-playground": "API Playground",
         "arrival-reliability": "Arrival Reliability",
         "automations": "Automations",
+        "automation-history": "Automation History",
         "backup": "Backup & Restore",
         "battery": "Battery Health",
         "battery-care": "Battery Care",
@@ -4904,7 +4957,7 @@
         "tesla-api-usage": "Tesla API Usage",
         "tesla-charging-history": "Charge History",
         "tesla-features": "Feature Flags",
-        "tesla-physics": "Tesla Physics",
+        "tesla-physics": "Physics Overview",
         "tesla-physics_black-box": "Black Box 90s",
         "tesla-physics_car-kept-living": "Car Kept Living",
         "tesla-physics_charge-port": "Charge-Port Court",
@@ -5018,6 +5071,19 @@
   "statusBar": {
     "aria": "Application status",
     "announcements": "Application status announcements",
+    "helix": {
+      "open": "Open Helix chat",
+      "close": "Close Helix chat",
+      "title": "Helix chat",
+      "disabled": "Enable Helix Chat in Integrations to ask about this page.",
+      "configure": "Configure Helix",
+      "welcome": "Ask Helix about the page you are viewing.",
+      "includePage": "Include visible page text",
+      "contextHint": "Only visible page text, not form entries or hidden panels, is sent to your configured AI provider when you ask.",
+      "question": "Ask Helix",
+      "placeholder": "Ask about this page…",
+      "send": "Send"
+    },
     "fleet": {
       "label": "Fleet"
     },
@@ -7743,6 +7809,7 @@
     "launcher": {
       "title": "Take a tour",
       "subtitle": "Guided walkthroughs for every major feature.",
+      "empty": "No tours are available yet.",
       "recommendedHere": "Recommended for this page",
       "completed": "Completed",
       "start": "Start",
@@ -7903,12 +7970,30 @@
       },
       "feature": {
         "legend": "Per-feature opt-in (all default off)",
+        "guidance": "Find a feature by name or task, then enable only what you need. Expand a row for technical details.",
+        "search": "Search AI features",
+        "searchHint": "Try chat, charging, alerts…",
+        "filters": "Feature categories",
+        "showing": "{{count}} of {{total}} features",
+        "noMatches": "No features match. Try another term or choose All.",
+        "more": "More detail",
+        "less": "Less detail",
+        "category": {
+          "all": "All",
+          "enabled": "Enabled",
+          "chat": "Chat & help",
+          "alerts": "Alerts & automation",
+          "driving": "Driving & trips",
+          "energy": "Energy & charging",
+          "operations": "System & tools",
+          "insights": "Insights & reports"
+        },
         "ai-provider-health": {
           "label": "Helix provider health (ops)",
           "description": "Diagnostic endpoint that reports the active Helix provider and its capabilities. Off by default; enable only for ops debugging."
         },
         "chatbot-llm": {
-          "label": "LLM chatbot",
+          "label": "Helix chat (side panel)",
           "description": "Conversational fleet assistant powered by an LLM. Falls back to the heuristic chatbot when Helix is off."
         },
         "digest-narration": {
@@ -8099,7 +8184,17 @@
         "tokensIn": "Tokens in",
         "tokensOut": "Tokens out",
         "cost": "Estimated cost",
-        "placeholder": "Usage populates as features run. Live numbers arrive in a follow-up update."
+        "utc": "Today · UTC",
+        "off": "Helix is off. Enable it and make a call to see usage.",
+        "loading": "Loading today’s usage…",
+        "empty": "No Helix calls yet today.",
+        "error": "Usage could not be loaded.",
+        "stale": "Showing the last available totals. Refresh failed.",
+        "retry": "Retry",
+        "errorOne": "1 error",
+        "errorMany": "{{total}} errors",
+        "summaryOne": "1 call · {{errors}}",
+        "summary": "{{calls}} calls · {{errors}}"
       }
     }
   },
@@ -11233,6 +11328,51 @@
     }
   },
   "automations": {
+    "historyPage": {
+      "title": "Automation History",
+      "subtitle": "Review every execution and its outcome across the selected period.",
+      "new": "New automation",
+      "allRules": "All rules",
+      "allStatuses": "All statuses",
+      "filterRule": "Filter executions by rule",
+      "filterStatus": "Filter executions by status",
+      "ruleId": "Rule #{{id}}",
+      "selectedRule": "Selected rule",
+      "loading": "Loading executions",
+      "empty": "No executions match this period and filters.",
+      "manage": "Manage automation rules",
+      "summary": "Execution summary",
+      "total": "Completed runs",
+      "success": "Succeeded",
+      "failed": "Failed",
+      "partial": "Partial",
+      "rate": "Success rate",
+      "duration": "Average duration",
+      "durationColumn": "Duration",
+      "trend": "Execution activity",
+      "trendAria": "Execution outcomes across the selected period",
+      "period": "Period",
+      "other": "Other outcomes",
+      "time": "Triggered",
+      "rule": "Automation",
+      "outcome": "Outcome",
+      "trigger": "Trigger",
+      "actions": "Actions",
+      "error": "Error",
+      "detail": "Execution details",
+      "actionResults": "Action results",
+      "transitions": "Vehicle state transitions",
+      "status": {
+        "running": "Running",
+        "success": "Succeeded",
+        "partial": "Partial",
+        "failed": "Failed",
+        "skipped": "Skipped",
+        "cancelled": "Cancelled",
+        "test": "Test",
+        "undo": "Undone"
+      }
+    },
     "readOnly": {
       "title": "Automation controls are read-only"
     },
@@ -11265,6 +11405,16 @@
         "unnamed": "(unnamed)"
       },
       "actionType": "Action Type",
+      "actionNumber": "Action {{number}}",
+      "chargeLimit": "Charge limit (%)",
+      "chargingAmps": "Charging current (A)",
+      "driverTemp": "Driver temperature (°C)",
+      "passengerTemp": "Passenger temperature (°C)",
+      "showAdvancedParams": "Advanced parameters (JSON)",
+      "hideAdvancedParams": "Hide advanced parameters",
+      "geofenceHelp": "Create a place first, then return here to choose when the vehicle arrives or leaves.",
+      "managePlaces": "Manage places",
+      "retryGeofences": "Retry loading places",
       "moveUp": "Move up",
       "moveDown": "Move down",
       "removeAction": "Remove action",
@@ -11273,7 +11423,7 @@
       "command": "Command",
       "commandParams": "Params (JSON, optional)",
       "invalidJson": "Invalid JSON",
-      "commandParamsPlaceholder": "{\"temp\": 21}",
+      "commandParamsPlaceholder": "{}",
       "channel": "Channel",
       "noChannels": "No channels configured",
       "notifyMessage": "Message",
@@ -11397,12 +11547,66 @@
     },
     "filterStatus": "Filter by status",
     "search": "Search automations...",
+    "manageRules": "Manage rules",
+    "history": {
+      "actions": "Actions",
+      "allAutomations": "All automations",
+      "allStatuses": "All statuses",
+      "automation": "Automation",
+      "avgDuration": "Average duration",
+      "count": "Executions",
+      "dailyTrend": "Daily activity",
+      "dailyTrendAria": "Daily automation runs by outcome across the selected period",
+      "day": "Day",
+      "duration": "Duration",
+      "empty": "No executions match these filters",
+      "filters": "Filter executions",
+      "loading": "Loading executions",
+      "noChartData": "No executions in this range",
+      "refresh": "Refresh",
+      "results": "Executions",
+      "statusBreakdown": "Execution outcomes",
+      "statusBreakdownAria": "Automation runs by outcome across the selected period",
+      "statusLabel": "Status",
+      "successRate": "Success rate (completed runs)",
+      "title": "Execution history",
+      "total": "{{count}} matching records",
+      "totalRuns": "Matching executions",
+      "trigger": "Trigger",
+      "summaryScope": "Totals cover the selected period, not just this page.",
+      "clearFilters": "Clear filters",
+      "firstPage": "Go to first page",
+      "createAutomation": "Create automation",
+      "report": "Execution activity",
+      "reportDescription": "See how your automations ran over the selected period.",
+      "summary": "Execution summary",
+      "succeeded": "Successful runs",
+      "failed": "Failed runs",
+      "failedActions": "({{count}} failed)",
+      "emptyWindow": "No automation runs in this period",
+      "status": {
+        "success": "success",
+        "partial": "partial",
+        "failed": "failed",
+        "skipped": "skipped",
+        "running": "running",
+        "cancelled": "cancelled",
+        "test": "test",
+        "undo": "undo"
+      }
+    },
     "presets": {
       "title": "Quick Start Templates",
       "hint": "One-click install",
       "actionCount": "{{count}} actions",
       "install": "Install",
       "empty": "No preset templates available",
+      "emptyCategory": "No templates match your filters",
+      "allCategory": "All",
+      "filterAria": "Filter presets by category",
+      "searchLabel": "Search templates",
+      "searchPlaceholder": "Search templates...",
+      "showing": "{{count}} of {{total}} templates",
       "expand": "Click to expand",
       "collapse": "Click to collapse",
       "toggleAria": "Show or hide quick start templates"
@@ -16372,8 +16576,11 @@
       },
       "templates": {
         "header": "Rule Templates - {{count}} pre-built rules",
+        "searchLabel": "Search templates",
         "searchPlaceholder": "Search templates...",
+        "categoryFilter": "Filter templates by category",
         "allCategory": "All",
+        "showing": "{{count}} of {{total}} templates",
         "use": "Use",
         "noMatchesTitle": "No templates found",
         "noMatches": "No templates match your search"
@@ -18202,19 +18409,149 @@
   "roadmap": {
     "title": "Roadmap",
     "subtitle": "What's been built, what's in progress, and what's coming next",
+    "note": "This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.",
     "overview": "Roadmap overview",
     "noItems": "No items in this phase yet.",
     "phase": {
       "done": "Completed",
-      "current": "In Progress",
+      "current": "Active Focus",
       "next": "Up Next",
       "future": "Future"
     },
     "phaseDesc": {
       "done": "Shipped and available in your deployment today.",
-      "current": "Actively being built right now.",
-      "next": "Designed and queued for the next development cycle.",
-      "future": "On the long-term vision — not yet scheduled."
+      "current": "Areas receiving attention; priorities may change.",
+      "next": "Potential next priorities, not scheduled commitments.",
+      "future": "Ideas to evaluate, not promised releases."
+    },
+    "entries": {
+      "history": {
+        "title": "Vehicle History & Physics",
+        "description": "Evidence-led history and explainable vehicle behavior",
+        "features": {
+          "0": "Vehicle day log and full state timeline",
+          "1": "Time-machine views of historical signals",
+          "2": "Drive physics energy ledger and Science Lab",
+          "3": "Driving dynamics and efficiency workbench",
+          "4": "Signal history, coverage, and diagnostics",
+          "5": "Fleet and vehicle history in the same navigation tree"
+        }
+      },
+      "charging": {
+        "title": "Charging & Energy Intelligence",
+        "description": "From charge history to costs, thermal behavior, and energy flows",
+        "features": {
+          "0": "Charging history, curves, and patterns",
+          "1": "Charge interruption and charger resilience analysis",
+          "2": "Battery degradation, range, and standby insights",
+          "3": "Energy ledger and power-flow views",
+          "4": "Tariff analysis and charging reconciliation",
+          "5": "Charge planning and departure alignment"
+        }
+      },
+      "journeys": {
+        "title": "Journeys & Ownership",
+        "description": "Planning, travel context, and fleet ownership insights",
+        "features": {
+          "0": "Journeys and trip planning with direct route access",
+          "1": "Arrival reliability and departure forecasts",
+          "2": "Vehicle comparison and fleet operations",
+          "3": "Maintenance, warranty, and consumables views",
+          "4": "Driver attribution and privacy benchmarks"
+        }
+      },
+      "helixStudio": {
+        "title": "Helix & Alert Studio",
+        "description": "Assisted investigations and configurable notification workflows",
+        "features": {
+          "0": "Helix analysis tools and Azure Foundry provider support",
+          "1": "Alert Studio and editable installed alert rules",
+          "2": "Curated alert packs and custom pack previews",
+          "3": "Pack defaults for alert behavior, cooldown, and channels",
+          "4": "Notification inbox, delivery channels, and health"
+        }
+      },
+      "operator": {
+        "title": "Operator Experience",
+        "description": "Direct navigation and responsive controls across the application",
+        "features": {
+          "0": "Inline sidebar collections preserve original page routes",
+          "1": "Searchable feature catalogue and direct sibling switching",
+          "2": "Desktop sidebar resizing and wrap-safe navigation labels",
+          "3": "Customizable dashboard and shared data displays",
+          "4": "Local Docker and Helm deployment options"
+        }
+      },
+      "reliability": {
+        "title": "Reliability & Data Trust",
+        "description": "Active focus on telemetry correctness and operational recovery",
+        "features": {
+          "0": "Improve stale-stream detection and resubscription recovery",
+          "1": "Close gaps between available signals and surfaced data",
+          "2": "Strengthen unit consistency between live and historical views",
+          "3": "Clarify failure states and recovery guidance for operators"
+        }
+      },
+      "helixQuality": {
+        "title": "Helix Quality & Cost Controls",
+        "description": "Improve grounded answers without making AI mandatory",
+        "features": {
+          "0": "Improve retrieval quality and citation surfaces",
+          "1": "Make per-feature model cost controls easier to inspect",
+          "2": "Explain AI spend anomalies before they become surprises",
+          "3": "Expand typed tools for high-value operator questions"
+        }
+      },
+      "recovery": {
+        "title": "Recovery & Documentation",
+        "description": "Make self-hosted operations easier to validate and restore",
+        "features": {
+          "0": "Rehearse restores and document recovery evidence",
+          "1": "Reduce backup size and simplify restore workflows",
+          "2": "Keep deployment guidance in sync with supported setups",
+          "3": "Extend meaningful service-level health checks"
+        }
+      },
+      "ecosystem": {
+        "title": "Energy Ecosystem",
+        "description": "Explore deeper integration with home energy and charging decisions",
+        "features": {
+          "0": "Connect charging decisions to local solar production",
+          "1": "Compare time-of-use tariffs with observed charging costs",
+          "2": "Explore Powerwall and home-energy context",
+          "3": "Evaluate additional charging-network data sources"
+        }
+      },
+      "fleetInsights": {
+        "title": "Privacy-preserving Fleet Insights",
+        "description": "Explore useful comparisons without exposing individual journeys",
+        "features": {
+          "0": "Aggregate fleet efficiency trends with clear provenance",
+          "1": "Support opt-in comparison without publishing private trips",
+          "2": "Explain how benchmarks are calculated",
+          "3": "Keep data retention and sharing under operator control"
+        }
+      },
+      "interoperability": {
+        "title": "Interoperability",
+        "description": "Evaluate integrations that serve self-hosted deployments",
+        "features": {
+          "0": "Assess Home Assistant integration needs",
+          "1": "Explore calendar context for trip planning",
+          "2": "Document stable webhook and API extension points",
+          "3": "Prioritize integrations based on operator demand"
+        }
+      },
+      "accessibleOps": {
+        "title": "Accessible Operator Workflows",
+        "description": "Continue refining navigation and dense screens on every display size",
+        "features": {
+          "0": "Improve the heaviest screens on compact displays",
+          "1": "Refine keyboard navigation and reduced-motion behavior",
+          "2": "Improve PWA installation guidance and offline messaging",
+          "3": "Keep product documentation aligned with the application"
+        }
+      }
     },
     "metric": {
       "total": "Total Initiatives",
@@ -21172,7 +21509,7 @@
     }
   },
   "automationList": {
-    "title": "Automations (list)",
+    "title": "Automation Rules",
     "readOnly": {
       "title": "Bulk automation controls are read-only"
     },
@@ -24456,7 +24793,14 @@
   "notificationHealth": {
     "title": "Notification Health",
     "subtitle": "Understand alert noise, delivery reliability, and delivery speed in one place.",
-    "navigation": "Notification health sections"
+    "navigation": "Notification health sections",
+    "overview": {
+      "label": "Delivery intelligence",
+      "description": "Explore three independent views of notification health. Select a view to jump to its metrics, charts, and detailed breakdowns.",
+      "fatigue": "Find noisy rules and the hours they fire.",
+      "burnRate": "See delivery outcomes against the 99% objective.",
+      "latency": "Inspect delivery speed and the slowest attempts."
+    }
   },
   "notificationBurnRate": {
     "title": "Notification Burn Rate",

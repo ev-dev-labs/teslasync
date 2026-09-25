@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useEffect,
   useRef,
   useState,
@@ -26,6 +28,13 @@ import {
 } from '@/hooks/useBackgroundJobs';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
+import { Button, Tooltip } from '@/components/ui/runtime';
+import { HelixMark } from '@/components/branding/HelixMark';
+
+const HelixSidePanel = lazy(async () => {
+  const module = await import('./status-bar/HelixSidePanel');
+  return { default: module.HelixSidePanel };
+});
 
 /**
  * StatusBar.
@@ -107,6 +116,8 @@ function StatusBarContent({
   const { t } = useTranslation();
   const backgroundJobs = useBackgroundJobs();
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [helixOpen, setHelixOpen] = useState(false);
+  const [helixMounted, setHelixMounted] = useState(false);
   useBackgroundFailureAnnouncements(backgroundJobs);
 
   return (
@@ -157,6 +168,23 @@ function StatusBarContent({
               />
             </>
           )}
+          <Divider />
+          <Tooltip content={t('statusBar.helix.open', 'Open Helix chat')} side="top">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label={t('statusBar.helix.open', 'Open Helix chat')}
+              aria-expanded={helixOpen}
+              onClick={() => {
+                setHelixMounted(true);
+                setHelixOpen(value => !value);
+              }}
+              className="h-5 min-h-0 rounded px-1.5 py-0 text-[var(--theme-primary)]"
+            >
+              <HelixMark className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </Tooltip>
         </div>
       </footer>
       {aboutOpen && (
@@ -164,6 +192,11 @@ function StatusBarContent({
           open
           onClose={() => setAboutOpen(false)}
         />
+      )}
+      {helixMounted && (
+        <Suspense fallback={null}>
+          <HelixSidePanel open={helixOpen} onClose={() => setHelixOpen(false)} />
+        </Suspense>
       )}
     </>
   );

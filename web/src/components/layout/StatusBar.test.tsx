@@ -275,10 +275,10 @@ describe('StatusBar :: visibility & accessibility', () => {
     ).toHaveTextContent('Sync failed: Gateway unavailable');
   });
 
-  it('renders exactly two non-semantic dividers, hidden from a11y', () => {
+  it('renders three non-semantic dividers, hidden from a11y', () => {
     const { container } = render(<StatusBar />);
     const dividers = container.querySelectorAll('span.w-px');
-    expect(dividers.length).toBe(2);
+    expect(dividers.length).toBe(3);
     dividers.forEach((d) => expect(d).toHaveAttribute('aria-hidden'));
   });
 

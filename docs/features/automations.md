@@ -43,7 +43,7 @@ Actions run sequentially. If one fails, the chain stops and the failure is recor
 
 ## Quick-start templates
 
-TeslaSync ships **twenty built-in presets** so you don't have to start from a blank canvas. They cover the patterns we see most often:
+TeslaSync ships **twenty built-in presets** so you don't have to start from a blank canvas. In **Automations**, expand Quick Start Templates to search by name or description and filter by the wrapping, counted category buttons. Open **Manage rules** for **Automation Rules**, where geofence routines sit alongside your rules: choose an enabled place before installing an arrival or departure routine. They cover the patterns we see most often:
 
 | Category   | Presets                                                                                                       |
 | ---------- | ------------------------------------------------------------------------------------------------------------- |
@@ -54,6 +54,8 @@ TeslaSync ships **twenty built-in presets** so you don't have to start from a bl
 | Lifecycle  | Close Windows When Vehicle Sleeps · Wake Vehicle Daily at 4 AM · Flash Lights on Wake                         |
 
 Each preset installs as an editable typed automation — change the schedule, swap the action, add a condition. Presets are a starting point, not a black box.
+
+The rule builder keeps each action on its own row with command and action type controls separated. Charge-limit, charging-current, and cabin-temperature commands offer labeled numeric inputs; arbitrary command parameters remain available under **Advanced parameters (JSON)**. Changing a command clears parameters belonging to the previous command. If a geofence trigger has no places to select, **Manage places** links to the place setup page.
 
 ## Helix natural-language drafting
 
@@ -71,11 +73,11 @@ Two automations that both try to **start charging at 11 PM** would race. Two aut
 
 The conflict view links to the offending rule so you can edit, disable, or accept the collision with a documented reason.
 
-## Live activity feed
+## Execution history
 
-Every automation execution is appended to the **Recent Activity** feed at the bottom of the Automations page. The feed streams live over SSE (with the usual polling fallback) and shows: which automation fired, which trigger matched, which actions succeeded or failed, and how long each took. You can click through to the per-execution detail with the action graph, the resolved parameters, and any error payloads.
+Open **Automation History** from the Automation navigation group to browse all recorded executions, not just the latest page. The shared header **View settings** date range applies to the history list, completed-run totals, and activity chart; filter by rule or outcome, page through older results, and open an execution for its action results and vehicle-state transitions. The Automations page continues to show which rules are firing live, without the old limited Recent Activity card.
 
-The same data is queryable through `GET /api/v1/automations/{id}/executions` — handy for grafana dashboards, audit exports, or wiring your own observability.
+`GET /api/v1/automations/history` and `GET /api/v1/automations/{id}/history` accept `limit`, `offset`, `status`, `since`, and `until`. Date-only `until` includes the full UTC day; RFC3339 `until` is an exclusive instant. Responses contain paginated `items`, total count, filtered `summary`, and UTC daily/status `trend` buckets computed over the full matching range, not only the loaded page.
 
 ## Failure handling
 

@@ -7,17 +7,17 @@
 import { useMemo, useState, type ElementType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Button as UiButton, Badge, Text } from '@/components/ui';
+import { GlassPanel, Button as UiButton, Badge, Text, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { QueryError } from '@/components/feedback/QueryError';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
-import { PillFilterBar, type PillItem } from '@/components/forms';
+import { SearchInput } from '@/components/forms';
 import { useAutomationPresets } from '@/api/hooks/useAutomations';
-import { RoutineWizard } from '../components/RoutineWizard';
 import { Icons } from '@/lib/icons';
+import { fmtInt } from '@/lib/numberFormat';
 import type { AutomationPreset } from '@/api/types';
 import type { AutomationTriggerKind } from '@/types/automations';
 
@@ -153,21 +153,20 @@ export function PresetGallery({
   const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useAutomationPresets(category);
   const [activeCategory, setActiveCategory] = useState(category ?? 'all');
+  const [search, setSearch] = useState('');
 
   const presetList = useMemo(() => data?.presets ?? [], [data]);
   const categories = useMemo(() => data?.categories ?? [], [data]);
   const filteredPresets = useMemo(() => {
-    if (category) {
-      return presetList;
-    }
-    if (activeCategory === 'all') {
-      return presetList;
-    }
-    return presetList.filter((p) => p.category === activeCategory);
-  }, [presetList, activeCategory, category]);
+    const query = search.trim().toLocaleLowerCase();
+    return presetList.filter((preset) =>
+      (category || activeCategory === 'all' || preset.category === activeCategory) &&
+      (!query || `${preset.name} ${preset.description}`.toLocaleLowerCase().includes(query)),
+    );
+  }, [presetList, activeCategory, category, search]);
 
-  const pills: PillItem[] = useMemo(() => {
-    const items: PillItem[] = [
+  const pills = useMemo(() => {
+    const items = [
       {
         key: 'all',
         label: t('automations.presets.allCategory', 'All'),
@@ -215,19 +214,48 @@ export function PresetGallery({
 
   return (
     <div className="space-y-6">
-      <RoutineWizard actionsDisabled={actionsDisabled} />
-      {!category && pills.length > 1 && (
-        <PillFilterBar
-          items={pills}
-          activeKey={activeCategory}
-          onChange={setActiveCategory}
-          ariaLabel={t('automations.presets.filterAria', 'Filter presets by category')}
+      {!category && (
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={t('automations.presets.searchPlaceholder', 'Search templates...')}
+          ariaLabel={t('automations.presets.searchLabel', 'Search templates')}
+          className="w-full"
         />
+      )}
+      {!category && pills.length > 1 && (
+        <div
+          role="group"
+          aria-label={t('automations.presets.filterAria', 'Filter presets by category')}
+          className="flex flex-wrap gap-2"
+        >
+          {pills.map((item) => (
+            <UiButton
+              key={item.key}
+              type="button"
+              size="sm"
+              variant={activeCategory === item.key ? 'primary' : 'ghost'}
+              aria-pressed={activeCategory === item.key}
+              onClick={() => setActiveCategory(item.key)}
+              className="min-h-9 rounded-shape-lg border border-[var(--border-default)] px-3"
+            >
+              {item.label} ({fmtInt(item.count)})
+            </UiButton>
+          ))}
+        </div>
+      )}
+      {!category && (
+        <Caption role="status" className="block">
+          {t('automations.presets.showing', '{{count}} of {{total}} templates', {
+            count: filteredPresets.length,
+            total: presetList.length,
+          })}
+        </Caption>
       )}
       {filteredPresets.length === 0 ? (
         <EmptyState /* no-action: informational empty — no CTA */
           icon={<Icons.clock className="h-8 w-8" />}
-          message={t('automations.presets.emptyCategory', 'No presets in this category')}
+          message={t('automations.presets.emptyCategory', 'No templates match your filters')}
         />
       ) : (
         <FadeIn>

@@ -33,17 +33,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { type ReactNode } from 'react';
 
 import { PresetGallery } from './PresetGallery';
 import { useAutomationPresets } from '@/api/hooks/useAutomations';
 import type { AutomationPreset } from '@/api/types';
-
-vi.mock('../components/RoutineWizard', () => ({
-  RoutineWizard: () => null,
-}));
 
 // ── i18n stub — echo the fallback, interpolate {{var}} tokens ────────────────
 vi.mock('react-i18next', () => ({
@@ -274,7 +270,7 @@ describe('PresetGallery — card content', () => {
     expect(container.querySelector('svg.lucide-shield')).not.toBeNull();
   });
 
-  it('filters the grid when a category pill is selected', () => {
+  it('filters the grid when a category pill is selected', async () => {
     mockUsePresets.mockReturnValue(
       hookResult({
         data: {
@@ -293,9 +289,19 @@ describe('PresetGallery — card content', () => {
 
     expect(screen.getByText('Night Lock')).toBeInTheDocument();
     expect(screen.getByText('Morning HVAC')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('tab', { name: /Security/ }));
+    expect(screen.getByRole('group', { name: 'Filter presets by category' })).toHaveClass('flex-wrap');
+    fireEvent.click(screen.getByRole('button', { name: 'Security (1)' }));
     expect(screen.getByText('Night Lock')).toBeInTheDocument();
     expect(screen.queryByText('Morning HVAC')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Security (1)' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), {
+      target: { value: 'morning' },
+    });
+    await waitFor(() => expect(screen.getByText('No templates match your filters')).toBeInTheDocument());
+    expect(screen.getByText('0 of 2 templates')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'All (2)' }));
+    expect(screen.getByText('Morning HVAC')).toBeInTheDocument();
+    expect(screen.queryByText('Night Lock')).not.toBeInTheDocument();
   });
 });
 

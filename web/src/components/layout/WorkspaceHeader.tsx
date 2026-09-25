@@ -3,12 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { Caption, CommandPaletteTrigger } from '@/components/ui/runtime'
 import { useWorkspaceScope } from '@/hooks/useWorkspaceScope'
 import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
+import type { SectionGroup } from './sectionGroups'
+import type { BreadcrumbSection } from './sidebar/sidebarBreadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { WorkspaceContextControl } from './WorkspaceContextControl'
 
 interface WorkspaceHeaderProps {
   notifications?: ReactNode
   themeControl?: ReactNode
+  breadcrumbSections?: readonly BreadcrumbSection[]
+  breadcrumbCollections?: readonly SectionGroup[]
 }
 
 /**
@@ -21,6 +25,8 @@ interface WorkspaceHeaderProps {
 export function WorkspaceHeader({
   notifications,
   themeControl,
+  breadcrumbSections,
+  breadcrumbCollections,
 }: WorkspaceHeaderProps) {
   const { t } = useTranslation()
   const workspaceScope = useWorkspaceScope()
@@ -38,7 +44,7 @@ export function WorkspaceHeader({
         <Caption className="mb-1 hidden font-semibold uppercase tracking-[0.1em] 3xl:block">
           {t('nav.workspaceContext', 'Fleet operations')}
         </Caption>
-        <LayoutBreadcrumbs variant="workspace" className="min-w-0 text-sm" />
+        <LayoutBreadcrumbs variant="workspace" className="min-w-0 text-sm" sections={breadcrumbSections} collections={breadcrumbCollections} />
       </div>
 
       <div
