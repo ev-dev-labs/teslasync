@@ -1,5 +1,9 @@
 # Database
 
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
 TeslaSync's database isn't a passive store. It's where multi-million-row time series live next to relational settings, where vector embeddings power the Helix chatbot, where continuous aggregates keep charts fast over multi-year ranges, and where retention policies quietly garden the tables you'd otherwise have to babysit.
 
 Everything that persists more than a few seconds — telemetry signals, drives, charging sessions, alert rules, audit logs, Helix call records, RAG embeddings — sits in one PostgreSQL instance with TimescaleDB and pgvector enabled. The bundled Compose image is `timescale/timescaledb-ha:pg17` which has both extensions pre-installed.
@@ -39,7 +43,7 @@ The live schema diagram renders below — drag to pan, scroll to zoom, hover to 
 <div id="diagram-container" style="position: relative; width: 100%; height: 80vh; border: 1px solid var(--vp-c-divider); border-radius: 12px; overflow: hidden; margin-top: 16px;">
   <iframe
     id="diagram-iframe"
-    src="/teslasync/database-diagram.html"
+    :src="withBase('/database-diagram.html')"
     style="width: 100%; height: 100%; border: none;"
     title="TeslaSync Database Diagram"
     loading="lazy"
