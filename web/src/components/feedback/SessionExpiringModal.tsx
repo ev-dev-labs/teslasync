@@ -155,9 +155,12 @@ export function SessionExpiringModal() {
       open={open}
       onClose={handleClose}
       size="sm"
-      ariaLabel={t('session.expiring.title', 'Your session is about to expire')}
+      ariaLabel={open ? t('session.expiring.title', 'Your session is about to expire') : undefined}
       data-testid="session-expiring-modal"
     >
+      {/* Modal hides its DOM when closed, but children still evaluate: avoid
+          fetching the session locale until there is an expiring session. */}
+      {open && (
       <div className="space-y-4">
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-amber-300/15 p-2 shrink-0">
@@ -226,6 +229,7 @@ export function SessionExpiringModal() {
           </Button>
         </div>
       </div>
+      )}
     </Modal>
   )
 }

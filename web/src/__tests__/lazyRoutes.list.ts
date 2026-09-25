@@ -106,6 +106,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   // Automations
   { name: 'AutomationsListPage', load: () => import('../features/automations/pages/AutomationsListPage') },
   { name: 'AutomationListPage', load: () => import('../features/automations/pages/AutomationListPage') },
+  { name: 'AutomationHistoryPage', load: () => import('../features/automations/pages/AutomationHistoryPage') },
   { name: 'AutomationBuilderPage', load: () => import('../features/automations/pages/AutomationBuilderPage') },
 
   // Notifications

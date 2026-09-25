@@ -403,7 +403,8 @@ vi.mock('@/components/ui/ThemePicker', () => ({
 }))
 
 // Import AFTER the mocks so the shell wires the stubs.
-import Layout, { navSections, navSearchKeywords, reconcileNavPaths } from './Layout'
+import Layout, { navSections, reconcileNavPaths } from './Layout'
+import { navSearchKeywords } from './navSearchKeywords'
 import { DIAGNOSTIC_GROUPS } from './diagnosticGroups'
 import {
   CANONICAL_SECTION_TO_COMPACT_GROUP,
