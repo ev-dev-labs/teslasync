@@ -7,22 +7,19 @@ import { RateLimitBanner } from '../feedback/RateLimitBanner'
 import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
 import { ImpersonationBanner } from '../feedback/ImpersonationBanner'
 import { TopProgress } from '../feedback/TopProgress'
-import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
 import { AnnouncerRegion } from '@/components/a11y'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
-import { GotoIndicator } from '../feedback/GotoIndicator'
-import { ChangelogModal } from '../feedback/ChangelogModal'
 import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
+import { TourLauncher } from '@/features/onboarding/TourLauncher'
+import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { SkipToContent } from '../feedback/SkipToContent'
 import { BrowserCompatBanner } from '../feedback/BrowserCompatBanner'
 import { TimeMachineBanner } from '../feedback/TimeMachineBanner'
 import { CookieConsentBanner } from '../feedback/CookieConsentBanner'
-import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
   TOURS,
@@ -45,7 +42,8 @@ import {
   prioritizeCanonicalNavSections,
   prioritizeCompactNavTree,
 } from './sidebar/compactNav'
-import { collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection } from './sidebar/collections'
+import { collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection, unpinnedSidebarItems } from './sidebar/collections'
+import { SIDEBAR_ROUTE_ICONS, SIDEBAR_SECTION_ICONS } from './sidebar/sidebarIcons'
 import { labelSectionPrimaries } from './sectionGroups'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
@@ -60,11 +58,10 @@ import {
   BreadcrumbOverridesProvider,
 } from './BreadcrumbOverridesContext'
 import { VehiclePicker } from './VehiclePicker'
-import { WorkspaceHeader } from './WorkspaceHeader'
-import { WorkspaceContextControl } from './WorkspaceContextControl'
 import { CommandPaletteHost } from './CommandPaletteHost'
-import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
+import { NotificationBellPopover } from './NotificationBellPopover'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
+import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH, SIDEBAR_WIDTH_STORAGE_KEY } from './sidebar/sidebarWidth'
 import { request } from '@/api/client'
 import { useAuthMode, useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useAlerts } from '@/api/hooks/useNotifications'
@@ -79,9 +76,9 @@ import { useFaviconBadge } from '../../hooks/useFaviconBadge'
 import { useDynamicAppIcon } from '../../hooks/useDynamicAppIcon'
 import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
-import { NotificationBellPopover } from './NotificationBellPopover'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
+import { navRouteIcons } from '@/lib/navRouteIcons';
 import { HelixMark } from '@/components/branding/HelixMark';
 import { usePresentationMode } from '@/hooks/usePresentationMode';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
@@ -115,9 +112,39 @@ const LazyFeedbackModal = lazy(async () => {
   return { default: module.FeedbackModal }
 })
 
+const LazyChangelogModal = lazy(async () => {
+  const module = await import('../feedback/ChangelogModal')
+  return { default: module.ChangelogModal }
+})
+
+const LazySessionExpiringModal = lazy(async () => {
+  const module = await import('../feedback/SessionExpiringModal')
+  return { default: module.SessionExpiringModal }
+})
+
+const LazyGotoIndicator = lazy(async () => {
+  const module = await import('../feedback/GotoIndicator')
+  return { default: module.GotoIndicator }
+})
+
 const LazyCollectionTreeRow = lazy(async () => {
   const module = await import('./sidebar/CollectionTreeRow')
   return { default: module.CollectionTreeRow }
+})
+
+const SidebarResizeHandle = lazy(async () => {
+  const module = await import('./sidebar/SidebarResizeHandle')
+  return { default: module.SidebarResizeHandle }
+})
+
+const WorkspaceHeader = lazy(async () => {
+  const module = await import('./WorkspaceHeader')
+  return { default: module.WorkspaceHeader }
+})
+
+const WorkspaceContextControl = lazy(async () => {
+  const module = await import('./WorkspaceContextControl')
+  return { default: module.WorkspaceContextControl }
 })
 
 const TourOverlay = lazy(async () => {
@@ -140,9 +167,9 @@ const LazyKeyboardShortcutsModal = lazy(async () => {
   return { default: module.KeyboardShortcutsModal }
 })
 
-const LazyThemePicker = lazy(async () => {
-  const module = await import('@/components/ui/ThemePicker')
-  return { default: module.ThemePicker }
+const ThemeQuickSwitcherPopover = lazy(async () => {
+  const module = await import('./ThemeQuickSwitcherPopover')
+  return { default: module.ThemeQuickSwitcherPopover }
 })
 
 // Sidebar nav labels resolve per-item: every entry in `navSections` carries a
@@ -392,13 +419,13 @@ export const navSections = [
     title: 'Home',
     titleKey: 'nav.groups.home',
     items: [
-      { to: '/', icon: Icons.layoutDashboard, label: 'Dashboard', labelKey: 'nav.items.dashboard', color: 'text-blue-400' },
+      { to: '/', icon: navRouteIcons['/'], label: 'Dashboard', labelKey: 'nav.items.dashboard', color: 'text-blue-400' },
       { to: '/action-center', icon: Icons.notificationsActive, label: 'Action Center', labelKey: 'nav.items.action-center', color: 'text-cyan-400' },
       { to: '/explore', icon: Icons.sparkles, label: 'Explore Features', labelKey: 'nav.items.explore', color: 'text-amber-400' },
-      { to: '/live', icon: Icons.radar, label: 'Live Map', labelKey: 'nav.items.live', color: 'text-emerald-400' },
-      { to: '/timeline', icon: Icons.clock, label: 'Timeline', labelKey: 'nav.items.timeline', color: 'text-sky-400' },
+      { to: '/live', icon: navRouteIcons['/live'], label: 'Live Map', labelKey: 'nav.items.live', color: 'text-emerald-400' },
+      { to: '/timeline', icon: navRouteIcons['/timeline'], label: 'Timeline', labelKey: 'nav.items.timeline', color: 'text-sky-400' },
       { to: '/activity', icon: Icons.activity, label: 'Activity Timeline', labelKey: 'nav.items.activity', color: 'text-teal-400' },
-      { to: '/weekly-digest', icon: Icons.calendarCheck, label: 'Weekly Digest', labelKey: 'nav.items.weekly-digest', color: 'text-purple-400' },
+      { to: '/weekly-digest', icon: navRouteIcons['/weekly-digest'], label: 'Weekly Digest', labelKey: 'nav.items.weekly-digest', color: 'text-purple-400' },
     ],
   },
   {
@@ -408,7 +435,7 @@ export const navSections = [
       { to: '/vehicles', icon: Icons.vehicle, label: 'My Vehicles', labelKey: 'nav.items.vehicles', color: 'text-sky-400', dataTour: 'vehicle-section' },
       { to: '/vehicle-management', icon: Icons.database, label: 'Vehicle Management', labelKey: 'nav.items.vehicle-management', color: 'text-violet-400' },
       { to: '/digital-twin', icon: Icons.monitor, label: 'Vehicle Live View', labelKey: 'nav.items.digital-twin', color: 'text-cyan-400' },
-      { to: '/day-log', icon: Icons.activity, label: 'Day Log', labelKey: 'nav.items.day-log', color: 'text-teal-400' },
+      { to: '/day-log', icon: Icons.fileText, label: 'Day Log', labelKey: 'nav.items.day-log', color: 'text-teal-400' },
       { to: '/vehicle-comparison', icon: Icons.arrowLeftRight, label: 'Compare Vehicles', labelKey: 'nav.items.vehicle-comparison', color: 'text-orange-400', minVehicles: 2 },
       { to: '/locations', icon: Icons.location, label: 'Saved Locations', labelKey: 'nav.items.locations', color: 'text-emerald-400' },
       { to: '/parking', icon: Icons.parking, label: 'Parking Analytics', labelKey: 'nav.items.parking', color: 'text-cyan-400' },
@@ -423,7 +450,7 @@ export const navSections = [
     title: 'Tesla Physics',
     titleKey: 'nav.groups.tesla_physics',
     items: [
-      { to: '/tesla-physics', icon: Icons.sparkles, label: 'Tesla Physics', labelKey: 'nav.items.tesla-physics', color: 'text-cyan-400' },
+      { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics Overview', labelKey: 'nav.items.tesla-physics', color: 'text-cyan-400' },
       { to: '/science', icon: Icons.analytics, label: 'Science Lab', labelKey: 'nav.items.science', color: 'text-cyan-400' },
     ],
   },
@@ -431,13 +458,13 @@ export const navSections = [
     title: 'Driving',
     titleKey: 'nav.groups.driving',
     items: [
-      { to: '/drives', icon: Icons.drive, label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400' },
+      { to: '/drives', icon: navRouteIcons['/drives'], label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400' },
       { to: '/trips', icon: Icons.trip, label: 'Trips', labelKey: 'nav.items.trips', color: 'text-teal-400' },
       { to: '/journeys', icon: Icons.compass, label: 'Journeys', labelKey: 'nav.items.journeys', color: 'text-sky-400' },
       { to: '/trip-planner', icon: Icons.mapPinned, label: 'Trip Planner', labelKey: 'nav.items.trip-planner', color: 'text-emerald-400' },
       { to: '/navigation', icon: Icons.signpost, label: 'Navigation', labelKey: 'nav.items.navigation', color: 'text-teal-400' },
       { to: '/geofences', icon: Icons.fence, label: 'Geofences', labelKey: 'nav.items.geofences', color: 'text-lime-400' },
-      { to: '/mileage', icon: Icons.trip, label: 'Mileage Log', labelKey: 'nav.items.mileage', color: 'text-teal-400' },
+      { to: '/mileage', icon: navRouteIcons['/mileage'], label: 'Mileage Log', labelKey: 'nav.items.mileage', color: 'text-teal-400' },
       { to: '/logbook', icon: Icons.wallet, label: 'Trip Logbook', labelKey: 'nav.items.logbook', color: 'text-amber-400' },
       { to: '/mileage-budget', icon: Icons.trendUp, label: 'Mileage Budget', labelKey: 'nav.items.mileage-budget', color: 'text-orange-400' },
       { to: '/driving-rhythm', icon: Icons.calendarClock, label: 'Driving Rhythm', labelKey: 'nav.items.driving-rhythm', color: 'text-violet-400' },
@@ -448,7 +475,7 @@ export const navSections = [
       { to: '/explorer', icon: Icons.compass, label: 'Explorer', labelKey: 'nav.items.explorer', color: 'text-teal-400' },
       { to: '/drive-calendar', icon: Icons.calendarClock, label: 'Drive Calendar', labelKey: 'nav.items.drive-calendar', color: 'text-fuchsia-400' },
       { to: '/milestones', icon: Icons.trip, label: 'Milestones', labelKey: 'nav.items.milestones', color: 'text-yellow-400' },
-      { to: '/lifetime-stats', icon: Icons.award, label: 'Lifetime Stats', labelKey: 'nav.items.lifetime-stats', color: 'text-yellow-400' },
+      { to: '/lifetime-stats', icon: Icons.trends, label: 'Lifetime Stats', labelKey: 'nav.items.lifetime-stats', color: 'text-yellow-400' },
       { to: '/drive-score', icon: Icons.trophy, label: 'Drive Score', labelKey: 'nav.items.drive-score', color: 'text-yellow-400' },
       { to: '/fsd', icon: Icons.cpu, label: 'FSD Insights', labelKey: 'nav.items.fsd', color: 'text-cyan-400' },
       { to: '/speed-profile', icon: Icons.speed, label: 'Speed Profile', labelKey: 'nav.items.speed-profile', color: 'text-rose-400' },
@@ -469,7 +496,7 @@ export const navSections = [
     title: 'Charging',
     titleKey: 'nav.groups.charging',
     items: [
-      { to: '/charging', icon: Icons.batteryCharging, label: 'Charging Overview', labelKey: 'nav.items.charging', color: 'text-green-400' },
+      { to: '/charging', icon: navRouteIcons['/charging'], label: 'Charging Overview', labelKey: 'nav.items.charging', color: 'text-green-400' },
       { to: '/tesla-charging-history', icon: Icons.receipt, label: 'Charge History', labelKey: 'nav.items.tesla-charging-history', color: 'text-emerald-400' },
       { to: '/charging-curve', icon: Icons.trendUp, label: 'Charging Curve', labelKey: 'nav.items.charging-curve', color: 'text-lime-400' },
       { to: '/charging-heatmap', icon: Icons.calendarClock, label: 'Charging Patterns', labelKey: 'nav.items.charging-heatmap', color: 'text-cyan-400' },
@@ -486,7 +513,7 @@ export const navSections = [
     title: 'Battery',
     titleKey: 'nav.groups.battery',
     items: [
-      { to: '/battery', icon: Icons.heartPulse, label: 'Battery Health', labelKey: 'nav.items.battery', color: 'text-rose-400' },
+      { to: '/battery', icon: navRouteIcons['/battery'], label: 'Battery Health', labelKey: 'nav.items.battery', color: 'text-rose-400' },
       { to: '/battery-cells', icon: Icons.battery, label: 'Battery Cells', labelKey: 'nav.items.battery-cells', color: 'text-purple-400' },
       { to: '/battery-degradation', icon: Icons.trendDown, label: 'Battery Degradation', labelKey: 'nav.items.battery-degradation', color: 'text-orange-400' },
       { to: '/projected-range', icon: Icons.target, label: 'Projected Range', labelKey: 'nav.items.projected-range', color: 'text-pink-400' },
@@ -496,7 +523,7 @@ export const navSections = [
       { to: '/pack-capacity', icon: Icons.batteryFull, label: 'Pack Capacity', labelKey: 'nav.items.pack-capacity', color: 'text-lime-400' },
       { to: '/cycle-stress', icon: Icons.recycle, label: 'Battery Cycle Stress', labelKey: 'nav.items.cycle-stress', color: 'text-orange-400' },
       { to: '/range-buffer', icon: Icons.battery, label: 'Range Buffer', labelKey: 'nav.items.range-buffer', color: 'text-teal-400' },
-      { to: '/battery-care', icon: Icons.heartPulse, label: 'Battery Care', labelKey: 'nav.items.battery-care', color: 'text-emerald-400' },
+      { to: '/battery-care', icon: Icons.heart, label: 'Battery Care', labelKey: 'nav.items.battery-care', color: 'text-emerald-400' },
       { to: '/charge-advisor', icon: Icons.batteryCharging, label: 'Charge Advisor', labelKey: 'nav.items.charge-advisor', color: 'text-cyan-400' },
     ],
   },
@@ -530,10 +557,10 @@ export const navSections = [
     title: 'Cabin',
     titleKey: 'nav.groups.cabin',
     items: [
-      { to: '/climate-control', icon: Icons.climate, label: 'Climate Control', labelKey: 'nav.items.climate-control', color: 'text-sky-400' },
+      { to: '/climate-control', icon: navRouteIcons['/climate-control'], label: 'Climate Control', labelKey: 'nav.items.climate-control', color: 'text-sky-400' },
       { to: '/cabin-thermal', icon: Icons.climateHot, label: 'Cabin Thermal Model', labelKey: 'nav.items.cabin-thermal', color: 'text-orange-400' },
       { to: '/hvac-cycling', icon: Icons.recycle, label: 'HVAC Cycling', labelKey: 'nav.items.hvac-cycling', color: 'text-cyan-400' },
-      { to: '/comfort-consistency', icon: Icons.climate, label: 'Comfort Consistency', labelKey: 'nav.items.comfort-consistency', color: 'text-violet-400' },
+      { to: '/comfort-consistency', icon: Icons.speedCircle, label: 'Comfort Consistency', labelKey: 'nav.items.comfort-consistency', color: 'text-violet-400' },
       { to: '/preconditioning-effectiveness', icon: Icons.calendarClock, label: 'Preconditioning Effectiveness', labelKey: 'nav.items.preconditioning-effectiveness', color: 'text-emerald-400' },
       { to: '/media-player', icon: Icons.headphones, label: 'Media Player', labelKey: 'nav.items.media-player', color: 'text-pink-400' },
     ],
@@ -542,10 +569,10 @@ export const navSections = [
     title: 'Reports',
     titleKey: 'nav.groups.reports',
     items: [
-      { to: '/statistics', icon: Icons.pieChart, label: 'Statistics', labelKey: 'nav.items.statistics', color: 'text-cyan-400' },
-      { to: '/analytics', icon: Icons.analytics, label: 'Analytics', labelKey: 'nav.items.analytics', color: 'text-indigo-400' },
-      { to: '/period-compare', icon: Icons.calendar, label: 'Period Comparison', labelKey: 'nav.items.period-compare', color: 'text-orange-400' },
-      { to: '/efficiency', icon: Icons.leaf, label: 'Efficiency', labelKey: 'nav.items.efficiency', color: 'text-amber-400' },
+      { to: '/statistics', icon: navRouteIcons['/statistics'], label: 'Statistics', labelKey: 'nav.items.statistics', color: 'text-cyan-400' },
+      { to: '/analytics', icon: navRouteIcons['/analytics'], label: 'Analytics', labelKey: 'nav.items.analytics', color: 'text-indigo-400' },
+      { to: '/period-compare', icon: navRouteIcons['/period-compare'], label: 'Period Comparison', labelKey: 'nav.items.period-compare', color: 'text-orange-400' },
+      { to: '/efficiency', icon: navRouteIcons['/efficiency'], label: 'Efficiency', labelKey: 'nav.items.efficiency', color: 'text-amber-400' },
       { to: '/temperature-impact', icon: Icons.climateHot, label: 'Temperature Impact', labelKey: 'nav.items.temperature-impact', color: 'text-blue-400' },
       { to: '/cost-analysis', icon: Icons.dollarSign, label: 'Cost Analysis', labelKey: 'nav.items.cost-analysis', color: 'text-emerald-400' },
       { to: '/tco', icon: Icons.wallet, label: 'Cost of Ownership', labelKey: 'nav.items.tco', color: 'text-green-400' },
@@ -569,6 +596,7 @@ export const navSections = [
     titleKey: 'nav.groups.automation',
     items: [
       { to: '/automations', icon: Icons.workflow, label: 'Automations', labelKey: 'nav.items.automations', color: 'text-purple-400' },
+      { to: '/automations/history', icon: Icons.activity, label: 'Automation History', labelKey: 'nav.items.automation-history', color: 'text-emerald-400' },
       { to: '/notifications/studio', icon: Icons.notificationsAdd, label: 'Alert Studio', labelKey: 'nav.items.notifications_studio', color: 'text-fuchsia-400' },
       { to: '/notifications/rules', icon: Icons.filter, label: 'Alert Rules', labelKey: 'nav.items.notifications_rules', color: 'text-amber-400' },
       { to: '/notifications/packs', icon: Icons.package, label: 'Alert Packs', labelKey: 'nav.items.notifications_packs', color: 'text-cyan-400' },
@@ -590,7 +618,7 @@ export const navSections = [
     titleKey: 'nav.groups.advanced_intelligence',
     items: [
       { to: '/intelligence/twin-lab', icon: Icons.network, label: 'Vehicle Twin Lab', labelKey: 'nav.items.intelligence_twin-lab', color: 'text-cyan-400' },
-      { to: '/intelligence/firmware-canary', icon: Icons.gitCompare, label: 'Firmware Canary', labelKey: 'nav.items.intelligence_firmware-canary', color: 'text-violet-400' },
+      { to: '/intelligence/firmware-canary', icon: Icons.flag, label: 'Firmware Canary', labelKey: 'nav.items.intelligence_firmware-canary', color: 'text-violet-400' },
       { to: '/intelligence/component-survival', icon: Icons.timer, label: 'Component Survival', labelKey: 'nav.items.intelligence_component-survival', color: 'text-amber-400' },
       { to: '/intelligence/road-hazards', icon: Icons.mapPinned, label: 'Road Hazard Mesh', labelKey: 'nav.items.intelligence_road-hazards', color: 'text-orange-400' },
       { to: '/intelligence/behavioral-sentinel', icon: Icons.securityAlert, label: 'Behavioral Sentinel', labelKey: 'nav.items.intelligence_behavioral-sentinel', color: 'text-rose-400' },
@@ -600,7 +628,7 @@ export const navSections = [
       { to: '/intelligence/federated-learning', icon: Icons.users, label: 'Federated Learning', labelKey: 'nav.items.intelligence_federated-learning', color: 'text-purple-400' },
       { to: '/intelligence/emergency-resilience', icon: Icons.home, label: 'Emergency Resilience', labelKey: 'nav.items.intelligence_emergency-resilience', color: 'text-red-400' },
       { to: '/intelligence/causal-lab', icon: Icons.scanSearch, label: 'Causal Experiment Lab', labelKey: 'nav.items.intelligence_causal-lab', color: 'text-fuchsia-400' },
-      { to: '/intelligence/tco-optimizer', icon: Icons.wallet, label: 'TCO Optimizer', labelKey: 'nav.items.intelligence_tco-optimizer', color: 'text-green-400' },
+      { to: '/intelligence/tco-optimizer', icon: Icons.target, label: 'TCO Optimizer', labelKey: 'nav.items.intelligence_tco-optimizer', color: 'text-green-400' },
     ],
   },
   {
@@ -647,7 +675,7 @@ export const navSections = [
     title: 'Settings',
     titleKey: 'nav.groups.settings',
     items: [
-      { to: '/settings', icon: Icons.settings, label: 'General Settings', labelKey: 'nav.items.settings', color: 'text-[var(--text-muted)]' },
+      { to: '/settings', icon: navRouteIcons['/settings'], label: 'General Settings', labelKey: 'nav.items.settings', color: 'text-[var(--text-muted)]' },
       { to: '/settings/fleet-setup', icon: Icons.radio, label: 'Fleet Setup', labelKey: 'nav.items.settings_fleet-setup', color: 'text-cyan-400' },
       { to: '/chatbot', icon: HelixMark, label: 'Helix Chat', labelKey: 'nav.items.chatbot', color: 'text-purple-400' },
       { to: '/dev-tools', icon: Icons.hammer, label: 'Developer Tools', labelKey: 'nav.items.dev-tools', color: 'text-cyan-400' },
@@ -657,7 +685,7 @@ export const navSections = [
     title: 'Integrations',
     titleKey: 'nav.groups.integrations',
     items: [
-      { to: '/integrations/helix', icon: HelixMark, label: 'Helix', labelKey: 'nav.items.integrations_helix', color: 'text-purple-400' },
+      { to: '/integrations/helix', icon: Icons.link, label: 'Helix', labelKey: 'nav.items.integrations_helix', color: 'text-purple-400' },
       { to: '/api-keys', icon: Icons.key, label: 'API Keys', labelKey: 'nav.items.api-keys', color: 'text-amber-400' },
       { to: '/gas-price', icon: Icons.fuel, label: 'Gas Prices', labelKey: 'nav.items.gas-price', color: 'text-orange-400' },
       { to: '/intelligence-packs', icon: Icons.package, label: 'Intelligence Packs', labelKey: 'nav.items.intelligence-packs', color: 'text-cyan-400' },
@@ -688,12 +716,12 @@ export const navSections = [
       { to: '/admin/live-signals', icon: Icons.radioTower, label: 'Live Signal Inspector', labelKey: 'nav.items.admin_live-signals', color: 'text-cyan-400' },
       { to: '/admin/ingest-xray', icon: Icons.scanSearch, label: 'Ingest X-Ray', labelKey: 'nav.items.admin_ingest-xray', color: 'text-sky-400' },
       { to: '/admin/dlq', icon: Icons.severityCritical, label: 'DLQ Inspector', labelKey: 'nav.items.admin_dlq', color: 'text-red-400' },
-      { to: '/admin/flags', icon: Icons.flag, label: 'Feature Flags', labelKey: 'nav.items.admin_flags', color: 'text-purple-400' },
+      { to: '/admin/flags', icon: Icons.flag, label: 'Platform Feature Flags', labelKey: 'nav.items.admin_flags', color: 'text-purple-400' },
       { to: '/admin/schema-drift', icon: Icons.fingerprint, label: 'Schema Drift', labelKey: 'nav.items.admin_schema-drift', color: 'text-purple-400' },
       { to: '/admin/slow-queries', icon: Icons.timer, label: 'Slow Queries', labelKey: 'nav.items.admin_slow-queries', color: 'text-amber-400' },
       { to: '/admin/vehicle-cost', icon: Icons.wallet, label: 'Vehicle Cost', labelKey: 'nav.items.admin_vehicle-cost', color: 'text-lime-400' },
       { to: '/admin/data-quality', icon: Icons.scanSearch, label: 'Data Quality', labelKey: 'nav.items.admin_data-quality', color: 'text-sky-400' },
-      { to: '/admin/disk-forecast', icon: Icons.hardDrive, label: 'Disk Forecast', labelKey: 'nav.items.admin_disk-forecast', color: 'text-teal-400' },
+      { to: '/admin/disk-forecast', icon: Icons.trendUp, label: 'Disk Forecast', labelKey: 'nav.items.admin_disk-forecast', color: 'text-teal-400' },
       { to: '/admin/secret-rotation', icon: Icons.securityCheck, label: 'Secret Rotation', labelKey: 'nav.items.admin_secret-rotation', color: 'text-cyan-400' },
       { to: '/admin/audit-log', icon: Icons.history, label: 'Audit Log', labelKey: 'nav.items.admin_audit-log', color: 'text-indigo-400' },
       { to: '/admin/gdpr-exports', icon: Icons.hardDriveDownload, label: 'GDPR Exports', labelKey: 'nav.items.admin_gdpr-exports', color: 'text-emerald-400' },
@@ -718,7 +746,13 @@ export const navSections = [
       { to: '/roadmap', icon: Icons.signpost, label: 'Roadmap', labelKey: 'nav.items.roadmap', color: 'text-violet-400' },
     ],
   },
-]
+].map(section => ({
+  ...section,
+  items: section.items.map(item => ({
+    ...item,
+    icon: SIDEBAR_ROUTE_ICONS[item.to] ?? item.icon,
+  })),
+}))
 
 type NavSection = (typeof navSections)[number]
 type NavItem = NavSection['items'][number]
@@ -885,51 +919,18 @@ function ThemeQuickSwitcher({
       >
         <Icons.palette className="h-5 w-5" aria-hidden="true" />
       </Button>
-      {open && coords && createPortal(
-        <div
-          ref={popoverRef}
-          role="dialog"
-          aria-label={t('theme.openPicker', 'Open theme picker')}
-          style={{
-            position: 'fixed',
-            top: coords.top,
-            ...(coords.left !== undefined ? { left: coords.left } : {}),
-            ...(coords.right !== undefined ? { right: coords.right } : {}),
-          }}
-          className="z-[80] w-[22rem] max-w-[calc(100vw-1rem)] rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-e3"
-        >
-          <Suspense
-            fallback={
-              <div
-                role="status"
-                aria-label={t('theme.loadingPicker', 'Loading theme picker…')}
-                className="min-h-64 animate-pulse rounded-shape-md bg-[var(--surface-2)] motion-reduce:animate-none"
-              />
-            }
-          >
-            <LazyThemePicker
-              compact
-              showMode
-              showCustom={false}
-              onChange={() => setOpen(false)}
-              onModeChange={() => setOpen(false)}
-            />
-          </Suspense>
-          <div className="mt-3 flex justify-end border-t border-[var(--border-subtle)] pt-3">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setOpen(false)
-                navigate('/settings#appearance')
-              }}
-              className="h-auto px-2 py-1 text-xs font-medium text-[var(--theme-primary)] hover:bg-transparent hover:brightness-110"
-            >
-              {t('theme.customize', 'Customize…')}
-            </Button>
-          </div>
-        </div>,
-        document.body,
+      {open && coords && (
+        <Suspense fallback={null}>
+          <ThemeQuickSwitcherPopover
+            coords={coords}
+            popoverRef={popoverRef}
+            onClose={() => setOpen(false)}
+            onCustomize={() => {
+              setOpen(false)
+              navigate('/settings#appearance')
+            }}
+          />
+        </Suspense>
       )}
     </div>
   )
@@ -942,6 +943,25 @@ export default function Layout() {
   // Defaults to 'linear'; user can change via Settings → Appearance.
   const sidebarStyle = useSidebarStyle()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY)
+      if (saved !== null) {
+        const width = Number(saved)
+        if (Number.isFinite(width)) return clampSidebarWidth(width)
+      }
+    } catch {
+      // Storage may be disabled; the sidebar remains resizable for this session.
+    }
+    return DEFAULT_SIDEBAR_WIDTH
+  })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth))
+    } catch {
+      // Storage may be disabled; keep the current session's width.
+    }
+  }, [sidebarWidth])
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
     try {
       const stored = window.localStorage.getItem(EXPANDED_NAV_STORAGE_KEY)
@@ -1484,11 +1504,11 @@ export default function Layout() {
               'h-4 w-4 transition-colors duration-fast',
               isActive
                 ? 'text-[var(--theme-primary)]'
-                : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
+                : 'text-[var(--theme-primary)]',
             )}
           />
         </span>
-        <span className={cn('relative z-10 min-w-0 truncate transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
+        <span className={cn('relative z-10 min-w-0 whitespace-normal break-words leading-snug transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
           {navLabel(item)}
         </span>
         {to === '/notifications/inbox' && unreadAlerts > 0 && (
@@ -1523,6 +1543,7 @@ export default function Layout() {
       <div
         data-presentation-mode={presentation.mode}
         className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
+        style={{ '--shell-sidebar-width': `${sidebarWidth}px` } as React.CSSProperties}
       >
       {/* Global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
@@ -1555,7 +1576,7 @@ export default function Layout() {
         data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
-          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform transition-transform duration-normal ease-out xl:top-0 xl:static xl:z-auto xl:w-[var(--shell-sidebar-width)] xl:translate-x-0',
+          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform transition-transform duration-normal ease-out xl:top-0 xl:relative xl:z-auto xl:w-[var(--shell-sidebar-width)] xl:shrink-0 xl:translate-x-0',
           'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
           presentation.mode !== 'standard' && 'hidden',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
@@ -1606,11 +1627,13 @@ export default function Layout() {
           <VehiclePicker hideWhenSingle={false} className="xl:hidden" />
         )}
         {workspaceScope.range && (
-          <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
-            <WorkspaceContextControl
-              className="w-full max-w-none"
-              listenForCommands={false}
-            />
+          <div role="group" aria-label={t('workspace.analysis.title', 'View settings')} className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
+            <Suspense fallback={null}>
+              <WorkspaceContextControl
+                className="w-full max-w-none"
+                listenForCommands={false}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -1765,14 +1788,17 @@ export default function Layout() {
                 </div>
               }
             />
-            {groupedSidebarSections.map(section => {
+            <div className="ms-3 border-s border-[var(--border-default)] ps-2">
+            {groupedSidebarSections.filter(section =>
+              unpinnedSidebarItems(section.items, visibleCollections, pinnedNavSet).length > 0,
+            ).map(section => {
               const isExpanded = expandedSections.has(section.title)
               const isActiveSection = section.title === activeSectionTitle
               const singleCollection = soleCollection(section, visibleCollections)
               const sectionStyle = SECTION_ICON_STYLES[section.title]
-              const SectionIcon = sectionStyle?.icon ?? Icons.sparkles
+              const SectionIcon = SIDEBAR_SECTION_ICONS[section.title] ?? sectionStyle?.icon ?? Icons.sparkles
               return (
-                <div key={section.title} className="mt-3 first:mt-1">
+                <div key={section.title} className="relative mt-3 first:mt-1 before:absolute before:-start-2 before:top-3.5 before:h-px before:w-2 before:bg-[var(--border-default)]">
                   <Button
                     type="button"
                     variant="ghost"
@@ -1780,9 +1806,7 @@ export default function Layout() {
                     aria-expanded={isExpanded}
                     aria-controls={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
                     onClick={() => toggleSection(section.title)}
-                    className={cn(
-                      'group/section relative mb-1.5 flex h-7 w-full items-center justify-between gap-2 rounded-md px-1.5 hover:bg-transparent'
-                    )}
+                    className="group/section relative mb-1.5 flex h-auto min-h-9 w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 hover:bg-transparent"
                   >
                     {isActiveSection && (
                       <span
@@ -1794,13 +1818,13 @@ export default function Layout() {
                       <SectionIcon
                         className={cn(
                           'h-3.5 w-3.5 shrink-0 transition-colors duration-fast',
-                          isActiveSection ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'
+                          'text-[var(--theme-primary)]'
                         )}
                         aria-hidden="true"
                       />
                       <span
                         className={cn(
-                          'truncate text-xs font-semibold tracking-[0.035em] transition-colors',
+                          'whitespace-normal break-words text-xs font-semibold leading-snug tracking-[0.035em] transition-colors',
                           isActiveSection ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover/section:text-[var(--text-primary)]'
                         )}
                         title={navSectionTitle(section)}
@@ -1845,8 +1869,8 @@ export default function Layout() {
                         transition={{ duration: 0.18, ease: 'easeOut' }}
                         className="overflow-hidden"
                       >
-                        <div className="space-y-0.5 pb-2">
-                          {section.items.map(item => {
+                        <div className="ms-5 space-y-0.5 border-s border-[var(--border-default)] pb-2 ps-2">
+                          {unpinnedSidebarItems(section.items, visibleCollections, pinnedNavSet).map(item => {
                             const group = visibleCollections.find(candidate => candidate.primary === item.to)
                             return group
                               ? <Suspense
@@ -1875,6 +1899,7 @@ export default function Layout() {
                 </div>
               )
             })}
+            </div>
           </div>
         </nav>
         )}
@@ -1888,6 +1913,9 @@ export default function Layout() {
             because their info is surfaced in the StatusBar (VersionSegment
             shows the update dot + uptime, ConnectionSegment shows API
             status, ActiveVehicleSegment shows the active vehicle). */}
+        <Suspense fallback={null}>
+          <SidebarResizeHandle width={sidebarWidth} onResize={setSidebarWidth} />
+        </Suspense>
       </aside>
 
       {/* Mobile top bar */}
@@ -1916,12 +1944,14 @@ export default function Layout() {
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         {/* Spacer for fixed mobile header */}
         <div className="h-14 shrink-0 xl:hidden" />
-        {presentation.mode === 'standard' && (
+        {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-[4.5rem] shrink-0 xl:block" />}>
           <WorkspaceHeader
             notifications={<NotificationBellPopover />}
             themeControl={<ThemeQuickSwitcher />}
+            breadcrumbSections={sidebarStyle === 'linear' ? compactNav.sections : groupedSidebarSections}
+            breadcrumbCollections={visibleCollections}
           />
-        )}
+        </Suspense>}
 
         {/* Browser-compat warning — topmost banner
             in the main content column so users on outdated browsers see
@@ -1973,7 +2003,7 @@ export default function Layout() {
             )}
             {presentation.mode === 'standard' && (
               <div data-role="compact-breadcrumbs" className="xl:hidden">
-                <LayoutBreadcrumbs className="min-w-0 text-sm" />
+                <LayoutBreadcrumbs className="min-w-0 text-sm" sections={sidebarStyle === 'linear' ? compactNav.sections : groupedSidebarSections} collections={visibleCollections} />
               </div>
             )}
             <RouteTransition>
@@ -1982,6 +2012,8 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      {presentation.mode === 'standard' && <div id="helix-dock-slot" className="hidden xl:contents" />}
 
       {/* Mobile bottom tab bar */}
       {presentation.mode === 'standard' && <BottomTabBar />}
@@ -2071,12 +2103,12 @@ export default function Layout() {
           actually expired (or any API call returned 401), preserving
           the current URL so the user can resume after re-auth.
           Both are no-ops in open mode (no FORWARD_AUTH_HEADER). */}
-      <SessionExpiringModal />
+      <Suspense fallback={null}><LazySessionExpiringModal /></Suspense>
       <SessionExpiredModal />
 
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />
-      <GotoIndicator visible={shortcutMode === 'goto'} />
+      {shortcutMode === 'goto' && <Suspense fallback={null}><LazyGotoIndicator visible /></Suspense>}
       {showCheatSheet && (
         <Suspense fallback={null}>
           <LazyKeyboardShortcutsModal open onClose={toggleCheatSheet} />
@@ -2114,7 +2146,7 @@ export default function Layout() {
       {/* "What's new since last visit" modal — auto-shows
           once-per-24h after the OnboardingWizard, or on demand via the command
           palette ("What's new") and footer status bar version segment. */}
-      <ChangelogModal />
+      <Suspense fallback={null}><LazyChangelogModal /></Suspense>
 
       {/* Surfaces unsaved form drafts after a
           tab close, browser crash, PWA reload, or auth redirect. The

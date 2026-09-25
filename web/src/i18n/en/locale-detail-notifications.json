@@ -474,8 +474,11 @@
       },
       "templates": {
         "header": "Rule Templates - {{count}} pre-built rules",
+        "searchLabel": "Search templates",
         "searchPlaceholder": "Search templates...",
+        "categoryFilter": "Filter templates by category",
         "allCategory": "All",
+        "showing": "{{count}} of {{total}} templates",
         "use": "Use",
         "noMatchesTitle": "No templates found",
         "noMatches": "No templates match your search"

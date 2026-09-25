@@ -585,6 +585,26 @@ describe('Layout — sidebar style selection', () => {
     expect(screen.queryByTestId('notion-sidebar')).toBeNull()
   })
 
+  describe('Layout — sidebar width', () => {
+    it('restores a saved width and supports keyboard resizing across sidebar styles', async () => {
+      localStorage.setItem('teslasync-sidebar-width', '344')
+      H.sidebarStyle.value = 'notion'
+      renderLayout('/')
+      const handle = await screen.findByRole('separator', { name: 'Resize sidebar' })
+      const shell = handle.closest('[data-presentation-mode]')
+      expect(handle).toHaveAttribute('aria-valuenow', '344')
+      expect(shell).toHaveStyle({ '--shell-sidebar-width': '344px' })
+
+      fireEvent.keyDown(handle, { key: 'ArrowRight' })
+      expect(handle).toHaveAttribute('aria-valuenow', '360')
+      expect(localStorage.getItem('teslasync-sidebar-width')).toBe('360')
+      fireEvent.keyDown(handle, { key: 'Home' })
+      expect(handle).toHaveAttribute('aria-valuenow', '240')
+      fireEvent.keyDown(handle, { key: 'End' })
+      expect(handle).toHaveAttribute('aria-valuenow', '420')
+    })
+  })
+
   it('renders the NotionSidebar when the style preference is "notion"', async () => {
     H.sidebarStyle.value = 'notion'
     renderLayout('/')

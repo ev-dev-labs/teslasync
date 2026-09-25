@@ -185,6 +185,7 @@ type HistoryFilter struct {
 	AutomationID int64     // 0 = all automations
 	Status       string    // empty = no status filter
 	Since        time.Time // zero = no lower bound
+	Before       time.Time // zero = no upper bound (exclusive)
 }
 
 // ListAll returns execution history matching the filter with pagination.
@@ -207,7 +208,7 @@ func (r *AutomationHistoryRepo) ListAll(ctx context.Context, f HistoryFilter, li
 	}
 
 	// Fetch
-	fetchQuery := fmt.Sprintf("SELECT %s FROM automation_history%s ORDER BY triggered_at DESC LIMIT $%d OFFSET $%d",
+	fetchQuery := fmt.Sprintf("SELECT %s FROM automation_history%s ORDER BY triggered_at DESC, id DESC LIMIT $%d OFFSET $%d",
 		automationHistoryColumns, where, len(args)+1, len(args)+2)
 	args = append(args, limit, offset)
 
@@ -243,6 +244,37 @@ type HistoryStats struct {
 	Partial         int     `json:"partial"`
 	SuccessRate     float64 `json:"success_rate"` // percentage, excludes running/skipped/cancelled
 	AvgDurationMs   float64 `json:"avg_duration_ms"`
+}
+
+// HistoryTrendPoint is a UTC day/status bucket across the entire filtered range.
+type HistoryTrendPoint struct {
+	Day    string `json:"day"`
+	Status string `json:"status"`
+	Count  int    `json:"count"`
+}
+
+func (r *AutomationHistoryRepo) GetTrend(ctx context.Context, f HistoryFilter) ([]HistoryTrendPoint, error) {
+	where, args := buildHistoryWhere(f)
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT to_char(triggered_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, status, COUNT(*)::int
+		FROM automation_history`+where+`
+		GROUP BY day, status ORDER BY day, status`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("get automation history trend: %w", err)
+	}
+	defer rows.Close()
+	points := make([]HistoryTrendPoint, 0)
+	for rows.Next() {
+		var point HistoryTrendPoint
+		if err := rows.Scan(&point.Day, &point.Status, &point.Count); err != nil {
+			return nil, fmt.Errorf("scan automation history trend: %w", err)
+		}
+		points = append(points, point)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate automation history trend: %w", err)
+	}
+	return points, nil
 }
 
 // GetStats returns aggregate statistics for executions matching the filter.
@@ -290,6 +322,11 @@ func buildHistoryWhere(f HistoryFilter) (string, []interface{}) {
 	if !f.Since.IsZero() {
 		clauses = append(clauses, fmt.Sprintf("triggered_at >= $%d", idx))
 		args = append(args, f.Since)
+		idx++
+	}
+	if !f.Before.IsZero() {
+		clauses = append(clauses, fmt.Sprintf("triggered_at < $%d", idx))
+		args = append(args, f.Before)
 	}
 
 	if len(clauses) == 0 {

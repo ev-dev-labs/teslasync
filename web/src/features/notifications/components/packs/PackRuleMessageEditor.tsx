@@ -19,7 +19,7 @@ export default function PackRuleMessageEditor({ template, selection, disabled, o
       <div className="min-w-0 flex-1">
         <Textarea id={`pack-${template.id}-message`} label={compact ? undefined : t('alertPacks.message', 'Notification message')}
           aria-label={t('alertPacks.message', 'Notification message')}
-          className={compact ? 'block h-11 min-h-11 focus:h-28' : 'block min-h-24'} rows={compact ? 1 : 3} maxLength={1024} disabled={disabled}
+          className={compact ? 'block min-h-24 w-full resize-y' : 'block min-h-24'} rows={3} maxLength={1024} disabled={disabled}
           value={message} error={message.trim() ? undefined : t('alertPacks.messageRequired', 'Enter a notification message.')}
           onChange={event => onChange({ ...selection, message: event.target.value })} />
       </div>

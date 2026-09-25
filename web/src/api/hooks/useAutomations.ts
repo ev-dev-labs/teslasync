@@ -11,6 +11,8 @@ import type {
   AutomationActionInput,
   AutomationConditionInput,
   AutomationHistoryListResponse,
+  AutomationExecutionDetail,
+  AutomationHistoryStatus,
   AutomationPresetsResponse,
   AutomationPreset,
   AutomationTriggerInput,
@@ -54,6 +56,82 @@ export function useAutomationHistory(limit = 20) {
     queryFn: ({ signal }) =>
       request<AutomationHistoryListResponse>(`/automations/history?limit=${limit}`, { signal }),
     refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/** Server-side history pagination; do not filter a recent-only page in memory. */
+export interface AutomationHistoryPageFilters {
+  page: number;
+  pageSize: number;
+  automationId?: number;
+  status?: AutomationHistoryStatus;
+  since?: string;
+  until?: string;
+}
+
+/** Fail closed: a missing server envelope must never masquerade as empty history. */
+function assertHistoryPage(value: unknown): AutomationHistoryListResponse {
+  if (!value || typeof value !== 'object') throw new Error('Invalid automation history response');
+  const page = value as Partial<AutomationHistoryListResponse>;
+  const summary = page.summary;
+  if (
+    !Array.isArray(page.items)
+    || !Number.isSafeInteger(page.total) || page.total! < 0
+    || !Number.isSafeInteger(page.limit) || page.limit! <= 0
+    || !Number.isSafeInteger(page.offset) || page.offset! < 0
+    || !summary
+    || !Number.isSafeInteger(summary.total_executions)
+    || !Number.isSafeInteger(summary.succeeded)
+    || !Number.isSafeInteger(summary.failed)
+    || !Number.isSafeInteger(summary.partial)
+    || !Number.isFinite(summary.success_rate)
+    || !Number.isFinite(summary.avg_duration_ms)
+    || !Array.isArray(page.trend)
+    || !page.trend.every((point) =>
+      point != null && typeof point.day === 'string'
+      && typeof point.status === 'string'
+      && Number.isSafeInteger(point.count) && point.count >= 0)
+    || !page.items.every((item) =>
+      item != null && Number.isSafeInteger(item.id)
+      && typeof item.automation_name === 'string'
+      && typeof item.triggered_at === 'string'
+      && typeof item.status === 'string')
+  ) {
+    throw new Error('Invalid automation history response');
+  }
+  return page as AutomationHistoryListResponse;
+}
+
+export function useAutomationHistoryPage(filters: AutomationHistoryPageFilters) {
+  const { page, pageSize, automationId, status, since, until } = filters;
+  return useQuery({
+    queryKey: ['automation-history', 'page', page, pageSize, automationId, status, since, until],
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({
+        limit: String(pageSize),
+        offset: String((page - 1) * pageSize),
+      });
+      if (status) params.set('status', status);
+      if (since) params.set('since', since);
+      if (until) params.set('until', until);
+      // The global endpoint does not accept automation_id; the per-automation
+      // endpoint uses the same paginated response and applies that filter in SQL.
+      const path = automationId != null
+        ? `/automations/${automationId}/history`
+        : '/automations/history';
+      return request<AutomationHistoryListResponse>(`${path}?${params}`, { signal }).then(assertHistoryPage);
+    },
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+export function useAutomationExecutionDetail(id: number | null) {
+  return useQuery({
+    queryKey: ['automation-history', 'detail', id],
+    queryFn: ({ signal }) =>
+      request<AutomationExecutionDetail>(`/automations/history/${id}`, { signal }),
+    enabled: id != null,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 

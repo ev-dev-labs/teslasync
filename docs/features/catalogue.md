@@ -8,8 +8,18 @@ task opens automatically, so switching between its views is one click: no
 intermediate landing page or second row of tabs. Group counts show how many
 destinations are available; Expand a group to reveal every original route.
 Sections with just one collection list their pages directly; sections with
-multiple collections show one more indented level. The full searchable
-catalogue, direct URLs, pins and visibility rules remain.
+multiple collections show one more connected level. Counts are displayed as
+plain numbers at each branch; the selected page has its own accent. The full
+searchable catalogue, direct URLs, pins and visibility rules remain.
+Sidebar section, collection and page names and glyphs are distinct, so a
+branch cannot be mistaken for one of its destinations. A pinned page moves
+to Quick access instead of appearing a second time in its original branch;
+unpinning restores it there without changing the route.
+The section list also shares a vertical rail, so collapsed sections are part
+of the same hierarchy as their expanded collections and pages.
+The desktop sidebar can be resized by dragging its edge or using the arrow keys
+on its resize handle; the chosen width is saved in this browser. Labels wrap to
+fit instead of being clipped.
 
 | Sidebar group | Screens | Catalogue page |
 | ------------- | ------: | -------------- |

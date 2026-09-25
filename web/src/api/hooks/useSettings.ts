@@ -317,13 +317,15 @@ export function useUpdatePollingConfig() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (pc: PollingConfig) =>
-      request<PollingConfig>('/settings/polling-config', {
+    mutationFn: async (pc: PollingConfig) => {
+      const { pollingConfigUpdate } = await import('../pollingConfigUpdate');
+      return request<PollingConfig>('/settings/polling-config', {
         method: 'PUT',
         requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pc),
-      }),
+        body: JSON.stringify(pollingConfigUpdate(pc)),
+      });
+    },
     onSuccess: (updated) => {
       qc.setQueryData(['polling-config'], updated);
       qc.invalidateQueries({ queryKey: ['polling-config'] });

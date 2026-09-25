@@ -50,7 +50,9 @@ const ACCEPT_MISSING = process.argv.includes('--accept-missing')
 const SOURCE_ROOT = join(__dirname, '..', 'src')
 const SHELL_RUNTIME_KEYS_PATH = join(I18N_ROOT, 'shell-runtime-keys.json')
 const KNOWN_MISSING_PATH = join(I18N_ROOT, 'known-missing-keys.json')
-const COMPLETE_SHELL_NAMESPACES = new Set(['nav'])
+// Shared controls used across dashboard, list, and detail routes should not
+// trigger a separate network request for each common label on first paint.
+const COMPLETE_SHELL_NAMESPACES = new Set(['nav', 'common', 'workspace', 'dataSources'])
 /**
  * A per-namespace fallback chunk this small costs less to inline than the
  * request that fetches it costs in headers and round trips. Inlining also

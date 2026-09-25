@@ -201,7 +201,7 @@ describe('LinearSidebar', () => {
     expect(onPin).toHaveBeenCalledWith('/drives')
   })
 
-  it('keeps one canonical active row when the current page is also a favorite', () => {
+  it('keeps the single favorite row active on its page', () => {
     renderSidebar({
       pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles', labelKey: 'nav.items.vehicles' }],
       activeSectionTitle: 'Fleet',
@@ -209,7 +209,7 @@ describe('LinearSidebar', () => {
     })
 
     const vehicleLinks = screen.getAllByRole('link', { name: /Vehicles/ })
-    expect(vehicleLinks).toHaveLength(2)
+    expect(vehicleLinks).toHaveLength(1)
     expect(vehicleLinks.filter(link => link.getAttribute('aria-current') === 'page')).toHaveLength(1)
   })
 

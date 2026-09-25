@@ -46,7 +46,7 @@ export function AlertFatiguePanel() {
   const chartData = useMemo(
     () =>
       summary.groups.slice(0, 12).map((g) => ({
-        rule: g.title.length > 26 ? `${g.title.slice(0, 25)}…` : g.title,
+        rule: g.title.length > 16 ? `${g.title.slice(0, 15)}…` : g.title,
         score: Math.round(g.noiseScore),
         perDay: Math.round(g.perDay * 10) / 10,
         ignored: g.ignoredRate != null ? Math.round(g.ignoredRate * 100) : null,
@@ -56,8 +56,12 @@ export function AlertFatiguePanel() {
   );
 
   const exportData = useMemo(
-    () => chartData.map(({ verdict, ...rest }) => ({ ...rest, verdict: String(verdict) })),
-    [chartData],
+    () => chartData.map(({ verdict, ...rest }, index) => ({
+      ...rest,
+      rule: summary.groups[index]?.title ?? rest.rule,
+      verdict: String(verdict),
+    })),
+    [chartData, summary.groups],
   );
 
   // A rule that fires all day is background hum; one that fires at 03:00 is
@@ -74,8 +78,8 @@ export function AlertFatiguePanel() {
   const isError = logsQuery.isError;
 
   return (
-    <section id="fatigue" aria-label={t('alertFatigue.title', 'Alert Fatigue')} className="space-y-4 scroll-mt-24">
-      <div>
+    <section id="fatigue" aria-label={t('alertFatigue.title', 'Alert Fatigue')} className="min-w-0 space-y-5 scroll-mt-24">
+      <div className="max-w-3xl">
         <SectionTitle>{t('alertFatigue.title', 'Alert Fatigue')}</SectionTitle>
         <Text as="p" color="secondary">
           {t('alertFatigue.subtitle', 'Which of your notification rules have stopped being useful — scored on volume, burstiness and how often you actually read them')}
@@ -85,7 +89,7 @@ export function AlertFatiguePanel() {
       <FadeIn>
         <section
           aria-label={t('alertFatigue.kpis', 'Alert fatigue metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4"
         >
           {isError ? (
             <GlassPanel className="col-span-full p-4 sm:p-5">
@@ -169,6 +173,7 @@ export function AlertFatiguePanel() {
             loading={isLoading}
             empty={chartData.length === 0}
             height={360}
+            mobileHeight={360}
             data={exportData}
             dataColumns={[
               { key: 'rule', label: t('alertFatigue.col.rule', 'Rule') },
@@ -189,7 +194,7 @@ export function AlertFatiguePanel() {
                 <YAxis
                   type="category"
                   dataKey="rule"
-                  width={150}
+                  width={110}
                   tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
                 />
                 <Tooltip content={<ChartTooltip />} />
@@ -285,14 +290,14 @@ export function AlertFatiguePanel() {
               message={t('alertFatigue.noRules', 'No notification rules have fired yet.')}
             />
           ) : (
-            <ul className="grid gap-3 lg:grid-cols-2">
+            <ul className="grid min-w-0 gap-3 lg:grid-cols-2">
               {summary.groups.map((g) => (
                 <li
                   key={g.key}
-                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+                  className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:p-4"
                 >
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Text variant="body" className="font-medium">{g.title}</Text>
+                    <Text variant="body" className="min-w-0 break-words font-medium">{g.title}</Text>
                     <Badge variant={VERDICT_BADGE[g.verdict]}>
                       {t(`alertFatigue.verdict.${g.verdict}`, VERDICT_DEFAULT[g.verdict])}
                     </Badge>
@@ -302,7 +307,7 @@ export function AlertFatiguePanel() {
                       </Badge>
                     ) : null}
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
+                  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-2 gap-y-1 sm:grid-cols-4 sm:gap-x-4">
                     <Text variant="caption">
                       {t('alertFatigue.firings', 'Firings')}
                     </Text>

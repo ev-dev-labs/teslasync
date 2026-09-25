@@ -20,6 +20,20 @@ const MAX_ROUTE_LOCALE_REQUESTS = 5
 
 async function captureLocaleRequests(browser, path) {
   const page = await browser.newPage({ serviceWorkers: 'block' })
+  await page.route('**/api/v1/onboarding/status', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        setup_complete: true,
+        setup_required: false,
+        is_complete: true,
+        tesla_connected: true,
+        vehicle_count: 1,
+        data_flowing: true,
+      }),
+    }),
+  )
   await page.addInitScript(() => {
     window.__TESLASYNC_I18N_PROBE_KEYS__ = []
   })

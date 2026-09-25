@@ -21,6 +21,7 @@ import {
   presetKeys,
   useAutomations,
   useAutomationHistory,
+  useAutomationHistoryPage,
   useImportAutomations,
   useToggleAutomation,
   useReEnableAutomation,
@@ -137,6 +138,7 @@ function makeHistoryResponse(
       success_rate: 0,
       avg_duration_ms: 0,
     },
+    trend: [],
     ...overrides,
   };
 }
@@ -207,6 +209,54 @@ describe('useAutomationHistory', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(calledUrl()).toBe('/automations/history?limit=20');
     expect(result.current.data?.total).toBe(3);
+  });
+
+  describe('useAutomationHistoryPage', () => {
+    it('paginates and filters on the server rather than truncating local history', async () => {
+      requestMock.mockResolvedValueOnce(makeHistoryResponse({ total: 101, limit: 25, offset: 50 }));
+      const { result } = renderHook(() => useAutomationHistoryPage({
+        page: 3, pageSize: 25, status: 'failed', since: '2026-04-01', until: '2026-04-30',
+      }), { wrapper: wrapperFor(makeClient()) });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(calledUrl()).toBe('/automations/history?limit=25&offset=50&status=failed&since=2026-04-01&until=2026-04-30');
+      expect(result.current.data?.total).toBe(101);
+      expect(calledOpts().signal).toBeDefined();
+    });
+
+    it('uses the existing per-automation history route for an automation filter', async () => {
+      requestMock.mockResolvedValueOnce(makeHistoryResponse({
+        trend: [{ day: '2026-04-30', status: 'success', count: 100 }],
+      }));
+      const { result } = renderHook(() => useAutomationHistoryPage({
+        page: 1, pageSize: 25, automationId: 42, since: '2026-04-01', until: '2026-04-30',
+      }), { wrapper: wrapperFor(makeClient()) });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(calledUrl()).toBe('/automations/42/history?limit=25&offset=0&since=2026-04-01&until=2026-04-30');
+      expect(result.current.data?.trend[0]?.count).toBe(100);
+    });
+
+    it.each([null, {}, { items: [], total: 0, limit: 25, offset: 0, summary: {}, trend: [] }])(
+      'rejects a missing or malformed history envelope instead of treating it as empty',
+      async (payload) => {
+        requestMock.mockResolvedValueOnce(payload);
+        const { result } = renderHook(() => useAutomationHistoryPage({
+          page: 1, pageSize: 25,
+        }), { wrapper: wrapperFor(makeClient()) });
+        await waitFor(() => expect(result.current.isError).toBe(true));
+        expect(result.current.data).toBeUndefined();
+        expect(result.current.error?.message).toBe('Invalid automation history response');
+      },
+    );
+
+    it('surfaces server failures rather than returning an empty history envelope', async () => {
+      requestMock.mockRejectedValueOnce(new Error('server unavailable'));
+      const { result } = renderHook(() => useAutomationHistoryPage({
+        page: 1, pageSize: 25,
+      }), { wrapper: wrapperFor(makeClient()) });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.error?.message).toBe('server unavailable');
+    });
   });
 
   it('honours a caller-supplied limit', async () => {

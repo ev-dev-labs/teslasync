@@ -17,8 +17,8 @@
  *   2. KPI band — the six aggregates are derived from the data (per-phase
  *      counts, total initiatives, total features shipped) with the phase-count
  *      sum reconciling against the Total Initiatives KPI.
- *   3. Features Shipped — proven to sum feature bullets in the completed phase
- *      (43), not the initiative count (5), guarding the reduce().
+ *   3. Features Shipped — proven to sum feature bullets in the completed phase,
+ *      not the initiative count, guarding the reduce().
  *   4. Delivery progress — the shipped/total summary caption, the accessible
  *      role="img" bar, and the four-entry per-phase legend.
  *   5. Phase bands — each band owns a heading, a count badge and a description,
@@ -129,6 +129,7 @@ describe('RoadmapPage — scaffolding & a11y', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Roadmap' }),
     ).toBeInTheDocument();
+    expect(screen.getByText('This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')).toBeInTheDocument();
     expect(
       screen.getByText(
         "What's been built, what's in progress, and what's coming next",
@@ -141,7 +142,7 @@ describe('RoadmapPage — scaffolding & a11y', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Completed' })).toBeInTheDocument();
     expect(
-      screen.getByRole('region', { name: 'In Progress' }),
+      screen.getByRole('region', { name: 'Active Focus' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Up Next' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Future' })).toBeInTheDocument();
@@ -155,17 +156,17 @@ describe('RoadmapPage — KPI band', () => {
   it('derives the six KPI metrics from the roadmap data', () => {
     renderPage();
 
-    expect(metricValue('Completed')).toBe('5');
-    expect(metricValue('In Progress')).toBe('1');
+    expect(metricValue('Completed')).toBe('10');
+    expect(metricValue('Active Focus')).toBe('1');
     expect(metricValue('Up Next')).toBe('2');
-    expect(metricValue('Future')).toBe('9');
+    expect(metricValue('Future')).toBe('4');
     expect(metricValue('Total Initiatives')).toBe('17');
-    expect(metricValue('Features Shipped')).toBe('43');
+    expect(metricValue('Features Shipped')).toBe('70');
 
     // Invariant: the four phase counts reconcile with the total.
     const phaseSum =
       Number(metricValue('Completed')) +
-      Number(metricValue('In Progress')) +
+      Number(metricValue('Active Focus')) +
       Number(metricValue('Up Next')) +
       Number(metricValue('Future'));
     expect(phaseSum).toBe(Number(metricValue('Total Initiatives')));
@@ -174,15 +175,15 @@ describe('RoadmapPage — KPI band', () => {
   it('counts Features Shipped as the total feature bullets in the completed phase, not the initiative count', () => {
     renderPage();
 
-    // Every bullet across the five completed cards is a <li>.
+    // Every bullet across the completed cards is a <li>.
     const shippedFeatureBullets = phase('Completed').getAllByRole('listitem');
-    expect(shippedFeatureBullets).toHaveLength(43);
+    expect(shippedFeatureBullets).toHaveLength(70);
 
     // The KPI reflects the summed bullets (guards the reduce()) …
     expect(Number(metricValue('Features Shipped'))).toBe(
       shippedFeatureBullets.length,
     );
-    // … and is emphatically not the initiative count (5).
+    // … and is emphatically not the initiative count.
     expect(Number(metricValue('Features Shipped'))).toBeGreaterThan(
       Number(metricValue('Completed')),
     );
@@ -206,11 +207,10 @@ describe('RoadmapPage — delivery progress', () => {
       scope.getByRole('img', { name: 'Roadmap initiatives by phase' }),
     ).toBeInTheDocument();
 
-    // Legend carries exactly one entry per phase with its count. "Future" and
-    // the counts 9 / 1 are unique within this panel.
+    // Legend carries exactly one entry per phase with its count.
     expect(scope.getAllByRole('listitem')).toHaveLength(4);
     expect(scope.getByText('Future')).toBeInTheDocument();
-    expect(scope.getByText('9')).toBeInTheDocument();
+    expect(scope.getByText('4')).toBeInTheDocument();
     expect(scope.getByText('1')).toBeInTheDocument();
   });
 });
@@ -226,8 +226,7 @@ describe('RoadmapPage — phase bands', () => {
     expect(
       done.getByText('Shipped and available in your deployment today.'),
     ).toBeInTheDocument();
-    // Band count badge (the only standalone "5" inside the band).
-    expect(done.getByText('5')).toBeInTheDocument();
+    expect(done.getByText('10')).toBeInTheDocument();
     // Every completed initiative surfaces as a card heading.
     [
       'Core Platform',
@@ -235,19 +234,23 @@ describe('RoadmapPage — phase bands', () => {
       'Intelligence & Observability',
       'Fleet Telemetry',
       'Premium UI & Design System',
+      'Vehicle History & Physics',
+      'Charging & Energy Intelligence',
+      'Journeys & Ownership',
+      'Helix & Alert Studio',
+      'Operator Experience',
     ].forEach((title) =>
       expect(
         done.getByRole('heading', { level: 3, name: title }),
       ).toBeInTheDocument(),
     );
 
-    // The single-item "In Progress" band owns its own copy + initiative.
-    const current = phase('In Progress');
+    const current = phase('Active Focus');
     expect(
-      current.getByText('Actively being built right now.'),
+      current.getByText('Areas receiving attention; priorities may change.'),
     ).toBeInTheDocument();
     expect(
-      current.getByRole('heading', { level: 3, name: 'External Integrations' }),
+      current.getByRole('heading', { level: 3, name: 'Reliability & Data Trust' }),
     ).toBeInTheDocument();
   });
 });
@@ -266,7 +269,7 @@ describe('RoadmapPage — card contents', () => {
       card.getByText('Live GPS map with animated markers'),
     ).toBeInTheDocument();
     expect(
-      card.getByText('Remote vehicle commands (14 commands)'),
+      card.getByText('Remote vehicle commands with proxy routing'),
     ).toBeInTheDocument();
     // Core Platform ships eleven features.
     expect(card.getAllByRole('listitem')).toHaveLength(11);
@@ -281,14 +284,21 @@ describe('RoadmapPage — card contents', () => {
       within(cardByTitle('Core Platform')).getByText('Completed'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('External Integrations')).getByText('In Progress'),
+      within(cardByTitle('Reliability & Data Trust')).getByText('Active Focus'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Enhanced Visualization')).getByText('Up Next'),
+      within(cardByTitle('Helix Quality & Cost Controls')).getByText('Up Next'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Enterprise & Scale')).getByText('Future'),
+      within(cardByTitle('Energy Ecosystem')).getByText('Future'),
     ).toBeInTheDocument();
+  });
+
+  it('does not promise features that the maintained roadmap explicitly excludes', () => {
+    renderPage();
+    for (const unsupported of ['Native iOS and Android apps', 'Community plugin marketplace', 'Multi-tenant fleet management']) {
+      expect(screen.queryByText(unsupported)).not.toBeInTheDocument();
+    }
   });
 });
 

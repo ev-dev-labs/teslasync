@@ -169,8 +169,8 @@ function makePollingConfig(overrides: Partial<PollingConfig> = {}): PollingConfi
     service_data: false,
     wake_up: false,
     commands: true,
-    telemetry_capture: true,
-    telemetry_capture_retention_days: 30,
+    telemetry_capture: false,
+    telemetry_capture_retention_days: 7,
     ...overrides,
   };
 }
@@ -802,7 +802,7 @@ describe('useToggleAPISuspend', () => {
 
 describe('usePollingConfig', () => {
   it('GETs /settings/polling-config and surfaces the boolean flags + retention', async () => {
-    const pc = makePollingConfig({ telemetry_capture_retention_days: 14 });
+    const pc = makePollingConfig();
     mockedRequest.mockResolvedValueOnce(pc);
 
     const { Wrapper } = makeWrapper();
@@ -810,7 +810,7 @@ describe('usePollingConfig', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.vehicle_discovery).toBe(true);
-    expect(result.current.data?.telemetry_capture_retention_days).toBe(14);
+    expect(result.current.data?.telemetry_capture_retention_days).toBe(7);
     expect(callAt(0)[0]).toBe('/settings/polling-config');
     expect(callAt(0)[1].signal).toBeInstanceOf(AbortSignal);
   });
@@ -838,6 +838,22 @@ describe('useUpdatePollingConfig', () => {
       'toast.settings.polling.success',
       'Polling config saved',
     );
+  });
+
+  it('sends only Go JSON tags when the read response contains camelCase aliases', async () => {
+    const pc = makePollingConfig();
+    mockedRequest.mockResolvedValueOnce(pc);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useUpdatePollingConfig(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync({
+      ...pc,
+      vehicleDiscovery: true,
+      onDemandChargeState: false,
+      telemetryCaptureRetentionDays: 7,
+    });
+
+    expect(bodyAt(0)).toEqual(pc);
   });
 
   it('toasts the error when the polling-config save fails', async () => {

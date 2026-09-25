@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import '../../../i18n';
@@ -154,6 +154,29 @@ describe('AlertStudioPage navigation protection', () => {
     RULES = [];
     recordedSavePayloads.length = 0;
     window.localStorage.clear();
+  });
+
+  it('shows all template categories as wrapped filters and preserves search and counts', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Templates' }));
+
+    const filters = screen.getByRole('group', { name: 'Filter templates by category' });
+    expect(filters).toHaveClass('flex-wrap');
+    expect(filters).not.toHaveClass('overflow-x-auto');
+    const all = within(filters).getByRole('button', { name: /All \(\d+\)/ });
+    expect(all).toHaveAttribute('aria-pressed', 'true');
+    const battery = within(filters).getByRole('button', { name: /Battery \(\d+\)/ });
+    fireEvent.click(battery);
+    await waitFor(() => expect(within(screen.getByRole('group', { name: 'Filter templates by category' }))
+      .getByRole('button', { name: /Battery \(\d+\)/ })).toHaveAttribute('aria-pressed', 'true'));
+    expect(within(screen.getByRole('group', { name: 'Filter templates by category' }))
+      .getByRole('button', { name: /All \(\d+\)/ })).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), {
+      target: { value: 'no matching template phrase' },
+    });
+    await waitFor(() => expect(screen.getByText(/0 of \d+ templates/)).toBeInTheDocument());
+    expect(screen.getByText('No templates found')).toBeInTheDocument();
   });
 
   describe('Shared AlertRuleEditor controlled edit mode', () => {

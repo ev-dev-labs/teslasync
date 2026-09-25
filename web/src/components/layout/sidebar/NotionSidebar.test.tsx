@@ -223,17 +223,17 @@ describe('NotionSidebar', () => {
     expect(onPin).toHaveBeenCalledWith('/')
   })
 
-  it('offers Unpin (not Pin) for an item that is already pinned but still listed in its section', () => {
+  it('shows a pinned page once in Quick access and keeps its sibling pinnable', () => {
     renderSidebar({ pinnedItems: [vehiclesItem], activeSectionTitle: 'Overview' })
 
-    // One unpin in Quick access + one on the in-section row = 2.
-    expect(screen.getAllByRole('button', { name: 'Unpin Vehicles' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Unpin Vehicles' })).toHaveLength(1)
+    expect(screen.getAllByRole('link', { name: 'Vehicles' })).toHaveLength(1)
     expect(screen.queryByRole('button', { name: 'Pin Vehicles' })).toBeNull()
     // A sibling that is NOT pinned still offers a Pin action.
     expect(screen.getByRole('button', { name: 'Pin Home' })).toBeInTheDocument()
   })
 
-  it('keeps one canonical active row when the current page is also a favorite', () => {
+  it('keeps the single favorite row active on its page', () => {
     renderSidebar({
       pinnedItems: [vehiclesItem],
       activeSectionTitle: 'Overview',
@@ -241,7 +241,7 @@ describe('NotionSidebar', () => {
     })
 
     const vehicleLinks = screen.getAllByRole('link', { name: 'Vehicles' })
-    expect(vehicleLinks).toHaveLength(2)
+    expect(vehicleLinks).toHaveLength(1)
     expect(vehicleLinks.filter(link => link.getAttribute('aria-current') === 'page')).toHaveLength(1)
   })
 

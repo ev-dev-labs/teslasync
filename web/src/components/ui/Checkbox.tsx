@@ -72,10 +72,10 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           'inline-flex shrink-0 items-center justify-center rounded border transition-colors',
           dims.box,
           'border-[var(--border-strong)] bg-white/[0.04]',
-          'peer-checked:border-cyan-500 peer-checked:bg-cyan-500/20 peer-checked:text-cyan-300',
-          'peer-indeterminate:border-cyan-500 peer-indeterminate:bg-cyan-500/20 peer-indeterminate:text-cyan-300',
+          'peer-checked:border-cyan-700 peer-checked:bg-cyan-600 peer-checked:text-[var(--surface-1)] dark:peer-checked:border-cyan-400 dark:peer-checked:bg-cyan-500/20 dark:peer-checked:text-cyan-200',
+          'peer-indeterminate:border-cyan-700 peer-indeterminate:bg-cyan-600 peer-indeterminate:text-[var(--surface-1)] dark:peer-indeterminate:border-cyan-400 dark:peer-indeterminate:bg-cyan-500/20 dark:peer-indeterminate:text-cyan-200',
           'peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-transparent',
-          'peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
+          'peer-disabled:cursor-not-allowed peer-disabled:opacity-80',
           'text-transparent',
         )}
       >

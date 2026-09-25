@@ -32,6 +32,10 @@ describe('getWorkspaceRouteScope', () => {
       range: true,
       vehicle: false,
     });
+    expect(getWorkspaceRouteScope('/automations/history')).toEqual({
+      range: true,
+      vehicle: false,
+    });
     expect(getWorkspaceRouteScope('/power-flow')).toEqual({
       range: true,
       vehicle: false,

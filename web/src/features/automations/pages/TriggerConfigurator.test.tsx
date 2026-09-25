@@ -24,6 +24,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
   TriggerConfigurator,
@@ -69,6 +70,7 @@ function mockGeofences(state: { data?: unknown; isLoading?: boolean; isError?: b
     data: state.data,
     isLoading: state.isLoading ?? false,
     isError: state.isError ?? false,
+    refetch: vi.fn(),
   });
 }
 
@@ -83,7 +85,9 @@ afterEach(() => {
 
 function renderConfig(trigger: AutomationTriggerStepInput) {
   const onChange = vi.fn();
-  const result = render(<TriggerConfigurator trigger={trigger} onChange={onChange} />);
+  const result = render(
+    <MemoryRouter><TriggerConfigurator trigger={trigger} onChange={onChange} /></MemoryRouter>,
+  );
   return { onChange, ...result };
 }
 
@@ -409,6 +413,7 @@ describe('TriggerConfigurator — geofence', () => {
     mockGeofences({ data: [] });
     renderConfig({ kind: 'trigger_geofence', place_id: 0, event: 'enter' });
     expect(screen.getByText('No geofences configured yet')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage places' })).toHaveAttribute('href', '/geofences');
   });
 });
 

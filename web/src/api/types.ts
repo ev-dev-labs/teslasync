@@ -2686,6 +2686,28 @@ export interface AutomationHistoryListResponse {
   limit: number
   offset: number
   summary: AutomationHistoryStats
+  /** UTC day/status buckets across the entire server-filtered range, not just `items`. */
+  trend: AutomationHistoryTrendPoint[]
+}
+
+export interface AutomationHistoryTrendPoint {
+  day: string
+  status: AutomationHistoryStatus
+  count: number
+}
+
+export interface AutomationExecutionDetail extends AutomationHistory {
+  success_rate: number
+  fsm_transitions: {
+    id: number
+    vehicle_id: number
+    ts: string
+    fsm_name: string
+    from_state: string
+    to_state: string
+    trigger: string
+    details?: Record<string, unknown>
+  }[]
 }
 
 // === Automation SSE Events ===

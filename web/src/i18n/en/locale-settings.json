@@ -58,12 +58,30 @@
       },
       "feature": {
         "legend": "Per-feature opt-in (all default off)",
+        "guidance": "Find a feature by name or task, then enable only what you need. Expand a row for technical details.",
+        "search": "Search AI features",
+        "searchHint": "Try chat, charging, alerts…",
+        "filters": "Feature categories",
+        "showing": "{{count}} of {{total}} features",
+        "noMatches": "No features match. Try another term or choose All.",
+        "more": "More detail",
+        "less": "Less detail",
+        "category": {
+          "all": "All",
+          "enabled": "Enabled",
+          "chat": "Chat & help",
+          "alerts": "Alerts & automation",
+          "driving": "Driving & trips",
+          "energy": "Energy & charging",
+          "operations": "System & tools",
+          "insights": "Insights & reports"
+        },
         "ai-provider-health": {
           "label": "Helix provider health (ops)",
           "description": "Diagnostic endpoint that reports the active Helix provider and its capabilities. Off by default; enable only for ops debugging."
         },
         "chatbot-llm": {
-          "label": "LLM chatbot",
+          "label": "Helix chat (side panel)",
           "description": "Conversational fleet assistant powered by an LLM. Falls back to the heuristic chatbot when Helix is off."
         },
         "digest-narration": {
@@ -254,7 +272,17 @@
         "tokensIn": "Tokens in",
         "tokensOut": "Tokens out",
         "cost": "Estimated cost",
-        "placeholder": "Usage populates as features run. Live numbers arrive in a follow-up update."
+        "utc": "Today · UTC",
+        "off": "Helix is off. Enable it and make a call to see usage.",
+        "loading": "Loading today’s usage…",
+        "empty": "No Helix calls yet today.",
+        "error": "Usage could not be loaded.",
+        "stale": "Showing the last available totals. Refresh failed.",
+        "retry": "Retry",
+        "errorOne": "1 error",
+        "errorMany": "{{total}} errors",
+        "summaryOne": "1 call · {{errors}}",
+        "summary": "{{calls}} calls · {{errors}}"
       }
     }
   },

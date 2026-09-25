@@ -30,5 +30,13 @@ The three Notification Health sections page through recorded events
 using a `(created_at, id)` cursor rather than truncating at the first 1,000.
 Delivery outcomes are measured separately from inbox events to avoid counting
 channel fan-out as additional notifications.
+The health page starts with three linked overview cards that jump to the
+full-length Fatigue, Burn Rate, and Latency sections (also reachable with
+`#fatigue`, `#burn-rate`, and `#latency`). All charts, chart export/data views,
+rule and severity breakdowns, latency cohorts, and slow delivery records remain
+available on the same page. Metrics stack on phones, form two columns on
+tablets, and four columns on wide screens. Each section retains its own
+loading, retry/error, and no-data presentation; no section is hidden when a
+different history source fails.
 
 [← All groups](./catalogue.md)

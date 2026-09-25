@@ -6,6 +6,10 @@ TeslaSync uses [`lucide-react`](https://lucide.dev) as its icon library, but
 rendered with the same icon everywhere (no Battery vs BatteryCharging vs Zap
 inconsistency for the "battery" concept), and keeps icon sizing consistent
 across the app.
+The sidebar has an additional route-scoped registry in
+`web/src/lib/sidebarGlyphs.ts` and `sidebarCollectionGlyphs.ts`: every
+destination, section, and collection has a distinct glyph. Collection-only
+glyphs load with the deferred collection rows instead of the initial shell.
 
 ## Quick start
 
@@ -100,6 +104,8 @@ Only these files may import directly from `lucide-react`:
 | File                       | Why                                           |
 | -------------------------- | --------------------------------------------- |
 | `web/src/lib/icons.ts`     | The registry itself                           |
+| `web/src/lib/sidebarGlyphs.ts` | Route-only navigation glyph registry     |
+| `web/src/lib/sidebarCollectionGlyphs.ts` | Deferred collection glyph registry |
 | `web/src/components/ui/Icon.tsx` | Re-exports `LucideIcon` for prop typing |
 
 Branded SVGs (Tesla logo, app logo, marketing assets) belong under

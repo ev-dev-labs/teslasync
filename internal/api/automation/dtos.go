@@ -159,6 +159,7 @@ type historyListResponse struct {
 	Limit   int                                  `json:"limit"`
 	Offset  int                                  `json:"offset"`
 	Summary *dbauto.HistoryStats                 `json:"summary"`
+	Trend   []dbauto.HistoryTrendPoint           `json:"trend"`
 }
 
 // historyDetailResponse wraps a single execution record with FSM transitions.
