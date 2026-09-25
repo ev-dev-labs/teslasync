@@ -1,4 +1,4 @@
-name: fleet-proto-drift
+name: Fleet Proto Drift
 
 on:
   schedule:
