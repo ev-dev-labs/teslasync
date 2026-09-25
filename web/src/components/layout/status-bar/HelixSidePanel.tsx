@@ -165,17 +165,11 @@ export function HelixSidePanel({ open, onClose }: HelixSidePanelProps) {
             ))}
             <div ref={endRef} />
           </div>
-          <div className="shrink-0 space-y-3 border-t border-[var(--border-default)] bg-[var(--surface-1)] p-4">
-            <Toggle
-              checked={includePage}
-              onChange={setIncludePage}
-              label={t('statusBar.helix.includePage', 'Include visible page text')}
-              size="sm"
-            />
+          <div className="shrink-0 space-y-2 border-t border-[var(--border-default)] bg-[var(--surface-1)] p-4">
             <Text as="p" variant="caption">
               {t('statusBar.helix.contextHint', 'Only visible page text, not form entries or hidden panels, is sent to your configured AI provider when you ask.')}
             </Text>
-            <div className="flex items-end gap-2">
+            <div data-role="helix-composer" className="w-full rounded-shape-xl border border-[var(--control-border)] bg-[var(--control-bg)] focus-within:border-[var(--theme-primary)] focus-within:ring-2 focus-within:ring-[var(--focus-ring)]">
               <Textarea
                 ref={inputRef}
                 value={draft}
@@ -184,17 +178,29 @@ export function HelixSidePanel({ open, onClose }: HelixSidePanelProps) {
                 rows={2}
                 aria-label={t('statusBar.helix.question', 'Ask Helix')}
                 placeholder={t('statusBar.helix.placeholder', 'Ask about this page…')}
-                className="min-w-0 flex-1"
+                className="resize-none border-0 bg-transparent px-3 py-3 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                disabled={!draft.trim() || !!request}
-                onClick={send}
-              >
-                {t('statusBar.helix.send', 'Send')}
-              </Button>
+              <div className="flex items-center justify-between gap-2 px-3 pb-2">
+                <Toggle
+                  checked={includePage}
+                  onChange={setIncludePage}
+                  label={t('statusBar.helix.includePage', 'Include visible page text')}
+                  size="sm"
+                  className="min-w-0"
+                />
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className="h-9 w-9 shrink-0 rounded-full p-0"
+                  aria-label={t('statusBar.helix.send', 'Send')}
+                  title={t('statusBar.helix.send', 'Send')}
+                  disabled={!draft.trim() || !!request}
+                  onClick={send}
+                >
+                  <Icons.arrowUp className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
             </div>
           </div>
         </>
