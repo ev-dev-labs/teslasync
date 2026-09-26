@@ -700,8 +700,8 @@ describe('InboxBody — URL filters', () => {
     renderInbox({ route: '/notifications/inbox?from=2026-09-01&to=2026-09-07' });
     await waitFor(() => expect(flatCalls().length).toBeGreaterThanOrEqual(1));
     const params = new URL(String(flatCalls()[0][0]), 'http://teslasync.local').searchParams;
-    expect(params.get('from')).toBe('2026-09-01T07:00:00.000Z');
-    expect(params.get('to_exclusive')).toBe('2026-09-08T07:00:00.000Z');
+    expect(params.get('from')).toBe(new Date('2026-09-01T00:00:00').toISOString());
+    expect(params.get('to_exclusive')).toBe(new Date('2026-09-08T00:00:00').toISOString());
   });
 
   it('threads URL filters into the request as snake_case params without the /api/v1 prefix', async () => {

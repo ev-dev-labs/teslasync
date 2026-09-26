@@ -28,7 +28,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
 import type { Drive, DrivingStats } from '@/types/driving';
 
@@ -95,9 +96,8 @@ vi.mock('@/api/client', async (importOriginal) => {
   return { ...actual, request: vi.fn().mockResolvedValue([]) };
 });
 
-// Stub the header action controls: they own their own store/query wiring which
-// is out of scope here. RangePicker still exposes its onChange so the date
-// filter can be driven through the page's real useUrlBatch → useUrlString path.
+// The page's data and panels are exercised without rendering application-header
+// controls; header date changes are simulated through URL state below.
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
   RangePicker: ({
@@ -240,6 +240,16 @@ function setDriving(
   };
 }
 
+function HeaderRangeControl() {
+  const [, setParams] = useSearchParams();
+  return <Button type="button" data-testid="header-efficiency-range" onClick={() => setParams((params) => {
+    const next = new URLSearchParams(params);
+    next.set('from', '2000-01-01');
+    next.set('to', '2000-01-02');
+    return next;
+  })}>Change header range</Button>;
+}
+
 function renderPage(path = '/efficiency') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
@@ -249,6 +259,7 @@ function renderPage(path = '/efficiency') {
       <QueryClientProvider client={client}>
         <ToastProvider>
           <EfficiencyPage />
+          <HeaderRangeControl />
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -388,19 +399,19 @@ describe('EfficiencyPage', () => {
     expect(
       screen.getByRole('img', { name: 'Daily efficiency trend area chart' }),
     ).toBeInTheDocument();
-    // The header still exposes the (stubbed) range control by its test id.
-    expect(screen.getByTestId('efficiency-range')).toBeInTheDocument();
+    expect(screen.queryByTestId('efficiency-range')).not.toBeInTheDocument();
   });
 
-  it('re-filters the drive-derived panels when the range control changes', async () => {
+  it('re-filters the drive-derived panels when the shared header range changes', async () => {
     setDriving({ data: makeStats() }, { data: [makeDrive(), makeDrive(), makeDrive(), makeDrive()] });
     renderPage();
 
     // The temperature-bucket table is populated for the default window.
     expect(screen.getByText('20–30°C')).toBeInTheDocument();
 
-    // Driving RangePicker → a window in the year 2000 drops every recent drive.
-    fireEvent.click(screen.getByTestId('efficiency-range'));
+    // A header URL range in the year 2000 drops every recent drive.
+    fireEvent.click(screen.getByTestId('header-efficiency-range'));
+    expect(screen.queryByTestId('efficiency-range')).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(

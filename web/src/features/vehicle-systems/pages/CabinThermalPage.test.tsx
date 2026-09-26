@@ -211,13 +211,13 @@ describe('CabinThermalPage', () => {
     expect(screen.getByText('Passive-soak curve')).toBeInTheDocument();
   });
 
-  it('keeps every shell and the vehicle control visible without a vehicle', () => {
+  it('keeps every shell visible without a vehicle or duplicate control', () => {
     h.vehicleId = null;
     h.history = query();
     renderPage();
 
     expectEverySection();
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
     expect(h.historyHook).toHaveBeenLastCalledWith('');
     expect(screen.getByText(
       'Select a vehicle to analyze its returned climate history.',

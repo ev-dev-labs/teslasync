@@ -58,6 +58,7 @@ const H = vi.hoisted(() => ({
   latest: { mode: 'resolve' as 'resolve' | 'reject' | 'pending', value: null as unknown },
   history: { mode: 'resolve' as 'resolve' | 'reject' | 'pending', value: [] as unknown },
   calls: { latest: 0, history: 0 },
+  historyPaths: [] as string[],
   setRange: vi.fn(),
 }));
 
@@ -136,6 +137,7 @@ vi.mock('@/api/client', async (importOriginal) => {
       }
       if (path.startsWith('/tire-pressure?')) {
         H.calls.history += 1;
+        H.historyPaths.push(path);
         if (H.history.mode === 'reject') return Promise.reject(new Error('history boom'));
         if (H.history.mode === 'pending') return new Promise(() => {});
         return Promise.resolve(H.history.value);
@@ -408,7 +410,7 @@ describe('TirePressurePage — populated data (bar)', () => {
 
     // Header shell always renders.
     expect(screen.getByRole('heading', { level: 1, name: 'Tire Pressure' })).toBeInTheDocument();
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
 
     // Wait for the latest reading to resolve (avg KPI is a unique post-resolution
     // string), then scope each KPI to its card. avg = 300k Pa = 3 bar,
@@ -561,11 +563,12 @@ describe('TirePressurePage — interactions + a11y', () => {
     );
   });
 
-  it('forwards RangePicker changes to the range-state setter', async () => {
+  it('uses the shared range for history without rendering a local range picker', async () => {
     renderPage();
 
     await screen.findByText('Front Left (bar)'); // wait for populated render
-    fireEvent.click(screen.getByTestId('tire-pressure-range'));
-    expect(H.setRange).toHaveBeenCalledWith({ start: '2026-05-01', end: '2026-05-31' });
+    expect(H.historyPaths).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01&end=2026-06-30');
+    expect(screen.queryByTestId('tire-pressure-range')).not.toBeInTheDocument();
+    expect(H.setRange).not.toHaveBeenCalled();
   });
 });

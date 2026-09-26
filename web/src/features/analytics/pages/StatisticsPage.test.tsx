@@ -537,11 +537,11 @@ describe('StatisticsPage', () => {
     await waitFor(() => expect(periodStatsCallCount()).toBeGreaterThan(before));
   });
 
-  it('hides the vehicle picker when the fleet is empty and shows it otherwise', async () => {
+  it('keeps vehicle selection in the shared header for empty and populated fleets', async () => {
     mockSelectedVehicle.mockReturnValue({
       vehicleId: null,
       vehicle: null,
-      vehicles: [] as any,
+      vehicles: [],
       setVehicleId: vi.fn(),
     });
     const { unmount } = renderPage();
@@ -550,20 +550,16 @@ describe('StatisticsPage', () => {
 
     installHappyPath();
     renderPage();
-    const picker = screen.getByRole('combobox', { name: 'Select Vehicle' });
-    expect(within(picker).getByRole('option', { name: 'Car One' })).toBeInTheDocument();
-    expect(within(picker).getByRole('option', { name: 'Car Two' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Select Vehicle' })).not.toBeInTheDocument();
+    expect(mockSelectedVehicle).toHaveBeenCalled();
   });
 
-  it('dispatches the numeric selection when a vehicle is picked', async () => {
+  it('consumes the selected vehicle from the shared context without a local picker', async () => {
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
-
-    fireEvent.change(screen.getByRole('combobox', { name: 'Select Vehicle' }), {
-      target: { value: '2' },
-    });
-
-    expect(setVehicleIdSpy).toHaveBeenCalledWith(2);
+    expect(mockSelectedVehicle).toHaveBeenCalled();
+    expect(screen.queryByRole('combobox', { name: 'Select Vehicle' })).not.toBeInTheDocument();
+    expect(setVehicleIdSpy).not.toHaveBeenCalled();
   });
 
   it('converts distance and efficiency to imperial units when preferred', async () => {
@@ -600,6 +596,6 @@ describe('StatisticsPage', () => {
         .getAllByRole('button', { name: 'Refresh' })
         .some((el) => el.tagName === 'BUTTON'),
     ).toBe(true);
-    expect(screen.getByRole('combobox', { name: 'Select Vehicle' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Select Vehicle' })).not.toBeInTheDocument();
   });
 });

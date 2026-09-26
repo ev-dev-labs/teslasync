@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { Drive } from '@/types/driving';
@@ -9,11 +9,13 @@ const {
   selectedVehicleMock,
   pageTitleMock,
   summarizeParkingMock,
+  sharedRange,
 } = vi.hoisted(() => ({
   useDrivesMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   pageTitleMock: vi.fn(),
   summarizeParkingMock: vi.fn(),
+  sharedRange: { set: (_range: { start: string; end: string }) => {} },
 }));
 
 vi.mock('react-i18next', () => ({
@@ -51,6 +53,7 @@ vi.mock('@/hooks/useRangeState', async () => {
         start: '2026-07-01',
         end: '2026-08-07',
       });
+      sharedRange.set = setRange;
       return { ...range, setRange };
     },
   };
@@ -209,7 +212,8 @@ describe('ParkingAnalyticsPage', () => {
 
   it('passes newly selected dates and the 1,000-row cap to the hook', async () => {
     render(<ParkingAnalyticsPage />);
-    fireEvent.click(screen.getByTestId('parking-analytics-range'));
+    act(() => sharedRange.set({ start: '2026-07-10', end: '2026-07-31' }));
+    expect(screen.queryByTestId('parking-analytics-range')).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(useDrivesMock).toHaveBeenLastCalledWith('42', {
@@ -240,7 +244,7 @@ describe('ParkingAnalyticsPage', () => {
       .mockReturnValue(laterNow);
 
     render(<ParkingAnalyticsPage />);
-    fireEvent.click(screen.getByTestId('parking-analytics-range'));
+    act(() => sharedRange.set({ start: '2026-07-10', end: '2026-07-31' }));
     await waitFor(() => expect(summarizeParkingMock).toHaveBeenCalledTimes(2));
 
     const modelOptions = summarizeParkingMock.mock.calls.map(

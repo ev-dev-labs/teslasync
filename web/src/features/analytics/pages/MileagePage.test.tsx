@@ -23,7 +23,7 @@
  *     QueryError and re-invoke that query's refetch, without cross-contaminating
  *     the healthy panels.
  *   - null-safety: null first/last drive timestamps fall back to the "—" glyph.
- *   - a11y/actions: labelled region landmarks + the VehicleSelect combobox.
+ *   - a11y/actions: labelled region landmarks without a duplicate vehicle picker.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
@@ -402,14 +402,13 @@ describe('MileagePage — null safety + a11y', () => {
     expect(siblingText(w, 'Lifetime Drives')).toBe('500');
   });
 
-  it('exposes labelled region landmarks and the vehicle-scope combobox', () => {
+  it('exposes labelled regions without duplicating the shared vehicle control', () => {
     renderPage();
 
     expect(screen.getByRole('region', { name: 'Mileage summary metrics' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Odometer and distance windows' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Daily and monthly distance' })).toBeInTheDocument();
 
-    const picker = screen.getByRole('combobox', { name: 'Select vehicle' });
-    expect(picker).toHaveValue('7');
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
   });
 });

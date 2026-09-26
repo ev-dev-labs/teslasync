@@ -554,7 +554,7 @@ describe('MapOverviewPage — interactions', () => {
 /* ── Accessibility ────────────────────────────────────────────────────── */
 
 describe('MapOverviewPage — accessibility', () => {
-  it('exposes labelled landmark regions and an accessible vehicle filter', async () => {
+  it('exposes labelled landmarks without a duplicate vehicle filter', async () => {
     renderPage()
 
     // The KPI band and the hero map are both labelled regions. findByRole
@@ -564,7 +564,6 @@ describe('MapOverviewPage — accessibility', () => {
     const map = screen.getByRole('region', { name: 'Live location map' })
     expect(await within(map).findByTestId('map-container')).toBeInTheDocument()
 
-    // The vehicle scope picker is a labelled combobox.
-    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument()
   })
 })

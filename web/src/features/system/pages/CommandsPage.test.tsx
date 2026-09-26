@@ -4,7 +4,6 @@ import {
   fireEvent,
   render,
   screen,
-  within,
 } from '@testing-library/react';
 import {
   MemoryRouter,
@@ -211,41 +210,36 @@ describe('CommandsPage', () => {
     expect(screen.queryByTestId('vehicle-management-workspace')).not.toBeInTheDocument();
     expect(screen.getByText('1/2 last reported active')).toBeInTheDocument();
 
-    const picker = screen.getByLabelText('Select vehicle');
-    expect(picker).toHaveValue('2');
-    expect(
-      within(picker).getByRole('option', { name: 'Roadster' }),
-    ).toBeInTheDocument();
-    expect(
-      within(picker).getByRole('option', { name: 'Cybertruck' }),
-    ).toBeInTheDocument();
+    expect(screen.queryByLabelText('Select vehicle')).not.toBeInTheDocument();
   });
 
-  it('updates the persistent selected vehicle from the page picker', () => {
+  it('follows changes to the header-selected vehicle', () => {
     const first = makeVehicle(1);
     const second = makeVehicle(2);
     installHooks({ vehicles: [first, second], selected: first });
 
-    renderPage();
-    fireEvent.change(screen.getByLabelText('Select vehicle'), {
-      target: { value: '2' },
-    });
+    const { rerender } = renderPage();
+    expect(screen.getByTestId('vehicle-command-center')).toHaveTextContent('Car 1');
+    installHooks({ vehicles: [first, second], selected: second });
+    rerender(
+      <MemoryRouter initialEntries={['/commands']}>
+        <CommandsPage />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
 
-    expect(setVehicleIdMock).toHaveBeenCalledWith(2);
+    expect(screen.getByTestId('vehicle-command-center')).toHaveTextContent('Car 2');
+    expect(setVehicleIdMock).not.toHaveBeenCalled();
   });
 
-  it('keeps the vehicle dropdown visible for a single-vehicle fleet', () => {
+  it('keeps the command workspace visible for a single-vehicle fleet', () => {
     const only = makeVehicle(7, { display_name: 'Solo' });
     installHooks({ vehicles: [only], selected: only });
 
     renderPage();
 
-    expect(screen.getByLabelText('Select vehicle')).toHaveValue('7');
-    expect(
-      within(screen.getByLabelText('Select vehicle')).getByRole('option', {
-        name: 'Solo',
-      }),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('vehicle-command-center')).toHaveTextContent('Solo');
+    expect(screen.queryByLabelText('Select vehicle')).not.toBeInTheDocument();
   });
 
   it('navigates to command history from the header action', () => {

@@ -37,7 +37,7 @@
  *
  * Network is never hit: the data hooks, the direct `request()` history
  * fetch, the live-connection hook, the unit formatters, the chart
- * primitives, the vehicle picker, and the heavy DataTable are all stubbed.
+ * primitives, shared vehicle context, and the heavy DataTable are all stubbed.
  * i18n is stubbed so visible copy is the English fallback with
  * {{placeholder}} interpolation applied.
  */
@@ -467,7 +467,7 @@ describe('NavigationRoutePage — ready state', () => {
 
     // Header actions.
     expect(getHeaderRefresh()).toBeInTheDocument();
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
 
     // a11y: all six section landmarks are labelled regions.
     for (const name of [

@@ -340,7 +340,7 @@ beforeEach(() => {
 /* ── structure & a11y ─────────────────────────────────────── */
 
 describe('TripPlannerPage — structure & a11y', () => {
-  it('renders the page title, subtitle and the vehicle picker action', () => {
+  it('renders the page title and subtitle without a duplicate vehicle picker', () => {
     renderPage();
 
     expect(
@@ -349,10 +349,9 @@ describe('TripPlannerPage — structure & a11y', () => {
     expect(
       screen.getByText('Plan your route with range estimation and charging stops'),
     ).toBeInTheDocument();
-    // VehicleSelect renders a labelled combobox because the mocked fleet is non-empty.
     expect(
-      screen.getByRole('combobox', { name: 'Select vehicle' }),
-    ).toBeInTheDocument();
+      screen.queryByRole('combobox', { name: 'Select vehicle' }),
+    ).not.toBeInTheDocument();
   });
 
   it('sets the document title via usePageTitle', () => {
