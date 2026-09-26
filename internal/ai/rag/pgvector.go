@@ -210,6 +210,7 @@ func (p *PgvectorRetriever) Retrieve(
 			  FROM %s
 			 WHERE user_subject = $2
 			   AND model        = $3
+			   AND expires_at   > now()
 			 ORDER BY embedding <=> $1::vector
 			 LIMIT $4`, p.table)
 		rows, qErr = p.db.Pool.Query(ctx, sql, queryVec, userSubject, p.model, k)
@@ -221,6 +222,7 @@ func (p *PgvectorRetriever) Retrieve(
 			 WHERE user_subject = $2
 			   AND model        = $3
 			   AND source_type  = ANY($4::text[])
+			   AND expires_at   > now()
 			 ORDER BY embedding <=> $1::vector
 			 LIMIT $5`, p.table)
 		rows, qErr = p.db.Pool.Query(ctx, sql, queryVec, userSubject, p.model, sourceTypes, k)
@@ -357,6 +359,26 @@ func (p *PgvectorRetriever) Index(
 			pe.text, hashes[pe.idx], vec, p.model, expiresAt,
 		); err != nil {
 			return fmt.Errorf("rag: index upsert chunk %d: %w", pe.idx, err)
+		}
+	}
+
+	// An unchanged chunk still represents freshly indexed source data.
+	// Renew its TTL without paying for another embedding, but only if the
+	// stored hash still matches (a concurrent index may have replaced it).
+	renewSQL := fmt.Sprintf(`
+		UPDATE %s SET expires_at = $1
+		 WHERE user_subject = $2 AND source_type = $3 AND source_id = $4
+		   AND model = $5 AND chunk_idx = $6 AND text_hash = $7
+		   AND expires_at < $1`, p.table)
+	if !IsNeverExpires(expiresAt) {
+		for i, hash := range hashes {
+			if existing[i] != hash {
+				continue
+			}
+			if _, err := tx.Exec(ctx, renewSQL, expiresAt,
+				userSubject, sourceType, sourceID, p.model, i, hash); err != nil {
+				return fmt.Errorf("rag: index renew chunk %d: %w", i, err)
+			}
 		}
 	}
 

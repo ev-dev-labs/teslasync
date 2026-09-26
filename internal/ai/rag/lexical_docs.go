@@ -143,6 +143,20 @@ func (r *LexicalDocsRetriever) Retrieve(
 		if score <= 0 {
 			continue
 		}
+		// A single shared word is weak evidence for a multi-part question.
+		// Keep one-word lookups useful, but require two independent matches
+		// when the question contains at least three meaningful terms.
+		if len(queryTerms) >= 3 {
+			matched := 0
+			for term := range queryTerms {
+				if document.terms[term] > 0 {
+					matched++
+				}
+			}
+			if matched < 2 {
+				continue
+			}
+		}
 		normalized := score / (score + 1)
 		chunk := document.chunk
 		chunk.Score = float32(normalized)

@@ -14,9 +14,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/app/aiusagesvc"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 )
@@ -106,7 +110,34 @@ func MountUsageRoutes(
 		r.Get("/today", usageGuard.Wrap(AIUsageFeatureID, h.Today))
 		r.Get("/by-feature", usageGuard.Wrap(AIUsageFeatureID, h.ByFeature))
 		r.Get("/recent", usageGuard.Wrap(AIUsageFeatureID, h.Recent))
+		r.Get("/spend-insights", usageGuard.Wrap(AIUsageFeatureID, h.SpendInsights))
 	})
+}
+
+// SpendInsights explains measured spend pace using only the calling subject's
+// audited calls; it does not infer spend from missing or incomplete audit data.
+func (h *UsageHandler) SpendInsights(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "ai.usage.spend_insights")
+	defer span.End()
+	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	now := time.Now().UTC()
+	today := now.Truncate(24 * time.Hour)
+	rows, err := h.repo.DailySpend(ctx, subject, today.AddDate(0, 0, -7), today.AddDate(0, 0, 1))
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "ai usage spend insights failed")
+		log.Ctx(ctx).Error().Err(err).Str("trace_id", trace.SpanFromContext(ctx).SpanContext().TraceID().String()).Msg("ai usage spend insights failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "ai usage spend insights failed")
+		return
+	}
+	observations := make([]aiusagesvc.DailyRow, 0, len(rows))
+	for _, row := range rows {
+		observations = append(observations, aiusagesvc.DailyRow{
+			Day: row.Day, FeatureID: row.FeatureID, Provider: row.Provider,
+			Model: row.Model, Calls: row.Calls, CostMicroCents: row.CostMicroCents,
+		})
+	}
+	httpx.WriteJSON(w, http.StatusOK, aiusagesvc.Analyze(observations, now))
 }
 
 // Today returns the user's aggregate spend + volume since 00:00 UTC.

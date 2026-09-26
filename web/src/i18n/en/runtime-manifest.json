@@ -161,6 +161,9 @@
     "watchFaceNL"
   ],
   "grouped": {
+    "explore": [
+      "explore"
+    ],
     "system": [
       "commandHistory",
       "dataExport",

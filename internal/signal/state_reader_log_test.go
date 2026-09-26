@@ -678,6 +678,34 @@ func validWindow() (time.Time, time.Time) {
 	return from, from.Add(time.Hour)
 }
 
+type limitQuerier struct {
+	timelineQuerier
+	limit int
+	sql   string
+}
+
+func (q *limitQuerier) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	if !strings.Contains(sql, "DISTINCT ON") {
+		q.sql = sql
+		q.limit = args[4].(int)
+	}
+	return q.timelineQuerier.Query(ctx, sql, args...)
+}
+
+func TestLogStateReader_Timeline_RawEventLimit(t *testing.T) {
+	from, to := validWindow()
+	q := &limitQuerier{timelineQuerier: timelineQuerier{windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
+		floatRow(from.Add(time.Second), "Speed", 10),
+		floatRow(from.Add(2*time.Second), "Speed", 11),
+	}}}}
+	reader := &LogStateReader{pool: q, log: zerolog.Nop()}
+	_, err := reader.Timeline(context.Background(), 1, []FieldMapping{{Signal: "Speed", Field: "speed"}},
+		from, to, TimelineOptions{MaxEvents: 1})
+	if !errors.Is(err, ErrTimelineEventLimit) || q.limit != 2 || !strings.Contains(q.sql, "LIMIT NULLIF($5, 0)") {
+		t.Fatalf("err=%v sql=%s limit=%d", err, q.sql, q.limit)
+	}
+}
+
 func TestLogStateReader_Timeline_ChartMode_EmptyMappings(t *testing.T) {
 	q := &timelineQuerier{}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}

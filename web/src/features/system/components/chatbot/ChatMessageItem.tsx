@@ -9,6 +9,8 @@ import type { ChatLink, ChatMessage } from '@/api/types';
 import { HelixEvidenceTrail } from '@/components/ai/HelixEvidenceTrail';
 import type { AiToolActivity, AiUsage } from '@/hooks/useAiStream';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { KnowledgeCitations } from './KnowledgeCitations';
+import type { KnowledgeEvidence } from './knowledgeEvidence';
 
 /**
  * Local extension of the wire-level ChatMessage with optional UI-only
@@ -26,6 +28,8 @@ export interface UIChatMessage extends ChatMessage {
   aiActivity?: AiToolActivity[];
   /** Token accounting retained for this assistant turn. */
   aiUsage?: AiUsage;
+  /** Verified retrieval chunks from this response, not model-generated citations. */
+  knowledgeEvidence?: KnowledgeEvidence[];
 }
 
 interface ChatMessageItemProps {
@@ -192,6 +196,9 @@ export function ChatMessageItem({
               state={message.isStreaming ? 'streaming' : 'done'}
               usage={message.aiUsage}
             />
+            {!message.isStreaming && (
+              <KnowledgeCitations evidence={message.knowledgeEvidence ?? []} answer={content} />
+            )}
             {(message.links?.length ?? 0) > 0 && !message.isStreaming && (
               <div className="mt-2 flex flex-wrap gap-1.5" aria-label={t('chatbot.citations', 'Sources')}>
                 {(message.links ?? []).map((link) => (

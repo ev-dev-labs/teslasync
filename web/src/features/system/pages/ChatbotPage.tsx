@@ -35,6 +35,7 @@ import {
   type UIChatMessage,
 } from '../components/chatbot/ChatMessageItem';
 import { SessionList } from '../components/chatbot/SessionList';
+import { extractKnowledgeEvidence, mergeKnowledgeEvidence } from '../components/chatbot/knowledgeEvidence';
 import { ChatWelcome } from '../components/chatbot/ChatWelcome';
 // Chatbot LLM surface
 // rendered conditionally via withAiFeature('chatbot-llm', …); absent
@@ -289,6 +290,9 @@ export default function ChatbotPage() {
                     name: ev.name,
                     status: ev.ok ? 'succeeded' : 'failed',
                   }),
+                  knowledgeEvidence: ev.ok && ev.name === 'retrieve_app_knowledge'
+                    ? mergeKnowledgeEvidence(m.knowledgeEvidence ?? [], extractKnowledgeEvidence(ev.data, pendingAiRequest?.message ?? ''))
+                    : m.knowledgeEvidence,
                 }
               : m,
           ),
@@ -338,7 +342,7 @@ export default function ChatbotPage() {
         setPendingAiRequest(null);
       }
     },
-    [sessionsQuery, t],
+    [sessionsQuery, t, pendingAiRequest?.message],
   );
 
   const aiStream = useAiStream({

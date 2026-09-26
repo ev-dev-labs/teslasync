@@ -98,27 +98,30 @@ func TestAICallLogRepo_RoundTrip(t *testing.T) {
 	_, _ = pool.Exec(ctx, `DELETE FROM ai_call_log WHERE user_subject = $1`, subject)
 
 	now := time.Now().UTC()
+	dayStart := now.Truncate(24 * time.Hour)
+	firstAt := dayStart.Add(now.Sub(dayStart) / 4)
+	secondAt := dayStart.Add(now.Sub(dayStart) / 2)
 	for i, rec := range []provider.AuditRecord{
 		{
 			UserSubject: subject, FeatureID: "chatbot-llm", Provider: "openai",
 			Model: "gpt-4o-mini", InputTokens: 100, OutputTokens: 50,
 			CostMicroCents: 45000, LatencyMs: 320, FinishReason: provider.FinishStop,
 			RequestHash: "h1", RedactedDigest: "h1",
-			StartedAt: now.Add(-30 * time.Minute), FinishedAt: now.Add(-30 * time.Minute).Add(320 * time.Millisecond),
+			StartedAt: firstAt, FinishedAt: firstAt.Add(320 * time.Millisecond),
 		},
 		{
 			UserSubject: subject, FeatureID: "chatbot-llm", Provider: "ollama",
 			Model: "llama3.1", InputTokens: 200, OutputTokens: 80,
 			CostMicroCents: 0, LatencyMs: 410, FinishReason: provider.FinishStop,
 			RequestHash: "h2", RedactedDigest: "h2",
-			StartedAt: now.Add(-10 * time.Minute), FinishedAt: now.Add(-10 * time.Minute).Add(410 * time.Millisecond),
+			StartedAt: secondAt, FinishedAt: secondAt.Add(410 * time.Millisecond),
 		},
 		{
 			UserSubject: subject, FeatureID: "ai-provider-health", Provider: "openai",
 			Model: "gpt-4o-mini", InputTokens: 10, OutputTokens: 5,
 			CostMicroCents: 4500, LatencyMs: 90, FinishReason: provider.FinishStop,
 			RequestHash: "h3", RedactedDigest: "h3", Error: "",
-			StartedAt: now.Add(-5 * time.Minute), FinishedAt: now.Add(-5 * time.Minute).Add(90 * time.Millisecond),
+			StartedAt: now, FinishedAt: now.Add(90 * time.Millisecond),
 		},
 	} {
 		r := rec
@@ -144,7 +147,7 @@ func TestAICallLogRepo_RoundTrip(t *testing.T) {
 		t.Errorf("Today.CostMicroCents = %d, want 49500", today.CostMicroCents)
 	}
 
-	byFeature, err := repo.ByFeature(ctx, subject, now.Add(-time.Hour))
+	byFeature, err := repo.ByFeature(ctx, subject, dayStart)
 	if err != nil {
 		t.Fatalf("ByFeature: %v", err)
 	}
@@ -180,7 +183,7 @@ func TestAICallLogRepo_RoundTrip(t *testing.T) {
 		UserSubject: otherSubject, FeatureID: "chatbot-llm", Provider: "openai",
 		Model: "gpt-4o-mini", InputTokens: 999, OutputTokens: 999,
 		CostMicroCents: 999000, LatencyMs: 999, FinishReason: provider.FinishStop,
-		StartedAt: now.Add(-1 * time.Minute), FinishedAt: now.Add(-1 * time.Minute),
+		StartedAt: now, FinishedAt: now,
 	}
 	if err := repo.Insert(ctx, &otherRec); err != nil {
 		t.Fatalf("Insert other-subject: %v", err)
@@ -198,6 +201,30 @@ func TestAICallLogRepo_RoundTrip(t *testing.T) {
 	}
 	if today2.CostMicroCents != 49500 {
 		t.Errorf("subject scoping leaked: Today.CostMicroCents = %d, want 49500", today2.CostMicroCents)
+	}
+	daily, err := repo.DailySpend(ctx, subject,
+		now.Truncate(24*time.Hour).AddDate(0, 0, -7),
+		now.Truncate(24*time.Hour).AddDate(0, 0, 1))
+	if err != nil {
+		t.Fatalf("DailySpend: %v", err)
+	}
+	var calls, cost int64
+	for _, row := range daily {
+		if row.FeatureID == "" || row.Provider == "" || row.Model == "" ||
+			!row.Day.Equal(row.Day.UTC().Truncate(24*time.Hour)) {
+			t.Errorf("invalid daily attribution: %+v", row)
+		}
+		calls += row.Calls
+		cost += row.CostMicroCents
+	}
+	if calls != 3 || cost != 49500 {
+		t.Errorf("DailySpend subject/window totals = (%d calls, %d microcents), want (3, 49500); rows=%+v", calls, cost, daily)
+	}
+	empty, err := repo.DailySpend(ctx, subject+"-missing",
+		now.Truncate(24*time.Hour).AddDate(0, 0, -7),
+		now.Truncate(24*time.Hour).AddDate(0, 0, 1))
+	if err != nil || len(empty) != 0 {
+		t.Errorf("DailySpend leaked other subjects: rows=%+v err=%v", empty, err)
 	}
 }
 

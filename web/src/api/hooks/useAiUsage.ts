@@ -43,6 +43,8 @@ export interface AiUsageFeatureRow {
   cost_micro_cents: number
   error_count: number
   avg_latency_ms: number
+  /** UTC timestamp of the latest audited call for this feature. */
+  last_call_at: string
 }
 
 export interface AiUsageByFeatureResponse {
@@ -76,6 +78,24 @@ export interface AiUsageRecentResponse {
   rows: AiUsageRecentRow[]
 }
 
+export interface AiSpendDriver {
+  feature_id: string
+  provider: string
+  model: string
+  today_micro_cents: number
+  prior_daily_avg_micro_cents: number
+}
+
+export interface AiSpendInsights {
+  status: 'insufficient_history' | 'no_spend_today' | 'normal' | 'new_paid_spend' | 'unusual_pace'
+  as_of: string
+  today_micro_cents: number
+  prior_daily_avg_micro_cents: number
+  projected_today_micro_cents: number | null
+  prior_active_days: number
+  drivers: AiSpendDriver[]
+}
+
 // ----------------------------------------------------------------------------
 // Query keys — namespaced under ['ai', 'usage'] so cache busts after a
 // chat / summary / etc. can be done with a single invalidation.
@@ -86,6 +106,17 @@ export const aiUsageKeys = {
   today: () => ['ai', 'usage', 'today'] as const,
   byFeature: (since?: string) => ['ai', 'usage', 'by-feature', since ?? ''] as const,
   recent: (limit?: number) => ['ai', 'usage', 'recent', limit ?? 0] as const,
+  spendInsights: () => ['ai', 'usage', 'spend-insights'] as const,
+}
+
+/** Compares audited spend against seven complete UTC days; never queried in AI-off mode. */
+export function useAiSpendInsights(enabled: boolean) {
+  return useQuery({
+    queryKey: aiUsageKeys.spendInsights(),
+    queryFn: ({ signal }) => request<AiSpendInsights>('/ai/usage/spend-insights', { signal }),
+    enabled,
+    refetchInterval: INTERVALS.STANDARD,
+  })
 }
 
 // ----------------------------------------------------------------------------
@@ -114,7 +145,7 @@ export function useAiUsageToday(options?: { enabled?: boolean }) {
  * Per-feature aggregate since the given ISO-8601 timestamp. When
  * `since` is omitted the server defaults to the last 7 days.
  */
-export function useAiUsageByFeature(since?: string) {
+export function useAiUsageByFeature(since?: string, options?: { enabled?: boolean }) {
   const path = since
     ? `/ai/usage/by-feature?since=${encodeURIComponent(since)}`
     : '/ai/usage/by-feature'
@@ -122,6 +153,7 @@ export function useAiUsageByFeature(since?: string) {
     queryKey: aiUsageKeys.byFeature(since),
     queryFn: ({ signal }) => request<AiUsageByFeatureResponse>(path, { signal }),
     refetchInterval: INTERVALS.STANDARD,
+    enabled: options?.enabled ?? true,
   })
 }
 
@@ -129,11 +161,12 @@ export function useAiUsageByFeature(since?: string) {
  * Most recent AI calls (newest first), capped server-side at 500
  * via `AICallRecentMax` and defaulted to 50.
  */
-export function useAiUsageRecent(limit?: number) {
+export function useAiUsageRecent(limit?: number, options?: { enabled?: boolean }) {
   const path = limit != null ? `/ai/usage/recent?limit=${limit}` : '/ai/usage/recent'
   return useQuery({
     queryKey: aiUsageKeys.recent(limit),
     queryFn: ({ signal }) => request<AiUsageRecentResponse>(path, { signal }),
     refetchInterval: INTERVALS.STANDARD,
+    enabled: options?.enabled ?? true,
   })
 }

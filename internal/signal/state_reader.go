@@ -4,8 +4,13 @@ package signal
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 )
+
+// ErrTimelineEventLimit signals that a bounded read cannot return a complete
+// timeline; callers must not interpret its partial prefix as a full window.
+var ErrTimelineEventLimit = errors.New("timeline raw event limit exceeded")
 
 // SignalValue is the opaque payload of a single change-feed observation. Tesla
 // Fleet Telemetry signals can be numeric, string, boolean, or JSON-structured
@@ -105,6 +110,11 @@ type TimelineOptions struct {
 	// The cap keeps the oldest prefix of the window; callers that need
 	// the newest data must choose a window that fits.
 	MaxRows int
+	// MaxEvents caps the raw change-feed rows scanned by the SQL timeline
+	// window, independently of MaxRows (which caps folded output). When hit,
+	// Timeline returns ErrTimelineEventLimit rather than a partial timeline.
+	// Zero preserves the existing unlimited behavior.
+	MaxEvents int
 }
 
 // StateReader is the canonical state-read interface for cold-path callers

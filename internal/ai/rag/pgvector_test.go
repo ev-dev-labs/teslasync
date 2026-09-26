@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -191,6 +192,7 @@ func TestPgvectorRetriever_Forget(t *testing.T) {
 		[]string{"x", "y", "z"}); err != nil {
 		t.Fatalf("Index: %v", err)
 	}
+
 	if err := r.Forget(ctx, subject, SourceDocs, "doc-3"); err != nil {
 		t.Fatalf("Forget: %v", err)
 	}
@@ -204,5 +206,63 @@ func TestPgvectorRetriever_Forget(t *testing.T) {
 	}
 	if count != 0 {
 		t.Errorf("post-forget count = %d, want 0", count)
+	}
+}
+
+func TestPgvectorRetriever_ExcludesExpiredChunks(t *testing.T) {
+	r, _, db := openPgvectorRetriever(t)
+	ctx := context.Background()
+	subject := "rag-test-subject"
+	if err := r.Index(ctx, subject, SourceDriveSummary, "old-drive", []string{"expired unique evidence"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := r.Index(ctx, subject, SourceDriveSummary, "new-drive", []string{"current unique evidence"}); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := db.Pool.Exec(ctx, `UPDATE embeddings_768 SET expires_at = $1 WHERE user_subject = $2 AND source_id = $3`,
+		time.Now().UTC().Add(-time.Hour), subject, "old-drive")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, filter := range [][]string{nil, {SourceDriveSummary}} {
+		got, err := r.Retrieve(ctx, subject, "expired unique evidence", filter, 5)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != 1 || got[0].SourceID != "new-drive" {
+			t.Fatalf("filter %v returned expired evidence: %+v", filter, got)
+		}
+	}
+}
+
+func TestPgvectorRetriever_ReindexRenewsUnchangedExpiredChunks(t *testing.T) {
+	r, prov, db := openPgvectorRetriever(t)
+	ctx := context.Background()
+	const subject = "rag-test-subject"
+	if err := r.Index(ctx, subject, SourceDriveSummary, "renewed-drive", []string{"verified evidence"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `UPDATE embeddings_768 SET expires_at = $1
+		WHERE user_subject = $2 AND source_type = $3 AND source_id = $4`,
+		time.Now().UTC().Add(-time.Hour), subject, SourceDriveSummary, "renewed-drive"); err != nil {
+		t.Fatal(err)
+	}
+	calls := prov.calls
+	if err := r.Index(ctx, subject, SourceDriveSummary, "renewed-drive", []string{"verified evidence"}); err != nil {
+		t.Fatal(err)
+	}
+	if prov.calls != calls {
+		t.Fatalf("unchanged chunk re-embedded: before=%d after=%d", calls, prov.calls)
+	}
+	var expiry time.Time
+	if err := db.Pool.QueryRow(ctx, `SELECT expires_at FROM embeddings_768
+		WHERE user_subject = $1 AND source_type = $2 AND source_id = $3`,
+		subject, SourceDriveSummary, "renewed-drive").Scan(&expiry); err != nil {
+		t.Fatal(err)
+	}
+	if !expiry.After(time.Now().Add(89 * 24 * time.Hour)) {
+		t.Fatalf("unchanged chunk expiry was not renewed: %s", expiry)
 	}
 }

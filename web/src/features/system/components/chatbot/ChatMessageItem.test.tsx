@@ -372,4 +372,19 @@ describe('ChatMessageItem', () => {
     );
     expect(screen.queryByLabelText('Sources')).toBeNull();
   });
+
+  it('lets readers inspect retrieved excerpts and distinguishes cited from merely retrieved chunks', () => {
+    renderItem(makeMessage({
+      content: 'See guide/charging.md for details.',
+      knowledgeEvidence: [
+        { sourceType: 'docs', sourceId: 'guide/charging.md', chunkIdx: 0, excerpt: 'Review charge settings.' },
+        { sourceType: 'runbooks', sourceId: 'runbooks/alerts.md', chunkIdx: 1, excerpt: 'Check recent alerts.' },
+      ],
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect retrieved sources (2)' }));
+    expect(screen.getByText(/docs: guide\/charging.md/)).toHaveTextContent('Cited in answer');
+    expect(screen.getByText(/runbooks: runbooks\/alerts.md/)).toHaveTextContent('Retrieved, not cited');
+    expect(screen.getByText('Review charge settings.')).toBeInTheDocument();
+    expect(screen.getByText(/publication dates are unavailable/)).toBeInTheDocument();
+  });
 });

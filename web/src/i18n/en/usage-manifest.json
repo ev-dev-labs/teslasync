@@ -1,5 +1,6 @@
 {
   "namespaceToBundle": {
+    "explore": "explore",
     "teslaUsage": "system",
     "alertPacks": "notifications",
     "density": "shared",
@@ -607,6 +608,9 @@
     "science": "science"
   },
   "bundles": {
+    "explore": [
+      "explore"
+    ],
     "system": [
       "commandHistory",
       "dataExport",
@@ -2917,6 +2921,7 @@
     "workspaceContext"
   ],
   "namespaceFallbackBundles": {
+    "explore": "explore",
     "teslaUsage": "system",
     "alertPacks": "notifications",
     "density": "detail-density",
