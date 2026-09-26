@@ -112,6 +112,7 @@ export function InboxSummary({ query }: InboxSummaryProps) {
       <MetricCard
         label={t('notifications.inbox.summary.total', 'Recent notifications')}
         value={stats.total}
+        subtitle={t('notifications.inbox.summary.recentScope', 'Latest 50 active entries · all time')}
         icon={<Inbox className="h-5 w-5" aria-hidden="true" />}
       />
       <MetricCard

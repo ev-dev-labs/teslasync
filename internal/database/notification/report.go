@@ -24,8 +24,12 @@ type ReportDay struct {
 type Report struct {
 	From                   string           `json:"from"`
 	To                     string           `json:"to"`
+	FromInstant            string           `json:"from_instant"`
+	ToExclusive            string           `json:"to_exclusive"`
+	Timezone               string           `json:"timezone"`
 	Triggered              int64            `json:"triggered"`
 	Deliveries             int64            `json:"deliveries"`
+	OutboundHTTPCalls      int64            `json:"outbound_http_calls"`
 	UncorrelatedDeliveries int64            `json:"uncorrelated_deliveries"`
 	BySource               []ReportKeyCount `json:"by_source"`
 	ByType                 []ReportKeyCount `json:"by_type"`
@@ -66,6 +70,8 @@ WITH deliveries AS (
 ), aggregates AS (
   SELECT 'triggered' AS dimension, '' AS key, '' AS day, COUNT(*)::bigint AS n FROM classified
   UNION ALL SELECT 'deliveries', '', '', COUNT(*)::bigint FROM deliveries
+  UNION ALL SELECT 'outbound_http_calls', '', '', COUNT(*)::bigint FROM api_call_logs
+    WHERE service = 'notify-generic' AND ts >= $1 AND ts < $2
   UNION ALL SELECT 'uncorrelated', '', '', COUNT(*)::bigint FROM deliveries WHERE trigger_id IS NULL
   UNION ALL SELECT 'source', source, '', COUNT(*)::bigint FROM classified GROUP BY source
   UNION ALL SELECT 'type', event_type, '', COUNT(*)::bigint FROM classified GROUP BY event_type
@@ -73,27 +79,32 @@ WITH deliveries AS (
   UNION ALL SELECT 'channel', COALESCE(c.kind::text, 'unknown'), '', COUNT(*)::bigint
     FROM deliveries d LEFT JOIN notification_channels c ON c.id = d.channel_id GROUP BY COALESCE(c.kind::text, 'unknown')
   UNION ALL SELECT 'status', status, '', COUNT(*)::bigint FROM deliveries GROUP BY status
-  UNION ALL SELECT 'daily_triggered', '', to_char(fired_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), COUNT(*)::bigint
+  UNION ALL SELECT 'daily_triggered', '', to_char(timezone($3::text, fired_at), 'YYYY-MM-DD'), COUNT(*)::bigint
     FROM classified GROUP BY 3
-  UNION ALL SELECT 'daily_deliveries', '', to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), COUNT(*)::bigint
+  UNION ALL SELECT 'daily_deliveries', '', to_char(timezone($3::text, created_at), 'YYYY-MM-DD'), COUNT(*)::bigint
     FROM deliveries GROUP BY 3
 )
 SELECT dimension, key, day, n FROM aggregates ORDER BY dimension, key, day`
 
-// GetReport aggregates a UTC, half-open time range in SQL. Rows returned are
-// bounded by the number of dimension keys and UTC days, not deliveries.
-func (r *NotificationRepo) GetReport(ctx context.Context, from, until time.Time) (*Report, error) {
-	return queryReport(ctx, r.db, from, until)
+// GetReport aggregates a half-open time range in SQL, grouping days in the
+// requested location. Rows are bounded by dimension keys and local days.
+func (r *NotificationRepo) GetReport(ctx context.Context, from, until time.Time, location *time.Location) (*Report, error) {
+	if location == nil {
+		return nil, fmt.Errorf("query notification report: location is required")
+	}
+	return queryReport(ctx, r.db, from, until, location)
 }
 
-func queryReport(ctx context.Context, db *database.DB, from, until time.Time) (*Report, error) {
-	rows, err := db.Pool.Query(ctx, reportSQL, from.UTC(), until.UTC())
+func queryReport(ctx context.Context, db *database.DB, from, until time.Time, location *time.Location) (*Report, error) {
+	rows, err := db.Pool.Query(ctx, reportSQL, from.UTC(), until.UTC(), location.String())
 	if err != nil {
 		return nil, fmt.Errorf("query notification report: %w", err)
 	}
 	defer rows.Close()
 	report := &Report{
-		From: from.UTC().Format(time.DateOnly), To: until.UTC().AddDate(0, 0, -1).Format(time.DateOnly),
+		From: from.In(location).Format(time.DateOnly), To: until.Add(-time.Nanosecond).In(location).Format(time.DateOnly),
+		FromInstant: from.UTC().Format(time.RFC3339Nano), ToExclusive: until.UTC().Format(time.RFC3339Nano),
+		Timezone: location.String(),
 		BySource: []ReportKeyCount{}, ByType: []ReportKeyCount{}, BySeverity: []ReportKeyCount{},
 		ByChannel: []ReportKeyCount{}, ByStatus: []ReportKeyCount{}, Daily: []ReportDay{},
 	}
@@ -110,6 +121,8 @@ func queryReport(ctx context.Context, db *database.DB, from, until time.Time) (*
 			report.Triggered = count
 		case "deliveries":
 			report.Deliveries = count
+		case "outbound_http_calls":
+			report.OutboundHTTPCalls = count
 		case "uncorrelated":
 			report.UncorrelatedDeliveries = count
 		case "source":
@@ -136,7 +149,9 @@ func queryReport(ctx context.Context, db *database.DB, from, until time.Time) (*
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate notification report: %w", err)
 	}
-	for date := from.UTC(); date.Before(until.UTC()); date = date.AddDate(0, 0, 1) {
+	firstDay := from.In(location)
+	lastDay := until.Add(-time.Nanosecond).In(location)
+	for date := time.Date(firstDay.Year(), firstDay.Month(), firstDay.Day(), 0, 0, 0, 0, location); !date.After(lastDay); date = date.AddDate(0, 0, 1) {
 		key := date.Format(time.DateOnly)
 		if days[key] == nil {
 			days[key] = &ReportDay{Day: key}

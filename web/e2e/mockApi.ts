@@ -655,11 +655,29 @@ export function resolveApiFixture(
   }
   if (path.startsWith('/notifications/report?')) {
     const params = new URLSearchParams(path.split('?')[1]);
-    const from = params.get('from') ?? '';
-    const to = params.get('to') ?? '';
-    const populated = scenario !== 'empty' && from <= '2026-08-26' && to >= '2026-08-26';
+    const legacyFrom = params.get('from');
+    const legacyTo = params.get('to');
+    const timezone = params.get('timezone') ?? 'UTC';
+    const localDay = (timestamp: string) => {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+      }).formatToParts(new Date(timestamp));
+      const value = (type: string) => parts.find(part => part.type === type)?.value ?? '';
+      return `${value('year')}-${value('month')}-${value('day')}`;
+    };
+    const fromInstant = params.get('from_instant') ?? (legacyFrom ? `${legacyFrom}T00:00:00Z` : '');
+    const toExclusive = params.get('to_exclusive') ?? (legacyTo
+      ? new Date(Date.parse(`${legacyTo}T00:00:00Z`) + 86_400_000).toISOString()
+      : '');
+    const from = legacyFrom ?? (fromInstant ? localDay(fromInstant) : '');
+    const to = legacyTo ?? (toExclusive ? localDay(new Date(Date.parse(toExclusive) - 1).toISOString()) : '');
+    const populated = scenario !== 'empty'
+      && Date.parse(fromInstant) <= Date.parse(notificationEvents[0].created_at)
+      && Date.parse(toExclusive) > Date.parse(notificationEvents[0].created_at);
     const report: NotificationReport = {
-      from, to, triggered: populated ? 3 : 0, deliveries: populated ? 2 : 0,
+      from, to, from_instant: fromInstant, to_exclusive: toExclusive, timezone,
+      triggered: populated ? 3 : 0, deliveries: populated ? 2 : 0,
+      outbound_http_calls: populated ? 4 : 0,
       uncorrelated_deliveries: 0,
       by_source: populated ? [
         { key: 'system', count: 1 }, { key: 'automation', count: 1 }, { key: 'alert', count: 1 },
@@ -668,7 +686,7 @@ export function resolveApiFixture(
       by_severity: populated ? ['info', 'warn', 'critical'].map(key => ({ key, count: 1 })) : [],
       by_channel: populated ? [{ key: 'email', count: 1 }, { key: 'webpush', count: 1 }] : [],
       by_status: populated ? [{ key: 'sent', count: 2 }] : [],
-      daily: populated ? [{ day: '2026-08-26', triggered: 3, deliveries: 2 }] : [],
+      daily: populated ? [{ day: localDay(notificationEvents[0].created_at), triggered: 3, deliveries: 2 }] : [],
     };
     return matched(report);
   }
