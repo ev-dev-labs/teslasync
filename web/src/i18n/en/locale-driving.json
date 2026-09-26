@@ -1112,6 +1112,9 @@
       "title": "Energy ledger",
       "regen": "Regen",
       "friction": "Friction brake",
+      "massMissing": "Vehicle mass is not configured. Mass-dependent estimates require TESLASYNC_VEHICLE_MASS_KG, which applies to every vehicle in this installation.",
+      "elevationMissing": "Grade and friction-brake estimates require recorded elevation; this telemetry source does not provide it.",
+      "hvacMissing": "Tesla reports HVAC on/off state, not power in watts. Accessory energy and the complete unexplained residual cannot be calculated from that state.",
       "openFull": "Open the full physics ledger"
     }
   },
