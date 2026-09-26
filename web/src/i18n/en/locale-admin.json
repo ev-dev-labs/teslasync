@@ -1023,7 +1023,68 @@
     }
   },
   "fleetApi": {
-    "subtitle": "Control Tesla Fleet API polling and endpoint toggles",
+    "subtitle": "Choose which Tesla Fleet API routes are available and which can be polled automatically",
+    "status": {
+      "polling": "Polling enabled",
+      "onDemand": "On demand only"
+    },
+    "kpis": {
+      "apiStatusHint": "Automatic Fleet API polling",
+      "endpointsHint": "{{count}} selected for polling"
+    },
+    "polling": {
+      "masterDesc": "Off by default. Turning this off stops scheduled Fleet API reads, not manual requests or token refresh.",
+      "activeNote": "Only enabled routes selected for auto-polling participate. On-demand routes and commands remain independent.",
+      "suspendedNote": "Automatic Fleet API polling is off. Enabled endpoints still work on demand; token refresh continues.",
+      "emergencyNote": "API actions were suspended previously; supported live requests and commands are blocked. Token refresh continues.",
+      "resumeActions": "Resume API actions"
+    },
+    "controls": {
+      "enabled": "Access",
+      "enable": "Enable",
+      "autoPoll": "Auto-poll",
+      "poll": "Auto-poll",
+      "onDemandOnly": "Not scheduled",
+      "subtitle": "Allow manual requests per endpoint, then opt supported reads into background refresh. Routes without a scheduled job stay manual only.",
+      "bulkTitle": "All routes",
+      "bulkAccess": "Access all",
+      "bulkAuto": "Auto-poll eligible routes",
+      "bulkHint": "Auto-poll selects only enabled routes with a scheduled job.",
+      "pausedHint": "Turn on Tesla API Polling to change auto-poll selections. Existing selections are retained while paused.",
+      "search": "Search API routes",
+      "accessSummary": "{{count}} routes available on demand",
+      "autoSummary": "{{count}} selected for auto-poll",
+      "scheduleRunning": "Schedule running",
+      "schedulePaused": "Schedule paused",
+      "categoryFilter": "Route groups",
+      "groupBy": "Group by",
+      "byCategory": "Category",
+      "byMethod": "HTTP method",
+      "sortBy": "Sort routes by",
+      "sortName": "Operation",
+      "sortPath": "API path",
+      "sortMethod": "HTTP method",
+      "sortAccess": "Access state",
+      "sortAuto": "Auto-poll state",
+      "sortAscending": "Sort ascending",
+      "sortDescending": "Sort descending",
+      "allRoutes": "All routes",
+      "groupCount": "{{count}} routes",
+      "empty": "Endpoint catalog unavailable",
+      "outdatedRuntime": "This API server does not provide the Fleet route catalog. Update and restart the API service to manage routes; no settings can be changed here until it is available.",
+      "retry": "Retry loading routes",
+      "clearSearch": "Clear search",
+      "noMatches": "No API routes match that search."
+    },
+    "categories": {
+      "vehicledata": "Vehicle data",
+      "vehiclecommands": "Vehicle commands",
+      "vehicleaccess": "Vehicle access",
+      "fleettelemetry": "Fleet telemetry",
+      "account": "Account",
+      "chargingandenergy": "Charging and energy",
+      "vehicleservices": "Vehicle services"
+    },
     "configured": {
       "emptyTitle": "Endpoint metadata unavailable",
       "emptyMessage": "This runtime did not publish any configured endpoint URLs.",
