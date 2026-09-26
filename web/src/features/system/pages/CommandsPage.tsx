@@ -9,7 +9,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { Badge, Button } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
@@ -93,12 +93,6 @@ export default function CommandsPage() {
             </Badge>
           )}
 
-          <VehicleSelect
-            id="commands-vehicle"
-            ariaLabel={t('commands.selectVehicle', 'Select vehicle')}
-            className="min-h-11 min-w-48"
-            withIcon
-          />
 
           <Button
             type="button"

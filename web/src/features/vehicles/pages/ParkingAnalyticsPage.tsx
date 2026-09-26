@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -37,7 +37,7 @@ export default function ParkingAnalyticsPage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const { tz } = useDateFormat();
   const [pageNowMs] = useState(() => Date.now());
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'parking-analytics.range',
   });
 
@@ -89,17 +89,6 @@ export default function ParkingAnalyticsPage() {
         'Where your car spends its time between drives',
       )}
       query={drivesQuery}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="parking-analytics-range"
-          />
-        </div>
-      }
     >
       <FadeIn>
         <ParkingKpiBand summary={summary} {...sectionState} />

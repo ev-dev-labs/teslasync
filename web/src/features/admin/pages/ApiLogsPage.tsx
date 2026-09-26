@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -15,7 +15,7 @@ import { StatCard, DateTime } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { FrontendErrorsCard } from '@/components/status';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { ListExportMenu, RangePicker } from '@/components/forms';
+import { ListExportMenu } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
@@ -124,9 +124,8 @@ export default function ApiLogsPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 25;
 
-  // Unified date range — no hardcoded windows. Picker drives the
-  // `from`/`to` URL params; absence of bounds = full history.
-  const { start, end, setRange } = useRangeState({
+  // The header owns the `from`/`to` window; absence of bounds = full history.
+  const { start, end } = useRangeState({
     persistKey: 'api-logs.range',
     defaultPresetId: 'all',
   });
@@ -138,6 +137,13 @@ export default function ApiLogsPage() {
   // resets `page` AND writes its own key, so all of them MUST go through
   // useUrlBatch. See useUrlState.ts §useUrlBatch JSDoc.
   const setUrl = useUrlBatch();
+  const previousRange = useRef(`${start}:${end}`);
+  useEffect(() => {
+    const currentRange = `${start}:${end}`;
+    if (previousRange.current === currentRange) return;
+    previousRange.current = currentRange;
+    if (page !== 0) setUrl({ page: null });
+  }, [start, end, page, setUrl]);
 
   type FilterKey = 'method' | 'status' | 'endpoint' | 'service';
   const setFilter = useCallback(
@@ -167,7 +173,7 @@ export default function ApiLogsPage() {
       status: status || undefined,
       endpoint: endpoint || undefined,
       service: service || undefined,
-      // RangePicker emits `YYYY-MM-DD`; backend stores ts as UTC timestamptz.
+      // The workspace range uses `YYYY-MM-DD`; backend stores ts as UTC timestamptz.
       // Send local-day boundaries so the comparison window matches the user's
       // picked dates (start of day .. end of day in their local zone).
       start: start ? new Date(`${start}T00:00:00`).toISOString() : undefined,
@@ -279,17 +285,6 @@ export default function ApiLogsPage() {
       title={t('apiLogs.title', 'API Logs')}
       subtitle={t('apiLogs.subtitle', 'Record of all API calls with request/response details')}
       query={logsQuery}
-      actions={
-        <RangePicker
-          value={{ start, end }}
-          onChange={(r) => {
-            setRange(r);
-            if (page !== 0) setPage(0);
-          }}
-          align="end"
-          triggerTestId="api-logs-range"
-        />
-      }
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>

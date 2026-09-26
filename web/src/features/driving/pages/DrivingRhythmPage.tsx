@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -31,7 +31,7 @@ export default function DrivingRhythmPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { start, end, timezone, setRange } = useRangeState({
+  const { start, end, timezone } = useRangeState({
     persistKey: 'driving-rhythm.range',
     defaultPresetId: 'all',
     inheritSharedPreference: false,
@@ -75,17 +75,6 @@ export default function DrivingRhythmPage() {
         'When your car actually gets driven',
       )}
       query={drivesQuery}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="driving-rhythm-range"
-          />
-        </div>
-      }
     >
       <FadeIn>
         <DrivingRhythmKpis summary={summary} {...sectionState} />

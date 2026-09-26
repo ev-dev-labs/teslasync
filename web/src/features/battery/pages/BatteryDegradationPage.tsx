@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import {
   GlassPanel, Badge, DataTable, PanelTitle, Text, Caption, type Column,
 } from '@/components/ui';
@@ -233,7 +233,6 @@ export default function BatteryDegradationPage() {
       subtitle={t('battery.degradation.subtitle', 'Health trends, degradation predictions, and charging habit impact')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <VehicleSelect />
           {/* Battery health analytics derive from a daily cagg; force amber after 24h. */}
           <DataFreshnessAuto query={healthQuery} forceStaleAfterMs={24 * 60 * 60 * 1000} />
         </div>

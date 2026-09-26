@@ -16,7 +16,7 @@ import {
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from '@/components/charts';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
@@ -134,9 +134,7 @@ export default function EfficiencyPage() {
     [unitPrefs.speed],
   );
 
-  const {
-    start: startDate, end: endDate, startInstant, endInstantExclusive, setRange,
-  } = useRangeState({
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'efficiency.range',
   });
 
@@ -296,13 +294,6 @@ export default function EfficiencyPage() {
       dataSources={dataSources}
       actions={
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="efficiency-range"
-          />
           <SavedViewMenu
             route="/efficiency"
             currentQuery={savedView.currentQuery}

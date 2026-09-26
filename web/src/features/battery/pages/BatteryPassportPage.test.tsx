@@ -317,7 +317,7 @@ describe('BatteryPassportPage', () => {
     renderPage();
 
     expectEverySection();
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
     expect(h.passportHook).toHaveBeenCalledTimes(1);
     expect(h.passportHook).toHaveBeenLastCalledWith('7');
     expect(h.verifyHook).toHaveBeenCalledTimes(1);

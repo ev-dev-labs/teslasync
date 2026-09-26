@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import { GlassPanel, Badge, Slider, PanelTitle, Text, Caption, HelperText } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
@@ -182,7 +182,6 @@ export default function ProjectedRangePage() {
   const pageProps = {
     title: t('range.title', 'Projected Range'),
     subtitle: t('range.subtitle', 'Personalized range estimates based on your driving patterns, weather, and conditions'),
-    actions: <VehicleSelect />,
   };
 
   // No vehicle scope yet — surface a single actionable prompt.

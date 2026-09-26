@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import { GlassPanel, DataTable, PanelTitle, type Column } from '@/components/ui';
 import { MetricCard, MetricBar, KVList } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -190,7 +190,6 @@ export default function MileagePage() {
       subtitle={t('mileage.subtitle', 'Daily and monthly distance tracking')}
       query={[statsQuery, dailyQuery, monthlyQuery]}
       dataSources={dataSources}
-      actions={<VehicleSelect />}
     >
       {/* §1 — KPI band: full-width responsive metric grid */}
       <FadeIn>

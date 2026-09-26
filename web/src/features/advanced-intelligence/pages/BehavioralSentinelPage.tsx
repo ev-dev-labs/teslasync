@@ -3,7 +3,7 @@ import { Fingerprint, RadioTower, TerminalSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useBehavioralSentinel } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
@@ -42,7 +42,6 @@ export default function BehavioralSentinelPage() {
         'advancedIntelligence.sentinel.subtitle',
         'Explainable command, identity, and telemetry-integrity signals without personal attribution.',
       )}
-      actions={<VehicleSelect withIcon />}
       loading={vehicleId != null && query.isLoading}
       error={query.error instanceof Error ? query.error : null}
     >

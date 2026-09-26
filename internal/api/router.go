@@ -3326,6 +3326,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
 				r.Get("/commands/latest", commandHandler.LatestCommands)
+				// Optional from/to: RFC3339 [from,to) instants or legacy inclusive calendar dates.
 				r.Get("/commands/history", commandHandler.CommandHistory)
 				r.Get("/energy", energyHandler.Stats)
 				r.Get("/energy/flow", energyFlowHandler.Get)
@@ -4175,7 +4176,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/watch", vampireDrainHandler.Watch)
 		})
 
-		// Visited Locations
+		// Visited locations: optional RFC3339 [from,to) bounds filter drives before aggregation.
 		r.Get("/locations", visitedLocationHandler.List)
 
 		// /mileage/{monthly,stats} are derived live from the SI-canonical drives

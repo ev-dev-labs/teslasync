@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { Button, Input } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
 import { Icons } from '@/lib/icons';
 import { addDaysYmd, isValidYmd, todayYmd } from '../../lib/daylog';
 
@@ -14,8 +13,8 @@ export interface DayLogControlsProps {
  * Header day scope controls. The date is a plain `YYYY-MM-DD`
  * calendar string end to end: the native date input, the URL param, and
  * the API `date` field all carry the same string, so there is no
- * UTC-midnight footgun anywhere in the chain. Category filtering lives
- * with the list itself; this section only scopes vehicle + day.
+ * UTC-midnight footgun anywhere in the chain. The app header owns vehicle
+ * selection; category filtering lives with the list itself.
  */
 export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsProps) {
   const { t } = useTranslation();
@@ -29,7 +28,6 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
 
   return (
     <div className="flex w-full min-w-0 flex-wrap items-center gap-1 sm:gap-2 xl:w-auto" data-testid="daylog-controls">
-        <VehicleSelect withIcon data-testid="daylog-vehicle" />
         <div className="grid min-w-0 flex-1 grid-cols-[44px_minmax(0,1fr)_44px_auto] items-center gap-1 sm:grid-cols-[36px_minmax(0,1fr)_36px_auto] xl:w-[320px]" data-testid="daylog-date-navigation">
         <Button
           variant="ghost"

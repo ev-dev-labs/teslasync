@@ -23,7 +23,7 @@
  * slice tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -433,7 +433,7 @@ describe('BatteryHealthPage · states', () => {
 
     expect(screen.getByTestId('battery-health-skeleton')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Battery Health' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByText('State of Health')).not.toBeInTheDocument();
   });
 
@@ -647,14 +647,10 @@ describe('BatteryHealthPage · branches & resilience', () => {
     expect(screen.queryByText('8.5')).not.toBeInTheDocument();
   });
 
-  it('lets the header vehicle picker refetch by mounting the live indicator + selector', () => {
+  it('mounts the live indicator without duplicating the header vehicle picker', () => {
     renderPage();
 
-    // The header actions render the shared VehicleSelect (a combobox) — proves
-    // the page exposes the source-of-truth picker rather than a dead panel.
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
-    // Interacting with it routes through the mocked selector without throwing.
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '42' } });
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Battery Health' })).toBeInTheDocument();
   });
 });

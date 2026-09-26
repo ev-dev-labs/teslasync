@@ -16,6 +16,7 @@ function withRouter(initialEntries: string[]) {
       <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/charging" element={children} />
+          <Route path="/local" element={children} />
         </Routes>
       </MemoryRouter>
     );
@@ -39,6 +40,22 @@ describe('useRangeState — initialization precedence', () => {
     expect(result.current.end).toBe('2026-08-27');
     expect(result.current.presetId).toBe('7d');
     expect(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY)).toBeNull();
+  });
+
+  it('uses the header default instead of a page-specific range on a header-owned route', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 12));
+    window.localStorage.setItem('charging.list.range', JSON.stringify({
+      version: STORED_PREFERENCE_VERSION, start: '2024-06-01', end: '2024-06-30',
+    }));
+
+    const { result } = renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range', defaultPresetId: 'all', inheritSharedPreference: false }),
+      { wrapper: withRouter(['/charging']) },
+    );
+    expect(result.current.start).toBe('2026-08-21');
+    expect(result.current.end).toBe('2026-08-27');
+    expect(result.current.presetId).toBe('7d');
   });
 
   it('uses URL params when present and valid', () => {
@@ -93,7 +110,7 @@ describe('useRangeState — localStorage persistence', () => {
     window.localStorage.clear();
   });
 
-  it('restores from localStorage when URL is empty', () => {
+  it('restores page-local storage on routes without a header range', () => {
     window.localStorage.setItem(
       'charging.list.range',
       JSON.stringify({
@@ -104,7 +121,7 @@ describe('useRangeState — localStorage persistence', () => {
     );
     const { result } = renderHook(
       () => useRangeState({ persistKey: 'charging.list.range', defaultPresetId: '30d' }),
-      { wrapper: withRouter(['/charging']) },
+      { wrapper: withRouter(['/local']) },
     );
     // Restoration writes URL on mount, so the next render reads from URL.
     expect(result.current.start).toBe('2024-06-01');
@@ -118,7 +135,7 @@ describe('useRangeState — localStorage persistence', () => {
     );
     const { result } = renderHook(
       () => useRangeState({ persistKey: 'charging.list.range' }),
-      { wrapper: withRouter(['/charging?from=2025-01-01&to=2025-01-31']) },
+      { wrapper: withRouter(['/local?from=2025-01-01&to=2025-01-31']) },
     );
     expect(result.current.start).toBe('2025-01-01');
     expect(result.current.end).toBe('2025-01-31');
@@ -127,7 +144,7 @@ describe('useRangeState — localStorage persistence', () => {
   it('persists committed range changes to localStorage', () => {
     const { result } = renderHook(
       () => useRangeState({ persistKey: 'charging.list.range' }),
-      { wrapper: withRouter(['/charging?from=2025-01-01&to=2025-01-31']) },
+      { wrapper: withRouter(['/local?from=2025-01-01&to=2025-01-31']) },
     );
     act(() => {
       result.current.setRange({ start: '2025-02-01', end: '2025-02-28' });
@@ -276,7 +293,7 @@ describe('useRangeState — localStorage persistence', () => {
     expect(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY)).toBeNull();
   });
 
-  it('ignores malformed shared storage and falls back to the page selection', () => {
+  it('ignores malformed shared storage and falls back to a local page selection', () => {
     window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, '{not json');
     window.localStorage.setItem(
       'charging.list.range',
@@ -288,7 +305,7 @@ describe('useRangeState — localStorage persistence', () => {
     );
     const { result } = renderHook(
       () => useRangeState({ persistKey: 'charging.list.range' }),
-      { wrapper: withRouter(['/charging']) },
+      { wrapper: withRouter(['/local']) },
     );
 
     expect(result.current.start).toBe('2024-07-01');
@@ -464,7 +481,7 @@ describe('useRangeState — minDate clamping', () => {
   it('clamps "all" preset start to minDate', () => {
     const { result } = renderHook(
       () => useRangeState({ defaultPresetId: 'all', minDate: '2024-01-01' }),
-      { wrapper: withRouter(['/charging']) },
+      { wrapper: withRouter(['/local']) },
     );
     expect(result.current.start).toBe('2024-01-01');
   });

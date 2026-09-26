@@ -10,7 +10,7 @@ import {
   useDeleteConsumable,
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
@@ -451,7 +451,6 @@ export default function ConsumablesLifecyclePage() {
       )}
       loading={reportQuery.isLoading}
       error={reportQuery.error as Error | null}
-      actions={<VehicleSelect withIcon />}
     >
       <AlertBanner
         variant="info"

@@ -42,7 +42,7 @@ import {
   KVList,
 } from '@/components/data-display';
 import { DataStateNotice, EmptyState, Skeleton, QueryError } from '@/components/feedback';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { FadeIn } from '@/components/motion';
 
 import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
@@ -600,7 +600,7 @@ export default function DriveScorePage() {
     `${fmtInt(efficiencyDisplay(whPerKm))} ${efficiencyUnit}`;
 
   /* ---- date filter ---- */
-  const { start: startDate, end: endDate, setRange } = useRangeState({
+  const { start: startDate, end: endDate } = useRangeState({
     persistKey: 'drive-score.range',
   });
 
@@ -1006,13 +1006,6 @@ export default function DriveScorePage() {
   /* ---- header actions ---- */
   const actions = (
     <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-      <VehicleSelect />
-      <RangePicker
-        value={{ start: startDate, end: endDate }}
-        onChange={setRange}
-        align="end"
-        triggerTestId="drive-score-range"
-      />
       <Button
         variant="ghost"
         onClick={() => refetch()}

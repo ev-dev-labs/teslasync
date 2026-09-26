@@ -35,7 +35,7 @@ import {
   QueryError,
   TableSkeleton,
 } from '@/components/feedback';
-import { RangePicker } from '@/components/forms';
+
 import {
   useTeslaChargingSessions,
   useRefreshTeslaChargingSessions,
@@ -147,7 +147,7 @@ export default function TeslaChargingSessionsPage() {
 
   const allSessions = response?.sessions ?? [];
   // Range filter (client-side) on charge_start_datetime.
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'tesla-charging-sessions.range',
     defaultPresetId: 'all',
   });
@@ -590,12 +590,6 @@ export default function TeslaChargingSessionsPage() {
         onChange={(e) => setSelectedVin(e.target.value)}
         className="w-full min-w-0 sm:w-56"
         aria-label={t('tesla_sessions.selectVehicle', 'Select vehicle')}
-      />
-      <RangePicker
-        value={{ start, end }}
-        onChange={setRange}
-        align="end"
-        triggerTestId="tesla-charging-sessions-range"
       />
     </>
   );

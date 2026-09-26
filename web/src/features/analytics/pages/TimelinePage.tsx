@@ -8,7 +8,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { useRangeState } from '@/hooks/useRangeState';
 import { useTimezone } from '@/lib/timezone';
 import {
@@ -138,7 +138,7 @@ export default function TimelinePage() {
   const enabled = activeId !== '';
 
   const timezone = useTimezone('vehicle');
-  const { start, end, setRange, startInstant, endInstantExclusive } = useRangeState({
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'timeline.range',
     defaultPresetId: '7d',
     timezone,
@@ -350,17 +350,6 @@ export default function TimelinePage() {
 
   const actions = (
     <div className="flex items-center gap-3">
-      <VehicleSelect
-        ariaLabel={t('timeline.selectVehicle', 'Select Vehicle')}
-      />
-      <RangePicker
-        value={{ start, end }}
-        onChange={(r) => setRange(r)}
-        presetIds={['today', 'yesterday', '7d', '30d', '90d', 'mtd', 'ytd', 'all']}
-        presetsOnly
-        align="end"
-        triggerTestId="timeline-range"
-      />
       <DataFreshnessAuto query={timelineQuery} />
       <Button
         variant="ghost"

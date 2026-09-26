@@ -4,7 +4,7 @@ import { AlertTriangle, Activity, MapPinOff, ShieldQuestion } from 'lucide-react
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard, TimeStamp } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -88,7 +88,6 @@ export default function ChargeInterruptionPage() {
         'Sessions that may have been cut short or under-delivered, estimated from indirect evidence \u2014 never a hardware diagnosis',
       )}
       query={sessionsQuery}
-      actions={<VehicleSelect />}
     >
       {/* 1 — KPI band */}
       <FadeIn>

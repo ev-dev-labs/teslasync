@@ -3,7 +3,7 @@
  *
  * TimelinePage fans two TanStack Query hooks — GET /vehicle-states/timeline
  * (FSM transition events) and GET /vehicle-states/summary (per-state dwell +
- * transition counts) — plus the fleet list into a vehicle picker, a four-tile
+ * transition counts) — plus the header-selected vehicle into a four-tile
  * KPI band, a proportional state-distribution bar, a daily-breakdown chart, a
  * per-state dwell panel, and a paginated transitions table. These tests drive
  * the page end-to-end (real hooks + real formatting boundary against a mocked
@@ -21,8 +21,7 @@
  *   5. A timeline fetch failure → an <AlertBanner> with the error message,
  *      while the page shell still renders.
  *   6. The icon-only refresh control exposes an accessible name and refetches.
- *   7. The labelled vehicle selector lists the fleet and re-scopes the queries
- *      to the picked vehicle.
+ *   7. Changing the header-selected vehicle re-scopes both state queries.
  *
  * Network is mocked at the `@/api/client` boundary (the repo convention — see
  * FleetComparePage.test.tsx / DiskForecastPage.test.tsx). `useSettings` /
@@ -80,6 +79,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import TimelinePage from './TimelinePage'
 import type { Vehicle } from '@/types/vehicle'
 
@@ -197,11 +197,17 @@ function renderPage(path = '/timeline') {
     <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={client}>
         <SelectedVehicleProvider>
+          <HeaderVehicleSwitch />
           <TimelinePage />
         </SelectedVehicleProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   )
+}
+
+function HeaderVehicleSwitch() {
+  const { setVehicleId } = useSelectedVehicle()
+  return <button onClick={() => setVehicleId(2)}>Select Model Y in header</button>
 }
 
 beforeEach(() => {
@@ -340,17 +346,13 @@ describe('TimelinePage', () => {
     )
   })
 
-  it('lists the fleet and re-scopes the queries when a vehicle is picked', async () => {
+  it('re-scopes the queries when the header vehicle changes', async () => {
     renderPage()
-
-    const select = (await screen.findByLabelText('Select Vehicle')) as HTMLSelectElement
-    expect(within(select).getByRole('option', { name: 'Model 3 LR' })).toBeInTheDocument()
-    expect(within(select).getByRole('option', { name: 'Model Y P' })).toBeInTheDocument()
 
     // Vehicle 1 is auto-selected → 10 transitions in the KPI band.
     await screen.findByText('10', {}, { timeout: 8000 })
 
-    fireEvent.change(select, { target: { value: '2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Select Model Y in header' }))
 
     // Vehicle 2's distinct total (7) proves the queries re-scoped to it.
     expect(await screen.findByText('7', {}, { timeout: 8000 })).toBeInTheDocument()

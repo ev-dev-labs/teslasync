@@ -806,6 +806,29 @@ func TestParseNotificationLogFilters_GroupKey(t *testing.T) {
 	})
 }
 
+func TestParseNotificationLogFilters_ExclusiveRange(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet,
+		"/notifications?from=2026-09-22T12%3A00%3A00-07%3A00&to_exclusive=2026-09-23T12%3A00%3A00-07%3A00", nil)
+	f, err := parseNotificationLogFilters(req)
+	if err != nil || !f.ToExclusive ||
+		!f.From.Equal(time.Date(2026, 9, 22, 19, 0, 0, 0, time.UTC)) ||
+		!f.To.Equal(time.Date(2026, 9, 23, 19, 0, 0, 0, time.UTC)) {
+		t.Fatalf("exclusive workspace range: %+v, err=%v", f, err)
+	}
+	for _, suffix := range []string{
+		"from=2026-09-23T12%3A00%3A00Z&to_exclusive=2026-09-23T12%3A00%3A00Z",
+		"from=2026-09-22&to_exclusive=2026-09-23",
+		"to=2026-09-23&to_exclusive=2026-09-24T00%3A00%3A00Z",
+		"to_exclusive=2026-09-24T00%3A00%3A00Z",
+		"from=2026-09-23&to_exclusive=",
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/notifications?"+suffix, nil)
+		if _, err := parseNotificationLogFilters(req); err == nil {
+			t.Errorf("accepted invalid exclusive range %s", suffix)
+		}
+	}
+}
+
 // TestGetLogsHandler_GroupedTrue routes to ListGrouped when ?grouped=true
 // is supplied and serializes the result as a JSON array of groups (never
 // null). The flat list path must NOT be hit.

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Zap, Cpu, BatteryCharging } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect, RangePicker } from '@/components/forms';
+
 
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
 import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
@@ -44,7 +44,7 @@ export default function DrivetrainHealthPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { start: startDate, end: endDate, setRange } = useRangeState({
+  const { start: startDate, end: endDate } = useRangeState({
     persistKey: 'drivetrain-health.range',
   });
 
@@ -150,17 +150,6 @@ export default function DrivetrainHealthPage() {
       title={t('drivetrain.title', 'Drivetrain Health')}
       subtitle={t('drivetrain.subtitle', 'Motor, inverter, and battery thermal status')}
       query={healthQuery}
-      actions={
-        <div className="flex flex-wrap items-center gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="drivetrain-health-range-picker"
-          />
-        </div>
-      }
     >
       {/* 1 — Hero: overall drivetrain health status (alert + panel) */}
       <HealthOverview

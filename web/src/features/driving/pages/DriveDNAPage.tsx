@@ -5,7 +5,7 @@ import {
   useDriveHistory,
   useDriveTelemetry,
 } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Select } from '@/components/ui';
@@ -154,7 +154,6 @@ export default function DriveDNAPage() {
       )}
       actions={
         <div className="flex flex-wrap items-start justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
           <Select
             aria-label={t('driveDna.selector.aria', 'Choose a drive')}
             value={activeId}

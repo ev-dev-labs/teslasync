@@ -2,13 +2,13 @@
 // The gated filter is mounted with ai_mode='off' and an enabled feature
 // toggle to prove mode wins over the toggle. A cloud-mode positive control
 // proves the gate works, and the full SignalExplorerPage render verifies
-// the manual SignalSelector, RangePicker, Explore/Live buttons, and empty
+// the manual SignalSelector, shared header range, Explore/Live buttons, and empty
 // state still render when the AI section is absent. The API 404 invariant
 // is covered by the matching Go handler test.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -64,6 +64,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { AISignalExplorerNlFilter } from '@/components/ai/AISignalExplorerNlFilter';
 import SignalExplorerPage from '@/features/telemetry/pages/SignalExplorerPage';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
 
@@ -95,7 +96,18 @@ function settingsPayload(overrides: Partial<AppSettings>) {
 
 beforeEach(() => {
   mockUseSettings.mockReset();
+  window.localStorage.clear();
 });
+
+function HeaderRangeProbe() {
+  const { start, end, setPreset } = useRangeState();
+  return (
+    <>
+      <span data-testid="header-range-window">{`${start}/${end}`}</span>
+      <button type="button" onClick={() => setPreset('90d')}>Change header range</button>
+    </>
+  );
+}
 
 function renderSignalExplorerPage() {
   const qc = new QueryClient({
@@ -103,8 +115,9 @@ function renderSignalExplorerPage() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/signals/explorer']}>
+      <MemoryRouter initialEntries={['/signal-explorer']}>
         <SelectedVehicleProvider>
+          <HeaderRangeProbe />
           <SignalExplorerPage />
         </SelectedVehicleProvider>
       </MemoryRouter>
@@ -177,7 +190,7 @@ describe('TestSignalExplorerNLAIOffManualFiltersWork (signal-explorer-nl-filter 
   it('TestSignalExplorerNLAIOffManualFiltersWork: SignalExplorerPage in off mode shows the deterministic manual-filter surface (baseline intact, ADR-015 §I3)', async () => {
     // With ai_mode='off', SignalExplorerPage must continue to render
     // every deterministic surface — page title, signal selector,
-    // range picker trigger, Explore + Live buttons, and empty-state
+    // shared header range, Explore + Live buttons, and empty-state
     // copy. The AI filter section must be absent from the DOM.
     mockUseSettings.mockReturnValue(
       settingsPayload({
@@ -191,11 +204,11 @@ describe('TestSignalExplorerNLAIOffManualFiltersWork (signal-explorer-nl-filter 
     // 1) Page title surfaces.
     expect(await screen.findByText(/^Signal Explorer$/)).toBeInTheDocument();
 
-    // 2) RangePicker trigger is rendered (carries the
-    //    triggerTestId="signal-explorer-range" prop).
-    expect(
-      await screen.findByTestId('signal-explorer-range'),
-    ).toBeInTheDocument();
+    // 2) Header range updates this route without mounting a second picker.
+    const originalRange = screen.getByTestId('header-range-window').textContent;
+    fireEvent.click(screen.getByRole('button', { name: 'Change header range' }));
+    expect(screen.getByTestId('header-range-window')).not.toHaveTextContent(originalRange ?? '');
+    expect(screen.queryByTestId('signal-explorer-range')).not.toBeInTheDocument();
 
     // 3) Explore + Live buttons are present (deterministic affordances).
     expect(

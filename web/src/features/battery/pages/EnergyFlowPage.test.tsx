@@ -28,7 +28,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
 
 vi.mock('@/components/charts', async (importOriginal) => {
@@ -236,6 +237,16 @@ function installHappyPath() {
   mockFlow.mockReturnValue(qr({ data: makeFlowData() }));
 }
 
+function HeaderRangeControl() {
+  const [, setParams] = useSearchParams();
+  return <Button type="button" data-testid="header-energy-range" onClick={() => setParams((params) => {
+    const next = new URLSearchParams(params);
+    next.set('from', '2025-03-07');
+    next.set('to', '2025-03-07');
+    return next;
+  })}>Choose one day in header</Button>;
+}
+
 function renderPage(entries: string[] = ['/battery/energy']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -244,6 +255,7 @@ function renderPage(entries: string[] = ['/battery/energy']) {
     <MemoryRouter initialEntries={entries}>
       <QueryClientProvider client={client}>
         <EnergyFlowPage />
+        <HeaderRangeControl />
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -503,20 +515,18 @@ describe('EnergyFlowPage — data contract & controls', () => {
     expect(mockFlow).toHaveBeenCalledWith('1');
   });
 
-  it('re-queries with a new window when a range preset is picked', async () => {
+  it('re-queries when the shared header chooses a one-day window', async () => {
     renderPage(); // default 7d preset → days 7
     expect(mockStats).toHaveBeenCalledWith('1', 7);
 
-    fireEvent.click(screen.getByTestId('energy-flow-range'));
-    const listbox = await screen.findByRole('listbox', { name: 'Quick date range' });
-    fireEvent.click(within(listbox).getByRole('option', { name: 'Today' }));
+    fireEvent.click(screen.getByTestId('header-energy-range'));
 
     await waitFor(() => expect(mockStats).toHaveBeenCalledWith('1', 1));
   });
 
-  it('exposes accessible vehicle + range controls', () => {
+  it('does not duplicate the shared header vehicle and range controls', () => {
     renderPage();
-    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument();
-    expect(screen.getByTestId('energy-flow-range')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('energy-flow-range')).not.toBeInTheDocument();
   });
 });

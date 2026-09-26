@@ -3,7 +3,7 @@ import { Clock3, MapPinned, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useRoadHazards } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
@@ -36,7 +36,6 @@ export default function RoadHazardMeshPage() {
         'advancedIntelligence.hazards.subtitle',
         'Privacy-preserving hazard clusters shown only at coarse-cell resolution.',
       )}
-      actions={<VehicleSelect withIcon />}
       loading={vehicleId != null && query.isLoading}
       error={query.error instanceof Error ? query.error : null}
     >

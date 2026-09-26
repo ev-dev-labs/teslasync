@@ -25,13 +25,14 @@ import { useTranslation } from 'react-i18next';
 import { Database, AlertCircle, Activity } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Button, Select, Label, Caption } from '@/components/ui';
+import { GlassPanel, Button, Select, Caption } from '@/components/ui';
 import { EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtInt } from '@/lib/numberFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlArray } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -73,6 +74,7 @@ interface SubmittedSignalQuery {
 export default function SignalLogViewerPage() {
   const { t } = useTranslation();
   usePageTitle(t('signalLog.title', 'Signal Log Viewer'));
+  const { preferences } = useProductPreferences();
 
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
   const vehicleId = storeVehicleId ?? 0;
@@ -80,10 +82,7 @@ export default function SignalLogViewerPage() {
   const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
-  const { start, end, setRange } = useRangeState({
-    persistKey: 'signal-log.range',
-    defaultPresetId: 'today',
-  });
+  const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
 
   const [perPage, setPerPage] = useState(50);
   const [page, setPage] = useState(1);
@@ -155,7 +154,6 @@ export default function SignalLogViewerPage() {
     <PageContainer
       title={t('signalLog.title', 'Signal Log Viewer')}
       subtitle={t('signalLog.subtitle', 'Query signal history from Postgres')}
-      actions={<VehicleSelect />}
       query={hasQueried ? signalLogQuery : undefined}
       copyLink
     >
@@ -174,7 +172,7 @@ export default function SignalLogViewerPage() {
         />
       ) : (
         <>
-          {/* 1 — Query cockpit: signal selector + range + rows + Query */}
+          {/* 1 — Query cockpit: signal selector + rows + Query */}
           <FadeIn>
             <GlassPanel className="space-y-4 p-4 sm:p-5">
               <SignalSelector
@@ -185,16 +183,6 @@ export default function SignalLogViewerPage() {
               />
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <label className="space-y-1">
-                  <Label className="block">{t('signalLog.timeRange', 'Time Range')}</Label>
-                  <RangePicker
-                    value={{ start, end }}
-                    onChange={setRange}
-                    presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
-                    align="start"
-                    triggerTestId="signal-log-range"
-                  />
-                </label>
                 <div className="flex flex-wrap items-end gap-3">
                   <Select
                     label={t('signalLog.perPage', 'Per Page')}

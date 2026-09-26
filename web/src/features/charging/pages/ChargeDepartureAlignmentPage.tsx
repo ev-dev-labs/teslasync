@@ -4,7 +4,7 @@ import { Clock3, Gauge, AlertTriangle, Link2 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -111,7 +111,6 @@ export default function ChargeDepartureAlignmentPage() {
       )}
       query={[sessionsQuery, drivesQuery]}
       dataSources={dataSources}
-      actions={<VehicleSelect />}
     >
       {/* 1 — KPI band */}
       <FadeIn>

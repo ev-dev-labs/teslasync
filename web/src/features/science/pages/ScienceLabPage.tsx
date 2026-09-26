@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { DataProvenanceBadge } from '@/components/data-display';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { Button, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -46,7 +46,6 @@ export default function ScienceLabPage() {
       contextActions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <DataProvenanceBadge provenance="historical" />
-          <VehicleSelect />
         </div>
       )}
     >

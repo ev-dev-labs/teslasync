@@ -18,6 +18,19 @@ func TestParseCommandHistoryWindow(t *testing.T) {
 		before.Format(time.RFC3339) != "2026-09-22T10:15:00Z" || id != 42 {
 		t.Fatalf("all-time command scope: from=%v until=%v cursor=%v id=%d err=%v", from, until, before, id, err)
 	}
+	from, until, before, id, err = parseCommandHistoryWindow(
+		"2026-09-22T10:15:00-07:00", "2026-09-23T10:15:00-07:00", "", "",
+	)
+	if err != nil || from.Format(time.RFC3339) != "2026-09-22T10:15:00-07:00" ||
+		until.Format(time.RFC3339) != "2026-09-23T10:15:00-07:00" || before != nil || id != 0 {
+		t.Fatalf("rolling command scope: from=%v until=%v cursor=%v id=%d err=%v", from, until, before, id, err)
+	}
+	from, until, _, _, err = parseCommandHistoryWindow(
+		"2026-09-23T06:00:00.123Z", "2026-09-23T06:05:00.456Z", "", "",
+	)
+	if err != nil || from.Nanosecond() != 123000000 || until.Nanosecond() != 456000000 {
+		t.Fatalf("precise command scope: from=%v until=%v err=%v", from, until, err)
+	}
 	for _, tc := range []struct{ from, to, before, id string }{
 		{"2026-02-30", "2026-09-23", "", ""},
 		{"2026-09-23", "2026-01-01", "", ""},
@@ -25,6 +38,10 @@ func TestParseCommandHistoryWindow(t *testing.T) {
 		{"2026-01-01", "2026-09-23", "invalid", "42"},
 		{"2026-01-01", "2026-09-23", "", "42"},
 		{"2026-01-01", "2026-09-23", "2026-01-02T00:00:00Z", "0"},
+		{"2026-01-01", "2026-09-23T00:00:00Z", "", ""},
+		{"2026-09-23T10:00:00Z", "2026-09-23T10:00:00Z", "", ""},
+		{"2026-09-23T11:00:00Z", "2026-09-23T10:00:00Z", "", ""},
+		{"2026-09-23T10:00:00Z", "2077-09-23T10:00:00Z", "", ""},
 	} {
 		if _, _, _, _, err := parseCommandHistoryWindow(tc.from, tc.to, tc.before, tc.id); err == nil {
 			t.Errorf("accepted invalid scope %+v", tc)

@@ -4,17 +4,14 @@
  * The bar is a fully-controlled surface: the parent owns `NotificationFilters`
  * and receives a complete next-state object on every change. These tests drive
  * the real sub-components (severity chips, vehicle/rule <Select>, the debounced
- * SearchInput, ActiveFilterChips) and stub only the heavy RangePicker popover
- * so the shared range commit path can be exercised deterministically.
+ * SearchInput, ActiveFilterChips). The header owns the date range.
  *
  * Coverage:
  *   1. Severity chips — labelled group, pressed state, add / remove / clear-last.
  *   2. Vehicle + rule selects — value reflection, emit on change, "All" clears,
  *      #id fallback label for nameless vehicles.
  *   3. SearchInput — debounced emit, whitespace-only treated as cleared.
- *   4. RangePicker — range + preset metadata are forwarded atomically, and
- *      the ISO value is sliced to YYYY-MM-DD.
- *   5. ActiveFilterChips — render, single-chip removal preserves siblings,
+ *   4. ActiveFilterChips — render, single-chip removal preserves siblings,
  *      and Clear-all preserves the shared date preference.
  *   6. Null-safety / a11y — empty filters render no chips and no pressed chip;
  *      an unknown vehicle id degrades to a #id chip label.
@@ -25,26 +22,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import '../../../i18n';
 
 import { NotificationFilterBar, type NotificationFilterBarProps } from './NotificationFilterBar';
-import type { RangePickerProps } from '@/components/forms';
 import type { Vehicle, AlertRule } from '@/api/types';
-
-// Replace only RangePicker (a portal + calendar popover that is impractical to
-// drive in jsdom). Every other export from the forms barrel — FilterBar,
-// SearchInput, ActiveFilterChips — stays real so their behaviour is covered.
-vi.mock('@/components/forms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/components/forms')>();
-  const MockRangePicker = ({ value, onChange }: RangePickerProps) => (
-    <div data-testid="range-picker" data-start={value.start} data-end={value.end}>
-      <button type="button" onClick={() => onChange(
-        { start: '2024-03-01', end: '2024-03-31' },
-        '30d',
-      )}>
-        commit-range
-      </button>
-    </div>
-  );
-  return { ...actual, RangePicker: MockRangePicker };
-});
 
 function vehicle(id: number, display_name: string): Vehicle {
   return { id, display_name } as unknown as Vehicle;
@@ -59,17 +37,15 @@ const RULES: AlertRule[] = [rule(10, 'Tire Pressure Low'), rule(20, 'Battery Col
 
 function renderBar(overrides: Omit<Partial<NotificationFilterBarProps>, 'onChange'> = {}) {
   const onChange = vi.fn();
-  const onRangeChange = vi.fn();
   render(
     <NotificationFilterBar
       filters={overrides.filters ?? {}}
       onChange={onChange}
-      onRangeChange={overrides.onRangeChange ?? onRangeChange}
       vehicles={overrides.vehicles ?? VEHICLES}
       rules={overrides.rules ?? RULES}
     />,
   );
-  return { onChange, onRangeChange };
+  return { onChange };
 }
 
 describe('NotificationFilterBar — severity chips', () => {
@@ -171,25 +147,10 @@ describe('NotificationFilterBar — search', () => {
   });
 });
 
-describe('NotificationFilterBar — shared date range', () => {
-  it('forwards the range and preset metadata atomically', () => {
-    const { onChange, onRangeChange } = renderBar({ filters: {} });
-
-    fireEvent.click(screen.getByRole('button', { name: 'commit-range' }));
-
-    expect(onRangeChange).toHaveBeenCalledWith(
-      { start: '2024-03-01', end: '2024-03-31' },
-      '30d',
-    );
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it('passes the ISO range down sliced to YYYY-MM-DD', () => {
-    renderBar({ filters: { from: '2024-03-01T12:00:00Z', to: '2024-03-31T09:30:00Z' } });
-
-    const picker = screen.getByTestId('range-picker');
-    expect(picker).toHaveAttribute('data-start', '2024-03-01');
-    expect(picker).toHaveAttribute('data-end', '2024-03-31');
+describe('NotificationFilterBar — workspace scope', () => {
+  it('does not duplicate the header date control', () => {
+    renderBar({ filters: { from: '2024-03-01T12:00:00Z', to_exclusive: '2024-03-31T09:30:00Z' } });
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
   });
 });
 
@@ -222,7 +183,7 @@ describe('NotificationFilterBar — active filter chips', () => {
         rule_id: [10],
         q: 'x',
         from: '2024-03-01',
-        to: '2024-03-31',
+        to_exclusive: '2024-04-01T00:00:00Z',
       },
     });
 
@@ -235,7 +196,7 @@ describe('NotificationFilterBar — active filter chips', () => {
     expect(patch.rule_id).toBeUndefined();
     expect(patch.q).toBeUndefined();
     expect(patch.from).toBe('2024-03-01');
-    expect(patch.to).toBe('2024-03-31');
+    expect(patch.to_exclusive).toBe('2024-04-01T00:00:00Z');
   });
 
   it('falls back to a #id chip when the filtered vehicle is unknown', () => {

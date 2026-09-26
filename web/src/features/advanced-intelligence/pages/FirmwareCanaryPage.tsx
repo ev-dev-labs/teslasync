@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useFirmwareCanary } from '@/api/hooks/useAdvancedIntelligence';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
@@ -39,7 +39,6 @@ export default function FirmwareCanaryPage() {
         'advancedIntelligence.firmware.subtitle',
         'Compare a target vehicle with matched peer windows before deciding rollout readiness.',
       )}
-      actions={<VehicleSelect withIcon />}
       loading={vehicleId != null && query.isLoading}
       error={query.error instanceof Error ? query.error : null}
     >

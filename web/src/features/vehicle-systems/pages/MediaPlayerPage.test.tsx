@@ -37,7 +37,7 @@
  *     ceiling comes from the charted peak instead of the small fallback.
  *   - source-icon / status branches: FM radio, podcast, and aux sources render
  *     alongside an unknown status that maps to "Stopped".
- *   - interactions: the range trigger commits a new range via setRange; sorting
+ *   - interactions: the shared range is read without a local trigger; sorting
  *     the Track column reorders the table and toggles direction.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -121,8 +121,8 @@ vi.mock('@/components/charts', async () => {
   };
 });
 
-// ── forms row: VehicleSelect is a bare marker; RangePicker is a single trigger
-//    that commits a fixed range so the parent's setRange wiring is assertable. ──
+// ── Keep the legacy form doubles inert; the page must not mount either
+//    workspace control now that the application header owns both. ──
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
   RangePicker: ({
@@ -562,13 +562,13 @@ describe('MediaPlayerPage — source icon and status branches', () => {
 });
 
 describe('MediaPlayerPage — interactions', () => {
-  it('commits a new range through setRange when the range trigger fires', () => {
+  it('reads the shared range without rendering a second range trigger', () => {
     const setRange = vi.fn();
     mockRange.mockReturnValue({ start: RANGE.start, end: RANGE.end, setRange });
     renderPage();
 
-    fireEvent.click(screen.getByTestId('media-player-range'));
-    expect(setRange).toHaveBeenCalledWith({ start: '2026-06-05', end: '2026-06-20' });
+    expect(screen.queryByTestId('media-player-range')).not.toBeInTheDocument();
+    expect(setRange).not.toHaveBeenCalled();
   });
 
   it('reorders the table and toggles direction when the Track column header is sorted', () => {

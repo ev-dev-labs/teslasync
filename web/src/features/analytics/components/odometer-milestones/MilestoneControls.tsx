@@ -1,7 +1,6 @@
 import type { KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { VehicleSelect } from '@/components/forms';
 import { Caption, Input } from '@/components/ui';
 import type { DistanceUnitPref } from '@/lib/unitConversion';
 
@@ -45,7 +44,6 @@ export function MilestoneControls({
 
   return (
     <div className="flex flex-wrap items-end justify-end gap-2 sm:gap-3">
-      <VehicleSelect />
       <Input
         key={distanceUnit}
         type="number"

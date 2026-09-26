@@ -134,6 +134,7 @@ export interface NotificationFilters {
   source?: 'rule';
   from?: string;
   to?: string;
+  to_exclusive?: string;
   read?: boolean;
   archived?: boolean;
   q?: string;
@@ -152,6 +153,7 @@ function serializeNotificationFilters(filters: NotificationFilters): string {
   if (filters.source) params.set('source', filters.source);
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
+  if (filters.to_exclusive) params.set('to_exclusive', filters.to_exclusive);
   if (typeof filters.read === 'boolean') params.set('read', String(filters.read));
   if (typeof filters.archived === 'boolean') params.set('archived', String(filters.archived));
   if (filters.q) params.set('q', filters.q);

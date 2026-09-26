@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { AIDigestNarration } from '@/components/ai/AIDigestNarration';
@@ -103,18 +103,11 @@ export default function WeeklyDigestPage() {
   const aiVehicleId =
     selectedVehicleId !== '' && Number.isFinite(parsedVehicleId) ? parsedVehicleId : undefined;
 
-  const actions = (
-    <VehicleSelect
-      ariaLabel={t('analytics.weeklyDigest.selectVehicle', 'Select vehicle')}
-      className="w-full sm:w-48"
-    />
-  );
 
   return (
     <PageContainer
       title={t('analytics.weeklyDigest.title', 'Weekly Digest')}
       subtitle={t('analytics.weeklyDigest.subtitle', 'Your driving and charging summary for the week')}
-      actions={actions}
       query={freshnessQueries}
       dataSources={dataSources}
     >

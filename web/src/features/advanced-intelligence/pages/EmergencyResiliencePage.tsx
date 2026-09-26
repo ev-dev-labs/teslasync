@@ -8,7 +8,7 @@ import {
 } from '@/components/charts';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner, EmptyState } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Text } from '@/components/ui';
@@ -59,7 +59,6 @@ export default function EmergencyResiliencePage() {
         'advancedIntelligence.resilience.subtitle',
         'Plan energy survival, load priorities, and risk progression for a modeled outage.',
       )}
-      actions={<VehicleSelect withIcon />}
     >
       <AlertBanner
         variant="warning"

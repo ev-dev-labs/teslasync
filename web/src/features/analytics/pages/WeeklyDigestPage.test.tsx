@@ -11,12 +11,12 @@
  * This suite drives that orchestration by mocking the `weekly-digest` barrel
  * (the hook + section spies that reflect their props as data-attributes), the
  * AI narration surface, the motion wrapper, and i18n. The real `PageContainer`
- * and canonical `VehicleSelect` render so the page's landmarks + global
- * vehicle combobox are exercised for real. Network is never touched.
+ * renders the page landmarks without duplicating the application header's
+ * vehicle picker. Network is never touched.
  *
  * Facets covered:
  *   - scaffolding/a11y: page heading + subtitle, labelled region landmarks,
- *     the vehicle combobox, and every section + AI surface mount.
+ *     no redundant vehicle combobox, and every section + AI surface mount.
  *   - document title via usePageTitle.
  *   - summary aggregation: `summaryLoading = drivesLoading || chargingLoading`
  *     and `summaryError = drivesError ?? chargingError` (both halves + the
@@ -242,7 +242,7 @@ beforeEach(() => {
 });
 
 describe('WeeklyDigestPage — scaffolding + a11y', () => {
-  it('renders the page header, vehicle combobox, and every digest surface', () => {
+  it('renders the page header and every digest surface without a redundant vehicle picker', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Weekly Digest' })).toBeInTheDocument();
@@ -250,8 +250,7 @@ describe('WeeklyDigestPage — scaffolding + a11y', () => {
       screen.getByText('Your driving and charging summary for the week'),
     ).toBeInTheDocument();
 
-    const select = screen.getByRole('combobox', { name: 'Select vehicle' });
-    expect(select).toHaveValue('7');
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
 
     for (const id of [
       'week-selector',
@@ -453,15 +452,11 @@ describe('WeeklyDigestPage — week navigation', () => {
   });
 });
 
-describe('WeeklyDigestPage — vehicle scope select', () => {
-  it('updates the shared numeric vehicle context on change', () => {
+describe('WeeklyDigestPage — shared vehicle scope', () => {
+  it('consumes the shared numeric vehicle context without modifying it', () => {
     renderPage();
-
-    fireEvent.change(screen.getByRole('combobox', { name: 'Select vehicle' }), {
-      target: { value: '9' },
-    });
-    expect(selectedVehicleContext.setVehicleId).toHaveBeenCalledTimes(1);
-    expect(selectedVehicleContext.setVehicleId).toHaveBeenCalledWith(9);
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
+    expect(selectedVehicleContext.setVehicleId).not.toHaveBeenCalled();
   });
 });
 

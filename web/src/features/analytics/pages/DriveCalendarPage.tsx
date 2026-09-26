@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Input } from '@/components/ui';
@@ -122,7 +122,6 @@ export default function DriveCalendarPage() {
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
-          <VehicleSelect />
         </div>
       }
     >

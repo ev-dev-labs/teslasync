@@ -7,7 +7,8 @@ import {
   within,
 } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
@@ -232,6 +233,16 @@ function selectVehicle(vehicleId: number | null) {
   });
 }
 
+function HeaderRangeControl() {
+  const [, setParams] = useSearchParams();
+  return <Button type="button" data-testid="header-sleep-range" onClick={() => setParams((params) => {
+    const next = new URLSearchParams(params);
+    next.set('from', '2026-07-16');
+    next.set('to', '2026-07-16');
+    return next;
+  })}>Select one day in header</Button>;
+}
+
 function renderPage(
   entries: string[] = [
     '/sleep-efficiency?from=2026-06-17&to=2026-07-16',
@@ -248,6 +259,7 @@ function renderPage(
       <QueryClientProvider client={client}>
         <ToastProvider>
           <SleepEfficiencyPage />
+          <HeaderRangeControl />
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -304,7 +316,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
       '2026-06-17',
       '2026-07-16',
     );
-    expect(screen.getByTestId('sleep-efficiency-range')).toBeInTheDocument();
+    expect(screen.queryByTestId('sleep-efficiency-range')).not.toBeInTheDocument();
     expect(
       screen.getByText('2026-06-17 to 2026-07-16 UTC'),
     ).toBeInTheDocument();
@@ -526,6 +538,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
         >
           <ToastProvider>
             <SleepEfficiencyPage />
+            <HeaderRangeControl />
           </ToastProvider>
         </QueryClientProvider>
       </MemoryRouter>,
@@ -537,13 +550,9 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps the RangePicker interactive and requeries a one-day preset', async () => {
+  it('requeries when the shared header chooses a one-day range', async () => {
     renderPage();
-    fireEvent.click(screen.getByTestId('sleep-efficiency-range'));
-    const listbox = await screen.findByRole('listbox', {
-      name: 'Quick date range',
-    });
-    fireEvent.click(within(listbox).getByRole('option', { name: 'Today' }));
+    fireEvent.click(screen.getByTestId('header-sleep-range'));
 
     await waitFor(() => {
       expect(mockSleep.mock.calls.some((call) => call[1] === 1)).toBe(true);

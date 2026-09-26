@@ -11,7 +11,7 @@
  * gated behind a single flag, and all values are null-safe.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -35,14 +35,7 @@ import { Button, GlassPanel, Pagination, PanelTitle, Text } from '@/components/u
 import { EntityPreviewDrawer, MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import {
-  SearchInput,
-  FilterBar,
-  ActiveFilterChips,
-  RangePicker,
-  VehicleSelect,
-  type FilterChipDescriptor,
-} from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
@@ -122,32 +115,35 @@ export default function LocationsPage() {
   // baseline geofence-create / location-rename UI; the AI panel
   // never persists.
   const [appliedName, setAppliedName] = useState<{ id: number; name: string } | null>(null);
-  const { start, end, setRange, reset: resetRange } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive, reset: resetRange } = useRangeState({
     persistKey: 'locations.range',
     defaultPresetId: 'all',
   });
+  const previousRange = useRef(`${start}:${end}`);
+  useEffect(() => {
+    const currentRange = `${start}:${end}`;
+    if (previousRange.current === currentRange) return;
+    previousRange.current = currentRange;
+    if (page !== 1) setPage(1);
+  }, [start, end, page, setPage]);
 
   const locationsQuery = useQuery({
-    queryKey: ['visited-locations', vehicleId, page, pageSize],
-    queryFn: () => request<VisitedLocation[]>(`/locations?vehicle_id=${vehicleId}&limit=${pageSize}&offset=${(page - 1) * pageSize}`),
+    queryKey: ['visited-locations', vehicleId, page, pageSize, startInstant, endInstantExclusive],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        vehicle_id: String(vehicleId),
+        limit: String(pageSize),
+        offset: String((page - 1) * pageSize),
+        from: startInstant,
+        to: endInstantExclusive,
+      });
+      return request<VisitedLocation[]>(`/locations?${params}`);
+    },
     enabled: vehicleId !== null,
   });
   const { data: rawLocations, isLoading, isError, error, refetch } = locationsQuery;
 
-  // Client-side filter by `last_visited` within the picked range. Backend
-  // /locations does not yet accept from/to so visit_count and
-  // total_duration_s remain LIFETIME aggregates — we only narrow which
-  // places are listed (those last visited in the window).
-  const locations = useMemo(() => {
-    if (!rawLocations?.length) return rawLocations;
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
-    return rawLocations.filter((l) => {
-      if (!l.last_visited) return false;
-      const ts = new Date(l.last_visited).getTime();
-      return ts >= startMs && ts <= endMs;
-    });
-  }, [rawLocations, start, end]);
+  const locations = rawLocations;
 
   const locationSearchFields = useMemo(
     () => ['address_name'] as const satisfies ReadonlyArray<keyof VisitedLocation>,
@@ -205,28 +201,11 @@ export default function LocationsPage() {
   const shownCount = locations?.length ?? 0;
   const hasLocations = shownCount > 0;
 
-  const actions = (
-    <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
-      <VehicleSelect
-        ariaLabel={t('locations.selectVehicle', 'Select vehicle')}
-      />
-      <RangePicker
-        value={{ start, end }}
-        onChange={(r) => {
-          setRange(r);
-          setPage(1);
-        }}
-        align="end"
-        triggerTestId="locations-range"
-      />
-    </div>
-  );
 
   return (
     <PageContainer
       title={t('locations.title', 'Visited Locations')}
       subtitle={t('locations.subtitle', "Places you've been — ranked by frequency")}
-      actions={actions}
       query={locationsQuery}
     >
       {/* ── 1. KPI band ───────────────────────────────────────────── */}

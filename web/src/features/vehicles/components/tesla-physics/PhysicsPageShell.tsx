@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useTeslaExclusive } from '@/api/hooks/useTeslaPhysics';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -69,7 +68,6 @@ export function PhysicsPageShell({ physics, children, navigation }: {
   return <PageContainer title={pageTitle} subtitle={t('teslaOnly.workbench.subtitle', 'A bounded evidence workbench: conclusions first, raw observations on demand.')}
     query={query} copyLink contextActions={<div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
       <DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />
-      <VehicleSelect />
     </div>}>
     <StaleRefreshWarning state={state} label={title} />
     {navigation}

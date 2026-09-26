@@ -35,7 +35,7 @@
  *      and statusNeon are exercised directly.
  *
  * Network is never hit: `useSignalObservations` is stubbed per-signal, the
- * vehicle picker is inert, and i18n resolves to the English fallback with
+ * shared vehicle scope is mocked, and i18n resolves to the English fallback with
  * {{placeholder}} interpolation applied.
  */
 
@@ -271,8 +271,8 @@ describe('PowersharePage', () => {
     expect(screen.queryByText('Output Power Trend')).not.toBeInTheDocument();
     expect(screen.queryByText('Live Session')).not.toBeInTheDocument();
     expect(screen.queryByText('Signal Snapshot')).not.toBeInTheDocument();
-    // The picker is still offered in the header action slot.
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
+    // Vehicle selection belongs to the application header, not the page.
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
   });
 
   it('renders the KPI band, every panel + a11y region, and issues each query with the right field + limit', () => {

@@ -4,7 +4,7 @@ import { Route, Gauge, TrendingUp, Wallet, SlidersHorizontal } from 'lucide-reac
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Input, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { AlertBanner, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -103,7 +103,6 @@ export default function MileageBudgetPage() {
       title={t('mileageBudget.title', 'Mileage Budget')}
       subtitle={t('mileageBudget.subtitle', 'Lease and warranty allowance pacing with overage forecast')}
       query={drivesQuery}
-      actions={<VehicleSelect />}
     >
       {!isLoading && !isError && historyCapped ? (
         <AlertBanner

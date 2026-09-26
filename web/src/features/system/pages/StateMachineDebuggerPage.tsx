@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -102,7 +102,7 @@ export default function StateMachineDebuggerPage() {
   const initialFsm = (searchParams.get('fsm') ?? 'all') as FSMType;
   const [fsmType, setFsmType] = useState<FSMType>(initialFsm);
 
-  /* Time range — canonical RangePicker. Default 7d so the debugger surfaces
+  /* Time range — header View settings. Default 7d so the debugger surfaces
    * recent dev/replay activity by default; 24h was misleading whenever the
    * last transition was older than a day. The backend handler now accepts
    * RFC 3339 instants and treats the window as half-open `[start, end)` so
@@ -114,7 +114,7 @@ export default function StateMachineDebuggerPage() {
    * next-day UTC falling outside the UTC-midnight filter). The
    * `FSMTimelineChart` still consumes `hours` for bucket sizing. */
   const vehicleTz = useTimezone('vehicle');
-  const { start, end, startInstant, endInstantExclusive, setRange } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'fsm-debugger.range',
     defaultPresetId: '7d',
     timezone: vehicleTz,
@@ -512,19 +512,6 @@ export default function StateMachineDebuggerPage() {
       loading={stateLoading && transLoading && statsLoading}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2" data-tour="debugger-share">
-          <VehicleSelect
-            ariaLabel={t('fsm.selectVehicle', 'Select vehicle')}
-            className="w-44"
-          />
-          <RangePicker
-            value={{ start, end }}
-            onChange={(r) => {
-              setRange(r);
-              setServerPage(1);
-            }}
-            align="end"
-            triggerTestId="fsm-debugger-range"
-          />
           <Text as="span" size="xs" color="muted" className="hidden items-center gap-1 sm:flex">
             <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} aria-hidden="true" />
             {t('fsm.autoRefresh', 'Live 10s')}

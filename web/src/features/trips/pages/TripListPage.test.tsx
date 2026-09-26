@@ -40,6 +40,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import { useRangeState } from '@/hooks/useRangeState';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { Trip } from '@/api/types';
@@ -162,26 +163,6 @@ vi.mock('@/components/mobile', () => ({
   PullToRefresh: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 vi.mock('@/components/data-display/SavedViewMenu', () => ({ SavedViewMenu: () => null }));
-vi.mock('@/components/forms/VehicleSelect', () => ({
-  VehicleSelect: () => <div data-testid="vehicle-select" />,
-}));
-vi.mock('@/components/forms/RangePicker', () => ({
-  RangePicker: ({
-    value,
-    onChange,
-  }: {
-    value: { start: string; end: string };
-    onChange: (v: { start: string; end: string }) => void;
-  }) => (
-    <button
-      type="button"
-      data-testid="range-picker"
-      onClick={() => onChange({ start: '2026-03-02', end: '2026-03-20' })}
-    >
-      {`range:${value.start}..${value.end}`}
-    </button>
-  ),
-}));
 
 // ── Data + environment hooks, driven per test. ──
 vi.mock('@/api/hooks/useTrips', () => ({ useTrips: vi.fn() }));
@@ -325,12 +306,22 @@ function LocationProbe() {
   return <div data-testid="loc-search">{loc.search}</div>;
 }
 
+function HeaderRangeChange() {
+  const { setRange } = useRangeState();
+  return (
+    <button onClick={() => setRange({ start: '2026-03-02', end: '2026-03-20' })}>
+      Change header range
+    </button>
+  );
+}
+
 function renderPage(initialEntries: string[] = ['/trips']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <TripListPage />
+        <HeaderRangeChange />
         <LocationProbe />
       </QueryClientProvider>
     </MemoryRouter>,
@@ -375,9 +366,9 @@ describe('TripListPage — loading', () => {
     renderPage();
 
     expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
-    // Header title + the range control persist during load.
+    // The page heading persists during load; the range belongs to the header.
     expect(screen.getByRole('heading', { name: 'Trips', level: 1 })).toBeInTheDocument();
-    expect(screen.getByTestId('range-picker')).toBeInTheDocument();
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
     // None of the data scaffolding mounts (PageContainer replaces children).
     expect(screen.queryByRole('region', { name: 'All trips' })).toBeNull();
     expect(screen.queryByText('No trips recorded yet')).toBeNull();
@@ -544,7 +535,7 @@ describe('TripListPage — URL state', () => {
     renderPage(['/trips?page=3']);
     expect(locSearch()).toContain('page=3');
 
-    fireEvent.click(screen.getByTestId('range-picker'));
+    fireEvent.click(screen.getByRole('button', { name: 'Change header range' }));
 
     const search = locSearch();
     expect(search).toContain('from=2026-03-02');

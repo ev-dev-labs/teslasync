@@ -4,7 +4,7 @@ import { ShieldCheck, ArrowUpDown, ListOrdered, Activity } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -82,7 +82,6 @@ export default function RootCauseIntelligencePage() {
         'rootCauseIntelligence.subtitle',
         "Evidence-ranked hypotheses about which telemetry signals moved alongside a chosen signal's biggest shift \u2014 a statistical association, never a diagnosis or proof of causation.",
       )}
-      actions={<VehicleSelect />}
       query={workspace.signalsQuery}
     >
       {/* 1 — Focal signal + analysis window */}

@@ -13,7 +13,7 @@
  *   3. Section-local loading / error / empty branches for EVERY panel — no panel
  *      is gated away or left blank.
  *   4. Deterministic grid / insight derivations surfaced in the hero + side panel.
- *   5. Toolbar wiring (vehicle select + range picker + refresh) and a11y
+ *   5. Shared header vehicle scope + page refresh wiring and a11y
  *      (labelled regions, an icon-only refresh button, the heatmap `img`).
  *
  * Strategy mirrors PeriodComparePage: render the REAL page + REAL shared subtree
@@ -90,7 +90,8 @@ vi.mock('react-i18next', async () => {
 });
 
 import ChargingHeatmapPage from '../ChargingHeatmapPage';
-import { SelectedVehicleProvider } from '@/store/selectedVehicle';
+import { SelectedVehicleProvider, useSelectedVehicleStore } from '@/store/selectedVehicle';
+import { Button } from '@/components/ui';
 import { ApiError } from '@/lib/resilience';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
@@ -198,6 +199,11 @@ function chargingCalls(): string[] {
     .filter((u) => u.startsWith('/charging'));
 }
 
+function HeaderVehicleControl() {
+  const { setVehicleId } = useSelectedVehicleStore();
+  return <Button type="button" data-testid="header-vehicle-20" onClick={() => setVehicleId(20)}>Select vehicle 20 in header</Button>;
+}
+
 function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
@@ -207,6 +213,7 @@ function renderPage() {
       <MemoryRouter initialEntries={['/charging/heatmap']}>
         <SelectedVehicleProvider>
           <ChargingHeatmapPage />
+          <HeaderVehicleControl />
         </SelectedVehicleProvider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -416,9 +423,8 @@ describe('ChargingHeatmapPage — data contract & toolbar', () => {
     await screen.findByRole('img', { name: GRID_ARIA });
 
     expect(chargingCalls().some((u) => /vehicle_id=20\b/.test(u))).toBe(false);
-    fireEvent.change(screen.getByRole('combobox', { name: 'Select vehicle' }), {
-      target: { value: '20' },
-    });
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('header-vehicle-20'));
     await waitFor(() =>
       expect(chargingCalls().some((u) => /vehicle_id=20\b/.test(u))).toBe(true),
     );

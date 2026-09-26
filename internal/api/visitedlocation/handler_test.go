@@ -23,21 +23,28 @@ type fakeVisitedLocationRepo struct {
 
 	gotVehicleID int64
 	gotLimit     int
+	gotOffset    int
+	gotFrom      time.Time
+	gotUntil     time.Time
 
 	out []*geomodel.VisitedLocation
 	err error
 }
 
-func (f *fakeVisitedLocationRepo) GetAll(_ context.Context, limit int) ([]*geomodel.VisitedLocation, error) {
+func (f *fakeVisitedLocationRepo) GetAll(_ context.Context, limit, offset int, from, until time.Time) ([]*geomodel.VisitedLocation, error) {
 	f.allCalled++
 	f.gotLimit = limit
+	f.gotOffset = offset
+	f.gotFrom, f.gotUntil = from, until
 	return f.out, f.err
 }
 
-func (f *fakeVisitedLocationRepo) GetByVehicle(_ context.Context, vehicleID int64, limit int) ([]*geomodel.VisitedLocation, error) {
+func (f *fakeVisitedLocationRepo) GetByVehicle(_ context.Context, vehicleID int64, limit, offset int, from, until time.Time) ([]*geomodel.VisitedLocation, error) {
 	f.byVehicleCalled++
 	f.gotVehicleID = vehicleID
 	f.gotLimit = limit
+	f.gotOffset = offset
+	f.gotFrom, f.gotUntil = from, until
 	return f.out, f.err
 }
 
@@ -122,17 +129,18 @@ func TestHandler_List_GetByVehicle_Filter(t *testing.T) {
 	}
 }
 
-// ---- pagination (limit) propagation; offset intentionally ignored --------
+// ---- pagination (limit and offset) propagation ----------------------------
 
 func TestHandler_List_LimitPropagation(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name      string
-		target    string
-		wantAll   bool // expect GetAll (true) or GetByVehicle (false)
-		wantVeh   int64
-		wantLimit int
+		name       string
+		target     string
+		wantAll    bool // expect GetAll (true) or GetByVehicle (false)
+		wantVeh    int64
+		wantLimit  int
+		wantOffset int
 	}{
 		{
 			name:      "get_all_default_limit",
@@ -147,13 +155,11 @@ func TestHandler_List_LimitPropagation(t *testing.T) {
 			wantLimit: 10,
 		},
 		{
-			// offset must NOT alter the limit passed to the repo; this
-			// aggregation endpoint has no offset support and silently
-			// discards it (top-N by visit_count).
-			name:      "offset_is_ignored",
-			target:    "/locations?limit=10&offset=20",
-			wantAll:   true,
-			wantLimit: 10,
+			name:       "offset_paginates_aggregates",
+			target:     "/locations?limit=10&offset=20",
+			wantAll:    true,
+			wantLimit:  10,
+			wantOffset: 20,
 		},
 		{
 			name:      "get_by_vehicle_custom_limit",
@@ -187,6 +193,9 @@ func TestHandler_List_LimitPropagation(t *testing.T) {
 			if fake.gotLimit != tc.wantLimit {
 				t.Errorf("limit: got %d, want %d", fake.gotLimit, tc.wantLimit)
 			}
+			if fake.gotOffset != tc.wantOffset {
+				t.Errorf("offset: got %d, want %d", fake.gotOffset, tc.wantOffset)
+			}
 			if tc.wantAll {
 				if fake.allCalled != 1 || fake.byVehicleCalled != 0 {
 					t.Fatalf("routing: allCalled=%d byVehicleCalled=%d, want 1/0", fake.allCalled, fake.byVehicleCalled)
@@ -200,6 +209,28 @@ func TestHandler_List_LimitPropagation(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestHandler_List_VisitWindow(t *testing.T) {
+	fake := &fakeVisitedLocationRepo{}
+	h := newHandler(fake)
+	rec := doList(h, "/locations?vehicle_id=42&from=2026-09-22T12%3A00%3A00-07%3A00&to=2026-09-23T12%3A00%3A00-07%3A00")
+	if rec.Code != http.StatusOK ||
+		!fake.gotFrom.Equal(time.Date(2026, 9, 22, 19, 0, 0, 0, time.UTC)) ||
+		!fake.gotUntil.Equal(time.Date(2026, 9, 23, 19, 0, 0, 0, time.UTC)) {
+		t.Fatalf("range not forwarded: status=%d from=%v until=%v", rec.Code, fake.gotFrom, fake.gotUntil)
+	}
+	for _, query := range []string{
+		"from=2026-09-22",
+		"from=2026-09-22T12%3A00%3A00Z&to=2026-09-22T12%3A00%3A00Z",
+		"from=2026-09-23T12%3A00%3A00Z&to=2026-09-22T12%3A00%3A00Z",
+		"from=2026-09-22T12%3A00%3A00Z&to=2077-09-22T12%3A00%3A00Z",
+	} {
+		rec := doList(h, "/locations?"+query)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("query %q: status=%d, want 400", query, rec.Code)
+		}
 	}
 }
 

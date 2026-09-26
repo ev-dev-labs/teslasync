@@ -406,7 +406,7 @@ describe('AnomalyDashboardPage', () => {
     expect(path).not.toContain('vehicleId='); // never camelCase
   });
 
-  it('is accessible: labelled landmark regions, a named vehicle picker, and a described chart region', async () => {
+  it('is accessible: labelled landmarks and a described chart without a duplicate picker', async () => {
     mockedRequest.mockImplementation(() => Promise.resolve(makeData()));
 
     renderPage();
@@ -414,8 +414,7 @@ describe('AnomalyDashboardPage', () => {
     expect(screen.getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'AI insights' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Anomaly overview' })).toBeInTheDocument();
-    // Header picker exposes an accessible name (fleet has ≥1 vehicle).
-    expect(screen.getByLabelText('Select vehicle')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Select vehicle')).not.toBeInTheDocument();
     // The bar chart is announced as a described image, not raw SVG.
     expect(
       await screen.findByRole('img', { name: 'Bar chart of the most frequently anomalous signals' }),

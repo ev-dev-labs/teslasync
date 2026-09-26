@@ -23,9 +23,8 @@
  *   9.  Default window — the request carries a 30-day ISO range + limit=200.
  *   10. URL-driven range — start/end query params flow verbatim into the
  *       request as snake_case params.
- *   11. RangePicker interaction — opening the popover exposes the accessible
- *       dialog + preset options; picking "All time" refetches with the new
- *       range.
+ *   11. Header range interaction — changing the shared URL window refetches
+ *       without a redundant page-level picker.
  *
  * Network is mocked at the shared `request` helper so the hook runs for real
  * without touching the wire; i18n is stubbed so `t(key, 'Default')` resolves
@@ -35,7 +34,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
 
 vi.mock('@/api/client', async () => {
@@ -137,6 +137,16 @@ function routeRequest(url: string, _opts?: ReqOpts): Promise<unknown> {
   return Promise.resolve(undefined);
 }
 
+function HeaderRangeControl() {
+  const [, setParams] = useSearchParams();
+  return <Button type="button" data-testid="header-activity-range" onClick={() => setParams((params) => {
+    const next = new URLSearchParams(params);
+    next.set('start', '2015-01-01');
+    next.set('end', '2026-09-25');
+    return next;
+  })}>Change header range</Button>;
+}
+
 function renderPage(initialEntry = '/my-activity') {
   const qc = new QueryClient({
     defaultOptions: {
@@ -148,6 +158,7 @@ function renderPage(initialEntry = '/my-activity') {
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[initialEntry]}>
         <MyActivityPage />
+        <HeaderRangeControl />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -335,7 +346,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
     );
   });
 
-  it('refetches with a new range when a RangePicker preset is applied', async () => {
+  it('refetches when the shared header changes the URL range', async () => {
     activityResult = [];
     renderPage();
 
@@ -343,18 +354,8 @@ describe('MyActivityPage — Project Apex elevation', () => {
       expect(activityCalls().length).toBeGreaterThan(0);
     });
 
-    // The range trigger is an accessible, labelled control.
-    const trigger = screen.getByTestId('my-activity-range');
-    expect(trigger).toHaveAttribute('aria-label', 'Date range');
-
-    fireEvent.click(trigger);
-
-    // Opening exposes the accessible popover dialog + selectable presets.
-    expect(screen.getByRole('dialog', { name: 'Date range picker' })).toBeInTheDocument();
-    const allTime = screen.getByRole('option', { name: 'All time' });
-    fireEvent.click(allTime);
-
-    // "All time" pins the start to the 2015 baseline → a fresh request fires.
+    expect(screen.queryByTestId('my-activity-range')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('header-activity-range'));
     await waitFor(() => {
       expect(activityCalls().some((u) => u.includes('start=2015-01-01'))).toBe(true);
     });

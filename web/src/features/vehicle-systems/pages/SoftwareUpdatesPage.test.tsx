@@ -92,24 +92,6 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   return { ...actual, useSelectedVehicle: vi.fn() };
 });
 
-// RangePicker → commit-button double: keeps the rest of the barrel (VehicleSelect)
-// real so we can still assert the vehicle picker's combobox a11y.
-vi.mock('@/components/forms', async (importActual) => {
-  const actual = await importActual<typeof import('@/components/forms')>();
-  return {
-    ...actual,
-    RangePicker: ({ onChange }: { onChange: (v: { start: string; end: string }) => void }) => (
-      <button
-        type="button"
-        data-testid="mock-range"
-        onClick={() => onChange({ start: '2025-02-01', end: '2025-02-28' })}
-      >
-        commit-range
-      </button>
-    ),
-  };
-});
-
 // Chart + breakdown children surface their derived props (recharts won't lay
 // out in jsdom, so the page's binning/tally logic is asserted via props).
 vi.mock('../components/SoftwareUpdateCadenceChart', () => ({
@@ -145,6 +127,7 @@ vi.mock('@/components/ai/AISoftwareUpdateChangelogSummarizer', () => ({
 
 import { request } from '@/api/client';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import SoftwareUpdatesPage from './SoftwareUpdatesPage';
 
 const mockRequest = vi.mocked(request);
@@ -208,6 +191,15 @@ function LocationProbe() {
   return <div data-testid="loc-search">{loc.search}</div>;
 }
 
+function HeaderRangeChange() {
+  const { setRange } = useRangeState();
+  return (
+    <button onClick={() => setRange({ start: '2025-02-01', end: '2025-02-28' })}>
+      Change header range
+    </button>
+  );
+}
+
 function renderPage(initialEntries: string[] = ['/software-updates']) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -216,6 +208,7 @@ function renderPage(initialEntries: string[] = ['/software-updates']) {
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={initialEntries}>
         <SoftwareUpdatesPage />
+        <HeaderRangeChange />
         <LocationProbe />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -258,7 +251,7 @@ beforeEach(() => {
 });
 
 describe('SoftwareUpdatesPage — structure, wiring & a11y', () => {
-  it('renders the title/subtitle, vehicle picker, refresh control and requests snake_case-safe params', async () => {
+  it('renders the title/subtitle and refresh control and requests snake_case-safe params', async () => {
     renderPage();
     await screen.findByTestId('cadence-chart');
 
@@ -270,8 +263,7 @@ describe('SoftwareUpdatesPage — structure, wiring & a11y', () => {
     ).toBeInTheDocument();
     expect(document.title).toContain('Software Updates');
 
-    // VehicleSelect renders a labelled combobox for a ≥1-vehicle fleet.
-    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
     // Icon-only refresh control has a real accessible name.
     expect(refreshButton()).toBeInstanceOf(HTMLButtonElement);
 
@@ -427,7 +419,7 @@ describe('SoftwareUpdatesPage — range change resets pagination atomically (reg
     // Precondition: we start on page 3 with a stale range.
     expect(screen.getByTestId('loc-search').textContent).toContain('page=3');
 
-    fireEvent.click(screen.getByTestId('mock-range'));
+    fireEvent.click(screen.getByRole('button', { name: 'Change header range' }));
 
     // The committed range survives (the old setRange()+setPage() race would
     // have reverted it) and the page param is cleared.

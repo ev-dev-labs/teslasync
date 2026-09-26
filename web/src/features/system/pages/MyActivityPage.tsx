@@ -20,7 +20,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { DataStateNotice, ErrorDisplay } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RangePicker } from '@/components/forms';
+
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -41,7 +41,7 @@ export default function MyActivityPage() {
   const { t } = useTranslation();
   usePageTitle(t('activity.myActivity.title', 'My Activity'));
 
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'my-activity.range',
     fromKey: 'start',
     toKey: 'end',
@@ -72,14 +72,6 @@ export default function MyActivityPage() {
   const sectionIsError = isError && !hardGate;
   const isEmpty = !isLoading && !sectionIsError && entries.length === 0;
 
-  const actions = (
-    <RangePicker
-      value={{ start, end }}
-      onChange={setRange}
-      align="end"
-      triggerTestId="my-activity-range"
-    />
-  );
 
   return (
     <PageContainer
@@ -88,7 +80,6 @@ export default function MyActivityPage() {
         'activity.myActivity.subtitle',
         'Recent actions you have taken in TeslaSync.',
       )}
-      actions={actions}
       query={query}
     >
       {hardGate ? (

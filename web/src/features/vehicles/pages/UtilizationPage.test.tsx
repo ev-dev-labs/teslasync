@@ -280,14 +280,7 @@ describe('UtilizationPage', () => {
       end: '2026-07-31',
       limit: 1000,
     });
-    expect(screen.getByTestId('utilization-range')).toHaveAttribute(
-      'data-start',
-      '2026-07-01',
-    );
-    expect(screen.getByTestId('utilization-range')).toHaveAttribute(
-      'data-end',
-      '2026-07-31',
-    );
+    expect(screen.queryByTestId('utilization-range')).not.toBeInTheDocument();
     expect(pageTitleMock).toHaveBeenCalledWith('Utilization');
 
     const retryCallbacks = sectionStateMock.mock.calls.map(

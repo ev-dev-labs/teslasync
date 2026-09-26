@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -38,7 +38,7 @@ export default function UtilizationPage() {
     vehicleId != null ? String(vehicleId) : undefined;
   const { costPerKwh } = useFormatting();
   const [asOfMs] = useState(() => Date.now());
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'utilization.range',
     defaultPresetId: 'all',
   });
@@ -95,17 +95,6 @@ export default function UtilizationPage() {
         'How intensively the car is actually used',
       )}
       query={drivesQuery}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="utilization-range"
-          />
-        </div>
-      }
     >
       <FadeIn>
         <UtilizationKpis summary={summary} {...sectionState} />

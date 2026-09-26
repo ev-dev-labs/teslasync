@@ -33,7 +33,7 @@ import {
 } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 import { AIPredictiveMaintenance } from '@/components/ai/AIPredictiveMaintenance';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -557,7 +557,6 @@ export default function MaintenancePage() {
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      <VehicleSelect />
       <Button
         variant="primary"
         size="sm"

@@ -10,7 +10,7 @@ import {
   useWarrantyOverview,
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
@@ -515,7 +515,6 @@ export default function WarrantyCommandPage() {
       )}
       loading={overviewQuery.isLoading}
       error={overviewQuery.error as Error | null}
-      actions={<VehicleSelect withIcon />}
     >
       <AlertBanner
         variant="warning"

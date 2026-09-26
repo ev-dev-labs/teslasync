@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -81,7 +81,6 @@ export default function DestinationTransitionsPage() {
         'destinationTransitions.subtitle',
         'Continuity-safe historical destination flows, support, temporal profiles, and complete returned-row accounting',
       )}
-      actions={<VehicleSelect />}
     >
       <FadeIn>
         <DestinationTransitionsKpiBand

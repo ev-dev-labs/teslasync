@@ -41,7 +41,7 @@ import {
   type OperationalAttention,
   type OperationalTone,
 } from '@/components/data-display';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 
 import { useEnergyStats, useVampireDrainStats } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
@@ -262,7 +262,7 @@ export default function EnergyPage() {
   const { vehicleId } = useSelectedVehicle();
 
   /* ── Date range ───────────────────────────────────────────────── */
-  const { start: startDate, end: endDate, setRange } = useRangeState({
+  const { start: startDate, end: endDate } = useRangeState({
     persistKey: 'energy.range',
   });
   const periodDays = inclusiveDayCount(startDate, endDate);
@@ -931,17 +931,6 @@ export default function EnergyPage() {
     <PageContainer
       title={t('energy.pageTitle', 'Energy Intelligence')}
       subtitle={t('energy.pageSubtitle', 'Deep cost analytics, efficiency trends, savings projections, and consumption patterns')}
-      contextActions={
-        <>
-          <VehicleSelect />
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="energy-range"
-          />
-        </>
-      }
       overflowActions={
         <SavedViewMenu
           route="/energy"
