@@ -580,6 +580,9 @@ export interface AppSettings {
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */
 export interface PollingConfig {
+  auto_polling_enabled?: boolean
+  fleet_endpoints?: Record<string, boolean>
+  auto_endpoints?: Record<string, boolean>
   // Polling endpoints (automatic)
   vehicle_discovery: boolean
   charge_state: boolean

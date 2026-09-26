@@ -1171,7 +1171,7 @@ func (a *App) initWorker(ctx context.Context) {
 		log.Info().
 			Dur("fallback_poll_interval", a.Cfg.FleetTelemetry.FallbackPollInterval).
 			Dur("stale_timeout", a.Cfg.FleetTelemetry.StaleTimeout).
-			Msg("fleet telemetry primary mode — worker will only poll non-streaming vehicles as fallback")
+			Msg("fleet telemetry primary mode — when automatic polling is enabled, non-streaming vehicles use fallback polling")
 	}
 
 	log.Info().
@@ -1182,7 +1182,7 @@ func (a *App) initWorker(ctx context.Context) {
 	resilience.SafeGoLoop(ctx, "vehicle-poller", func(loopCtx context.Context) {
 		a.Worker.Start(loopCtx)
 	})
-	log.Info().Msg("vehicle poller started (resilient mode)")
+	log.Info().Msg("Fleet API worker started; automatic polling requires explicit enablement, token refresh continues")
 	a.Health.RecordSuccess("worker")
 }
 

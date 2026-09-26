@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 )
@@ -272,7 +273,27 @@ func (h *SettingsHandler) GetPollingConfig(w http.ResponseWriter, r *http.Reques
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to read endpoint controls")
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, pc)
+	httpx.WriteJSON(w, http.StatusOK, endpointControlsView(pc))
+}
+
+type endpointControlsResponse struct {
+	settingsmodel.LegacyPollingConfig
+	EndpointCatalog []tesla.FleetEndpoint `json:"endpoint_catalog"`
+}
+
+func endpointControlsView(pc settingsmodel.LegacyPollingConfig) endpointControlsResponse {
+	catalog := tesla.FleetEndpointCatalog()
+	enabled := make(map[string]bool, len(catalog))
+	auto := make(map[string]bool)
+	for _, endpoint := range catalog {
+		enabled[endpoint.Key] = pc.EndpointEnabled(endpoint.Key)
+		if endpoint.Pollable {
+			auto[endpoint.Key] = enabled[endpoint.Key] && pc.AutoPreference(endpoint.Key)
+		}
+	}
+	pc.FleetEndpoints = enabled
+	pc.AutoEndpoints = auto
+	return endpointControlsResponse{LegacyPollingConfig: pc, EndpointCatalog: catalog}
 }
 
 // UpdatePollingConfig accepts a polling configuration update.
@@ -280,7 +301,7 @@ func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Req
 	ctx, span := otel.Tracer("api").Start(r.Context(), "api.settings.update_endpoint_controls")
 	defer span.End()
 	var pc settingsmodel.LegacyPollingConfig
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192))
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16384))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&pc); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -291,13 +312,33 @@ func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Req
 		return
 	}
 	pc.TelemetryCaptureRetentionDays = 7
+	valid := make(map[string]tesla.FleetEndpoint)
+	for _, endpoint := range tesla.FleetEndpointCatalog() {
+		valid[endpoint.Key] = endpoint
+	}
+	for key := range pc.FleetEndpoints {
+		if _, ok := valid[key]; !ok {
+			httpx.WriteError(w, http.StatusBadRequest, "unknown Fleet API endpoint key")
+			return
+		}
+	}
+	for key, enabled := range pc.AutoEndpoints {
+		if endpoint, ok := valid[key]; !ok || !endpoint.Pollable {
+			httpx.WriteError(w, http.StatusBadRequest, "endpoint is not eligible for automatic polling")
+			return
+		}
+		if enabled && !pc.EndpointEnabled(key) {
+			httpx.WriteError(w, http.StatusBadRequest, "disabled endpoint cannot participate in automatic polling")
+			return
+		}
+	}
 	if err := h.endpointControls.UpsertEndpointControls(ctx, pc); err != nil {
 		span.RecordError(err)
 		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to persist endpoint controls")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to persist endpoint controls")
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, pc)
+	httpx.WriteJSON(w, http.StatusOK, endpointControlsView(pc))
 }
 
 // dashboardLayoutsResponse is the JSON envelope for dashboard layout persistence.
