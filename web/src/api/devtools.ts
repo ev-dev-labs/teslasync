@@ -109,6 +109,7 @@ export const getAPICallLogs = (params: {
   service?: string
   start?: string
   end?: string
+  endExclusive?: string
 } = {}) => {
   const query = new URLSearchParams()
   if (params.limit) query.set('limit', String(params.limit))
@@ -119,10 +120,12 @@ export const getAPICallLogs = (params: {
   if (params.service) query.set('service', params.service)
   if (params.start) query.set('start', params.start)
   if (params.end) query.set('end', params.end)
+  if (params.endExclusive) query.set('end_exclusive', params.endExclusive)
   return request<APICallLogResponse>(`/api-logs?${query.toString()}`)
 }
 
-export const getAPICallLogStats = () => request<APICallLogStats>('/api-logs/stats')
+export const getAPICallLogStats = (start: string, endExclusive: string) =>
+  request<APICallLogStats>(`/api-logs/stats?${new URLSearchParams({ start, end_exclusive: endExclusive })}`)
 
 // === System / Admin ===
 export const getAPIUsage = () => request<APIUsage>('/system/api-usage')

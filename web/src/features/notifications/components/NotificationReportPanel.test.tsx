@@ -29,8 +29,11 @@ const useReport = vi.mocked(useNotificationReport);
 const report: NotificationReport = {
   from: '2026-01-01',
   to: '2026-01-30',
+  from_instant: '2026-01-01T08:00:00Z',
+  to_exclusive: '2026-01-31T08:00:00Z',
   triggered: 3,
   deliveries: 5,
+  outbound_http_calls: 11,
   uncorrelated_deliveries: 0,
   by_source: [{ key: 'system', count: 2 }, { key: 'alert', count: 1 }],
   by_type: [{ key: 'system.mqtt.outage', count: 2 }, { key: 'alert.triggered', count: 1 }],
@@ -41,7 +44,7 @@ const report: NotificationReport = {
 };
 
 function renderPanel() {
-  return render(<MemoryRouter><NotificationReportPanel from="2026-01-01" to="2026-01-30" /></MemoryRouter>);
+  return render(<MemoryRouter><NotificationReportPanel fromInstant="2026-01-01T08:00:00Z" toExclusive="2026-01-31T08:00:00Z" /></MemoryRouter>);
 }
 
 beforeEach(() => {
@@ -51,17 +54,20 @@ beforeEach(() => {
 describe('NotificationReportPanel', () => {
   it('separates triggered events from multi-channel deliveries and shows each breakdown', () => {
     renderPanel();
-    expect(useReport).toHaveBeenCalledWith('2026-01-01', '2026-01-30');
+    expect(useReport).toHaveBeenCalledWith('2026-01-01T08:00:00Z', '2026-01-31T08:00:00Z');
     expect(screen.queryByText('Choose date range')).not.toBeInTheDocument();
     expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
     expect(screen.getByText('Channel deliveries')).toBeInTheDocument();
+    expect(screen.getByText('Outbound HTTP calls').closest('[data-role="metric-card"]')).toHaveTextContent('11');
+    expect(screen.getByText(/Outbound HTTP calls include retries and failures/)).toBeInTheDocument();
+    expect(screen.getByText(/Compare with Notifications under API Logs’ By Service/)).toBeInTheDocument();
     expect(screen.getByText('1.7')).toBeInTheDocument();
     expect(screen.getByText('Deliveries without a linked trigger')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByText('Alert')).toBeInTheDocument();
     expect(screen.getByText('System Mqtt Outage')).toBeInTheDocument();
     expect(screen.getByText('Delivery outcomes')).toBeInTheDocument();
-    expect(screen.getByText('Daily activity')).toBeInTheDocument();
+    expect(screen.getByText('Daily activity (UTC)')).toBeInTheDocument();
   });
 
   it('excludes unattributed historical deliveries from the fan-out ratio', () => {

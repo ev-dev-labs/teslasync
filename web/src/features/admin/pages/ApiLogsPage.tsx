@@ -124,8 +124,8 @@ export default function ApiLogsPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 25;
 
-  // The header owns the `from`/`to` window; absence of bounds = full history.
-  const { start, end } = useRangeState({
+  // The header owns the `from`/`to` window for both KPIs and request rows.
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'api-logs.range',
     defaultPresetId: 'all',
   });
@@ -137,13 +137,13 @@ export default function ApiLogsPage() {
   // resets `page` AND writes its own key, so all of them MUST go through
   // useUrlBatch. See useUrlState.ts §useUrlBatch JSDoc.
   const setUrl = useUrlBatch();
-  const previousRange = useRef(`${start}:${end}`);
+  const previousRange = useRef(`${startInstant}:${endInstantExclusive}`);
   useEffect(() => {
-    const currentRange = `${start}:${end}`;
+    const currentRange = `${startInstant}:${endInstantExclusive}`;
     if (previousRange.current === currentRange) return;
     previousRange.current = currentRange;
     if (page !== 0) setUrl({ page: null });
-  }, [start, end, page, setUrl]);
+  }, [startInstant, endInstantExclusive, page, setUrl]);
 
   type FilterKey = 'method' | 'status' | 'endpoint' | 'service';
   const setFilter = useCallback(
@@ -159,13 +159,13 @@ export default function ApiLogsPage() {
     error: statsError,
     refetch: refetchStats,
   } = useQuery<APICallLogStats>({
-    queryKey: ['api-log-stats'],
-    queryFn: getAPICallLogStats,
+    queryKey: ['api-log-stats', startInstant, endInstantExclusive],
+    queryFn: () => getAPICallLogStats(startInstant, endInstantExclusive),
     refetchInterval: 30_000,
   });
 
   const logsQuery = useQuery({
-    queryKey: ['api-logs', page, method, status, endpoint, service, start, end],
+    queryKey: ['api-logs', page, method, status, endpoint, service, startInstant, endInstantExclusive],
     queryFn: () => getAPICallLogs({
       limit,
       offset: page * limit,
@@ -173,11 +173,8 @@ export default function ApiLogsPage() {
       status: status || undefined,
       endpoint: endpoint || undefined,
       service: service || undefined,
-      // The workspace range uses `YYYY-MM-DD`; backend stores ts as UTC timestamptz.
-      // Send local-day boundaries so the comparison window matches the user's
-      // picked dates (start of day .. end of day in their local zone).
-      start: start ? new Date(`${start}T00:00:00`).toISOString() : undefined,
-      end: end ? new Date(`${end}T23:59:59.999`).toISOString() : undefined,
+      start: startInstant,
+      endExclusive: endInstantExclusive,
     }),
     refetchInterval: 10_000,
   });
@@ -324,7 +321,7 @@ export default function ApiLogsPage() {
 
       <FadeIn delay={0.05}>
         <Caption className="block">
-          {t('apiLogs.statsScope', 'API call totals are all-time across services; the date and filters below apply only to the request list.')}
+          {t('apiLogs.statsScope', 'API call totals and service counts use the View settings range. Service, method, status, and endpoint filters apply only to the request list.')}
         </Caption>
         <section
           aria-label={t('apiLogs.errorDiagnostics', 'Error diagnostics')}
@@ -398,8 +395,7 @@ export default function ApiLogsPage() {
               ) : statsError ? (
                 <QueryError error={statsError} onRetry={() => refetchStats()} />
               ) : serviceRows.length === 0 ? (
-                // no-action: getAPICallLogStats() is a global all-time
-                // aggregate ignoring filters here; self-resolves once traffic occurs (30s poll).
+                // no-action: the header's View settings controls this window; no service rows exist yet.
                 <EmptyState
                   icon={<Layers className="h-8 w-8" aria-hidden="true" />}
                   message={t('apiLogs.noServices', 'No service activity yet')}

@@ -103,8 +103,8 @@ vi.mock('../components/InboxBody', () => ({
   ),
 }));
 vi.mock('../components/NotificationReportPanel', () => ({
-  NotificationReportPanel: ({ from, to }: { from: string; to: string }) => (
-    <div data-testid="notification-report">{`Notification activity ${from} ${to}`}</div>
+  NotificationReportPanel: ({ fromInstant, toExclusive }: { fromInstant: string; toExclusive: string }) => (
+    <div data-testid="notification-report">{`Notification activity ${fromInstant} ${toExclusive}`}</div>
   ),
 }));
 
@@ -211,7 +211,7 @@ describe('InboxPage — page shell & composition', () => {
   it('passes the top date filter to notification activity', () => {
     renderPage('/notifications/inbox?from=2026-01-01&to=2026-01-30');
     expect(screen.getByTestId('notification-report')).toHaveTextContent(
-      'Notification activity 2026-01-01 2026-01-30',
+      `Notification activity ${new Date('2026-01-01T00:00:00').toISOString()} ${new Date('2026-01-31T00:00:00').toISOString()}`,
     );
   });
 });
@@ -229,6 +229,7 @@ describe('InboxPage — summary KPI derivation (happy path)', () => {
     renderPage();
     const summary = summaryScope();
     expect(summary.getByText('5')).toBeInTheDocument(); // total rows
+    expect(summary.getByText('Latest 50 active entries · all time')).toBeInTheDocument();
     expect(summary.getByText('3')).toBeInTheDocument(); // unread (rows w/o read_at)
     expect(summary.getByText('3 of 5')).toBeInTheDocument(); // unread subtitle
     expect(summary.getByText('1')).toBeInTheDocument(); // warnings

@@ -1099,8 +1099,11 @@ export interface NotificationLog {
 export interface NotificationReport {
   from: string
   to: string
+  from_instant: string
+  to_exclusive: string
   triggered: number
   deliveries: number
+  outbound_http_calls: number
   uncorrelated_deliveries: number
   by_source: { key: string; count: number }[]
   by_type: { key: string; count: number }[]

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import { useRangeState, SHARED_RANGE_STORAGE_KEY } from '@/hooks/useRangeState';
 
 const { useHistoryMock, selectedVehicleMock, pageTitleMock } = vi.hoisted(() => ({
   useHistoryMock: vi.fn(),
@@ -28,26 +29,23 @@ vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: (title: string) => pageTitleMock(title),
 }));
 
-vi.mock('@/components/forms', () => ({
-  VehicleSelect: () => <div data-testid="vehicle-select" />,
-}));
-
 vi.mock('@/components/layout', () => ({
   PageContainer: ({
     title,
     subtitle,
     actions,
+    query,
     children,
   }: {
     title: string;
-    subtitle: string;
-    actions: ReactNode;
+    subtitle?: string;
+    actions?: ReactNode;
+    query?: unknown;
     children: ReactNode;
   }) => (
-    <main>
+    <main data-has-local-actions={Boolean(actions)} data-has-freshness-chip={Boolean(query)}>
       <h1>{title}</h1>
       <p>{subtitle}</p>
-      {actions}
       {children}
     </main>
   ),
@@ -116,15 +114,26 @@ function LocationProbe() {
   return <span data-testid="location">{location.search}</span>;
 }
 
+function HeaderRangeProbe() {
+  const { setRange } = useRangeState();
+  return (
+    <button type="button" onClick={() => setRange({ start: '2025-01-01', end: '2025-12-31' })}>
+      Set header range
+    </button>
+  );
+}
+
 function renderCalendar(path = '/drive-calendar') {
   return render(<MemoryRouter initialEntries={[path]}>
     <DriveCalendarPage />
     <LocationProbe />
+    <HeaderRangeProbe />
   </MemoryRouter>);
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.localStorage.removeItem(SHARED_RANGE_STORAGE_KEY);
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
   useHistoryMock.mockReturnValue(query());
 });
@@ -134,12 +143,15 @@ describe('DriveCalendarPage', () => {
     renderCalendar();
 
     expect(screen.getByRole('heading', { name: 'Drive Calendar' })).toBeInTheDocument();
-    expect(screen.getByText('A year of driving at a glance, with streaks')).toBeInTheDocument();
+    expect(screen.getByText('Driving activity and streaks in the selected period')).toBeInTheDocument();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(useHistoryMock).toHaveBeenCalledWith('42', expect.any(String), expect.any(String));
-    expect(screen.getByRole('button', { name: 'Last 52 weeks' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Last 52 weeks' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton', { name: 'Jump to year' })).not.toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveAttribute('data-has-local-actions', 'false');
+    expect(screen.getByRole('main')).toHaveAttribute('data-has-freshness-chip', 'false');
   });
 
   it.each([
@@ -162,30 +174,30 @@ describe('DriveCalendarPage', () => {
     expect(screen.queryByTestId('calendar-heatmap')).not.toBeInTheDocument();
   });
 
-  it('loads a selected previous year, preserves other URL parameters, and steps between years', () => {
+  it('translates a bookmarked year into shared range URLs and preserves the vehicle parameter', () => {
     renderCalendar('/drive-calendar?year=2024&vehicle_id=42');
-    expect(screen.getByTestId('calendar-heatmap')).toHaveAttribute('data-year', '2024');
+    expect(screen.getByTestId('location')).toHaveTextContent('from=2024-01-01');
+    expect(screen.getByTestId('location')).toHaveTextContent('to=2024-12-31');
+    expect(screen.getByTestId('location')).not.toHaveTextContent('year=');
     const [, start, end] = useHistoryMock.mock.lastCall!;
     expect(new Date(start)).toEqual(new Date(2024, 0, 1));
     expect(new Date(end)).toEqual(new Date(2025, 0, 1));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Next year' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('year=2025');
+    fireEvent.click(screen.getByRole('button', { name: 'Set header range' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('from=2025-01-01');
+    expect(screen.getByTestId('location')).toHaveTextContent('to=2025-12-31');
     expect(screen.getByTestId('location')).toHaveTextContent('vehicle_id=42');
-    expect(screen.getByTestId('calendar-heatmap')).toHaveAttribute('data-year', '2025');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Last 52 weeks' }));
-    expect(screen.getByTestId('location')).not.toHaveTextContent('year=');
-    expect(screen.getByTestId('location')).toHaveTextContent('vehicle_id=42');
+    const [, nextStart, nextEnd] = useHistoryMock.mock.lastCall!;
+    expect(new Date(nextStart)).toEqual(new Date(2025, 0, 1));
+    expect(new Date(nextEnd)).toEqual(new Date(2026, 0, 1));
   });
 
-  it('jumps straight to an older year without scrolling through a year list', () => {
-    renderCalendar();
-    const yearInput = screen.getByRole('spinbutton', { name: 'Jump to year' });
-    fireEvent.change(yearInput, { target: { value: '2014' } });
-    fireEvent.blur(yearInput);
-    expect(screen.getByTestId('location')).toHaveTextContent('year=2014');
-    expect(screen.getByTestId('calendar-heatmap')).toHaveAttribute('data-year', '2014');
+  it('uses the precise rolling bounds for the shared last-24-hours preset', () => {
+    renderCalendar('/drive-calendar?time_scope=24h');
+    const [, start, end] = useHistoryMock.mock.lastCall!;
+    expect(Date.now() - new Date(start).getTime()).toBeGreaterThanOrEqual(86_390_000);
+    expect(Date.now() - new Date(start).getTime()).toBeLessThan(86_410_000);
+    expect(Math.abs(Date.now() - new Date(end).getTime())).toBeLessThan(10_000);
   });
 
   it('shows totals from every loaded drive in a year with more than 1,000 sessions', () => {
@@ -196,17 +208,22 @@ describe('DriveCalendarPage', () => {
         distanceM: 1000,
       })),
     }));
-    renderCalendar('/drive-calendar?year=2024');
+    renderCalendar('/drive-calendar?from=2024-01-01&to=2024-12-31');
     expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-drives', '1001');
   });
 
-  it('rejects out-of-range years instead of requesting a misleading empty calendar', () => {
-    renderCalendar();
-    const yearInput = screen.getByRole('spinbutton', { name: 'Jump to year' });
-    fireEvent.change(yearInput, { target: { value: '1800' } });
-    fireEvent.blur(yearInput);
-    expect(yearInput).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose a year from 1900');
+  it('rejects invalid bookmarked years instead of requesting a misleading calendar', () => {
+    renderCalendar('/drive-calendar?year=1800');
+    expect(screen.getByText(/Choose a year from 1900/)).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('year=1800');
+    expect(useHistoryMock).not.toHaveBeenCalled();
+  });
+
+  it('prioritizes an explicit global range over a bookmarked year', () => {
+    renderCalendar('/drive-calendar?year=2024&from=2026-01-01&to=2026-01-31');
     expect(screen.getByTestId('location')).not.toHaveTextContent('year=');
+    const [, start, end] = useHistoryMock.mock.lastCall!;
+    expect(new Date(start)).toEqual(new Date(2026, 0, 1));
+    expect(new Date(end)).toEqual(new Date(2026, 1, 1));
   });
 });

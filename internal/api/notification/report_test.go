@@ -23,7 +23,8 @@ func (f *fakeReportStore) GetReport(_ context.Context, from, until time.Time) (*
 		return nil, f.err
 	}
 	return &dbnotif.Report{From: from.Format(time.DateOnly), To: until.AddDate(0, 0, -1).Format(time.DateOnly),
-		Triggered: 1, Deliveries: 2, UncorrelatedDeliveries: 0,
+		FromInstant: from.UTC().Format(time.RFC3339Nano), ToExclusive: until.UTC().Format(time.RFC3339Nano),
+		Triggered: 1, Deliveries: 2, OutboundHTTPCalls: 3, UncorrelatedDeliveries: 0,
 		BySource: []dbnotif.ReportKeyCount{}, ByType: []dbnotif.ReportKeyCount{},
 		BySeverity: []dbnotif.ReportKeyCount{}, ByChannel: []dbnotif.ReportKeyCount{},
 		ByStatus: []dbnotif.ReportKeyCount{}, Daily: []dbnotif.ReportDay{}}, nil
@@ -48,7 +49,7 @@ func TestGetReportRange(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}
-	if result.Triggered != 1 || result.Deliveries != 2 {
+	if result.Triggered != 1 || result.Deliveries != 2 || result.OutboundHTTPCalls != 3 {
 		t.Fatalf("report = %+v", result)
 	}
 }
@@ -71,6 +72,22 @@ func TestGetReportDefaultThirtyDays(t *testing.T) {
 	}
 }
 
+func TestGetReportPreservesHeaderInstantBounds(t *testing.T) {
+	store := &fakeReportStore{}
+	rec := httptest.NewRecorder()
+	(&Handler{report: store}).GetReport(rec, httptest.NewRequest(http.MethodGet,
+		"/api/v1/notifications/report?from_instant=2026-09-19T00%3A00%3A00-07%3A00&to_exclusive=2026-09-26T00%3A00%3A00-07%3A00", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := store.from.UTC().Format(time.RFC3339); got != "2026-09-19T07:00:00Z" {
+		t.Fatalf("start = %s", got)
+	}
+	if got := store.until.UTC().Format(time.RFC3339); got != "2026-09-26T07:00:00Z" {
+		t.Fatalf("exclusive end = %s", got)
+	}
+}
+
 func TestGetReportAllTimeRange(t *testing.T) {
 	store := &fakeReportStore{}
 	rec := httptest.NewRecorder()
@@ -85,6 +102,9 @@ func TestGetReportRejectsInvalidRanges(t *testing.T) {
 	for _, query := range []string{
 		"?from=2026-02-30", "?to=2020-01-01&from=2020-01-02",
 		"?from=1900-01-01&to=2025-01-01", "?from=2026-01-01T00:00:00Z",
+		"?from_instant=2026-09-19T00:00:00Z", "?to_exclusive=2026-09-26T00:00:00Z",
+		"?from=2026-09-19&from_instant=2026-09-19T00:00:00Z&to_exclusive=2026-09-26T00:00:00Z",
+		"?from_instant=2026-09-26T00:00:00Z&to_exclusive=2026-09-19T00:00:00Z",
 	} {
 		store := &fakeReportStore{}
 		rec := httptest.NewRecorder()

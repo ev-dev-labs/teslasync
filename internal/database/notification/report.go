@@ -24,8 +24,11 @@ type ReportDay struct {
 type Report struct {
 	From                   string           `json:"from"`
 	To                     string           `json:"to"`
+	FromInstant            string           `json:"from_instant"`
+	ToExclusive            string           `json:"to_exclusive"`
 	Triggered              int64            `json:"triggered"`
 	Deliveries             int64            `json:"deliveries"`
+	OutboundHTTPCalls      int64            `json:"outbound_http_calls"`
 	UncorrelatedDeliveries int64            `json:"uncorrelated_deliveries"`
 	BySource               []ReportKeyCount `json:"by_source"`
 	ByType                 []ReportKeyCount `json:"by_type"`
@@ -66,6 +69,8 @@ WITH deliveries AS (
 ), aggregates AS (
   SELECT 'triggered' AS dimension, '' AS key, '' AS day, COUNT(*)::bigint AS n FROM classified
   UNION ALL SELECT 'deliveries', '', '', COUNT(*)::bigint FROM deliveries
+  UNION ALL SELECT 'outbound_http_calls', '', '', COUNT(*)::bigint FROM api_call_logs
+    WHERE service = 'notify-generic' AND ts >= $1 AND ts < $2
   UNION ALL SELECT 'uncorrelated', '', '', COUNT(*)::bigint FROM deliveries WHERE trigger_id IS NULL
   UNION ALL SELECT 'source', source, '', COUNT(*)::bigint FROM classified GROUP BY source
   UNION ALL SELECT 'type', event_type, '', COUNT(*)::bigint FROM classified GROUP BY event_type
@@ -93,7 +98,8 @@ func queryReport(ctx context.Context, db *database.DB, from, until time.Time) (*
 	}
 	defer rows.Close()
 	report := &Report{
-		From: from.UTC().Format(time.DateOnly), To: until.UTC().AddDate(0, 0, -1).Format(time.DateOnly),
+		From: from.UTC().Format(time.DateOnly), To: until.UTC().Add(-time.Nanosecond).Format(time.DateOnly),
+		FromInstant: from.UTC().Format(time.RFC3339Nano), ToExclusive: until.UTC().Format(time.RFC3339Nano),
 		BySource: []ReportKeyCount{}, ByType: []ReportKeyCount{}, BySeverity: []ReportKeyCount{},
 		ByChannel: []ReportKeyCount{}, ByStatus: []ReportKeyCount{}, Daily: []ReportDay{},
 	}
@@ -110,6 +116,8 @@ func queryReport(ctx context.Context, db *database.DB, from, until time.Time) (*
 			report.Triggered = count
 		case "deliveries":
 			report.Deliveries = count
+		case "outbound_http_calls":
+			report.OutboundHTTPCalls = count
 		case "uncorrelated":
 			report.UncorrelatedDeliveries = count
 		case "source":
@@ -136,7 +144,7 @@ func queryReport(ctx context.Context, db *database.DB, from, until time.Time) (*
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate notification report: %w", err)
 	}
-	for date := from.UTC(); date.Before(until.UTC()); date = date.AddDate(0, 0, 1) {
+	for date := from.UTC().Truncate(24 * time.Hour); date.Before(until.UTC()); date = date.AddDate(0, 0, 1) {
 		key := date.Format(time.DateOnly)
 		if days[key] == nil {
 			days[key] = &ReportDay{Day: key}

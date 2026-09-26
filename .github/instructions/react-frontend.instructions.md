@@ -73,9 +73,12 @@ Before creating a new hook, check if one already exists in the relevant file.
   managed controls, but remove redundant page JSX rather than relying on
   hidden widgets. Avoid `scope="local"` for a workspace selection.
 - Keep truly independent form dates, chart zoom, and calendar-year
-  navigation; retain local vehicle selection where the route deliberately
-  disables the global picker and the page still needs one. Confirm desktop
-  header and mobile drawer both expose any replacement control.
+  navigation only when it does not duplicate the header's analysis window.
+  Drive Calendar uses the shared range for both its query and its heatmap;
+  a year is selected through the header's custom range, not a second picker.
+  Retain local vehicle selection where the route deliberately disables the
+  global picker and the page still needs one. Confirm desktop header and
+  mobile drawer both expose any replacement control.
 
 ## Shared Component Library
 

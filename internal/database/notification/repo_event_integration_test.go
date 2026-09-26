@@ -47,12 +47,60 @@ func eventFixture(t *testing.T) (*NotificationRepo, context.Context) {
 				OR (status <> 'triggered' AND channel_id IS NOT NULL)))`,
 		`CREATE UNIQUE INDEX notification_test_trigger_event ON notification_logs (trigger_id) WHERE status = 'triggered'`,
 		`CREATE TEMP TABLE notification_log_events (notification_log_id bigint, actor text, kind text, note text)`,
+		`CREATE TEMP TABLE api_call_logs (ts timestamptz NOT NULL, service text NOT NULL, status_code integer NOT NULL)`,
 	} {
 		if _, err := pool.Exec(ctx, statement); err != nil {
 			t.Fatalf("create isolated notification fixture: %v", err)
 		}
 	}
 	return NewNotificationRepo(&database.DB{Pool: pool}), ctx
+}
+
+func TestReportOutboundHTTPCallsRespectServiceAndHalfOpenUTCWindow(t *testing.T) {
+	repo, ctx := eventFixture(t)
+	from := time.Date(2026, 9, 19, 0, 0, 0, 0, time.UTC)
+	until := from.AddDate(0, 0, 7)
+	for _, row := range []struct {
+		ts      time.Time
+		service string
+		status  int
+	}{
+		{from.Add(-time.Nanosecond), "notify-generic", 200},
+		{from, "notify-generic", 200},
+		{from.Add(time.Hour), "notify-generic", 429},
+		{until.Add(-time.Nanosecond), "notify-generic", 503},
+		{until, "notify-generic", 200},
+		{from, "teslasync-api", 200},
+	} {
+		if _, err := repo.db.Pool.Exec(ctx,
+			`INSERT INTO api_call_logs (ts, service, status_code) VALUES ($1, $2, $3)`,
+			row.ts, row.service, row.status); err != nil {
+			t.Fatal(err)
+		}
+	}
+	report, err := repo.GetReport(ctx, from, until)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.OutboundHTTPCalls != 3 || report.Deliveries != 0 || report.Triggered != 0 {
+		t.Fatalf("report=%+v, want 3 outbound requests (including errors), no deliveries or triggers", report)
+	}
+}
+
+func TestReportLocalRangeIncludesEveryTouchedUTCDay(t *testing.T) {
+	repo, ctx := eventFixture(t)
+	from := time.Date(2026, 9, 19, 7, 0, 0, 0, time.UTC)
+	until := time.Date(2026, 9, 26, 7, 0, 0, 0, time.UTC)
+	report, err := repo.GetReport(ctx, from, until)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Daily) != 8 || report.Daily[0].Day != "2026-09-19" ||
+		report.Daily[7].Day != "2026-09-26" ||
+		report.FromInstant != "2026-09-19T07:00:00Z" ||
+		report.ToExclusive != "2026-09-26T07:00:00Z" {
+		t.Fatalf("local-day window represented incorrectly: %+v", report)
+	}
 }
 
 func TestEventInboxReportTwoChannelFanout(t *testing.T) {

@@ -1,12 +1,14 @@
 package notification
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
@@ -21,6 +23,20 @@ func (h *Handler) GetReport(w http.ResponseWriter, r *http.Request) {
 	from := today.AddDate(0, 0, -29)
 	to := today
 	q := r.URL.Query()
+	if q.Has("from_instant") || q.Has("to_exclusive") {
+		if !q.Has("from_instant") || !q.Has("to_exclusive") || q.Has("from") || q.Has("to") {
+			httpx.WriteError(w, http.StatusBadRequest, "from_instant and to_exclusive must be provided together without from/to")
+			return
+		}
+		start, startErr := time.Parse(time.RFC3339Nano, q.Get("from_instant"))
+		end, endErr := time.Parse(time.RFC3339Nano, q.Get("to_exclusive"))
+		if startErr != nil || endErr != nil || !start.Before(end) || end.Sub(start).Hours() >= 24*18263 {
+			httpx.WriteError(w, http.StatusBadRequest, "invalid instant range")
+			return
+		}
+		h.writeReport(w, ctx, span, start, end)
+		return
+	}
 	if value := q.Get("from"); value != "" {
 		date, err := time.Parse(time.DateOnly, value)
 		if err != nil || date.Format(time.DateOnly) != value {
@@ -41,7 +57,11 @@ func (h *Handler) GetReport(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "date range must be ordered and at most 50 years")
 		return
 	}
-	result, err := h.report.GetReport(ctx, from, to.AddDate(0, 0, 1))
+	h.writeReport(w, ctx, span, from, to.AddDate(0, 0, 1))
+}
+
+func (h *Handler) writeReport(w http.ResponseWriter, ctx context.Context, span trace.Span, from, until time.Time) {
+	result, err := h.report.GetReport(ctx, from, until)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "notification report failed")
