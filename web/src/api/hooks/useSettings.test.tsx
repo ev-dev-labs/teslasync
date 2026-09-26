@@ -149,6 +149,13 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
 
 function makePollingConfig(overrides: Partial<PollingConfig> = {}): PollingConfig {
   return {
+    auto_polling_enabled: false,
+    fleet_endpoints: { 'vehicles.list': true, 'vehicle_data.charge_state': true },
+    auto_endpoints: { 'vehicles.list': true, 'vehicle_data.charge_state': true },
+    endpoint_catalog: [
+      { key: 'vehicles.list', method: 'GET', path: '/api/1/vehicles', category: 'Vehicle data', pollable: true },
+      { key: 'vehicle_data.charge_state', method: 'GET', path: '/api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state', category: 'Vehicle data', pollable: true },
+    ],
     vehicle_discovery: true,
     charge_state: true,
     climate_state: false,
@@ -831,7 +838,9 @@ describe('useUpdatePollingConfig', () => {
     expect(callAt(0)[0]).toBe('/settings/polling-config');
     expect(callAt(0)[1].method).toBe('PUT');
     expect(callAt(0)[1].requiresLiveMode).toBe(true);
-    expect(bodyAt(0)).toEqual(pc);
+    const { endpoint_catalog, ...payload } = pc;
+    expect(endpoint_catalog).toHaveLength(2);
+    expect(bodyAt(0)).toEqual(payload);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['polling-config'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['capture-stats'] });
     expect(successToast).toHaveBeenCalledWith(
@@ -853,7 +862,9 @@ describe('useUpdatePollingConfig', () => {
       telemetryCaptureRetentionDays: 7,
     });
 
-    expect(bodyAt(0)).toEqual(pc);
+    const { endpoint_catalog, ...payload } = pc;
+    expect(endpoint_catalog).toHaveLength(2);
+    expect(bodyAt(0)).toEqual(payload);
   });
 
   it('toasts the error when the polling-config save fails', async () => {

@@ -1,19 +1,19 @@
 /**
- * FleetApiPage — Tesla Fleet API polling configuration and endpoint management.
+ * FleetAPIPage — outbound Tesla Fleet API access and polling participation.
  *
- * Suspend/resume polling, toggle individual endpoints, and view the runtime's
- * configured endpoints. Laid out as a
+ * Opt into automatic polling, independently allow each implemented Fleet API
+ * route, and view the runtime's configured endpoints. Laid out as a
  * full-width, mobile-first bento; every data section owns its own
  * loading / error / empty state and reads only from the settings hooks.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity, AlertTriangle, Globe, Link as LinkIcon, Pause, Play, Shield,
+  Activity, AlertTriangle, ArrowDown, ArrowUp, Globe, Link as LinkIcon, Pause, Play, Shield, Search,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, IconBox, Toggle, Badge, PanelTitle, Text, Caption, HelperText, Label, Code } from '@/components/ui';
+import { GlassPanel, IconBox, Toggle, Badge, PanelTitle, Text, Caption, HelperText, Label, Code, Input, Button, Select } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, InlineCallout } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -23,44 +23,63 @@ import {
   useSettings, useToggleAPISuspend, usePollingConfig,
   useUpdatePollingConfig, useVersionInfo,
 } from '@/api/hooks/useSettings';
+import type { FleetEndpoint } from '@/api/hooks/useSettings';
 
-// ─── EndpointToggle — single on/off row (≥44px touch target) ─────────────────
-
-function EndpointToggle({ label, desc, enabled, onToggle, disabled }: {
-  label: string; desc: string; enabled: boolean; onToggle: () => void; disabled: boolean;
+function EndpointToggle({ endpoint, enabled, auto, pollingEnabled, onEnable, onAuto, pending }: {
+  endpoint: FleetEndpoint;
+  enabled: boolean;
+  auto: boolean;
+  pollingEnabled: boolean;
+  onEnable: () => void;
+  onAuto: () => void;
+  pending: boolean;
 }) {
+  const { t } = useTranslation();
+  const name = `${endpoint.method} ${endpoint.path}`;
   return (
-    <GlassPanel className="flex min-h-11 items-center justify-between gap-3 p-3">
-      <div className="min-w-0">
-        <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">{label}</Text>
-        <Caption className="block truncate">{desc}</Caption>
+    <div className={`flex min-w-0 flex-col gap-2 border-b border-[var(--border-default)] px-3 py-2.5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between ${enabled ? 'bg-[var(--surface-2)]' : ''}`}>
+      <div className="grid min-w-0 flex-1 gap-1 md:grid-cols-[minmax(12rem,0.7fr)_minmax(0,1.3fr)] md:items-center md:gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Badge variant={endpoint.method === 'GET' ? 'info' : 'warning'} size="sm" className="shrink-0">{endpoint.method}</Badge>
+          <Text as="span" size="sm" weight="medium" color="primary" className="min-w-0">
+            {endpoint.key.replace(/\./g, ' › ').replace(/_/g, ' ')}
+          </Text>
+        </div>
+        <Code className="block min-w-0 break-all text-[var(--text-muted)]">{endpoint.path}</Code>
       </div>
-      <Toggle checked={enabled} onChange={() => onToggle()} disabled={disabled} size="sm" className="shrink-0" aria-label={label} />
-    </GlassPanel>
+      <div className="grid w-full shrink-0 grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-2 sm:w-[20rem] sm:grid-cols-[7.5rem_12rem]">
+        <div className="flex items-center justify-end gap-2">
+          <Caption className="sm:hidden">{t('fleetApi.controls.enabled', 'Access')}</Caption>
+          <Toggle checked={enabled} onChange={onEnable} disabled={pending} size="sm"
+            aria-label={`${t('fleetApi.controls.enable', 'Enable')} ${name}`} />
+        </div>
+        {endpoint.pollable ? (
+          <div className="flex items-center justify-end gap-2 border-l border-[var(--border-default)] pl-3">
+            <Caption className="sm:hidden">{t('fleetApi.controls.autoPoll', 'Auto-poll')}</Caption>
+            <Toggle checked={enabled && auto} onChange={onAuto} disabled={pending || !enabled || !pollingEnabled} size="sm"
+              aria-label={`${t('fleetApi.controls.poll', 'Auto-poll')} ${name}`} />
+          </div>
+        ) : (
+          <Caption className="border-l border-[var(--border-default)] pl-3 text-right"
+            title={t('fleetApi.controls.onDemandOnly', 'Not scheduled')}
+            aria-label={t('fleetApi.controls.onDemandOnly', 'Not scheduled')}>
+            <span className="sm:hidden">{t('fleetApi.controls.onDemandOnly', 'Not scheduled')}</span>
+            <span className="hidden sm:inline" aria-hidden="true">—</span>
+          </Caption>
+        )}
+      </div>
+    </div>
   );
 }
-
-// Reflows a group's switches into more columns as the viewport widens so the
-// panel never leaves dead horizontal space on large monitors.
-const TOGGLE_GRID = 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-6';
-
-// Every toggleable endpoint key used for
-// the enabled/total tally. Kept module-level (label-independent) so the tally
-// never depends on the translated render arrays.
-const ALL_ENDPOINT_KEYS = [
-  'vehicle_discovery', 'charge_state', 'climate_state', 'drive_state',
-  'location_data', 'vehicle_state', 'vehicle_config',
-  'on_demand_vehicle_discovery', 'on_demand_charge_state', 'on_demand_climate_state',
-  'on_demand_drive_state', 'on_demand_location_data', 'on_demand_vehicle_state',
-  'on_demand_vehicle_config', 'nearby_charging_sites', 'release_notes',
-  'recent_alerts', 'service_data', 'wake_up', 'commands',
-];
-
-// ─── Page component ──────────────────────────────────────────────────────────
 
 export default function FleetAPIPage() {
   const { t } = useTranslation();
   usePageTitle(t('fleetApi.title', 'Fleet API'));
+  const [search, setSearch] = useState('');
+  const [groupBy, setGroupBy] = useState<'category' | 'method'>('category');
+  const [selectedGroup, setSelectedGroup] = useState('Vehicle data');
+  const [sortBy, setSortBy] = useState<'name' | 'path' | 'method' | 'access' | 'auto'>('name');
+  const [sortDescending, setSortDescending] = useState(false);
 
   const settingsQuery = useSettings();
   const pollingQuery = usePollingConfig();
@@ -93,45 +112,96 @@ export default function FleetAPIPage() {
   const pollingConfig = pollingQuery.data;
   const version = versionQuery.data;
 
-  const toggleEndpoint = useCallback((key: string) => {
+  const catalog = pollingConfig?.endpoint_catalog ?? [];
+  const normalizedSearch = search.trim().toLowerCase();
+  const endpointGroups = useMemo(() => {
+    const groups = new Map<string, FleetEndpoint[]>();
+    for (const endpoint of catalog) {
+      const group = groupBy === 'category' ? endpoint.category : endpoint.method;
+      if (selectedGroup !== 'all' && !normalizedSearch && group !== selectedGroup) {
+        continue;
+      }
+      if (normalizedSearch && !`${endpoint.key} ${endpoint.method} ${endpoint.path} ${endpoint.category}`.toLowerCase().includes(normalizedSearch)) {
+        continue;
+      }
+      const entries = groups.get(group) ?? [];
+      entries.push(endpoint);
+      groups.set(group, entries);
+    }
+    const sortValue = (endpoint: FleetEndpoint): string | number => {
+      switch (sortBy) {
+        case 'path': return endpoint.path;
+        case 'method': return endpoint.method;
+        case 'access': return Number(!!pollingConfig?.fleet_endpoints[endpoint.key]);
+        case 'auto': return Number(!!pollingConfig?.auto_endpoints[endpoint.key]);
+        default: return endpoint.key;
+      }
+    };
+    return [...groups.entries()].map(([group, endpoints]): [string, FleetEndpoint[]] => [
+      group,
+      endpoints.sort((a, b) => {
+        const left = sortValue(a);
+        const right = sortValue(b);
+        const compared = typeof left === 'number' && typeof right === 'number'
+          ? left - right : String(left).localeCompare(String(right));
+        return (sortDescending ? -compared : compared) || a.key.localeCompare(b.key);
+      }),
+    ]);
+  }, [catalog, groupBy, normalizedSearch, selectedGroup, sortBy, sortDescending, pollingConfig]);
+  const groups = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const endpoint of catalog) {
+      const group = groupBy === 'category' ? endpoint.category : endpoint.method;
+      counts.set(group, (counts.get(group) ?? 0) + 1);
+    }
+    return [...counts.entries()];
+  }, [catalog, groupBy]);
+  const groupLabel = (group: string) => groupBy === 'category'
+    ? t(`fleetApi.categories.${group.toLowerCase().replace(/ /g, '')}`, group)
+    : group;
+
+  const toggleEndpoint = (endpoint: FleetEndpoint) => {
     if (!pollingConfig) return;
-    pollingConfigMut.mutate({ ...pollingConfig, [key]: !pollingConfig[key] });
-  }, [pollingConfig, pollingConfigMut]);
+    const enabled = pollingConfig.fleet_endpoints[endpoint.key];
+    pollingConfigMut.mutate({
+      ...pollingConfig,
+      fleet_endpoints: { ...pollingConfig.fleet_endpoints, [endpoint.key]: !enabled },
+      auto_endpoints: enabled && endpoint.pollable
+        ? { ...pollingConfig.auto_endpoints, [endpoint.key]: false }
+        : pollingConfig.auto_endpoints,
+    });
+  };
 
-  const pollingEndpoints = [
-    { key: 'vehicle_discovery', label: t('fleetApi.endpoints.vehicleDiscovery', 'Vehicle Discovery'), desc: t('fleetApi.endpoints.pollingVehicleDiscoveryDesc', 'List vehicles from Tesla') },
-    { key: 'charge_state', label: t('fleetApi.endpoints.chargeState', 'Charge State'), desc: t('fleetApi.endpoints.chargeStateDesc', 'Battery & charging data') },
-    { key: 'climate_state', label: t('fleetApi.endpoints.climateState', 'Climate State'), desc: t('fleetApi.endpoints.climateStateDesc', 'Climate & temperature data') },
-    { key: 'drive_state', label: t('fleetApi.endpoints.driveState', 'Drive State'), desc: t('fleetApi.endpoints.driveStateDesc', 'Location & speed data') },
-    { key: 'location_data', label: t('fleetApi.endpoints.locationData', 'Location Data'), desc: t('fleetApi.endpoints.locationDataDesc', 'GPS coordinates') },
-    { key: 'vehicle_state', label: t('fleetApi.endpoints.vehicleState', 'Vehicle State'), desc: t('fleetApi.endpoints.vehicleStateDesc', 'Locks, doors, odometer') },
-    { key: 'vehicle_config', label: t('fleetApi.endpoints.vehicleConfig', 'Vehicle Config'), desc: t('fleetApi.endpoints.vehicleConfigDesc', 'Model, trim, options') },
-  ];
+  const toggleAuto = (key: string) => {
+    if (!pollingConfig?.auto_polling_enabled || !pollingConfig.fleet_endpoints[key]) return;
+    pollingConfigMut.mutate({
+      ...pollingConfig,
+      auto_endpoints: { ...pollingConfig.auto_endpoints, [key]: !pollingConfig.auto_endpoints[key] },
+    });
+  };
 
-  const onDemandEndpoints = [
-    { key: 'on_demand_vehicle_discovery', label: t('fleetApi.endpoints.vehicleDiscovery', 'Vehicle Discovery'), desc: t('fleetApi.endpoints.onDemandVehicleDiscoveryDesc', 'Sync vehicles from Tesla') },
-    { key: 'on_demand_charge_state', label: t('fleetApi.endpoints.chargeState', 'Charge State'), desc: t('fleetApi.endpoints.chargeStateDesc', 'Battery & charging data') },
-    { key: 'on_demand_climate_state', label: t('fleetApi.endpoints.climateState', 'Climate State'), desc: t('fleetApi.endpoints.climateStateDesc', 'Climate & temperature data') },
-    { key: 'on_demand_drive_state', label: t('fleetApi.endpoints.driveState', 'Drive State'), desc: t('fleetApi.endpoints.driveStateDesc', 'Location & speed data') },
-    { key: 'on_demand_location_data', label: t('fleetApi.endpoints.locationData', 'Location Data'), desc: t('fleetApi.endpoints.locationDataDesc', 'GPS coordinates') },
-    { key: 'on_demand_vehicle_state', label: t('fleetApi.endpoints.vehicleState', 'Vehicle State'), desc: t('fleetApi.endpoints.vehicleStateDesc', 'Locks, doors, odometer') },
-    { key: 'on_demand_vehicle_config', label: t('fleetApi.endpoints.vehicleConfig', 'Vehicle Config'), desc: t('fleetApi.endpoints.vehicleConfigDesc', 'Model, trim, options') },
-    { key: 'nearby_charging_sites', label: t('fleetApi.endpoints.nearbyCharging', 'Nearby Charging'), desc: t('fleetApi.endpoints.nearbyChargingDesc', 'Supercharger locations') },
-    { key: 'release_notes', label: t('fleetApi.endpoints.releaseNotes', 'Release Notes'), desc: t('fleetApi.endpoints.releaseNotesDesc', 'Firmware release notes') },
-    { key: 'recent_alerts', label: t('fleetApi.endpoints.recentAlerts', 'Recent Alerts'), desc: t('fleetApi.endpoints.recentAlertsDesc', 'Vehicle alert history') },
-    { key: 'service_data', label: t('fleetApi.endpoints.serviceData', 'Service Data'), desc: t('fleetApi.endpoints.serviceDataDesc', 'Service history & status') },
-  ];
+  const toggleAllAccess = () => {
+    if (!pollingConfig || catalog.length === 0) return;
+    const enable = !catalog.every((endpoint) => pollingConfig.fleet_endpoints[endpoint.key]);
+    pollingConfigMut.mutate({
+      ...pollingConfig,
+      fleet_endpoints: Object.fromEntries(catalog.map((endpoint) => [endpoint.key, enable])),
+      auto_endpoints: enable ? pollingConfig.auto_endpoints
+        : Object.fromEntries(catalog.filter((endpoint) => endpoint.pollable).map((endpoint) => [endpoint.key, false])),
+    });
+  };
 
-  const commandEndpoints = [
-    { key: 'wake_up', label: t('fleetApi.endpoints.wakeUp', 'Wake Up'), desc: t('fleetApi.endpoints.wakeUpDesc', 'Wake vehicle from sleep') },
-    { key: 'commands', label: t('fleetApi.endpoints.commands', 'Vehicle Commands'), desc: t('fleetApi.endpoints.commandsDesc', 'Lock, unlock, climate, etc.') },
-  ];
-
-  const endpointGroups = [
-    { id: 'polling', title: t('fleetApi.groups.polling', 'Polling Endpoints'), endpoints: pollingEndpoints },
-    { id: 'onDemand', title: t('fleetApi.groups.onDemand', 'On-Demand Endpoints'), endpoints: onDemandEndpoints },
-    { id: 'commands', title: t('fleetApi.groups.commands', 'Commands'), endpoints: commandEndpoints },
-  ];
+  const toggleAllAuto = () => {
+    if (!pollingConfig?.auto_polling_enabled) return;
+    const eligible = catalog.filter((endpoint) => endpoint.pollable && pollingConfig.fleet_endpoints[endpoint.key]);
+    if (eligible.length === 0) return;
+    const enable = !eligible.every((endpoint) => pollingConfig.auto_endpoints[endpoint.key]);
+    pollingConfigMut.mutate({
+      ...pollingConfig,
+      auto_endpoints: Object.fromEntries(catalog.filter((endpoint) => endpoint.pollable)
+        .map((endpoint) => [endpoint.key, enable && !!pollingConfig.fleet_endpoints[endpoint.key]])),
+    });
+  };
 
   const configuredEndpoints = [
     { key: 'api', label: t('fleetApi.configured.api', 'API (Internal)') },
@@ -140,12 +210,10 @@ export default function FleetAPIPage() {
     { key: 'tesla_api', label: t('fleetApi.configured.teslaApi', 'Tesla Fleet API') },
   ];
 
-  const allEndpointKeys = ALL_ENDPOINT_KEYS;
-
-  const totalCount = allEndpointKeys.length;
-  const enabledCount = pollingConfig
-    ? allEndpointKeys.filter((k) => pollingConfig[k]).length
-    : 0;
+  const totalCount = catalog.length;
+  const enabledCount = catalog.filter((ep) => pollingConfig?.fleet_endpoints[ep.key]).length;
+  const autoCount = catalog.filter((ep) => ep.pollable && pollingConfig?.fleet_endpoints[ep.key] && pollingConfig.auto_endpoints[ep.key]).length;
+  const eligibleCount = catalog.filter((ep) => ep.pollable && pollingConfig?.fleet_endpoints[ep.key]).length;
 
   const apiSuspended = settings?.api_suspended ?? false;
   const kpiLoading = settingsQuery.isLoading || pollingQuery.isLoading;
@@ -156,7 +224,7 @@ export default function FleetAPIPage() {
   // KPI never lies about state it doesn't actually know.
   const EM_DASH = '—';
   const apiStatusKnown = !!settings;
-  const pollingKnown = !!pollingConfig;
+  const pollingKnown = !!pollingConfig && catalog.length > 0;
 
   const versionLabel = version
     ? `v${version.chart_version} · ${version.go_version} · ${version.os}/${version.arch}`
@@ -167,11 +235,10 @@ export default function FleetAPIPage() {
   return (
     <PageContainer
       title={t('fleetApi.pageTitle', 'Fleet API Settings')}
-      subtitle={t('fleetApi.subtitle', 'Control Tesla Fleet API polling and endpoint toggles')}
+      subtitle={t('fleetApi.subtitle', 'Choose which Tesla Fleet API routes are available and which can be polled automatically')}
       query={[settingsQuery, pollingQuery, versionQuery]}
       dataSources={dataSources}
     >
-      {/* 1 — KPI band ─────────────────────────────────────────────── */}
       <FadeIn>
         <section
           aria-label={t('fleetApi.kpis.label', 'Fleet API summary')}
@@ -188,72 +255,84 @@ export default function FleetAPIPage() {
             <>
               <MetricCard
                 label={t('fleetApi.kpis.apiStatus', 'API Status')}
-                value={apiStatusKnown
-                  ? (apiSuspended ? t('fleetApi.status.suspended', 'Suspended') : t('fleetApi.status.active', 'Active'))
+                value={apiStatusKnown && pollingKnown
+                  ? (apiSuspended ? t('fleetApi.status.suspended', 'Suspended') : pollingConfig.auto_polling_enabled
+                    ? t('fleetApi.status.polling', 'Polling enabled') : t('fleetApi.status.onDemand', 'On demand only'))
                   : EM_DASH}
                 icon={apiStatusKnown && apiSuspended ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                color={!apiStatusKnown ? 'blue' : apiSuspended ? 'red' : 'green'}
-                subtitle={t('fleetApi.kpis.apiStatusHint', 'Tesla Fleet polling')}
+                color={!apiStatusKnown || !pollingKnown ? 'blue' : apiSuspended ? 'red' : 'green'}
+                subtitle={t('fleetApi.kpis.apiStatusHint', 'Automatic Fleet API polling')}
               />
               <MetricCard
                 label={t('fleetApi.kpis.endpointsEnabled', 'Endpoints Enabled')}
                 value={pollingKnown ? `${fmtInt(enabledCount)} / ${fmtInt(totalCount)}` : EM_DASH}
                 icon={<Shield className="h-5 w-5" />}
                 color="cyan"
-                subtitle={t('fleetApi.kpis.endpointsHint', 'Active toggles')}
+                subtitle={t('fleetApi.kpis.endpointsHint', '{{count}} selected for polling', { count: autoCount })}
               />
             </>
           )}
         </section>
       </FadeIn>
 
-      {/* 2 — Master Tesla API switch ─ */}
       <FadeIn delay={0.1}>
         <section>
           <GlassPanel className="flex h-full flex-col gap-4 p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <IconBox color={apiSuspended ? 'red' : 'green'}>
-                  {apiSuspended ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                <IconBox color={pollingConfig?.auto_polling_enabled ? 'green' : 'blue'}>
+                  {pollingConfig?.auto_polling_enabled ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
                 </IconBox>
                 <div className="min-w-0">
                   <PanelTitle>{t('fleetApi.polling.title', 'Tesla API Polling')}</PanelTitle>
                   <HelperText className="mt-0.5">
-                    {apiSuspended
-                      ? t('fleetApi.polling.suspendedDesc', 'All Tesla Fleet API calls are suspended')
-                      : t('fleetApi.polling.activeDesc', 'Vehicle data is being polled from Tesla')}
+                    {t('fleetApi.polling.masterDesc', 'Off by default. Turning this off stops scheduled Fleet API reads, not manual requests or token refresh.')}
                   </HelperText>
                 </div>
               </div>
-              {!settingsQuery.isLoading && !settingsQuery.isError && (
+              {pollingKnown && (
                 <Toggle
-                  checked={!apiSuspended}
-                  onChange={() => suspendMut.mutate(!apiSuspended)}
+                  checked={pollingConfig.auto_polling_enabled}
+                  onChange={() => pollingConfigMut.mutate({ ...pollingConfig, auto_polling_enabled: !pollingConfig.auto_polling_enabled })}
                   aria-label={t('fleetApi.polling.toggleAria', 'Toggle Tesla API polling')}
-                  className={suspendMut.isPending ? 'pointer-events-none opacity-60' : ''}
+                  disabled={pollingConfigMut.isPending}
                 />
               )}
             </div>
 
-            {settingsQuery.isLoading ? (
+            {pollingQuery.isLoading ? (
               <Skeleton height={56} />
-            ) : settingsQuery.isError ? (
-              <QueryError error={settingsQuery.error} onRetry={() => settingsQuery.refetch()} />
-            ) : apiSuspended ? (
-              <InlineCallout variant="danger" icon={<AlertTriangle />}>
-                {t('fleetApi.polling.suspendedNote', "Polling and commands are paused. Token refresh continues so you won't need to re-authenticate. Useful when your vehicle is in service.")}
+            ) : pollingQuery.isError ? (
+              <QueryError error={pollingQuery.error} onRetry={() => pollingQuery.refetch()} />
+            ) : !pollingConfig ? (
+              <Text as="p" size="sm" color="secondary">{t('fleetApi.controls.empty', 'Endpoint settings are unavailable.')}</Text>
+            ) : pollingConfig.auto_polling_enabled ? (
+              <InlineCallout variant="success" icon={<Play />}>
+                {t('fleetApi.polling.activeNote', 'Only enabled routes selected for auto-polling participate. On-demand routes and commands remain independent.')}
               </InlineCallout>
             ) : (
-              <InlineCallout variant="success" icon={<Play />}>
-                {t('fleetApi.polling.activeNote', 'Tesla Fleet API polling is active. Toggle off to pause data collection and commands without losing your session.')}
+              <InlineCallout variant="info" icon={<Pause />}>
+                {t('fleetApi.polling.suspendedNote', 'Automatic Fleet API polling is off. Enabled endpoints still work on demand; token refresh continues.')}
               </InlineCallout>
             )}
+            {settingsQuery.isError ? (
+              <QueryError error={settingsQuery.error} onRetry={() => settingsQuery.refetch()} />
+            ) : apiSuspended ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <InlineCallout variant="danger" icon={<AlertTriangle />}>
+                  {t('fleetApi.polling.emergencyNote', 'API actions were suspended previously; supported live requests and commands are blocked. Token refresh continues.')}
+                </InlineCallout>
+                <Button variant="secondary" size="sm" disabled={suspendMut.isPending}
+                  onClick={() => suspendMut.mutate(false)}>
+                  {t('fleetApi.polling.resumeActions', 'Resume API actions')}
+                </Button>
+              </div>
+            ) : null}
           </GlassPanel>
 
         </section>
       </FadeIn>
 
-      {/* 3 — Endpoint controls: full-width toggle band ───────────────── */}
       <FadeIn delay={0.2}>
         <GlassPanel className="space-y-5 p-4 sm:p-5">
           <div className="flex flex-wrap items-center gap-3">
@@ -263,55 +342,174 @@ export default function FleetAPIPage() {
             <div className="min-w-0 flex-1">
               <PanelTitle>{t('fleetApi.controls.title', 'API Endpoint Controls')}</PanelTitle>
               <HelperText className="mt-0.5">
-                {t('fleetApi.controls.subtitle', 'Toggle individual Tesla Fleet API endpoints on or off')}
+                {t('fleetApi.controls.subtitle', 'Allow manual requests per endpoint, then opt supported reads into background refresh. Routes without a scheduled job stay manual only.')}
               </HelperText>
             </div>
-            {pollingConfig && (
+            {pollingKnown && (
               <Badge variant="info" size="sm" className="shrink-0">
                 {t('fleetApi.controls.enabledCount', '{{enabled}}/{{total}} enabled', { enabled: enabledCount, total: totalCount })}
               </Badge>
             )}
           </div>
 
+          {pollingKnown && (
+            <div className="grid gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3 sm:grid-cols-3">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+                <Text as="span" size="sm" weight="medium">{t('fleetApi.controls.accessSummary', '{{count}} routes available on demand', { count: enabledCount })}</Text>
+              </div>
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Text as="span" size="sm" weight="medium">{t('fleetApi.controls.autoSummary', '{{count}} selected for auto-poll', { count: autoCount })}</Text>
+              </div>
+              <div className="flex items-center gap-2">
+                <Pause className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                <Text as="span" size="sm" weight="medium">{pollingConfig.auto_polling_enabled
+                  ? t('fleetApi.controls.scheduleRunning', 'Schedule running')
+                  : t('fleetApi.controls.schedulePaused', 'Schedule paused')}</Text>
+              </div>
+            </div>
+          )}
+          {pollingKnown && (
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-[var(--border-default)] px-4 py-3">
+              <Text as="span" size="sm" weight="medium">{t('fleetApi.controls.bulkTitle', 'All routes')}</Text>
+              <Label className="flex items-center gap-2">
+                {t('fleetApi.controls.bulkAccess', 'Access all')}
+                <Toggle checked={enabledCount === totalCount} onChange={toggleAllAccess}
+                  disabled={pollingConfigMut.isPending} size="sm"
+                  aria-label={t('fleetApi.controls.bulkAccess', 'Access all')} />
+              </Label>
+              <Label className="flex items-center gap-2">
+                {t('fleetApi.controls.bulkAuto', 'Auto-poll eligible routes')}
+                <Toggle checked={eligibleCount > 0 && autoCount === eligibleCount} onChange={toggleAllAuto}
+                  disabled={pollingConfigMut.isPending || eligibleCount === 0 || !pollingConfig.auto_polling_enabled} size="sm"
+                  aria-label={t('fleetApi.controls.bulkAuto', 'Auto-poll eligible routes')} />
+              </Label>
+              <Caption>{pollingConfig.auto_polling_enabled
+                ? t('fleetApi.controls.bulkHint', 'Auto-poll selects only enabled routes with a scheduled job.')
+                : t('fleetApi.controls.pausedHint', 'Turn on Tesla API Polling to change auto-poll selections. Existing selections are retained while paused.')}</Caption>
+            </div>
+          )}
+          {pollingKnown && (
+            <div className="flex flex-col gap-2">
+              <div className="flex w-full items-center gap-2">
+                <Search className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <Input value={search} onChange={(e) => { setSearch(e.target.value); if (e.target.value) setSelectedGroup('all'); }}
+                    placeholder={t('fleetApi.controls.search', 'Search API routes')}
+                    aria-label={t('fleetApi.controls.search', 'Search API routes')} />
+                </div>
+              </div>
+            </div>
+          )}
           {pollingQuery.isLoading ? (
             <div className="space-y-3">
               <Skeleton width="30%" height={14} />
-              <div className={TOGGLE_GRID}>
-                {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={56} />)}
-              </div>
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={56} />)}
             </div>
           ) : pollingQuery.isError ? (
             <QueryError error={pollingQuery.error} onRetry={() => pollingQuery.refetch()} />
-          ) : !pollingConfig ? (
-            <EmptyState /* no-action: transient empty state — polling config unavailable until the backend responds */
+          ) : !pollingKnown ? (
+            <EmptyState
               icon={<Shield className="h-8 w-8" />}
-              message={t('fleetApi.controls.empty', 'No endpoint configuration available')}
+              message={t('fleetApi.controls.empty', 'Endpoint catalog unavailable')}
+              description={t('fleetApi.controls.outdatedRuntime', 'This API server does not provide the Fleet route catalog. Update and restart the API service to manage routes; no settings can be changed here until it is available.')}
+              action={{ label: t('fleetApi.controls.retry', 'Retry loading routes'), onClick: () => { void pollingQuery.refetch(); } }}
             />
           ) : (
-            <div className="space-y-6">
-              {endpointGroups.map((group) => (
-                <div key={group.id} className="space-y-3">
-                  <Text as="h4" variant="label">{group.title}</Text>
-                  <div className={TOGGLE_GRID}>
-                    {group.endpoints.map((ep) => (
-                      <EndpointToggle
-                        key={ep.key}
-                        label={ep.label}
-                        desc={ep.desc}
-                        enabled={!!pollingConfig[ep.key]}
-                        disabled={pollingConfigMut.isPending}
-                        onToggle={() => toggleEndpoint(ep.key)}
-                      />
-                    ))}
-                  </div>
+            <div className="min-w-0 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Caption>{t('fleetApi.controls.groupBy', 'Group by')}</Caption>
+                <Button size="sm" variant={groupBy === 'category' ? 'primary' : 'secondary'}
+                  aria-pressed={groupBy === 'category'}
+                  onClick={() => { setGroupBy('category'); setSelectedGroup('all'); }}>
+                  {t('fleetApi.controls.byCategory', 'Category')}
+                </Button>
+                <Button size="sm" variant={groupBy === 'method' ? 'primary' : 'secondary'}
+                  aria-pressed={groupBy === 'method'}
+                  onClick={() => { setGroupBy('method'); setSelectedGroup('all'); }}>
+                  {t('fleetApi.controls.byMethod', 'HTTP method')}
+                </Button>
+                <div className="flex items-center gap-2 sm:ml-auto">
+                  <Select size="sm" aria-label={t('fleetApi.controls.sortBy', 'Sort routes by')}
+                    value={sortBy}
+                    onChange={(e) => {
+                      const value = e.target.value as typeof sortBy;
+                      setSortBy(value);
+                      setSortDescending(value === 'access' || value === 'auto');
+                    }}
+                    options={[
+                      { value: 'name', label: t('fleetApi.controls.sortName', 'Operation') },
+                      { value: 'path', label: t('fleetApi.controls.sortPath', 'API path') },
+                      { value: 'method', label: t('fleetApi.controls.sortMethod', 'HTTP method') },
+                      { value: 'access', label: t('fleetApi.controls.sortAccess', 'Access state') },
+                      { value: 'auto', label: t('fleetApi.controls.sortAuto', 'Auto-poll state') },
+                    ]} />
+                  <Button size="sm" variant="secondary" onClick={() => setSortDescending(!sortDescending)}
+                    aria-label={sortDescending
+                      ? t('fleetApi.controls.sortAscending', 'Sort ascending')
+                      : t('fleetApi.controls.sortDescending', 'Sort descending')}>
+                    {sortDescending ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+                  </Button>
                 </div>
-              ))}
+              </div>
+              <nav aria-label={t('fleetApi.controls.categoryFilter', 'Route groups')}
+                className="flex gap-2 overflow-x-auto pb-1">
+                <Button size="sm" variant={selectedGroup === 'all' ? 'primary' : 'secondary'}
+                  className="shrink-0 gap-2"
+                  onClick={() => { setSelectedGroup('all'); setSearch(''); }} aria-pressed={selectedGroup === 'all'}>
+                  {t('fleetApi.controls.allRoutes', 'All routes')} <Badge size="sm" variant="info">{totalCount}</Badge>
+                </Button>
+                {groups.map(([group, count]) => (
+                  <Button key={group} size="sm" variant={selectedGroup === group ? 'primary' : 'secondary'}
+                    className="shrink-0 gap-2"
+                    onClick={() => { setSelectedGroup(group); setSearch(''); }} aria-pressed={selectedGroup === group}>
+                    {groupLabel(group)}
+                    <Badge size="sm" variant="info">{count}</Badge>
+                  </Button>
+                ))}
+              </nav>
+              <div className="min-w-0 space-y-3">
+                {endpointGroups.length === 0 ? (
+                  <EmptyState
+                    icon={<Search className="h-8 w-8" />}
+                    message={t('fleetApi.controls.noMatches', 'No API routes match that search.')}
+                    action={{ label: t('fleetApi.controls.clearSearch', 'Clear search'), onClick: () => setSearch('') }}
+                  />
+                ) : endpointGroups.map(([group, endpoints]) => (
+                  <section key={group} aria-label={group} className="overflow-hidden rounded-xl border border-[var(--border-default)]">
+                    <div className="flex items-center justify-between gap-2 bg-[var(--surface-2)] px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <PanelTitle>{groupLabel(group)}</PanelTitle>
+                        <Badge size="sm" variant="info">{t('fleetApi.controls.groupCount', '{{count}} routes', { count: endpoints.length })}</Badge>
+                      </div>
+                      <div className="hidden w-[20rem] grid-cols-[7.5rem_12rem] gap-2 text-right sm:grid">
+                        <Caption>{t('fleetApi.controls.enabled', 'Access')}</Caption>
+                        <Caption>{t('fleetApi.controls.autoPoll', 'Auto-poll')}</Caption>
+                      </div>
+                    </div>
+                    <div>
+                      {endpoints.map((ep) => (
+                        <EndpointToggle
+                          key={ep.key}
+                          endpoint={ep}
+                          enabled={!!pollingConfig.fleet_endpoints[ep.key]}
+                          auto={!!pollingConfig.auto_endpoints[ep.key]}
+                          pollingEnabled={pollingConfig.auto_polling_enabled}
+                          pending={pollingConfigMut.isPending}
+                          onEnable={() => toggleEndpoint(ep)}
+                          onAuto={() => toggleAuto(ep.key)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
             </div>
           )}
         </GlassPanel>
       </FadeIn>
 
-      {/* 4 — Configured endpoints: full-width detail band ────────────── */}
       <FadeIn delay={0.3}>
         <GlassPanel className="space-y-4 p-4 sm:p-5">
           <div className="flex flex-wrap items-center gap-3">

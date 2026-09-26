@@ -50,6 +50,9 @@ func allOnDemandSubEndpoints() LegacyPollingConfig {
 // on-demand endpoint enabled, telemetry capture OFF, and a 7-day retention.
 func TestDefaultPollingConfig(t *testing.T) {
 	pc := DefaultPollingConfig()
+	if pc.AutoPollingEnabled || len(pc.EnabledAutoVehicleDataEndpoints()) != 0 {
+		t.Fatal("automatic Fleet API polling must be opt-in")
+	}
 
 	boolFlags := []struct {
 		name string
