@@ -65,7 +65,7 @@ type Handler struct {
 }
 
 type notificationReportStore interface {
-	GetReport(ctx context.Context, from, until time.Time) (*dbnotif.Report, error)
+	GetReport(ctx context.Context, from, until time.Time, location *time.Location) (*dbnotif.Report, error)
 }
 
 // notificationInboxStore is the slice of NotificationRepo used by the inbox

@@ -11,9 +11,9 @@ import { notificationEventTypeFallback } from '@/lib/notificationEventType';
 
 type Breakdown = NotificationReport['by_source'];
 
-export function NotificationReportPanel({ fromInstant, toExclusive }: { fromInstant: string; toExclusive: string }) {
+export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: { fromInstant: string; toExclusive: string; timezone: string }) {
   const { t } = useTranslation();
-  const query = useNotificationReport(fromInstant, toExclusive);
+  const query = useNotificationReport(fromInstant, toExclusive, timezone);
   const report = query.data;
   const daily = report?.daily;
   const resolution = (daily?.length ?? 0) > 3650 ? 4 : (daily?.length ?? 0) > 730 ? 7 : 10;
@@ -32,12 +32,12 @@ export function NotificationReportPanel({ fromInstant, toExclusive }: { fromInst
     ? t('notifications.report.timelineAnnual', 'Annual activity')
     : resolution === 7
       ? t('notifications.report.timelineMonthly', 'Monthly activity')
-      : t('notifications.report.timeline', 'Daily activity (UTC)');
+      : t('notifications.report.timeline', 'Daily activity');
   const timelineAria = resolution === 4
     ? t('notifications.report.timelineAriaAnnual', 'Annual notification triggers and channel deliveries')
     : resolution === 7
       ? t('notifications.report.timelineAriaMonthly', 'Monthly notification triggers and channel deliveries')
-      : t('notifications.report.timelineAria', 'Daily notification triggers and channel deliveries by UTC day');
+      : t('notifications.report.timelineAria', 'Daily notification triggers and channel deliveries');
   const breakdowns: { key: string; title: string; rows: Breakdown }[] = [
     { key: 'source', title: t('notifications.report.sources', 'Trigger sources'), rows: report?.by_source ?? [] },
     { key: 'type', title: t('notifications.report.types', 'Event types'), rows: report?.by_type ?? [] },

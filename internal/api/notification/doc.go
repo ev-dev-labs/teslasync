@@ -4,11 +4,12 @@
 //
 // GET /notifications/report takes UTC calendar dates from/to (inclusive) or
 // RFC3339 from_instant/to_exclusive bounds (matching the header's local range),
-// defaults to the most recent 30 days including today, and accepts up to
+// and an optional IANA timezone for local-day aggregates (default UTC).
+// It defaults to the most recent 30 days including today, and accepts up to
 // 50 years. triggered counts canonical status=triggered event rows, including
 // zero-channel and WebPush-only events; deliveries counts only channel attempts.
 // by_source, by_type and by_severity count events; by_channel and by_status
-// count delivery attempts. Daily counts are UTC and include zero-filled days.
+// count delivery attempts. Daily counts use the requested timezone and include zero-filled days.
 // outbound_http_calls counts api_call_logs rows for service=notify-generic in
 // the same UTC window; it includes retries and failed calls, excludes transports
 // without HTTP calls, and is not a delivery or trigger count.

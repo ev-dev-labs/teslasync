@@ -1101,6 +1101,7 @@ export interface NotificationReport {
   to: string
   from_instant: string
   to_exclusive: string
+  timezone: string
   triggered: number
   deliveries: number
   outbound_http_calls: number

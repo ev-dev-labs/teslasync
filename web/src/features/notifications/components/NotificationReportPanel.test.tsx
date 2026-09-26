@@ -31,6 +31,7 @@ const report: NotificationReport = {
   to: '2026-01-30',
   from_instant: '2026-01-01T08:00:00Z',
   to_exclusive: '2026-01-31T08:00:00Z',
+  timezone: 'America/Los_Angeles',
   triggered: 3,
   deliveries: 5,
   outbound_http_calls: 11,
@@ -44,7 +45,7 @@ const report: NotificationReport = {
 };
 
 function renderPanel() {
-  return render(<MemoryRouter><NotificationReportPanel fromInstant="2026-01-01T08:00:00Z" toExclusive="2026-01-31T08:00:00Z" /></MemoryRouter>);
+  return render(<MemoryRouter><NotificationReportPanel fromInstant="2026-01-01T08:00:00Z" toExclusive="2026-01-31T08:00:00Z" timezone="America/Los_Angeles" /></MemoryRouter>);
 }
 
 beforeEach(() => {
@@ -54,7 +55,7 @@ beforeEach(() => {
 describe('NotificationReportPanel', () => {
   it('separates triggered events from multi-channel deliveries and shows each breakdown', () => {
     renderPanel();
-    expect(useReport).toHaveBeenCalledWith('2026-01-01T08:00:00Z', '2026-01-31T08:00:00Z');
+    expect(useReport).toHaveBeenCalledWith('2026-01-01T08:00:00Z', '2026-01-31T08:00:00Z', 'America/Los_Angeles');
     expect(screen.queryByText('Choose date range')).not.toBeInTheDocument();
     expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
     expect(screen.getByText('Channel deliveries')).toBeInTheDocument();
@@ -67,7 +68,7 @@ describe('NotificationReportPanel', () => {
     expect(screen.getByText('Alert')).toBeInTheDocument();
     expect(screen.getByText('System Mqtt Outage')).toBeInTheDocument();
     expect(screen.getByText('Delivery outcomes')).toBeInTheDocument();
-    expect(screen.getByText('Daily activity (UTC)')).toBeInTheDocument();
+    expect(screen.getByText('Daily activity')).toBeInTheDocument();
   });
 
   it('excludes unattributed historical deliveries from the fan-out ratio', () => {

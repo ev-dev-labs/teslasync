@@ -119,7 +119,7 @@ export const notificationKeys = {
   bellUnread: (limit: number) => ['notification-logs', 'bell-unread', limit] as const,
   unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
-  report: (fromInstant: string, toExclusive: string) => ['notification-report', fromInstant, toExclusive] as const,
+  report: (fromInstant: string, toExclusive: string, timezone: string) => ['notification-report', fromInstant, toExclusive, timezone] as const,
   quietHours: ['notification-quiet-hours'] as const,
 };
 
@@ -1270,12 +1270,12 @@ export function useNotificationStats() {
   });
 }
 
-export function useNotificationReport(fromInstant: string, toExclusive: string) {
-  const params = new URLSearchParams({ from_instant: fromInstant, to_exclusive: toExclusive });
+export function useNotificationReport(fromInstant: string, toExclusive: string, timezone: string) {
+  const params = new URLSearchParams({ from_instant: fromInstant, to_exclusive: toExclusive, timezone });
   return useQuery({
-    queryKey: notificationKeys.report(fromInstant, toExclusive),
+    queryKey: notificationKeys.report(fromInstant, toExclusive, timezone),
     queryFn: ({ signal }) => request<NotificationReport>(`/notifications/report?${params}`, { signal }),
-    enabled: Boolean(fromInstant && toExclusive),
+    enabled: Boolean(fromInstant && toExclusive && timezone),
   });
 }
 

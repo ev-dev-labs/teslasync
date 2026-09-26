@@ -103,8 +103,8 @@ vi.mock('../components/InboxBody', () => ({
   ),
 }));
 vi.mock('../components/NotificationReportPanel', () => ({
-  NotificationReportPanel: ({ fromInstant, toExclusive }: { fromInstant: string; toExclusive: string }) => (
-    <div data-testid="notification-report">{`Notification activity ${fromInstant} ${toExclusive}`}</div>
+  NotificationReportPanel: ({ fromInstant, toExclusive, timezone }: { fromInstant: string; toExclusive: string; timezone: string }) => (
+    <div data-testid="notification-report" data-timezone={timezone}>{`Notification activity ${fromInstant} ${toExclusive}`}</div>
   ),
 }));
 
@@ -213,6 +213,7 @@ describe('InboxPage — page shell & composition', () => {
     expect(screen.getByTestId('notification-report')).toHaveTextContent(
       `Notification activity ${new Date('2026-01-01T00:00:00').toISOString()} ${new Date('2026-01-31T00:00:00').toISOString()}`,
     );
+    expect(screen.getByTestId('notification-report').getAttribute('data-timezone')).toBeTruthy();
   });
 });
 

@@ -124,8 +124,15 @@ export const getAPICallLogs = (params: {
   return request<APICallLogResponse>(`/api-logs?${query.toString()}`)
 }
 
-export const getAPICallLogStats = (start: string, endExclusive: string) =>
-  request<APICallLogStats>(`/api-logs/stats?${new URLSearchParams({ start, end_exclusive: endExclusive })}`)
+export const getAPICallLogStats = (start?: string, endExclusive?: string) => {
+  if (start === undefined && endExclusive === undefined) {
+    return request<APICallLogStats>('/api-logs/stats')
+  }
+  if (!start || !endExclusive) {
+    throw new Error('API call log stats require both start and endExclusive')
+  }
+  return request<APICallLogStats>(`/api-logs/stats?${new URLSearchParams({ start, end_exclusive: endExclusive })}`)
+}
 
 // === System / Admin ===
 export const getAPIUsage = () => request<APIUsage>('/system/api-usage')
