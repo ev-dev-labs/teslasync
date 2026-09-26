@@ -53,6 +53,26 @@ useTrips.ts         useUser.ts         useVehicleSystems.ts
 
 Before creating a new hook, check if one already exists in the relevant file.
 
+## Workspace Scope Controls
+
+- Use the application header's **View settings** for date ranges and its
+  vehicle picker for the selected vehicle. Pages consume `useRangeState()`
+  and `useSelectedVehicle()`; VIN-backed queries use `useVehicleVinFilter()`.
+- Register a dated page's actual route in
+  `web/src/lib/workspaceScope.ts` (`RANGE_ENABLED_PATHS`) and verify
+  `getWorkspaceRouteScope(path)` enables the intended header controls.
+  Pass both `startInstant` and `endInstantExclusive` through typed hooks and
+  apply bounds to complete server-side results, not just loaded rows.
+- Do not render a second workspace `RangePicker`, `DateRangeFilter`, or
+  `VehicleSelect` inside a page, its action rail, toolbar, or chart.
+  `PageActions` and the shared picker components suppress duplicate
+  managed controls, but remove redundant page JSX rather than relying on
+  hidden widgets. Avoid `scope="local"` for a workspace selection.
+- Keep truly independent form dates, chart zoom, and calendar-year
+  navigation; retain local vehicle selection where the route deliberately
+  disables the global picker and the page still needs one. Confirm desktop
+  header and mobile drawer both expose any replacement control.
+
 ## Shared Component Library
 
 **RULE: Pages/features MUST import from these barrels. Never import libraries directly.**

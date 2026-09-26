@@ -4,7 +4,7 @@ import { CheckCheck, Radio, RefreshCw, ShieldAlert } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -103,7 +103,6 @@ export default function CommandReliabilityPage() {
       actions={
         <div className="flex flex-wrap items-center gap-3">
           <RangePicker value={{ start: from, end: to }} onChange={setRange} presetIds={['7d', '30d', '90d', 'all']} />
-          <VehicleSelect />
         </div>
       }
     >

@@ -40,6 +40,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/efficiency',
   '/energy',
   '/energy-flow',
+  '/fsd',
   '/locations',
   '/logbook',
   '/media-player',

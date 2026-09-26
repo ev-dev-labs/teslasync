@@ -40,7 +40,7 @@ import {
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion, Label, Caption } from '@/components/ui';
 import { GlossaryTerm } from '@/components/ui/GlossaryTerm';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+import { VehicleSelect } from '@/components/forms';
 import { StatCard, BulkActionsToolbar, SavedViewMenu } from '@/components/data-display';
 import type { BulkAction } from '@/components/data-display/BulkActionsToolbar';
 import { EmptyState, AlertBanner, Skeleton } from '@/components/feedback';
@@ -49,6 +49,7 @@ import { FadeIn } from '@/components/motion';
 import { cn } from '@/lib/cn';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUrlArray, useUrlBoolean, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -101,6 +102,7 @@ export default function SignalsWorkspacePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('signalsWorkspace.title', 'Signals'));
+  const { preferences } = useProductPreferences();
 
   // ── Vehicle context ───────────────────────────────────────────
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
@@ -129,10 +131,7 @@ export default function SignalsWorkspacePage() {
   );
 
   // ── Time range ───────────────────────────────────────────────
-  const { start, end, setRange } = useRangeState({
-    persistKey: 'signals-workspace.range',
-    defaultPresetId: 'today',
-  });
+  const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
   const fromIso = useMemo(() => (start ? new Date(`${start}T00:00:00`).toISOString() : ''), [start]);
   const toIso   = useMemo(() => (end   ? new Date(`${end}T23:59:59.999`).toISOString() : ''), [end]);
 
@@ -471,24 +470,10 @@ export default function SignalsWorkspacePage() {
           />
         </Accordion>
 
-        {/* Workspace toolbar — Time range / Per page / Run / Live / Compare.
+        {/* Workspace toolbar — Per page / Run / Live / Compare.
             Signal selection lives entirely in the "Add signals" Accordion above. */}
         <GlassPanel className="p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex flex-wrap items-end gap-2">
-                {!isCompare ? (
-                  <div className="flex flex-col gap-1">
-                    <Label>{t('signalsWorkspace.timeRange', 'Time Range')}</Label>
-                    <RangePicker
-                      value={{ start, end }}
-                      onChange={setRange}
-                      presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
-                      align="start"
-                      triggerTestId="signals-workspace-range"
-                    />
-                  </div>
-                ) : null}
-              </div>
               <div className="flex flex-wrap items-end gap-2">
                 {!isLive && !isCompare ? (
                   <Select

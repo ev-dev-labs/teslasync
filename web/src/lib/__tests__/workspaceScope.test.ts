@@ -21,6 +21,12 @@ describe('getWorkspaceRouteScope', () => {
       range: true,
       vehicle: true,
     });
+    for (const path of ['/fsd', '/signal-explorer', '/signal-log', '/signals']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({
+        range: true,
+        vehicle: true,
+      });
+    }
   });
 
   it('shows only controls that affect the active page', () => {
