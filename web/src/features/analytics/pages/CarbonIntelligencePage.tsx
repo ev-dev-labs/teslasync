@@ -6,7 +6,7 @@ import {
   useCarbonRecommendation,
   useCarbonSummary,
 } from '@/api/hooks/useCarbon';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -37,13 +37,7 @@ export default function CarbonIntelligencePage() {
   usePageTitle(t('carbon.title', 'Carbon Intelligence'));
   const { vehicleId } = useSelectedVehicle();
   const timezone = useTimezone('vehicle');
-  const {
-    start,
-    end,
-    startInstant,
-    endInstantExclusive,
-    setRange,
-  } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'carbon.range',
     defaultPresetId: '90d',
     timezone,
@@ -112,14 +106,6 @@ export default function CarbonIntelligencePage() {
       copyLink
       actions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            presetIds={['30d', '90d', '1y', 'all']}
-            align="end"
-            triggerTestId="carbon-range"
-          />
         </div>
       )}
     >

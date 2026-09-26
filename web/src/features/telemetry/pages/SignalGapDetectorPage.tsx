@@ -17,7 +17,7 @@ import { Info, RefreshCw } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { Button } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -42,7 +42,6 @@ export default function SignalGapDetectorPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      <VehicleSelect />
       <Button
         variant="ghost"
         onClick={() => query.refetch()}

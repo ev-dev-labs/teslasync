@@ -5,7 +5,6 @@
  *   - Severity chips (info/warn/critical) — multi-select
  *   - Vehicle <Select> (single, "All vehicles" option)
  *   - Rule <Select>    (single, "All rules" option)
- *   - DateRangeFilter  (from/to ISO date strings)
  *   - SearchInput      (debounced, message text search)
  *
  * The parent owns the `NotificationFilters` state; this component is fully
@@ -19,10 +18,8 @@ import { Button, Select } from '@/components/ui';
 import {
   FilterBar,
   SearchInput,
-  RangePicker,
   ActiveFilterChips,
   type FilterChipDescriptor,
-  type RangePickerProps,
 } from '@/components/forms';
 import type { NotificationFilters } from '@/api/hooks/useNotifications';
 import type { Vehicle, AlertRule } from '@/api/types';
@@ -38,7 +35,6 @@ type Severity = (typeof SEVERITY_OPTIONS)[number]['value'];
 export interface NotificationFilterBarProps {
   filters: NotificationFilters;
   onChange: (next: NotificationFilters) => void;
-  onRangeChange: RangePickerProps['onChange'];
   vehicles: Vehicle[];
   rules: AlertRule[];
 }
@@ -46,7 +42,6 @@ export interface NotificationFilterBarProps {
 export function NotificationFilterBar({
   filters,
   onChange,
-  onRangeChange,
   vehicles,
   rules,
 }: NotificationFilterBarProps) {
@@ -93,14 +88,6 @@ export function NotificationFilterBar({
   const selectedSeverities = useMemo(
     () => new Set<Severity>(filters.severity ?? []),
     [filters.severity],
-  );
-
-  const rangeValue = useMemo(
-    () => ({
-      start: filters.from?.slice(0, 10) ?? '',
-      end: filters.to?.slice(0, 10) ?? '',
-    }),
-    [filters.from, filters.to],
   );
 
   const vehicleOptions = useMemo(
@@ -247,11 +234,6 @@ export function NotificationFilterBar({
           historyScope="notifications"
         />
       </FilterBar>
-
-      <RangePicker
-        value={rangeValue}
-        onChange={onRangeChange}
-      />
 
       <ActiveFilterChips filters={activeFilterChips} onClearAll={handleClearAll} />
     </div>

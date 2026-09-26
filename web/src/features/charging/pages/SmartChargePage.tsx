@@ -26,7 +26,7 @@ import {
   ErrorText,
   type Column,
 } from '@/components/ui';
-import { UnitInput, VehicleSelect } from '@/components/forms';
+import { UnitInput } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -317,7 +317,6 @@ export default function SmartChargePage() {
     <PageContainer
       title={t('chargePlanner.title', 'Smart Charge')}
       subtitle={t('chargePlanner.subtitle', 'Optimize charging schedule for the cheapest TOU rates')}
-      actions={<VehicleSelect />}
       query={plansQuery}
     >
       <div className="space-y-4 sm:space-y-6">

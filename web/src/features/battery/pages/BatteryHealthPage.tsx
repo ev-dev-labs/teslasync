@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import {
   GlassPanel, Badge, Button,
   SectionTitle, PanelTitle, Text, MetricLabel,
@@ -223,7 +223,6 @@ export default function BatteryHealthPage() {
 
   const pageContextActions = (
     <>
-      <VehicleSelect />
       <LiveIndicator variant="compact" />
     </>
   );

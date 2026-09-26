@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { useDrive, useDrives } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Select } from '@/components/ui';
@@ -160,7 +160,6 @@ export default function DriveComparePage() {
       query={[drivesQuery, driveAQuery, driveBQuery]}
       actions={
         <div className="flex max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
           {driveOptions.length > 0 ? (
             <>
               <Select

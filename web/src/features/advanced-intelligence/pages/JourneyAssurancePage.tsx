@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useRunJourneyAssurance } from '@/api/hooks/useAdvancedIntelligence';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Text } from '@/components/ui';
@@ -62,7 +62,6 @@ export default function JourneyAssurancePage() {
         'advancedIntelligence.journey.subtitle',
         'Assess departure readiness and arrival reserve from supported vehicle evidence.',
       )}
-      actions={<VehicleSelect withIcon />}
     >
       <AlertBanner
         variant="info"

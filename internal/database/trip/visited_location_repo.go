@@ -24,17 +24,17 @@ func NewVisitedLocationRepo(db *database.DB) *VisitedLocationRepo {
 	return &VisitedLocationRepo{db: db}
 }
 
-func (r *VisitedLocationRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*geomodel.VisitedLocation, error) {
-	return r.deriveFromDrives(ctx, &vehicleID, limit)
+func (r *VisitedLocationRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, from, until time.Time) ([]*geomodel.VisitedLocation, error) {
+	return r.deriveFromDrives(ctx, &vehicleID, limit, offset, from, until)
 }
 
-func (r *VisitedLocationRepo) GetAll(ctx context.Context, limit int) ([]*geomodel.VisitedLocation, error) {
-	return r.deriveFromDrives(ctx, nil, limit)
+func (r *VisitedLocationRepo) GetAll(ctx context.Context, limit, offset int, from, until time.Time) ([]*geomodel.VisitedLocation, error) {
+	return r.deriveFromDrives(ctx, nil, limit, offset, from, until)
 }
 
 // deriveFromDrives is the only visited-location read path now that the
 // legacy visited_locations table is gone.
-func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *int64, limit int) ([]*geomodel.VisitedLocation, error) {
+func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *int64, limit, offset int, from, until time.Time) ([]*geomodel.VisitedLocation, error) {
 	const placeName = `COALESCE(NULLIF(g.name, ''), NULLIF(d.end_place, ''))`
 	query := `SELECT MIN(d.id) AS id,
 			d.vehicle_id,
@@ -55,14 +55,24 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 		args = append(args, *vehicleID)
 		argN = 2
 	}
+	if !from.IsZero() {
+		query += fmt.Sprintf(" AND d.ended_at >= $%d", argN)
+		args = append(args, from.UTC())
+		argN++
+	}
+	if !until.IsZero() {
+		query += fmt.Sprintf(" AND d.ended_at < $%d", argN)
+		args = append(args, until.UTC())
+		argN++
+	}
 	query += fmt.Sprintf(` GROUP BY d.vehicle_id, %s
-		ORDER BY visit_count DESC
-		LIMIT $%d`, placeName, argN)
-	args = append(args, limit)
+		ORDER BY visit_count DESC, id
+		LIMIT $%d OFFSET $%d`, placeName, argN, argN+1)
+	args = append(args, limit, offset)
 
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("query visited locations: %w", err)
 	}
 	defer rows.Close()
 
@@ -72,12 +82,15 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 		var firstVisited time.Time
 		if err := rows.Scan(&l.ID, &l.VehicleID, &l.AddressName, &l.VisitCount,
 			&l.TotalDurationS, &l.LastVisited, &firstVisited); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scan visited location: %w", err)
 		}
 		l.CreatedAt = firstVisited
 		locs = append(locs, l)
 	}
-	return locs, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate visited locations: %w", err)
+	}
+	return locs, nil
 }
 
 // UpsertFromDrive is a no-op stub kept for caller compatibility.

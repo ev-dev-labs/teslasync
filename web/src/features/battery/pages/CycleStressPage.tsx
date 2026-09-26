@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -168,7 +168,6 @@ export default function CycleStressPage() {
         'cycleStress.subtitle',
         'Continuity-bounded SoC cycle reconstruction, sensitivity, source coverage, and accounting',
       )}
-      actions={<VehicleSelect />}
     >
       <FadeIn>
         <CycleStressKpiBand

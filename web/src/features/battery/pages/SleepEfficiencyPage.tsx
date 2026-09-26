@@ -4,7 +4,7 @@ import { RefreshCw } from 'lucide-react';
 
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { AlertBanner } from '@/components/feedback';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -43,7 +43,7 @@ export default function SleepEfficiencyPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'sleep-efficiency.range',
   });
   const requestedRange = useMemo(
@@ -99,19 +99,6 @@ export default function SleepEfficiencyPage() {
     },
   };
   const common = { analysis, state: queryState };
-  const actions = (
-    <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end sm:gap-3">
-      <VehicleSelect
-        ariaLabel={t('sleep.selectVehicle', 'Select vehicle')}
-      />
-      <RangePicker
-        value={{ start, end }}
-        onChange={setRange}
-        align="end"
-        triggerTestId="sleep-efficiency-range"
-      />
-    </div>
-  );
 
   return (
     <PageContainer
@@ -120,7 +107,6 @@ export default function SleepEfficiencyPage() {
         'sleep.subtitle',
         'Inspect transition counts, withheld duration derivations, Sentry evidence, and exact source accounting',
       )}
-      actions={actions}
       query={sleepQuery}
     >
       {refreshError && (

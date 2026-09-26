@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Input } from '@/components/ui';
@@ -91,7 +91,6 @@ export default function EfficiencyTargetPage() {
       query={historyQuery}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
           <Input
             key={`efficiency-target-${distanceUnit}`}
             type="number"

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { Button, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -74,7 +74,7 @@ export default function ActivityTimelinePage() {
   const { vehicleId, vehicles } = useSelectedVehicle();
   const operationalMode = useOperationalMode();
   const tz = useTimezone('vehicle');
-  const { start, end, startInstant, endInstantExclusive, setRange } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'activity.timeline.range',
   });
   const [kinds, setKinds] = useState<ActivityKind[]>([]);
@@ -123,12 +123,6 @@ export default function ActivityTimelinePage() {
         'A unified timeline of drives, charging, alerts, software updates, and your annotations.',
       )}
       query={query}
-      contextActions={
-        <>
-          <VehicleSelect />
-          <RangePicker value={{ start, end }} onChange={setRange} align="end" triggerTestId="activity-range" />
-        </>
-      }
       overflowActions={
         <ListExportMenu
           testId="activity-export"

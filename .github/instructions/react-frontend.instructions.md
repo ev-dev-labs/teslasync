@@ -63,6 +63,10 @@ Before creating a new hook, check if one already exists in the relevant file.
   `getWorkspaceRouteScope(path)` enables the intended header controls.
   Pass both `startInstant` and `endInstantExclusive` through typed hooks and
   apply bounds to complete server-side results, not just loaded rows.
+- On header-owned routes, `useRangeState()` inherits the header's product
+  default and shared preference, not an older page-specific default or
+  `persistKey`. Preserve page-local range defaults only on routes without a
+  header range (or for genuinely independent custom URL keys).
 - Do not render a second workspace `RangePicker`, `DateRangeFilter`, or
   `VehicleSelect` inside a page, its action rail, toolbar, or chart.
   `PageActions` and the shared picker components suppress duplicate

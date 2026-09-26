@@ -7,7 +7,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, StatusPill, SelectableCard } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricBar } from '@/components/data-display';
 import {
   LinearGauge, ChartGradient, ChartTooltip, chartGrid, axisTick,
@@ -136,7 +136,6 @@ export default function RemainingUsefulLifePage() {
     <PageContainer
       title={t('rul.title', 'Remaining Useful Life')}
       subtitle={t('rul.subtitle', 'Predictive end-of-life forecasts for your wear components')}
-      actions={<VehicleSelect />}
       query={boardQuery}
     >
       {/* ── 1. Next-service banner ─────────────────────────────────────── */}

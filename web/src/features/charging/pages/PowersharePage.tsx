@@ -7,7 +7,7 @@ import { Button } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -88,7 +88,6 @@ export default function PowersharePage() {
 
   const actions = (
     <div className="flex items-center gap-2">
-      <VehicleSelect />
       <Button
         variant="ghost"
         onClick={refetchAll}
@@ -107,7 +106,7 @@ export default function PowersharePage() {
 
   if (vehicleId == null) {
     return (
-      <PageContainer title={title} subtitle={subtitle} actions={<VehicleSelect />}>
+      <PageContainer title={title} subtitle={subtitle}>
         <EmptyState /* no-action: page precondition — no vehicle in scope yet */
           icon={<Zap className="h-8 w-8" />}
           message={t('powershare.noVehicle', 'Select a vehicle to view its Powershare telemetry.')}

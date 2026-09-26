@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { FadeIn } from '@/components/motion';
 
 import { useDrives } from '@/api/hooks/useDriving';
@@ -130,13 +130,7 @@ export default function DrivingDynamicsPage() {
   );
 
   /* ---- shared date filter (used by SpeedGear + DriveAnalytics) ---- */
-  const {
-    start: startDate,
-    end: endDate,
-    startInstant,
-    endInstantExclusive,
-    setRange,
-  } = useRangeState({
+  const { start: startDate, end: endDate, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'driving-dynamics.range',
     timezone,
   });
@@ -185,17 +179,6 @@ export default function DrivingDynamicsPage() {
     <PageContainer
       title={t('dynamics.title', 'Driving Dynamics')}
       subtitle={t('dynamics.subtitle', 'Live motor telemetry, G-forces, and Grok’s powertrain read')}
-      contextActions={
-        <>
-          <VehicleSelect />
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="driving-dynamics-range"
-          />
-        </>
-      }
       query={motorLatestQuery}
     >
       <div className="space-y-6">

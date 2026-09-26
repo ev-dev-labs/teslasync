@@ -18,7 +18,7 @@ import {
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 import { VampireSplitPanel } from '../components/VampireSplitPanel';
 import { VampireCulpritPanel } from '../components/VampireCulpritPanel';
 
@@ -194,7 +194,6 @@ export default function VampireDrainPage() {
 
   const actions = (
     <>
-      <VehicleSelect />
       <Button
         variant="ghost"
         onClick={() => { void statsQuery.refetch(); void eventsQuery.refetch(); }}

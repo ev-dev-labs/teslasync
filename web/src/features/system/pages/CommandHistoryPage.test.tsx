@@ -4,15 +4,15 @@
  * This page is the command-center audit log for a single vehicle. Its own
  * responsibilities (what these tests exercise) are:
  *
- *   1. A `useCommandHistory(vehicleId)` feed keyed on the derived active
+ *   1. A complete range-scoped command feed keyed on the derived active
  *      vehicle (URL `?vehicle_id` > store > first fleet vehicle).
- *   2. A KPI band derived from the FULL history (total, 24h, success rate,
+ *   2. A KPI band derived from the full selected window (total, 24h, success rate,
  *      failed, most-used, last-sent) — never scoped by the filter bar.
  *   3. Per-section loading / error / empty branches for EVERY panel (KPI,
  *      daily-activity chart, top commands, timeline, status breakdown) — no
  *      panel is gated away when data is missing.
  *   4. Filter wiring: status tabs + live search narrow ONLY the timeline
- *      (count, pagination), while the range scopes the analytics.
+ *      (count, pagination); header range scopes the entire feed.
  *   5. Command-name i18n resolution (curated map + Title-Case fallback) and
  *      the timeline subtitle builder (JSON params, error prefix, raw-on-parse
  *      -failure).
@@ -257,7 +257,7 @@ describe('CommandHistoryPage — happy path', () => {
 
     expect(historyCalls().some((u) => /\/vehicles\/10\/commands\/history/.test(u))).toBe(true);
     expect(historyCalls().every((u) => !u.includes('/api/v1'))).toBe(true);
-    expect(historyCalls().some((u) => /limit=200/.test(u))).toBe(true);
+    expect(historyCalls().some((u) => /from=.+&to=.+&limit=1000/.test(u))).toBe(true);
   });
 
   it('derives every KPI from the full history (total, 24h, success-rate, failed, most-used)', async () => {
@@ -435,18 +435,13 @@ describe('CommandHistoryPage — filters & interactions', () => {
     expect(within(tl).queryByText('Honk Horn')).not.toBeInTheDocument();
   });
 
-  it('switches the active-vehicle feed when a different vehicle is selected', async () => {
+  it('uses the header vehicle selection from a deep link without a duplicate page picker', async () => {
     installRequest({ commands: richCommands() });
-    renderPage();
+    renderPage(['/command-history?vehicle_id=20']);
 
     await waitForCount(5);
-
-    const select = screen.getByRole('combobox', { name: 'Select vehicle' });
-    fireEvent.change(select, { target: { value: '20' } });
-
-    await waitFor(() =>
-      expect(historyCalls().some((u) => /\/vehicles\/20\/commands\/history/.test(u))).toBe(true),
-    );
+    expect(historyCalls().some((u) => /\/vehicles\/20\/commands\/history/.test(u))).toBe(true);
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
   });
 });
 

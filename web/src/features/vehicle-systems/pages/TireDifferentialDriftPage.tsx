@@ -4,7 +4,7 @@ import { Gauge, Search, Scale, Waypoints } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -99,7 +99,6 @@ export default function TireDifferentialDriftPage() {
         'Removes the four-tire common mode at every sample, so what remains is how each corner moves relative to its peers — an inference, not a manufacturer reading',
       )}
       query={historyQuery}
-      actions={<VehicleSelect />}
     >
       {/* 1 — KPI band */}
       <FadeIn>

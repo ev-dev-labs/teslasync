@@ -6,7 +6,7 @@ import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { Grid, PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -33,7 +33,6 @@ export default function PhysicsCockpitPage() {
     <PageContainer
       title={t('vehicles.physicsCockpit.title', 'Tesla physics cockpit')}
       subtitle={cockpit?.honesty ?? t('vehicles.physicsCockpit.subtitle', 'Live Gear, charge state, port latch, BMS, and trip meters.')}
-      contextActions={<VehicleSelect />}
       secondaryActions={(
         <Button
           variant="secondary"

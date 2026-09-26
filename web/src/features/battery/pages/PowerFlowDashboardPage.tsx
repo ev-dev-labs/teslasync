@@ -7,7 +7,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, PanelTitle, Caption } from '@/components/ui';
-import { RangePicker } from '@/components/forms';
+
 import { StatCard, KVList, Energy } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -32,7 +32,6 @@ import {
   SolarChargeAdviceStrip,
   fmtWatts,
   DEFAULT_SITE_ID,
-  PRESET_IDS,
   FLOW_COLORS,
   type PowerHistoryPoint,
 } from '../components/power-flow';
@@ -101,7 +100,7 @@ export default function PowerFlowDashboardPage() {
 
   // Fixed energy_site_id for now; a future picker can select from multiple sites.
   const [siteId] = useState(DEFAULT_SITE_ID);
-  const { start: since, end: until, setRange } = useRangeState({
+  const { start: since, end: until } = useRangeState({
     persistKey: 'power-flow.range',
     defaultPresetId: '7d',
   });
@@ -187,13 +186,6 @@ export default function PowerFlowDashboardPage() {
 
   const actions = (
     <>
-      <RangePicker
-        value={{ start: since, end: until }}
-        onChange={(r) => setRange(r)}
-        presetIds={PRESET_IDS}
-        align="end"
-        triggerTestId="power-flow-range"
-      />
       <Button
         variant="secondary"
         onClick={() => refreshMutation.mutate(siteId)}

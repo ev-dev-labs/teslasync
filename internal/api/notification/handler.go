@@ -503,6 +503,9 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 		}
 		f.From = t
 	}
+	if q.Has("to") && q.Has("to_exclusive") {
+		return f, fmt.Errorf("to and to_exclusive cannot both be provided")
+	}
 	if s := q.Get("to"); s != "" {
 		t, err := parseFlexibleTime(s)
 		if err != nil {
@@ -512,6 +515,20 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 			t = t.AddDate(0, 0, 1).Add(-time.Nanosecond)
 		}
 		f.To = t
+	}
+	if q.Has("to_exclusive") {
+		s := q.Get("to_exclusive")
+		if s == "" || f.From.IsZero() {
+			return f, fmt.Errorf("to_exclusive requires from and an RFC3339 instant")
+		}
+		t, err := time.Parse(time.RFC3339Nano, s)
+		if err != nil {
+			return f, fmt.Errorf("invalid to_exclusive: must be an RFC3339 instant")
+		}
+		f.To, f.ToExclusive = t, true
+	}
+	if !f.From.IsZero() && !f.To.IsZero() && (f.From.After(f.To) || f.ToExclusive && !f.From.Before(f.To)) {
+		return f, fmt.Errorf("from must precede the end of the time range")
 	}
 	if q.Has("before_created_at") || q.Has("before_id") {
 		if q.Get("before_created_at") == "" || q.Get("before_id") == "" {

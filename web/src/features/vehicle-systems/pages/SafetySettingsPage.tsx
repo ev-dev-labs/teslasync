@@ -23,7 +23,7 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard, TimeStamp, DataFreshnessAuto } from '@/components/data-display';
 import {
   LinearGauge,
@@ -465,7 +465,6 @@ export default function SafetySettingsPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <VehicleSelect />
       <DataFreshnessAuto query={latestQuery} />
       <Button
         variant="ghost"

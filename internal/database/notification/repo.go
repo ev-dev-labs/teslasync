@@ -679,6 +679,7 @@ type NotificationLogFilters struct {
 	Source                     string    // empty = all; rule = notification with an alert rule
 	From                       time.Time // inclusive lower bound on created_at
 	To                         time.Time // inclusive upper bound on created_at
+	ToExclusive                bool      // interpret To as an exclusive instant for workspace ranges
 	BeforeCreatedAt            time.Time // keyset cursor: rows strictly before this created_at/id tuple
 	BeforeID                   int64
 	Read                       *bool  // nil = both, false = unread only, true = read only
@@ -724,7 +725,11 @@ func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
 		addClause("nl.created_at >= "+ph(1), f.From.UTC())
 	}
 	if !f.To.IsZero() {
-		addClause("nl.created_at <= "+ph(1), f.To.UTC())
+		operator := " <= "
+		if f.ToExclusive {
+			operator = " < "
+		}
+		addClause("nl.created_at"+operator+ph(1), f.To.UTC())
 	}
 	if !f.BeforeCreatedAt.IsZero() && f.BeforeID > 0 {
 		createdAtPlaceholder := ph(1)

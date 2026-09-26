@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -105,7 +105,6 @@ export default function BatteryCarePage() {
         'How gently your charging habits treat the pack',
       )}
       query={[sessionsQuery, drivesQuery]}
-      actions={<VehicleSelect />}
     >
       <FadeIn>
         <BatteryCareKpiBand care={care} state={combinedState} />

@@ -12,7 +12,7 @@ import {
   type OfficialNHTSACommunicationsArtifactURL,
 } from '@/api/hooks/useServiceIntelligence';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Text } from '@/components/ui';
@@ -60,9 +60,6 @@ export default function ServiceIntelligencePage() {
 
   const actions = (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-      <VehicleSelect
-        ariaLabel={t('serviceIntelligence.vehicle.select', 'Select vehicle')}
-      />
       <Button
         type="button"
         variant="secondary"

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useDeferredValue } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,7 +26,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
 import { DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
 import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
-import { RangePicker, VehicleSelect, PillFilterBar, type PillItem } from '@/components/forms';
+import { PillFilterBar, type PillItem } from '@/components/forms';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
 import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
@@ -106,11 +106,7 @@ export default function DrivesListPage() {
    * the API applies a 50-row default page, so filtering client-side alone
    * capped this page at the 50 newest drives regardless of the chosen range
    * or page size. */
-  const {
-    start: startDate,
-    end: endDate,
-    setRangeWithUrlUpdates,
-  } = useRangeState({
+  const { start: startDate, end: endDate } = useRangeState({
     persistKey: 'drives.list.range',
   });
   const priorRange = useMemo(() => priorPeriod(startDate, endDate), [startDate, endDate]);
@@ -235,6 +231,13 @@ export default function DrivesListPage() {
   const [fsdFilter] = useUrlEnum<FsdFilter>('fsd', FSD_FILTERS, 'all');
   const [trendMetric, setTrendMetric] = useUrlEnum<TrendMetric>('trend', TREND_METRICS, 'drives');
   const setUrlBatch = useUrlBatch();
+  const previousRange = useRef(`${startDate}:${endDate}`);
+  useEffect(() => {
+    const currentRange = `${startDate}:${endDate}`;
+    if (previousRange.current === currentRange) return;
+    previousRange.current = currentRange;
+    if (page !== 1) setUrlBatch({ page: null });
+  }, [startDate, endDate, page, setUrlBatch]);
 
   /* ---- Date filter — bucket each drive by its vehicle-tz day so the
  * filter result matches the date the user sees in the row's header. */
@@ -959,19 +962,6 @@ export default function DrivesListPage() {
       error={drivesState.fatalError}
       copyLink
       query={drivesQuery}
-      contextActions={
-        <>
-          <VehicleSelect />
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={(r) => {
-              setRangeWithUrlUpdates(r, { page: null });
-            }}
-            align="end"
-            triggerTestId="drives-range-picker"
-          />
-        </>
-      }
       overflowActions={
         <div data-tour="drives-saved-views">
           <SavedViewMenu
@@ -1233,7 +1223,7 @@ export default function DrivesListPage() {
                       onRemove: () => { setUrlBatch({ q: null, page: null }); },
                     } satisfies FilterChipDescriptor
                   : null,
-                // Date range chips intentionally omitted — the RangePicker
+                // Date range chips intentionally omitted — the header range control
                 // trigger above already shows the active range and offers
                 // preset reset, so showing chips here would duplicate the
                 // affordance.
@@ -1257,7 +1247,7 @@ export default function DrivesListPage() {
             }
             onClearAll={() => {
               // Only clear filters that are visible as chips. Date range is
-              // owned by the RangePicker, so leave it alone here — clearing
+              // owned by the header range control, so leave it alone here — clearing
               // an invisible filter would be a WYSIWYG violation.
               setUrlBatch({ q: null, coll: null, fsd: null, page: null });
             }}

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useRunChargingSiteTwin } from '@/api/hooks/useAdvancedIntelligence';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Select, Text } from '@/components/ui';
@@ -51,7 +51,6 @@ export default function ChargingSiteTwinPage() {
         'advancedIntelligence.site.subtitle',
         'Test queue, utilization, peak demand, and panel constraints before infrastructure changes.',
       )}
-      actions={<VehicleSelect withIcon />}
     >
       <AlertBanner
         variant="info"

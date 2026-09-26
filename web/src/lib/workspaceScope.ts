@@ -31,6 +31,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/charging/curves',
   '/cold-start',
   '/command-history',
+  '/command-reliability',
   '/cost-analysis',
   '/drive-score',
   '/drives',

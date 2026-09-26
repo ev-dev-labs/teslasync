@@ -9,7 +9,7 @@ import {
   useReconciliationReport,
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Text, Textarea } from '@/components/ui';
@@ -412,7 +412,6 @@ export default function ChargingReconciliationPage() {
       )}
       loading={invoicesQuery.isLoading}
       error={invoicesQuery.error as Error | null}
-      actions={<VehicleSelect withIcon />}
     >
       <AlertBanner
         variant="info"

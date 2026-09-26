@@ -284,7 +284,14 @@ describe('LocationsPage — shell & request contract', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Visited Locations' })).toBeInTheDocument();
     expect(screen.getByText("Places you've been — ranked by frequency")).toBeInTheDocument();
     await waitFor(() => expect(mockRequest).toHaveBeenCalled());
-    expect(mockRequest).toHaveBeenCalledWith('/locations?vehicle_id=2&limit=50&offset=0');
+    const requestPath = String(mockRequest.mock.calls[0]?.[0]);
+    const params = new URL(requestPath, 'http://teslasync.local').searchParams;
+    expect(requestPath).toMatch(/^\/locations\?/);
+    expect(params.get('vehicle_id')).toBe('2');
+    expect(params.get('limit')).toBe('50');
+    expect(params.get('offset')).toBe('0');
+    expect(params.get('from')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(params.get('to')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(document.title).toContain('Visited Locations');
   });
 });
@@ -301,16 +308,13 @@ describe('LocationsPage — KPI band', () => {
     expect(kpiValue('Total Time')).toMatch(/\bh\b/);
   });
 
-  it('excludes rows without a last_visited timestamp from the range-filtered aggregates', async () => {
+  it('renders only the server-side range-filtered aggregates', async () => {
     mockRequest.mockResolvedValue([
-      { id: 9, address_name: 'Ghost, Nowhere', visit_count: 99, total_duration_s: 100, last_visited: null },
       { id: 1, address_name: 'Home, Seattle', visit_count: 10, total_duration_s: 500, last_visited: '2025-03-10T08:00:00Z' },
     ] as any);
     renderPage();
     await waitFor(() => expect(kpiValue('Unique Places')).toBe('1'));
-    // Ghost's 99 visits must not leak into any aggregate or the list.
     expect(kpiValue('Total Visits')).toBe('10');
-    expect(screen.queryByText('Ghost, Nowhere')).not.toBeInTheDocument();
   });
 
   it('shows a "—" placeholder for Most Visited when there is no data', async () => {
@@ -435,18 +439,13 @@ describe('LocationsPage — AI auto-name affordance', () => {
   });
 });
 
-describe('LocationsPage — vehicle picker', () => {
-  it('lists vehicles (vin fallback for a blank name) and propagates a change', async () => {
-    const setVehicleId = installVehicles();
+describe('LocationsPage — header vehicle scope', () => {
+  it('uses the header-selected vehicle without rendering a duplicate selector', async () => {
+    installVehicles({ vehicleId: 5 });
     renderPage();
 
-    const select = await screen.findByRole('combobox', { name: 'Select vehicle' });
-    expect(within(select).getByText('Model 3')).toBeInTheDocument();
-    // Blank display_name falls back to the VIN.
-    expect(within(select).getByText('VIN5')).toBeInTheDocument();
-
-    fireEvent.change(select, { target: { value: '5' } });
-    expect(setVehicleId).toHaveBeenCalledWith(5);
+    await waitFor(() => expect(mockRequest).toHaveBeenCalledWith(expect.stringContaining('vehicle_id=5')));
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
   });
 
   it('hides the picker and skips the request when no vehicle is available', async () => {

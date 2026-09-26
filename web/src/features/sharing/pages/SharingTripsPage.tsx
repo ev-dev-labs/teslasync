@@ -35,7 +35,7 @@ import { PageContainer } from '@/components/layout'
 import { GlassPanel, Button, PanelTitle, Text } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
-import { VehicleSelect } from '@/components/forms'
+
 import { FadeIn } from '@/components/motion'
 import { useTrips } from '@/api/hooks/useTrips'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
@@ -80,9 +80,6 @@ export default function SharingTripsPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      <VehicleSelect
-        ariaLabel={t('sharing.trips.selectVehicle', 'Select vehicle')}
-      />
       <Button
         variant="ghost"
         onClick={() => refetch()}

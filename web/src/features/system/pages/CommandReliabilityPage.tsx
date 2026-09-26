@@ -4,7 +4,6 @@ import { CheckCheck, Radio, RefreshCw, ShieldAlert } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { RangePicker } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -19,8 +18,10 @@ import { useCommandReliabilityHistory } from '@/api/hooks/useCommands';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { chartTokens } from '@/lib/tokens';
 import { formatDateShort } from '@/lib/dateFormat';
+import { useTimezone } from '@/lib/timezone';
 
 import { analyzeCommandReliability, type ReliabilityGrade } from '../lib/commandReliability';
 
@@ -53,11 +54,13 @@ export default function CommandReliabilityPage() {
   usePageTitle(t('commandReliability.title', 'Command Reliability'));
 
   const { vehicleId } = useSelectedVehicle();
-  const { start: from, end: to, setRange } = useRangeState({
-    persistKey: 'command.reliability.range',
-    defaultPresetId: 'all',
+  const { preferences } = useProductPreferences();
+  const timeZone = useTimezone('vehicle');
+  const { startInstant, endInstantExclusive } = useRangeState({
+    defaultPresetId: preferences.defaultAnalysisRange,
+    timezone: timeZone,
   });
-  const historyQuery = useCommandReliabilityHistory(vehicleId ?? undefined, from, to);
+  const historyQuery = useCommandReliabilityHistory(vehicleId ?? undefined, startInstant, endInstantExclusive);
 
   const summary = useMemo(
     () => analyzeCommandReliability(historyQuery.data ?? []),
@@ -100,11 +103,6 @@ export default function CommandReliabilityPage() {
         'Which remote commands you can actually trust, graded on Wilson confidence bounds rather than a raw success percentage',
       )}
       query={historyQuery}
-      actions={
-        <div className="flex flex-wrap items-center gap-3">
-          <RangePicker value={{ start: from, end: to }} onChange={setRange} presetIds={['7d', '30d', '90d', 'all']} />
-        </div>
-      }
     >
       {/* 1 — KPI band */}
       <FadeIn>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useChargingHistory } from '@/api/hooks/useCharging';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -126,7 +126,6 @@ export default function PackCapacityPage() {
         'packCapacity.subtitle',
         'Charging-derived capacity evidence, uncertainty, sensitivity, diagnostics, and exact row accounting',
       )}
-      actions={<VehicleSelect />}
     >
       <FadeIn>
         <PackCapacityKpiBand

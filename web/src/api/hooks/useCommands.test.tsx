@@ -200,11 +200,11 @@ describe('useCommandReliabilityHistory', () => {
     }));
     mockedRequest.mockResolvedValueOnce(firstPage).mockResolvedValueOnce([{ ...sampleEntry, id: 1000 }]);
     const { result } = renderHook(
-      () => useCommandReliabilityHistory(42, '2026-01-01', '2026-09-23'), { wrapper },
+      () => useCommandReliabilityHistory(42, '2026-09-22T12:00:00Z', '2026-09-23T12:00:00Z'), { wrapper },
     );
     await waitFor(() => expect(result.current.data).toHaveLength(1001));
     expect(mockedRequest.mock.calls[0][0]).toBe(
-      '/vehicles/42/commands/history?from=2026-01-01&to=2026-09-23&limit=1000',
+      '/vehicles/42/commands/history?from=2026-09-22T12%3A00%3A00Z&to=2026-09-23T12%3A00%3A00Z&limit=1000',
     );
     expect(mockedRequest.mock.calls[1][0]).toContain('before_id=1001');
     expect(mockedRequest.mock.calls[1][0]).toContain('before_created_at=');

@@ -23,7 +23,7 @@ import { GlassPanel, Button, Select, Slider, PanelTitle, Text, Caption } from '@
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 import { AITripPlannerLLMAgent } from '@/components/ai/AITripPlannerLLMAgent';
 import { usePlanTrip } from '@/api/hooks/useDriving';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
@@ -199,7 +199,6 @@ export default function TripPlannerPage() {
     <PageContainer
       title={t('tripPlanner.title', 'Trip Planner')}
       subtitle={t('tripPlanner.subtitle', 'Plan your route with range estimation and charging stops')}
-      actions={<VehicleSelect />}
     >
       {/* Opt-in AI trip-planner agent — renders zero DOM in off mode (ADR-015
           §I5+§I6). The deterministic form below is the canonical view. */}

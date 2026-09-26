@@ -17,7 +17,7 @@ import {
 } from '@/components/data-display';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -126,7 +126,6 @@ export default function LifetimeStatsPage() {
       subtitle={t('lifetime.subtitle', 'Your all-time driving achievements and milestones')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <VehicleSelect />
           {/* Lifetime stats are cagg-driven; force amber after 6h. */}
           <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
         </div>

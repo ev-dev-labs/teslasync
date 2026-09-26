@@ -6,6 +6,21 @@ import {
   getWorkspaceRouteScope,
 } from '../workspaceScope';
 import { ROUTE_REGISTRY } from '../routeRegistry';
+import appSource from '../../App.tsx?raw';
+
+const pageSources = import.meta.glob('../../features/**/pages/*Page.tsx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+const lazyPages = new Map(
+  [...appSource.matchAll(/const (\w+)\s*=\s*lazy\(\(\)\s*=>\s*import\('\.\/features\/([^']+\/pages\/[^']+)'\)/g)]
+    .map(([, name, path]) => [name, `../../features/${path}.tsx`]),
+);
+const routedPages = [...appSource.matchAll(
+  /<Route\b[^>]*?path="([^"]+)"[^>]*?element=\{<SafeRoute[^>]*><([A-Z]\w*)/g,
+)].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
   it('enables both canonical controls on vehicle history pages', () => {
@@ -18,6 +33,10 @@ describe('getWorkspaceRouteScope', () => {
       vehicle: true,
     });
     expect(getWorkspaceRouteScope('/media-player')).toEqual({
+      range: true,
+      vehicle: true,
+    });
+    expect(getWorkspaceRouteScope('/command-reliability')).toEqual({
       range: true,
       vehicle: true,
     });
@@ -157,5 +176,27 @@ describe('workspace scope metadata', () => {
     expect(Object.keys(scope).sort()).toEqual(['range', 'vehicle']);
     expect(typeof scope.range).toBe('boolean');
     expect(typeof scope.vehicle).toBe('boolean');
+  });
+
+  it('audits every lazy-loaded routed page for real header range ownership', () => {
+    const visited = new Set(routedPages.map(({ name }) => name));
+    visited.add('Dashboard'); // index route has no path attribute
+    const unmounted = [...lazyPages.keys()].filter((name) => !visited.has(name));
+    expect(unmounted).toEqual([]);
+
+    const missingSources = [...lazyPages.values()].filter((path) => !pageSources[path]);
+    expect(missingSources).toEqual([]);
+
+    const unscoped = routedPages.flatMap(({ path, name }) => {
+      const page = pageSources[lazyPages.get(name) ?? ''];
+      if (!page) return [];
+      const hasRange = page.includes('useRangeState(') ||
+        (name === 'ArchivedPage' && page.includes('<InboxBody'));
+      const hasPagePicker = page.includes('<RangePicker');
+      if (getWorkspaceRouteScope(path).range && !hasRange) return [path];
+      if (hasPagePicker && !getWorkspaceRouteScope(path).range) return [path];
+      return [];
+    });
+    expect(unscoped).toEqual([]);
   });
 });

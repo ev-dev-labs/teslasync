@@ -40,7 +40,7 @@ import {
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion, Label, Caption } from '@/components/ui';
 import { GlossaryTerm } from '@/components/ui/GlossaryTerm';
-import { VehicleSelect } from '@/components/forms';
+
 import { StatCard, BulkActionsToolbar, SavedViewMenu } from '@/components/data-display';
 import type { BulkAction } from '@/components/data-display/BulkActionsToolbar';
 import { EmptyState, AlertBanner, Skeleton } from '@/components/feedback';
@@ -370,7 +370,6 @@ export default function SignalsWorkspacePage() {
       )}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <VehicleSelect />
           {isLive ? (
             <Badge variant={live.connected ? 'success' : 'danger'} dot>
               {live.connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}

@@ -4,7 +4,7 @@ import { Activity, MapPin, Plug, Zap } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -92,7 +92,6 @@ export default function ChargerHealthPage() {
         'Every charging location benchmarked against its own best behaviour, so a stall that has quietly slowed down cannot hide',
       )}
       query={sessionsQuery}
-      actions={<VehicleSelect />}
     >
       {/* 1 — KPI band */}
       <FadeIn>

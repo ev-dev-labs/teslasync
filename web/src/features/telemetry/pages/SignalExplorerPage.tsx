@@ -26,7 +26,7 @@ import { GlassPanel, Button, Badge, HelpTooltip, Select } from '@/components/ui'
 import { EmptyState, AlertBanner } from '@/components/feedback';
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlArray, useUrlNumber, useUrlBatch, type UrlBatchUpdate } from '@/hooks/useUrlState';
@@ -237,7 +237,6 @@ export default function SignalExplorerPage() {
       subtitle={t('signalExplorer.subtitle', 'Visualise signal history with chart and stats — or stream live')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <VehicleSelect />
           {isLive ? (
             <Badge variant={live.connected ? 'success' : 'danger'} dot>
               {live.connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}

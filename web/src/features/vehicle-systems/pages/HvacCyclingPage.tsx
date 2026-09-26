@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -83,7 +83,6 @@ export default function HvacCyclingPage() {
         'hvacCycling.subtitle',
         'An evidence chain from returned climate rows to gap-qualified intervals, censored runs, and complete-cycle diagnostics',
       )}
-      actions={<VehicleSelect />}
       query={climateQuery}
     >
       <FadeIn>

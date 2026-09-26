@@ -28,7 +28,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Button, Select, Caption } from '@/components/ui';
 import { EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtInt } from '@/lib/numberFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -154,7 +154,6 @@ export default function SignalLogViewerPage() {
     <PageContainer
       title={t('signalLog.title', 'Signal Log Viewer')}
       subtitle={t('signalLog.subtitle', 'Query signal history from Postgres')}
-      actions={<VehicleSelect />}
       query={hasQueried ? signalLogQuery : undefined}
       copyLink
     >

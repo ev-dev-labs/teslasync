@@ -672,42 +672,36 @@ describe('InboxBody — mark all read', () => {
 /* ── 9. URL-backed filters ────────────────────────────── */
 
 describe('InboxBody — URL filters', () => {
-  it('includes historical Alert Studio events by default despite a seven-day workspace range', async () => {
+  it('honors the shared seven-day workspace range instead of querying all-time history', async () => {
     localStorage.setItem(SHARED_RANGE_STORAGE_KEY, JSON.stringify({
       version: 2, start: '2026-09-01', end: '2026-09-07', presetId: '7d',
     }));
     installRequest({
-      logs: () => Promise.resolve([
-        makeLog({
-          id: 42, channel_id: null, status: 'triggered',
-          event_type: 'alert.rule', title: 'Battery alert from Studio',
-          created_at: '2026-08-01T12:00:00Z',
-        }),
-      ]),
+      logs: () => Promise.resolve([]),
     });
     renderInbox({ route: '/notifications/inbox?view=flat' });
 
-    expect(await screen.findByText('Battery alert from Studio')).toBeInTheDocument();
-    expect(within(screen.getByRole('table', { name: 'Inbox' })).getByText('Battery Low')).toBeInTheDocument();
+    await waitFor(() => expect(flatCalls().length).toBeGreaterThanOrEqual(1));
     const params = new URL(
       String(flatCalls()[0][0]),
       'http://teslasync.local',
     ).searchParams;
     const from = params.get('from');
-    const to = params.get('to');
+    const until = params.get('to_exclusive');
 
-    expect(from).toBe('2015-01-01');
-    expect(to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(screen.getByText('All time')).toBeInTheDocument();
-    expect(callsFor((path) => path.includes('count_only=true') && path.includes('from=2015-01-01')).length).toBeGreaterThan(0);
+    expect(from).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(from).not.toContain('2015-01-01');
+    expect(until).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(params.has('to')).toBe(false);
+    expect(callsFor((path) => path.includes('count_only=true') && path.includes('to_exclusive=')).length).toBeGreaterThan(0);
   });
 
   it('respects an explicit inbox date range', async () => {
     renderInbox({ route: '/notifications/inbox?from=2026-09-01&to=2026-09-07' });
     await waitFor(() => expect(flatCalls().length).toBeGreaterThanOrEqual(1));
     const params = new URL(String(flatCalls()[0][0]), 'http://teslasync.local').searchParams;
-    expect(params.get('from')).toBe('2026-09-01');
-    expect(params.get('to')).toBe('2026-09-07');
+    expect(params.get('from')).toBe('2026-09-01T07:00:00.000Z');
+    expect(params.get('to_exclusive')).toBe('2026-09-08T07:00:00.000Z');
   });
 
   it('threads URL filters into the request as snake_case params without the /api/v1 prefix', async () => {
