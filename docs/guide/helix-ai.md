@@ -31,7 +31,7 @@ walks every feature in the registry and asserts each off-mode contract.
 | Surface | Route | Description |
 |---|---|---|
 | Helix Chat | `/chatbot` | Evidence-first fleet agent with cross-domain tool use, app knowledge retrieval, and visible provenance |
-| AI Settings | `/settings/ai` | Per-feature toggles, provider config, usage card, redaction controls, restore panel |
+| AI Settings | `/settings/ai` | Per-feature toggles, provider config, today's usage and seven-day per-feature spend, restore panel |
 | Inline widgets | various pages | 55+ `AI*.tsx` widgets, each gated by `withAiFeature` |
 
 ## The 56 user features
@@ -205,6 +205,14 @@ Provider choice resolves with this precedence (highest wins):
 3. **No provider** — the feature stays off.
 
 See `ResolveProviderName` in `internal/ai/provider/config.go`.
+
+Settings → AI shows audited per-feature calls, input/output tokens, and estimated
+cost over the last seven days, ordered by cost. The daily cost cap, when set,
+applies to **all** Helix calls combined; feature toggles are opt-ins, not
+individual cost caps. Provider/model labels come from the latest matching call
+among the 50 most recent audited calls, not from the seven-day aggregates.
+Features without such a recent call have no provider/model attribution in
+this view. Usage queries are disabled while Helix is off.
 
 ### Decorator chain
 

@@ -406,6 +406,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/fleetstatesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/roadanomalysvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
@@ -685,6 +686,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		},
 	}))
 	driveHandler := apidrives.NewDriveDetail(db, stateReader, liveStateReader)
+	roadAnomalyHandler := v1handlers.NewRoadAnomalyHandler(roadanomalysvc.New(drivedb.NewDriveRepo(db), stateReader))
 	chargingHandler := apicharging.NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
 		func(r *http.Request, action string, entityID *int64, detail string) {
@@ -3455,6 +3457,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", driveHandler.BulkDelete)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
+				r.Get("/road-anomalies", roadAnomalyHandler.Get)
 				r.Get("/positions", driveHandler.Positions)
 				r.Get("/telemetry", driveHandler.TelemetryReadings)
 				// Share link management

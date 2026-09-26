@@ -29,6 +29,7 @@ import type {
   DriveDiagnosticResponse,
   DriveDiagnosticWindow,
 } from '@/types/admin-diagnostics';
+import type { RoadAnomalyResponse } from '@/types/roadAnomalies';
 
 /** Fetches paginated driving sessions for a vehicle, optionally filtered by date range. */
 export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: string, end?: string) => {
@@ -66,7 +67,19 @@ export const drivingKeys = {
   coach: (vehicleId?: string, days?: number) => ['driving-coach', vehicleId, days] as const,
   whyEnded: (driveId: string, window: DriveDiagnosticWindow) =>
     ['drive', driveId, 'why-ended', window] as const,
+  roadAnomalies: (driveId: string) => ['drive', driveId, 'road-anomalies'] as const,
 };
+
+/** Historical, on-demand analysis; do not scan signal history until expanded. */
+export function useDriveRoadAnomalies(driveId: string, enabled = true) {
+  return useQuery({
+    queryKey: drivingKeys.roadAnomalies(driveId),
+    queryFn: ({ signal }) =>
+      request<RoadAnomalyResponse>(`/drives/${encodeURIComponent(driveId)}/road-anomalies`, { signal }),
+    enabled: enabled && !!driveId,
+    staleTime: STALE_TIMES.MODERATE,
+  });
+}
 
 /**
  * Options for scoping a drives query on the server.

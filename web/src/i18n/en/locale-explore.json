@@ -1,0 +1,12 @@
+{
+  "explore": {
+    "subtitle": {
+      "category": "{{matches}} features in the selected category"
+    },
+    "searchLabel": "Filter features",
+    "searchPlaceholder": "Filter features by name, section, or description (press / to focus)",
+    "sectionsAriaLabel": "Filter features by category",
+    "all": "All",
+    "showing": "{{count}} of {{total}} features"
+  }
+}

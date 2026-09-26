@@ -10,13 +10,13 @@
  * Page anatomy (top → bottom):
  *   1. KPI overview band — derived, at-a-glance counts (features / categories /
  *      showing / vehicles). No new API; computed from the same catalog.
- *   2. Sticky search panel — stays pinned as you scroll the catalog, with
- *      section-anchor chips (with match counts) for quick jumping.
+ *   2. Search and category filters — same labeled input and rectangular
+ *      selected/unselected buttons as the rule-template gallery.
  *   3. Results — per-section card bands, or a helpful empty state with
  *      "did you mean" suggestions from the Levenshtein route engine.
  *
  * Design rules preserved:
- *   - URL-driven state (`?q=`) so a link reproduces the user's view.
+ *   - URL-driven state (`?q=&section=`) so a link reproduces the user's view.
  *   - Shared components + design tokens only (Button / Input / GlassPanel /
  *     MetricCard / typography). The few `<a>` tags are internal navigation and
  *     keep focus rings + ARIA.
@@ -41,7 +41,6 @@ import {
 } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -76,6 +75,7 @@ export default function ExplorePage() {
   const vehicleCount = vehicles?.length ?? 0;
 
   const query = searchParams.get('q') ?? '';
+  const selectedSection = searchParams.get('section') ?? 'all';
 
   // ── Catalog ─────────────────────────────────────────────────────────
   const visibleCatalog = useMemo(() => {
@@ -91,7 +91,13 @@ export default function ExplorePage() {
     () => filterFeatureCatalog(visibleCatalog, query, (key, fallback) => t(key, fallback)),
     [visibleCatalog, query, t],
   );
-  const grouped = useMemo(() => groupFeatureCatalog(filtered), [filtered]);
+  const allGroups = useMemo(() => groupFeatureCatalog(filtered), [filtered]);
+  const grouped = useMemo(
+    () => selectedSection === 'all'
+      ? allGroups
+      : allGroups.filter((group) => slugify(group.section) === selectedSection),
+    [allGroups, selectedSection],
+  );
 
   // Stable count of distinct categories across the whole visible catalog —
   // drives the KPI band and stays constant while the user filters.
@@ -104,6 +110,12 @@ export default function ExplorePage() {
     const params = new URLSearchParams(searchParams);
     if (next) params.set('q', next);
     else params.delete('q');
+    setSearchParams(params, { replace: true });
+  };
+  const updateSection = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'all') params.delete('section');
+    else params.set('section', next);
     setSearchParams(params, { replace: true });
   };
 
@@ -125,7 +137,7 @@ export default function ExplorePage() {
   }, []);
 
   const totalFeatures = visibleCatalog.length;
-  const matchCount = filtered.length;
+  const matchCount = grouped.reduce((count, group) => count + group.entries.length, 0);
 
   const subtitle = query
     ? t('explore.subtitle.filtered', '{{matches}} of {{total}} features match "{{query}}"', {
@@ -133,6 +145,10 @@ export default function ExplorePage() {
         total: totalFeatures,
         query,
       })
+    : selectedSection !== 'all'
+      ? t('explore.subtitle.category', '{{matches}} features in the selected category', {
+          matches: matchCount,
+        })
     : t('explore.subtitle.all', 'Every feature in TeslaSync — {{total}} in total.', {
         total: totalFeatures,
       });
@@ -182,24 +198,15 @@ export default function ExplorePage() {
           </section>
         </FadeIn>
 
-        {/* 2 — Sticky search panel. Left un-wrapped by FadeIn on purpose: a
-            motion transform on an ancestor breaks `position: sticky`. `top-0`
-            works because Layout's main scroll container is the page itself.
-            `z-30` keeps us under modals (z-90+) and the command palette
-            (z-100) but over normal page content. */}
+        {/* Match the rule-template gallery: labeled search, outlined category
+            buttons, and a visible count of results. */}
         <div
-          className={cn(
-            'sticky top-0 z-30 -mx-4 px-4 pt-2 pb-3 md:-mx-6 md:px-6',
-            'bg-[var(--bg)]/85 backdrop-blur supports-[backdrop-filter]:bg-[var(--bg)]/70',
-          )}
           data-testid="explore-search-panel"
         >
           <GlassPanel className="p-4 sm:p-5">
-            <VisuallyHidden as="label" htmlFor="explore-search">
-              {t('explore.searchLabel', 'Filter features')}
-            </VisuallyHidden>
             <Input
               id="explore-search"
+              label={t('explore.searchLabel', 'Filter features')}
               ref={inputRef}
               type="search"
               autoComplete="off"
@@ -213,15 +220,24 @@ export default function ExplorePage() {
               icon={<Icons.search className="h-4 w-4" aria-hidden="true" />}
               data-testid="explore-search"
             />
-            {grouped.length > 0 && (
-              <SectionAnchorStrip
-                groups={grouped.map((g) => ({
+            {allGroups.length > 0 && (
+              <SectionFilter
+                groups={allGroups.map((g) => ({
                   section: g.section,
                   sectionKey: g.sectionKey,
                   count: g.entries.length,
                 }))}
+                total={filtered.length}
+                selected={selectedSection}
+                onSelect={updateSection}
               />
             )}
+            <Caption role="status" className="mt-4 block">
+              {t('explore.showing', '{{count}} of {{total}} features', {
+                count: matchCount,
+                total: totalFeatures,
+              })}
+            </Caption>
           </GlassPanel>
         </div>
 
@@ -233,10 +249,10 @@ export default function ExplorePage() {
               query={query}
               catalog={visibleCatalog}
               onPickSuggestion={(to) => {
-                updateQuery('');
+                setSearchParams({}, { replace: true });
                 navigate(to);
               }}
-              onClear={() => updateQuery('')}
+              onClear={() => setSearchParams({}, { replace: true })}
             />
           ) : (
             <div className="space-y-8">
@@ -258,43 +274,51 @@ export default function ExplorePage() {
   );
 }
 
-// ─── Anchor strip ────────────────────────────────────────────────────
+// ─── Category filter ────────────────────────────────────────────────
 
-function SectionAnchorStrip({
+function SectionFilter({
   groups,
+  total,
+  selected,
+  onSelect,
 }: {
   groups: { section: string; sectionKey: string; count: number }[];
+  total: number;
+  selected: string;
+  onSelect: (section: string) => void;
 }) {
   const { t } = useTranslation();
   return (
-    <nav
-      className="mt-3 flex flex-wrap gap-2"
-      aria-label={t('explore.sectionsAriaLabel', 'Jump to section')}
+    <div
+      role="group"
+      className="mt-4 flex flex-wrap gap-2"
+      aria-label={t('explore.sectionsAriaLabel', 'Filter features by category')}
       data-testid="explore-anchor-strip"
     >
+      <Button
+        type="button"
+        size="sm"
+        variant={selected === 'all' ? 'primary' : 'outline'}
+        aria-pressed={selected === 'all'}
+        onClick={() => onSelect('all')}
+        className="min-h-9 rounded-shape-sm px-3"
+      >
+        {t('explore.all', 'All')} ({total})
+      </Button>
       {groups.map(({ section, sectionKey, count }) => (
-        <a
+        <Button
           key={section}
-          href={`#explore-section-${slugify(section)}`}
-          className={cn(
-            'inline-flex min-h-11 items-center gap-2 rounded-full px-3 py-1.5',
-            'bg-white/[0.04] text-[var(--text-secondary)]',
-            'hover:bg-white/[0.08] hover:text-[var(--text-primary)]',
-            'border border-[var(--glass-border)]',
-            'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
-            'transition-colors',
-          )}
+          type="button"
+          size="sm"
+          variant={selected === slugify(section) ? 'primary' : 'outline'}
+          aria-pressed={selected === slugify(section)}
+          onClick={() => onSelect(slugify(section))}
+          className="min-h-9 rounded-shape-sm px-3"
         >
-          <Text as="span" size="sm">{t(sectionKey, section)}</Text>
-          <Caption
-            className="tabular-nums"
-            aria-label={t('explore.anchorCountAria', '{{count}} features', { count })}
-          >
-            {count}
-          </Caption>
-        </a>
+          {t(sectionKey, section)} ({count})
+        </Button>
       ))}
-    </nav>
+    </div>
   );
 }
 

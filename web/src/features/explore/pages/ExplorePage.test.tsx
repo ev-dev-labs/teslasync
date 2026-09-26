@@ -13,8 +13,8 @@
  *     numbers can never silently drift, and "showing" tracks the live filter
  *     while "features"/"categories" stay stable.
  *   - Results: every visible section renders as a landmark band with a heading,
- *     a count badge, and one <li> per card; the sticky anchor strip mirrors the
- *     section list with in-page hrefs.
+ *     a count badge, and one <li> per card; the category filter mirrors the
+ *     template-gallery controls and scopes results via the URL.
  *   - Filtering: URL-driven (?q=) round-trip, match highlighting (single- and
  *     multi-token <mark> wrapping), and the empty state with a "did you mean"
  *     Levenshtein suggestion that navigates + clears on pick.
@@ -166,15 +166,17 @@ describe('ExplorePage — results layout', () => {
     expect(screen.getByText(/Your daily summary/i)).toBeInTheDocument();
   });
 
-  it('renders a sticky anchor strip that mirrors the section list with in-page hrefs', () => {
-    renderPage();
+  it('renders rectangular category buttons and scopes results via a shareable URL', () => {
+    const { getLocation } = renderPage();
     const strip = screen.getByTestId('explore-anchor-strip');
-    const anchors = strip.querySelectorAll('a');
-    expect(anchors).toHaveLength(CATEGORY_COUNT);
-
-    const home = strip.querySelector('a[href="#explore-section-home"]');
-    expect(home).not.toBeNull();
-    expect(home?.textContent).toContain('Home');
+    const buttons = within(strip).getAllByRole('button');
+    expect(buttons).toHaveLength(CATEGORY_COUNT + 1);
+    expect(within(strip).getByRole('button', { name: `All (${ALL_COUNT})` })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Home (7)' }));
+    expect(getLocation().search).toBe('?section=home');
+    expect(screen.getByTestId('explore-section-home')).toBeInTheDocument();
+    expect(screen.queryByTestId('explore-section-charging')).not.toBeInTheDocument();
+    expect(kpiValue('Showing')).toBe('7');
   });
 });
 

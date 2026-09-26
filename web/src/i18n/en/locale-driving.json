@@ -903,6 +903,25 @@
     }
   },
   "driveDetail": {
+    "road": {
+      "title": "Possible road-surface anomalies",
+      "subtitle": "Historical telemetry review — not confirmed potholes",
+      "hide": "Hide analysis",
+      "review": "Review road surface",
+      "caveat": "Tesla does not report vertical impact or suspension motion. A candidate may be a road seam, speed bump, or maneuver; no candidate does not prove the road was smooth.",
+      "insufficientTitle": "Not enough synchronized samples",
+      "insufficient": "This drive did not record sufficiently close acceleration, speed, and GPS observations to screen for short jolts. Missing evidence is not a smooth-road result.",
+      "otherDrive": "Review other drives",
+      "noneTitle": "No candidates in recorded samples",
+      "none": "No short jolt matched the screening criteria in the usable telemetry. Events between reports may have been missed.",
+      "count": "{{count}} possible jolts in this drive",
+      "samples": "{{count}} acceleration observations screened",
+      "map": "Possible road-anomaly locations",
+      "possibleJolt": "Possible jolt",
+      "speed": "Recorded speed",
+      "position": "Approximate location",
+      "failed": "Road-surface analysis failed to render"
+    },
     "vsAverage": "vs your average",
     "vsRecord": "vs your record",
     "minutesShort": "min",
