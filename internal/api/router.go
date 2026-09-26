@@ -415,6 +415,7 @@ import (
 	analysishandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/analysis"
 	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
+	roadanomalyhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/roadanomaly"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
@@ -686,7 +687,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		},
 	}))
 	driveHandler := apidrives.NewDriveDetail(db, stateReader, liveStateReader)
-	roadAnomalyHandler := v1handlers.NewRoadAnomalyHandler(roadanomalysvc.New(drivedb.NewDriveRepo(db), stateReader))
+	roadAnomalyHandler := roadanomalyhandler.NewRoadAnomalyHandler(roadanomalysvc.New(drivedb.NewDriveRepo(db), stateReader))
 	chargingHandler := apicharging.NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
 		func(r *http.Request, action string, entityID *int64, detail string) {
