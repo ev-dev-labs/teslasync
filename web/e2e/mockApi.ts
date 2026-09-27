@@ -430,6 +430,7 @@ export function resolveApiFixture(
   if (path === '/onboarding/status') return matched({});
   if (path === '/admin/rbac/matrix') return matched({ roles: [], permissions: [] });
   if (path === '/system/update-check') return matched({ update_available: false });
+  if (path === '/system/map-config') return matched({ provider: 'free', api_key: '' });
   if (path === '/export/jobs') return matched([]);
   if (path === '/admin/impersonate') return matched({ mode: 'inactive' });
   if (path === '/push/public-key') return matched({ public_key: '' });
@@ -613,6 +614,8 @@ export function resolveApiFixture(
     });
   }
   if (path.startsWith('/charging-telemetry/latest')) return matched(null);
+  if (path.startsWith('/climate/latest?vehicle_id=')) return matched(null);
+  if (path.startsWith('/security/latest?vehicle_id=')) return matched(null);
   if (path.startsWith('/data-repair/cases/stats')) {
     return matched({ open: 1, in_review: 0, quarantined: 0, resolved: 0, total: 1, updated_at: observedAt });
   }

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { expectThemeApplied, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { assertMockApiComplete, expectThemeApplied, fulfillApiMock, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 
 for (const theme of ['dark', 'light'] as const) {
   for (const width of [390, 1440]) {
@@ -33,14 +33,17 @@ for (const theme of ['dark', 'light'] as const) {
       await page.keyboard.press('Escape')
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]'))
       expect(saved.at(-1)?.widgets).toEqual([])
+      await assertMockApiComplete(page, mockApi)
 
       const restoredPage = await page.context().newPage()
       await seedBrowserState(restoredPage, theme, '/', { preserveDashboardState: true })
-      await installApiMocks(restoredPage, 'populated', theme)
+      const restoredMockApi = await installApiMocks(restoredPage, 'populated', theme)
       await restoredPage.goto('/', { waitUntil: 'domcontentloaded' })
       await expect(restoredPage.getByText('No widgets yet')).toBeVisible()
       await restoredPage.reload({ waitUntil: 'domcontentloaded' })
       await expect(restoredPage.getByText('No widgets yet')).toBeVisible()
+      await waitForHarnessReady(restoredPage, restoredMockApi)
+      await assertMockApiComplete(restoredPage, restoredMockApi)
       await restoredPage.close()
     })
   }
@@ -48,7 +51,7 @@ for (const theme of ['dark', 'light'] as const) {
 
 test('installs a layout pack and restores its widgets in a new browser', async ({ page, browser }) => {
   await seedBrowserState(page, 'dark', '/')
-  await installApiMocks(page)
+  const mockApi = await installApiMocks(page)
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
   await page.getByRole('button', { name: 'Layout packs' }).first().click()
@@ -62,15 +65,16 @@ test('installs a layout pack and restores its widgets in a new browser', async (
     dashboards: JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as unknown[],
     active_id: localStorage.getItem('teslasync-active-dashboard') ?? '',
   }))
+  await assertMockApiComplete(page, mockApi)
   const context = await browser.newContext()
   try {
     const restored = await context.newPage()
     await seedBrowserState(restored, 'dark', '/', { preserveDashboardState: true })
 
-    await installApiMocks(restored)
+    const restoredMockApi = await installApiMocks(restored)
     await restored.route('**/api/v1/settings/dashboard-layouts', (route) => {
       if (route.request().method() === 'GET') {
-        return route.fulfill({
+        return fulfillApiMock(route, restoredMockApi, {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify(saved),
@@ -80,10 +84,12 @@ test('installs a layout pack and restores its widgets in a new browser', async (
     })
     await restored.goto(page.url(), { waitUntil: 'domcontentloaded' })
     await expect(restored.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Daily Commuter')
+    await waitForHarnessReady(restored, restoredMockApi)
     const hydrated = await restored.evaluate(() =>
       JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{ id: string; widgets: unknown[] }>,
     )
     expect(hydrated.find((dashboard) => dashboard.id === saved.active_id)?.widgets).toHaveLength(7)
+    await assertMockApiComplete(restored, restoredMockApi)
   } finally {
     await context.close()
   }
@@ -108,5 +114,6 @@ for (const width of [390, 1440]) {
     await expect(page.getByText('Operational brief')).toHaveCount(0)
     await expect(page.getByRole('navigation', { name: 'Primary workflows' })).toHaveCount(0)
     await expect(page.getByText('Recommended actions')).toHaveCount(0)
+    await assertMockApiComplete(page, mockApi)
   })
 }
