@@ -221,6 +221,25 @@ describe('getAPICallLogs', () => {
     // limit/offset 0 and empty method are dropped; only the truthy endpoint survives.
     expect(call()[0]).toBe('/api-logs?endpoint=%2Fx')
   })
+
+  it('serialises the exclusive upper bound in snake_case for precise header windows', async () => {
+    mockedRequest.mockResolvedValueOnce({ logs: [], total: 0 })
+    await getAPICallLogs({ start: '2026-09-19T07:00:00Z', endExclusive: '2026-09-26T07:00:00Z' })
+    expect(call()[0]).toBe('/api-logs?start=2026-09-19T07%3A00%3A00Z&end_exclusive=2026-09-26T07%3A00%3A00Z')
+  })
+})
+
+describe('getAPICallLogStats', () => {
+  it('serialises both exact instants for header-scoped stats', async () => {
+    mockedRequest.mockResolvedValueOnce({ total_calls: 2 })
+    await getAPICallLogStats('2026-09-19T07:00:00Z', '2026-09-26T07:00:00Z')
+    expect(call()[0]).toBe('/api-logs/stats?start=2026-09-19T07%3A00%3A00Z&end_exclusive=2026-09-26T07%3A00%3A00Z')
+  })
+
+  it('rejects partial windows rather than sending unscoped stats', () => {
+    expect(() => getAPICallLogStats('2026-09-19T07:00:00Z')).toThrow(/both start and endExclusive/)
+    expect(mockedRequest).not.toHaveBeenCalled()
+  })
 })
 
 // ---------------------------------------------------------------------------

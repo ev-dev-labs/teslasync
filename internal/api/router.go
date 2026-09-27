@@ -4596,6 +4596,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/users/me/activity", auditHandler.UserActivity)
 
 		// API Call Logs
+		// GET /api-logs and /api-logs/stats accept start/end_exclusive RFC3339
+		// bounds; unbounded stats and legacy inclusive list end remain supported.
 		r.Route("/api-logs", func(r chi.Router) {
 			r.Get("/", apiCallLogHandler.List)
 			r.Get("/stats", apiCallLogHandler.Stats)

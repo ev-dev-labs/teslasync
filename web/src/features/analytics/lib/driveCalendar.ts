@@ -1,8 +1,8 @@
 /**
  * Drive Calendar model — a year of daily driving.
  *
- * Buckets drive distance into local calendar days for either the trailing
- * 52 weeks or a selected calendar year. Pure and clock-free (`nowMs` injected).
+ * Buckets drive distance into local calendar days for the shared workspace
+ * range. Pure and clock-free (`nowMs` injected).
  */
 
 import type { Drive } from '@/types/driving';
@@ -73,25 +73,26 @@ export interface DriveCalendar {
   weekendDistanceShare: number | null;
 }
 
-export function driveCalendarBounds(nowMs: number, year: number | null): { start: Date; endExclusive: Date } {
+export interface DriveCalendarWindow {
+  start: string;
+  end: string;
+}
+
+export function driveCalendarBounds(nowMs: number, range: DriveCalendarWindow): { start: Date; endExclusive: Date } {
+  const start = new Date(`${range.start}T00:00:00`);
+  const requestedEnd = new Date(`${range.end}T00:00:00`);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(requestedEnd.getTime()) || start > requestedEnd) {
+    throw new Error('Drive calendar requires a valid date range');
+  }
   const today = new Date(nowMs);
   today.setHours(0, 0, 0, 0);
   const endExclusive = new Date(today);
   endExclusive.setDate(endExclusive.getDate() + 1);
-  if (year != null) {
-    const yearEnd = new Date(year + 1, 0, 1);
-    return {
-      start: new Date(year, 0, 1),
-      endExclusive: yearEnd < endExclusive ? yearEnd : endExclusive,
-    };
-  }
-  const start = new Date(today);
-  start.setDate(start.getDate() - 52 * 7);
-  start.setDate(start.getDate() - start.getDay());
-  return { start, endExclusive };
+  requestedEnd.setDate(requestedEnd.getDate() + 1);
+  return { start, endExclusive: requestedEnd < endExclusive ? requestedEnd : endExclusive };
 }
 
-function localKey(d: Date): string {
+export function calendarDayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -102,30 +103,30 @@ function p95(values: readonly number[]): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(0.95 * sorted.length) - 1)]!;
 }
 
-export function buildDriveCalendar(drives: readonly Drive[], nowMs: number, year: number | null = null): DriveCalendar {
+export function buildDriveCalendar(drives: readonly Drive[], nowMs: number, range: DriveCalendarWindow): DriveCalendar {
   const byDay = new Map<string, { distanceM: number; drives: number }>();
   for (const d of drives) {
     if (!d.startTs) continue;
     const dt = new Date(d.startTs);
     if (!Number.isFinite(dt.getTime())) continue;
-    const key = localKey(dt);
+    const key = calendarDayKey(dt);
     const agg = byDay.get(key) ?? { distanceM: 0, drives: 0 };
     agg.distanceM += Number.isFinite(d.distanceM) ? Math.max(0, d.distanceM) : 0;
     agg.drives += 1;
     byDay.set(key, agg);
   }
 
-  const { start: windowStart, endExclusive } = driveCalendarBounds(nowMs, year);
+  const { start: windowStart, endExclusive } = driveCalendarBounds(nowMs, range);
   const start = new Date(windowStart);
   start.setDate(start.getDate() - start.getDay());
-  const today = new Date(endExclusive);
-  today.setDate(today.getDate() - 1);
+  const lastDay = new Date(endExclusive);
+  lastDay.setDate(lastDay.getDate() - 1);
 
-  const todayKey = localKey(today);
-  const windowStartKey = localKey(windowStart);
+  const lastDayKey = calendarDayKey(lastDay);
+  const windowStartKey = calendarDayKey(windowStart);
   const positives: number[] = [];
   for (const [key, { distanceM }] of byDay) {
-    if (key >= windowStartKey && key <= todayKey && distanceM > 0) positives.push(distanceM);
+    if (key >= windowStartKey && key <= lastDayKey && distanceM > 0) positives.push(distanceM);
   }
   const cap = p95(positives);
 
@@ -136,7 +137,7 @@ export function buildDriveCalendar(drives: readonly Drive[], nowMs: number, year
   let busiestDay: CalendarDay | null = null;
 
   for (const date = new Date(start); date < endExclusive; date.setDate(date.getDate() + 1)) {
-    const key = localKey(date);
+    const key = calendarDayKey(date);
     const agg = key >= windowStartKey ? byDay.get(key) : undefined;
     const distanceM = agg?.distanceM ?? 0;
     const count = agg?.drives ?? 0;
@@ -153,8 +154,8 @@ export function buildDriveCalendar(drives: readonly Drive[], nowMs: number, year
   }
 
   // Streaks over the windowed days (ascending). The current streak may end
-  // today OR yesterday — an empty "today" shouldn't zero it before the
-  // evening commute happens.
+  // today OR yesterday when the range includes today — an empty "today"
+  // shouldn't zero it before the evening commute happens.
   let longestStreak = 0;
   let run = 0;
   for (const d of days) {
@@ -167,7 +168,7 @@ export function buildDriveCalendar(drives: readonly Drive[], nowMs: number, year
   }
   let currentStreak = 0;
   let idx = days.length - 1;
-  if (idx >= 0 && days[idx]!.drives === 0) idx -= 1; // forgive an empty today
+  if (idx >= 0 && days[idx]!.date === calendarDayKey(new Date(nowMs)) && days[idx]!.drives === 0) idx -= 1;
   for (; idx >= 0 && days[idx]!.drives > 0; idx--) currentStreak += 1;
 
   const weeks: CalendarWeek[] = [];

@@ -40,6 +40,10 @@ describe('getWorkspaceRouteScope', () => {
       range: true,
       vehicle: true,
     });
+    expect(getWorkspaceRouteScope('/drive-calendar')).toEqual({
+      range: true,
+      vehicle: true,
+    });
     for (const path of ['/fsd', '/signal-explorer', '/signal-log', '/signals']) {
       expect(getWorkspaceRouteScope(path), path).toEqual({
         range: true,
