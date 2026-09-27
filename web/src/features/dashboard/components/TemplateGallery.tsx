@@ -21,6 +21,9 @@ const TEMPLATE_DESCRIPTIONS: Record<string, { key: string; fallback: string }> =
   performance: { key: 'templates.performance.desc', fallback: 'Track driving performance, efficiency, and vehicle health' },
   kiosk_wall: { key: 'templates.kioskWall.desc', fallback: 'Clean layout designed for always-on screens and kiosk mode' },
   minimal: { key: 'templates.minimal.desc', fallback: 'Just the essentials — battery, charging, climate, and navigation' },
+  battery_care: { key: 'templates.batteryCare.desc', fallback: 'Follow battery health, range, charging history, and energy use together' },
+  operations: { key: 'templates.operations.desc', fallback: 'Fleet posture, alerts, recent drives, and system health for daily triage' },
+  winter_ready: { key: 'templates.winterReady.desc', fallback: 'Check climate, tire pressure, weather, and range before setting off' },
 };
 
 /* ─── Template Detail View ─── */
@@ -80,7 +83,7 @@ function TemplateDetail({
           </UiButton>
           <UiButton size="sm" onClick={onApply}>
             <Sparkles className="h-3.5 w-3.5 mr-1" />
-            {t('templates.apply', 'Install as new dashboard')}
+            {t('templates.apply', 'Create layout with these widgets')}
           </UiButton>
         </div>
       </div>
@@ -211,7 +214,7 @@ export function TemplateGallery({ open, onClose, onApply }: TemplateGalleryProps
       title={
         selectedTemplate
           ? t('templates.detail', 'Template Preview')
-          : t('templates.title', 'Layout packs')
+          : t('templates.title', 'Create a layout')
       }
       size="lg"
       className="sm:max-h-[80vh]"
@@ -250,7 +253,7 @@ export function TemplateGallery({ open, onClose, onApply }: TemplateGalleryProps
                     {t('templates.blank', 'Blank Dashboard')}
                   </h4>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    {t('templates.blank.desc', 'Start from scratch and add widgets manually')}
+                    {t('templates.blankDescription', 'Start from scratch and add widgets manually')}
                   </p>
                 </div>
               </div>

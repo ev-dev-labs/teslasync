@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
+import { Accordion, GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
 import { PrefetchLink } from '@/components/layout'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
@@ -200,15 +200,12 @@ export function AppearanceSettings() {
             {t('theme.density.help', 'Affects table rows, cards, and dashboard widgets across the app.')}
           </HelperText>
 
-          {/* Live preview — uses density Tailwind utilities so it reflows
-            instantly when the body[data-density] attribute changes. */}
-          <div className="mt-4 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] overflow-hidden">
-            <div className="border-b border-[var(--glass-border)] bg-[var(--surface-3)] px-d-pad-x py-d-pad-y">
-              <p className="text-d-base font-medium text-[var(--text-secondary)]">
-                {t('theme.density.previewTitle', 'Preview')}
-              </p>
-            </div>
-            <div className="divide-y divide-[var(--glass-border)]">
+          <Accordion
+            title={t('theme.density.previewTitle', 'Preview')}
+            className="mt-4 border-[var(--glass-border)]"
+            bodyClassName="p-0"
+          >
+            <div className="divide-y divide-[var(--glass-border)] bg-[var(--surface-2)]">
               {[
                 t('theme.density.previewRow1', 'Sample row — Tesla Model 3'),
                 t('theme.density.previewRow2', 'Sample row — Tesla Model Y'),
@@ -222,9 +219,17 @@ export function AppearanceSettings() {
                 </div>
               ))}
             </div>
-          </div>
+          </Accordion>
         </div>
 
+      </GlassPanel>
+
+      <Accordion
+        title={t('theme.moreOptions', 'More appearance options')}
+        className="border-[var(--glass-border)]"
+        bodyClassName="space-y-4 p-3 sm:p-4"
+      >
+        <GlassPanel className="p-6">
         {/* Time format default */}
         <div data-tour="settings-time-format">
           <div className="flex items-center gap-2 mb-3">
@@ -576,6 +581,7 @@ export function AppearanceSettings() {
           </div>
         </div>
       </GlassPanel>
+      </Accordion>
     </>
   )
 }

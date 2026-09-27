@@ -559,10 +559,79 @@
   },
   "templates": {
     "widgetCount": "{{count}} widgets",
-    "apply": "Install as new dashboard",
+    "apply": "Create layout with these widgets",
     "detail": "Template Preview",
-    "title": "Layout packs",
-    "blank": "Blank Dashboard"
+    "title": "Create a layout",
+    "blank": "Blank Dashboard",
+    "blankDescription": "Start from scratch and add widgets manually",
+    "default": {
+      "name": "Default",
+      "desc": "Balanced overview of vehicle status, battery, climate, and recent drives"
+    },
+    "commuter": {
+      "name": "Daily Commuter",
+      "desc": "Essentials for your daily drive — range, charging, climate, and security"
+    },
+    "fleetManager": {
+      "desc": "Fleet-wide metrics, drive history, and charging analytics"
+    },
+    "dataNerd": {
+      "desc": "Live signals, energy flow, and deep telemetry data"
+    },
+    "chargingFocus": {
+      "desc": "Focus on charging status, costs, and energy flow"
+    },
+    "securityMonitor": {
+      "desc": "Keep an eye on doors, windows, sentry events, and location"
+    },
+    "roadTrip": {
+      "desc": "Everything you need for a long drive — range, weather, tires, and maps"
+    },
+    "performance": {
+      "name": "Performance",
+      "desc": "Track driving performance, efficiency, and vehicle health"
+    },
+    "kioskWall": {
+      "desc": "Clean layout designed for always-on screens and kiosk mode"
+    },
+    "minimal": {
+      "name": "Minimal",
+      "desc": "Just the essentials — battery, charging, climate, and navigation"
+    },
+    "batteryCare": {
+      "desc": "Follow battery health, range, charging history, and energy use together"
+    },
+    "battery_care": {
+      "name": "Battery Care"
+    },
+    "operations": {
+      "name": "Operations Desk",
+      "desc": "Fleet posture, alerts, recent drives, and system health for daily triage"
+    },
+    "winterReady": {
+      "desc": "Check climate, tire pressure, weather, and range before setting off"
+    },
+    "winter_ready": {
+      "name": "Winter Ready"
+    },
+    "fleet_manager": {
+      "name": "Fleet Manager"
+    },
+    "data_nerd": {
+      "name": "Data Nerd"
+    },
+    "charging_focus": {
+      "name": "Charging Hub"
+    },
+    "security_monitor": {
+      "name": "Security Monitor"
+    },
+    "road_trip": {
+      "name": "Road Trip"
+    },
+    "kiosk_wall": {
+      "name": "Wall Display"
+    }
   },
   "widget": {
     "alertFeed": "Alert Feed",

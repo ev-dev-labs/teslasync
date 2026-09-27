@@ -22,11 +22,13 @@ const LEVEL_CLASSES = [
 
 interface DriveCalendarHeatmapProps extends DriveCalendarSectionState {
   calendar: DriveCalendar;
+  className?: string;
 }
 
 /** Responsive Sunday-first activity grid with month and weekday context. */
 export function DriveCalendarHeatmap({
   calendar,
+  className,
   isLoading,
   error,
   onRetry,
@@ -36,7 +38,7 @@ export function DriveCalendarHeatmap({
   const weekdayLabels = getWeekdayLabels(t);
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
+    <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <CalendarDays className="h-4 w-4 text-cyan-300" aria-hidden="true" />

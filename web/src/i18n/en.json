@@ -13646,10 +13646,32 @@
   },
   "templates": {
     "widgetCount": "{{count}} widgets",
-    "apply": "Install as new dashboard",
+    "apply": "Create layout with these widgets",
     "detail": "Template Preview",
-    "title": "Layout packs",
-    "blank": "Blank Dashboard"
+    "title": "Create a layout",
+    "blank": "Blank Dashboard",
+    "blankDescription": "Start from scratch and add widgets manually",
+    "default": { "name": "Default", "desc": "Balanced overview of vehicle status, battery, climate, and recent drives" },
+    "commuter": { "name": "Daily Commuter", "desc": "Essentials for your daily drive — range, charging, climate, and security" },
+    "fleetManager": { "desc": "Fleet-wide metrics, drive history, and charging analytics" },
+    "dataNerd": { "desc": "Live signals, energy flow, and deep telemetry data" },
+    "chargingFocus": { "desc": "Focus on charging status, costs, and energy flow" },
+    "securityMonitor": { "desc": "Keep an eye on doors, windows, sentry events, and location" },
+    "roadTrip": { "desc": "Everything you need for a long drive — range, weather, tires, and maps" },
+    "performance": { "name": "Performance", "desc": "Track driving performance, efficiency, and vehicle health" },
+    "kioskWall": { "desc": "Clean layout designed for always-on screens and kiosk mode" },
+    "minimal": { "name": "Minimal", "desc": "Just the essentials — battery, charging, climate, and navigation" },
+    "batteryCare": { "desc": "Follow battery health, range, charging history, and energy use together" },
+    "battery_care": { "name": "Battery Care" },
+    "operations": { "name": "Operations Desk", "desc": "Fleet posture, alerts, recent drives, and system health for daily triage" },
+    "winterReady": { "desc": "Check climate, tire pressure, weather, and range before setting off" },
+    "winter_ready": { "name": "Winter Ready" },
+    "fleet_manager": { "name": "Fleet Manager" },
+    "data_nerd": { "name": "Data Nerd" },
+    "charging_focus": { "name": "Charging Hub" },
+    "security_monitor": { "name": "Security Monitor" },
+    "road_trip": { "name": "Road Trip" },
+    "kiosk_wall": { "name": "Wall Display" }
   },
   "hero": {
     "unknownStatus": "Unknown",
@@ -16920,6 +16942,9 @@
     "subtitle": "Customize colors and display mode",
     "displayMode": "Display Mode",
     "modeCount": "{{count}} modes",
+    "browseModes": "Browse all {{count}} modes",
+    "showCoreModes": "Show essential modes",
+    "moreOptions": "More appearance options",
     "searchModes": "Search display modes…",
     "noModes": "No display modes match your search.",
     "mode": "Mode",
@@ -17170,6 +17195,51 @@
     }
   },
   "settings": {
+    "typography": {
+      "title": "Typography",
+      "subtitle": "Choose fonts and tune size, spacing, and weight — applied everywhere instantly.",
+      "familyHint": "Focus or hover to preview a font, then select it to use it everywhere.",
+      "searchFont": "Search {{kind}}",
+      "searchPlaceholder": "Search font families…",
+      "noFonts": "No font families match your search.",
+      "cardSample": "Aa 012345",
+      "webFontHelp": "Web fonts need an internet connection; system and installed custom fonts work offline.",
+      "preview": {
+        "aria": "Typography preview",
+        "label": "Live preview",
+        "heading": "The quick brown fox jumps over the lazy dog",
+        "body": "Sync your Tesla fleet, chart every drive, and read the numbers clearly in any theme.",
+        "interface": "Interface & headings",
+        "data": "Data & code",
+        "tryText": "Try your own text",
+        "tryPlaceholder": "Type here to see your text in the preview"
+      },
+      "presets": {
+        "label": "Reading presets",
+        "default": "Default",
+        "comfortable": "Comfortable",
+        "compact": "Compact",
+        "legible": "High legibility"
+      },
+      "uiFont": {
+        "label": "UI font",
+        "customAria": "Custom UI font stack",
+        "customPlaceholder": "e.g. 'Aptos', system-ui, sans-serif"
+      },
+      "monoFont": {
+        "label": "Monospace font",
+        "customAria": "Custom monospace font stack",
+        "customPlaceholder": "e.g. 'Cascadia Code', ui-monospace, monospace"
+      },
+      "scale": { "label": "Text scale" },
+      "leading": { "label": "Line height", "tight": "Tight", "normal": "Normal", "relaxed": "Relaxed" },
+      "tracking": { "label": "Letter spacing", "tight": "Tight", "normal": "Normal", "wide": "Wide" },
+      "weight": { "label": "Heading weight", "medium": "Medium", "semibold": "Semibold", "bold": "Bold" },
+      "reset": {
+        "help": "Restore the default font, size, and spacing.",
+        "action": "Reset to defaults"
+      }
+    },
     "quietHours": {
       "deleteConfirm": {
         "title": "Delete this quiet-hours window?",
@@ -17206,7 +17276,7 @@
       "appearance": "Appearance & experience",
       "appearanceDescription": "Theme, layout, status bar and celebrations",
       "typography": "Fonts & readability",
-      "typographyDescription": "Font families, text size and spacing",
+      "typographyDescription": "Explore fonts, preview your own text, and fine-tune readability",
       "advanced": "Confirmation prompts",
       "advancedDescription": "Restore confirmations you previously silenced",
       "reset": "Reset & recovery",

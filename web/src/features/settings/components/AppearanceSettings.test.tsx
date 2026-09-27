@@ -149,6 +149,10 @@ function switchIn(testId: string): HTMLElement {
   return within(screen.getByTestId(testId)).getByRole('switch')
 }
 
+function openMoreOptions() {
+  fireEvent.click(screen.getByRole('button', { name: 'More appearance options' }))
+}
+
 function findPutCall() {
   return mockedRequest.mock.calls.find(
     (c) => (c[1] as RequestInit | undefined)?.method === 'PUT',
@@ -188,14 +192,32 @@ describe('AppearanceSettings — structure & delegation', () => {
   it('renders every preference section label', () => {
     renderPanel()
     expect(screen.getByText('Information density')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Preview' })).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
+    expect(screen.getByText('Sample row — Tesla Model 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'More appearance options' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Default time format')).not.toBeInTheDocument()
+    openMoreOptions()
     expect(screen.getByText('Default time format')).toBeInTheDocument()
     expect(screen.getByText('Chart palette')).toBeInTheDocument()
     expect(screen.getByText('Status bar')).toBeInTheDocument()
     expect(screen.getByText('Celebration')).toBeInTheDocument()
   })
 
+  it('collapses the long tail without losing saved preferences when reopened', async () => {
+    renderPanel()
+    openMoreOptions()
+    expect(screen.getByRole('radiogroup', { name: 'Chart palette' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'More appearance options' }))
+    await waitFor(() => expect(screen.queryByRole('radiogroup', { name: 'Chart palette' })).not.toBeInTheDocument())
+    openMoreOptions()
+    expect(within(screen.getByRole('radiogroup', { name: 'Chart palette' }))
+      .getByRole('radio', { name: /Color-blind safe/i })).toBeChecked()
+  })
+
   it('exposes the three option groups as named radiogroups (a11y)', () => {
     renderPanel()
+    openMoreOptions()
     expect(
       screen.getByRole('radiogroup', { name: 'Information density' }),
     ).toBeInTheDocument()
@@ -249,6 +271,7 @@ describe('AppearanceSettings — information density', () => {
 describe('AppearanceSettings — default time format', () => {
   it('shows the persisted default as checked', () => {
     renderPanel()
+    openMoreOptions()
     const group = screen.getByRole('radiogroup', { name: 'Default time format' })
     expect(within(group).getByRole('radio', { name: /Relative/i })).toBeChecked()
     expect(
@@ -258,6 +281,7 @@ describe('AppearanceSettings — default time format', () => {
 
   it('persists the alternate time format via PUT /settings', async () => {
     renderPanel()
+    openMoreOptions()
     const group = screen.getByRole('radiogroup', { name: 'Default time format' })
     fireEvent.click(within(group).getByRole('radio', { name: /Absolute/i }))
 
@@ -272,6 +296,7 @@ describe('AppearanceSettings — default time format', () => {
 describe('AppearanceSettings — chart palette', () => {
   it('renders both palettes with their full swatch sets and the CB-safe default checked', () => {
     renderPanel()
+    openMoreOptions()
     const group = screen.getByRole('radiogroup', { name: 'Chart palette' })
     expect(
       within(group).getByRole('radio', { name: /Color-blind safe/i }),
@@ -287,6 +312,7 @@ describe('AppearanceSettings — chart palette', () => {
 
   it('persists the neon palette via PUT /settings', async () => {
     renderPanel()
+    openMoreOptions()
     const group = screen.getByRole('radiogroup', { name: 'Chart palette' })
     fireEvent.click(within(group).getByRole('radio', { name: /Stylistic neon/i }))
 
@@ -301,6 +327,7 @@ describe('AppearanceSettings — chart palette', () => {
 describe('AppearanceSettings — status bar (localStorage-backed)', () => {
   it('toggles visibility and persists the preference', () => {
     renderPanel()
+    openMoreOptions()
     const sw = switchIn('statusbar-toggle-enabled')
     expect(sw).toBeChecked()
 
@@ -313,6 +340,7 @@ describe('AppearanceSettings — status bar (localStorage-backed)', () => {
 
   it('flips the icon-only preference while the bar is visible', () => {
     renderPanel()
+    openMoreOptions()
     const wrap = screen.getByTestId('statusbar-toggle-icon-only')
     expect(wrap).toHaveAttribute('aria-disabled', 'false')
     const sw = within(wrap).getByRole('switch')
@@ -330,6 +358,7 @@ describe('AppearanceSettings — status bar (localStorage-backed)', () => {
     // Arrange: bar hidden → the icon-only sub-preference is meaningless.
     setStatusBarPrefs({ enabled: false, iconOnly: false })
     renderPanel()
+    openMoreOptions()
 
     const wrap = screen.getByTestId('statusbar-toggle-icon-only')
     expect(wrap).toHaveAttribute('aria-disabled', 'true')
@@ -349,6 +378,7 @@ describe('AppearanceSettings — status bar (localStorage-backed)', () => {
 describe('AppearanceSettings — achievement celebrations (localStorage-backed)', () => {
   it('renders the four celebration switches at their documented defaults', () => {
     renderPanel()
+    openMoreOptions()
     expect(switchIn('celebration-toggle-toasts')).toBeChecked()
     expect(switchIn('celebration-toggle-sound')).not.toBeChecked()
     expect(switchIn('celebration-toggle-dashboard')).toBeChecked()
@@ -357,6 +387,7 @@ describe('AppearanceSettings — achievement celebrations (localStorage-backed)'
 
   it('opts into the unlock sound and persists it', () => {
     renderPanel()
+    openMoreOptions()
     const sw = switchIn('celebration-toggle-sound')
     expect(sw).not.toBeChecked()
 
@@ -372,6 +403,7 @@ describe('AppearanceSettings — achievement celebrations (localStorage-backed)'
 describe('AppearanceSettings — product tours', () => {
   it('replays each registered tour by id', () => {
     renderPanel()
+    openMoreOptions()
     fireEvent.click(screen.getByTestId('replay-tour-main'))
     expect(mockedStartTour).toHaveBeenCalledWith('main')
     fireEvent.click(screen.getByTestId('replay-tour-debugger'))
@@ -383,6 +415,7 @@ describe('AppearanceSettings — product tours', () => {
 
   it('resets every tour on demand', () => {
     renderPanel()
+    openMoreOptions()
     fireEvent.click(screen.getByTestId('reset-all-tours'))
     expect(mockedResetAllTours).toHaveBeenCalledTimes(1)
   })
@@ -410,6 +443,7 @@ describe('AppearanceSettings — degraded load', () => {
 
   it('links to dashboard kiosk settings', () => {
     renderPanel()
+    openMoreOptions()
     const link = screen.getByTestId('kiosk-settings-link')
     expect(link).toHaveAttribute('href', '/?kiosk=settings')
     expect(link).toHaveAccessibleName(/open kiosk settings/i)

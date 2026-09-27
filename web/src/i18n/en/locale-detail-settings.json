@@ -1,5 +1,67 @@
 {
   "settings": {
+    "typography": {
+      "title": "Typography",
+      "subtitle": "Choose fonts and tune size, spacing, and weight — applied everywhere instantly.",
+      "familyHint": "Focus or hover to preview a font, then select it to use it everywhere.",
+      "searchFont": "Search {{kind}}",
+      "searchPlaceholder": "Search font families…",
+      "noFonts": "No font families match your search.",
+      "cardSample": "Aa 012345",
+      "webFontHelp": "Web fonts need an internet connection; system and installed custom fonts work offline.",
+      "preview": {
+        "aria": "Typography preview",
+        "label": "Live preview",
+        "heading": "The quick brown fox jumps over the lazy dog",
+        "body": "Sync your Tesla fleet, chart every drive, and read the numbers clearly in any theme.",
+        "interface": "Interface & headings",
+        "data": "Data & code",
+        "tryText": "Try your own text",
+        "tryPlaceholder": "Type here to see your text in the preview"
+      },
+      "presets": {
+        "label": "Reading presets",
+        "default": "Default",
+        "comfortable": "Comfortable",
+        "compact": "Compact",
+        "legible": "High legibility"
+      },
+      "uiFont": {
+        "label": "UI font",
+        "customAria": "Custom UI font stack",
+        "customPlaceholder": "e.g. 'Aptos', system-ui, sans-serif"
+      },
+      "monoFont": {
+        "label": "Monospace font",
+        "customAria": "Custom monospace font stack",
+        "customPlaceholder": "e.g. 'Cascadia Code', ui-monospace, monospace"
+      },
+      "scale": {
+        "label": "Text scale"
+      },
+      "leading": {
+        "label": "Line height",
+        "tight": "Tight",
+        "normal": "Normal",
+        "relaxed": "Relaxed"
+      },
+      "tracking": {
+        "label": "Letter spacing",
+        "tight": "Tight",
+        "normal": "Normal",
+        "wide": "Wide"
+      },
+      "weight": {
+        "label": "Heading weight",
+        "medium": "Medium",
+        "semibold": "Semibold",
+        "bold": "Bold"
+      },
+      "reset": {
+        "help": "Restore the default font, size, and spacing.",
+        "action": "Reset to defaults"
+      }
+    },
     "quietHours": {
       "deleteConfirm": {
         "title": "Delete this quiet-hours window?",
@@ -36,7 +98,7 @@
       "appearance": "Appearance & experience",
       "appearanceDescription": "Theme, layout, status bar and celebrations",
       "typography": "Fonts & readability",
-      "typographyDescription": "Font families, text size and spacing",
+      "typographyDescription": "Explore fonts, preview your own text, and fine-tune readability",
       "advanced": "Confirmation prompts",
       "advancedDescription": "Restore confirmations you previously silenced",
       "reset": "Reset & recovery",

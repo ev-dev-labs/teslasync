@@ -350,6 +350,21 @@ describe('TeslaChargingHistoryPage — happy path', () => {
     expect(screen.getByText('Charging Sessions')).toBeInTheDocument();
   });
 
+  it('fills the wide-screen space below spending with sessions alongside Price Radar', async () => {
+    installRequest();
+    renderPage();
+    await screen.findByText('Charging Sessions');
+
+    const spending = screen.getByText('Monthly Spending').closest('[class*="2xl:col-span-2"]');
+    const sessions = screen.getByText('Charging Sessions').closest('[class*="2xl:col-span-2"]');
+    const locations = screen.getByText('Top Locations').closest('[class*="2xl:col-start-3"]');
+    expect(spending).toHaveClass('2xl:col-span-2');
+    expect(sessions).toHaveClass('2xl:row-start-2');
+    expect(locations).toHaveClass('2xl:row-start-1');
+    expect(spending?.parentElement).toBe(sessions?.parentElement);
+    expect(sessions?.parentElement).toBe(locations?.parentElement);
+  });
+
   it('derives the KPI band from the server summary + entry list', async () => {
     installRequest();
     renderPage();

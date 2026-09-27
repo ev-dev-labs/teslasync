@@ -29,6 +29,18 @@ type SettingsHandler struct {
 	telemetryHandler any
 }
 
+var validFontFamily = map[string]bool{
+	"inter": true, "system": true, "roboto": true, "source": true, "plex": true, "atkinson": true,
+	"nunito": true, "dm-sans": true, "manrope": true, "outfit": true, "poppins": true,
+	"work-sans": true, "public-sans": true, "lato": true, "open-sans": true, "noto-sans": true, "custom": true,
+}
+
+var validFontMono = map[string]bool{
+	"jetbrains": true, "fira": true, "plex-mono": true, "source-code-pro": true,
+	"roboto-mono": true, "inconsolata": true, "space-mono": true, "ubuntu-mono": true,
+	"system": true, "custom": true,
+}
+
 type endpointControlsStore interface {
 	GetEndpointControls(context.Context) (settingsmodel.LegacyPollingConfig, error)
 	UpsertEndpointControls(context.Context, settingsmodel.LegacyPollingConfig) error
@@ -130,14 +142,12 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// ── Typography validation (Typography Unit 0) ──
 	// Mirror the union types + slider bounds in FontProvider.tsx. Empty values
 	// are tolerated (a partial round-trip keeps the stored default).
-	validFontFamily := map[string]bool{"inter": true, "system": true, "roboto": true, "source": true, "plex": true, "atkinson": true, "custom": true}
 	if s.FontFamily != "" && !validFontFamily[s.FontFamily] {
-		httpx.WriteError(w, http.StatusBadRequest, "font_family must be one of inter/system/roboto/source/plex/atkinson/custom")
+		httpx.WriteError(w, http.StatusBadRequest, "font_family must be a supported UI font")
 		return
 	}
-	validFontMono := map[string]bool{"jetbrains": true, "fira": true, "plex-mono": true, "system": true, "custom": true}
 	if s.FontMono != "" && !validFontMono[s.FontMono] {
-		httpx.WriteError(w, http.StatusBadRequest, "font_mono must be one of jetbrains/fira/plex-mono/system/custom")
+		httpx.WriteError(w, http.StatusBadRequest, "font_mono must be a supported monospace font")
 		return
 	}
 	if len(s.FontCustomSans) > 200 || len(s.FontCustomMono) > 200 {

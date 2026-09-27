@@ -29,9 +29,12 @@ import { TOPICS } from '@/lib/broadcastTopics'
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Curated UI font presets plus a free-text custom stack. */
-export type FontFamilyId = 'inter' | 'system' | 'roboto' | 'source' | 'plex' | 'atkinson' | 'custom'
+export type FontFamilyId = 'inter' | 'system' | 'roboto' | 'source' | 'plex' | 'atkinson'
+  | 'nunito' | 'dm-sans' | 'manrope' | 'outfit' | 'poppins' | 'work-sans'
+  | 'public-sans' | 'lato' | 'open-sans' | 'noto-sans' | 'custom'
 /** Curated monospace presets plus a free-text custom stack. */
-export type MonoFamilyId = 'jetbrains' | 'fira' | 'plex-mono' | 'system' | 'custom'
+export type MonoFamilyId = 'jetbrains' | 'fira' | 'plex-mono' | 'source-code-pro'
+  | 'roboto-mono' | 'inconsolata' | 'space-mono' | 'ubuntu-mono' | 'system' | 'custom'
 
 export interface FontPrefs {
   sans: FontFamilyId
@@ -58,12 +61,27 @@ export const FONT_SANS_STACKS: Record<Exclude<FontFamilyId, 'custom'>, string> =
   source: "'Source Sans 3', system-ui, -apple-system, sans-serif",
   plex: "'IBM Plex Sans', system-ui, -apple-system, sans-serif",
   atkinson: "'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif",
+  nunito: "'Nunito', system-ui, -apple-system, sans-serif",
+  'dm-sans': "'DM Sans', system-ui, -apple-system, sans-serif",
+  manrope: "'Manrope', system-ui, -apple-system, sans-serif",
+  outfit: "'Outfit', system-ui, -apple-system, sans-serif",
+  poppins: "'Poppins', system-ui, -apple-system, sans-serif",
+  'work-sans': "'Work Sans', system-ui, -apple-system, sans-serif",
+  'public-sans': "'Public Sans', system-ui, -apple-system, sans-serif",
+  lato: "'Lato', system-ui, -apple-system, sans-serif",
+  'open-sans': "'Open Sans', system-ui, -apple-system, sans-serif",
+  'noto-sans': "'Noto Sans', system-ui, -apple-system, sans-serif",
 }
 
 export const FONT_MONO_STACKS: Record<Exclude<MonoFamilyId, 'custom'>, string> = {
   jetbrains: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
   fira: "'Fira Code', ui-monospace, monospace",
   'plex-mono': "'IBM Plex Mono', ui-monospace, monospace",
+  'source-code-pro': "'Source Code Pro', ui-monospace, monospace",
+  'roboto-mono': "'Roboto Mono', ui-monospace, monospace",
+  inconsolata: "'Inconsolata', ui-monospace, monospace",
+  'space-mono': "'Space Mono', ui-monospace, monospace",
+  'ubuntu-mono': "'Ubuntu Mono', ui-monospace, monospace",
   system: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
 }
 
@@ -73,12 +91,27 @@ const GOOGLE_SANS_QUERIES: Partial<Record<FontFamilyId, string>> = {
   source: 'Source+Sans+3:wght@400;500;600;700',
   plex: 'IBM+Plex+Sans:wght@400;500;600;700',
   atkinson: 'Atkinson+Hyperlegible:wght@400;700',
+  nunito: 'Nunito:wght@400;500;600;700;800',
+  'dm-sans': 'DM+Sans:wght@400;500;600;700;800',
+  manrope: 'Manrope:wght@400;500;600;700;800',
+  outfit: 'Outfit:wght@400;500;600;700;800',
+  poppins: 'Poppins:wght@400;500;600;700;800',
+  'work-sans': 'Work+Sans:wght@400;500;600;700;800',
+  'public-sans': 'Public+Sans:wght@400;500;600;700;800',
+  lato: 'Lato:wght@400;700',
+  'open-sans': 'Open+Sans:wght@400;500;600;700;800',
+  'noto-sans': 'Noto+Sans:wght@400;500;600;700;800',
 }
 
 const GOOGLE_MONO_QUERIES: Partial<Record<MonoFamilyId, string>> = {
   jetbrains: 'JetBrains+Mono:wght@400;500;600',
   fira: 'Fira+Code:wght@400;500;600',
   'plex-mono': 'IBM+Plex+Mono:wght@400;500;600',
+  'source-code-pro': 'Source+Code+Pro:wght@400;500;600;700',
+  'roboto-mono': 'Roboto+Mono:wght@400;500;600;700',
+  inconsolata: 'Inconsolata:wght@400;500;600;700',
+  'space-mono': 'Space+Mono:wght@400;700',
+  'ubuntu-mono': 'Ubuntu+Mono:wght@400;700',
 }
 
 const ACTIVE_FONT_STYLESHEET_ID = 'teslasync-active-fonts'
@@ -87,8 +120,14 @@ const ACTIVE_FONT_STYLESHEET_ID = 'teslasync-active-fonts'
 const CUSTOM_SANS_FALLBACK = 'system-ui, -apple-system, sans-serif'
 const CUSTOM_MONO_FALLBACK = 'ui-monospace, monospace'
 
-export const SANS_FAMILY_IDS: FontFamilyId[] = ['inter', 'system', 'roboto', 'source', 'plex', 'atkinson', 'custom']
-export const MONO_FAMILY_IDS: MonoFamilyId[] = ['jetbrains', 'fira', 'plex-mono', 'system', 'custom']
+export const SANS_FAMILY_IDS: FontFamilyId[] = [
+  'inter', 'system', 'roboto', 'source', 'plex', 'atkinson', 'nunito', 'dm-sans',
+  'manrope', 'outfit', 'poppins', 'work-sans', 'public-sans', 'lato', 'open-sans', 'noto-sans', 'custom',
+]
+export const MONO_FAMILY_IDS: MonoFamilyId[] = [
+  'jetbrains', 'fira', 'plex-mono', 'source-code-pro', 'roboto-mono',
+  'inconsolata', 'space-mono', 'ubuntu-mono', 'system', 'custom',
+]
 
 // Text-scale slider bounds. Kept above the WCAG-AA body-size floor at 0.85×.
 export const FONT_SCALE_MIN = 0.85

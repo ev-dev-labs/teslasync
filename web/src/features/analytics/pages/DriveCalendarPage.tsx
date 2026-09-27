@@ -24,6 +24,7 @@ import {
 import { buildDriveCalendar, calendarDayKey } from '../lib/driveCalendar';
 
 const ACTIVITY_COLUMNS = { default: 1, xl: 5 } as const;
+const COMPACT_HEATMAP_MAX_WEEKS = 16;
 
 function DriveCalendarContent() {
   const { t } = useTranslation();
@@ -37,6 +38,7 @@ function DriveCalendarContent() {
     () => buildDriveCalendar(drivesQuery.data ?? [], Date.now(), { start, end }),
     [drivesQuery.data, start, end],
   );
+  const compactHeatmap = calendar.weeks.length <= COMPACT_HEATMAP_MAX_WEEKS;
 
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('driveCalendar.title', 'Drive Calendar')} />;
@@ -60,27 +62,33 @@ function DriveCalendarContent() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <DriveCalendarHeatmap calendar={calendar} {...sectionState} />
-      </FadeIn>
-
-      <FadeIn delay={0.1}>
         <section aria-label={t('driveCalendar.activity', 'Driving activity')}>
-          <Grid cols={ACTIVITY_COLUMNS} gap={4}>
+          <Grid
+            gap={4}
+            className={compactHeatmap
+              ? 'grid-cols-1 xl:grid-cols-[max-content_minmax(0,1fr)] 2xl:grid-cols-[max-content_minmax(0,3fr)_minmax(0,2fr)]'
+              : 'grid-cols-1 xl:grid-cols-5'}
+          >
+            <DriveCalendarHeatmap
+              calendar={calendar}
+              className={compactHeatmap ? 'min-w-0' : 'min-w-0 xl:col-span-5'}
+              {...sectionState}
+            />
             <MonthlyActivityChart
               months={calendar.months}
-              className="xl:col-span-3"
+              className={compactHeatmap ? 'min-w-0' : 'xl:col-span-3'}
               {...sectionState}
             />
             <WeekdayPatternChart
               weekdays={calendar.weekdays}
-              className="xl:col-span-2"
+              className={compactHeatmap ? 'min-w-0 xl:col-span-2 2xl:col-span-1' : 'xl:col-span-2'}
               {...sectionState}
             />
           </Grid>
         </section>
       </FadeIn>
 
-      <FadeIn delay={0.15}>
+      <FadeIn delay={0.1}>
         <section
           aria-label={t(
             'driveCalendar.insights',

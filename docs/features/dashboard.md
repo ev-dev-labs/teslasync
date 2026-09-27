@@ -42,7 +42,7 @@ Widgets are self-rendering: each one declares which signals it depends on, and i
 
 ## Multiple dashboards
 
-Use **Layout packs** in the dashboard header to preview and install a ready-made dashboard without replacing your current one, or choose **Blank Dashboard** to start with no widgets. The **Personal workspace** controls let you switch, rename, duplicate, and create dashboards; **Customize** reveals the drag handles and always-visible **Arrange**, settings, and remove controls. **Auto Arrange** packs widgets into rows without resetting their chosen widths or heights. Each dashboard has its own widgets and layout. Common patterns:
+Use **New Layout** in the dashboard header or the Personal workspace strip to create a dashboard without replacing your current one. Choose **Blank Dashboard** to start with no widgets, or preview a populated template such as Operations Desk, Battery Care, Winter Ready, Daily Commuter, or Fleet Manager. The template creates its widgets and responsive grid positions together; use **Add Widget** under **Customize** only to add individual widgets to the current layout. The **Personal workspace** controls let you switch, rename, and duplicate layouts; **Customize** reveals the drag handles and always-visible **Arrange**, settings, and remove controls. **Auto Arrange** packs widgets into rows without resetting their chosen widths or heights. Each dashboard has its own widgets and layout. Common patterns:
 
 - **Daily** — Vehicle Hero, Battery Level, Quick Actions, Recent Alerts
 - **Long trip** — Live Drive, Charger Map, Range Bar, Tire Pressure, Energy Flow

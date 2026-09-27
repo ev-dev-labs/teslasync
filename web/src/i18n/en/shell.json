@@ -1427,14 +1427,15 @@
   "theme": {
     "accent": "Accent",
     "accentColor": "Accent Color",
+    "browseModes": "Browse all {{count}} modes",
     "custom": "Custom",
     "displayMode": "Display Mode",
     "mode": "Mode",
-    "modeCount": "{{count}} modes",
     "noModes": "No display modes match your search.",
     "openPicker": "Open theme picker",
     "primary": "Primary",
     "searchModes": "Search display modes…",
+    "showCoreModes": "Show essential modes",
     "theme": "Theme"
   },
   "timeMachine": {

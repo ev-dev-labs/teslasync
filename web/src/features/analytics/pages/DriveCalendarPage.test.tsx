@@ -49,7 +49,9 @@ vi.mock('@/components/layout', () => ({
       {children}
     </main>
   ),
-  Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Grid: ({ children, className }: { children: ReactNode; className?: string }) => (
+    <div className={className} data-testid="calendar-grid">{children}</div>
+  ),
 }));
 
 vi.mock('@/components/motion', () => ({
@@ -69,8 +71,8 @@ vi.mock('../components/drive-calendar', () => {
     CalendarSummaryCards: (props: { isLoading: boolean; error: unknown; calendar: { totalDrives: number } }) => (
       <section data-testid="calendar-summary" data-drives={props.calendar.totalDrives}>{status(props)}</section>
     ),
-    DriveCalendarHeatmap: (props: { isLoading: boolean; error: unknown; year: number | null }) => (
-      <section data-testid="calendar-heatmap" data-year={props.year}>{status(props)}</section>
+    DriveCalendarHeatmap: (props: { isLoading: boolean; error: unknown; className?: string }) => (
+      <section className={props.className} data-testid="calendar-heatmap">{status(props)}</section>
     ),
     MonthlyActivityChart: (props: { isLoading: boolean; error: unknown }) => (
       <section data-testid="calendar-monthly">{status(props)}</section>
@@ -152,6 +154,19 @@ describe('DriveCalendarPage', () => {
     expect(screen.queryByRole('spinbutton', { name: 'Jump to year' })).not.toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveAttribute('data-has-local-actions', 'false');
     expect(screen.getByRole('main')).toHaveAttribute('data-has-freshness-chip', 'false');
+  });
+
+  it.each([
+    ['/drive-calendar?from=2024-07-01&to=2024-09-30', '2xl:grid-cols-[max-content_minmax(0,3fr)_minmax(0,2fr)]', false],
+    ['/drive-calendar?from=2024-01-01&to=2024-12-31', 'xl:grid-cols-5', true],
+  ])('sizes the selected-period panel for %s without hiding activity sections', (path, columns, fullWidth) => {
+    renderCalendar(path);
+    const activity = screen.getByRole('region', { name: 'Driving activity' });
+    expect(activity.querySelector('[data-testid="calendar-grid"]')).toHaveClass(columns);
+    expect(screen.getByTestId('calendar-heatmap')).toHaveClass(fullWidth ? 'xl:col-span-5' : 'min-w-0');
+    for (const id of ['calendar-heatmap', 'calendar-monthly', 'calendar-weekdays']) {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+    }
   });
 
   it.each([

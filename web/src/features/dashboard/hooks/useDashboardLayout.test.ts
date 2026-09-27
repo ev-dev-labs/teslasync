@@ -184,6 +184,38 @@ describe('DASHBOARD_PRESETS', () => {
         expect(registryIds.has(w.widgetId)).toBe(true);
       }
       expect(Object.keys(preset.layouts).sort()).toEqual([...BREAKPOINTS].sort());
+      for (const [breakpoint, columns] of Object.entries(GRID_COLS)) {
+        const layout = preset.layouts[breakpoint];
+        expect(layout).toHaveLength(preset.widgets.length);
+        expect(new Set(layout.map((item) => item.i)).size).toBe(layout.length);
+        for (const item of layout) {
+          expect(item.w).toBeGreaterThan(0);
+          expect(item.h).toBeGreaterThan(0);
+          expect(item.x).toBeGreaterThanOrEqual(0);
+          expect(item.x + item.w).toBeLessThanOrEqual(columns);
+          expect(item.y).toBeGreaterThanOrEqual(0);
+        }
+        for (let i = 0; i < layout.length; i++) {
+          for (let j = i + 1; j < layout.length; j++) {
+            const a = layout[i], b = layout[j];
+            expect(a.x + a.w <= b.x || b.x + b.w <= a.x ||
+              a.y + a.h <= b.y || b.y + b.h <= a.y).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
+  it('offers operational, battery-care and winter-ready compositions with distinct real widgets', () => {
+    for (const [id, required] of [
+      ['operations', 'fleet-posture'],
+      ['battery_care', 'battery-degradation-trend'],
+      ['winter_ready', 'tire-pressure-visual'],
+    ]) {
+      const widgets = DASHBOARD_PRESETS.find((preset) => preset.id === id)?.widgets ?? [];
+      expect(widgets.length).toBeGreaterThanOrEqual(5);
+      expect(widgets.map((widget) => widget.widgetId)).toContain(required);
+      expect(new Set(widgets.map((widget) => widget.widgetId)).size).toBe(widgets.length);
     }
   });
 });
@@ -482,6 +514,9 @@ describe('useDashboardLayout — dashboard CRUD', () => {
     expect(id).toBeDefined();
     expect(result.current.activeId).toBe(id);
     expect(result.current.dashboards.find((d) => d.id === id)?.name).toBe('Daily Commuter');
+    expect(result.current.dashboards.find((d) => d.id === id)?.widgets.map((w) => w.widgetId))
+      .toEqual(DASHBOARD_PRESETS.find((preset) => preset.id === 'commuter')?.widgets.map((w) => w.widgetId));
+    expect(result.current.dashboards.find((d) => d.id === id)?.layouts.xs).toHaveLength(7);
   });
 
   it('persists per-dashboard settings and icon', () => {

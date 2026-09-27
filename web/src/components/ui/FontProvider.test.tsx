@@ -181,6 +181,17 @@ describe('applyFontCSS', () => {
         }),
       ).toBeNull()
     })
+
+    it('provides a real family stylesheet for every curated non-system preset', () => {
+      for (const sans of SANS_FAMILY_IDS.filter(id => id !== 'custom' && id !== 'system')) {
+        expect(resolveSansStack(sans, '')).toContain('sans-serif')
+        expect(fontStylesheetHref({ ...DEFAULT_FONT_PREFS, sans, mono: 'system' })).toContain('family=')
+      }
+      for (const mono of MONO_FAMILY_IDS.filter(id => id !== 'custom' && id !== 'system')) {
+        expect(resolveMonoStack(mono, '')).toContain('monospace')
+        expect(fontStylesheetHref({ ...DEFAULT_FONT_PREFS, sans: 'system', mono })).toContain('family=')
+      }
+    })
   })
 
   it('resolves a custom sans stack into --font-sans', () => {
@@ -261,6 +272,8 @@ describe('exported constants + presets', () => {
     expect(SANS_FAMILY_IDS).toContain('custom')
     expect(MONO_FAMILY_IDS).toContain('jetbrains')
     expect(MONO_FAMILY_IDS).toContain('custom')
+    expect(SANS_FAMILY_IDS).toHaveLength(17)
+    expect(MONO_FAMILY_IDS).toHaveLength(10)
   })
 
   it('exposes a sane scale range and slider presets', () => {

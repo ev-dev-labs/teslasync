@@ -444,10 +444,11 @@ export default function TeslaChargingHistoryPage() {
         </section>
       </FadeIn>
 
-      {/* 2 — Bento middle: hero spending chart + top-locations context panel. */}
-      <FadeIn delay={0.1}>
-        <section className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+      {/* Keep the sessions beside Price Radar on wide screens so its height
+          does not leave an empty two-column row beneath the spending chart. */}
+      <section className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 2xl:grid-cols-3 2xl:items-start">
+        <FadeIn delay={0.1} className="min-w-0 2xl:col-span-2">
+          <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Receipt className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('tesla_charging.monthlySpending', 'Monthly Spending')}
@@ -489,7 +490,8 @@ export default function TeslaChargingHistoryPage() {
               </EmbeddedChart>
             )}
           </GlassPanel>
-
+        </FadeIn>
+        <FadeIn delay={0.1} className="min-w-0 2xl:col-start-3 2xl:row-start-1">
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
@@ -519,20 +521,14 @@ export default function TeslaChargingHistoryPage() {
               </div>
             )}
           </GlassPanel>
-        </section>
-      </FadeIn>
+        </FadeIn>
 
-      {/* 2b — Price radar: cheapest visited sites by realized $/kWh. */}
-      <FadeIn delay={0.12}>
-        <section className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
-          <div className="xl:col-start-3">
-            <SitePriceRadar vin={queryVin || undefined} enabled={!vehiclesLoading} />
-          </div>
-        </section>
-      </FadeIn>
+        <FadeIn delay={0.12} className="min-w-0 2xl:col-start-3 2xl:row-start-2">
+          <SitePriceRadar vin={queryVin || undefined} enabled={!vehiclesLoading} />
+        </FadeIn>
 
-      {/* 3 — Detail band: full-width sessions table with search + bulk export. */}
-      <FadeIn delay={0.15}>
+      {/* Sessions use the space below the chart at wide widths. */}
+      <FadeIn delay={0.15} className="min-w-0 2xl:col-span-2 2xl:row-start-2">
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-4">
             {t('tesla_charging.sessions', 'Charging Sessions')}
@@ -637,6 +633,7 @@ export default function TeslaChargingHistoryPage() {
           )}
         </GlassPanel>
       </FadeIn>
+      </section>
     </PageContainer>
   );
 }

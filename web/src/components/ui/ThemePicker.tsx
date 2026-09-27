@@ -12,8 +12,8 @@ import { cn } from '@/lib/cn'
  *
  * Single source of truth for the theme + mode + custom-colour UI. Used in
  * three places:
- *   1. The full Appearance settings page (`AppearanceSettings.tsx`) — all
- *      sections enabled.
+ *   1. The Appearance settings page (`AppearanceSettings.tsx`) — core modes
+ *      first, with the full catalog available on demand.
  *   2. The top-bar quick-switcher popover (Layout.tsx) — `compact` and
  *      `showCustom={false}` to keep the popover small.
  *   3. The first-run dashboard banner — opens the same popover.
@@ -46,6 +46,8 @@ const modeIcons: Record<string, ReactNode> = {
   nord: <Sparkles className="h-4 w-4" />,
 }
 
+const essentialModes = new Set(['dark', 'light', 'auto'])
+
 /** Fallback glyph for the 130+ generated presets that have no dedicated icon. */
 function schemeIcon(scheme: 'dark' | 'light'): ReactNode {
   return scheme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
@@ -65,11 +67,15 @@ export function ThemePicker({
   const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
   const [customAccent, setCustomAccent] = useState(() => localStorage.getItem('teslasync-custom-accent') || '#e63946')
   const [modeQuery, setModeQuery] = useState('')
+  const [showAllModes, setShowAllModes] = useState(false)
 
   const modeCount = Object.keys(allModes).length
+  const essentialModeCount = Object.values(allModes).filter(m => essentialModes.has(m.id)).length
   const groupedModes = useMemo(() => {
     const q = modeQuery.trim().toLowerCase()
     const list = (Object.values(allModes) as ModeTheme[]).filter(
+      m => showAllModes || essentialModes.has(m.id) || m.id === modeId,
+    ).filter(
       m => !q || (m.name ?? '').toLowerCase().includes(q) || (m.category ?? '').toLowerCase().includes(q),
     )
     const byCat = new Map<string, ModeTheme[]>()
@@ -85,7 +91,7 @@ export function ThemePicker({
       const ib = order.indexOf(b[0])
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
     })
-  }, [allModes, modeQuery])
+  }, [allModes, modeId, modeQuery, showAllModes])
 
   const handleTheme = (id: ThemeId, name: string) => {
     setTheme(id)
@@ -104,7 +110,7 @@ export function ThemePicker({
     onChange?.('custom')
   }
 
-  const modeGridCols = compact ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4'
+  const modeGridCols = compact ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
   const themeGridCols = compact
     ? 'grid-cols-2 sm:grid-cols-3'
     : 'grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6'
@@ -118,18 +124,17 @@ export function ThemePicker({
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('theme.displayMode', 'Display Mode')}
             </p>
-            <span className="text-xs text-[var(--text-muted)]">
-              {t('theme.modeCount', '{{count}} modes', { count: modeCount })}
-            </span>
           </div>
-          <Input
-            type="search"
-            value={modeQuery}
-            onChange={e => setModeQuery(e.target.value)}
-            placeholder={t('theme.searchModes', 'Search display modes…')}
-            aria-label={t('theme.searchModes', 'Search display modes…')}
-            className="mb-3"
-          />
+          {showAllModes && (
+            <Input
+              type="search"
+              value={modeQuery}
+              onChange={e => setModeQuery(e.target.value)}
+              placeholder={t('theme.searchModes', 'Search display modes…')}
+              aria-label={t('theme.searchModes', 'Search display modes…')}
+              className="mb-3"
+            />
+          )}
           <div className={cn('space-y-5 overflow-y-auto pr-1', compact ? 'max-h-72' : 'max-h-[28rem]')}>
             {groupedModes.length === 0 && (
               <p className="py-6 text-center text-xs text-[var(--text-muted)]">
@@ -166,7 +171,7 @@ export function ThemePicker({
                         <span style={{ color: m.textPrimary }}>{modeIcons[m.id] ?? schemeIcon(m.colorScheme)}</span>
                       </div>
                       <div className="min-w-0 text-left">
-                        <p className="truncate text-sm font-medium text-[var(--text-primary)]">{m.name}</p>
+                        <p className="break-words text-sm font-medium text-[var(--text-primary)]">{m.name}</p>
                         <div className="flex gap-1 mt-1">
                           {[m.bg, m.surface1, m.surface2, m.surface3].map((c, i) => (
                             <div
@@ -186,6 +191,21 @@ export function ThemePicker({
               </div>
             ))}
           </div>
+          {modeCount > essentialModeCount && (
+            <Button
+              variant="ghost"
+              aria-expanded={showAllModes}
+              onClick={() => {
+                setShowAllModes(previous => !previous)
+                setModeQuery('')
+              }}
+              className="mt-3"
+            >
+              {showAllModes
+                ? t('theme.showCoreModes', 'Show essential modes')
+                : t('theme.browseModes', 'Browse all {{count}} modes', { count: modeCount })}
+            </Button>
+          )}
         </div>
       )}
 

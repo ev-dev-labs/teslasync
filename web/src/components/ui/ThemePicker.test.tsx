@@ -198,12 +198,13 @@ beforeEach(() => {
 })
 
 describe('ThemePicker — display-mode section', () => {
-  it('renders the grouped modes, the live count, and per-category totals', () => {
+  it('shows core modes first and offers the full library on demand', () => {
     renderPicker()
     expect(screen.getByText('Display Mode')).toBeInTheDocument()
-    expect(screen.getByText('4 modes')).toBeInTheDocument()
-    // Core has two modes; the uncategorised one lands in the appended "Other".
+    expect(screen.getByRole('button', { name: 'Browse all 4 modes' })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByText('Core').textContent).toContain('(2)')
+    expect(screen.queryByRole('button', { name: 'Dracula' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Browse all 4 modes' }))
     expect(screen.getByText('Other').textContent).toContain('(1)')
     expect(screen.getByRole('button', { name: 'Dark' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Plain' })).toBeInTheDocument()
@@ -211,6 +212,7 @@ describe('ThemePicker — display-mode section', () => {
 
   it('orders categories Core → Editor → Other via the real modeCategoryOrder', () => {
     renderPicker()
+    fireEvent.click(screen.getByRole('button', { name: 'Browse all 4 modes' }))
     const dark = screen.getByRole('button', { name: 'Dark' })
     const dracula = screen.getByRole('button', { name: 'Dracula' })
     const plain = screen.getByRole('button', { name: 'Plain' })
@@ -234,11 +236,22 @@ describe('ThemePicker — display-mode section', () => {
     expect(screen.getByRole('button', { name: 'Light', pressed: true })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Dark', pressed: false })).toBeInTheDocument()
   })
+
+  it('keeps a selected non-core mode visible when the catalog is collapsed', () => {
+    renderPicker({ initialModeId: 'dracula' })
+    expect(screen.getByRole('button', { name: 'Dracula', pressed: true })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Plain' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Browse all 4 modes' }))
+    expect(screen.getByRole('button', { name: 'Plain' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Show essential modes' }))
+    expect(screen.getByRole('button', { name: 'Dracula', pressed: true })).toBeInTheDocument()
+  })
 })
 
 describe('ThemePicker — mode search', () => {
   it('filters modes by name and hides the non-matching categories', () => {
     renderPicker()
+    fireEvent.click(screen.getByRole('button', { name: 'Browse all 4 modes' }))
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'drac' } })
     expect(screen.getByRole('button', { name: 'Dracula' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Dark' })).toBeNull()
@@ -249,6 +262,7 @@ describe('ThemePicker — mode search', () => {
 
   it('also matches on the category label, not just the mode name', () => {
     renderPicker()
+    fireEvent.click(screen.getByRole('button', { name: 'Browse all 4 modes' }))
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'core' } })
     expect(screen.getByRole('button', { name: 'Dark' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Light' })).toBeInTheDocument()
@@ -257,6 +271,7 @@ describe('ThemePicker — mode search', () => {
 
   it('shows the empty state when nothing matches', () => {
     renderPicker()
+    fireEvent.click(screen.getByRole('button', { name: 'Browse all 4 modes' }))
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'zzzzz' } })
     expect(screen.getByText('No display modes match your search.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Dark' })).toBeNull()
@@ -363,6 +378,7 @@ describe('ThemePicker — prop toggles', () => {
 describe('ThemePicker — accessibility', () => {
   it('gives the search and colour inputs real accessible names', () => {
     renderPicker({ initialThemeId: 'custom' })
+    fireEvent.click(screen.getByRole('button', { name: 'Browse all 4 modes' }))
     expect(
       screen.getByRole('searchbox', { name: 'Search display modes…' }),
     ).toBeInTheDocument()

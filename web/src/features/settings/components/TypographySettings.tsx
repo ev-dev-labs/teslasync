@@ -24,36 +24,19 @@ import {
   useFont,
   SANS_FAMILY_IDS,
   MONO_FAMILY_IDS,
+  resolveSansStack,
+  resolveMonoStack,
   LEADING_OPTIONS,
   TRACKING_OPTIONS,
   HEADING_WEIGHT_OPTIONS,
   FONT_SCALE_MIN,
   FONT_SCALE_MAX,
   FONT_SCALE_STEP,
-  type FontFamilyId,
-  type MonoFamilyId,
   type ReadingPresetId,
 } from '@/components/ui/FontProvider'
-
-// Brand names are proper nouns rendered verbatim in the option lists; only the
-// surrounding UI copy is translated.
-const SANS_LABELS: Record<FontFamilyId, string> = {
-  inter: 'Inter',
-  system: 'System UI',
-  roboto: 'Roboto',
-  source: 'Source Sans 3',
-  plex: 'IBM Plex Sans',
-  atkinson: 'Atkinson Hyperlegible',
-  custom: 'Custom',
-}
-
-const MONO_LABELS: Record<MonoFamilyId, string> = {
-  jetbrains: 'JetBrains Mono',
-  fira: 'Fira Code',
-  'plex-mono': 'IBM Plex Mono',
-  system: 'System Mono',
-  custom: 'Custom',
-}
+import { FontFamilyPicker } from './FontFamilyPicker'
+import { TypographySpecimen } from './TypographySpecimen'
+import { SANS_LABELS, MONO_LABELS, SANS_GROUPS } from './fontChoices'
 
 /** Small block field label using the shared `label` typography role. */
 function FieldLabel({ children }: { children: ReactNode }) {
@@ -129,13 +112,18 @@ export function TypographySettings() {
 
   // Brand-name option lists are static; memoize so typing in a custom-font
   // field (which re-renders on every keystroke) doesn't rebuild them.
-  const sansOptions = useMemo<SelectOption[]>(
-    () => SANS_FAMILY_IDS.map((id) => ({ value: id, label: SANS_LABELS[id] })),
-    [],
+  const sansChoices = useMemo(
+    () => SANS_FAMILY_IDS.map(id => ({
+      id, name: SANS_LABELS[id], group: SANS_GROUPS[id],
+      stack: resolveSansStack(id, prefs.customSans),
+    })),
+    [prefs.customSans],
   )
-  const monoOptions = useMemo<SelectOption[]>(
-    () => MONO_FAMILY_IDS.map((id) => ({ value: id, label: MONO_LABELS[id] })),
-    [],
+  const monoChoices = useMemo(
+    () => MONO_FAMILY_IDS.map(id => ({
+      id, name: MONO_LABELS[id], stack: resolveMonoStack(id, prefs.customMono),
+    })),
+    [prefs.customMono],
   )
 
   // Each field label doubles as the accessible group name for its segmented
@@ -226,29 +214,7 @@ export function TypographySettings() {
           </div>
         </div>
 
-        {/* Live preview — reflects the current font, scale, line-height,
-            letter-spacing, and heading weight via the shared CSS vars. */}
-        <div
-          role="group"
-          className="space-y-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4"
-          aria-label={t('typography.preview.aria', 'Typography preview')}
-        >
-          <Text as="div" variant="label">
-            {t('typography.preview.label', 'Preview')}
-          </Text>
-          <Heading level="section" as="p">
-            {t('typography.preview.heading', 'The quick brown fox jumps over the lazy dog')}
-          </Heading>
-          <Text as="p" variant="body">
-            {t(
-              'typography.preview.body',
-              'Sync your Tesla fleet, chart every drive, and read the numbers clearly in any theme.',
-            )}
-          </Text>
-          <Text as="p" variant="code">
-            0123456789 · kWh · °C · km/h
-          </Text>
-        </div>
+        <TypographySpecimen sansName={SANS_LABELS[prefs.sans]} monoName={MONO_LABELS[prefs.mono]} />
 
         {/* Reading presets — one-click bundles. */}
         <div>
@@ -265,20 +231,21 @@ export function TypographySettings() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
           {/* UI font */}
           <div>
-            <Select
+            <FontFamilyPicker
+              kind="sans"
               label={t('typography.uiFont.label', 'UI font')}
-              options={sansOptions}
-              value={prefs.sans}
-              onChange={(e) => setSans(e.target.value as FontFamilyId)}
+              choices={sansChoices}
+              selected={prefs.sans}
+              onSelect={setSans}
             />
             {prefs.sans === 'custom' && (
               <div className="mt-2">
                 <Input
                   aria-label={t('typography.uiFont.customAria', 'Custom UI font stack')}
-                  placeholder={t('typography.uiFont.customPlaceholder', "e.g. 'Nunito', system-ui, sans-serif")}
+                  placeholder={t('typography.uiFont.customPlaceholder', "e.g. 'Aptos', system-ui, sans-serif")}
                   value={prefs.customSans}
                   onChange={(e) => setCustomSans(e.target.value)}
                 />
@@ -288,11 +255,12 @@ export function TypographySettings() {
 
           {/* Monospace font */}
           <div>
-            <Select
+            <FontFamilyPicker
+              kind="mono"
               label={t('typography.monoFont.label', 'Monospace font')}
-              options={monoOptions}
-              value={prefs.mono}
-              onChange={(e) => setMono(e.target.value as MonoFamilyId)}
+              choices={monoChoices}
+              selected={prefs.mono}
+              onSelect={setMono}
             />
             {prefs.mono === 'custom' && (
               <div className="mt-2">
@@ -306,6 +274,9 @@ export function TypographySettings() {
             )}
           </div>
         </div>
+        <HelperText>
+          {t('typography.webFontHelp', 'Web fonts need an internet connection; system and installed custom fonts work offline.')}
+        </HelperText>
 
         {/* Text scale */}
         <Slider
