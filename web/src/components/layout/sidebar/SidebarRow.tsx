@@ -13,7 +13,6 @@
 import { PrefetchNavLink } from '../PrefetchLink'
 import { motion } from '@/components/motion/runtime'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
-import { routeIconColor } from './iconColors'
 import type { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 
@@ -21,7 +20,6 @@ export interface SidebarRowProps {
   to: string
   label: string
   icon: typeof Icons.home
-  iconColor?: string
   active: boolean
   onSelect?: () => void
   onDoubleClick?: () => void
@@ -39,7 +37,6 @@ export function SidebarRow({
   to,
   label,
   icon: Icon,
-  iconColor,
   active,
   onSelect,
   onDoubleClick,
@@ -94,14 +91,14 @@ export function SidebarRow({
             : 'flex min-h-10 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-2 pe-2.5 ps-3 text-sm transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           active
-            ? 'bg-[var(--surface-2)] font-medium text-[var(--text-primary)]'
+            ? 'bg-[var(--theme-primary)]/10 font-semibold text-[var(--text-primary)]'
             : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         )}
       >
         <Icon
           className={cn(
             compact ? 'h-6 w-6 shrink-0 transition-colors' : 'h-4 w-4 shrink-0 transition-colors',
-            active ? 'text-[var(--theme-primary)]' : routeIconColor(iconColor),
+            active ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]',
           )}
           aria-hidden
         />
@@ -137,13 +134,19 @@ export function SidebarNotificationDot({ className }: { className?: string }) {
   )
 }
 
-export function SidebarCountChip({ value, label }: { value: number; label: string }) {
+export function SidebarCountChip({ value, label, suffix, uncapped = false, className }: {
+  value: number
+  label: string
+  suffix?: string
+  uncapped?: boolean
+  className?: string
+}) {
   return (
     <span
       aria-label={label}
-      className="inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 text-xs font-medium tabular-nums text-[var(--text-secondary)]"
+      className={cn('inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 text-xs font-medium tabular-nums text-[var(--text-secondary)]', className)}
     >
-      {value > 99 ? '99+' : value}
+      {!uncapped && value > 99 ? '99+' : value}{suffix && ` ${suffix}`}
     </span>
   )
 }

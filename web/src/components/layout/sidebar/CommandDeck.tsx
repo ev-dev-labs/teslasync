@@ -47,6 +47,7 @@ export interface CommandDeckProps {
   alertCount?: number
   vehicleCount?: number
   staleCount?: number
+  vehicleId?: string
   collections?: readonly SectionGroup[]
   /** Rail collapse is host-owned: Layout derives the aside width from it. */
   railCollapsed: boolean
@@ -94,6 +95,7 @@ export function CommandDeck({
   alertCount = 0,
   vehicleCount = 0,
   staleCount = 0,
+  vehicleId,
   collections = [],
   railCollapsed,
   onToggleRailCollapsed,
@@ -190,6 +192,7 @@ export function CommandDeck({
     alertCount,
     vehicleCount,
     staleCount,
+    vehicleId,
     collections,
   }
 

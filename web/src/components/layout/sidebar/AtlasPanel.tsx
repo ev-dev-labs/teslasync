@@ -5,9 +5,8 @@
  * selected — Search, Suggested, Favorites, or one section's flat page
  * list. The rail owns navigation; this panel owns content.
  *
- * Deliberately NOT a floating card: it sits in-flow beside the rail on
- * the same surface with a plain divider, so the two columns read as one
- * sidebar. Two variants share every view:
+ * Deliberately NOT a floating card: it sits in-flow beside the tinted
+ * rail on a contrasting surface with a plain divider. Two variants share every view:
  *   - `secondary` — desktop column that can close or shrink to icons.
  *   - `inline` — the mobile drill-in level with a Back button.
  *
@@ -37,6 +36,7 @@ import { groupSidebarItems } from './collections'
 import { searchSidebarSections, type SidebarSearchHit } from './sidebarSearch'
 import { NavSectionHeader } from './NavSectionHeader'
 import { SidebarCountChip, SidebarNotificationDot, SidebarRow } from './SidebarRow'
+import { SidebarDriveBadge } from './SidebarDriveBadge'
 import { SidebarFlyout, useSidebarFlyout } from './SidebarFlyout'
 import type { SidebarSuggestion } from './sidebarSuggest'
 import type { DeckSelection } from './CommandDeck'
@@ -63,6 +63,7 @@ export interface AtlasPanelProps {
   alertCount?: number
   vehicleCount?: number
   staleCount?: number
+  vehicleId?: string
   collections?: readonly SectionGroup[]
 }
 
@@ -86,6 +87,7 @@ export function AtlasPanel({
   alertCount = 0,
   vehicleCount = 0,
   staleCount = 0,
+  vehicleId,
   collections = [],
 }: AtlasPanelProps) {
   const { t } = useTranslation()
@@ -118,9 +120,9 @@ export function AtlasPanel({
 
   // ── Search state ───────────────────────────────────────────────────────
   const [query, setQuery] = useState('')
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set())
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set())
   const toggleGroup = (key: string) => {
-    setCollapsedGroups(previous => {
+    setExpandedGroups(previous => {
       const next = new Set(previous)
       if (next.has(key)) next.delete(key)
       else next.add(key)
@@ -145,6 +147,8 @@ export function AtlasPanel({
 
   // ── Shared row helpers ─────────────────────────────────────────────────
   const trailingFor = (to: string): React.ReactNode => {
+    if (vehicleId && to === '/drives') return <SidebarDriveBadge kind="today" vehicleId={vehicleId} />
+    if (vehicleId && to === '/drive-score') return <SidebarDriveBadge kind="score" vehicleId={vehicleId} />
     if (to === '/notifications/inbox' && alertCount > 0) return <SidebarNotificationDot />
     if (to === '/vehicles' && vehicleCount > 0) {
       return (
@@ -200,7 +204,6 @@ export function AtlasPanel({
       to={hit.to}
       label={hit.label}
       icon={hit.icon}
-      iconColor={hit.color}
       active={itemIsActive(hit.to)}
       onSelect={onItemSelect}
       onDoubleClick={() => pinOnDoubleClick(hit.to)}
@@ -220,7 +223,6 @@ export function AtlasPanel({
       to={item.to}
       label={navLabel(item)}
       icon={item.icon}
-      iconColor={item.color}
       active={itemIsActive(item.to)}
       onSelect={onItemSelect}
       onDoubleClick={() => pinOnDoubleClick(item.to)}
@@ -246,7 +248,14 @@ export function AtlasPanel({
     : null
   const sectionGroups = openSection ? groupSidebarItems(openSection.items, safeCollections) : []
   const collapsibleGroupKeys = sectionGroups.filter(group => group.label).map(group => group.entries[0].to)
-  const anyGroupCollapsed = collapsibleGroupKeys.some(key => collapsedGroups.has(key))
+  const activeGroupKey = sectionGroups.find(group =>
+    group.label && group.entries.some(entry => itemIsActive(entry.to)),
+  )?.entries[0].to ?? collapsibleGroupKeys[0]
+  const viewKey = view.kind === 'section' ? `section:${view.title}` : view.kind
+  useEffect(() => {
+    setExpandedGroups(new Set(activeGroupKey ? [activeGroupKey] : []))
+  }, [viewKey, activeGroupKey])
+  const anyGroupCollapsed = collapsibleGroupKeys.some(key => !expandedGroups.has(key))
 
   const viewTitle = (): string => {
     switch (view.kind) {
@@ -256,8 +265,6 @@ export function AtlasPanel({
       case 'section': return openSection ? navSectionTitle(openSection) : t('nav.empty', 'No pages yet.')
     }
   }
-  const viewKey = view.kind === 'section' ? `section:${view.title}` : view.kind
-
   useEffect(() => {
     if (variant !== 'inline') return
     const handleEscape = (event: KeyboardEvent) => {
@@ -276,8 +283,8 @@ export function AtlasPanel({
       data-collapsed={compact}
       onMouseLeave={hideTip}
       className={cn(
-        'relative flex min-h-0 flex-col bg-[var(--surface-1)]',
-        variant === 'secondary' && 'h-full w-full border-s border-[var(--border-default)]',
+        'relative flex min-h-0 flex-col bg-white dark:bg-[var(--surface-1)]',
+        variant === 'secondary' && 'h-full w-full border-s border-e border-[var(--border-default)]',
         variant === 'inline' && 'h-full w-full flex-1',
       )}
     >
@@ -311,14 +318,7 @@ export function AtlasPanel({
             title={anyGroupCollapsed
               ? t('nav.deck.expandAllGroups', 'Expand all groups')
               : t('nav.deck.collapseAllGroups', 'Collapse all groups')}
-            onClick={() => setCollapsedGroups(previous => {
-              const next = new Set(previous)
-              for (const key of collapsibleGroupKeys) {
-                if (anyGroupCollapsed) next.delete(key)
-                else next.add(key)
-              }
-              return next
-            })}
+            onClick={() => setExpandedGroups(new Set(anyGroupCollapsed ? collapsibleGroupKeys : []))}
             className="h-9 w-9 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             {anyGroupCollapsed
@@ -443,7 +443,6 @@ export function AtlasPanel({
                           to={item.to}
                           label={navLabel(item)}
                           icon={item.icon}
-                          iconColor={item.color}
                           active={itemIsActive(item.to)}
                           onSelect={onItemSelect}
                           onDoubleClick={() => pinOnDoubleClick(item.to)}
@@ -523,7 +522,6 @@ export function AtlasPanel({
                 to={item.to}
                 label={navLabel(item)}
                 icon={item.icon}
-                iconColor={item.color}
                 active={itemIsActive(item.to)}
                 onSelect={onItemSelect}
                 onDoubleClick={() => pinOnDoubleClick(item.to)}
@@ -552,25 +550,34 @@ export function AtlasPanel({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    aria-expanded={!collapsedGroups.has(group.entries[0].to)}
+                    aria-expanded={expandedGroups.has(group.entries[0].to)}
                     aria-controls={`${groupListId}-${index}`}
-                    aria-label={compact ? (group.labelKey ? t(group.labelKey, group.label) : group.label) : undefined}
+                    aria-label={group.labelKey ? t(group.labelKey, group.label) : group.label}
                     {...(compact ? tipHandlers(group.labelKey ? t(group.labelKey, group.label) : group.label) : {})}
                     onClick={() => toggleGroup(group.entries[0].to)}
                     className={cn(
-                      'min-h-11 rounded-shape-md text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-                      compact ? 'mx-auto flex w-11 justify-center p-0' : 'w-full justify-between px-3 text-2xs font-semibold uppercase tracking-[0.14em]',
+                      'min-h-11 rounded-shape-md text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+                      compact ? 'mx-auto flex w-11 justify-center p-0' : 'w-full justify-start gap-2 px-2 text-sm font-semibold uppercase tracking-normal',
                     )}
                   >
-                    {!compact && <span className="truncate text-start">{group.labelKey ? t(group.labelKey, group.label) : group.label}</span>}
-                    {collapsedGroups.has(group.entries[0].to)
-                      ? <Icons.next className="h-5 w-5 shrink-0 rtl:rotate-180" aria-hidden />
-                      : <Icons.expand className="h-5 w-5 shrink-0" aria-hidden />}
+                    {expandedGroups.has(group.entries[0].to)
+                      ? <Icons.expand className="h-4 w-4 shrink-0" aria-hidden />
+                      : <Icons.next className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden />}
+                    {!compact && (
+                      <>
+                        <span className="min-w-0 flex-1 truncate text-start">
+                          {group.labelKey ? t(group.labelKey, group.label) : group.label}
+                        </span>
+                        <span aria-hidden className="rounded-full bg-[var(--surface-3)] px-2 py-0.5 text-2xs tabular-nums text-[var(--text-secondary)]">
+                          {group.entries.length}
+                        </span>
+                      </>
+                    )}
                   </Button>
                 )}
                 <div
                   id={group.label ? `${groupListId}-${index}` : undefined}
-                  hidden={Boolean(group.label && collapsedGroups.has(group.entries[0].to))}
+                  hidden={Boolean(group.label && !expandedGroups.has(group.entries[0].to))}
                   className="space-y-px"
                 >
                   {group.entries.map(entry => (
@@ -579,7 +586,6 @@ export function AtlasPanel({
                       to={entry.to}
                       label={navLabel(entry)}
                       icon={entry.icon}
-                      iconColor={entry.color}
                       active={itemIsActive(entry.to)}
                       onSelect={onItemSelect}
                       onDoubleClick={() => pinOnDoubleClick(entry.to)}

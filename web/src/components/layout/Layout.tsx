@@ -1280,7 +1280,7 @@ export default function Layout() {
           // secondary panel docks. Reduced motion snaps the width while
           // preserving the drawer slide.
           'transition-[transform,width] xl:duration-normal xl:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-transform',
-          'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
+          'flex flex-col border-r border-[var(--border-default)] bg-[var(--nav-rail-bg)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
           presentation.mode !== 'standard' && 'hidden',
           sidebarOpen ? 'top-0 translate-x-0 visible' : 'top-14 -translate-x-full invisible xl:visible',
           // Reserve space for the fixed footer StatusBar
@@ -1369,6 +1369,7 @@ export default function Layout() {
             alertCount={unreadAlerts}
             vehicleCount={vehicleCount}
             staleCount={staleCount}
+            vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}
             collections={visibleCollections}
             railCollapsed={deckRailCollapsed}
             onToggleRailCollapsed={() => setDeckRailCollapsed(prev => !prev)}

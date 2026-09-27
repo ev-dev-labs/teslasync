@@ -51,6 +51,9 @@ for (const width of [390, 1440]) {
 
       // Section group: the docked panel is collapsible from either column.
       await rail.getByRole('button', { name: /Driving, \d+ pages/ }).click()
+      await expect(nav.getByRole('button', { name: 'Driving Performance' })).toHaveAttribute('aria-expanded', 'true')
+      await expect(nav.getByRole('button', { name: 'Drive Records' })).toHaveAttribute('aria-expanded', 'false')
+      await nav.getByRole('button', { name: 'Expand all groups' }).click()
       await expect(nav.getByRole('link', { name: 'Regen Braking' })).toBeVisible()
       await expect(nav.getByText('Driving Performance')).toBeVisible()
       await nav.getByRole('button', { name: 'Collapse all groups' }).click()
@@ -74,6 +77,8 @@ for (const width of [390, 1440]) {
       await rail.getByRole('button', { name: 'Saved' }).click()
       await expect(nav.getByRole('link', { name: 'Regen Braking' })).toBeVisible()
       await rail.getByRole('button', { name: /Driving, \d+ pages/ }).click()
+      await expect(nav.getByRole('button', { name: 'Driving Performance' })).toHaveAttribute('aria-expanded', 'true')
+      await nav.getByRole('button', { name: 'Expand all groups' }).click()
       await expect(nav.getByRole('link', { name: 'Regen Braking' })).toBeVisible()
       await rail.getByRole('button', { name: /Driving, \d+ pages/ }).click()
       await expect(page.getByTestId('command-deck-secondary')).toHaveCount(0)
@@ -81,7 +86,8 @@ for (const width of [390, 1440]) {
       await expect(page.getByTestId('command-deck-secondary')).toHaveCount(1)
       await rail.getByRole('button', { name: /Diagnostics, \d+ pages/ }).click()
       const vehicleCosts = nav.getByRole('button', { name: 'Vehicle Costs' })
-      await expect(vehicleCosts).toHaveAttribute('aria-expanded', 'true')
+      await expect(vehicleCosts).toHaveAttribute('aria-expanded', 'false')
+      await vehicleCosts.click()
       await expect(nav.getByRole('link', { name: 'Vehicle Cost' })).toBeVisible()
       await vehicleCosts.click()
       await expect(nav.getByRole('link', { name: 'Vehicle Cost' })).toHaveCount(0)
@@ -134,6 +140,7 @@ for (const width of [390, 1440]) {
       await rail.getByRole('button', { name: /Driving, \d+ pages/ }).click()
       await expect(nav.getByRole('link', { name: 'Regen Braking' })).toBeVisible()
       await expect(nav.getByText('Driving Performance')).toBeVisible()
+      await nav.getByRole('button', { name: 'Expand all groups' }).click()
       await nav.getByRole('button', { name: 'Collapse all groups' }).click()
       await expect(nav.getByRole('link', { name: 'Regen Braking' })).toHaveCount(0)
       await nav.getByRole('button', { name: 'Expand all groups' }).click()
@@ -156,6 +163,29 @@ for (const width of [390, 1440]) {
 }
 
 for (const width of [390, 1440]) {
+  test(`opens only the current Drive Calendar group at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await seedBrowserState(page, 'light', '/drive-calendar')
+    const mockApi = await installApiMocks(page, 'populated', 'light')
+    await page.goto('/drive-calendar', { waitUntil: 'domcontentloaded' })
+    await waitForHarnessReady(page, mockApi)
+    await openSidebarOnMobile(page, width)
+
+    const rail = page.getByRole('navigation', { name: 'Sections and shortcuts' })
+    await rail.getByRole('button', { name: /Driving, \d+ pages/ }).click()
+    const panel = page.getByRole('navigation', { name: 'Sidebar navigation' })
+    await expect(panel.getByRole('button', { name: 'Drive Records' })).toHaveAttribute('aria-expanded', 'true')
+    await expect(panel.getByRole('button', { name: 'Trip Records' })).toHaveAttribute('aria-expanded', 'false')
+    await expect(panel.getByRole('link', { name: 'Drive Calendar' })).toHaveAttribute('aria-current', 'page')
+    await expect(panel.getByRole('link', { name: 'Trips' })).toHaveCount(0)
+    if (width >= 1280) {
+      const railColor = await rail.evaluate(element => getComputedStyle(element).backgroundColor)
+      const panelColor = await panel.evaluate(element => getComputedStyle(element).backgroundColor)
+      expect(railColor).not.toBe(panelColor)
+    }
+    await captureDeck(page, testInfo, `deck-drive-calendar-${width}`)
+  })
+
   test(`keeps the command deck legible in light mode at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     await seedBrowserState(page, 'light', '/driving-dynamics')

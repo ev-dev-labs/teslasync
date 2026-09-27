@@ -268,6 +268,10 @@ describe('CommandDeck', () => {
   it('offers a context-aware expand/collapse all control for multiple collections', () => {
     renderControlledDeck({ collections: [driveCollection, tripCollection] })
     fireEvent.click(desktopRail().getByRole('button', { name: 'Driving, 5 pages' }))
+    expect(secondaryPanel().getByRole('button', { name: 'Drive Records' })).toHaveAttribute('aria-expanded', 'true')
+    expect(secondaryPanel().getByRole('button', { name: 'Trip Records' })).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Expand all groups' }))
+    expect(secondaryPanel().getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Collapse all groups' }))
     expect(secondaryPanel().getByRole('button', { name: 'Drive Records' })).toHaveAttribute('aria-expanded', 'false')
     expect(secondaryPanel().getByRole('button', { name: 'Trip Records' })).toHaveAttribute('aria-expanded', 'false')
@@ -277,6 +281,21 @@ describe('CommandDeck', () => {
     expect(secondaryPanel().getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Trip Records' }))
     expect(secondaryPanel().getByRole('button', { name: 'Expand all groups' })).toBeInTheDocument()
+  })
+
+  it('opens only the active collection and shows the other collection count', () => {
+    renderControlledDeck({ pathname: '/drive-calendar', collections: [driveCollection, tripCollection] })
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving, 5 pages' }))
+    const driveGroup = secondaryPanel().getByRole('button', { name: 'Drive Records' })
+    const tripGroup = secondaryPanel().getByRole('button', { name: 'Trip Records' })
+    expect(driveGroup).toHaveAttribute('aria-expanded', 'true')
+    expect(tripGroup).toHaveAttribute('aria-expanded', 'false')
+    expect(tripGroup).toHaveTextContent('2')
+    expect(secondaryPanel().getByRole('link', { name: 'Drive Calendar' })).toHaveAttribute('aria-current', 'page')
+    expect(secondaryPanel().queryByRole('link', { name: 'Mileage Log' })).toBeNull()
+    fireEvent.click(tripGroup)
+    expect(tripGroup).toHaveAttribute('aria-expanded', 'true')
+    expect(secondaryPanel().getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
   })
 
   it('collapses the secondary panel via its header, returning focus to the rail', () => {

@@ -39,6 +39,7 @@
   --surface-1: #11151c;
   --surface-2: #171c25;
   --surface-3: #202733;
+  --nav-rail-bg: #0f172a;
   --surface-overlay: rgba(0, 0, 0, 0.6);
   --glass-bg: rgba(255, 255, 255, 0.025);
   --glass-border: rgba(255, 255, 255, 0.08);
@@ -562,6 +563,7 @@ html[data-status-bar='off'] {
   --border-strong: rgba(0, 0, 0, 0.2);
   --surface-overlay: rgba(15, 23, 42, 0.5);
   --bg-app: #f8fafc;
+  --nav-rail-bg: #f8fafc;
   /*
    * Elevation ramp for light themes. The dark-mode ladder uses heavy black
    * alphas that read as dirty smudges on a white surface, so light mode gets
@@ -1552,6 +1554,7 @@ html[data-status-bar='off'] {
     --surface-1: Canvas !important;
     --surface-2: Canvas !important;
     --surface-3: Canvas !important;
+    --nav-rail-bg: Canvas !important;
     --surface-elevated: Canvas !important;
     --surface-overlay: Canvas !important;
     --glass-bg: Canvas !important;
