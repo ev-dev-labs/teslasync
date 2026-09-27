@@ -17,7 +17,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Test the drift detector
         run: python3 -m unittest discover -s scripts -p 'test_check_fleet_proto_drift.py'
       - name: Fetch the current upstream schema at a fixed revision
