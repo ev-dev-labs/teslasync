@@ -34,9 +34,8 @@ for (const theme of ['dark', 'light'] as const) {
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]'))
       expect(saved.at(-1)?.widgets).toEqual([])
 
-      // The shared browser seed is re-applied on every reload. A new tab has
-      // the same storage but no seeding script, so it exercises real hydration.
       const restoredPage = await page.context().newPage()
+      await seedBrowserState(restoredPage, theme, '/', { preserveDashboardState: true })
       await installApiMocks(restoredPage, 'populated', theme)
       await restoredPage.goto('/', { waitUntil: 'domcontentloaded' })
       await expect(restoredPage.getByText('No widgets yet')).toBeVisible()
@@ -66,10 +65,7 @@ test('installs a layout pack and restores its widgets in a new browser', async (
   const context = await browser.newContext()
   try {
     const restored = await context.newPage()
-    await restored.addInitScript(() => {
-      localStorage.setItem('teslasync-onboarded', 'true')
-      localStorage.setItem('teslasync:onboarding:skipped:v1', '1')
-    })
+    await seedBrowserState(restored, 'dark', '/', { preserveDashboardState: true })
 
     await installApiMocks(restored)
     await restored.route('**/api/v1/settings/dashboard-layouts', (route) => {
@@ -96,12 +92,7 @@ test('installs a layout pack and restores its widgets in a new browser', async (
 for (const width of [390, 1440]) {
   test(`new dashboards show fleet posture in the ${width}px widget grid without a fixed brief`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
-    await page.addInitScript(() => {
-      localStorage.setItem('teslasync-onboarded', 'true')
-      localStorage.setItem('teslasync:onboarding:skipped:v1', '1')
-      localStorage.setItem('teslasync:changelog:seen-version', '99.0.0')
-      localStorage.setItem('teslasync:changelog:last-shown', '1787760000000')
-    })
+    await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
     const mockApi = await installApiMocks(page)
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, mockApi)
