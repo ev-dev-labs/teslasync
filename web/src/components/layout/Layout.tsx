@@ -747,7 +747,7 @@ export default function Layout() {
     if (!sidebarOpen) return
     sidebarCloseRef.current?.focus()
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
+      if (event.key !== 'Escape' || event.defaultPrevented) return
       setSidebarOpen(false)
       requestAnimationFrame(() => sidebarTriggerRef.current?.focus())
     }

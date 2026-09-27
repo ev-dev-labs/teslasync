@@ -990,6 +990,23 @@ describe('Layout — mobile drawer', () => {
     await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
     expect(aside.className).toContain('invisible xl:visible')
   })
+
+  it('keeps the drawer open when a nested control consumes Escape', async () => {
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'true'))
+
+    const closeButton = screen.getByRole('button', { name: 'Close sidebar' })
+    const consumeEscape = (event: KeyboardEvent) => event.preventDefault()
+    closeButton.addEventListener('keydown', consumeEscape)
+    fireEvent.keyDown(closeButton, { key: 'Escape' })
+    expect(aside).toHaveAttribute('data-sidebar-open', 'true')
+
+    closeButton.removeEventListener('keydown', consumeEscape)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+  })
 })
 
 // ══════════════════════════════════════════════════════════════════════
