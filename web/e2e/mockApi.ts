@@ -921,7 +921,6 @@ export async function installApiMocks(
   scenario: DataScenario = 'populated',
   theme: 'dark' | 'light' = 'dark',
   density: E2EUIDensity = 'comfortable',
-  scope: 'page' | 'context' = 'page',
 ): Promise<MockApiController | null> {
   if (process.env.E2E_MOCKS === '0') return null;
   const sseServer = await ensureMockSseServer();
@@ -940,13 +939,8 @@ export async function installApiMocks(
   page.on('request', (request) => {
     requestRecord(controller, request);
   });
-  const handleRequest = (route: Route) =>
-    fulfill(route, scenario, controller, theme, density, sseServer.origin);
-  if (scope === 'context') {
-    await page.context().route('**/api/**', handleRequest);
-  } else {
-    await page.route('**/api/**', handleRequest);
-  }
+  await page.route('**/api/**', (route) =>
+    fulfill(route, scenario, controller, theme, density, sseServer.origin));
   return controller;
 }
 
