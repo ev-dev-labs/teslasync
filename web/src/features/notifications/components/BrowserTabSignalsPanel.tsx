@@ -79,7 +79,7 @@ export function BrowserTabSignalsPanel({ className }: BrowserTabSignalsPanelProp
             <HelperText>
               {t(
                 'settings.tab.hint',
-                'Adds a "(N)" prefix and favicon dot when there are unread notifications. Critical alerts briefly flash "(!) ALERT" when the tab is in the background.',
+                'Adds a "(N)" prefix and favicon dot when there are unread notifications, and mirrors the count onto the installed app icon while the app is open where supported. Critical alerts briefly flash "(!) ALERT" when the tab is in the background.',
               )}
             </HelperText>
             {isSaving && (

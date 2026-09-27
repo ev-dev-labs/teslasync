@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
 import {
   Button,
@@ -14,6 +15,8 @@ import { useRangeState } from '@/hooks/useRangeState'
 import { useProductPreferences } from '@/hooks/useProductPreferences'
 import { getCurrentDensity } from '@/hooks/useDensitySync'
 import { getDatePreset } from '@/lib/datePresets'
+import { civilDateInTimeZone } from '@/lib/dateRange'
+import { getWorkspaceQuickRangePresets, isWorkspaceRangePresetAvailable } from '@/lib/workspaceScope'
 import { formatDate, formatDateShort } from '@/lib/dateFormat'
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
@@ -27,18 +30,17 @@ import {
 } from '@/lib/workspacePreferences'
 import { useStatusBarPopover } from './status-bar/StatusBarContext'
 
-const SHORT_PRESET_LABELS: Record<WorkspaceRangePreset, string> = {
+const SHORT_PRESET_LABELS: Record<WorkspaceRangePreset | 'ytd', string> = {
   live: 'Last 5 min',
   '24h': '24 hours',
   today: 'Today',
   '7d': '7 days',
   '30d': '30 days',
   '90d': '90 days',
+  ytd: 'Year to date',
   '1y': '1 year',
   all: 'All time',
 }
-const QUICK_PRESETS = ['24h', '7d', '30d', '90d'] as const
-
 export interface WorkspaceContextControlProps {
   className?: string
   /** Keep command listeners mounted while omitting a route-inapplicable trigger. */
@@ -58,6 +60,9 @@ export function WorkspaceContextControl({
   iconOnly = false,
 }: WorkspaceContextControlProps) {
   const { t } = useTranslation()
+  const { pathname } = useLocation()
+  const quickPresets = getWorkspaceQuickRangePresets(pathname)
+  const calendarRoute = isWorkspaceRangePresetAvailable(pathname, 'ytd')
   const triggerRef = useRef<HTMLButtonElement>(null)
   const { open, toggle, close } = useStatusBarPopover(
     variant === 'status' ? 'workspace-context-status' : 'workspace-context',
@@ -73,14 +78,21 @@ export function WorkspaceContextControl({
   const density = pendingDensity ?? settings?.ui_density ?? getCurrentDensity()
   const [draftStart, setDraftStart] = useState(range.start)
   const [draftEnd, setDraftEnd] = useState(range.end)
-  const [showCustom, setShowCustom] = useState(!range.presetId)
+  const calendarYear = Number(civilDateInTimeZone(new Date(), range.timezone).slice(0, 4))
+  const rangeYear = Number(range.start.slice(0, 4))
+  const fullYear = calendarRoute && !range.presetId && rangeYear >= 1900 && rangeYear <= calendarYear &&
+    range.start === `${rangeYear}-01-01` && range.end === `${rangeYear}-12-31`
+    ? rangeYear
+    : undefined
+  const selectedYear = fullYear ?? calendarYear
+  const [showCustom, setShowCustom] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setDraftStart(range.start)
     setDraftEnd(range.end)
-    setShowCustom(!range.presetId)
-  }, [open, range.start, range.end, range.presetId])
+    setShowCustom(false)
+  }, [open, range.start, range.end])
 
   useEffect(() => {
     if (!listenForCommands) return
@@ -114,9 +126,11 @@ export function WorkspaceContextControl({
   const activePreset = range.presetId
     ? getDatePreset(range.presetId)
     : undefined
-  const activeLabel = activePreset
-    ? t(activePreset.i18nKey, activePreset.fallback)
-    : t('workspace.analysis.custom', 'Custom')
+  const activeLabel = fullYear != null
+    ? t('workspace.analysis.fullYear', 'Full year {{year}}', { year: String(fullYear) })
+    : activePreset
+      ? t(activePreset.i18nKey, activePreset.fallback)
+      : t('workspace.analysis.custom', 'Custom')
   const visibleContextLabel = range.compare
     ? t(
         'workspace.analysis.rangeWithComparison',
@@ -130,9 +144,42 @@ export function WorkspaceContextControl({
     { range: visibleContextLabel },
   )
   const validDraft = draftStart.length > 0 && draftEnd.length > 0 && draftStart <= draftEnd
-  const visiblePresets = isWorkspaceRangePreset(range.presetId) && !QUICK_PRESETS.some(id => id === range.presetId)
-    ? [range.presetId, ...QUICK_PRESETS]
-    : QUICK_PRESETS
+  const legacyPreset = isWorkspaceRangePreset(range.presetId) &&
+    range.presetId !== 'all' &&
+    !quickPresets.some(id => id === range.presetId) &&
+    isWorkspaceRangePresetAvailable(pathname, range.presetId)
+    ? range.presetId
+    : undefined
+  const presetButton = (id: WorkspaceRangePreset | 'ytd') => (
+    <Button
+      key={id}
+      type="button"
+      variant="ghost"
+      size="sm"
+      aria-pressed={!showCustom && range.presetId === id}
+      aria-label={id === '24h' ? t('date.preset.last24h', 'Last 24 hours') : undefined}
+      onClick={() => {
+        setShowCustom(false)
+        range.setPreset(id)
+      }}
+      className={cn(
+        'min-h-11 min-w-0 rounded-lg border px-2 text-xs transition-colors',
+        !showCustom && range.presetId === id
+          ? 'border-[var(--theme-primary)] bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1'
+          : 'border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-secondary)] hover:bg-[var(--surface-3)]',
+      )}
+    >
+      {t(`workspace.analysis.presets.${id}`, SHORT_PRESET_LABELS[id])}
+    </Button>
+  )
+  const applyYear = (year: number) => {
+    if (!Number.isInteger(year) || year < 1900 || year > calendarYear) return
+    range.setRange({
+      start: `${year}-01-01`,
+      end: `${year}-12-31`,
+    }, 'custom')
+    setShowCustom(false)
+  }
 
   const updateDensity = (next: string) => {
     if (!settings || !isWorkspaceDensity(next) || next === density) return
@@ -227,51 +274,92 @@ export function WorkspaceContextControl({
 
         <div className="space-y-4 px-5 py-4">
           <div className="space-y-2.5">
-            <Caption className="block font-semibold uppercase tracking-wide">
-              {t('workspace.analysis.range', 'Date range')}
-            </Caption>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Caption className="font-semibold uppercase tracking-wide">
+                {t('workspace.analysis.range', 'Date range')}
+              </Caption>
+              <Caption className="rounded-full border border-[var(--border-default)] px-2 py-1 text-[var(--text-secondary)]">
+                {t(
+                  'workspace.analysis.activeRange',
+                  '{{start}} to {{end}}',
+                  { start: formatDateShort(`${range.start}T00:00:00`), end: formatDate(`${range.end}T00:00:00`) },
+                )}
+              </Caption>
+            </div>
             <div
               role="group"
               aria-label={t('workspace.analysis.range', 'Date range')}
-              className="grid grid-cols-2 gap-1 rounded-shape-lg bg-[var(--surface-2)] p-1 min-[420px]:grid-cols-5"
+              className="space-y-2"
             >
-              {visiblePresets.map(id => (
+              <div className="grid grid-cols-2 gap-2">
+                {quickPresets.map(presetButton)}
+              </div>
+              {legacyPreset && presetButton(legacyPreset)}
+              {calendarRoute && (
+                <div role="group" aria-label={t('workspace.analysis.fullYear', 'Full year {{year}}', { year: String(selectedYear) })}
+                  className={cn(
+                    'flex min-w-0 items-center rounded-lg border bg-[var(--surface-1)]',
+                    !showCustom && fullYear != null
+                      ? 'border-[var(--theme-primary)] shadow-e1'
+                      : 'border-[var(--border-default)]',
+                  )}
+                >
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    aria-label={t('workspace.analysis.previousYear', 'Previous year')}
+                    disabled={selectedYear <= 1900}
+                    onClick={() => applyYear(selectedYear - 1)}
+                    className="min-h-11 min-w-11 shrink-0 px-1"
+                  >
+                    <Icons.previous className="h-4 w-4" aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    aria-label={t('workspace.analysis.fullYear', 'Full year {{year}}', { year: String(selectedYear) })}
+                    aria-pressed={!showCustom && fullYear != null}
+                    onClick={() => applyYear(selectedYear)}
+                    className="flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-none px-0.5 text-[var(--text-primary)]"
+                  >
+                    <span className="text-2xs leading-none text-[var(--text-muted)]">
+                      {t('workspace.analysis.fullYearLabel', 'Full year')}
+                    </span>
+                    <span className="text-sm font-semibold leading-none">{selectedYear}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    aria-label={t('workspace.analysis.nextYear', 'Next year')}
+                    disabled={selectedYear >= calendarYear}
+                    onClick={() => applyYear(selectedYear + 1)}
+                    className="min-h-11 min-w-11 shrink-0 px-1"
+                  >
+                    <Icons.next className="h-4 w-4" aria-hidden />
+                  </Button>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2 border-t border-[var(--border-default)] pt-2">
+                {presetButton('all')}
                 <Button
-                  key={id}
                   type="button"
                   variant="ghost"
                   size="sm"
-                  aria-pressed={!showCustom && range.presetId === id}
-                  aria-label={id === '24h' ? t('date.preset.last24h', 'Last 24 hours') : undefined}
-                  onClick={() => {
-                    setShowCustom(false)
-                    range.setPreset(id)
-                  }}
+                  aria-pressed={showCustom || (!range.presetId && fullYear == null)}
+                  onClick={() => setShowCustom(true)}
                   className={cn(
-                    'min-h-9 min-w-0 rounded-lg px-1 text-xs',
-                    !showCustom && range.presetId === id
-                      ? 'bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1 ring-1 ring-inset ring-[var(--theme-primary)]'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-3)]',
+                    'min-h-11 min-w-0 rounded-lg border px-2 text-xs transition-colors',
+                    showCustom || (!range.presetId && fullYear == null)
+                      ? 'border-[var(--theme-primary)] bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1'
+                      : 'border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-secondary)] hover:bg-[var(--surface-3)]',
                   )}
                 >
-                  {t(`workspace.analysis.presets.${id}`, SHORT_PRESET_LABELS[id])}
+                  {t('workspace.analysis.custom', 'Custom')}
                 </Button>
-              ))}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-pressed={showCustom || !range.presetId}
-                onClick={() => setShowCustom(true)}
-                className={cn(
-                  'min-h-9 min-w-0 rounded-lg px-1 text-xs max-[419px]:col-span-2',
-                  showCustom || !range.presetId
-                    ? 'bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1 ring-1 ring-inset ring-[var(--theme-primary)]'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-3)]',
-                )}
-              >
-                {t('workspace.analysis.custom', 'Custom')}
-              </Button>
+              </div>
             </div>
             {(range.presetId === 'live' || range.presetId === '24h' || range.presetId === 'today') && !showCustom && (
               <Caption className="block">
@@ -306,7 +394,7 @@ export function WorkspaceContextControl({
                   variant="primary"
                   disabled={!validDraft}
                   onClick={() => {
-                    range.setRange({ start: draftStart, end: draftEnd })
+                    range.setRange({ start: draftStart, end: draftEnd }, 'custom')
                     close()
                   }}
                   className="w-full"
@@ -376,23 +464,13 @@ export function WorkspaceContextControl({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-default)] bg-[var(--surface-2)] px-5 py-3">
-          <Caption>
-            {t(
-              'workspace.analysis.activeRange',
-              '{{start}} to {{end}}',
-              { start: formatDateShort(`${range.start}T00:00:00`), end: formatDate(`${range.end}T00:00:00`) },
-            )}
-          </Caption>
-          {range.compare && (
+        {range.compare && (
+          <div className="border-t border-[var(--border-default)] bg-[var(--surface-2)] px-5 py-3">
             <Caption className="text-cyan-700 dark:text-cyan-300">
-              {t(
-                'workspace.analysis.comparisonActive',
-                'Comparison active: previous matching period',
-              )}
+              {t('workspace.analysis.comparisonActive', 'Comparison active: previous matching period')}
             </Caption>
-          )}
-        </div>
+          </div>
+        )}
       </Popover>
     </>
   )

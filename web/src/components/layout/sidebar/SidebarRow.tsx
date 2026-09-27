@@ -13,7 +13,6 @@
 import { PrefetchNavLink } from '../PrefetchLink'
 import { motion } from '@/components/motion/runtime'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
-import { routeIconColor } from './iconColors'
 import type { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 
@@ -21,7 +20,6 @@ export interface SidebarRowProps {
   to: string
   label: string
   icon: typeof Icons.home
-  iconColor?: string
   active: boolean
   onSelect?: () => void
   onDoubleClick?: () => void
@@ -33,13 +31,14 @@ export interface SidebarRowProps {
   dataTour?: string
   /** Secondary line under the label (reason, collection, …). */
   context?: string
+  ariaLabel?: string
+  actionAlwaysVisible?: boolean
 }
 
 export function SidebarRow({
   to,
   label,
   icon: Icon,
-  iconColor,
   active,
   onSelect,
   onDoubleClick,
@@ -50,6 +49,8 @@ export function SidebarRow({
   hoverAction,
   dataTour,
   context,
+  ariaLabel,
+  actionAlwaysVisible = false,
 }: SidebarRowProps) {
   // Cascade item: under an orchestrating AtlasPanel parent each row rises
   // in sequence on mount; without one the variants stay inert and the
@@ -70,7 +71,7 @@ export function SidebarRow({
       {active && (
         <span
           aria-hidden
-          className="absolute inset-y-1 start-0 z-10 w-[3px] rounded-r-sm bg-[var(--theme-primary)]"
+          className="absolute inset-y-0 start-0 z-10 w-[2.5px] bg-[var(--nav-active-indicator)]"
         />
       )}
       <PrefetchNavLink
@@ -81,7 +82,7 @@ export function SidebarRow({
         onMouseLeave={compact ? onHideTip : undefined}
         onFocus={compact ? event => onShowTip?.(event.currentTarget, label, context) : undefined}
         onBlur={compact ? onHideTip : undefined}
-        aria-label={compact ? (context ? `${label}, ${context}` : label) : undefined}
+        aria-label={ariaLabel ?? (compact ? (context ? `${label}, ${context}` : label) : undefined)}
         end={!active}
         // `undefined`, never `false`: NavLink adopts an explicitly passed
         // aria-current as its own active marker, so `false` would render
@@ -94,14 +95,14 @@ export function SidebarRow({
             : 'flex min-h-10 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-2 pe-2.5 ps-3 text-sm transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           active
-            ? 'bg-[var(--surface-2)] font-medium text-[var(--text-primary)]'
+            ? 'bg-[var(--nav-active-bg)] font-semibold text-[var(--text-primary)]'
             : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         )}
       >
         <Icon
           className={cn(
             compact ? 'h-6 w-6 shrink-0 transition-colors' : 'h-4 w-4 shrink-0 transition-colors',
-            active ? 'text-[var(--theme-primary)]' : routeIconColor(iconColor),
+            active ? 'text-[var(--nav-active-indicator)]' : 'text-[var(--text-muted)]',
           )}
           aria-hidden
         />
@@ -117,7 +118,7 @@ export function SidebarRow({
         {!compact && trailing}
       </PrefetchNavLink>
       {hoverAction && !compact && (
-        <div className="ms-1 transition-opacity lg:opacity-0 lg:group-hover/sidebar-row:opacity-100 lg:focus-within:opacity-100">
+        <div className={cn('ms-1 transition-opacity', !actionAlwaysVisible && 'lg:opacity-0 lg:group-hover/sidebar-row:opacity-100 lg:focus-within:opacity-100')}>
           {hoverAction}
         </div>
       )}
@@ -137,13 +138,19 @@ export function SidebarNotificationDot({ className }: { className?: string }) {
   )
 }
 
-export function SidebarCountChip({ value, label }: { value: number; label: string }) {
+export function SidebarCountChip({ value, label, suffix, uncapped = false, className }: {
+  value: number
+  label: string
+  suffix?: string
+  uncapped?: boolean
+  className?: string
+}) {
   return (
     <span
       aria-label={label}
-      className="inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 text-xs font-medium tabular-nums text-[var(--text-secondary)]"
+      className={cn('inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 text-xs font-medium tabular-nums text-[var(--text-secondary)]', className)}
     >
-      {value > 99 ? '99+' : value}
+      {!uncapped && value > 99 ? '99+' : value}{suffix && ` ${suffix}`}
     </span>
   )
 }

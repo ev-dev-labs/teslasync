@@ -11,6 +11,7 @@ import { cn } from '@/lib/cn';
 import { Button as UiButton, GlassPanel } from '@/components/ui';
 import { EmptyState, Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
+import { kioskPanelStyle } from '../lib/kioskAppearance';
 import {
   GRID_BREAKPOINTS, GRID_COLS, ROW_HEIGHT, GRID_MARGIN,
 } from '../hooks/useDashboardLayout';
@@ -320,17 +321,10 @@ export function DashboardGrid({
     });
   }, [isMobileStack, widgets, liveLayouts.xs]);
 
-  // Kiosk panel background boost: increases GlassPanel bg from default 5% white
-  const kioskPanelStyle = useMemo(() => {
-    if (kioskWidgetOpacity == null) return undefined;
-    // Scale from bg-[var(--surface-2)] at 0.3 to bg-[var(--surface-2)] at 1.0 for readability
-    const alpha = 0.03 + kioskWidgetOpacity * 0.17;
-    const blur = 4 + kioskWidgetOpacity * 12;
-    return {
-      backgroundColor: `rgba(255, 255, 255, ${alpha.toFixed(3)})`,
-      backdropFilter: `blur(${blur.toFixed(1)}px)`,
-    };
-  }, [kioskWidgetOpacity]);
+  const panelStyle = useMemo(
+    () => kioskWidgetOpacity == null ? undefined : kioskPanelStyle(kioskWidgetOpacity),
+    [kioskWidgetOpacity],
+  );
 
   const fullscreenInstance = fullscreenWidget
     ? widgets.find((w) => w.id === fullscreenWidget)
@@ -400,8 +394,9 @@ export function DashboardGrid({
             'w-full overflow-y-auto rounded-xl',
             mobile ? 'flex-1 min-h-0' : 'h-full',
             showWidgetBorders && 'border border-[var(--border-subtle)]',
+            panelStyle && 'kiosk-panel',
           )}
-          style={kioskPanelStyle}
+          style={panelStyle}
         >
           <SectionErrorBoundary
             name={`widget:${def.id}:${widget.id}`}
@@ -425,7 +420,7 @@ export function DashboardGrid({
       </div>
     );
   }, [
-    t, editMode, getWidgetSizeLive, dashboardVehicleId, kioskPanelStyle,
+    t, editMode, getWidgetSizeLive, dashboardVehicleId, panelStyle,
     showWidgetBorders, onRemoveWidget, onOpenSettings, arrangeWidget,
     getArrangeAvailability,
   ]);

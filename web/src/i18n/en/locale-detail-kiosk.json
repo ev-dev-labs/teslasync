@@ -15,7 +15,7 @@
     "showClock": "Show Clock",
     "clockPosition": "Clock Position",
     "transparency": "Transparency",
-    "transparencyDesc": "Adjust widget and background opacity. Higher values are more solid and readable.",
+    "transparencyDesc": "Adjust widget and background opacity. Colors follow your selected app theme. Higher values are more solid and readable.",
     "widgetOpacity": "Widget Opacity",
     "transparent": "Transparent",
     "solid": "Solid",

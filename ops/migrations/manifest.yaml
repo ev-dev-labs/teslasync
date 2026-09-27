@@ -480,3 +480,17 @@ migrations:
     irreversible_justification: Down removes persistent geofence observations and rule attributes that cannot be reconstructed.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-09-23"
+
+  - version: 253
+    name: navigation_pins
+    forward_compatible: true
+    forward_compatibility_notes: Adds a value to the pinned_items item_type CHECK; older binaries continue to read and write their existing pin types.
+    rollback_notes: Leave this migration applied when rolling back the binary; explicit down deletes navigation pins and should only run after exporting those rows.
+    expected_duration: <10s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Brief ACCESS EXCLUSIVE lock while replacing the pinned_items CHECK, followed by validation under a weaker lock; schedule outside write-heavy periods.
+    reversible: false
+    irreversible_justification: Explicit down removes saved navigation pins that cannot be reconstructed from the database.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-09-23"

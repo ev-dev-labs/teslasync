@@ -55,7 +55,10 @@ function main() {
   const failures = []
   const duplicateUrls = manifestUrls.filter((url, index) =>
     manifestUrls.indexOf(url) !== index)
-  const routeChunks = urls.filter((url) => /\.(?:js|css|map|html)(?:$|\?)/i.test(url))
+  // Only the offline shell and its CSP-safe stylesheet may be precached;
+  // unlike index.html, neither intercepts ForwardAuth redirects.
+  const routeChunks = urls.filter((url) =>
+    !['offline.html', 'offline.css'].includes(url) && /\.(?:js|css|map|html)(?:$|\?)/i.test(url))
   const oversizedBrandSources = urls.filter((url) =>
     /icons\/(?:logo|logo-original)\.(?:svg|png)$/i.test(url))
   const localeCacheIndex = worker.indexOf('i18n-locale-assets')

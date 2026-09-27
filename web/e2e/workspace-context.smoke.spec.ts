@@ -17,6 +17,7 @@ for (const theme of ['light', 'dark'] as const) {
       if (!initial.matched || !initial.body || typeof initial.body !== 'object') {
         throw new Error('Settings fixture is unavailable')
       }
+
       let settings = initial.body as Record<string, unknown>
       await page.route('**/api/v1/settings', async route => {
         if (route.request().method() === 'PUT') {
@@ -54,4 +55,112 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(dialog.getByLabel('Start date')).toHaveCount(0)
     })
   }
+}
+
+for (const width of [390, 1440]) {
+test(`Drive Calendar year chips shift and preserve fixed dates at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 })
+  await seedBrowserState(page, 'light', '/drive-calendar')
+  const mockApi = await installApiMocks(page, 'populated', 'light')
+  await page.goto('/drive-calendar', { waitUntil: 'domcontentloaded' })
+  await waitForHarnessReady(page, mockApi)
+
+  if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+  await page.getByRole('button', { name: /Analysis window:/ }).click()
+  const calendarSettings = page.getByRole('dialog', { name: 'View settings' })
+  const currentYear = new Date().getFullYear()
+  await expect(calendarSettings.getByRole('button', { name: 'Year to date' })).toBeVisible()
+  await expect(calendarSettings.getByRole('button', { name: 'All time' })).toBeVisible()
+  await expect(calendarSettings.getByLabel('Calendar year')).toHaveCount(0)
+  await calendarSettings.screenshot({ path: testInfo.outputPath(`calendar-year-options-${width}.png`) })
+  await calendarSettings.getByRole('button', { name: `Full year ${currentYear}` }).click()
+  await expect.poll(() => new URL(page.url()).searchParams.get('to')).toBe(`${currentYear}-12-31`)
+  await expect(calendarSettings.getByRole('button', { name: 'Next year' })).toBeDisabled()
+  await calendarSettings.getByRole('button', { name: 'Previous year' }).click()
+  await expect(calendarSettings.getByRole('button', { name: `Full year ${currentYear - 1}` })).toHaveAttribute('aria-pressed', 'true')
+  await calendarSettings.getByRole('button', { name: 'Previous year' }).click()
+  await expect(calendarSettings.getByRole('button', { name: `Full year ${currentYear - 2}` })).toHaveAttribute('aria-pressed', 'true')
+  await calendarSettings.getByRole('button', { name: 'Next year' }).click()
+  await expect(calendarSettings.getByRole('button', { name: `Full year ${currentYear - 1}` })).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => new URL(page.url()).searchParams.get('from')).toBe(`${currentYear - 1}-01-01`)
+  await expect.poll(() => new URL(page.url()).searchParams.get('to')).toBe(`${currentYear - 1}-12-31`)
+  expect(new URL(page.url()).searchParams.get('time_scope')).toBe('custom')
+
+  const selected = new URL(page.url()).search
+  await page.goto(`/drives${selected}`, { waitUntil: 'domcontentloaded' })
+  if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+  await page.getByRole('button', { name: /Analysis window: Custom/ }).click()
+  const drivesSettings = page.getByRole('dialog', { name: 'View settings' })
+  await expect(drivesSettings.getByRole('button', { name: `Full year ${currentYear - 1}` })).toHaveCount(0)
+  await expect(drivesSettings.getByLabel('Calendar year')).toHaveCount(0)
+  expect(new URL(page.url()).searchParams.get('from')).toBe(`${currentYear - 1}-01-01`)
+  expect(new URL(page.url()).searchParams.get('to')).toBe(`${currentYear - 1}-12-31`)
+})
+}
+
+for (const width of [390, 1440]) {
+  test(`quick choices stay balanced with All time selected at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await seedBrowserState(page, 'light', '/drives')
+    const mockApi = await installApiMocks(page, 'populated', 'light')
+    await page.goto('/drives?time_scope=all', { waitUntil: 'domcontentloaded' })
+    await waitForHarnessReady(page, mockApi)
+    if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+    await page.getByRole('button', { name: 'Analysis window: All time' }).click()
+    const dialog = page.getByRole('dialog', { name: 'View settings' })
+    const all = dialog.getByRole('button', { name: 'All time' })
+    const lastQuick = dialog.getByRole('button', { name: '90 days' })
+    const custom = dialog.getByRole('button', { name: 'Custom' })
+    await expect(all).toHaveAttribute('aria-pressed', 'true')
+    const allBox = await all.boundingBox()
+    const quickBox = await lastQuick.boundingBox()
+    const customBox = await custom.boundingBox()
+    expect(allBox).not.toBeNull()
+    expect(quickBox).not.toBeNull()
+    expect(customBox).not.toBeNull()
+    expect(allBox!.y).toBeGreaterThanOrEqual(quickBox!.y + quickBox!.height)
+    expect(customBox!.y).toBe(allBox!.y)
+    await dialog.screenshot({ path: testInfo.outputPath(`all-time-${width}.png`) })
+    await dialog.getByRole('button', { name: '7 days' }).click()
+    await expect(all).toHaveAttribute('aria-pressed', 'false')
+    expect((await all.boundingBox())?.y).toBe(allBox!.y)
+  })
+
+  test(`Drive Calendar converts a carried 24-hour window to compact Custom at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await seedBrowserState(page, 'light', '/drive-calendar')
+    const mockApi = await installApiMocks(page, 'populated', 'light')
+    await page.goto('/drive-calendar?from=2026-09-26&to=2026-09-27&time_scope=24h', { waitUntil: 'domcontentloaded' })
+    await waitForHarnessReady(page, mockApi)
+    if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+    await page.getByRole('button', { name: 'Analysis window: Custom' }).click()
+    const dialog = page.getByRole('dialog', { name: 'View settings' })
+    await expect(dialog.getByRole('button', { name: 'Custom' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(dialog.getByRole('button', { name: 'Last 24 hours' })).toHaveCount(0)
+    await expect(dialog.getByLabel('Start date')).toHaveCount(0)
+    await dialog.screenshot({ path: testInfo.outputPath(`calendar-carried-range-${width}.png`) })
+    await dialog.getByRole('button', { name: 'Custom' }).click()
+    await expect(dialog.getByLabel('Start date')).toBeVisible()
+  })
+
+  test(`selected full year remains legible at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await seedBrowserState(page, 'light', '/drive-calendar')
+    const mockApi = await installApiMocks(page, 'populated', 'light')
+    await page.goto('/drive-calendar?from=2017-01-01&to=2017-12-31&time_scope=custom', { waitUntil: 'domcontentloaded' })
+    await waitForHarnessReady(page, mockApi)
+    if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+    await page.getByRole('button', { name: 'Analysis window: Full year 2017' }).click()
+    const dialog = page.getByRole('dialog', { name: 'View settings' })
+    const selected = dialog.getByRole('button', { name: 'Full year 2017' })
+    await expect(selected).toHaveAttribute('aria-pressed', 'true')
+    await expect(selected).toContainText('2017')
+    await expect(dialog.getByLabel('Start date')).toHaveCount(0)
+    const label = await selected.locator('span').first().boundingBox()
+    const year = await selected.locator('span').last().boundingBox()
+    expect(label).not.toBeNull()
+    expect(year).not.toBeNull()
+    expect(year!.y).toBeGreaterThanOrEqual(label!.y + label!.height)
+    await dialog.screenshot({ path: testInfo.outputPath(`selected-year-${width}.png`) })
+  })
 }

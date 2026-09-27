@@ -25,3 +25,23 @@ for (const path of ['/', '/data-repair']) {
     await assertMockApiComplete(page, mockApi);
   });
 }
+
+test('installed mobile navigation opens and follows a shortcut in secondary engines', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'standalone', { configurable: true, value: true });
+  });
+  await seedBrowserState(page, 'dark', '/');
+  const mockApi = await installApiMocks(page, 'populated');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await waitForHarnessReady(page, mockApi);
+
+  const sidebar = page.locator('[data-role="sidebar"]');
+  await page.getByRole('button', { name: 'Open sidebar' }).click();
+  await expect(sidebar).toHaveAttribute('data-sidebar-open', 'true');
+  await expect(sidebar.getByRole('navigation', { name: 'Sections and shortcuts' })).toBeVisible();
+  await sidebar.getByRole('link', { name: 'All pages' }).click();
+  await expect(page).toHaveURL(/\/explore$/);
+  await expect(sidebar).toHaveAttribute('data-sidebar-open', 'false');
+  await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible();
+});

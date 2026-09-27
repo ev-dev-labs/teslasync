@@ -58,12 +58,18 @@ function selectPinned(rows: PinnedItem[]): PinnedItem[] {
  * returns an array — never undefined — so consumers can `.some(...)` or
  * `.map(...)` without a null guard.
  */
-export function usePinned(type: PinnedItemType, context?: string) {
+export function usePinned(
+  type: PinnedItemType,
+  context?: string,
+  options: { refetchInterval?: number | false; refetchOnWindowFocus?: boolean | 'always' } = {},
+) {
   return useQuery({
     queryKey: pinnedKeys.list(type, context),
     queryFn: ({ signal }) => request<PinnedItem[]>(`/pinned${buildQuery(type, context)}`, { signal }),
     select: selectPinned,
     staleTime: STALE_TIMES.SLOW,
+    refetchInterval: options.refetchInterval,
+    refetchOnWindowFocus: options.refetchOnWindowFocus,
   });
 }
 
@@ -86,7 +92,7 @@ export interface TogglePinInput {
  * skip the lookup, or (b) the helper grows a `beforeMutate` hook that
  * fires ahead of the optimistic write.
  */
-export function useTogglePin(type: PinnedItemType) {
+export function useTogglePin(type: PinnedItemType, options: { notifyError?: boolean } = {}) {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
 
@@ -124,6 +130,7 @@ export function useTogglePin(type: PinnedItemType) {
       }
     },
     onError: (e, vars) => {
+      if (options.notifyError === false) return;
       if (vars.pin) {
         error(e, 'toast.pin.pinned.error', 'Failed to pin');
       } else {

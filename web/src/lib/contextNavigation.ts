@@ -1,5 +1,5 @@
 import { ROUTE_META } from './routeMeta'
-import { getWorkspaceRouteScope } from './workspaceScope'
+import { getWorkspaceRouteScope, isWorkspaceRangePresetAvailable } from './workspaceScope'
 
 export type ContextQueryValue =
   | string
@@ -85,6 +85,16 @@ export function preserveWorkspaceScope(
     const allowed = VEHICLE_SCOPE_KEYS.has(key) ? scope.vehicle : scope.range
     if (!allowed) continue
     next.set(key, value)
+  }
+  const selectedScope = next.get('time_scope')
+  if (
+    scope.range &&
+    selectedScope &&
+    !isWorkspaceRangePresetAvailable(rawPath, selectedScope) &&
+    next.has('from') &&
+    next.has('to')
+  ) {
+    next.set('time_scope', 'custom')
   }
 
   const query = next.toString()

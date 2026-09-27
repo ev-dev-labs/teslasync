@@ -1,7 +1,7 @@
 /**
  * sidebarSearch — pure query-engine tests.
  *
- * The unified sidebar's search box must surface every destination,
+ * Sidebar matching must surface every destination,
  * including pages nested inside collections and aliases users type
  * that never appear in a label ("soh", "tpms"). These tests pin the
  * matching rules without rendering any DOM.
@@ -79,6 +79,11 @@ describe('matchesSidebarTokens', () => {
 describe('searchSidebarSections', () => {
   it('returns no sections for a blank query (caller renders the tree)', () => {
     expect(searchSidebarSections(sections, collections, '   ', identity)).toEqual([])
+  })
+
+  it('can exclude the section-title shortcut when filtering within a section', () => {
+    expect(searchSidebarSections(sections, collections, 'Driving', identity, { matchSectionTitle: false })).toEqual([])
+    expect(searchSidebarSections(sections, collections, 'Driving', identity)[0].hits.map(hit => hit.to)).toEqual(['/drives'])
   })
 
   it('matches labels case-insensitively', () => {

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!-- Offline fallback: served by the service worker's catch handler when a
+     navigation fails with no cached response (cold offline launch). Fully
+     static — no auth, no API, no app shell — so it can never loop behind a
+     ForwardAuth proxy. Kept tiny on purpose: it is precached at install. -->
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0d12" />
+    <title>Offline · TeslaSync</title>
+    <link rel="stylesheet" href="/offline.css" />
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#06281f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+        </svg>
+      </div>
+      <h1>You&rsquo;re offline</h1>
+      <p>TeslaSync couldn&rsquo;t reach the network and this page isn&rsquo;t cached yet. Pages you&rsquo;ve already visited keep working offline.</p>
+      <a class="retry" href="/">Retry</a>
+    </main>
+  </body>
+</html>

@@ -175,6 +175,7 @@ describe('BrowserTabSignalsPanel — happy path', () => {
     expect(badge).toHaveAttribute('aria-checked', 'true');
     expect(flash).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByText(/favicon dot/i)).toBeInTheDocument();
+    expect(screen.getByText(/installed app icon/i)).toBeInTheDocument();
   });
 
   it('reflects OFF when the stored fields are false', async () => {

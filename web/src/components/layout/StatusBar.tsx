@@ -129,7 +129,7 @@ function StatusBarContent({
           'fixed left-0 right-0 z-[55] flex items-center justify-between gap-2',
           'border-t border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-xl',
           'px-3 text-xs text-[var(--text-secondary)] lg:px-4',
-          'bottom-14 xl:bottom-0',
+          'bottom-[var(--shell-tab-bar-height)] xl:bottom-0',
           'h-6 xl:h-7',
           className,
         )}

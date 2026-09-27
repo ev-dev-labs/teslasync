@@ -189,6 +189,11 @@ export default defineConfig({
           // produces a duplicate entry that `check-pwa-precache.mjs` rejects.
           'watch-manifest.json',
           'assets/spritesheet-*.svg',
+          // Static offline shell for the SW catch handler. Safe to precache
+          // (unlike index.html): it carries no auth and never intercepts
+          // proxy redirects — it only renders when the network itself fails.
+          'offline.html',
+          'offline.css',
         ],
       },
       includeAssets: [
@@ -217,9 +222,12 @@ export default defineConfig({
         lang: 'en',
         dir: 'ltr',
         display: 'standalone',
-        // Ordered fallback chain. iOS ignores this entirely and keys off
+        // Ordered fallback chain. `window-controls-overlay` first so
+        // installed desktop builds (Windows/macOS/ChromeOS) render the web
+        // workspace header as the window title bar (see the drag-region
+        // CSS in index.css). iOS ignores this entirely and keys off
         // `apple-mobile-web-app-capable` in index.html; Android honours it.
-        display_override: ['standalone', 'minimal-ui', 'browser'],
+        display_override: ['window-controls-overlay', 'standalone', 'minimal-ui', 'browser'],
         background_color: '#0b0d12',
         theme_color: '#0b0d12',
         orientation: 'any',
@@ -252,6 +260,26 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
+          },
+        ],
+        // Rich install UI on Android / Windows / ChromeOS. Captured from
+        // the mocked build via `npm run pwa:assets` — re-run after major
+        // visual changes. `useDynamicAppIcon` merges these into its
+        // runtime manifest instead of stripping them.
+        screenshots: [
+          {
+            src: '/screenshots/screenshot-narrow.jpg',
+            sizes: '390x844',
+            type: 'image/jpeg',
+            form_factor: 'narrow',
+            label: 'Fleet dashboard on a phone',
+          },
+          {
+            src: '/screenshots/screenshot-wide.jpg',
+            sizes: '1280x720',
+            type: 'image/jpeg',
+            form_factor: 'wide',
+            label: 'Fleet overview on desktop',
           },
         ],
         shortcuts: [

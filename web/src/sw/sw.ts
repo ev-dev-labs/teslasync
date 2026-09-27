@@ -16,8 +16,8 @@
 // Everything with real logic lives in a sibling pure module so it can be
 // unit-tested without a ServiceWorkerGlobalScope.
 
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
-import { NavigationRoute, registerRoute } from 'workbox-routing'
+import { matchPrecache, precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
+import { NavigationRoute, registerRoute, setCatchHandler } from 'workbox-routing'
 import { CacheFirst, NetworkFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
@@ -243,6 +243,24 @@ registerRoute(
     ],
   }),
 )
+
+// ── Offline navigation fallback ──────────────────────────────────────────────
+// A cold offline launch (nothing cached yet) would otherwise end on the
+// browser's dead-end error page. When a navigation throws — network down
+// AND no cached entry — serve the precached offline shell instead.
+//
+// ForwardAuth-safe by construction: this fires only when the strategy
+// THROWS (connectivity failure). HTTP responses — including the proxy's
+// 302 to the login page — flow through untouched, so the session-expiry
+// handling the NavigationRoute comment above describes is unaffected.
+// Non-document requests keep their previous behaviour (a network error,
+// which the app already renders as its offline/error state).
+setCatchHandler(async ({ request }) => {
+  if (request.destination === 'document') {
+    return (await matchPrecache('offline.html')) ?? Response.error()
+  }
+  return Response.error()
+})
 
 // ── Authenticated API reads (PWA-02) ───────────────────────────────────────
 //

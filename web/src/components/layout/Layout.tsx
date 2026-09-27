@@ -62,6 +62,7 @@ import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useAlerts } from '@/api/hooks/useNotifications'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
+import { useNavigationPins } from '@/api/hooks/useNavigationPins'
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles'
 import { deriveVehicleStatus, type Alert } from '@/api/types'
 import { useSelectedVehicleStore } from '@/store/selectedVehicle'
@@ -69,6 +70,7 @@ import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
 import { useFaviconBadge } from '../../hooks/useFaviconBadge'
+import { useAppBadge } from '../../hooks/useAppBadge'
 import { useDynamicAppIcon } from '../../hooks/useDynamicAppIcon'
 import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
@@ -698,6 +700,8 @@ export default function Layout() {
   const presentation = usePresentationMode()
   const { preferences: productPreferences } = useProductPreferences()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const sidebarTriggerRef = useRef<HTMLButtonElement>(null)
+  const sidebarCloseRef = useRef<HTMLButtonElement>(null)
   // Command Deck rail collapse. Host-owned (not deck-owned) because the
   // aside width derives from it. Persisted per browser.
   const [deckRailCollapsed, setDeckRailCollapsed] = useState(() => {
@@ -736,7 +740,33 @@ export default function Layout() {
   const [pinnedNavPaths, setPinnedNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getPinnedNavPaths()),
   )
+  const applyServerPins = useCallback((paths: string[]) => {
+    const reconciled = reconcileNavPaths(paths)
+    setPinnedNavPathsState(previous => navPathsEqual(previous, reconciled) ? previous : reconciled)
+  }, [])
+  const navigationPins = useNavigationPins(pinnedNavPaths, applyServerPins)
   const location = useLocation()
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location.pathname])
+  const wasSidebarOpen = useRef(false)
+  useEffect(() => {
+    const shouldRestoreFocus = wasSidebarOpen.current && !sidebarOpen
+    wasSidebarOpen.current = sidebarOpen
+    if (!shouldRestoreFocus) return
+    const frame = requestAnimationFrame(() => sidebarTriggerRef.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [sidebarOpen])
+  useEffect(() => {
+    if (!sidebarOpen) return
+    sidebarCloseRef.current?.focus()
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      setSidebarOpen(false)
+    }
+    document.addEventListener('keydown', onEscape)
+    return () => document.removeEventListener('keydown', onEscape)
+  }, [sidebarOpen])
   const workspaceScope = useMemo(
     () => getWorkspaceRouteScope(location.pathname),
     [location.pathname],
@@ -794,6 +824,7 @@ export default function Layout() {
   useDynamicAppIcon()
   useTitleBadge()
   useFaviconBadge()
+  useAppBadge()
   useCriticalAlertFlash()
   const { mode: shortcutMode, showCheatSheet, toggleCheatSheet } = useKeyboardShortcuts()
   // Footer status bar. When the user has hidden the
@@ -1155,10 +1186,12 @@ export default function Layout() {
       return [to, ...prev]
     })
     setRecentNavPathsState(prev => prev.filter(path => path !== to))
-  }, [])
+    void navigationPins.toggle(to, true).catch(navigationPins.restore)
+  }, [navigationPins.toggle, navigationPins.restore])
   const unpinNavPath = useCallback((to: string) => {
     setPinnedNavPathsState(prev => prev.filter(path => path !== to))
-  }, [])
+    void navigationPins.toggle(to, false).catch(navigationPins.restore)
+  }, [navigationPins.toggle, navigationPins.restore])
   // Suggested pages for the default sidebar: live context (charging car,
   // unread critical alerts) first, then pages related to the current
   // route. Pure derivation — see `sidebar/sidebarSuggest.ts`.
@@ -1255,9 +1288,9 @@ export default function Layout() {
           // secondary panel docks. Reduced motion snaps the width while
           // preserving the drawer slide.
           'transition-[transform,width] xl:duration-normal xl:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-transform',
-          'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
+          'flex flex-col border-r border-[var(--border-default)] bg-[var(--nav-rail-bg)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
           presentation.mode !== 'standard' && 'hidden',
-          sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
+          sidebarOpen ? 'top-0 translate-x-0 visible' : 'top-14 -translate-x-full invisible xl:visible',
           // Reserve space for the fixed footer StatusBar
           // so the bottom "Take a tour / Report bug" row never slides under
           // it. Mobile open-state already overlays StatusBar (sidebar z-66 >
@@ -1268,11 +1301,12 @@ export default function Layout() {
       >
         {/* Mobile sidebar brand. Build version intentionally not rendered
             here; canonical provenance lives in the footer <VersionSegment>. */}
-        <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 py-4 shrink-0 xl:hidden">
+        <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden">
           <PrefetchNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
           </PrefetchNavLink>
           <Button
+            ref={sidebarCloseRef}
             type="button"
             variant="ghost"
             size="sm"
@@ -1285,10 +1319,7 @@ export default function Layout() {
           </Button>
         </div>
 
-        {/* Logo — desktop sidebar header. Build version intentionally not
-            rendered here; canonical provenance lives in the footer
-            <VersionSegment>. The collapsed rail shrinks the aside to
-            dock width, so it gets the mark without the wordmark. */}
+        {/* Desktop brand stays visible above the rail search. */}
         <div className={cn(
           'hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] xl:flex',
           deckRailCollapsed ? 'justify-center px-2' : 'px-5',
@@ -1306,7 +1337,7 @@ export default function Layout() {
           </PrefetchNavLink>
         </div>
 
-        {/* Mobile drawer search; desktop discovery lives in WorkspaceHeader. */}
+        {/* Mobile drawer global search. */}
         <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
           <CommandPaletteTrigger />
         </div>
@@ -1339,10 +1370,12 @@ export default function Layout() {
             navSectionTitle={navSectionTitle}
             onPin={pinNavPath}
             onUnpin={unpinNavPath}
+            pinSyncUnavailable={navigationPins.syncUnavailable}
             onItemSelect={() => setSidebarOpen(false)}
             alertCount={unreadAlerts}
             vehicleCount={vehicleCount}
             staleCount={staleCount}
+            vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}
             collections={visibleCollections}
             railCollapsed={deckRailCollapsed}
             onToggleRailCollapsed={() => setDeckRailCollapsed(prev => !prev)}
@@ -1371,8 +1404,9 @@ export default function Layout() {
 
       {/* Mobile top bar */}
       {presentation.mode === 'standard' && !sidebarOpen && (
-        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)]/95 backdrop-blur-md px-4 py-3 xl:hidden [touch-action:manipulation]">
+        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)]/95 backdrop-blur-md px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
           <Button
+            ref={sidebarTriggerRef}
             onClick={() => setSidebarOpen(true)}
             type="button"
             variant="ghost"
@@ -1394,7 +1428,7 @@ export default function Layout() {
       {/* Main content */}
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         {/* Spacer for fixed mobile header */}
-        <div className="h-14 shrink-0 xl:hidden" />
+        <div className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />
         {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-[4.5rem] shrink-0 xl:block" />}>
           <WorkspaceHeader
             notifications={<NotificationBellPopover />}

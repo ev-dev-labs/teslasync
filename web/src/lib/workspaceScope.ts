@@ -1,3 +1,5 @@
+import type { WorkspaceRangePreset } from './workspacePreferences';
+
 export interface WorkspaceRouteScope {
   range: boolean;
   vehicle: boolean;
@@ -73,6 +75,22 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/utilization',
   '/vehicle-systems/software',
 ]);
+
+const STANDARD_QUICK_PRESETS = ['24h', '7d', '30d', '90d'] as const;
+const CALENDAR_QUICK_PRESETS = ['7d', '30d', '90d', 'ytd'] as const;
+
+export function getWorkspaceQuickRangePresets(pathname: string): readonly (WorkspaceRangePreset | 'ytd')[] {
+  return normalizePathname(pathname) === '/drive-calendar'
+    ? CALENDAR_QUICK_PRESETS
+    : STANDARD_QUICK_PRESETS;
+}
+
+export function isWorkspaceRangePresetAvailable(pathname: string, id: string): boolean {
+  if (normalizePathname(pathname) === '/drive-calendar') {
+    return id !== 'live' && id !== '24h' && id !== 'today' && id !== '1y';
+  }
+  return id !== '1y' && id !== 'ytd';
+}
 
 export const VEHICLE_DISABLED_PREFIXES = [
   '/account',

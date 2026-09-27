@@ -3,23 +3,28 @@
 Operator index of TeslaSync screens. Labels and paths come from the live sidebar (`navSections` in `web/src/components/layout/Layout.tsx`). One-line descriptions come from Explore (`web/src/features/explore/featureCatalog.ts`).
 
 **In the app:** sidebar groups, or **Explore Features** at `/explore`.
-Related views are nested directly under their task in the sidebar. The current
-task opens automatically, so switching between its views is one click: no
-intermediate landing page or second row of tabs. Group counts show how many
-destinations are available; Expand a group to reveal every original route.
-Sections with just one collection list their pages directly; sections with
-multiple collections show one more connected level. Counts are displayed as
-plain numbers at each branch; the selected page has its own accent. The full
-searchable catalogue, direct URLs, pins and visibility rules remain.
-Sidebar section, collection and page names and glyphs are distinct, so a
-branch cannot be mistaken for one of its destinations. A pinned page moves
-to Quick access instead of appearing a second time in its original branch;
-unpinning restores it there without changing the route.
-The section list also shares a vertical rail, so collapsed sections are part
-of the same hierarchy as their expanded collections and pages.
-The desktop sidebar can be resized by dragging its edge or using the arrow keys
-on its resize handle; the chosen width is saved in this browser. Labels wrap to
-fit instead of being clipped.
+The primary rail lists sections; selecting one opens its secondary panel.
+The current page has an accent and a dot, while a chevron marks the open
+section. Collection groups can expand individually or together, and the
+secondary filter searches only pages in the open section. Global page,
+telemetry and command search remains in the centered desktop header and the
+mobile drawer. On mobile, the sidebar drills from sections into pages with a
+Back control.
+The primary rail uses a neutral slate surface, and the context panel uses a
+separate white/deep-navy surface with a hairline divider. The current page
+has a narrow, Settings-aware accent indicator and a quiet tinted surface. Opening a
+section expands only the collection containing the current page (or its
+first collection when no page in that section is active); the other
+collections remain collapsed until selected.
+
+Pinned pages remain in their collection and also appear in the section's
+**Quick access pins** and the **Saved** view. Pins are stored on the server
+and synchronize across browsers on the same installation (on window focus
+and while the app is open). On first sync, existing browser pins are copied
+to the server; after that, the server list takes precedence. Pins added
+while the server is unavailable appear locally and remain queued across
+reloads until a successful sync. The desktop rail and secondary panel can
+each collapse to icons; those display preferences remain browser-local.
 
 | Sidebar group | Screens | Catalogue page |
 | ------------- | ------: | -------------- |

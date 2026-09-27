@@ -2,7 +2,7 @@
  * SectionRail
  * ───────────
  * The primary column of the Command Deck: every parent group in one
- * scrolling list — hub shortcuts (Search, Suggested, Saved, All pages)
+ * scrolling list — hub shortcuts (Suggested, Saved, All pages)
  * pinned above the section groups, utility links plus the collapse
  * toggle pinned below.
  *
@@ -22,7 +22,6 @@ import type { SidebarSectionInput } from '../sectionGroups'
 import type { SectionGroup } from '../sectionGroups'
 import { flattenSidebarItems } from './collections'
 import { SIDEBAR_SECTION_ICONS, SIDEBAR_SHORTCUT_ICONS } from './sidebarIcons'
-import { routeIconColor } from './iconColors'
 import { SidebarFlyout, useSidebarFlyout } from './SidebarFlyout'
 import type { DeckSelection } from './CommandDeck'
 
@@ -32,7 +31,9 @@ export interface SectionRailProps {
   showCollapseControl?: boolean
   /** Current secondary-panel selection, or null when it is closed. */
   selection: DeckSelection | null
+  panelOpen?: boolean
   onSelect: (selection: DeckSelection) => void
+  onItemSelect?: () => void
   /** Ref sink so the deck can return focus here when the panel closes. */
   itemRef?: (key: string, el: HTMLButtonElement | null) => void
   sections: SidebarSectionInput[]
@@ -61,10 +62,10 @@ function RailBadge({ value, label }: { value: number; label: string }) {
 
 interface RailButtonProps {
   icon: typeof Icons.home
-  iconColor?: string
   label: string
   countLabel?: string
   active: boolean
+  expanded?: boolean
   collapsed: boolean
   onClick: () => void
   badge?: React.ReactNode
@@ -77,10 +78,10 @@ interface RailButtonProps {
 
 function RailButton({
   icon: Icon,
-  iconColor,
   label,
   countLabel,
   active,
+  expanded,
   collapsed,
   onClick,
   badge,
@@ -106,17 +107,18 @@ function RailButton({
       onBlur={collapsed ? onHideTip : undefined}
       aria-label={countLabel ? `${label}, ${countLabel}` : label}
       aria-pressed={active}
+      aria-expanded={expanded}
       className={cn(
-        'h-auto min-h-11 w-full gap-2.5 rounded-shape-md px-2.5 py-2 text-sm',
+        'h-auto min-h-11 w-full gap-2.5 rounded-shape-md border border-transparent px-2.5 py-2 text-sm',
         collapsed ? 'justify-center px-1' : 'justify-start',
         active
-          ? 'bg-[var(--surface-2)] font-medium text-[var(--text-primary)]'
+          ? 'border-[var(--theme-primary)]/35 bg-[var(--nav-active-bg)] font-semibold text-[var(--text-primary)] shadow-sm'
           : 'font-normal text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         'focus-visible:ring-[var(--focus-ring)]',
       )}
     >
       <span className="relative inline-flex shrink-0">
-        <Icon className={cn(collapsed ? 'h-6 w-6' : 'h-5 w-5', active ? 'text-[var(--theme-primary)]' : routeIconColor(iconColor))} aria-hidden />
+        <Icon className={cn(collapsed ? 'h-6 w-6' : 'h-5 w-5', active ? 'text-[var(--nav-active-indicator)]' : 'text-[var(--text-muted)]')} aria-hidden />
         {collapsed && badge && (
           <span className="absolute -end-2 -top-2">{badge}</span>
         )}
@@ -125,6 +127,7 @@ function RailButton({
         <>
           <span className="min-w-0 flex-1 truncate text-start leading-snug">{label}</span>
           {badge}
+          {expanded && <Icons.next className="h-4 w-4 shrink-0 text-[var(--nav-active-indicator)] rtl:rotate-180" aria-hidden />}
         </>
       )}
     </Button>
@@ -136,7 +139,9 @@ export function SectionRail({
   onToggleCollapsed,
   showCollapseControl = true,
   selection,
+  panelOpen = false,
   onSelect,
+  onItemSelect,
   itemRef,
   sections,
   collections = [],
@@ -158,22 +163,12 @@ export function SectionRail({
       role="navigation"
       aria-label={t('nav.deck.groups', 'Sections and shortcuts')}
       onMouseLeave={hideTip}
-      className="relative flex h-full min-h-0 w-full flex-col bg-[var(--surface-1)]"
+      className="relative flex h-full min-h-0 w-full flex-col bg-[var(--nav-rail-bg)]"
     >
       <div
         onScroll={hideTip}
         className="min-h-0 flex-1 space-y-px overflow-y-auto overscroll-contain px-1.5 py-2 scrollbar-thin"
       >
-        <RailButton
-          icon={SIDEBAR_SHORTCUT_ICONS.search}
-          label={t('nav.deck.search', 'Search')}
-          active={isActive('search')}
-          collapsed={collapsed}
-          onClick={() => onSelect({ kind: 'search' })}
-          buttonRef={el => itemRef?.('search', el)}
-          onShowTip={showTip}
-          onHideTip={hideTip}
-        />
         <RailButton
           icon={SIDEBAR_SHORTCUT_ICONS.suggested}
           label={t('nav.deck.suggested', 'Suggested')}
@@ -211,6 +206,7 @@ export function SectionRail({
 
         <PrefetchNavLink
           to="/explore"
+          onClick={onItemSelect}
           aria-label={t('nav.deck.allPages', 'All pages')}
           {...(collapsed ? tipHandlers(t('nav.deck.allPages', 'All pages')) : {})}
           className={cn(
@@ -220,7 +216,7 @@ export function SectionRail({
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           )}
         >
-          <SIDEBAR_SHORTCUT_ICONS.allPages className={cn(collapsed ? 'h-6 w-6 shrink-0' : 'h-5 w-5 shrink-0', routeIconColor(undefined))} aria-hidden />
+          <SIDEBAR_SHORTCUT_ICONS.allPages className={cn(collapsed ? 'h-6 w-6 shrink-0' : 'h-5 w-5 shrink-0', 'text-[var(--text-muted)]')} aria-hidden />
           {!collapsed && (
             <span className="min-w-0 flex-1 truncate text-start leading-snug">{t('nav.deck.allPages', 'All pages')}</span>
           )}
@@ -239,10 +235,10 @@ export function SectionRail({
             <RailButton
               key={section.title}
               icon={SectionIcon}
-              iconColor={section.items[0]?.color}
               label={navSectionTitle(section)}
               countLabel={t('nav.deck.pageCount', { count, defaultValue: '{{count}} pages' })}
               active={isActive(key)}
+              expanded={panelOpen && isActive(key)}
               collapsed={collapsed}
               onClick={() => onSelect({ kind: 'section', title: section.title })}
               buttonRef={el => itemRef?.(key, el)}
@@ -257,6 +253,7 @@ export function SectionRail({
         <div className="flex flex-col gap-0.5">
           <PrefetchNavLink
             to="/notifications/inbox"
+            onClick={onItemSelect}
             aria-label={t('nav.deck.alerts', 'Alerts')}
             {...(collapsed ? tipHandlers(
               t('nav.deck.alerts', 'Alerts'),
@@ -279,6 +276,7 @@ export function SectionRail({
           </PrefetchNavLink>
           <PrefetchNavLink
             to="/settings#appearance"
+            onClick={onItemSelect}
             aria-label={t('nav.deck.display', 'Display')}
             {...(collapsed ? tipHandlers(t('nav.deck.display', 'Display')) : {})}
             className={cn(

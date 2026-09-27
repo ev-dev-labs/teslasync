@@ -7,6 +7,7 @@ import {
 import { WorkspaceContextControl } from './WorkspaceContextControl';
 
 const mocks = vi.hoisted(() => ({
+  pathname: '/drives',
   setPreset: vi.fn(),
   setRange: vi.fn(),
   setCompare: vi.fn(),
@@ -15,6 +16,13 @@ const mocks = vi.hoisted(() => ({
   settingsPresent: true,
   compare: false,
   presetId: '7d' as string | undefined,
+  start: '2025-01-01',
+  end: '2025-01-07',
+}));
+
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...await importOriginal<typeof import('react-router-dom')>(),
+  useLocation: () => ({ pathname: mocks.pathname }),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -34,8 +42,8 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/useRangeState', () => ({
   useRangeState: () => ({
-    start: '2025-01-01',
-    end: '2025-01-07',
+    start: mocks.start,
+    end: mocks.end,
     startInstant: '2025-01-01T00:00:00Z',
     endInstantExclusive: '2025-01-08T00:00:00Z',
     timezone: 'UTC',
@@ -68,8 +76,11 @@ vi.mock('@/api/hooks/useSettings', () => ({
 describe('WorkspaceContextControl', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.pathname = '/drives';
     mocks.compare = false;
     mocks.presetId = '7d';
+    mocks.start = '2025-01-01';
+    mocks.end = '2025-01-07';
     mocks.settingsPresent = true;
   });
 
@@ -91,7 +102,7 @@ describe('WorkspaceContextControl', () => {
     expect(rangeChoices).toHaveTextContent('24 hours');
     fireEvent.click(screen.getByRole('button', { name: 'Last 24 hours' }));
     expect(mocks.setPreset).toHaveBeenCalledWith('24h');
-    expect(rangeChoices).not.toHaveTextContent('All time');
+    expect(rangeChoices).toHaveTextContent('All time');
     expect(rangeChoices).toHaveTextContent('90 days');
     expect(screen.getByRole('button', { name: '7 days' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByLabelText('Start date')).not.toBeInTheDocument();
@@ -124,7 +135,7 @@ describe('WorkspaceContextControl', () => {
     expect(mocks.setRange).toHaveBeenCalledWith({
       start: '2024-12-01',
       end: '2024-12-15',
-    });
+    }, 'custom');
   });
 
   it('rolls back the density selection when the save fails', () => {
@@ -147,12 +158,14 @@ describe('WorkspaceContextControl', () => {
     expect(mocks.refetchSettings).toHaveBeenCalled();
   });
 
-  it('shows custom date fields for a saved custom range and hides them on a preset', () => {
+  it('keeps saved custom dates compact until editing and hides them on a preset', () => {
     mocks.presetId = undefined;
     render(<WorkspaceContextControl />);
     fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Custom' }));
 
     expect(screen.getByRole('button', { name: 'Custom' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByLabelText('Start date')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }));
     expect(screen.getByLabelText('Start date')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '7 days' }));
     expect(screen.queryByLabelText('Start date')).not.toBeInTheDocument();
@@ -166,6 +179,94 @@ describe('WorkspaceContextControl', () => {
     expect(screen.getByRole('button', { name: 'Last 5 min' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: '30 days' }));
     expect(mocks.setPreset).toHaveBeenCalledWith('30d');
+  });
+
+  it('keeps All time in its own row without moving the quick choices', () => {
+    mocks.presetId = 'all';
+    render(<WorkspaceContextControl />);
+    fireEvent.click(screen.getByRole('button', { name: 'Analysis window: All time' }));
+    expect(screen.getByRole('button', { name: 'Last 24 hours' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '90 days' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All time' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: '7 days' }));
+    expect(mocks.setPreset).toHaveBeenCalledWith('7d');
+    expect(screen.getByRole('button', { name: 'All time' })).toBeInTheDocument();
+  });
+
+  it.each(['/drive-calendar', '/drive-calendar/'])('shifts the full-year chip with the selected year on %s', (pathname) => {
+    mocks.pathname = pathname;
+    const year = new Date().getFullYear();
+    const { rerender } = render(<WorkspaceContextControl />);
+    fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Last 7 days' }));
+    const choices = screen.getByRole('group', { name: 'Date range' });
+    expect(choices).toHaveTextContent('Year to date');
+    expect(choices).toHaveTextContent('All time');
+    expect(screen.getByRole('button', { name: `Full year ${year}` })).toBeInTheDocument();
+    expect(choices).not.toHaveTextContent('24 hours');
+    expect(screen.queryByRole('spinbutton', { name: 'Calendar year' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Year to date' }));
+    expect(mocks.setPreset).toHaveBeenCalledWith('ytd');
+    fireEvent.click(screen.getByRole('button', { name: 'Full year ' + year }));
+    expect(mocks.setRange).toHaveBeenCalledWith(
+      { start: `${year}-01-01`, end: `${year}-12-31` },
+      'custom',
+    );
+    mocks.presetId = undefined;
+    mocks.start = `${year}-01-01`;
+    mocks.end = `${year}-12-31`;
+    rerender(<WorkspaceContextControl />);
+    expect(screen.getByRole('button', { name: `Full year ${year}` })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByLabelText('Start date')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next year' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous year' }));
+    expect(mocks.setRange).toHaveBeenCalledWith(
+      { start: `${year - 1}-01-01`, end: `${year - 1}-12-31` },
+      'custom',
+    );
+    mocks.start = `${year - 1}-01-01`;
+    mocks.end = `${year - 1}-12-31`;
+    rerender(<WorkspaceContextControl />);
+    expect(screen.getByRole('button', { name: `Full year ${year - 1}` })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Previous year' }));
+    expect(mocks.setRange).toHaveBeenLastCalledWith(
+      { start: `${year - 2}-01-01`, end: `${year - 2}-12-31` }, 'custom',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Next year' }));
+    expect(mocks.setRange).toHaveBeenLastCalledWith(
+      { start: `${year}-01-01`, end: `${year}-12-31` }, 'custom',
+    );
+  });
+
+  it('shows Custom instead of an unavailable year preset on other screens', () => {
+    mocks.presetId = undefined;
+    render(<WorkspaceContextControl />);
+    fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Custom' }));
+    expect(screen.queryByRole('button', { name: '1 year' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton', { name: 'Calendar year' })).not.toBeInTheDocument();
+  });
+
+  it('adapts the header choices to the active route without a reload', () => {
+    const { rerender } = render(<WorkspaceContextControl />);
+    fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Last 7 days' }));
+    expect(screen.getByRole('button', { name: 'Last 24 hours' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Year to date' })).not.toBeInTheDocument();
+
+    mocks.pathname = '/drive-calendar';
+    rerender(<WorkspaceContextControl />);
+    expect(screen.getByRole('button', { name: 'Year to date' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Full year ${new Date().getFullYear()}` })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Last 24 hours' })).not.toBeInTheDocument();
+    mocks.presetId = undefined;
+    mocks.start = '2026-09-26';
+    mocks.end = '2026-09-27';
+    rerender(<WorkspaceContextControl />);
+    expect(screen.getByRole('button', { name: 'Custom' })).toHaveAttribute('aria-pressed', 'true');
+
+    mocks.pathname = '/drives';
+    rerender(<WorkspaceContextControl />);
+    expect(screen.getByRole('button', { name: 'Last 24 hours' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Year to date' })).not.toBeInTheDocument();
   });
 
   it('resets date range, comparison, and display density to configured defaults', () => {

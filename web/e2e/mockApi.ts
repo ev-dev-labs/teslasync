@@ -1,6 +1,8 @@
 import { expect, type Page, type Request as PlaywrightRequest, type Route } from '@playwright/test';
 import type { FsdInsights } from '../src/types/fsd';
 import type { NotificationLog, NotificationReport } from '../src/api/types';
+import type { PinnedItem } from '../src/api/types';
+import type { ThemeId } from '../src/components/ui/ThemeProvider';
 import { ensureMockSseServer } from './mockSseServer';
 import type { DataScenario } from './routeRegistry';
 
@@ -429,6 +431,7 @@ export function resolveApiFixture(
   scenario: DataScenario,
   theme: 'dark' | 'light' = 'dark',
   density: E2EUIDensity = 'comfortable',
+  accentTheme: ThemeId = 'neon-cyan',
 ): MockResolution {
   const observedAt = scenario === 'stale' ? STALE : NOW;
   if (method !== 'GET') {
@@ -437,7 +440,7 @@ export function resolveApiFixture(
     ) return matched({});
     return { matched: false };
   }
-  if (path === '/settings') return matched({ ...settings, mode: theme, ui_density: density });
+  if (path === '/settings') return matched({ ...settings, theme: accentTheme, mode: theme, ui_density: density });
   if (path === '/system/auth-mode') return matched({ mode: 'open', forward_auth: false });
   if (path === '/auth/status') return matched({ authenticated: false, connected: false });
   if (path === '/auth/session') {
@@ -752,6 +755,8 @@ export interface MockApiController {
     contentType: string;
     violations: string[];
   }>;
+  navPins: PinnedItem[];
+  nextNavPinId: number;
 }
 
 export interface CapturedBeacon {
@@ -830,6 +835,7 @@ async function fulfill(
   theme: 'dark' | 'light',
   density: E2EUIDensity,
   sseOrigin: string,
+  accentTheme: ThemeId,
 ): Promise<void> {
   controller.pending += 1;
   controller.lastActivityAt = Date.now();
@@ -866,7 +872,7 @@ async function fulfill(
       await fulfillSse(route, path, controller, sseOrigin);
       return;
     }
-    const resolution = resolveApiFixture(path, request.method(), scenario, theme, density);
+    const resolution = resolveApiFixture(path, request.method(), scenario, theme, density, accentTheme);
     if (!resolution.matched) {
       controller.unmatched.add(
         `${request.method()} ${url.pathname}${url.search ? '?<redacted>' : ''}`,
@@ -917,6 +923,40 @@ async function fulfill(
       });
       return;
     }
+    if (url.pathname.endsWith('/pinned') && request.method() === 'GET' && url.searchParams.get('type') === 'navigation') {
+      if (record) record.disposition = 'fulfilled';
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(controller.navPins) });
+      return;
+    }
+    if (url.pathname.endsWith('/pinned') && request.method() === 'POST') {
+      const body = request.postDataJSON() as { item_type?: string; item_id?: string };
+      if (body.item_type === 'navigation' && body.item_id) {
+        const existing = controller.navPins.find(pin => pin.item_id === body.item_id);
+        if (record) record.disposition = 'fulfilled';
+        if (existing) {
+          await route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"item already pinned"}' });
+          return;
+        }
+        controller.navPins.forEach(pin => { pin.position += 1; });
+        const pin: PinnedItem = {
+          id: controller.nextNavPinId++,
+          item_type: 'navigation',
+          item_id: body.item_id,
+          position: 0,
+          pinned_at: NOW,
+        };
+        controller.navPins.unshift(pin);
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(pin) });
+        return;
+      }
+    }
+    const navPinId = /^\/pinned\/(\d+)$/.exec(path)?.[1];
+    if (request.method() === 'DELETE' && navPinId && controller.navPins.some(pin => pin.id === Number(navPinId))) {
+      controller.navPins = controller.navPins.filter(pin => pin.id !== Number(navPinId));
+      if (record) record.disposition = 'fulfilled';
+      await route.fulfill({ status: 204, body: '' });
+      return;
+    }
     const status = resolution.status ?? 200;
     if (record) record.disposition = 'fulfilled';
     await route.fulfill({
@@ -956,6 +996,7 @@ export async function installApiMocks(
   scenario: DataScenario = 'populated',
   theme: 'dark' | 'light' = 'dark',
   density: E2EUIDensity = 'comfortable',
+  accentTheme: ThemeId = 'neon-cyan',
 ): Promise<MockApiController | null> {
   if (process.env.E2E_MOCKS === '0') return null;
   const sseServer = await ensureMockSseServer();
@@ -970,12 +1011,14 @@ export async function installApiMocks(
     requests: [],
     requestIndex: new WeakMap(),
     invalidRum: [],
+    navPins: [],
+    nextNavPinId: 1,
   };
   page.on('request', (request) => {
     requestRecord(controller, request);
   });
   await page.route('**/api/**', (route) =>
-    fulfill(route, scenario, controller, theme, density, sseServer.origin));
+    fulfill(route, scenario, controller, theme, density, sseServer.origin, accentTheme));
   return controller;
 }
 

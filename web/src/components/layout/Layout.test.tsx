@@ -368,6 +368,13 @@ vi.mock('./sidebar/NavSectionHeader', () => ({
     </div>
   ),
 }))
+vi.mock('@/api/hooks/useNavigationPins', () => ({
+  useNavigationPins: () => ({
+    ready: true,
+    toggle: () => Promise.resolve(),
+    restore: () => undefined,
+  }),
+}))
 
 // ── @/components/ui: faithful Button + trivial ThemePicker ────────────
 vi.mock('@/components/ui/runtime', async () => {
@@ -978,11 +985,61 @@ describe('Layout — mobile drawer', () => {
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })
     expect(aside).toHaveAttribute('data-sidebar-open', 'false')
+    expect(aside.firstElementChild?.className).toContain('safe-area-inset-top')
+    expect(screen.getByRole('banner', { name: 'Site header' }).className).toContain('safe-area-inset-top')
 
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
     await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'true'))
+    expect(aside.className).toContain('visible')
+    expect(screen.getByRole('button', { name: 'Close sidebar' })).toHaveFocus()
 
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+    expect(aside.className).toContain('invisible xl:visible')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open sidebar' })).toHaveFocus())
+  })
+
+  it('restores the mobile trigger after close, logo navigation, a deck shortcut, and backdrop click', async () => {
+    renderLayout('/')
+    const trigger = () => screen.getByRole('button', { name: 'Open sidebar' })
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    fireEvent.click(trigger())
     fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
+    await waitFor(() => expect(trigger()).toHaveFocus())
+
+    fireEvent.click(trigger())
+    const mobileLogo = aside.querySelector('a[href="/"]')
+    expect(mobileLogo).not.toBeNull()
+    fireEvent.click(mobileLogo!)
+    await waitFor(() => expect(trigger()).toHaveFocus())
+
+    fireEvent.click(trigger())
+    act(() => {
+      (H.sidebarProps.unified as { onItemSelect: () => void }).onItemSelect()
+    })
+    await waitFor(() => expect(trigger()).toHaveFocus())
+
+    fireEvent.click(trigger())
+    const backdrop = aside.previousElementSibling
+    expect(backdrop).not.toBeNull()
+    fireEvent.click(backdrop!)
+    await waitFor(() => expect(trigger()).toHaveFocus())
+  })
+
+  it('keeps the drawer open when a nested control consumes Escape', async () => {
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'true'))
+
+    const closeButton = screen.getByRole('button', { name: 'Close sidebar' })
+    const consumeEscape = (event: KeyboardEvent) => event.preventDefault()
+    closeButton.addEventListener('keydown', consumeEscape)
+    fireEvent.keyDown(closeButton, { key: 'Escape' })
+    expect(aside).toHaveAttribute('data-sidebar-open', 'true')
+
+    closeButton.removeEventListener('keydown', consumeEscape)
+    fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
   })
 })

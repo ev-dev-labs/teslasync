@@ -2,7 +2,6 @@ import { Icons, type LucideIcon } from '@/lib/icons'
 import { SidebarGlyphs } from '@/lib/sidebarGlyphs'
 
 export const SIDEBAR_SHORTCUT_ICONS = {
-  search: Icons.search,
   suggested: Icons.sparkles,
   saved: Icons.star,
   allPages: Icons.compass,

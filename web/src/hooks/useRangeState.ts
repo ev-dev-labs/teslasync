@@ -24,7 +24,7 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
-import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
+import { getWorkspaceRouteScope, isWorkspaceRangePresetAvailable } from '@/lib/workspaceScope';
 import {
   getDatePreset,
   matchPresetId,
@@ -227,9 +227,9 @@ function notifySharedRangeChange(
   );
 }
 
-function resolvePreference(preference: StoredRangePreference): RangeValue {
+function resolvePreference(preference: StoredRangePreference, allowPreset = true): RangeValue {
   const preset = preference.presetId
-    ? getDatePreset(preference.presetId)
+    ? allowPreset ? getDatePreset(preference.presetId) : undefined
     : undefined;
   return preset?.resolve() ?? {
     start: preference.start,
@@ -242,7 +242,9 @@ function createPreference(
   requestedPresetId?: string,
 ): StoredRangePreference {
   const presetId =
-    requestedPresetId && getDatePreset(requestedPresetId)
+    requestedPresetId === 'custom'
+      ? undefined
+      : requestedPresetId && getDatePreset(requestedPresetId)
       ? requestedPresetId
       : matchPresetId(range.start, range.end);
   return {
@@ -308,7 +310,9 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     timezone,
   } = opts;
   const defaultPresetId = headerOwned
-    ? preferences.defaultAnalysisRange
+    ? isWorkspaceRangePresetAvailable(pathname, preferences.defaultAnalysisRange)
+      ? preferences.defaultAnalysisRange
+      : DEFAULT_PRESET_ID
     : opts.defaultPresetId ?? DEFAULT_PRESET_ID;
   const persistKey = headerOwned ? undefined : opts.persistKey;
   const inheritSharedPreference = headerOwned || (opts.inheritSharedPreference ?? true);
@@ -330,8 +334,13 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   const urlEnd = params.get(toKey);
   const urlCompare = params.get(compareKey);
   const urlScope = params.get(scopeKey);
-  const urlScopedPreset =
+  const availablePreset = (id: string) =>
+    !headerOwned || isWorkspaceRangePresetAvailable(pathname, id);
+  const urlPreset =
     urlScope && urlScope !== 'custom' ? getDatePreset(urlScope) : undefined;
+  const urlScopedPreset = urlPreset && availablePreset(urlPreset.id)
+    ? urlPreset
+    : undefined;
   const urlScopedRange = urlScopedPreset
     ? clampRange(
         urlScopedPreset.resolve(new Date(rollingNow), resolvedTimezone),
@@ -360,7 +369,10 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   const pagePreference = loadFromStorage(persistKey);
   const storedPreference = sharedPreference ?? pagePreference;
   const storedRange = storedPreference
-    ? resolvePreference(storedPreference)
+    ? resolvePreference(
+        storedPreference,
+        !storedPreference.presetId || availablePreset(storedPreference.presetId),
+      )
     : null;
   const urlRange: RangeValue | null =
     isValidIsoDate(urlStart) &&
@@ -381,6 +393,8 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     urlRange?.end,
     urlScopedRange?.start,
     urlScopedRange?.end,
+    urlPreset,
+    urlScopedPreset,
     storedRange?.start,
     storedRange?.end,
     minDate,
@@ -444,9 +458,9 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
       const preset = getDatePreset(id);
       if (!preset) return;
       const r: DatePresetRange = preset.resolve(new Date(), resolvedTimezone);
-      setRange(r, id);
+      setRange(r, headerOwned && !isWorkspaceRangePresetAvailable(pathname, id) ? 'custom' : id);
     },
-    [setRange, resolvedTimezone],
+    [setRange, resolvedTimezone, headerOwned, pathname],
   );
 
   const setCompare = useCallback(
@@ -510,11 +524,14 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   );
 
   const presetId = useMemo(() => {
+    if (urlScope === 'custom' || (urlPreset && !urlScopedPreset)) return undefined;
     if (urlScopedPreset) return urlScopedPreset.id;
     if (!urlRange && storedPreference?.presetId) {
-      return storedPreference.presetId;
+      return availablePreset(storedPreference.presetId) ? storedPreference.presetId : undefined;
     }
-    return matchPresetId(effective.start, effective.end);
+    if (!urlRange && storedPreference && !storedPreference.presetId) return undefined;
+    const matched = matchPresetId(effective.start, effective.end);
+    return matched && availablePreset(matched) ? matched : undefined;
   }, [
     effective.end,
     effective.start,
@@ -522,8 +539,34 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     urlRange?.end,
     urlRange?.start,
     urlScopedPreset,
+    urlPreset,
+    urlScope,
+    headerOwned,
+    pathname,
     rollingNow,
   ]);
+
+  useEffect(() => {
+    if (!headerOwned || !storedPreference?.presetId ||
+        isWorkspaceRangePresetAvailable(pathname, storedPreference.presetId)) return;
+    const fixed = createPreference(
+      { start: storedPreference.start, end: storedPreference.end },
+      'custom',
+    );
+    saveToStorage(SHARED_RANGE_STORAGE_KEY, fixed);
+    notifySharedRangeChange(sourceId, fixed);
+  }, [headerOwned, pathname, storedPreference?.presetId, storedPreference?.start, storedPreference?.end, sourceId]);
+
+  useEffect(() => {
+    if (!urlPreset || urlScopedPreset || !headerOwned) return;
+    setParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set(fromKey, effective.start);
+      next.set(toKey, effective.end);
+      next.set(scopeKey, 'custom');
+      return next;
+    }, { replace: true });
+  }, [urlPreset, urlScopedPreset, headerOwned, setParams, fromKey, toKey, scopeKey, effective.start, effective.end]);
 
   useEffect(() => {
     if (!presetId) return undefined;

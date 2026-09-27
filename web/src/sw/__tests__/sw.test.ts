@@ -33,6 +33,7 @@ import { TRIP_SHARE_CACHE_URL } from '../../lib/tripShareTarget'
 vi.mock('workbox-precaching', () => ({
   precacheAndRoute: vi.fn(),
   cleanupOutdatedCaches: vi.fn(),
+  matchPrecache: vi.fn(),
 }))
 
 vi.mock('workbox-routing', () => ({
@@ -40,6 +41,7 @@ vi.mock('workbox-routing', () => ({
   NavigationRoute: vi.fn().mockImplementation(function () {
     return {}
   }),
+  setCatchHandler: vi.fn(),
 }))
 
 vi.mock('workbox-strategies', () => ({
@@ -406,6 +408,35 @@ describe('runtime caching registration', () => {
         .map((p) => p.cacheWillUpdate!({ response: tile })),
     )
     expect(after).toContain(null)
+  })
+})
+
+// ── Offline navigation fallback ───────────────────────────────────────────────
+
+describe('offline navigation fallback', () => {
+  async function catchHandler() {
+    const { setCatchHandler } = await import('workbox-routing')
+    const calls = vi.mocked(setCatchHandler).mock.calls as unknown as Array<
+      [(options: { request: Pick<Request, 'destination'> }) => Promise<Response>]
+    >
+    return calls[0][0]
+  }
+
+  it('serves the precached offline shell for failed document requests', async () => {
+    const { matchPrecache } = await import('workbox-precaching')
+    const shell = new Response('<html>offline</html>', { status: 200 })
+    vi.mocked(matchPrecache).mockResolvedValueOnce(shell)
+    const handler = await catchHandler()
+    await expect(
+      handler({ request: { destination: 'document' } }),
+    ).resolves.toBe(shell)
+    expect(matchPrecache).toHaveBeenCalledWith('offline.html')
+  })
+
+  it('keeps network-error behaviour for non-document requests', async () => {
+    const handler = await catchHandler()
+    const response = await handler({ request: { destination: 'image' } })
+    expect(response.type).toBe('error')
   })
 })
 

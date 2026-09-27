@@ -39,6 +39,10 @@
   --surface-1: #11151c;
   --surface-2: #171c25;
   --surface-3: #202733;
+  --nav-rail-bg: #090d16;
+  --nav-context-bg: #0d1321;
+  --nav-active-bg: color-mix(in srgb, var(--theme-primary) 8%, #0d1321);
+  --nav-active-indicator: var(--theme-primary);
   --surface-overlay: rgba(0, 0, 0, 0.6);
   --glass-bg: rgba(255, 255, 255, 0.025);
   --glass-border: rgba(255, 255, 255, 0.08);
@@ -95,7 +99,7 @@
   /* Bottom chrome: mobile tab bar (h-14) + status bar (h-6). At `xl` the
      tab bar hides and the status bar grows to h-7. Overlays (Drawer, Modal
      sheets) pin above this so footers never sit under the bars. */
-  --shell-tab-bar-height: 3.5rem;
+  --shell-tab-bar-height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   --shell-status-bar-height: 1.5rem;
   --shell-chrome-bottom: calc(var(--shell-tab-bar-height) + var(--shell-status-bar-height));
   /*
@@ -562,6 +566,10 @@ html[data-status-bar='off'] {
   --border-strong: rgba(0, 0, 0, 0.2);
   --surface-overlay: rgba(15, 23, 42, 0.5);
   --bg-app: #f8fafc;
+  --nav-rail-bg: #f8fafc;
+  --nav-context-bg: #ffffff;
+  --nav-active-bg: color-mix(in srgb, var(--theme-primary) 8%, #f1f5f9);
+  --nav-active-indicator: var(--theme-primary);
   /*
    * Elevation ramp for light themes. The dark-mode ladder uses heavy black
    * alphas that read as dirty smudges on a white surface, so light mode gets
@@ -1321,6 +1329,14 @@ html[data-status-bar='off'] {
   min-height: 100vh;
 }
 
+.kiosk-surface {
+  background-color: color-mix(in srgb, var(--bg-app) var(--kiosk-background-opacity, 100%), transparent);
+}
+
+.kiosk-panel {
+  background-color: color-mix(in srgb, var(--surface-1) var(--kiosk-panel-opacity, 100%), transparent);
+}
+
 /* === @media print (Phase-40 / Prompt 54) =====================================
  * Live SPA printing: hide app chrome, swap dark glass surfaces for white paper,
  * keep recharts SVGs readable, and avoid mid-element page breaks.
@@ -1544,6 +1560,10 @@ html[data-status-bar='off'] {
     --surface-1: Canvas !important;
     --surface-2: Canvas !important;
     --surface-3: Canvas !important;
+    --nav-rail-bg: Canvas !important;
+    --nav-context-bg: Canvas !important;
+    --nav-active-bg: Canvas !important;
+    --nav-active-indicator: Highlight !important;
     --surface-elevated: Canvas !important;
     --surface-overlay: Canvas !important;
     --glass-bg: Canvas !important;
@@ -1839,4 +1859,30 @@ figure[data-print-card]:fullscreen p {
 }
 .rdp-tesla .rdp-nav_button:hover {
   background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Window-controls-overlay (installed desktop PWA) ───────────────────────
+   Chrome/Edge on Windows, macOS, and ChromeOS draw the min/max/close
+   buttons over the window's top corner and yield the rest of the title
+   bar to web content when the manifest opts into `window-controls-overlay`.
+   The workspace header becomes the drag handle; interactive descendants
+   stay clickable via `no-drag`. Content keeps clear of the OS controls
+   using the titlebar-area geometry (right side in LTR, left in RTL).
+   Browsers without WCO never match the media query, so browser tabs and
+   the mobile appbar are untouched. */
+@media (display-mode: window-controls-overlay) {
+  [data-role='workspace-header'] {
+    -webkit-app-region: drag;
+    app-region: drag;
+    /* LTR: controls occupy [area-x + area-width, 100vw]. */
+    padding-inline-end: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 1rem);
+  }
+  html[dir='rtl'] [data-role='workspace-header'] {
+    /* RTL: controls occupy [0, area-x]. */
+    padding-inline-end: calc(env(titlebar-area-x, 0px) + 1rem);
+  }
+  [data-role='workspace-header'] :is(a, button, input, select, textarea, [role='button'], [role='combobox']) {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
 }

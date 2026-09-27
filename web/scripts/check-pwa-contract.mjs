@@ -302,6 +302,14 @@ function checkServiceWorkerSource() {
       'isApiReadCacheName',
       'a purge must sweep the API bucket of every build id, not just the current one',
     ],
+    [
+      'setCatchHandler',
+      'a cold offline launch needs the offline.html navigation fallback',
+    ],
+    [
+      'matchPrecache',
+      "the offline fallback must come from the precache ('offline.html')",
+    ],
   ]) {
     if (!source.includes(needle)) fail(`sw.ts is missing ${needle} — ${why}`)
   }
@@ -468,16 +476,40 @@ function checkViteConfig() {
   if (!/registerType:\s*'prompt'/.test(source)) {
     fail("vite.config.ts must set registerType: 'prompt'")
   }
-  for (const key of ['id:', 'scope:', 'display_override:', 'launch_handler:', 'share_target:']) {
+  for (const key of ['id:', 'scope:', 'display_override:', 'launch_handler:', 'share_target:', 'screenshots:']) {
     if (!source.includes(key)) {
       fail(`vite.config.ts manifest is missing "${key}" (PWA-01)`)
     }
+  }
+  if (!source.includes("'window-controls-overlay'")) {
+    fail('vite.config.ts manifest display_override must lead with window-controls-overlay (desktop title-bar integration)')
+  }
+  if (!source.includes("'offline.html'")) {
+    fail('vite.config.ts must precache offline.html for the SW navigation catch handler')
+  }
+  if (!source.includes("'offline.css'")) {
+    fail('vite.config.ts must precache the CSP-safe offline stylesheet')
   }
 }
 
 function checkIndexHtmlSource() {
   const html = readFile(join(WEB_ROOT, 'index.html'))
   assertInstallMeta(html, 'index.html')
+}
+
+function checkOfflineShell() {
+  const html = readFile(join(WEB_ROOT, 'public', 'offline.html'))
+  if (!html.includes('href="/offline.css"') || /<(?:script|style)\b/i.test(html)) {
+    fail('offline.html must load its precached stylesheet without CSP-blocked inline script or style')
+  }
+  if (!existsSync(join(WEB_ROOT, 'public', 'offline.css'))) {
+    fail('public/offline.css is missing')
+  }
+  const nginx = readFile(join(WEB_ROOT, 'nginx.conf'))
+  const policies = nginx.match(/manifest-src 'self' blob:/g) ?? []
+  if (policies.length !== 4 || nginx.includes("manifest-src 'self'\"")) {
+    fail('nginx.conf must allow blob: PWA manifests in every CSP location')
+  }
 }
 
 function assertInstallMeta(html, label) {
@@ -488,7 +520,11 @@ function assertInstallMeta(html, label) {
     ['name="apple-mobile-web-app-title"', 'iOS home-screen label'],
     ['name="apple-mobile-web-app-status-bar-style"', 'iOS status bar styling'],
     ['rel="apple-touch-icon"', 'iOS home-screen icon'],
+    ['rel="apple-touch-startup-image"', 'iOS launch screens (no blank flash on cold start)'],
     ['name="theme-color"', 'Android toolbar colour'],
+    ['prefers-color-scheme: light', 'light-scheme toolbar tint for first paint'],
+    ['prefers-color-scheme: dark', 'dark-scheme toolbar tint for first paint'],
+    ['name="msapplication-TileColor"', 'Windows Start tile colour'],
   ]
   for (const [needle, why] of required) {
     if (!html.includes(needle)) fail(`${label} is missing ${needle} — ${why}`)
@@ -599,9 +635,53 @@ function checkManifest() {
     }
   }
 
+  if (!Array.isArray(manifest.display_override) || manifest.display_override[0] !== 'window-controls-overlay') {
+    fail('manifest display_override must lead with window-controls-overlay (desktop title-bar integration)')
+  }
+
+  // Rich install UI needs one narrow (phone) and one wide (desktop)
+  // screenshot, and the files must actually ship.
+  const screenshots = Array.isArray(manifest.screenshots) ? manifest.screenshots : []
+  for (const factor of ['narrow', 'wide']) {
+    if (!screenshots.some((shot) => shot.form_factor === factor)) {
+      fail(`manifest needs a "${factor}" screenshots entry for the rich install UI`)
+    }
+  }
+  for (const shot of screenshots) {
+    const file = join(DIST_ROOT, String(shot.src ?? '').replace(/^\/+/, ''))
+    if (!existsSync(file)) {
+      fail(`manifest screenshot ${shot.src} is declared but missing from dist/ (run \`npm run pwa:assets\`)`)
+    }
+  }
+
   notes.push(
-    `manifest: ${icons.length} icons, ${(manifest.shortcuts ?? []).length} shortcuts, share target enabled`,
+    `manifest: ${icons.length} icons, ${(manifest.shortcuts ?? []).length} shortcuts, ${screenshots.length} screenshots, share target enabled`,
   )
+}
+
+function checkSplashScreens() {
+  // Every iOS launch-screen link must resolve to a shipped file, or that
+  // device gets the blank-flash cold start the screens exist to prevent.
+  const html = readFile(join(WEB_ROOT, 'index.html'))
+  const hrefs = [...html.matchAll(/rel="apple-touch-startup-image"[^>]*href="([^"]+)"/g)]
+    .map((match) => match[1])
+  if (hrefs.length === 0) {
+    fail('index.html declares no apple-touch-startup-image links (run `npm run pwa:assets`)')
+    return
+  }
+  for (const href of hrefs) {
+    const file = join(WEB_ROOT, 'public', href.replace(/^\/+/, ''))
+    if (!existsSync(file)) {
+      fail(`iOS splash ${href} is linked but missing from public/ (run \`npm run pwa:assets\`)`)
+      continue
+    }
+    const declared = href.match(/(\d+)x(\d+)\.png$/)
+    const actual = pngSize(file)
+    if (declared && actual && (Number(declared[1]) !== actual.width || Number(declared[2]) !== actual.height)) {
+      fail(`iOS splash ${href} must be exactly ${declared[1]}x${declared[2]} (is ${actual.width}x${actual.height})`)
+    }
+  }
+  notes.push(`splash: ${hrefs.length} iOS launch screens`)
 }
 
 function checkBuiltIndexHtml() {
@@ -686,6 +766,12 @@ function checkBuiltServiceWorker() {
   if (!worker.includes('x-teslasync-cached-at')) {
     fail('dist/sw.js does not stamp cached API reads with a capture time (PWA-02)')
   }
+  if (!worker.includes('offline.html')) {
+    fail('dist/sw.js does not precache offline.html for the navigation catch handler')
+  }
+  if (!worker.includes('offline.css')) {
+    fail('dist/sw.js does not precache the offline stylesheet')
+  }
 
   // PWA-03: workbox-precaching legitimately installs its own `install`
   // listener, so the presence of one is not the signal. What matters is that
@@ -720,6 +806,8 @@ function main() {
   checkOfflineAnnouncementOwnership()
   checkViteConfig()
   checkIndexHtmlSource()
+  checkOfflineShell()
+  checkSplashScreens()
 
   if (!SOURCE_ONLY) {
     checkManifest()

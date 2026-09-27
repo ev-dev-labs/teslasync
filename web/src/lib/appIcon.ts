@@ -113,6 +113,41 @@ export function buildAppIconSvg(opts: BuildIconOptions): string {
  *
  * Uses `btoa` in the browser. In test (jsdom) `btoa` is available too.
  */
+export interface DynamicManifestIcon {
+  src: string
+  sizes: string
+  type: string
+  purpose: string
+}
+
+/**
+ * Assemble the runtime install manifest from the static build-time one.
+ *
+ * Precedence: minimal install defaults < static manifest fields <
+ * themed overrides. The static spread is what preserves fields the
+ * theming hook knows nothing about (screenshots, shortcuts,
+ * share_target, display_override, id, scope) so future manifest
+ * additions survive re-theming; icons + colours always come from the
+ * active theme.
+ */
+export function buildDynamicManifest(
+  base: Record<string, unknown>,
+  overrides: { backgroundColor: string; themeColor: string; icons: DynamicManifestIcon[] },
+): Record<string, unknown> {
+  return {
+    name: 'TeslaSync',
+    short_name: 'TeslaSync',
+    start_url: '/',
+    display: 'standalone',
+    orientation: 'any',
+    categories: ['auto', 'utilities'],
+    ...base,
+    background_color: overrides.backgroundColor,
+    theme_color: overrides.themeColor,
+    icons: overrides.icons,
+  }
+}
+
 export function svgToDataUrl(svg: string): string {
   // btoa() requires Latin-1 input. SVG output here is pure ASCII (no
   // non-Latin characters in attribute values), so a plain btoa is safe.

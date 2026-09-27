@@ -1,7 +1,7 @@
 /**
  * sidebarSearch
  * ─────────────
- * Pure query engine for the unified sidebar's "Search pages" box.
+ * Pure query engine for sidebar suggestions and scoped section filtering.
  *
  * Why a separate module
  * ---------------------
@@ -107,6 +107,7 @@ export function searchSidebarSections<TItem extends SidebarSearchableItem>(
   collections: readonly SectionGroup[],
   query: string,
   resolveText: SidebarSearchText,
+  { matchSectionTitle = true }: { matchSectionTitle?: boolean } = {},
 ): SidebarSearchSection[] {
   const tokens = tokenizeSidebarQuery(query)
   if (tokens.length === 0) return []
@@ -147,7 +148,7 @@ export function searchSidebarSections<TItem extends SidebarSearchableItem>(
     ]
       .join(' ')
       .toLowerCase()
-    if (matchesSidebarTokens(titleHaystack, tokens)) {
+    if (matchSectionTitle && matchesSidebarTokens(titleHaystack, tokens)) {
       for (const item of section.items ?? []) {
         flattenItem(item, groupByPrimary.get(item.to))
       }
