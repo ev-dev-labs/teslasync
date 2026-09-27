@@ -68,6 +68,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import { request, ApiError } from '@/api/client'
+import { aiUsageKeys } from '@/api/hooks/useAiUsage'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { AISettings } from '../AISettings'
 import { AI_FEATURE_IDS } from '@/ai/features'
@@ -93,6 +94,14 @@ function renderPanel(initial: Partial<AppSettings> = baseSettings) {
   // Seed the cache so the AISettings component sees data on first
   // render — avoids a flaky "wait for query to resolve" loop.
   qc.setQueryData(['settings'], initial)
+  // Usage hooks are covered by their own tests; these settings tests
+  // should not return undefined from unrelated usage queries.
+  qc.setQueryData(aiUsageKeys.today(), {
+    user_subject: 'settings-test', call_count: 0, input_tokens: 0,
+    output_tokens: 0, cost_micro_cents: 0, error_count: 0, avg_latency_ms: 0,
+  })
+  qc.setQueryData(aiUsageKeys.byFeature(), { since: '2026-09-18T00:00:00Z', rows: [] })
+  qc.setQueryData(aiUsageKeys.recent(50), { limit: 50, rows: [] })
   return render(
     <QueryClientProvider client={qc}>
       <ToastProvider>
@@ -107,6 +116,16 @@ beforeEach(() => {
 })
 
 describe('AISettings — §I1 default-off rendering', () => {
+  it('does not query usage or mount the cap bar before an off-mode user saves the opt-in', async () => {
+    renderPanel({ ...baseSettings, ai_cost_cap_cents: 1000 })
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('Save an enabled Helix mode')
+    expect(screen.queryByTestId('ai-cost-cap-spend-bar')).toBeNull()
+    await waitFor(() => {
+      expect(mockedRequest.mock.calls.filter(([path]: [string]) => path.startsWith('/ai/usage/'))).toHaveLength(0)
+    })
+  })
+
   it('renders OFF radio selected and hides AI sub-sections by default', () => {
     renderPanel()
     const offRadio = screen.getByTestId('ai-mode-off') as HTMLInputElement
@@ -301,14 +320,17 @@ describe('AISettings — F1↔F2 provider config schema (namespaced shape)', () 
     { oldFlavor: 'openai', effectiveModel: 'old-deployment' },
     { oldFlavor: 'foundry', effectiveModel: 'visible-model' },
   ])('migrates $oldFlavor identity, then validates and saves only Foundry settings', async ({ oldFlavor, effectiveModel }) => {
+    let savedSettings: unknown
     mockedRequest.mockImplementation(async (path, init) => {
       if (path === '/settings/ai/validate-config') {
         return { ok: true, mode: 'cloud', probed_model: 'edited-deployment' }
       }
       if (path === '/settings' && init?.method === 'PUT') {
-        return JSON.parse(String(init.body))
+        savedSettings = JSON.parse(String(init.body))
+        return savedSettings
       }
-      return undefined
+      if (path === '/settings') return savedSettings ?? baseSettings
+      throw new Error(`Unexpected request: ${path}`)
     })
     renderPanel({
       ...baseSettings,

@@ -1,35 +1,8 @@
 /**
  * FleetAPIPage contract tests.
  *
- * The page fans four settings queries (settings, polling-config, capture-stats,
- * version) plus two mutations (suspend-api, update-polling-config) across a
- * KPI band, a master API power switch, a telemetry-capture panel, a full
- * endpoint-toggle grid, and a configured-endpoints detail band. These tests
- * exercise every branch and interaction:
- *
- *   1. Loading  — skeletons render; no KPI values and no switches are shown.
- *   2. Loaded   — truthful KPIs, named endpoint switches, retention select,
- *                 captured-signal summary, and configured endpoints.
- *   3. Suspended — the paused status + unchecked master switch + danger note.
- *   4. Suspend  — clicking the master switch POSTs /settings/suspend-api.
- *   5. Endpoint — clicking a toggle PUTs /settings/polling-config with the
- *                 flipped flag.
- *   6. Retention — changing the select PUTs the new retention value.
- *   7. Error    — when ONLY /settings fails, the API-status KPI degrades to an
- *                 em-dash (regression guard: it must not fabricate "Active"),
- *                 the master switch panel surfaces <QueryError>, and the other
- *                 KPIs stay truthful because their sources resolved.
- *   8. Removed MongoDB capture controls do not appear or request statistics.
- *                 "not configured" badge; an empty version payload shows the
- *                 configured-endpoints empty state; a known 0 stays a truthful 0.
- *   9. a11y     — the KPI region is labelled and every switch + the retention
- *                 combobox has an accessible name (regression guard for the
- *                 Toggle aria-label routing fix).
- *
- * Network is driven entirely through the mocked `@/api/client` `request`
- * (the same seam APIKeysPage / DevToolsPage use) so nothing touches the real
- * network. `isApiError` is preserved from the real module so <QueryError>
- * falls to its generic network branch for a plain Error.
+ * The page uses the backend catalog so every implemented Fleet route has an
+ * independent access switch; only worker-supported read routes offer auto-poll.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -91,6 +64,7 @@ if (typeof window.matchMedia !== 'function') {
 
 import { request } from '@/api/client';
 import { ToastProvider } from '@/components/feedback/Toast';
+import { camelCaseKeys } from '@/lib/resilience';
 import FleetAPIPage from './FleetAPIPage';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
@@ -100,15 +74,14 @@ interface ReqOpts {
   body?: string;
 }
 
-// Every boolean polling key the tally counts (mirrors ALL_ENDPOINT_KEYS in the
-// page).
-const POLLING_BOOL_KEYS = [
-  'vehicle_discovery', 'charge_state', 'climate_state', 'drive_state',
-  'location_data', 'vehicle_state', 'vehicle_config',
-  'on_demand_vehicle_discovery', 'on_demand_charge_state', 'on_demand_climate_state',
-  'on_demand_drive_state', 'on_demand_location_data', 'on_demand_vehicle_state',
-  'on_demand_vehicle_config', 'nearby_charging_sites', 'release_notes',
-  'recent_alerts', 'service_data', 'wake_up', 'commands',
+const CATALOG = [
+  { key: 'vehicles.list', method: 'GET', path: '/api/1/vehicles', category: 'Vehicle data', pollable: true },
+  { key: 'vehicle_data.charge_state', method: 'GET', path: '/api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state', category: 'Vehicle data', pollable: true },
+  { key: 'vehicle_data.drive_state', method: 'GET', path: '/api/1/vehicles/{vin}/vehicle_data?endpoints=drive_state', category: 'Vehicle data', pollable: true },
+  { key: 'vehicles.nearby_charging_sites', method: 'GET', path: '/api/1/vehicles/{vin}/nearby_charging_sites', category: 'Vehicle data', pollable: false },
+  { key: 'command.door_lock', method: 'POST', path: '/api/1/vehicles/{vin}/command/door_lock', category: 'Vehicle commands', pollable: false },
+  { key: 'telemetry.subscribe', method: 'POST', path: '/api/1/vehicles/fleet_telemetry_config', category: 'Fleet telemetry', pollable: false },
+  { key: 'dx.pricing', method: 'POST', path: '/api/1/dx/vehicles/pricing', category: 'Vehicle services', pollable: false },
 ];
 
 const DEFAULT_ENDPOINTS = {
@@ -122,10 +95,16 @@ function makeSettings(overrides: Record<string, unknown> = {}) {
   return { api_suspended: false, ...overrides };
 }
 
-function makePolling(overrides: Record<string, boolean | number> = {}) {
-  const base: Record<string, boolean | number> = {};
-  for (const k of POLLING_BOOL_KEYS) base[k] = false;
-  return { ...base, ...overrides };
+function makePolling(overrides: Record<string, unknown> = {}) {
+  return {
+    auto_polling_enabled: false,
+    fleet_endpoints: Object.fromEntries(CATALOG.map(({ key }) => [key, false])),
+    auto_endpoints: { 'vehicles.list': false, 'vehicle_data.charge_state': false, 'vehicle_data.drive_state': false },
+    endpoint_catalog: CATALOG,
+    telemetry_capture: false,
+    telemetry_capture_retention_days: 7,
+    ...overrides,
+  };
 }
 
 function makeVersion(overrides: Record<string, unknown> = {}) {
@@ -144,11 +123,15 @@ interface InstallCfg {
 function installRequest(cfg: InstallCfg = {}) {
   const {
     settings = makeSettings(),
-    polling = makePolling({ charge_state: true, drive_state: true }),
+    polling = makePolling({
+      fleet_endpoints: { ...Object.fromEntries(CATALOG.map(({ key }) => [key, false])), 'vehicle_data.charge_state': true, 'vehicle_data.drive_state': true },
+      auto_endpoints: { 'vehicles.list': false, 'vehicle_data.charge_state': true, 'vehicle_data.drive_state': false },
+    }),
     version = makeVersion(),
     rejectGet = [],
   } = cfg;
   let currentPolling = polling;
+  let currentSettings = settings;
 
   mockedRequest.mockImplementation((path: string, opts?: ReqOpts) => {
     const method = opts?.method ?? 'GET';
@@ -156,12 +139,16 @@ function installRequest(cfg: InstallCfg = {}) {
       return Promise.reject(new Error('network down'));
     }
     switch (`${method} ${path}`) {
-      case 'GET /settings': return Promise.resolve(settings);
+      case 'GET /settings': return Promise.resolve(currentSettings);
       case 'GET /settings/polling-config': return Promise.resolve(currentPolling);
       case 'GET /system/version': return Promise.resolve(version);
-      case 'POST /settings/suspend-api': return Promise.resolve({ api_suspended: true });
+      case 'POST /settings/suspend-api': {
+        const { suspended } = JSON.parse(opts?.body ?? '{}') as { suspended: boolean };
+        currentSettings = { ...(currentSettings as Record<string, unknown>), api_suspended: suspended };
+        return Promise.resolve({ api_suspended: suspended });
+      }
       case 'PUT /settings/polling-config':
-        currentPolling = JSON.parse(opts?.body ?? '{}') as unknown;
+        currentPolling = { ...JSON.parse(opts?.body ?? '{}'), endpoint_catalog: CATALOG } as unknown;
         return Promise.resolve(currentPolling);
       default: return Promise.reject(new Error(`unexpected ${method} ${path}`));
     }
@@ -222,65 +209,70 @@ describe('FleetAPIPage', () => {
 
     const region = kpiRegion();
     // API status resolves to the true "Active" state (api_suspended === false).
-    expect(await within(region).findByText('Active')).toBeInTheDocument();
-    expect(within(region).getByText('2 / 20')).toBeInTheDocument();
+    expect(await within(region).findByText('On demand only')).toBeInTheDocument();
+    expect(within(region).getByText('2 / 7')).toBeInTheDocument();
 
-    // The master switch is named AND reflects the un-suspended (checked) state.
     const master = screen.getByRole('switch', { name: 'Toggle Tesla API polling' });
-    expect(master).toHaveAttribute('aria-checked', 'true');
-
-    // "Charge State" exists in BOTH the polling and on-demand groups.
-    expect(screen.getAllByRole('switch', { name: 'Charge State' })).toHaveLength(2);
-    expect(screen.getByRole('switch', { name: 'Nearby Charging' })).toBeInTheDocument();
+    expect(master).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state' })).toBeDisabled();
+    expect(screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vin}/vehicle_data?endpoints=drive_state' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('switch', { name: 'Auto-poll eligible routes' })).toBeDisabled();
+    expect(screen.getByRole('switch', { name: 'Access all' })).toBeEnabled();
+    expect(screen.queryByRole('switch', { name: /Auto-poll .*door_lock/ })).toBeNull();
 
     expect(screen.queryByText('Telemetry Capture')).toBeNull();
     expect(screen.queryByText(/MongoDB/)).toBeNull();
     expect(mockedRequest.mock.calls.some(([path]) => path === '/dev-tools/telemetry-capture/stats')).toBe(false);
 
     // Header tally badge + a configured endpoint URL surface.
-    expect(screen.getByText('2/20 enabled')).toBeInTheDocument();
+    expect(screen.getByText('2/7 enabled')).toBeInTheDocument();
     expect(screen.getByText('https://fleet-api.prd.na.vn.cloud.tesla.com')).toBeInTheDocument();
   });
 
-  it('reflects a suspended API with a paused status and an unchecked master switch', async () => {
+  it('keeps suspension independent of the polling master switch', async () => {
     installRequest({ settings: makeSettings({ api_suspended: true }) });
 
     renderPage();
 
     expect(await within(kpiRegion()).findByText('Suspended')).toBeInTheDocument();
 
-    const master = screen.getByRole('switch', { name: 'Toggle Tesla API polling' });
-    expect(master).toHaveAttribute('aria-checked', 'false');
-
-    expect(screen.getByText(/Polling and commands are paused/)).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Suspend Tesla API actions' })).toBeNull();
+    expect(screen.getByRole('switch', { name: 'Toggle Tesla API polling' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByText(/API actions were suspended previously/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Resume API actions' }));
+    await waitFor(() => expect(findRequestBody('/settings/suspend-api', 'POST').suspended).toBe(false));
   });
 
-  it('POSTs /settings/suspend-api when the master switch is toggled', async () => {
+  it('PUTs the polling master without suspending on-demand actions', async () => {
     installRequest();
 
     renderPage();
 
     const master = await screen.findByRole('switch', { name: 'Toggle Tesla API polling' });
-    expect(master).toHaveAttribute('aria-checked', 'true');
+    expect(master).toHaveAttribute('aria-checked', 'false');
 
     fireEvent.click(master);
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
-        '/settings/suspend-api',
-        expect.objectContaining({ method: 'POST' }),
+        '/settings/polling-config',
+        expect.objectContaining({ method: 'PUT' }),
       ),
     );
-    // The un-suspended page suspends on click.
-    expect(findRequestBody('/settings/suspend-api', 'POST').suspended).toBe(true);
+    expect(findRequestBody('/settings/polling-config', 'PUT').auto_polling_enabled).toBe(true);
+    expect(mockedRequest.mock.calls.some(([path]) => path === '/settings/suspend-api')).toBe(false);
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Auto-poll eligible routes' })).toBeEnabled());
+    expect(screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state' })).toBeEnabled();
   });
 
-  it('PUTs /settings/polling-config with the flipped flag when an endpoint is toggled', async () => {
+  it('toggles individual routes without enrolling them in automatic polling', async () => {
     installRequest();
 
     renderPage();
 
-    const sw = await screen.findByRole('switch', { name: 'Nearby Charging' });
+    const sw = await screen.findByRole('switch', { name: 'Enable GET /api/1/vehicles/{vin}/nearby_charging_sites' });
     expect(sw).toHaveAttribute('aria-checked', 'false');
 
     fireEvent.click(sw);
@@ -292,8 +284,101 @@ describe('FleetAPIPage', () => {
       ),
     );
     // The disabled endpoint is flipped on.
-    expect(findRequestBody('/settings/polling-config', 'PUT').nearby_charging_sites).toBe(true);
-    await waitFor(() => expect(screen.getByRole('switch', { name: 'Nearby Charging' })).toHaveAttribute('aria-checked', 'true'));
+    expect((findRequestBody('/settings/polling-config', 'PUT').fleet_endpoints as Record<string, boolean>)['vehicles.nearby_charging_sites']).toBe(true);
+    expect(screen.queryByRole('switch', { name: /Auto-poll .*nearby_charging_sites/ })).toBeNull();
+    await waitFor(() => expect(sw).toHaveAttribute('aria-checked', 'true'));
+  });
+
+  it('clears auto-poll selection when an enabled route is disabled', async () => {
+    installRequest();
+    renderPage();
+    const sw = await screen.findByRole('switch', { name: 'Enable GET /api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state' });
+    fireEvent.click(sw);
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/settings/polling-config', expect.objectContaining({ method: 'PUT' })));
+    const body = findRequestBody('/settings/polling-config', 'PUT');
+    expect((body.fleet_endpoints as Record<string, boolean>)['vehicle_data.charge_state']).toBe(false);
+    expect((body.auto_endpoints as Record<string, boolean>)['vehicle_data.charge_state']).toBe(false);
+  });
+
+  it('strips response-only camelCase endpoint aliases from the strict update payload', async () => {
+    installRequest({ polling: camelCaseKeys(makePolling({
+      fleet_endpoints: { ...Object.fromEntries(CATALOG.map(({ key }) => [key, true])) },
+    })) });
+    renderPage();
+    fireEvent.click(await screen.findByRole('switch', { name: 'Enable GET /api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state' }));
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/settings/polling-config', expect.objectContaining({ method: 'PUT' })));
+    const body = findRequestBody('/settings/polling-config', 'PUT');
+    expect(Object.keys(body.fleet_endpoints as Record<string, boolean>).sort()).toEqual(CATALOG.map(({ key }) => key).sort());
+    expect(Object.keys(body.auto_endpoints as Record<string, boolean>).sort()).toEqual(CATALOG.filter(({ pollable }) => pollable).map(({ key }) => key).sort());
+    expect(body.endpoint_catalog).toBeUndefined();
+  });
+
+  it('bulk access disables every route and clears all automatic preferences without changing the schedule', async () => {
+    installRequest();
+    renderPage();
+    fireEvent.click(await screen.findByRole('switch', { name: 'Access all' }));
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/settings/polling-config', expect.objectContaining({ method: 'PUT' })));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Access all' })).toHaveAttribute('aria-checked', 'true'));
+    mockedRequest.mockClear();
+    fireEvent.click(screen.getByRole('switch', { name: 'Access all' }));
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/settings/polling-config', expect.objectContaining({ method: 'PUT' })));
+    const body = findRequestBody('/settings/polling-config', 'PUT');
+    expect(Object.values(body.fleet_endpoints as Record<string, boolean>)).toEqual(Array(CATALOG.length).fill(false));
+    expect(Object.values(body.auto_endpoints as Record<string, boolean>)).toEqual(Array(CATALOG.filter(({ pollable }) => pollable).length).fill(false));
+    expect(body.auto_polling_enabled).toBe(false);
+  });
+
+  it('bulk auto-poll selects only enabled, worker-supported routes', async () => {
+    installRequest({ polling: makePolling({
+      auto_polling_enabled: true,
+      fleet_endpoints: { ...Object.fromEntries(CATALOG.map(({ key }) => [key, false])), 'vehicle_data.charge_state': true, 'vehicle_data.drive_state': true },
+      auto_endpoints: { 'vehicles.list': false, 'vehicle_data.charge_state': true, 'vehicle_data.drive_state': false },
+    }) });
+    renderPage();
+    fireEvent.click(await screen.findByRole('switch', { name: 'Auto-poll eligible routes' }));
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/settings/polling-config', expect.objectContaining({ method: 'PUT' })));
+    const body = findRequestBody('/settings/polling-config', 'PUT');
+    expect(body.auto_endpoints).toEqual({
+      'vehicles.list': false,
+      'vehicle_data.charge_state': true,
+      'vehicle_data.drive_state': true,
+    });
+    expect(body.auto_polling_enabled).toBe(true);
+  });
+
+  it('filters catalog routes by search term', async () => {
+    installRequest();
+    renderPage();
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Search API routes' }), { target: { value: 'door_lock' } });
+    expect(screen.getByRole('switch', { name: 'Enable POST /api/1/vehicles/{vin}/command/door_lock' })).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /Enable .*charge_state/ })).toBeNull();
+    expect(within(screen.getByRole('navigation', { name: 'Route groups' })).getByRole('button', { name: /All routes/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('groups by HTTP method and sorts routes by path and access state', async () => {
+    installRequest();
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'HTTP method' }));
+    expect(screen.getByRole('region', { name: 'POST' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'GET' })).toBeInTheDocument();
+
+    const labels = () => within(screen.getByRole('region', { name: 'GET' }))
+      .getAllByRole('switch', { name: /^Enable GET/ })
+      .map((node) => node.getAttribute('aria-label'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sort routes by' }), { target: { value: 'path' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sort descending' }));
+    expect(labels()[0]).toContain('endpoints=drive_state');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sort routes by' }), { target: { value: 'access' } });
+    expect(labels().slice(0, 2)).toEqual(expect.arrayContaining([
+      expect.stringContaining('endpoints=charge_state'),
+      expect.stringContaining('endpoints=drive_state'),
+    ]));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Route groups' })).getByRole('button', { name: /^POST/ }));
+    expect(screen.getByRole('region', { name: 'POST' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'GET' })).toBeNull();
+    expect(screen.getByRole('switch', { name: 'Enable POST /api/1/vehicles/{vin}/command/door_lock' })).toBeInTheDocument();
   });
 
   it('degrades the API-status KPI to an em-dash (not a fabricated Active) when only /settings fails', async () => {
@@ -308,10 +393,9 @@ describe('FleetAPIPage', () => {
     expect(within(region).queryByText('Suspended')).toBeNull();
 
     // The other three sources resolved, so their KPIs stay truthful.
-    expect(within(region).getByText('2 / 20')).toBeInTheDocument();
+    expect(within(region).getByText('2 / 7')).toBeInTheDocument();
 
-    // The master switch panel surfaces the error and hides the header toggle.
-    expect(screen.queryByRole('switch', { name: 'Toggle Tesla API polling' })).toBeNull();
+    expect(screen.getByRole('switch', { name: 'Toggle Tesla API polling' })).toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
   });
 
@@ -343,8 +427,8 @@ describe('FleetAPIPage', () => {
     // (icon-only) now has an accessible name on the role="switch" element.
     expect(await screen.findByRole('switch', { name: 'Toggle Tesla API polling' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Fleet API summary' })).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Wake Up' })).toBeInTheDocument();
-    // Master (1) + polling (7) + on-demand (11) + commands (2).
-    expect(screen.getAllByRole('switch')).toHaveLength(21);
+    fireEvent.click(screen.getByRole('button', { name: /All routes/ }));
+    expect(screen.getByRole('switch', { name: 'Enable POST /api/1/vehicles/{vin}/command/door_lock' })).toBeInTheDocument();
+    expect(screen.getAllByRole('switch')).toHaveLength(13);
   });
 });

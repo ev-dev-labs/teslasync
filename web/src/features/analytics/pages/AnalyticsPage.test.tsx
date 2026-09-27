@@ -3,13 +3,13 @@
  *
  * AnalyticsPage is a thin orchestration shell: it owns the active-tab state,
  * threads a single `useFleetAnalytics({ start, end })` query object down to a
- * KPI band (HeroGauges) plus one of four domain tabs, and wires the header
- * RangePicker back into `useRangeState`. Its five chart-heavy children are
+ * KPI band (HeroGauges) plus one of four domain tabs, and consumes the header
+ * range through `useRangeState`. Its five chart-heavy children are
  * mocked with prop-capturing stubs so the tests can assert the page's own
  * behaviour deterministically (recharts/leaflet render nothing meaningful in
  * jsdom and would only add flake). Everything else — the real
- * `useFleetAnalytics`, `useRangeState`, `PageContainer`, `TabNav` and
- * `RangePicker` — renders for real, so the query-param wiring is exercised
+ * `useFleetAnalytics`, `useRangeState`, `PageContainer` and `TabNav`
+ * render for real, so the query-param wiring is exercised
  * end-to-end.
  *
  * Facets covered:
@@ -21,13 +21,13 @@
  *   5. Tab switching — clicking each tab mounts exactly that domain panel and
  *      unmounts the previous one, and the freshly-mounted panel receives the
  *      same resolved query (data threading survives a tab change).
- *   6. a11y — the KPI region, the tab nav, the four named tab buttons, and the
- *      RangePicker trigger all expose accessible names.
+ *   6. a11y — the KPI region, the tab nav, and the four named tab buttons
+ *      expose accessible names; no duplicate range picker renders in the page.
  *   7. Range contract — the fleet request is scoped by the URL range using
  *      snake_case `start`/`end` calendar-date params, with NO `/api/v1`
  *      double-prefix (the backend `/analytics/fleet` handler parses
  *      `YYYY-MM-DD`, so instants would be wrong).
- *   8. Range interaction — committing a preset in the RangePicker re-scopes the
+ *   8. Range interaction — changing the header range re-scopes the
  *      query and re-fetches with the new window.
  *
  * Network is driven through the mocked `@/api/client` `request` seam (the same
@@ -118,6 +118,7 @@ if (typeof window.matchMedia !== 'function') {
 
 import { request } from '@/api/client';
 import { getDatePreset } from '@/lib/datePresets';
+import { useRangeState } from '@/hooks/useRangeState';
 import AnalyticsPage from './AnalyticsPage';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
@@ -148,10 +149,16 @@ function renderPage(initialEntries: string[] = ['/analytics']) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
+        <HeaderRangeChange />
         <AnalyticsPage />
       </QueryClientProvider>
     </MemoryRouter>,
   );
+}
+
+function HeaderRangeChange() {
+  const { setRange } = useRangeState();
+  return <button onClick={() => setRange(getDatePreset('7d')!.resolve())}>Change header range</button>;
 }
 
 /** The single fleet request path that was issued (last call). */
@@ -272,9 +279,7 @@ describe('AnalyticsPage', () => {
       'Battery',
     ]);
 
-    // The icon-only-ish range trigger exposes an accessible name + test id.
-    expect(screen.getByRole('button', { name: 'Date range' })).toBeInTheDocument();
-    expect(screen.getByTestId('analytics-range')).toBeInTheDocument();
+    expect(screen.queryByTestId('analytics-range')).not.toBeInTheDocument();
   });
 
   it('scopes the fleet request to the URL range with snake_case calendar-date params (no /api/v1)', async () => {
@@ -294,7 +299,7 @@ describe('AnalyticsPage', () => {
     expect(issued.every((p) => !p.includes('vehicleId='))).toBe(true);
   });
 
-  it('re-scopes and re-fetches the query when a RangePicker preset is committed', async () => {
+  it('re-scopes and re-fetches the query when the header range changes', async () => {
     installFleet();
 
     renderPage(['/analytics?from=2025-03-01&to=2025-03-15']);
@@ -304,10 +309,7 @@ describe('AnalyticsPage', () => {
       expect(fleetPaths()).toContain('/analytics/fleet?start=2025-03-01&end=2025-03-15'),
     );
 
-    // Open the range popover and commit the "Last 7 days" preset.
-    fireEvent.click(screen.getByTestId('analytics-range'));
-    const dialog = screen.getByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('option', { name: 'Last 7 days' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change header range' }));
 
     const expected = getDatePreset('7d')!.resolve();
     const expectedPath = `/analytics/fleet?start=${expected.start}&end=${expected.end}`;

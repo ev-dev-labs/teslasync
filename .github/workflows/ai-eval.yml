@@ -21,7 +21,7 @@
 #     gates on secrets and runs only on the nightly schedule (never
 #     on PR / push).
 
-name: ai-eval
+name: AI Evaluation
 
 on:
   pull_request:

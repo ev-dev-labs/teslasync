@@ -45,6 +45,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { useRangeState } from '@/hooks/useRangeState';
 import type { ReactNode } from 'react';
 
 import { ToastProvider } from '@/components/feedback/Toast';
@@ -155,32 +156,6 @@ vi.mock('@/components/ai/AIMLChargingCurveClustering', () => ({
   ),
 }));
 
-// RangePicker → a single button that commits a fixed new range; VehicleSelect
-// → an inert marker. The page owns the reset-on-range-change wiring; the
-// picker's own calendar behaviour is out of scope here.
-vi.mock('@/components/forms', () => ({
-  RangePicker: ({
-    value,
-    onChange,
-    triggerTestId,
-  }: {
-    value: { start: string; end: string };
-    onChange: (r: { start: string; end: string }) => void;
-    triggerTestId?: string;
-    align?: string;
-  }) => (
-    <button
-      type="button"
-      data-testid={triggerTestId ?? 'range-picker'}
-      data-start={value.start}
-      data-end={value.end}
-      onClick={() => onChange({ start: '2099-01-01', end: '2099-01-31' })}
-    >
-      change range
-    </button>
-  ),
-  VehicleSelect: () => <div data-testid="vehicle-select" />,
-}));
 
 import ChargingCurvePage from './ChargingCurvePage';
 
@@ -276,10 +251,20 @@ function buildTree(qc: QueryClient): ReactNode {
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/charging/curve']}>
         <ToastProvider>
+          <HeaderRangeChange />
           <ChargingCurvePage />
         </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>
+  );
+}
+
+function HeaderRangeChange() {
+  const { setRange } = useRangeState();
+  return (
+    <button onClick={() => setRange({ start: '2099-01-01', end: '2099-01-31' })}>
+      Change header range
+    </button>
   );
 }
 
@@ -376,7 +361,7 @@ describe('ChargingCurvePage', () => {
     expect(screen.getByTestId('session-curve')).toBeInTheDocument();
 
     // Committing a new range must reset the selection back to the hint.
-    fireEvent.click(screen.getByTestId('charging-curve-range'));
+    fireEvent.click(screen.getByRole('button', { name: 'Change header range' }));
 
     expect(screen.queryByTestId('session-curve')).not.toBeInTheDocument();
     expect(

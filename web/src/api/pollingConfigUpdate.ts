@@ -1,8 +1,19 @@
 import type { PollingConfig } from './hooks/useSettings'
 
-export function pollingConfigUpdate(pc: PollingConfig): PollingConfig {
-  // Read responses also expose camelCase aliases; the strict Go decoder only accepts these JSON tags.
+export function pollingConfigUpdate(pc: PollingConfig): Omit<PollingConfig, 'endpoint_catalog'> {
+  // camelCaseKeys adds aliases inside endpoint maps too; only catalog keys are valid on write.
+  const catalogKeys = new Set(pc.endpoint_catalog.map((endpoint) => endpoint.key))
+  const pollableKeys = new Set(pc.endpoint_catalog.filter((endpoint) => endpoint.pollable).map((endpoint) => endpoint.key))
+  const fleetEndpoints = Object.fromEntries(
+    Object.entries(pc.fleet_endpoints).filter(([key]) => catalogKeys.has(key)),
+  )
+  const autoEndpoints = Object.fromEntries(
+    Object.entries(pc.auto_endpoints).filter(([key]) => pollableKeys.has(key)),
+  )
   return {
+    auto_polling_enabled: pc.auto_polling_enabled,
+    fleet_endpoints: fleetEndpoints,
+    auto_endpoints: autoEndpoints,
     vehicle_discovery: pc.vehicle_discovery,
     charge_state: pc.charge_state,
     climate_state: pc.climate_state,

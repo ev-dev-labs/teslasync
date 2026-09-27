@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -26,7 +26,6 @@ export default function JourneysPage() {
         'journey.page.subtitle',
         'Door-to-door trip companion: plan the drive, ride it live with replans, then debrief.',
       )}
-      contextActions={<VehicleSelect withIcon />}
     >
       <FadeIn>
         <JourneyPanel vehicleId={vehicleId} />

@@ -28,9 +28,13 @@ export function sidebarBreadcrumbs(
 
     const sectionLabel = section.titleKey ? translate(section.titleKey, section.title) : section.title
     const pageLabel = translate(page.labelKey, page.label)
-    const flattened = section.items.length === 1 && collection?.primary === section.items[0].to
+    // Flat trail: the sidebar lists every page directly under its
+    // section, so the breadcrumb mirrors exactly that — Section >
+    // Page. The collection name is deliberately NOT a rung: it links
+    // nowhere and matches nothing in navigation, so it read as a
+    // phantom level (Vehicles > Places > Geofences). Collections
+    // still resolve the section via their primary above.
     const trail: BreadcrumbItem[] = section.title === 'Home' ? [] : [{ label: sectionLabel }]
-    if (collection && !flattened) trail.push({ label: translate(collection.labelKey, collection.label) })
 
     const routeIndex = routeItems.findIndex(item => item.href === path)
     const detailItems = path === pathname || routeIndex < 0 ? [] : routeItems.slice(routeIndex + 1)

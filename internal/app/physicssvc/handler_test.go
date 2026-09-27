@@ -95,11 +95,31 @@ func TestLedgerFieldsCoverSolverInputs(t *testing.T) {
 	}
 	for _, s := range []string{
 		"VehicleSpeed", "PackVoltage", "PackCurrent", "EnergyRemaining",
-		"Gear", "ModuleTempMax", "HvacPower", "RatedRange",
+		"Gear", "ModuleTempMax", "RatedRange",
 		"TpmsPressureFl", "Version", "DetailedChargeState",
 	} {
 		if !need[s] {
 			t.Fatalf("ledger fields missing %s", s)
+		}
+	}
+	if need["HvacPower"] {
+		t.Fatal("HvacPower is an on/off state, not measured watts")
+	}
+}
+
+func TestHvacStateCannotBecomeAccessoryPower(t *testing.T) {
+	at := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	for _, state := range []signal.SignalValue{true, "On", 1.0} {
+		row := signal.TimelineRow{
+			Timestamp: at,
+			Fields: map[string]signal.SignalValue{
+				"hvac_power_w": state,
+			},
+			ObservedAt: map[string]time.Time{"hvac_power_w": at},
+		}
+		s := samplesFromTimeline([]signal.TimelineRow{row})[0]
+		if s.HvacPowerW != nil {
+			t.Fatalf("HVAC state %v became a watt measurement: %v", state, *s.HvacPowerW)
 		}
 	}
 }

@@ -1,4 +1,14 @@
 {
+  "explore": {
+    "subtitle": {
+      "category": "{{matches}} features in the selected category"
+    },
+    "searchLabel": "Filter features",
+    "searchPlaceholder": "Filter features by name, section, or description (press / to focus)",
+    "sectionsAriaLabel": "Filter features by category",
+    "all": "All",
+    "showing": "{{count}} of {{total}} features"
+  },
   "teslaUsage": {
     "observedEvents": "observed events",
     "pageTitle": "Tesla API usage",
@@ -463,6 +473,19 @@
       "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
     },
     "systemStatus": {
+      "aiSpend": {
+        "title": "Helix spend watch",
+        "today": "Audited today (UTC): {{amount}}",
+        "baseline": "Prior 7-day daily average: {{amount}}",
+        "insufficient": "Fewer than 3 active days in the prior week; there is not enough history for a pace comparison.",
+        "quiet": "No audited AI spend recorded today.",
+        "projection": "At the current pace: approximately {{amount}} by UTC midnight.",
+        "unusual": "Spend is pacing at least twice the prior-week daily average. This is an estimate, not a billing alert.",
+        "newPaid": "Paid AI usage appeared today after a week of zero recorded spend. Check the contributing provider and model.",
+        "capRisk": "At this pace you may reach the global daily cap ({{amount}}) before UTC midnight.",
+        "driver": "Largest observed contributor: {{feature}} via {{provider}} / {{model}} ({{amount}} today; {{baseline}} prior daily average).",
+        "caveat": "Based on recorded AI calls only. Delayed or missing audit records can undercount; projections assume today’s pace continues."
+      },
       "maintenance": {
         "readOnly": "Maintenance controls are read-only"
       }
@@ -1526,21 +1549,16 @@
   },
   "driveCalendar": {
     "title": "Drive Calendar",
-    "subtitle": "A year of driving at a glance, with streaks",
-    "yearSubtitle": "Driving activity across {{year}}",
-    "rolling": "Last 52 weeks",
-    "previousYear": "Previous year",
-    "nextYear": "Next year",
-    "jumpToYear": "Jump to year",
+    "subtitle": "Driving activity and streaks in the selected period",
     "invalidYear": "Choose a year from 1900 through {{year}}.",
+    "openCalendar": "Open Drive Calendar",
     "kpis": "Drive calendar summary metrics",
     "activity": "Driving activity",
     "insights": "Driving patterns and highlights",
     "activeDays": "Active Days",
-    "inYear": "in the last 52 weeks",
-    "inSelectedYear": "in {{year}}",
+    "inRange": "in the selected period",
     "currentStreak": "Current Streak",
-    "yearEndStreak": "Year-end Streak",
+    "rangeEndStreak": "End-of-period Streak",
     "days": "{{count}} days",
     "longest": "longest: {{count}}",
     "distance": "Distance",
@@ -1548,14 +1566,12 @@
     "busiestDay": "Busiest Day",
     "less": "Less",
     "more": "More",
-    "noDrives": "No drives in the last year yet.",
-    "noDrivesYear": "No drives recorded in {{year}}.",
+    "noDrives": "No drives in the selected period.",
     "browseDrives": "Browse drives",
     "heatmap": {
-      "title": "Last 52 Weeks",
+      "title": "Selected period",
       "activeSummary": "{{active}} active days · {{drives}} drives",
-      "aria": "Daily driving heatmap for the last 52 weeks; {{active}} active days and a {{streak}} day current streak",
-      "ariaYear": "Daily driving heatmap for {{year}}; {{active}} active days and a {{streak}} day year-end streak",
+      "aria": "Daily driving heatmap for the selected period; {{active}} active days and a {{streak}} day end-of-period streak",
       "cell": "{{date}} · {{distance}} · {{count}} drives",
       "legend": "Driving intensity from less to more"
     },
@@ -4549,6 +4565,41 @@
     }
   },
   "nav": {
+    "deck": {
+      "groups": "Sections and shortcuts",
+      "search": "Search",
+      "suggested": "Suggested",
+      "saved": "Saved",
+      "allPages": "All pages",
+      "suggestedCount_one": "{{count}} suggestion",
+      "suggestedCount_other": "{{count}} suggestions",
+      "favoritesCount_one": "{{count}} pinned page",
+      "favoritesCount_other": "{{count}} pinned pages",
+      "pageCount_one": "{{count}} page",
+      "pageCount_other": "{{count}} pages",
+      "alerts": "Alerts",
+      "alertCount_one": "{{count}} unread alert",
+      "alertCount_other": "{{count}} unread alerts",
+      "vehicles": "Cars",
+      "vehicleCount_one": "{{count}} vehicle",
+      "vehicleCount_other": "{{count}} vehicles",
+      "display": "Display",
+      "expand": "Expand sidebar",
+      "collapse": "Collapse sidebar",
+      "collapseShort": "Collapse",
+      "backToRail": "Back to sections",
+      "close": "Close panel",
+      "collapsePanel": "Collapse secondary navigation",
+      "expandPanel": "Expand secondary navigation",
+      "expandToSearch": "Expand to search pages",
+      "expandAllGroups": "Expand all groups",
+      "collapseAllGroups": "Collapse all groups",
+      "searchHint": "Type to search all pages. Keyword shortcuts like “soh” work too.",
+      "allCaughtUp": "All caught up — nothing needs you right now.",
+      "now": "Now",
+      "upNext": "Up next",
+      "noFavorites": "Pin pages from any row and they will live here."
+    },
     "collections": {
       "toggle": "{{group}}, {{count}} views",
       "timeline": "Vehicle History",
@@ -4588,6 +4639,7 @@
       "telemetry": "Telemetry Troubleshooting",
       "signalAnalysis": "Signal Analysis",
       "vehicle": "Vehicle Diagnostics",
+      "vehicleCost": "Vehicle Costs",
       "sections": "{{group}} sections"
     },
     "reportGroups": {
@@ -5689,6 +5741,7 @@
     "fleetPosture": {
       "eyebrow": "Operational brief",
       "title": "Fleet posture",
+      "help": "Verified live-state coverage and evidence age across your fleet.",
       "unnamedVehicle": "Selected vehicle",
       "activeScope": "Active vehicle scope",
       "openVehicle": "Open vehicle",
@@ -5862,6 +5915,7 @@
     "redo": "Redo",
     "autoArrange": "Auto Arrange",
     "templates": "Templates",
+    "layoutPacks": "Layout packs",
     "reset": "Reset",
     "kiosk": "Kiosk",
     "customize": "Customize",
@@ -8195,6 +8249,24 @@
         "errorMany": "{{total}} errors",
         "summaryOne": "1 call · {{errors}}",
         "summary": "{{calls}} calls · {{errors}}"
+      },
+      "featureSpend": {
+        "title": "Spend by feature",
+        "window": "Last 7 days · UTC",
+        "globalCap": "Audited estimated costs. The daily cap applies to all Helix calls combined, not to individual features.",
+        "noCap": "Audited estimated costs. No daily spend cap is set. Feature toggles control access, not individual spending limits.",
+        "off": "Save an enabled Helix mode to inspect usage. No usage is requested while Helix is off.",
+        "loading": "Loading feature spend…",
+        "error": "Feature spend could not be loaded.",
+        "retry": "Retry",
+        "stale": "Showing retained spend; the latest refresh failed.",
+        "empty": "No audited Helix calls in the last 7 days.",
+        "attribution": "Provider and model identify the latest call found in the 50 most recent calls, not a breakdown of the 7-day total.",
+        "recentUnavailable": "Recent call attribution is unavailable or out of date. Spend totals remain available.",
+        "callsTokens": "{{calls}} calls · {{input}} in / {{output}} out · last call {{last}} UTC",
+        "sample": "Recent call: {{provider}} / {{model}}",
+        "sampleLoading": "Loading recent call attribution…",
+        "noSample": "No recent provider/model sample for this feature."
       }
     }
   },
@@ -9390,7 +9462,7 @@
   "apiLogs": {
     "title": "API Logs",
     "subtitle": "Record of all API calls with request/response details",
-    "statsScope": "API call totals are all-time across services; the date and filters below apply only to the request list.",
+    "statsScope": "API call totals and service counts use the View settings range. Service, method, status, and endpoint filters apply only to the request list.",
     "errorDiagnostics": "Error diagnostics",
     "backendErrors": "Backend runtime errors",
     "backendScope": "Since the current API process started; independent of API call filters.",
@@ -10631,7 +10703,68 @@
     "manageVehicles": "Manage vehicles"
   },
   "fleetApi": {
-    "subtitle": "Control Tesla Fleet API polling and endpoint toggles",
+    "subtitle": "Choose which Tesla Fleet API routes are available and which can be polled automatically",
+    "status": {
+      "polling": "Polling enabled",
+      "onDemand": "On demand only"
+    },
+    "kpis": {
+      "apiStatusHint": "Automatic Fleet API polling",
+      "endpointsHint": "{{count}} selected for polling"
+    },
+    "polling": {
+      "masterDesc": "Off by default. Turning this off stops scheduled Fleet API reads, not manual requests or token refresh.",
+      "activeNote": "Only enabled routes selected for auto-polling participate. On-demand routes and commands remain independent.",
+      "suspendedNote": "Automatic Fleet API polling is off. Enabled endpoints still work on demand; token refresh continues.",
+      "emergencyNote": "API actions were suspended previously; supported live requests and commands are blocked. Token refresh continues.",
+      "resumeActions": "Resume API actions"
+    },
+    "controls": {
+      "enabled": "Access",
+      "enable": "Enable",
+      "autoPoll": "Auto-poll",
+      "poll": "Auto-poll",
+      "onDemandOnly": "Not scheduled",
+      "subtitle": "Allow manual requests per endpoint, then opt supported reads into background refresh. Routes without a scheduled job stay manual only.",
+      "bulkTitle": "All routes",
+      "bulkAccess": "Access all",
+      "bulkAuto": "Auto-poll eligible routes",
+      "bulkHint": "Auto-poll selects only enabled routes with a scheduled job.",
+      "pausedHint": "Turn on Tesla API Polling to change auto-poll selections. Existing selections are retained while paused.",
+      "search": "Search API routes",
+      "accessSummary": "{{count}} routes available on demand",
+      "autoSummary": "{{count}} selected for auto-poll",
+      "scheduleRunning": "Schedule running",
+      "schedulePaused": "Schedule paused",
+      "categoryFilter": "Route groups",
+      "groupBy": "Group by",
+      "byCategory": "Category",
+      "byMethod": "HTTP method",
+      "sortBy": "Sort routes by",
+      "sortName": "Operation",
+      "sortPath": "API path",
+      "sortMethod": "HTTP method",
+      "sortAccess": "Access state",
+      "sortAuto": "Auto-poll state",
+      "sortAscending": "Sort ascending",
+      "sortDescending": "Sort descending",
+      "allRoutes": "All routes",
+      "groupCount": "{{count}} routes",
+      "empty": "Endpoint catalog unavailable",
+      "outdatedRuntime": "This API server does not provide the Fleet route catalog. Update and restart the API service to manage routes; no settings can be changed here until it is available.",
+      "retry": "Retry loading routes",
+      "clearSearch": "Clear search",
+      "noMatches": "No API routes match that search."
+    },
+    "categories": {
+      "vehicledata": "Vehicle data",
+      "vehiclecommands": "Vehicle commands",
+      "vehicleaccess": "Vehicle access",
+      "fleettelemetry": "Fleet telemetry",
+      "account": "Account",
+      "chargingandenergy": "Charging and energy",
+      "vehicleservices": "Vehicle services"
+    },
     "configured": {
       "emptyTitle": "Endpoint metadata unavailable",
       "emptyMessage": "This runtime did not publish any configured endpoint URLs.",
@@ -11599,6 +11732,8 @@
       "title": "Quick Start Templates",
       "hint": "One-click install",
       "actionCount": "{{count}} actions",
+      "actionOne": "1 action",
+      "details": "Details for {{name}}",
       "install": "Install",
       "empty": "No preset templates available",
       "emptyCategory": "No templates match your filters",
@@ -13511,9 +13646,9 @@
   },
   "templates": {
     "widgetCount": "{{count}} widgets",
-    "apply": "Use This Template",
+    "apply": "Install as new dashboard",
     "detail": "Template Preview",
-    "title": "Dashboard Templates",
+    "title": "Layout packs",
     "blank": "Blank Dashboard"
   },
   "hero": {
@@ -14798,6 +14933,25 @@
     "colSignal": "Signal"
   },
   "driveDetail": {
+    "road": {
+      "title": "Possible road-surface anomalies",
+      "subtitle": "Historical telemetry review — not confirmed potholes",
+      "hide": "Hide analysis",
+      "review": "Review road surface",
+      "caveat": "Tesla does not report vertical impact or suspension motion. A candidate may be a road seam, speed bump, or maneuver; no candidate does not prove the road was smooth.",
+      "insufficientTitle": "Not enough synchronized samples",
+      "insufficient": "This drive did not record sufficiently close acceleration, speed, and GPS observations to screen for short jolts. Missing evidence is not a smooth-road result.",
+      "otherDrive": "Review other drives",
+      "noneTitle": "No candidates in recorded samples",
+      "none": "No short jolt matched the screening criteria in the usable telemetry. Events between reports may have been missed.",
+      "count": "{{count}} possible jolts in this drive",
+      "samples": "{{count}} acceleration observations screened",
+      "map": "Possible road-anomaly locations",
+      "possibleJolt": "Possible jolt",
+      "speed": "Recorded speed",
+      "position": "Approximate location",
+      "failed": "Road-surface analysis failed to render"
+    },
     "vsAverage": "vs your average",
     "vsRecord": "vs your record",
     "minutesShort": "min",
@@ -14988,6 +15142,9 @@
       "title": "Energy ledger",
       "regen": "Regen",
       "friction": "Friction brake",
+      "massMissing": "Vehicle mass is not configured. Mass-dependent estimates require TESLASYNC_VEHICLE_MASS_KG, which applies to every vehicle in this installation.",
+      "elevationMissing": "Grade and friction-brake estimates require recorded elevation; this telemetry source does not provide it.",
+      "hvacMissing": "Tesla reports HVAC on/off state, not power in watts. Accessory energy and the complete unexplained residual cannot be calculated from that state.",
       "openFull": "Open the full physics ledger"
     }
   },
@@ -16185,7 +16342,9 @@
       "deliveries": "Channel deliveries",
       "fanout": "Linked deliveries per trigger",
       "uncorrelated": "Deliveries without a linked trigger",
+      "outboundCalls": "Outbound HTTP calls",
       "countNote": "Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.",
+      "httpScope": "Counts use the View settings window. Outbound HTTP calls include retries and failures; they are not channel deliveries. Compare with Notifications under API Logs’ By Service for the same window.",
       "timeline": "Daily activity",
       "day": "Day",
       "period": "Period",
@@ -16245,7 +16404,8 @@
       "nextPage": "Next",
       "pageNumber": "Page {{page}}",
       "summary": {
-        "total": "Recent notifications"
+        "total": "Recent notifications",
+        "recentScope": "Latest 50 active entries · all time"
       },
       "selectAll": "Select all visible",
       "countLabel": "{{count}} notifications",
@@ -16581,7 +16741,7 @@
         "categoryFilter": "Filter templates by category",
         "allCategory": "All",
         "showing": "{{count}} of {{total}} templates",
-        "use": "Use",
+        "use": "Use template",
         "noMatchesTitle": "No templates found",
         "noMatches": "No templates match your search"
       },
@@ -17652,7 +17812,7 @@
     "viewHistory": "View history",
     "selectVehicle": "Select vehicle",
     "centerRegion": "Selected vehicle command center",
-    "reachableCount": "{{reachable}}/{{total}} recently reachable",
+    "lastKnownActiveCount": "{{active}}/{{total}} last reported active",
     "statesError": "Failed to load vehicle states",
     "noVehicles": "No vehicles found",
     "connectFleet": "Connect your Tesla account and sync your fleet to start sending commands.",
@@ -17716,6 +17876,9 @@
       "selectedVehicle": "Selected vehicle",
       "vehicleState": "Vehicle state",
       "loadingState": "Loading vehicle state",
+      "lastKnownStatus": "Last known: {{status}}",
+      "lastSignal": "Last signal",
+      "noSignalTime": "No verified signal time",
       "battery": "Battery",
       "range": "Estimated range",
       "cabin": "Cabin",
@@ -17744,7 +17907,9 @@
       "locked": "Locked",
       "unlocked": "Unlocked",
       "asleepHelp": "The vehicle is asleep. Commands remain selectable; waking it first can improve delivery speed.",
-      "offlineHelp": "The vehicle reports offline. Commands remain selectable, but delivery may fail until connectivity returns."
+      "offlineHelp": "The vehicle reports offline. Commands remain selectable, but delivery may fail until connectivity returns.",
+      "lastKnownAsleep": "Last reported asleep. Commands remain selectable; waking it first may improve delivery speed.",
+      "lastKnownOffline": "Last reported offline. Commands remain selectable, but delivery may fail until connectivity returns."
     },
     "freshness": {
       "title": "Telemetry may be outdated",

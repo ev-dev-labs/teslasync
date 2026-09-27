@@ -16,7 +16,7 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import {
   ComposedChart, LineChart, Line, Area, XAxis, YAxis, Tooltip, ReferenceLine,
   ResponsiveContainer, ChartGradient, ChartTooltip, ChartLegend, chartGrid, axisTick,
@@ -246,7 +246,6 @@ export default function SegmentsPage() {
     <PageContainer
       title={t('segments.title', 'Ghost Racing')}
       subtitle={t('segments.subtitle', 'Race your most-repeated routes against your own personal best')}
-      actions={<VehicleSelect />}
       query={segmentsQuery}
     >
       {/* ── 1. Detected segments ─────────────────────────────────────────── */}

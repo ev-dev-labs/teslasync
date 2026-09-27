@@ -37,7 +37,7 @@ import {
 import { MetricCard, TimeStamp } from '@/components/data-display';
 import { EmptyState, AlertBanner, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 import {
   MapContainer,
   Marker,
@@ -256,7 +256,6 @@ export default function GuardModePage() {
     <PageContainer
       title={t('guard.title', 'Guard Mode')}
       subtitle={t('guard.subtitle', 'Anti-theft monitoring and emergency response')}
-      actions={<VehicleSelect />}
       query={configQuery}
     >
       {/* Triggered alert banner */}

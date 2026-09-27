@@ -5,7 +5,7 @@ import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useClipCatalog } from '../hooks/useClipCatalog';
@@ -51,7 +51,6 @@ export default function DashcamIntelligencePage() {
         'Local-only clip catalog, privacy redaction, and telemetry-synchronized incident reconstruction. Nothing leaves this browser.',
       )}
       loading={clipsQuery.isLoading}
-      actions={<VehicleSelect withIcon />}
     >
       <FadeIn>
         <div className="space-y-4">

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Select } from '@/components/ui';
@@ -141,7 +141,6 @@ export default function ChargeAdvisorPage() {
       )}
       actions={(
         <div className="flex flex-wrap items-end gap-2">
-          <VehicleSelect />
           <Select
             id="charge-advisor-reserve-floor"
             label={t('chargeAdvisor.reserveLabel', 'Reserve floor')}

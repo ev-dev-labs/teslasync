@@ -319,14 +319,14 @@ describe('PreconditioningEffectivenessPage', () => {
     expect(h.driveHook).toHaveBeenLastCalledWith('7', 1000);
   });
 
-  it('retains every shell and both controls without a selected vehicle', () => {
+  it('retains every shell without a selected vehicle or redundant control', () => {
     h.vehicleId = null;
     h.climateQuery = query(h.climateRefetch, { isSuccess: false });
     h.driveQuery = query(h.driveRefetch, { isSuccess: false });
     renderPage();
 
     expectEverySection();
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh evidence' })).toBeDisabled();
     expect(h.climateHook).toHaveBeenLastCalledWith('');
     expect(h.driveHook).toHaveBeenLastCalledWith(undefined, 1000);

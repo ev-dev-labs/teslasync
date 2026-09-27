@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDrives, useRegenEfficiency } from '@/api/hooks/useDriving';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -35,14 +35,7 @@ export default function RegenEfficiencyPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const selectedTimeZone = useTimezone('vehicle');
-  const {
-    start,
-    end,
-    startInstant,
-    endInstantExclusive,
-    timezone,
-    setRange,
-  } = useRangeState({
+  const { startInstant, endInstantExclusive, timezone } = useRangeState({
     persistKey: 'regen-efficiency.range',
     defaultPresetId: 'all',
     timezone: selectedTimeZone,
@@ -89,17 +82,6 @@ export default function RegenEfficiencyPage() {
         'Descriptive energy-recovery evidence for the selected date window',
       )}
       query={[aggregateQuery, drivesQuery]}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="regen-efficiency-range"
-          />
-        </div>
-      }
     >
       <FadeIn>
         <RegenKpiBand

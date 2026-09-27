@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -36,13 +36,7 @@ export default function ShareCardPage() {
   const { vehicleId } = useSelectedVehicle();
   const timezone = useTimezone('vehicle');
   const display = useShareCardDisplay();
-  const {
-    start,
-    end,
-    startInstant,
-    endInstantExclusive,
-    setRange,
-  } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'share-card.range',
     timezone,
   });
@@ -88,14 +82,6 @@ export default function ShareCardPage() {
       copyLink
       actions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            presetIds={['30d', '90d', '1y', 'all']}
-            align="end"
-            triggerTestId="share-card-range"
-          />
         </div>
       )}
     >

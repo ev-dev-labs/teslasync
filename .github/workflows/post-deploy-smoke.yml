@@ -1,4 +1,4 @@
-name: Post-deploy smoke
+name: Post-Deploy Smoke
 
 # OPS-01 — Authenticated post-deploy smoke gate.
 #

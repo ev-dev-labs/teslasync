@@ -15,7 +15,7 @@
  *      derivations (with the genuine `convertSpeedFromSI` SI→display
  *      conversion running for both km/h and mph/mi), plus the
  *      loading / error(+retry) / empty postures for every data source and
- *      the range-picker → `setRange` wiring.
+ *      header-owned range query wiring without a duplicate picker.
  *
  * Strategy (mirrors ./DrivetrainHealthPage.test.tsx):
  *   - The two data hooks + the vehicle selector + useUnits / useRangeState
@@ -27,8 +27,6 @@
  *     a measured container jsdom can't provide) don't render; the BarChart
  *     and Scatter stubs capture the exact `data` the page computed, and the
  *     LinearGauge stub prints its value+unit for assertions.
- *   - The two toolbar controls are stubbed to plain elements via
- *     React.createElement (keeps jsx-a11y off the mock markup).
  *   - react-i18next resolves the developer fallback string, interpolating
  *     `{{vars}}`.
  *
@@ -144,29 +142,6 @@ vi.mock('@/api/hooks/useDriving', async () => {
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => unitsMock() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => selectedVehicleMock() }));
 vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => rangeStateMock() }));
-
-// Stub the toolbar controls. RangePicker forwards a fixed range on click so the
-// setRange wiring can be asserted. createElement (not JSX) keeps jsx-a11y off.
-vi.mock('@/components/forms', async () => {
-  const React = await vi.importActual<typeof import('react')>('react');
-  return {
-    VehicleSelect: function VehicleSelectStub() {
-      return React.createElement('div', { 'data-testid': 'vehicle-select' });
-    },
-    RangePicker: function RangePickerStub(props: {
-      onChange?: (r: { start: string; end: string }) => void;
-    }) {
-      return React.createElement(
-        'button',
-        {
-          'data-testid': 'range-picker',
-          onClick: () => props.onChange?.({ start: '2024-02-01', end: '2024-02-28' }),
-        },
-        'range',
-      );
-    },
-  };
-});
 
 // Stub the chart primitives: recharts needs a measured container jsdom can't
 // give it. BarChart + Scatter capture the exact derived `data`; LinearGauge
@@ -475,10 +450,11 @@ describe('SpeedProfilePage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Speed Profile' })).toBeInTheDocument();
   });
 
-  it('wires the range picker onChange straight to setRange', () => {
+  it('sends the header-owned range to the profile query without a local picker', () => {
+    rangeStateMock.mockReturnValue({ start: '2024-02-01', end: '2024-02-28', setRange: setRangeMock });
     renderPage();
-    fireEvent.click(screen.getByTestId('range-picker'));
-    expect(setRangeMock).toHaveBeenCalledTimes(1);
-    expect(setRangeMock).toHaveBeenCalledWith({ start: '2024-02-01', end: '2024-02-28' });
+    expect(speedProfileMock).toHaveBeenCalledWith('42', '2024-02-01', '2024-02-28');
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
+    expect(setRangeMock).not.toHaveBeenCalled();
   });
 });

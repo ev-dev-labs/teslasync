@@ -49,6 +49,21 @@ export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefin
             ) : null}
           </div>
           <DriveLedgerPanel ledger={ledger.drive} />
+          {ledger.drive?.missing_signals?.includes('mass_kg') ? (
+            <Text as="p" size="sm" color="secondary">
+              {t('driveDetail.ledger.massMissing', 'Vehicle mass is not configured. Mass-dependent estimates require TESLASYNC_VEHICLE_MASS_KG, which applies to every vehicle in this installation.')}
+            </Text>
+          ) : null}
+          {ledger.drive?.grade_wh?.unknown ? (
+            <Text as="p" size="sm" color="secondary">
+              {t('driveDetail.ledger.elevationMissing', 'Grade and friction-brake estimates require recorded elevation; this telemetry source does not provide it.')}
+            </Text>
+          ) : null}
+          {ledger.drive?.accessory_wh?.unknown ? (
+            <Text as="p" size="sm" color="secondary">
+              {t('driveDetail.ledger.hvacMissing', 'Tesla reports HVAC on/off state, not power in watts. Accessory energy and the complete unexplained residual cannot be calculated from that state.')}
+            </Text>
+          ) : null}
           <Text as="p" size="sm" color="secondary">
             <Link
               to="/tesla-physics/ledger"

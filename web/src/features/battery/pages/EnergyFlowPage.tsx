@@ -12,7 +12,7 @@ import {
   GlassPanel, Badge, DataTable, useSortToggle, type Column,
   PanelTitle, Text, Caption, Label, MetricValue,
 } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import {
   LinearGauge, ChartTooltip, ChartGradient, EmbeddedChart,
@@ -37,7 +37,7 @@ import type { DailyEnergy, EnergyFlowData } from '@/types/energy';
 
 /* ───────── Constants ───────── */
 
-const PRESET_IDS = ['today', '7d', '30d', '90d', 'mtd', 'ytd'];
+
 
 /** Universal "value unknown" placeholder (shared across the app). */
 const DASH = '—';
@@ -312,7 +312,7 @@ export default function EnergyFlowPage() {
   const { formatDistance, formatEnergy, unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'energy-flow.range',
     defaultPresetId: '7d',
   });
@@ -467,19 +467,6 @@ export default function EnergyFlowPage() {
 
   /* ───── Vehicle & Range Controls ───── */
 
-  const actions = (
-    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <VehicleSelect />
-      <RangePicker
-        value={{ start, end }}
-        onChange={(r) => setRange(r)}
-        presetIds={PRESET_IDS}
-        presetsOnly
-        align="end"
-        triggerTestId="energy-flow-range"
-      />
-    </div>
-  );
 
   const noVehicleMsg = t('energyFlow.noVehicle', 'Select a vehicle to view its energy flow.');
 
@@ -489,7 +476,6 @@ export default function EnergyFlowPage() {
     <PageContainer
       title={t('energyFlow.title', 'Energy Flow')}
       subtitle={t('energyFlow.subtitle', 'Power distribution and energy analysis')}
-      actions={actions}
       query={[statsQuery, flowQuery]}
       dataSources={dataSources}
     >

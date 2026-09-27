@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
 import { AITCONarration } from '@/components/ai/AITCONarration';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -77,7 +77,6 @@ export default function TrueCostPage() {
         'Evidence-backed recorded charging versus modeled gasoline operating cost',
       )}
       query={vehicleId != null ? query : undefined}
-      actions={<VehicleSelect />}
     >
       <div data-testid="tco-ai-slot">
         <AITCONarration {...narrationProps} />

@@ -179,6 +179,18 @@ describe('AlertStudioPage navigation protection', () => {
     expect(screen.getByText('No templates found')).toBeInTheDocument();
   });
 
+  it('offers a full-width template button and applies its preset', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Templates' }));
+    const useTemplate = screen.getByRole('button', { name: 'Use template Battery Low (< 20%)' });
+    expect(useTemplate).toHaveClass('mt-auto', 'w-full');
+    expect(useTemplate.closest('[data-print-card]')).toHaveClass('h-full');
+
+    fireEvent.click(useTemplate);
+    await waitFor(() => expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Battery Low (< 20%)'));
+    expect(screen.queryByRole('button', { name: 'Use template Battery Low (< 20%)' })).not.toBeInTheDocument();
+  });
+
   describe('Shared AlertRuleEditor controlled edit mode', () => {
     beforeEach(() => {
       RULES = [];

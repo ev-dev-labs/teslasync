@@ -29,12 +29,29 @@ describe('sidebar breadcrumbs', () => {
       .toEqual([{ label: 'Commands' }, { label: 'Send Commands', href: undefined }])
   })
 
-  it('shows section, collection, then page when the collection is a real rung', () => {
+  it('skips the collection rung: section then page, mirroring the flat sidebar', () => {
     const withOtherReports = sections.map(section => section.title === 'Reports'
       ? { ...section, items: [...section.items, { to: '/share-card', label: 'Share Card', labelKey: 'share' }] }
       : section)
     expect(sidebarBreadcrumbs('/analytics', [{ label: 'Statistics', href: '/statistics' }, { label: 'Analytics' }], withOtherReports, collections, translate))
-      .toEqual([{ label: 'Reports' }, { label: 'Fleet Insights' }, { label: 'Analytics', href: undefined }])
+      .toEqual([{ label: 'Reports' }, { label: 'Analytics', href: undefined }])
+  })
+
+  it('flattens collection siblings to section then page (Places > Geofences)', () => {
+    const vehicleSections: BreadcrumbSection[] = [
+      { title: 'Vehicles', items: [
+        { to: '/locations', label: 'Saved Locations', labelKey: 'locations' },
+        { to: '/geofences', label: 'Geofences', labelKey: 'geofences' },
+      ] },
+    ]
+    const places: SectionGroup[] = [
+      { primary: '/locations', label: 'Places', labelKey: 'places', pages: [
+        { to: '/locations', label: 'Saved Locations', labelKey: 'locations' },
+        { to: '/geofences', label: 'Geofences', labelKey: 'geofences' },
+      ] },
+    ]
+    expect(sidebarBreadcrumbs('/geofences', [{ label: 'Geofences' }], vehicleSections, places, translate))
+      .toEqual([{ label: 'Vehicles' }, { label: 'Geofences', href: undefined }])
   })
 
   it('preserves detail-page overrides below the actual sidebar path', () => {

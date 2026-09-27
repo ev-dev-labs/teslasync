@@ -365,14 +365,15 @@ type PhysicsConfig struct {
 }
 
 type TeslaConfig struct {
-	ClientID           string
-	ClientSecret       string
-	BaseURL            string
-	AuthURL            string
-	RedirectURI        string
-	CommandProxyURL    string // Vehicle Command Proxy URL for signed commands
-	CommandProxyCAFile string // PEM trust anchor for a private command proxy
-	Timeout            time.Duration
+	ClientID                  string
+	ClientSecret              string
+	BaseURL                   string
+	AuthURL                   string
+	RedirectURI               string
+	CommandProxyURL           string // Vehicle Command Proxy URL for signed commands
+	CommandProxyCAFile        string // PEM trust anchor for a private command proxy
+	CommandProxyTLSServerName string // Certificate DNS name when the proxy is reached by an internal service name
+	Timeout                   time.Duration
 	// DailyBudgetUSD is a conservative UTC-daily estimated Fleet API spend
 	// ceiling shared across API and worker processes. Zero disables the guard.
 	DailyBudgetUSD float64
@@ -484,16 +485,17 @@ func Load() (*Config, error) {
 		},
 
 		Tesla: TeslaConfig{
-			ClientID:           envStr("TESLA_CLIENT_ID", ""),
-			ClientSecret:       envStr("TESLA_CLIENT_SECRET", ""),
-			BaseURL:            envStr("TESLA_API_BASE_URL", "https://fleet-api.prd.na.vn.cloud.tesla.com"),
-			AuthURL:            envStr("TESLA_AUTH_URL", "https://auth.tesla.com"),
-			RedirectURI:        envStr("TESLA_REDIRECT_URI", "http://localhost:4000/api/v1/auth/callback"),
-			CommandProxyURL:    envStr("TESLA_COMMAND_PROXY_URL", ""),
-			CommandProxyCAFile: envStr("TESLA_COMMAND_PROXY_CA_FILE", ""),
-			Timeout:            envDuration("TESLA_TIMEOUT", 30*time.Second),
-			DailyBudgetUSD:     envFloat64("TESLA_API_DAILY_BUDGET_USD", 0.30),
-			CommandReserveUSD:  envFloat64("TESLA_API_COMMAND_RESERVE_USD", 0.05),
+			ClientID:                  envStr("TESLA_CLIENT_ID", ""),
+			ClientSecret:              envStr("TESLA_CLIENT_SECRET", ""),
+			BaseURL:                   envStr("TESLA_API_BASE_URL", "https://fleet-api.prd.na.vn.cloud.tesla.com"),
+			AuthURL:                   envStr("TESLA_AUTH_URL", "https://auth.tesla.com"),
+			RedirectURI:               envStr("TESLA_REDIRECT_URI", "http://localhost:4000/api/v1/auth/callback"),
+			CommandProxyURL:           envStr("TESLA_COMMAND_PROXY_URL", ""),
+			CommandProxyCAFile:        envStr("TESLA_COMMAND_PROXY_CA_FILE", ""),
+			CommandProxyTLSServerName: envStr("TESLA_COMMAND_PROXY_TLS_SERVER_NAME", ""),
+			Timeout:                   envDuration("TESLA_TIMEOUT", 30*time.Second),
+			DailyBudgetUSD:            envFloat64("TESLA_API_DAILY_BUDGET_USD", 0.30),
+			CommandReserveUSD:         envFloat64("TESLA_API_COMMAND_RESERVE_USD", 0.05),
 		},
 
 		MQTT: MQTTConfig{

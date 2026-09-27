@@ -5,6 +5,19 @@
       "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
     },
     "systemStatus": {
+      "aiSpend": {
+        "title": "Helix spend watch",
+        "today": "Audited today (UTC): {{amount}}",
+        "baseline": "Prior 7-day daily average: {{amount}}",
+        "insufficient": "Fewer than 3 active days in the prior week; there is not enough history for a pace comparison.",
+        "quiet": "No audited AI spend recorded today.",
+        "projection": "At the current pace: approximately {{amount}} by UTC midnight.",
+        "unusual": "Spend is pacing at least twice the prior-week daily average. This is an estimate, not a billing alert.",
+        "newPaid": "Paid AI usage appeared today after a week of zero recorded spend. Check the contributing provider and model.",
+        "capRisk": "At this pace you may reach the global daily cap ({{amount}}) before UTC midnight.",
+        "driver": "Largest observed contributor: {{feature}} via {{provider}} / {{model}} ({{amount}} today; {{baseline}} prior daily average).",
+        "caveat": "Based on recorded AI calls only. Delayed or missing audit records can undercount; projections assume today’s pace continues."
+      },
       "maintenance": {
         "readOnly": "Maintenance controls are read-only"
       }

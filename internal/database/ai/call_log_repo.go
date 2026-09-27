@@ -71,6 +71,49 @@ type AICallFeatureRow struct {
 	LastCallAt     time.Time `json:"last_call_at" db:"last_call_at"`
 }
 
+// AICallDailySpendRow attributes observed spend to a UTC day, feature, and
+// actual provider/model. Only audited calls appear; days without calls are
+// deliberately absent rather than fabricated measurements.
+type AICallDailySpendRow struct {
+	Day            time.Time `json:"day"`
+	FeatureID      string    `json:"feature_id"`
+	Provider       string    `json:"provider"`
+	Model          string    `json:"model"`
+	Calls          int64     `json:"call_count"`
+	CostMicroCents int64     `json:"cost_micro_cents"`
+}
+
+// DailySpend reads at most eight UTC days of the calling subject's audited
+// usage. Aggregating in SQL bounds the response by the number of feature/model
+// combinations, not by the number of calls.
+func (r *AICallLogRepo) DailySpend(ctx context.Context, subject string, since, until time.Time) ([]AICallDailySpendRow, error) {
+	const q = `
+		SELECT (started_at AT TIME ZONE 'UTC')::date AS day, feature_id,
+		       provider, model, COUNT(*)::BIGINT,
+		       COALESCE(SUM(cost_micro_cents), 0)::BIGINT AS cost_micro_cents
+		FROM ai_call_log
+		WHERE user_subject = $1 AND started_at >= $2 AND started_at < $3
+		GROUP BY day, feature_id, provider, model
+		ORDER BY day DESC, cost_micro_cents DESC, feature_id`
+	rows, err := r.db.Pool.Query(ctx, q, subject, since.UTC(), until.UTC())
+	if err != nil {
+		return nil, fmt.Errorf("ai_call_log DailySpend: %w", err)
+	}
+	defer rows.Close()
+	out := make([]AICallDailySpendRow, 0)
+	for rows.Next() {
+		var row AICallDailySpendRow
+		if err := rows.Scan(&row.Day, &row.FeatureID, &row.Provider, &row.Model, &row.Calls, &row.CostMicroCents); err != nil {
+			return nil, fmt.Errorf("ai_call_log DailySpend scan: %w", err)
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ai_call_log DailySpend rows: %w", err)
+	}
+	return out, nil
+}
+
 // AICallRecentRow is one entry in the Recent listing: per-call detail
 // for the last N invocations. Optional fields use *string / *int64
 // so the JSON serialiser can emit null where the column is unset.
