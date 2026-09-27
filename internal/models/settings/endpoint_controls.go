@@ -6,6 +6,82 @@ import (
 	"strings"
 )
 
+// EndpointEnabled applies a per-route override before consulting legacy
+// switches. Unconfigured new routes stay available for deliberate on-demand use.
+func (pc LegacyPollingConfig) EndpointEnabled(key string) bool {
+	if value, ok := pc.FleetEndpoints[key]; ok {
+		return value
+	}
+	switch key {
+	case "vehicles.list":
+		return pc.OnDemandVehicleDiscovery
+	case "vehicles.nearby_charging_sites":
+		return pc.NearbyChargingSites
+	case "vehicles.release_notes":
+		return pc.ReleaseNotes
+	case "vehicles.recent_alerts":
+		return pc.RecentAlerts
+	case "vehicles.service_data":
+		return pc.ServiceData
+	case "vehicles.wake_up", "command.wake_up":
+		return pc.WakeUp
+	}
+	if strings.HasPrefix(key, "command.") {
+		return pc.Commands
+	}
+	if strings.HasPrefix(key, "vehicle_data.") {
+		switch strings.TrimPrefix(key, "vehicle_data.") {
+		case "charge_state":
+			return pc.OnDemandChargeState
+		case "climate_state":
+			return pc.OnDemandClimateState
+		case "drive_state":
+			return pc.OnDemandDriveState
+		case "location_data":
+			return pc.OnDemandLocationData
+		case "vehicle_state":
+			return pc.OnDemandVehicleState
+		case "vehicle_config":
+			return pc.OnDemandVehicleConfig
+		}
+	}
+	return true
+}
+
+// PollsEndpoint checks the independent participation flag for the only Fleet
+// requests the worker knows how to consume: discovery and vehicle_data.
+func (pc LegacyPollingConfig) PollsEndpoint(key string) bool {
+	if !pc.AutoPollingEnabled || !pc.EndpointEnabled(key) {
+		return false
+	}
+	return pc.AutoPreference(key)
+}
+
+// AutoPreference is independent of the master switch: the page retains
+// selected routes while polling is paused.
+func (pc LegacyPollingConfig) AutoPreference(key string) bool {
+	if value, ok := pc.AutoEndpoints[key]; ok {
+		return value
+	}
+	switch key {
+	case "vehicles.list":
+		return pc.VehicleDiscovery
+	case "vehicle_data.charge_state":
+		return pc.ChargeState
+	case "vehicle_data.climate_state":
+		return pc.ClimateState
+	case "vehicle_data.drive_state":
+		return pc.DriveState
+	case "vehicle_data.location_data":
+		return pc.LocationData
+	case "vehicle_data.vehicle_state":
+		return pc.VehicleState
+	case "vehicle_data.vehicle_config":
+		return pc.VehicleConfig
+	}
+	return false
+}
+
 // AllowsFleetOperation checks only operations represented by the endpoint
 // controls. Unrelated Fleet API operations are not controlled by these flags.
 // Automatic requests and user-triggered requests have separate switches.

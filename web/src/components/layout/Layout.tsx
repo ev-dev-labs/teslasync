@@ -7,22 +7,19 @@ import { RateLimitBanner } from '../feedback/RateLimitBanner'
 import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
 import { ImpersonationBanner } from '../feedback/ImpersonationBanner'
 import { TopProgress } from '../feedback/TopProgress'
-import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
 import { AnnouncerRegion } from '@/components/a11y'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
-import { GotoIndicator } from '../feedback/GotoIndicator'
-import { ChangelogModal } from '../feedback/ChangelogModal'
 import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
+import { TourLauncher } from '@/features/onboarding/TourLauncher'
+import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { SkipToContent } from '../feedback/SkipToContent'
 import { BrowserCompatBanner } from '../feedback/BrowserCompatBanner'
 import { TimeMachineBanner } from '../feedback/TimeMachineBanner'
 import { CookieConsentBanner } from '../feedback/CookieConsentBanner'
-import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
   TOURS,
@@ -37,18 +34,15 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
-import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
+import { BottomTabBar } from './BottomTabBar'
 import {
-  buildCompactNavTree,
   findMostSpecificNavEntry,
   isExclusiveActivePath,
   prioritizeCanonicalNavSections,
-  prioritizeCompactNavTree,
 } from './sidebar/compactNav'
-import { GroupedSectionNavigation } from './GroupedSectionNavigation'
-import { REPORT_GROUPS, labelReportPrimaries, reportPrimaryPath, reportSidebarItems } from './reportGroups'
-import { DIAGNOSTIC_GROUPS, diagnosticPrimaryPath, diagnosticSidebarItems, labelDiagnosticPrimaries } from './diagnosticGroups'
-import { useSidebarStyle } from '@/hooks/useSidebarStyle'
+import { collectionGroups, collectionPrimaryPath, collectionSidebarSections } from './sidebar/collections'
+import { suggestSidebarPages } from './sidebar/sidebarSuggest'
+import { SIDEBAR_ROUTE_ICONS } from './sidebar/sidebarIcons'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import { RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
@@ -61,18 +55,16 @@ import {
   BreadcrumbOverridesProvider,
 } from './BreadcrumbOverridesContext'
 import { VehiclePicker } from './VehiclePicker'
-import { WorkspaceHeader } from './WorkspaceHeader'
-import { WorkspaceContextControl } from './WorkspaceContextControl'
 import { CommandPaletteHost } from './CommandPaletteHost'
-import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
-import { NavSectionHeader } from './sidebar/NavSectionHeader'
+import { NotificationBellPopover } from './NotificationBellPopover'
 import { request } from '@/api/client'
-import { useAuthMode, useIsForwardAuth } from '@/api/hooks/useAuthMode'
+import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useAlerts } from '@/api/hooks/useNotifications'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
-import { useVehicles } from '@/api/hooks/useVehicles'
-import type { Alert } from '@/api/types'
+import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles'
+import { deriveVehicleStatus, type Alert } from '@/api/types'
+import { useSelectedVehicleStore } from '@/store/selectedVehicle'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
@@ -80,17 +72,16 @@ import { useFaviconBadge } from '../../hooks/useFaviconBadge'
 import { useDynamicAppIcon } from '../../hooks/useDynamicAppIcon'
 import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
-import { NotificationBellPopover } from './NotificationBellPopover'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
+import { navRouteIcons } from '@/lib/navRouteIcons';
 import { HelixMark } from '@/components/branding/HelixMark';
 import { usePresentationMode } from '@/hooks/usePresentationMode';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope';
 import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
-import { resolveNavCapabilitiesFromAuthMode } from '@/lib/navCapabilities';
+
 import {
-  MAX_PINNED_NAV_ITEMS,
   MAX_RECENT_NAV_ITEMS,
   getPinnedNavPaths,
   getRecentNavPaths,
@@ -116,19 +107,39 @@ const LazyFeedbackModal = lazy(async () => {
   return { default: module.FeedbackModal }
 })
 
+const LazyChangelogModal = lazy(async () => {
+  const module = await import('../feedback/ChangelogModal')
+  return { default: module.ChangelogModal }
+})
+
+const LazySessionExpiringModal = lazy(async () => {
+  const module = await import('../feedback/SessionExpiringModal')
+  return { default: module.SessionExpiringModal }
+})
+
+const LazyGotoIndicator = lazy(async () => {
+  const module = await import('../feedback/GotoIndicator')
+  return { default: module.GotoIndicator }
+})
+
+const WorkspaceHeader = lazy(async () => {
+  const module = await import('./WorkspaceHeader')
+  return { default: module.WorkspaceHeader }
+})
+
+const WorkspaceContextControl = lazy(async () => {
+  const module = await import('./WorkspaceContextControl')
+  return { default: module.WorkspaceContextControl }
+})
+
 const TourOverlay = lazy(async () => {
   const module = await import('../feedback/TourOverlay')
   return { default: module.TourOverlay }
 })
 
-const NotionSidebar = lazy(async () => {
-  const module = await import('./sidebar/NotionSidebar')
-  return { default: module.NotionSidebar }
-})
-
-const LinearSidebar = lazy(async () => {
-  const module = await import('./sidebar/LinearSidebar')
-  return { default: module.LinearSidebar }
+const CommandDeck = lazy(async () => {
+  const module = await import('./sidebar/CommandDeck')
+  return { default: module.CommandDeck }
 })
 
 const LazyKeyboardShortcutsModal = lazy(async () => {
@@ -136,9 +147,9 @@ const LazyKeyboardShortcutsModal = lazy(async () => {
   return { default: module.KeyboardShortcutsModal }
 })
 
-const LazyThemePicker = lazy(async () => {
-  const module = await import('@/components/ui/ThemePicker')
-  return { default: module.ThemePicker }
+const ThemeQuickSwitcherPopover = lazy(async () => {
+  const module = await import('./ThemeQuickSwitcherPopover')
+  return { default: module.ThemeQuickSwitcherPopover }
 })
 
 // Sidebar nav labels resolve per-item: every entry in `navSections` carries a
@@ -149,211 +160,9 @@ const LazyThemePicker = lazy(async () => {
 // (`nav.groups.<slug>`). Render through `navLabel(item)` / `navSectionTitle()`
 // below — never the raw fields.
 
-export const navSearchKeywords: Record<string, string[]> = {
-  '/': ['home', 'overview', 'start', 'summary'],
-  '/action-center': ['action center', 'decision inbox', 'recommendations', 'priorities', 'findings', 'snooze'],
-  '/live': ['map', 'location', 'tracking', 'realtime', 'vehicle position'],
-  '/vehicles': ['cars', 'fleet', 'garage', 'vehicle list'],
-  '/vehicle-management': ['vehicle management', 'fleet api management', 'options', 'specs', 'warranty', 'pricing', 'enterprise roles', 'payer'],
-  '/period-compare': ['comparison', 'period', 'time', 'this month vs last month', 'trends'],
-  '/weekly-digest': ['digest', 'weekly', 'summary', 'report'],
-  '/navigation': ['route', 'directions', 'map', 'nav'],
-  '/drives': ['drive history', 'sessions', 'trips'],
-  '/trips': ['trip history', 'journeys', 'routes'],
-  '/journeys': ['journey autopilot', 'plan trip', 'live trip', 'replan'],
-  '/trip-planner': ['plan trip', 'route planner', 'range planning'],
-  '/arrival-reliability': ['arrival reliability', 'travel time', 'route uncertainty', 'on time'],
-  '/destination-transitions': ['destination transitions', 'mobility graph', 'next destination'],
-  '/journey-fragmentation': ['journey fragmentation', 'trip chains', 'stopovers'],
-  '/seasonal-efficiency': ['seasonal efficiency', 'annual trend', 'energy seasonality'],
-  '/drive-score': ['score', 'driving score', 'safe driving'],
-  '/fsd': ['fsd', 'full self driving', 'supervised self-driving', 'autopilot distance', 'self driving miles', 'autonomy usage'],
-  '/speed-profile': ['speed', 'profile', 'velocity'],
-  '/driving-dynamics': ['dynamics', 'handling', 'performance', 'acceleration'],
-  '/regen-efficiency': ['regen', 'regenerative', 'braking', 'recovery'],
-  '/battery': ['battery', 'health', 'range', 'capacity', 'soh'],
-  '/battery-cells': ['cells', 'cell voltage', 'battery module'],
-  '/battery-degradation': ['degradation', 'battery loss', 'range loss', 'aging'],
-  '/cycle-stress': ['battery cycles', 'cycle stress', 'depth of discharge', 'rainflow'],
-  '/charging': ['charge', 'charging sessions', 'plug', 'charger'],
-  '/tesla-charging-history': ['supercharger', 'tesla charging', 'charge cost', 'invoice', 'receipt'],
-  '/charging-heatmap': ['charging patterns', 'heatmap', 'schedule', 'when charging'],
-  '/charging-curve': ['curve', 'charging speed', 'kw', 'power curve'],
-  '/smart-charge': ['smart charging', 'schedule', 'automation'],
-  '/charge-interruption': ['charge interruption', 'charging failure', 'interrupted session'],
-  '/charger-resilience': ['charger resilience', 'site dependency', 'charging diversity'],
-  '/charge-departure-alignment': ['charge alignment', 'departure readiness', 'next drive'],
-  '/charging-thermal-tax': ['charging thermal tax', 'battery heater', 'thermal overhead'],
-  '/powershare': ['power share', 'home backup', 'v2h'],
-  '/energy': ['energy usage', 'consumption', 'kwh'],
-  '/energy-flow': ['flow', 'energy graph', 'power path'],
-  '/power-flow': ['power', 'flow', 'dashboard'],
-  '/energy-products': ['powerwall', 'solar', 'home energy'],
-  '/efficiency': ['efficiency', 'wh per mile', 'consumption'],
-  '/route-efficiency': ['route', 'efficiency', 'trip energy'],
-  '/projected-range': ['range', 'forecast', 'projection'],
-  '/mileage': ['odometer', 'miles', 'distance'],
-  '/temperature-impact': ['temperature', 'weather', 'climate impact'],
-  '/cost-analysis': ['cost', 'money', 'expense', 'savings'],
-  '/tco': ['ownership', 'total cost', 'tco'],
-  '/digital-twin': ['digital twin', 'vehicle state', 'doors', 'windows', 'lights'],
-  '/tire-pressure': ['tires', 'tpms', 'pressure'],
-  '/climate-control': ['climate', 'temperature', 'hvac', 'ac', 'heat'],
-  '/hvac-cycling': ['hvac cycling', 'compressor duty', 'short cycling'],
-  '/comfort-consistency': ['comfort consistency', 'setpoint', 'cabin stability'],
-  '/preconditioning-effectiveness': ['preconditioning', 'cabin readiness', 'departure climate'],
-  '/tire-differential-drift': ['tire drift', 'pressure trend', 'tpms differential'],
-  '/drivetrain-health': ['motor', 'drive unit', 'health'],
-  '/vampire-drain': ['vampire', 'phantom drain', 'idle drain'],
-  '/sleep-efficiency': ['sleep', 'standby', 'idle'],
-  '/software-updates': ['software', 'firmware', 'ota'],
-  '/maintenance': ['service', 'maintenance', 'repairs'],
-  '/analytics': ['analytics', 'insights', 'charts'],
-  '/statistics': ['stats', 'numbers', 'metrics'],
-  '/signal-entropy': ['signal entropy', 'telemetry variability', 'information density'],
-  '/signal-trend': ['signal trend', 'theil sen', 'mann kendall', 'telemetry slope'],
-  '/signal-change-points': ['signal change points', 'page hinkley', 'telemetry shift'],
-  '/signal-deadband': ['signal deadband', 'noise floor', 'telemetry retention'],
-  '/signal-mutual-information': ['mutual information', 'nonlinear coupling', 'signal dependence'],
-  '/lifetime-stats': ['lifetime', 'all time', 'totals'],
-  '/vehicle-comparison': ['compare vehicles', 'fleet comparison', 'side by side', 'two vehicles'],
-  '/timeline': ['timeline', 'events', 'history'],
-  '/day-log': ['day log', 'what happened today', 'daily events', 'drive start', 'charge start'],
-  '/activity': ['activity', 'drives', 'charging', 'alerts', 'software updates', 'annotations', 'operations timeline'],
-  '/locations': ['places', 'locations', 'visited'],
-  '/commands': ['commands', 'control', 'remote'],
-  '/command-history': ['command log', 'remote history'],
-  '/automations': ['automation', 'rules', 'workflows'],
-  '/notifications': ['notifications', 'messages', 'inbox'],
-  '/notifications/inbox': ['inbox', 'notifications', 'messages'],
-  '/notifications/archived': ['archived', 'notifications'],
-  '/notifications/channels': ['channels', 'discord', 'slack', 'telegram', 'email', 'ntfy', 'pushover', 'webhook'],
-  '/notifications/webhooks': ['webhooks', 'hmac', 'http endpoint'],
-  '/notifications/browser': ['browser notifications', 'desktop push', 'permission'],
-  '/notifications/quiet-hours': ['quiet hours', 'do not disturb', 'dnd', 'schedule'],
-  '/notifications/rules': ['alert rules', 'rules', 'conditions'],
-  '/notifications/studio': ['alert studio', 'studio', 'rule builder'],
-  '/notifications/packs': ['alert packs', 'rule packs', 'curated alert templates'],
-  '/notifications/health': ['alert fatigue', 'notification burn rate', 'notification latency', 'delivery slo', 'error budget', 'apdex', 'tail latency'],
-  '/geofences': ['geofence', 'zones', 'places'],
-  '/guard-mode': ['guard', 'sentry', 'security'],
-  '/chatbot': ['ai', 'assistant', 'chat'],
-  '/media-player': ['media', 'music', 'player'],
-  '/tesla-account': ['account', 'tesla login', 'oauth'],
-  '/system-status': ['system', 'status', 'health', 'admin', 'administration', 'overview'],
-  '/tesla-api-usage': ['tesla', 'fleet api', 'signals', 'commands', 'wakes', 'usage', 'spend'],
-  '/physics-cockpit': ['physics', 'cockpit', 'gear', 'charge port', 'bms', 'trip meter', 'fsd counter'],
-  '/tesla-physics': ['tesla physics', 'physics', 'exclusive', 'tesla language'],
-  '/tesla-physics/clocks': ['event time', 'ingest time', 'display time', 'three clocks'],
-  '/tesla-physics/life-tape': ['life tape', 'neutral rolling', 'confirmed park', 'unknown gap'],
-  '/tesla-physics/contradictions': ['contradiction', 'park with speed', 'complete latched'],
-  '/tesla-physics/meters': ['trip meter', 'odometer', 'fsd counter', 'null is not zero'],
-  '/tesla-physics/unknown': ['unknown os', 'unknown hours', 'budget'],
-  '/tesla-physics/car-kept-living': ['mqtt', 'queue', 'replay', 'event time', 'carbon'],
-  '/tesla-physics/logbook': ['tesla language', 'park', 'drive', 'disconnected'],
-  '/tesla-physics/firmware-epochs': ['firmware', 'this vin', 'correlation'],
-  '/tesla-physics/charge-port': ['charge port', 'latch', 'complete unplug'],
-  '/tesla-physics/black-box': ['black box', '90 seconds', 'park', 'unplug'],
-  '/tesla-physics/dictionary': ['owner dictionary', 'park dwell', 'etiquette'],
-  '/tesla-physics/vault': ['resale', 'service vault', 'session certificate'],
-  '/tesla-physics/modes': ['valet', 'service', 'transport', 'unknown mode'],
-  '/tesla-physics/nervous-system': ['bms', 'gear', 'latch', 'silent'],
-  '/tesla-physics/range': ['rated range', 'typical range', 'no true range'],
-  '/science': ['science lab', 'electrochemistry', 'arrhenius', 'lab notebook'],
-  '/outage': ['outage', 'mqtt', 'replay', 'carbon', 'queue', 'unknown gap'],
-  '/api-logs': ['api logs', 'requests', 'debug'],
-  '/fleet-api': ['fleet api', 'tesla api'],
-  '/tesla-features': ['feature flags', 'tesla features', 'feature config', 'flags'],
-  '/tesla-region': ['region', 'tesla region', 'fleet api endpoint', 'api region'],
-  '/tesla-orders': ['orders', 'tesla orders', 'active orders', 'delivery', 'vehicle delivery'],
-  '/gas-price': ['gas price', 'fuel', 'eia', 'gasoline', 'auto poll', 'comparison'],
-  '/settings': ['settings', 'preferences', 'configuration'],
-  '/settings/fleet-setup': ['fleet setup', 'onboarding', 'tesla oauth', 'telemetry subscribe', 'fleet telemetry'],
-  '/api-keys': ['keys', 'tokens', 'api key'],
-  '/notifications/audit': ['audit', 'audit log', 'activity log', 'admin'],
-  '/data-export': ['export', 'download', 'csv'],
-  '/backup': ['backup', 'restore'],
-  '/data-repair': ['repair', 'data repair', 'fix sessions'],
-  '/dev-tools': ['developer', 'tools', 'debug'],
-  '/api-playground': ['playground', 'api test'],
-  '/roadmap': ['roadmap', 'plans'],
-  '/signals': ['signals', 'live monitor', 'signal log', 'signal explorer', 'signal diff', 'gap detector', 'telemetry workspace'],
-  '/account/2fa': ['2fa', 'two factor', 'two-factor', 'mfa', 'totp', 'authenticator', 'security', 'account', 'verify', 'enroll'],
-  '/account/sessions': ['sessions', 'devices', 'sign out', 'logout', 'revoke', 'active sessions', 'security', 'account'],
-  '/account/privacy': ['privacy', 'recent pages', 'recently viewed', 'cookies', 'consent', 'gdpr', 'analytics', 'tracking', 'account'],
-  '/integrations/helix': ['helix', 'ai', 'assistant', 'llm', 'gpt', 'openai', 'anthropic', 'integration', 'provider', 'cost cap', 'api key'],
-  '/live-monitor': ['live signals', 'monitor', 'telemetry'],
-  '/signal-log': ['signals', 'signal log', 'telemetry log'],
-  '/signal-explorer': ['explore signals', 'signal explorer'],
-  '/signal-diff': ['diff', 'signal compare'],
-  '/signal-gaps': ['gaps', 'missing signals'],
-  '/state-debugger': ['state machine', 'debugger', 'fsm'],
-  '/mqtt-inspector': ['mqtt', 'broker', 'telemetry stream'],
-  '/redis-signals': ['redis', 'cache', 'signals'],
-  '/db-health': ['database', 'db', 'postgres'],
-  '/anomaly-detection': ['anomaly', 'outliers', 'analytics', 'detection'],
-  '/diagnostics/root-cause': ['root cause', 'evidence graph', 'hypothesis', 'signal explanation', 'diagnostics'],
-  '/diagnostics/service-evidence': ['service evidence', 'evidence pack', 'integrity', 'service export'],
-  '/dashcam': ['dashcam', 'sentry', 'clips', 'redaction', 'incident reconstruction'],
-  '/energy-orchestrator': ['whole home energy', 'solar', 'powerwall', 'tariff', 'panel limit', 'departure'],
-  '/service-intelligence': ['recall', 'service intelligence', 'tsb', 'firmware', 'symptoms'],
-  '/benchmarks/privacy': ['private benchmarks', 'differential privacy', 'cohort', 'degradation comparison'],
-  '/intelligence-packs': ['intelligence packs', 'marketplace', 'signed analytics', 'sandbox', 'community'],
-  '/resale-vault': ['warranty', 'resale', 'vehicle history', 'signed report', 'selective disclosure'],
-  '/fleet-operations': ['fleet operations', 'drivers', 'reservations', 'cost centers', 'work orders'],
-  '/intelligence/twin-lab': ['twin lab', 'counterfactual', 'uncertainty', 'sensitivity', 'vehicle simulation'],
-  '/intelligence/firmware-canary': ['firmware canary', 'rollout', 'matched cohort', 'regression', 'hold'],
-  '/intelligence/component-survival': ['component survival', 'event free', 'competing risks', 'intervention'],
-  '/intelligence/road-hazards': ['road hazards', 'hazard mesh', 'crash cluster', 'airbag', 'coarse cell'],
-  '/intelligence/behavioral-sentinel': ['behavioral sentinel', 'command anomaly', 'identity change', 'integrity'],
-  '/intelligence/charging-forensics': ['charging forensics', 'billing', 'loss', 'cost discrepancy', 'trust'],
-  '/intelligence/journey-assurance': ['journey assurance', 'departure readiness', 'uncertainty', 'arrival energy'],
-  '/intelligence/charging-site-twin': ['charging site twin', 'queue', 'reliability', 'site simulation'],
-  '/intelligence/federated-learning': ['federated learning', 'model card', 'privacy budget', 'local training'],
-  '/intelligence/emergency-resilience': ['emergency resilience', 'reserve', 'evacuation', 'backup energy'],
-  '/intelligence/causal-lab': ['causal experiment', 'treatment', 'control', 'effect estimate'],
-  '/intelligence/tco-optimizer': ['tco optimizer', 'ownership cost', 'portfolio', 'replacement scenario'],
-  '/ownership/insurance-telematics': ['insurance telematics', 'underwriting', 'premium', 'risk score', 'safe driving discount', 'harsh braking'],
-  '/ownership/tariff-lab': ['tariff lab', 'utility rate', 'time of use', 'price band', 'arbitrage', 'electricity plan', 'rate comparison'],
-  '/ownership/charging-reconciliation': ['charging reconciliation', 'invoice', 'dispute', 'billing variance', 'overcharge', 'statement audit'],
-  '/ownership/driver-attribution': ['driver attribution', 'fingerprint', 'who drove', 'behaviour cluster', 'driver profile', 'cost split'],
-  '/ownership/warranty-command': ['warranty', 'coverage', 'claim readiness', 'expiry', 'deductible', 'capacity floor'],
-  '/ownership/data-governance': ['data governance', 'retention policy', 'disk usage', 'purge plan', 'legal hold', 'storage'],
-  '/ownership/model-trust': ['model trust', 'prediction accuracy', 'calibration', 'forecast error', 'bias', 'drift', 'skill score'],
-  '/ownership/jurisdiction-compliance': ['jurisdiction', 'road usage charge', 'apportionment', 'mileage tax', 'filing', 'registration'],
-  '/ownership/consumables-lifecycle': ['consumables', 'wear parts', 'tires', 'filters', 'brake pads', 'wipers', 'replacement due'],
-  '/ownership/subscription-roi': ['subscription roi', 'connectivity', 'premium features', 'cancel', 'break even', 'recurring cost'],
-}
-
 // Pinned / recent nav persistence lives in `lib/navPins.ts` so the command
 // palette can surface the same Quick-access list the sidebar renders.
-const EXPANDED_NAV_STORAGE_KEY = 'teslasync-expanded-nav-sections'
 
-const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; ring: string; dot: string; icon: typeof Icons.home; gradient: string }> = {
-  Home:           { accent: 'text-sky-700 dark:text-sky-300',         surface: 'bg-sky-400/10',     ring: 'ring-sky-400/20',     dot: 'bg-sky-400',     icon: Icons.home,            gradient: 'from-sky-500/20 via-sky-400/5 to-transparent' },
-  Vehicles:       { accent: 'text-cyan-700 dark:text-cyan-300',       surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-cyan-400',    icon: Icons.vehicle,         gradient: 'from-cyan-500/20 via-cyan-400/5 to-transparent' },
-  'Tesla Physics': { accent: 'text-cyan-700 dark:text-cyan-300',     surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-cyan-400',    icon: Icons.sparkles,        gradient: 'from-cyan-500/20 via-cyan-400/5 to-transparent' },
-  Driving:        { accent: 'text-violet-700 dark:text-violet-300',   surface: 'bg-violet-400/10',  ring: 'ring-violet-400/20',  dot: 'bg-violet-400',  icon: Icons.drive,           gradient: 'from-violet-500/25 via-violet-400/8 to-transparent' },
-  Charging:       { accent: 'text-emerald-700 dark:text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400', icon: Icons.batteryCharging, gradient: 'from-emerald-500/20 via-emerald-400/5 to-transparent' },
-  Battery:        { accent: 'text-amber-700 dark:text-amber-300',     surface: 'bg-amber-400/10',   ring: 'ring-amber-400/20',   dot: 'bg-amber-400',   icon: Icons.battery,         gradient: 'from-amber-500/20 via-amber-400/5 to-transparent' },
-  Energy:         { accent: 'text-lime-700 dark:text-lime-300',       surface: 'bg-lime-400/10',    ring: 'ring-lime-400/20',    dot: 'bg-lime-400',    icon: Icons.bolt,            gradient: 'from-lime-500/20 via-lime-400/5 to-transparent' },
-  Service:        { accent: 'text-rose-700 dark:text-rose-300',       surface: 'bg-rose-400/10',    ring: 'ring-rose-400/20',    dot: 'bg-rose-400',    icon: Icons.maintenance,     gradient: 'from-rose-500/20 via-rose-400/5 to-transparent' },
-  Reports:        { accent: 'text-green-700 dark:text-green-300',     surface: 'bg-green-400/10',   ring: 'ring-green-400/20',   dot: 'bg-green-400',   icon: Icons.analytics,       gradient: 'from-green-500/20 via-green-400/5 to-transparent' },
-  Cabin:          { accent: 'text-sky-700 dark:text-sky-300',         surface: 'bg-sky-400/10',     ring: 'ring-sky-400/20',     dot: 'bg-sky-400',     icon: Icons.cabin,           gradient: 'from-sky-500/20 via-sky-400/5 to-transparent' },
-  Commands:       { accent: 'text-fuchsia-700 dark:text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400', icon: Icons.gamepad,         gradient: 'from-fuchsia-500/20 via-fuchsia-400/5 to-transparent' },
-  Controls:       { accent: 'text-fuchsia-700 dark:text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400', icon: Icons.gamepad,         gradient: 'from-fuchsia-500/20 via-fuchsia-400/5 to-transparent' },
-  Automation:     { accent: 'text-purple-700 dark:text-purple-300',   surface: 'bg-purple-400/10',  ring: 'ring-purple-400/20',  dot: 'bg-purple-400',  icon: Icons.workflow,        gradient: 'from-purple-500/25 via-purple-400/8 to-transparent' },
-  Notifications:  { accent: 'text-orange-700 dark:text-orange-300',   surface: 'bg-orange-400/10',  ring: 'ring-orange-400/20',  dot: 'bg-orange-400',  icon: Icons.notifications,   gradient: 'from-orange-500/20 via-orange-400/5 to-transparent' },
-  Security:       { accent: 'text-yellow-700 dark:text-yellow-300',   surface: 'bg-yellow-400/10',  ring: 'ring-yellow-400/20',  dot: 'bg-yellow-400',  icon: Icons.security,        gradient: 'from-yellow-500/20 via-yellow-400/5 to-transparent' },
-  Account:        { accent: 'text-blue-700 dark:text-blue-300',       surface: 'bg-blue-400/10',    ring: 'ring-blue-400/20',    dot: 'bg-blue-400',    icon: Icons.user,            gradient: 'from-blue-500/20 via-blue-400/5 to-transparent' },
-  Integrations:   { accent: 'text-pink-700 dark:text-pink-300',       surface: 'bg-pink-400/10',    ring: 'ring-pink-400/20',    dot: 'bg-pink-400',    icon: Icons.link,            gradient: 'from-pink-500/20 via-pink-400/5 to-transparent' },
-  Settings:       { accent: 'text-slate-700 dark:text-slate-300',     surface: 'bg-slate-400/10',   ring: 'ring-slate-400/20',   dot: 'bg-slate-400',   icon: Icons.settings,        gradient: 'from-slate-500/20 via-slate-400/5 to-transparent' },
-  Data:           { accent: 'text-teal-700 dark:text-teal-300',       surface: 'bg-teal-400/10',    ring: 'ring-teal-400/20',    dot: 'bg-teal-400',    icon: Icons.database,        gradient: 'from-teal-500/20 via-teal-400/5 to-transparent' },
-  Diagnostics:    { accent: 'text-cyan-700 dark:text-neon-cyan',      surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',     dot: 'bg-neon-cyan',   icon: Icons.stethoscope,     gradient: 'from-cyan-500/25 via-cyan-400/8 to-transparent' },
-  'Advanced Intelligence': { accent: 'text-indigo-700 dark:text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400', icon: Icons.network, gradient: 'from-indigo-500/25 via-indigo-400/8 to-transparent' },
-  'Ownership Intelligence': { accent: 'text-teal-700 dark:text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400', icon: Icons.wallet, gradient: 'from-teal-500/25 via-teal-400/8 to-transparent' },
-  About:          { accent: 'text-slate-600 dark:text-[var(--text-secondary)]', surface: 'bg-[var(--surface-2)]', ring: 'ring-white/10', dot: 'bg-[var(--surface-2)]', icon: Icons.info, gradient: 'from-white/[0.06] via-white/[0.02] to-transparent' },
-}
 
 // NOTE: The legacy `SSEStatusDot` component lived here and rendered a bare
 // colored dot tied to the SSE wire state. It was replaced by the shared
@@ -361,40 +170,20 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
 // dot, page-level badges, and stale-data banner all derive from a single
 // `useLiveConnection` source of truth.
 
-/**
- * Feature switch for the sidebar "Recently Used" surface — disabled per
- * UX review on 2026-05-26 (duplicated items across Pinned + Recently
- * Used + canonical section added noise). Code is kept in place so we
- * can re-enable it by flipping this flag back to `true` without a diff.
- * Recent-page tracking itself still runs (it's wired into the command
- * palette + the global status bar) — only the sidebar render is muted.
- */
-const SHOW_RECENTLY_USED_NAV = false;
 
-/**
- * Sidebar style is now a user preference (Settings → Appearance →
- * Sidebar style). Backed by localStorage via `useSidebarStyle`, with
- * cross-tab sync via the `storage` event. Default is 'linear'.
- *
- * The legacy `<nav>` block below is preserved verbatim so users can
- * choose 'legacy' at any time and get a byte-identical sidebar.
- */
-// Trial flag retained for cmd+line debugging — uncomment to force a
-// specific style regardless of the user's saved preference.
-// const FORCE_SIDEBAR_STYLE: SidebarStyle | null = null;
 
 export const navSections = [
   {
     title: 'Home',
     titleKey: 'nav.groups.home',
     items: [
-      { to: '/', icon: Icons.layoutDashboard, label: 'Dashboard', labelKey: 'nav.items.dashboard', color: 'text-blue-400' },
+      { to: '/', icon: navRouteIcons['/'], label: 'Dashboard', labelKey: 'nav.items.dashboard', color: 'text-blue-400' },
       { to: '/action-center', icon: Icons.notificationsActive, label: 'Action Center', labelKey: 'nav.items.action-center', color: 'text-cyan-400' },
       { to: '/explore', icon: Icons.sparkles, label: 'Explore Features', labelKey: 'nav.items.explore', color: 'text-amber-400' },
-      { to: '/live', icon: Icons.radar, label: 'Live Map', labelKey: 'nav.items.live', color: 'text-emerald-400' },
-      { to: '/timeline', icon: Icons.clock, label: 'Timeline', labelKey: 'nav.items.timeline', color: 'text-sky-400' },
+      { to: '/live', icon: navRouteIcons['/live'], label: 'Live Map', labelKey: 'nav.items.live', color: 'text-emerald-400' },
+      { to: '/timeline', icon: navRouteIcons['/timeline'], label: 'Timeline', labelKey: 'nav.items.timeline', color: 'text-sky-400' },
       { to: '/activity', icon: Icons.activity, label: 'Activity Timeline', labelKey: 'nav.items.activity', color: 'text-teal-400' },
-      { to: '/weekly-digest', icon: Icons.calendarCheck, label: 'Weekly Digest', labelKey: 'nav.items.weekly-digest', color: 'text-purple-400' },
+      { to: '/weekly-digest', icon: navRouteIcons['/weekly-digest'], label: 'Weekly Digest', labelKey: 'nav.items.weekly-digest', color: 'text-purple-400' },
     ],
   },
   {
@@ -404,7 +193,7 @@ export const navSections = [
       { to: '/vehicles', icon: Icons.vehicle, label: 'My Vehicles', labelKey: 'nav.items.vehicles', color: 'text-sky-400', dataTour: 'vehicle-section' },
       { to: '/vehicle-management', icon: Icons.database, label: 'Vehicle Management', labelKey: 'nav.items.vehicle-management', color: 'text-violet-400' },
       { to: '/digital-twin', icon: Icons.monitor, label: 'Vehicle Live View', labelKey: 'nav.items.digital-twin', color: 'text-cyan-400' },
-      { to: '/day-log', icon: Icons.activity, label: 'Day Log', labelKey: 'nav.items.day-log', color: 'text-teal-400' },
+      { to: '/day-log', icon: Icons.fileText, label: 'Day Log', labelKey: 'nav.items.day-log', color: 'text-teal-400' },
       { to: '/vehicle-comparison', icon: Icons.arrowLeftRight, label: 'Compare Vehicles', labelKey: 'nav.items.vehicle-comparison', color: 'text-orange-400', minVehicles: 2 },
       { to: '/locations', icon: Icons.location, label: 'Saved Locations', labelKey: 'nav.items.locations', color: 'text-emerald-400' },
       { to: '/parking', icon: Icons.parking, label: 'Parking Analytics', labelKey: 'nav.items.parking', color: 'text-cyan-400' },
@@ -416,39 +205,16 @@ export const navSections = [
     ],
   },
   {
-    title: 'Tesla Physics',
-    titleKey: 'nav.groups.tesla_physics',
-    items: [
-      { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics hub', labelKey: 'nav.items.tesla-physics', color: 'text-cyan-400' },
-      { to: '/tesla-physics/clocks', icon: Icons.clock, label: 'Three Clocks', labelKey: 'nav.items.tesla-physics_clocks', color: 'text-cyan-400' },
-      { to: '/tesla-physics/life-tape', icon: Icons.activity, label: 'Life Tape', labelKey: 'nav.items.tesla-physics_life-tape', color: 'text-violet-400' },
-      { to: '/tesla-physics/contradictions', icon: Icons.fingerprint, label: 'Contradiction Court', labelKey: 'nav.items.tesla-physics_contradictions', color: 'text-amber-400' },
-      { to: '/tesla-physics/meters', icon: Icons.timer, label: 'Trip-Meter Genealogy', labelKey: 'nav.items.tesla-physics_meters', color: 'text-purple-400' },
-      { to: '/tesla-physics/unknown', icon: Icons.sparkles, label: 'Unknown OS', labelKey: 'nav.items.tesla-physics_unknown', color: 'text-amber-400' },
-      { to: '/tesla-physics/car-kept-living', icon: Icons.heart, label: 'Car Kept Living', labelKey: 'nav.items.tesla-physics_car-kept-living', color: 'text-rose-400' },
-      { to: '/tesla-physics/logbook', icon: Icons.history, label: 'Tesla-Language Logbook', labelKey: 'nav.items.tesla-physics_logbook', color: 'text-indigo-400' },
-      { to: '/tesla-physics/firmware-epochs', icon: Icons.cpu, label: 'Firmware Epochs', labelKey: 'nav.items.tesla-physics_firmware-epochs', color: 'text-cyan-400' },
-      { to: '/tesla-physics/charge-port', icon: Icons.bolt, label: 'Charge-Port Court', labelKey: 'nav.items.tesla-physics_charge-port', color: 'text-amber-400' },
-      { to: '/tesla-physics/black-box', icon: Icons.archive, label: 'Black Box 90s', labelKey: 'nav.items.tesla-physics_black-box', color: 'text-indigo-400' },
-      { to: '/tesla-physics/dictionary', icon: Icons.network, label: 'Owner Dictionary', labelKey: 'nav.items.tesla-physics_dictionary', color: 'text-teal-400' },
-      { to: '/tesla-physics/vault', icon: Icons.archive, label: 'Physics Vault', labelKey: 'nav.items.tesla-physics_vault', color: 'text-emerald-400' },
-      { to: '/tesla-physics/modes', icon: Icons.radar, label: 'Mode Laws', labelKey: 'nav.items.tesla-physics_modes', color: 'text-orange-400' },
-      { to: '/tesla-physics/nervous-system', icon: Icons.activity, label: 'Nervous System', labelKey: 'nav.items.tesla-physics_nervous-system', color: 'text-cyan-400' },
-      { to: '/tesla-physics/range', icon: Icons.bolt, label: 'Range Disagreement', labelKey: 'nav.items.tesla-physics_range', color: 'text-lime-400' },
-      { to: '/science', icon: Icons.analytics, label: 'Science Lab', labelKey: 'nav.items.science', color: 'text-cyan-400' },
-    ],
-  },
-  {
     title: 'Driving',
     titleKey: 'nav.groups.driving',
     items: [
-      { to: '/drives', icon: Icons.drive, label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400' },
+      { to: '/drives', icon: navRouteIcons['/drives'], label: 'Drives', labelKey: 'nav.items.drives', color: 'text-violet-400' },
       { to: '/trips', icon: Icons.trip, label: 'Trips', labelKey: 'nav.items.trips', color: 'text-teal-400' },
       { to: '/journeys', icon: Icons.compass, label: 'Journeys', labelKey: 'nav.items.journeys', color: 'text-sky-400' },
       { to: '/trip-planner', icon: Icons.mapPinned, label: 'Trip Planner', labelKey: 'nav.items.trip-planner', color: 'text-emerald-400' },
       { to: '/navigation', icon: Icons.signpost, label: 'Navigation', labelKey: 'nav.items.navigation', color: 'text-teal-400' },
       { to: '/geofences', icon: Icons.fence, label: 'Geofences', labelKey: 'nav.items.geofences', color: 'text-lime-400' },
-      { to: '/mileage', icon: Icons.trip, label: 'Mileage Log', labelKey: 'nav.items.mileage', color: 'text-teal-400' },
+      { to: '/mileage', icon: navRouteIcons['/mileage'], label: 'Mileage Log', labelKey: 'nav.items.mileage', color: 'text-teal-400' },
       { to: '/logbook', icon: Icons.wallet, label: 'Trip Logbook', labelKey: 'nav.items.logbook', color: 'text-amber-400' },
       { to: '/mileage-budget', icon: Icons.trendUp, label: 'Mileage Budget', labelKey: 'nav.items.mileage-budget', color: 'text-orange-400' },
       { to: '/driving-rhythm', icon: Icons.calendarClock, label: 'Driving Rhythm', labelKey: 'nav.items.driving-rhythm', color: 'text-violet-400' },
@@ -459,7 +225,7 @@ export const navSections = [
       { to: '/explorer', icon: Icons.compass, label: 'Explorer', labelKey: 'nav.items.explorer', color: 'text-teal-400' },
       { to: '/drive-calendar', icon: Icons.calendarClock, label: 'Drive Calendar', labelKey: 'nav.items.drive-calendar', color: 'text-fuchsia-400' },
       { to: '/milestones', icon: Icons.trip, label: 'Milestones', labelKey: 'nav.items.milestones', color: 'text-yellow-400' },
-      { to: '/lifetime-stats', icon: Icons.award, label: 'Lifetime Stats', labelKey: 'nav.items.lifetime-stats', color: 'text-yellow-400' },
+      { to: '/lifetime-stats', icon: Icons.trends, label: 'Lifetime Stats', labelKey: 'nav.items.lifetime-stats', color: 'text-yellow-400' },
       { to: '/drive-score', icon: Icons.trophy, label: 'Drive Score', labelKey: 'nav.items.drive-score', color: 'text-yellow-400' },
       { to: '/fsd', icon: Icons.cpu, label: 'FSD Insights', labelKey: 'nav.items.fsd', color: 'text-cyan-400' },
       { to: '/speed-profile', icon: Icons.speed, label: 'Speed Profile', labelKey: 'nav.items.speed-profile', color: 'text-rose-400' },
@@ -480,7 +246,7 @@ export const navSections = [
     title: 'Charging',
     titleKey: 'nav.groups.charging',
     items: [
-      { to: '/charging', icon: Icons.batteryCharging, label: 'Charging Overview', labelKey: 'nav.items.charging', color: 'text-green-400' },
+      { to: '/charging', icon: navRouteIcons['/charging'], label: 'Charging Overview', labelKey: 'nav.items.charging', color: 'text-green-400' },
       { to: '/tesla-charging-history', icon: Icons.receipt, label: 'Charge History', labelKey: 'nav.items.tesla-charging-history', color: 'text-emerald-400' },
       { to: '/charging-curve', icon: Icons.trendUp, label: 'Charging Curve', labelKey: 'nav.items.charging-curve', color: 'text-lime-400' },
       { to: '/charging-heatmap', icon: Icons.calendarClock, label: 'Charging Patterns', labelKey: 'nav.items.charging-heatmap', color: 'text-cyan-400' },
@@ -497,7 +263,7 @@ export const navSections = [
     title: 'Battery',
     titleKey: 'nav.groups.battery',
     items: [
-      { to: '/battery', icon: Icons.heartPulse, label: 'Battery Health', labelKey: 'nav.items.battery', color: 'text-rose-400' },
+      { to: '/battery', icon: navRouteIcons['/battery'], label: 'Battery Health', labelKey: 'nav.items.battery', color: 'text-rose-400' },
       { to: '/battery-cells', icon: Icons.battery, label: 'Battery Cells', labelKey: 'nav.items.battery-cells', color: 'text-purple-400' },
       { to: '/battery-degradation', icon: Icons.trendDown, label: 'Battery Degradation', labelKey: 'nav.items.battery-degradation', color: 'text-orange-400' },
       { to: '/projected-range', icon: Icons.target, label: 'Projected Range', labelKey: 'nav.items.projected-range', color: 'text-pink-400' },
@@ -507,7 +273,7 @@ export const navSections = [
       { to: '/pack-capacity', icon: Icons.batteryFull, label: 'Pack Capacity', labelKey: 'nav.items.pack-capacity', color: 'text-lime-400' },
       { to: '/cycle-stress', icon: Icons.recycle, label: 'Battery Cycle Stress', labelKey: 'nav.items.cycle-stress', color: 'text-orange-400' },
       { to: '/range-buffer', icon: Icons.battery, label: 'Range Buffer', labelKey: 'nav.items.range-buffer', color: 'text-teal-400' },
-      { to: '/battery-care', icon: Icons.heartPulse, label: 'Battery Care', labelKey: 'nav.items.battery-care', color: 'text-emerald-400' },
+      { to: '/battery-care', icon: Icons.heart, label: 'Battery Care', labelKey: 'nav.items.battery-care', color: 'text-emerald-400' },
       { to: '/charge-advisor', icon: Icons.batteryCharging, label: 'Charge Advisor', labelKey: 'nav.items.charge-advisor', color: 'text-cyan-400' },
     ],
   },
@@ -521,6 +287,18 @@ export const navSections = [
       { to: '/energy-products', icon: Icons.home, label: 'Solar & Powerwall', labelKey: 'nav.items.energy-products', color: 'text-lime-400' },
       { to: '/energy-ledger', icon: Icons.receipt, label: 'Energy Ledger', labelKey: 'nav.items.energy-ledger', color: 'text-emerald-400' },
       { to: '/energy-orchestrator', icon: Icons.workflow, label: 'Energy Orchestrator', labelKey: 'nav.items.energy-orchestrator', color: 'text-cyan-400' },
+    ],
+  },
+  {
+    title: 'Cabin',
+    titleKey: 'nav.groups.cabin',
+    items: [
+      { to: '/climate-control', icon: navRouteIcons['/climate-control'], label: 'Climate Control', labelKey: 'nav.items.climate-control', color: 'text-sky-400' },
+      { to: '/cabin-thermal', icon: Icons.climateHot, label: 'Cabin Thermal Model', labelKey: 'nav.items.cabin-thermal', color: 'text-orange-400' },
+      { to: '/hvac-cycling', icon: Icons.recycle, label: 'HVAC Cycling', labelKey: 'nav.items.hvac-cycling', color: 'text-cyan-400' },
+      { to: '/comfort-consistency', icon: Icons.speedCircle, label: 'Comfort Consistency', labelKey: 'nav.items.comfort-consistency', color: 'text-violet-400' },
+      { to: '/preconditioning-effectiveness', icon: Icons.calendarClock, label: 'Preconditioning Effectiveness', labelKey: 'nav.items.preconditioning-effectiveness', color: 'text-emerald-400' },
+      { to: '/media-player', icon: Icons.headphones, label: 'Media Player', labelKey: 'nav.items.media-player', color: 'text-pink-400' },
     ],
   },
   {
@@ -538,25 +316,13 @@ export const navSections = [
     ],
   },
   {
-    title: 'Cabin',
-    titleKey: 'nav.groups.cabin',
-    items: [
-      { to: '/climate-control', icon: Icons.climate, label: 'Climate Control', labelKey: 'nav.items.climate-control', color: 'text-sky-400' },
-      { to: '/cabin-thermal', icon: Icons.climateHot, label: 'Cabin Thermal Model', labelKey: 'nav.items.cabin-thermal', color: 'text-orange-400' },
-      { to: '/hvac-cycling', icon: Icons.recycle, label: 'HVAC Cycling', labelKey: 'nav.items.hvac-cycling', color: 'text-cyan-400' },
-      { to: '/comfort-consistency', icon: Icons.climate, label: 'Comfort Consistency', labelKey: 'nav.items.comfort-consistency', color: 'text-violet-400' },
-      { to: '/preconditioning-effectiveness', icon: Icons.calendarClock, label: 'Preconditioning Effectiveness', labelKey: 'nav.items.preconditioning-effectiveness', color: 'text-emerald-400' },
-      { to: '/media-player', icon: Icons.headphones, label: 'Media Player', labelKey: 'nav.items.media-player', color: 'text-pink-400' },
-    ],
-  },
-  {
     title: 'Reports',
     titleKey: 'nav.groups.reports',
     items: [
-      { to: '/statistics', icon: Icons.pieChart, label: 'Statistics', labelKey: 'nav.items.statistics', color: 'text-cyan-400' },
-      { to: '/analytics', icon: Icons.analytics, label: 'Analytics', labelKey: 'nav.items.analytics', color: 'text-indigo-400' },
-      { to: '/period-compare', icon: Icons.calendar, label: 'Period Comparison', labelKey: 'nav.items.period-compare', color: 'text-orange-400' },
-      { to: '/efficiency', icon: Icons.leaf, label: 'Efficiency', labelKey: 'nav.items.efficiency', color: 'text-amber-400' },
+      { to: '/statistics', icon: navRouteIcons['/statistics'], label: 'Statistics', labelKey: 'nav.items.statistics', color: 'text-cyan-400' },
+      { to: '/analytics', icon: navRouteIcons['/analytics'], label: 'Analytics', labelKey: 'nav.items.analytics', color: 'text-indigo-400' },
+      { to: '/period-compare', icon: navRouteIcons['/period-compare'], label: 'Period Comparison', labelKey: 'nav.items.period-compare', color: 'text-orange-400' },
+      { to: '/efficiency', icon: navRouteIcons['/efficiency'], label: 'Efficiency', labelKey: 'nav.items.efficiency', color: 'text-amber-400' },
       { to: '/temperature-impact', icon: Icons.climateHot, label: 'Temperature Impact', labelKey: 'nav.items.temperature-impact', color: 'text-blue-400' },
       { to: '/cost-analysis', icon: Icons.dollarSign, label: 'Cost Analysis', labelKey: 'nav.items.cost-analysis', color: 'text-emerald-400' },
       { to: '/tco', icon: Icons.wallet, label: 'Cost of Ownership', labelKey: 'nav.items.tco', color: 'text-green-400' },
@@ -580,6 +346,7 @@ export const navSections = [
     titleKey: 'nav.groups.automation',
     items: [
       { to: '/automations', icon: Icons.workflow, label: 'Automations', labelKey: 'nav.items.automations', color: 'text-purple-400' },
+      { to: '/automations/history', icon: Icons.calendarMinus, label: 'Automation History', labelKey: 'nav.items.automation-history', color: 'text-emerald-400' },
       { to: '/notifications/studio', icon: Icons.notificationsAdd, label: 'Alert Studio', labelKey: 'nav.items.notifications_studio', color: 'text-fuchsia-400' },
       { to: '/notifications/rules', icon: Icons.filter, label: 'Alert Rules', labelKey: 'nav.items.notifications_rules', color: 'text-amber-400' },
       { to: '/notifications/packs', icon: Icons.package, label: 'Alert Packs', labelKey: 'nav.items.notifications_packs', color: 'text-cyan-400' },
@@ -601,7 +368,7 @@ export const navSections = [
     titleKey: 'nav.groups.advanced_intelligence',
     items: [
       { to: '/intelligence/twin-lab', icon: Icons.network, label: 'Vehicle Twin Lab', labelKey: 'nav.items.intelligence_twin-lab', color: 'text-cyan-400' },
-      { to: '/intelligence/firmware-canary', icon: Icons.gitCompare, label: 'Firmware Canary', labelKey: 'nav.items.intelligence_firmware-canary', color: 'text-violet-400' },
+      { to: '/intelligence/firmware-canary', icon: Icons.flag, label: 'Firmware Canary', labelKey: 'nav.items.intelligence_firmware-canary', color: 'text-violet-400' },
       { to: '/intelligence/component-survival', icon: Icons.timer, label: 'Component Survival', labelKey: 'nav.items.intelligence_component-survival', color: 'text-amber-400' },
       { to: '/intelligence/road-hazards', icon: Icons.mapPinned, label: 'Road Hazard Mesh', labelKey: 'nav.items.intelligence_road-hazards', color: 'text-orange-400' },
       { to: '/intelligence/behavioral-sentinel', icon: Icons.securityAlert, label: 'Behavioral Sentinel', labelKey: 'nav.items.intelligence_behavioral-sentinel', color: 'text-rose-400' },
@@ -611,7 +378,7 @@ export const navSections = [
       { to: '/intelligence/federated-learning', icon: Icons.users, label: 'Federated Learning', labelKey: 'nav.items.intelligence_federated-learning', color: 'text-purple-400' },
       { to: '/intelligence/emergency-resilience', icon: Icons.home, label: 'Emergency Resilience', labelKey: 'nav.items.intelligence_emergency-resilience', color: 'text-red-400' },
       { to: '/intelligence/causal-lab', icon: Icons.scanSearch, label: 'Causal Experiment Lab', labelKey: 'nav.items.intelligence_causal-lab', color: 'text-fuchsia-400' },
-      { to: '/intelligence/tco-optimizer', icon: Icons.wallet, label: 'TCO Optimizer', labelKey: 'nav.items.intelligence_tco-optimizer', color: 'text-green-400' },
+      { to: '/intelligence/tco-optimizer', icon: Icons.target, label: 'TCO Optimizer', labelKey: 'nav.items.intelligence_tco-optimizer', color: 'text-green-400' },
     ],
   },
   {
@@ -628,6 +395,14 @@ export const navSections = [
       { to: '/ownership/jurisdiction-compliance', icon: Icons.globe, label: 'Jurisdiction Compliance', labelKey: 'nav.items.ownership_jurisdiction-compliance', color: 'text-indigo-400' },
       { to: '/ownership/consumables-lifecycle', icon: Icons.package, label: 'Consumables Lifecycle', labelKey: 'nav.items.ownership_consumables-lifecycle', color: 'text-rose-400' },
       { to: '/ownership/subscription-roi', icon: Icons.wallet, label: 'Subscription ROI', labelKey: 'nav.items.ownership_subscription-roi', color: 'text-emerald-400' },
+    ],
+  },
+  {
+    title: 'Tesla Physics',
+    titleKey: 'nav.groups.tesla_physics',
+    items: [
+      { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics Overview', labelKey: 'nav.items.tesla-physics', color: 'text-cyan-400' },
+      { to: '/science', icon: Icons.analytics, label: 'Science Lab', labelKey: 'nav.items.science', color: 'text-cyan-400' },
     ],
   },
   {
@@ -658,7 +433,7 @@ export const navSections = [
     title: 'Settings',
     titleKey: 'nav.groups.settings',
     items: [
-      { to: '/settings', icon: Icons.settings, label: 'General Settings', labelKey: 'nav.items.settings', color: 'text-[var(--text-muted)]' },
+      { to: '/settings', icon: navRouteIcons['/settings'], label: 'General Settings', labelKey: 'nav.items.settings', color: 'text-[var(--text-muted)]' },
       { to: '/settings/fleet-setup', icon: Icons.radio, label: 'Fleet Setup', labelKey: 'nav.items.settings_fleet-setup', color: 'text-cyan-400' },
       { to: '/chatbot', icon: HelixMark, label: 'Helix Chat', labelKey: 'nav.items.chatbot', color: 'text-purple-400' },
       { to: '/dev-tools', icon: Icons.hammer, label: 'Developer Tools', labelKey: 'nav.items.dev-tools', color: 'text-cyan-400' },
@@ -668,7 +443,7 @@ export const navSections = [
     title: 'Integrations',
     titleKey: 'nav.groups.integrations',
     items: [
-      { to: '/integrations/helix', icon: HelixMark, label: 'Helix', labelKey: 'nav.items.integrations_helix', color: 'text-purple-400' },
+      { to: '/integrations/helix', icon: Icons.link, label: 'Helix', labelKey: 'nav.items.integrations_helix', color: 'text-purple-400' },
       { to: '/api-keys', icon: Icons.key, label: 'API Keys', labelKey: 'nav.items.api-keys', color: 'text-amber-400' },
       { to: '/gas-price', icon: Icons.fuel, label: 'Gas Prices', labelKey: 'nav.items.gas-price', color: 'text-orange-400' },
       { to: '/intelligence-packs', icon: Icons.package, label: 'Intelligence Packs', labelKey: 'nav.items.intelligence-packs', color: 'text-cyan-400' },
@@ -699,12 +474,12 @@ export const navSections = [
       { to: '/admin/live-signals', icon: Icons.radioTower, label: 'Live Signal Inspector', labelKey: 'nav.items.admin_live-signals', color: 'text-cyan-400' },
       { to: '/admin/ingest-xray', icon: Icons.scanSearch, label: 'Ingest X-Ray', labelKey: 'nav.items.admin_ingest-xray', color: 'text-sky-400' },
       { to: '/admin/dlq', icon: Icons.severityCritical, label: 'DLQ Inspector', labelKey: 'nav.items.admin_dlq', color: 'text-red-400' },
-      { to: '/admin/flags', icon: Icons.flag, label: 'Feature Flags', labelKey: 'nav.items.admin_flags', color: 'text-purple-400' },
+      { to: '/admin/flags', icon: Icons.flag, label: 'Platform Feature Flags', labelKey: 'nav.items.admin_flags', color: 'text-purple-400' },
       { to: '/admin/schema-drift', icon: Icons.fingerprint, label: 'Schema Drift', labelKey: 'nav.items.admin_schema-drift', color: 'text-purple-400' },
       { to: '/admin/slow-queries', icon: Icons.timer, label: 'Slow Queries', labelKey: 'nav.items.admin_slow-queries', color: 'text-amber-400' },
       { to: '/admin/vehicle-cost', icon: Icons.wallet, label: 'Vehicle Cost', labelKey: 'nav.items.admin_vehicle-cost', color: 'text-lime-400' },
       { to: '/admin/data-quality', icon: Icons.scanSearch, label: 'Data Quality', labelKey: 'nav.items.admin_data-quality', color: 'text-sky-400' },
-      { to: '/admin/disk-forecast', icon: Icons.hardDrive, label: 'Disk Forecast', labelKey: 'nav.items.admin_disk-forecast', color: 'text-teal-400' },
+      { to: '/admin/disk-forecast', icon: Icons.trendUp, label: 'Disk Forecast', labelKey: 'nav.items.admin_disk-forecast', color: 'text-teal-400' },
       { to: '/admin/secret-rotation', icon: Icons.securityCheck, label: 'Secret Rotation', labelKey: 'nav.items.admin_secret-rotation', color: 'text-cyan-400' },
       { to: '/admin/audit-log', icon: Icons.history, label: 'Audit Log', labelKey: 'nav.items.admin_audit-log', color: 'text-indigo-400' },
       { to: '/admin/gdpr-exports', icon: Icons.hardDriveDownload, label: 'GDPR Exports', labelKey: 'nav.items.admin_gdpr-exports', color: 'text-emerald-400' },
@@ -729,7 +504,13 @@ export const navSections = [
       { to: '/roadmap', icon: Icons.signpost, label: 'Roadmap', labelKey: 'nav.items.roadmap', color: 'text-violet-400' },
     ],
   },
-]
+].map(section => ({
+  ...section,
+  items: section.items.map(item => ({
+    ...item,
+    icon: SIDEBAR_ROUTE_ICONS[item.to] ?? item.icon,
+  })),
+}))
 
 type NavSection = (typeof navSections)[number]
 type NavItem = NavSection['items'][number]
@@ -794,7 +575,7 @@ export function reconcileNavPaths(paths: readonly string[]): string[] {
  * A small palette icon button that opens a popover containing a compact
  * `<ThemePicker>`. The popover hides the custom-color builder to keep it
  * small; users who want to build a custom theme follow the "Customize…"
- * link to /settings/appearance.
+ * link to /settings#appearance.
  *
  * Listens for `open-theme-popover` window events so other surfaces (the
  * command palette, the dashboard first-run banner) can open the popover
@@ -896,51 +677,18 @@ function ThemeQuickSwitcher({
       >
         <Icons.palette className="h-5 w-5" aria-hidden="true" />
       </Button>
-      {open && coords && createPortal(
-        <div
-          ref={popoverRef}
-          role="dialog"
-          aria-label={t('theme.openPicker', 'Open theme picker')}
-          style={{
-            position: 'fixed',
-            top: coords.top,
-            ...(coords.left !== undefined ? { left: coords.left } : {}),
-            ...(coords.right !== undefined ? { right: coords.right } : {}),
-          }}
-          className="z-[80] w-[22rem] max-w-[calc(100vw-1rem)] rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-e3"
-        >
-          <Suspense
-            fallback={
-              <div
-                role="status"
-                aria-label={t('theme.loadingPicker', 'Loading theme picker…')}
-                className="min-h-64 animate-pulse rounded-shape-md bg-[var(--surface-2)] motion-reduce:animate-none"
-              />
-            }
-          >
-            <LazyThemePicker
-              compact
-              showMode
-              showCustom={false}
-              onChange={() => setOpen(false)}
-              onModeChange={() => setOpen(false)}
-            />
-          </Suspense>
-          <div className="mt-3 flex justify-end border-t border-[var(--border-subtle)] pt-3">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setOpen(false)
-                navigate('/settings#appearance')
-              }}
-              className="h-auto px-2 py-1 text-xs font-medium text-[var(--theme-primary)] hover:bg-transparent hover:brightness-110"
-            >
-              {t('theme.customize', 'Customize…')}
-            </Button>
-          </div>
-        </div>,
-        document.body,
+      {open && coords && (
+        <Suspense fallback={null}>
+          <ThemeQuickSwitcherPopover
+            coords={coords}
+            popoverRef={popoverRef}
+            onClose={() => setOpen(false)}
+            onCustomize={() => {
+              setOpen(false)
+              navigate('/settings#appearance')
+            }}
+          />
+        </Suspense>
       )}
     </div>
   )
@@ -949,19 +697,39 @@ function ThemeQuickSwitcher({
 export default function Layout() {
   const presentation = usePresentationMode()
   const { preferences: productPreferences } = useProductPreferences()
-  // Sidebar style preference — localStorage-backed, cross-tab synced.
-  // Defaults to 'linear'; user can change via Settings → Appearance.
-  const sidebarStyle = useSidebarStyle()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
+  // Command Deck rail collapse. Host-owned (not deck-owned) because the
+  // aside width derives from it. Persisted per browser.
+  const [deckRailCollapsed, setDeckRailCollapsed] = useState(() => {
     try {
-      const stored = window.localStorage.getItem(EXPANDED_NAV_STORAGE_KEY)
-      const parsed = stored ? JSON.parse(stored) as string[] : []
-      return new Set(parsed.length > 0 ? parsed : ['Home'])
+      return window.localStorage.getItem('teslasync-deck-rail-collapsed') === '1'
     } catch {
-      return new Set(['Home'])
+      return false
     }
   })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('teslasync-deck-rail-collapsed', deckRailCollapsed ? '1' : '0')
+    } catch {
+      // Storage may be disabled; the toggle still works for the session.
+    }
+  }, [deckRailCollapsed])
+  // Open state is session-only; the secondary icon-width preference persists.
+  const [deckPanelOpen, setDeckPanelOpen] = useState(false)
+  const [deckPanelCollapsed, setDeckPanelCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem('teslasync-deck-panel-collapsed') === '1'
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('teslasync-deck-panel-collapsed', deckPanelCollapsed ? '1' : '0')
+    } catch {
+      // The panel remains usable when storage is unavailable.
+    }
+  }, [deckPanelCollapsed])
   const [recentNavPaths, setRecentNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getRecentNavPaths()),
   )
@@ -1183,6 +951,24 @@ export default function Layout() {
   const { data: vehicles } = useVehicles()
   const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const vehicleCount = vehicles?.length ?? 0
+  // Focused vehicle for sidebar suggestions: the persisted selection when
+  // it still exists, else the first vehicle. Router-free on purpose —
+  // suggestions are hints and must never trigger navigation. The live
+  // state query shares its cache key with the status bar, so it rarely
+  // costs an extra request.
+  const { vehicleId: storedVehicleId } = useSelectedVehicleStore()
+  const suggestionVehicleId = useMemo(() => {
+    if (storedVehicleId != null && vehicles?.some(vehicle => vehicle.id === storedVehicleId)) {
+      return storedVehicleId
+    }
+    return vehicles?.[0]?.id ?? 0
+  }, [storedVehicleId, vehicles])
+  const suggestionVehicle = vehicles?.find(vehicle => vehicle.id === suggestionVehicleId) ?? null
+  const { data: suggestionVehicleState } = useVehicleState(suggestionVehicleId)
+  const criticalAlertCount = useMemo(
+    () => alerts?.filter(alert => !alert.is_read && (alert.severity === 'critical' || alert.severity === 'warning')).length ?? 0,
+    [alerts],
+  )
 
   // HELP-01: there is no tour auto-start effect here any more.
   //
@@ -1209,13 +995,8 @@ export default function Layout() {
   // running behind a ForwardAuth identity provider — the underlying endpoints
   // 503 in open mode and there is nothing useful to show.
   const isForwardAuth = useIsForwardAuth()
-  // Raw auth-mode contract — the only permission infrastructure the SPA has.
-  // Feeds capability-aware navigation grouping (see `navCapabilities` below).
-  const { data: authMode } = useAuthMode()
 
   const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
-  const activeSectionTitle = activeNavEntry?.section.title
-  const activeSectionStyle = activeSectionTitle ? SECTION_ICON_STYLES[activeSectionTitle] : undefined
   const visibleNavSections = useMemo(
     () =>
       prioritizeCanonicalNavSections(
@@ -1235,27 +1016,13 @@ export default function Layout() {
       productPreferences.persona,
     ],
   )
+  const visibleCollections = useMemo(() => collectionGroups(visibleNavSections), [visibleNavSections])
+  const groupedPathname = collectionPrimaryPath(visibleCollections, location.pathname)
+  const activeSectionTitle = findNavItemByPath(groupedPathname)?.section.title
   const groupedSidebarSections = useMemo(
-    () => visibleNavSections.map(section =>
-      section.title === 'Reports'
-        ? { ...section, items: reportSidebarItems(section.items) }
-        : section.title === 'Diagnostics'
-          ? { ...section, items: diagnosticSidebarItems(section.items) }
-          : section,
-    ),
-    [visibleNavSections],
+    () => collectionSidebarSections(visibleNavSections, visibleCollections),
+    [visibleNavSections, visibleCollections],
   )
-  const compactGroupedSections = useMemo(
-    () => visibleNavSections.map(section =>
-      section.title === 'Reports'
-        ? { ...section, items: labelReportPrimaries(section.items) }
-        : section.title === 'Diagnostics'
-          ? { ...section, items: labelDiagnosticPrimaries(section.items) }
-          : section,
-    ),
-    [visibleNavSections],
-  )
-  const groupedPathname = diagnosticPrimaryPath(reportPrimaryPath(location.pathname))
   const pinnedNavItems = useMemo(() =>
     pinnedNavPaths
       .map(path => findNavItemByExactPath(path))
@@ -1278,49 +1045,8 @@ export default function Layout() {
     [recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
   )
 
-  // Progressive disclosure for the DEFAULT (Linear) sidebar only.
-  //
-  // `visibleNavSections` remains the complete catalog for `/explore`, search,
-  // and pinning. Report and diagnostic links are grouped only in the rendered sidebars. The
-  // Linear style instead renders a curated two-tier tree: seven everyday
-  // primary groups (Overview · Vehicles · Drives · Charging · Energy ·
-  // Insights · Operations) followed by intentional advanced groups. Nothing
-  // is deleted — long-tail routes stay reachable through the always-visible
-  // command-palette trigger and `/explore` (pinned into Overview), and the
-  // exact active item is injected when the current route is outside the
-  // curated set so location context is never lost. Capability resolution
-  // comes from the real permission contract (`/system/auth-mode`) and only
-  // demotes advanced groups; it never removes them.
-  // See `sidebar/compactNav.ts` and `lib/navCapabilities.ts`.
-  const navCapabilities = useMemo(
-    () => resolveNavCapabilitiesFromAuthMode(authMode, productPreferences.persona),
-    [authMode, productPreferences.persona],
-  )
-  const compactNav = useMemo(
-    () =>
-      prioritizeCompactNavTree(
-        buildCompactNavTree(compactGroupedSections, groupedPathname, {
-          capabilities: navCapabilities,
-        }),
-        productPreferences.persona,
-      ),
-    [
-      compactGroupedSections,
-      groupedPathname,
-      navCapabilities,
-      productPreferences.persona,
-    ],
-  )
+  const pinnedNavSet = useMemo(() => new Set(pinnedNavPaths), [pinnedNavPaths])
 
-  useEffect(() => {
-    if (!activeSectionTitle) return
-    setExpandedSections(prev => {
-      if (prev.has(activeSectionTitle)) return prev
-      const next = new Set(prev)
-      next.add(activeSectionTitle)
-      return next
-    })
-  }, [activeSectionTitle])
 
   // Scroll the active sidebar link into view whenever the route changes.
   // Runs on the next tick so the section-expansion effect above has a
@@ -1357,15 +1083,8 @@ export default function Layout() {
       }
     })
     return () => window.cancelAnimationFrame(id)
-  }, [location.pathname, expandedSections])
+  }, [location.pathname])
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(EXPANDED_NAV_STORAGE_KEY, JSON.stringify([...expandedSections]))
-    } catch {
-      // Ignore storage failures; navigation still works without persisted sections.
-    }
-  }, [expandedSections])
 
   useEffect(() => {
     const activeTo = activeNavEntry?.item.to
@@ -1420,24 +1139,6 @@ export default function Layout() {
     [],
   )
 
-  const toggleSection = useCallback((title: string) => {
-    setExpandedSections(prev => {
-      const next = new Set(prev)
-      if (next.has(title) && title !== activeSectionTitle) {
-        next.delete(title)
-      } else {
-        next.add(title)
-      }
-      return next
-    })
-  }, [activeSectionTitle])
-  const expandedSectionCount = groupedSidebarSections.filter(section => expandedSections.has(section.title)).length
-  const expandAllSections = useCallback(() => {
-    setExpandedSections(new Set(groupedSidebarSections.map(section => section.title)))
-  }, [groupedSidebarSections])
-  const collapseAllSections = useCallback(() => {
-    setExpandedSections(new Set())
-  }, [])
 
   const navLabel = useCallback(
     (item: { label: string; labelKey: string }) => t(item.labelKey, item.label),
@@ -1448,83 +1149,60 @@ export default function Layout() {
       section.titleKey ? t(section.titleKey, section.title) : section.title,
     [t],
   )
-  const activeNavPath = activeNavEntry?.item.to
-  const activeIsPinned = activeNavPath ? pinnedNavPaths.includes(activeNavPath) : false
   const pinNavPath = useCallback((to: string) => {
     setPinnedNavPathsState(prev => {
       if (prev.includes(to)) return prev
-      return [to, ...prev].slice(0, MAX_PINNED_NAV_ITEMS)
+      return [to, ...prev]
     })
     setRecentNavPathsState(prev => prev.filter(path => path !== to))
   }, [])
   const unpinNavPath = useCallback((to: string) => {
     setPinnedNavPathsState(prev => prev.filter(path => path !== to))
   }, [])
+  // Suggested pages for the default sidebar: live context (charging car,
+  // unread critical alerts) first, then pages related to the current
+  // route. Pure derivation — see `sidebar/sidebarSuggest.ts`.
+  const sidebarSuggestions = useMemo(
+    () => suggestSidebarPages(groupedSidebarSections, visibleCollections, location.pathname, {
+      pinnedPaths: pinnedNavSet,
+      recentPaths: new Set(recentNavPaths),
+      signals: {
+        vehicleName: suggestionVehicle?.display_name ?? undefined,
+        vehicleStatus: deriveVehicleStatus(suggestionVehicleState?.state),
+        criticalAlertCount,
+      },
+      resolveLabel: navLabel,
+      formatReason: (kind, vars) => {
+        switch (kind) {
+          case 'charging':
+            return vars.vehicle
+              ? t('nav.suggest.chargingVehicle', { vehicle: vars.vehicle, defaultValue: '{{vehicle}} is charging' })
+              : t('nav.suggest.charging', 'Charging now')
+          case 'driving':
+            return vars.vehicle
+              ? t('nav.suggest.drivingVehicle', { vehicle: vars.vehicle, defaultValue: '{{vehicle}} is on the move' })
+              : t('nav.suggest.driving', 'On the move')
+          case 'alerts':
+            return t('nav.suggest.alerts', { count: vars.count ?? 0, defaultValue: '{{count}} need attention' })
+          case 'related':
+            return t('nav.suggest.related', { page: vars.page ?? '', defaultValue: 'Related to {{page}}' })
+        }
+      },
+    }),
+    [
+      groupedSidebarSections,
+      visibleCollections,
+      location.pathname,
+      pinnedNavSet,
+      recentNavPaths,
+      suggestionVehicle,
+      suggestionVehicleState,
+      criticalAlertCount,
+      navLabel,
+      t,
+    ],
+  )
   const mainRef = useRef<HTMLElement>(null)
-  const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
-    const { to, icon: Icon, ...rest } = item
-    const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined
-    const isActive = isExclusiveActivePath(groupedPathname, to, NAV_CATALOG_PATHS)
-    const isInTabBar = BOTTOM_TAB_PATHS.has(to)
-    return (
-      <PrefetchNavLink
-        key={to}
-        to={to}
-        end={!isActive}
-        onClick={() => setSidebarOpen(false)}
-        aria-label={navLabel(item)}
-        aria-current={isActive ? 'page' : undefined}
-        data-tour={dataTour}
-        className={cn(
-          'group relative flex min-h-9 items-center gap-2.5 rounded-shape-md px-2.5 py-1.5 text-sm font-medium transition-colors duration-fast',
-          isInTabBar && 'opacity-50 lg:opacity-100'
-        )}
-      >
-        {isActive && (
-          <motion.div
-            layoutId={compact ? `nav-active-${activeScope}-${to}` : 'nav-active'}
-            className="absolute inset-0 rounded-shape-md border border-[rgba(var(--theme-primary-rgb),0.2)] bg-[rgba(var(--theme-primary-rgb),0.09)]"
-            transition={{ duration: 0.16, ease: 'easeOut' }}
-          />
-        )}
-        <span
-          className={cn(
-            'relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-shape-sm border transition-colors duration-fast',
-            isActive
-              ? 'border-[rgba(var(--theme-primary-rgb),0.24)] bg-[rgba(var(--theme-primary-rgb),0.12)]'
-              : 'border-[var(--border-subtle)] bg-[var(--surface-2)] group-hover:border-[var(--border-default)]'
-          )}
-        >
-          <Icon
-            className={cn(
-              'h-4 w-4 transition-colors duration-fast',
-              isActive
-                ? 'text-[var(--theme-primary)]'
-                : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
-            )}
-          />
-        </span>
-        <span className={cn('relative z-10 min-w-0 truncate transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
-          {navLabel(item)}
-        </span>
-        {to === '/notifications/inbox' && unreadAlerts > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-rose-500/20 bg-rose-500/10 px-1.5 text-2xs font-semibold text-rose-300">
-            {unreadAlerts > 9 ? '9+' : unreadAlerts}
-          </span>
-        )}
-        {to === '/vehicles' && vehicles && vehicles.length > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-[var(--border-default)] bg-[var(--surface-3)] px-1.5 text-2xs font-semibold text-[var(--text-secondary)]">
-            {vehicles.length}
-          </span>
-        )}
-        {to === '/data-repair' && staleCount > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-amber-500/20 bg-amber-500/10 px-1.5 text-2xs font-semibold text-amber-300">
-            {staleCount > 9 ? '9+' : staleCount}
-          </span>
-        )}
-      </PrefetchNavLink>
-    )
-  }
 
   return (
     <>
@@ -1539,6 +1217,7 @@ export default function Layout() {
       <div
         data-presentation-mode={presentation.mode}
         className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
+        style={{ '--shell-sidebar-width': `${(deckRailCollapsed ? 76 : 240) + (deckPanelOpen ? (deckPanelCollapsed ? 76 : 320) : 0)}px` } as React.CSSProperties}
       >
       {/* Global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
@@ -1571,7 +1250,11 @@ export default function Layout() {
         data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
-          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform transition-transform duration-normal ease-out xl:top-0 xl:static xl:z-auto xl:w-[var(--shell-sidebar-width)] xl:translate-x-0',
+          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform duration-normal ease-out xl:top-0 xl:relative xl:z-20 xl:w-[var(--shell-sidebar-width)] xl:shrink-0 xl:translate-x-0',
+          // The deck breathes its width as the rail collapses and the
+          // secondary panel docks. Reduced motion snaps the width while
+          // preserving the drawer slide.
+          'transition-[transform,width] xl:duration-normal xl:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-transform',
           'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
           presentation.mode !== 'standard' && 'hidden',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
@@ -1604,10 +1287,22 @@ export default function Layout() {
 
         {/* Logo — desktop sidebar header. Build version intentionally not
             rendered here; canonical provenance lives in the footer
-            <VersionSegment>. */}
-        <div className="hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] px-5 xl:flex">
-          <PrefetchNavLink to="/" className="flex min-w-0 flex-1 items-center gap-3 rounded-shape-md py-1 transition-colors hover:opacity-90" onClick={() => setSidebarOpen(false)}>
-            <Logo size={32} showWordmark />
+            <VersionSegment>. The collapsed rail shrinks the aside to
+            dock width, so it gets the mark without the wordmark. */}
+        <div className={cn(
+          'hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] xl:flex',
+          deckRailCollapsed ? 'justify-center px-2' : 'px-5',
+        )}
+        >
+          <PrefetchNavLink
+            to="/"
+            className={cn(
+              'flex min-w-0 items-center gap-3 rounded-shape-md py-1 transition-colors hover:opacity-90',
+              !deckRailCollapsed && 'flex-1',
+            )}
+            onClick={() => setSidebarOpen(false)}
+          >
+            <Logo size={32} showWordmark={!deckRailCollapsed} />
           </PrefetchNavLink>
         </div>
 
@@ -1622,254 +1317,46 @@ export default function Layout() {
           <VehiclePicker hideWhenSingle={false} className="xl:hidden" />
         )}
         {workspaceScope.range && (
-          <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
-            <WorkspaceContextControl
-              className="w-full max-w-none"
-              listenForCommands={false}
-            />
+          <div role="group" aria-label={t('workspace.analysis.title', 'View settings')} className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
+            <Suspense fallback={null}>
+              <WorkspaceContextControl
+                className="w-full max-w-none"
+                listenForCommands={false}
+              />
+            </Suspense>
           </div>
         )}
 
         {/* Navigation */}
-        {sidebarStyle === 'linear' ? (
-          <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
-            <LinearSidebar
-              sections={compactNav.sections}
-              pinnedItems={pinnedNavItems}
-              pathname={location.pathname}
-              navLabel={navLabel}
-              onPin={pinNavPath}
-              onUnpin={unpinNavPath}
-              onItemSelect={() => setSidebarOpen(false)}
-              activeSectionTitle={compactNav.activeSectionTitle}
-              alertCount={unreadAlerts}
-              vehicleCount={vehicleCount}
-              staleCount={staleCount}
-            />
-          </Suspense>
-        ) : sidebarStyle === 'notion' ? (
-          <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
-            <NotionSidebar
-              sections={groupedSidebarSections}
-              pinnedItems={pinnedNavItems}
-              pathname={groupedPathname}
-              navLabel={navLabel}
-              onPin={pinNavPath}
-              onUnpin={unpinNavPath}
-              onItemSelect={() => setSidebarOpen(false)}
-              activeSectionTitle={activeSectionTitle}
-              alertCount={unreadAlerts}
-              vehicleCount={vehicleCount}
-              staleCount={staleCount}
-            />
-          </Suspense>
-        ) : (
-        <nav
-          aria-label={t('a11y.navSections', 'Navigation sections')}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 xl:py-4 px-3 space-y-3 scrollbar-thin"
-          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
-        >
-          {activeNavEntry && (
-            <div
-              className={cn(
-                'rounded-2xl border border-[var(--glass-border)] px-3 py-2 ring-1',
-                activeSectionStyle?.surface ?? 'bg-[rgba(var(--theme-primary-rgb),0.07)]',
-                activeSectionStyle?.ring ?? 'ring-[rgba(var(--theme-primary-rgb),0.18)]',
-              )}
-              aria-label={t('nav.currentSection', 'Current')}
-            >
-              <div className="flex items-center gap-2">
-                <p
-                  className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-primary)]"
-                  title={`${navLabel(activeNavEntry.item)} — ${navSectionTitle(activeNavEntry.section)}`}
-                >
-                  {navLabel(activeNavEntry.item)}
-                </p>
-                {activeNavPath && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-pressed={activeIsPinned}
-                    aria-label={activeIsPinned ? t('nav.unpinCurrent', 'Remove current page from pinned') : t('nav.pinCurrent', 'Pin current page')}
-                    onClick={() => activeIsPinned ? unpinNavPath(activeNavPath) : pinNavPath(activeNavPath)}
-                    className={cn(
-                      'h-7 shrink-0 rounded-lg px-2 text-xs hover:bg-white/[0.08]',
-                      activeIsPinned ? 'text-amber-300' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                    )}
-                  >
-                    <Icons.star className={cn('h-3.5 w-3.5', activeIsPinned && 'fill-current')} />
-                    <span>{activeIsPinned ? t('nav.pinnedAction', 'Pinned') : t('nav.pinAction', 'Pin')}</span>
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {pinnedNavItems.length > 0 && (
-            <div>
-              <NavSectionHeader
-                id="nav-pinned-label"
-                label={t('nav.pinned', 'Pinned')}
-              />
-              <div className="space-y-0.5" aria-labelledby="nav-pinned-label">
-                {pinnedNavItems.map(item => (
-                  <div key={item.to} className="flex items-center gap-1">
-                    <div className="min-w-0 flex-1">
-                      {renderNavLink(item, true, 'pinned')}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-label={t('nav.unpinPage', { page: navLabel(item), defaultValue: 'Unpin {{page}}' })}
-                      onClick={() => unpinNavPath(item.to)}
-                      className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-muted)] opacity-80 hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
-                    >
-                      <Icons.close className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {SHOW_RECENTLY_USED_NAV && recentNavItems.length > 0 && (
-            <div>
-              <NavSectionHeader
-                id="nav-recent-label"
-                label={t('nav.recentlyUsed', 'Recently Used')}
-              />
-              <div className="space-y-0.5" aria-labelledby="nav-recent-label">
-                {recentNavItems.map(item => renderNavLink(item, true, 'recent'))}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-1" aria-labelledby="nav-sections-label">
-            <NavSectionHeader
-              id="nav-sections-label"
-              label={t('nav.sections', 'Sections')}
-              action={
-                <div className="flex items-center gap-0.5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={t('nav.expandAll', 'Expand all sections')}
-                    title={t('nav.expandAll', 'Expand all sections')}
-                    disabled={expandedSectionCount === groupedSidebarSections.length}
-                    onClick={expandAllSections}
-                    className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
-                  >
-                    <Icons.expandAll className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={t('nav.collapseAll', 'Collapse all sections')}
-                    title={t('nav.collapseAll', 'Collapse all sections')}
-                    disabled={expandedSectionCount === 0}
-                    onClick={collapseAllSections}
-                    className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
-                  >
-                    <Icons.collapseAll className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Button>
-                </div>
-              }
-            />
-            {groupedSidebarSections.map(section => {
-              const isExpanded = expandedSections.has(section.title)
-              const isActiveSection = section.title === activeSectionTitle
-              const sectionStyle = SECTION_ICON_STYLES[section.title]
-              const SectionIcon = sectionStyle?.icon ?? Icons.sparkles
-              return (
-                <div key={section.title} className="mt-3 first:mt-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-expanded={isExpanded}
-                    aria-controls={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
-                    onClick={() => toggleSection(section.title)}
-                    className={cn(
-                      'group/section relative mb-1.5 flex h-7 w-full items-center justify-between gap-2 rounded-md px-1.5 hover:bg-transparent'
-                    )}
-                  >
-                    {isActiveSection && (
-                      <span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-x-0 -inset-y-0.5 rounded-shape-sm bg-[var(--surface-2)]"
-                      />
-                    )}
-                    <span className="relative z-10 flex min-w-0 flex-1 items-center gap-2">
-                      <SectionIcon
-                        className={cn(
-                          'h-3.5 w-3.5 shrink-0 transition-colors duration-fast',
-                          isActiveSection ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span
-                        className={cn(
-                          'truncate text-xs font-semibold tracking-[0.035em] transition-colors',
-                          isActiveSection ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover/section:text-[var(--text-primary)]'
-                        )}
-                        title={navSectionTitle(section)}
-                      >
-                        {navSectionTitle(section)}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className={cn(
-                          'ms-1 h-px flex-1 bg-[var(--border-subtle)] transition-opacity',
-                          isActiveSection ? 'opacity-100' : 'opacity-60 group-hover/section:opacity-100'
-                        )}
-                      />
-                    </span>
-                    <span className="relative z-10 flex shrink-0 items-center gap-1.5">
-                      <span
-                        className={cn(
-                          'flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-2xs font-semibold tabular-nums',
-                          isActiveSection
-                            ? 'bg-[var(--surface-3)] text-[var(--text-secondary)]'
-                            : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                        )}
-                      >
-                        {section.items.length}
-                      </span>
-                      <Icons.expand
-                        className={cn(
-                          'h-3 w-3 transition-transform',
-                          isActiveSection ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]',
-                          isExpanded && 'rotate-180'
-                        )}
-                      />
-                    </span>
-                  </Button>
-                  <AnimatePresence initial={false}>
-                    {isExpanded && (
-                      <motion.div
-                        id={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-0.5 pb-2">
-                          {section.items.map(item => renderNavLink(item, true, `section-${section.title}`))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )
-            })}
-          </div>
-        </nav>
-        )}
+        <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
+          <CommandDeck
+            sections={groupedSidebarSections}
+            pinnedItems={pinnedNavItems}
+            recentItems={recentNavItems}
+            suggestions={sidebarSuggestions}
+            pathname={location.pathname}
+            navLabel={navLabel}
+            navSectionTitle={navSectionTitle}
+            onPin={pinNavPath}
+            onUnpin={unpinNavPath}
+            onItemSelect={() => setSidebarOpen(false)}
+            alertCount={unreadAlerts}
+            vehicleCount={vehicleCount}
+            staleCount={staleCount}
+            collections={visibleCollections}
+            railCollapsed={deckRailCollapsed}
+            onToggleRailCollapsed={() => setDeckRailCollapsed(prev => !prev)}
+            panelOpen={deckPanelOpen}
+            onPanelOpenChange={setDeckPanelOpen}
+            panelCollapsed={deckPanelCollapsed}
+            onTogglePanelCollapsed={() => {
+              const collapsed = !deckPanelCollapsed
+              setDeckPanelCollapsed(collapsed)
+              if (collapsed) setDeckRailCollapsed(true)
+            }}
+            activeSectionTitle={activeSectionTitle}
+          />
+        </Suspense>
 
         {/* Sidebar footer note:
             "Press ? for shortcuts · Take a tour · Report bug" was moved to
@@ -1908,12 +1395,14 @@ export default function Layout() {
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         {/* Spacer for fixed mobile header */}
         <div className="h-14 shrink-0 xl:hidden" />
-        {presentation.mode === 'standard' && (
+        {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-[4.5rem] shrink-0 xl:block" />}>
           <WorkspaceHeader
             notifications={<NotificationBellPopover />}
             themeControl={<ThemeQuickSwitcher />}
+            breadcrumbSections={groupedSidebarSections}
+            breadcrumbCollections={visibleCollections}
           />
-        )}
+        </Suspense>}
 
         {/* Browser-compat warning — topmost banner
             in the main content column so users on outdated browsers see
@@ -1965,21 +1454,17 @@ export default function Layout() {
             )}
             {presentation.mode === 'standard' && (
               <div data-role="compact-breadcrumbs" className="xl:hidden">
-                <LayoutBreadcrumbs className="min-w-0 text-sm" />
+                <LayoutBreadcrumbs className="min-w-0 text-sm" sections={groupedSidebarSections} collections={visibleCollections} />
               </div>
             )}
             <RouteTransition>
-              {presentation.mode === 'standard' && (
-                <>
-                  <GroupedSectionNavigation groups={REPORT_GROUPS} sectionsLabelKey="nav.reportGroups.sections" />
-                  <GroupedSectionNavigation groups={DIAGNOSTIC_GROUPS} sectionsLabelKey="nav.diagnosticGroups.sections" />
-                </>
-              )}
               <Outlet />
             </RouteTransition>
           </div>
         </main>
       </div>
+
+      {presentation.mode === 'standard' && <div id="helix-dock-slot" className="hidden xl:contents" />}
 
       {/* Mobile bottom tab bar */}
       {presentation.mode === 'standard' && <BottomTabBar />}
@@ -2069,12 +1554,12 @@ export default function Layout() {
           actually expired (or any API call returned 401), preserving
           the current URL so the user can resume after re-auth.
           Both are no-ops in open mode (no FORWARD_AUTH_HEADER). */}
-      <SessionExpiringModal />
+      <Suspense fallback={null}><LazySessionExpiringModal /></Suspense>
       <SessionExpiredModal />
 
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />
-      <GotoIndicator visible={shortcutMode === 'goto'} />
+      {shortcutMode === 'goto' && <Suspense fallback={null}><LazyGotoIndicator visible /></Suspense>}
       {showCheatSheet && (
         <Suspense fallback={null}>
           <LazyKeyboardShortcutsModal open onClose={toggleCheatSheet} />
@@ -2112,7 +1597,7 @@ export default function Layout() {
       {/* "What's new since last visit" modal — auto-shows
           once-per-24h after the OnboardingWizard, or on demand via the command
           palette ("What's new") and footer status bar version segment. */}
-      <ChangelogModal />
+      <Suspense fallback={null}><LazyChangelogModal /></Suspense>
 
       {/* Surfaces unsaved form drafts after a
           tab close, browser crash, PWA reload, or auth redirect. The

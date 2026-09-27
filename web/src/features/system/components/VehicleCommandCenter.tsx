@@ -131,6 +131,7 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
       <CommandCenterHero
         vehicle={vehicle}
         state={state}
+        stateTrust={stateQuery.data}
         loading={stateQuery.isLoading}
         error={stateQuery.error}
         onRetry={() => void stateQuery.refetch()}
@@ -139,6 +140,7 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
       <CommandReadinessStrip
         vehicle={vehicle}
         state={state}
+        stateTrust={stateQuery.data}
         stateLoading={stateQuery.isLoading}
         stateError={stateQuery.error}
         pendingLabel={pendingLabel}

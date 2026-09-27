@@ -8,6 +8,7 @@ export type E2EUIDensity = 'compact' | 'comfortable' | 'spacious';
 
 export interface BrowserSeedOptions {
   density?: E2EUIDensity;
+  preserveDashboardState?: boolean;
 }
 
 const NOW = '2026-08-26T16:00:00.000Z';
@@ -429,6 +430,7 @@ export function resolveApiFixture(
   if (path === '/onboarding/status') return matched({});
   if (path === '/admin/rbac/matrix') return matched({ roles: [], permissions: [] });
   if (path === '/system/update-check') return matched({ update_available: false });
+  if (path === '/system/map-config') return matched({ provider: 'free', api_key: '' });
   if (path === '/export/jobs') return matched([]);
   if (path === '/admin/impersonate') return matched({ mode: 'inactive' });
   if (path === '/push/public-key') return matched({ public_key: '' });
@@ -612,6 +614,8 @@ export function resolveApiFixture(
     });
   }
   if (path.startsWith('/charging-telemetry/latest')) return matched(null);
+  if (path.startsWith('/climate/latest?vehicle_id=')) return matched(null);
+  if (path.startsWith('/security/latest?vehicle_id=')) return matched(null);
   if (path.startsWith('/data-repair/cases/stats')) {
     return matched({ open: 1, in_review: 0, quarantined: 0, resolved: 0, total: 1, updated_at: observedAt });
   }
@@ -655,11 +659,29 @@ export function resolveApiFixture(
   }
   if (path.startsWith('/notifications/report?')) {
     const params = new URLSearchParams(path.split('?')[1]);
-    const from = params.get('from') ?? '';
-    const to = params.get('to') ?? '';
-    const populated = scenario !== 'empty' && from <= '2026-08-26' && to >= '2026-08-26';
+    const legacyFrom = params.get('from');
+    const legacyTo = params.get('to');
+    const timezone = params.get('timezone') ?? 'UTC';
+    const localDay = (timestamp: string) => {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+      }).formatToParts(new Date(timestamp));
+      const value = (type: string) => parts.find(part => part.type === type)?.value ?? '';
+      return `${value('year')}-${value('month')}-${value('day')}`;
+    };
+    const fromInstant = params.get('from_instant') ?? (legacyFrom ? `${legacyFrom}T00:00:00Z` : '');
+    const toExclusive = params.get('to_exclusive') ?? (legacyTo
+      ? new Date(Date.parse(`${legacyTo}T00:00:00Z`) + 86_400_000).toISOString()
+      : '');
+    const from = legacyFrom ?? (fromInstant ? localDay(fromInstant) : '');
+    const to = legacyTo ?? (toExclusive ? localDay(new Date(Date.parse(toExclusive) - 1).toISOString()) : '');
+    const populated = scenario !== 'empty'
+      && Date.parse(fromInstant) <= Date.parse(notificationEvents[0].created_at)
+      && Date.parse(toExclusive) > Date.parse(notificationEvents[0].created_at);
     const report: NotificationReport = {
-      from, to, triggered: populated ? 3 : 0, deliveries: populated ? 2 : 0,
+      from, to, from_instant: fromInstant, to_exclusive: toExclusive, timezone,
+      triggered: populated ? 3 : 0, deliveries: populated ? 2 : 0,
+      outbound_http_calls: populated ? 4 : 0,
       uncorrelated_deliveries: 0,
       by_source: populated ? [
         { key: 'system', count: 1 }, { key: 'automation', count: 1 }, { key: 'alert', count: 1 },
@@ -668,7 +690,7 @@ export function resolveApiFixture(
       by_severity: populated ? ['info', 'warn', 'critical'].map(key => ({ key, count: 1 })) : [],
       by_channel: populated ? [{ key: 'email', count: 1 }, { key: 'webpush', count: 1 }] : [],
       by_status: populated ? [{ key: 'sent', count: 2 }] : [],
-      daily: populated ? [{ day: '2026-08-26', triggered: 3, deliveries: 2 }] : [],
+      daily: populated ? [{ day: localDay(notificationEvents[0].created_at), triggered: 3, deliveries: 2 }] : [],
     };
     return matched(report);
   }
@@ -1073,7 +1095,7 @@ export async function seedBrowserState(
   options: BrowserSeedOptions = {},
 ): Promise<void> {
   const density = options.density ?? 'comfortable';
-  await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes }) => {
+  await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes, preserveDashboardState }) => {
     const beaconRecords: CapturedBeacon[] = [];
     const NativeBlob = Blob;
     const blobBodies = new WeakMap<Blob, string | null>();
@@ -1286,12 +1308,13 @@ export async function seedBrowserState(
     const sidebarSection =
       activePath.startsWith('/settings') ? 'Settings'
         : activePath.startsWith('/data-repair') ? 'Data'
-          : activePath.startsWith('/vehicles') ? 'Vehicles'
-            : activePath.startsWith('/drives') ? 'Driving'
-              : activePath.startsWith('/charging') ? 'Charging'
-                : activePath.startsWith('/battery') ? 'Battery'
-                  : activePath.startsWith('/notifications') ? 'Notifications'
-                    : 'Home';
+          : activePath.startsWith('/tesla-physics') ? 'Tesla Physics'
+            : activePath.startsWith('/vehicles') ? 'Vehicles'
+              : activePath.startsWith('/drives') ? 'Driving'
+                : activePath.startsWith('/charging') ? 'Charging'
+                  : activePath.startsWith('/battery') ? 'Battery'
+                    : activePath.startsWith('/notifications') ? 'Notifications'
+                      : 'Home';
     localStorage.setItem('teslasync-expanded-nav-sections', JSON.stringify([sidebarSection]));
     for (const tourId of ['main', 'alerts', 'charging', 'drives', 'vehicles', 'automations', 'settings', 'debugger']) {
       for (let version = 1; version <= 5; version += 1) {
@@ -1305,13 +1328,16 @@ export async function seedBrowserState(
       layouts: {}, createdAt: '2026-08-26T16:00:00.000Z',
       updatedAt: '2026-08-26T16:00:00.000Z', isDefault: true,
     }];
-    localStorage.setItem('teslasync-dashboards', JSON.stringify(dashboard));
-    localStorage.setItem('teslasync-active-dashboard', 'e2e');
+    if (!preserveDashboardState) {
+      localStorage.setItem('teslasync-dashboards', JSON.stringify(dashboard));
+      localStorage.setItem('teslasync-active-dashboard', 'e2e');
+    }
   }, {
     selectedTheme: theme,
     selectedDensity: density,
     activePath: routePath,
     allowedBeaconPaths: [...ALLOWED_BEACON_PATHS],
     maxBeaconBytes: MAX_BEACON_BYTES,
+    preserveDashboardState: options.preserveDashboardState ?? false,
   });
 }

@@ -76,7 +76,7 @@ func (r *APICallLogRepo) CreateBatch(ctx context.Context, batch []*teslamodel.AP
 	return err
 }
 
-func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate string) ([]*teslamodel.APICallLog, int, error) {
+func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error) {
 	query := `SELECT id, ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited, request_body, response_body, request_headers, response_headers FROM api_call_logs WHERE 1=1`
 	countQuery := `SELECT COUNT(*) FROM api_call_logs WHERE 1=1`
 	args := []interface{}{}
@@ -128,6 +128,12 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 		args = append(args, endDate)
 		argIdx++
 	}
+	if endExclusive != "" {
+		query += ` AND ts < $` + itoa(argIdx)
+		countQuery += ` AND ts < $` + itoa(argIdx)
+		args = append(args, endExclusive)
+		argIdx++
+	}
 
 	var total int
 	err := r.db.Pool.QueryRow(ctx, countQuery, args...).Scan(&total)
@@ -155,7 +161,7 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 	return logs, total, rows.Err()
 }
 
-func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, error) {
+func (r *APICallLogRepo) GetStats(ctx context.Context, start, endExclusive *time.Time) (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
 	var total, errorCount, last24h int
@@ -167,7 +173,9 @@ func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, 
 			COALESCE(AVG(duration_ms), 0),
 			COUNT(*) FILTER (WHERE ts >= NOW() - INTERVAL '24 hours')
 		FROM api_call_logs
-	`).Scan(&total, &errorCount, &avgDuration, &last24h)
+		WHERE ($1::timestamptz IS NULL OR ts >= $1)
+		  AND ($2::timestamptz IS NULL OR ts < $2)
+	`, start, endExclusive).Scan(&total, &errorCount, &avgDuration, &last24h)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +190,9 @@ func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, 
 	stats["last_24h"] = last24h
 
 	// Grouped result needs its own query.
-	rows, err := r.db.Pool.Query(ctx, `SELECT http_method, COUNT(*) as count FROM api_call_logs GROUP BY http_method ORDER BY count DESC`)
+	rows, err := r.db.Pool.Query(ctx, `SELECT http_method, COUNT(*) as count FROM api_call_logs
+		WHERE ($1::timestamptz IS NULL OR ts >= $1) AND ($2::timestamptz IS NULL OR ts < $2)
+		GROUP BY http_method ORDER BY count DESC`, start, endExclusive)
 	if err != nil {
 		return nil, err
 	}
@@ -196,9 +206,15 @@ func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, 
 		}
 		methodCounts[method] = count
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
 	stats["by_method"] = methodCounts
 
-	svcRows, err := r.db.Pool.Query(ctx, `SELECT service, COUNT(*) as count FROM api_call_logs GROUP BY service ORDER BY count DESC`)
+	svcRows, err := r.db.Pool.Query(ctx, `SELECT service, COUNT(*) as count FROM api_call_logs
+		WHERE ($1::timestamptz IS NULL OR ts >= $1) AND ($2::timestamptz IS NULL OR ts < $2)
+		GROUP BY service ORDER BY count DESC`, start, endExclusive)
 	if err != nil {
 		return nil, err
 	}

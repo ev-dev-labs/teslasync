@@ -11,9 +11,9 @@ import { notificationEventTypeFallback } from '@/lib/notificationEventType';
 
 type Breakdown = NotificationReport['by_source'];
 
-export function NotificationReportPanel({ from, to }: { from: string; to: string }) {
+export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: { fromInstant: string; toExclusive: string; timezone: string }) {
   const { t } = useTranslation();
-  const query = useNotificationReport(from, to);
+  const query = useNotificationReport(fromInstant, toExclusive, timezone);
   const report = query.data;
   const daily = report?.daily;
   const resolution = (daily?.length ?? 0) > 3650 ? 4 : (daily?.length ?? 0) > 730 ? 7 : 10;
@@ -59,13 +59,17 @@ export function NotificationReportPanel({ from, to }: { from: string; to: string
       {query.isError && <GlassPanel className="p-5"><QueryError error={query.error} onRetry={() => { void query.refetch(); }} /></GlassPanel>}
       {report && !query.isError && (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <MetricCard label={t('notifications.report.triggered', 'Triggers recorded')} value={fmtInt(report.triggered)} />
             <MetricCard label={t('notifications.report.deliveries', 'Channel deliveries')} value={fmtInt(report.deliveries)} />
             <MetricCard label={t('notifications.report.fanout', 'Linked deliveries per trigger')} value={report.triggered > 0 ? ((report.deliveries - report.uncorrelated_deliveries) / report.triggered).toFixed(1) : '—'} />
             <MetricCard label={t('notifications.report.uncorrelated', 'Deliveries without a linked trigger')} value={fmtInt(report.uncorrelated_deliveries)} />
+            <MetricCard label={t('notifications.report.outboundCalls', 'Outbound HTTP calls')} value={fmtInt(report.outbound_http_calls)} />
           </div>
           <Text variant="caption">{t('notifications.report.countNote', 'Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.')}</Text>
+          <Text variant="caption" className="block">
+            {t('notifications.report.httpScope', 'Counts use the View settings window. Outbound HTTP calls include retries and failures; they are not channel deliveries. Compare with Notifications under API Logs’ By Service for the same window.')}
+          </Text>
           <ChartContainer
             title={timelineTitle}
             ariaLabel={timelineAria}

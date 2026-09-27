@@ -23,13 +23,14 @@
  *   - chart cap: >10 routes collapse to MAX_COMPARISON_ROUTES rows, still sorted.
  *   - single route: comparison chart shows empty (needs ≥2) while KPIs + the
  *     lone route card still render.
- *   - range picker: committing a new range writes snake_case from/to to the URL
- *     and re-queries with the new dates.
+ *   - shared header range: changing snake_case from/to in the URL re-queries
+ *     with the new dates without a duplicate page picker.
  *   - AI panel receives the selected vehicle id (or none when unselected).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { RouteSummary } from '@/types/driving';
@@ -153,9 +154,8 @@ vi.mock('@/components/charts', () => {
   };
 });
 
-// ── forms row: VehicleSelect is a bare marker; RangePicker exposes the current
-//    value + a single trigger that commits a fixed new range so the
-//    onChange → URL-batch wiring is assertable without the real popover. ───────
+// ── The header fixture below owns URL changes; obsolete page controls are
+//    mocked but must not be rendered by the page. ────────────────────────────
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
   RangePicker: ({
@@ -287,6 +287,16 @@ function LocationProbe() {
   return <output data-testid="location-search">{search}</output>;
 }
 
+function HeaderRangeControl() {
+  const [, setSearchParams] = useSearchParams();
+  return <Button type="button" data-testid="header-range-change" onClick={() => setSearchParams((params) => {
+    const next = new URLSearchParams(params);
+    next.set('from', '2026-05-01');
+    next.set('to', '2026-05-31');
+    return next;
+  })}>Change header range</Button>;
+}
+
 function renderPage(initialEntries: string[] = ['/route-efficiency?from=2026-01-01&to=2026-01-31']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const page = (
@@ -294,6 +304,7 @@ function renderPage(initialEntries: string[] = ['/route-efficiency?from=2026-01-
       <QueryClientProvider client={client}>
         <RouteEfficiencyPage />
         <LocationProbe />
+        <HeaderRangeControl />
       </QueryClientProvider>
     </MemoryRouter>
   );
@@ -486,20 +497,19 @@ describe('RouteEfficiencyPage — comparison chart bounds', () => {
   });
 });
 
-describe('RouteEfficiencyPage — range picker URL wiring', () => {
-  it('reflects the URL range and commits a new range as snake_case from/to', async () => {
+describe('RouteEfficiencyPage — shared range URL wiring', () => {
+  it('reads URL range changes from the header as snake_case from/to', async () => {
     renderPage();
 
     // Initial range is read from the URL query params.
-    expect(screen.getByTestId('range-display')).toHaveTextContent('2026-01-01..2026-01-31');
+    expect(screen.queryByTestId('range-display')).not.toBeInTheDocument();
     expect(mockRouteEff).toHaveBeenCalledWith('7', '2026-01-01', '2026-01-31');
 
-    fireEvent.click(screen.getByTestId('route-efficiency-range-picker'));
+    fireEvent.click(screen.getByTestId('header-range-change'));
 
     // The committed range round-trips through the URL and re-drives the hook.
-    await waitFor(() =>
-      expect(screen.getByTestId('range-display')).toHaveTextContent('2026-05-01..2026-05-31'),
-    );
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent('from=2026-05-01'));
+    expect(screen.queryByTestId('route-efficiency-range-picker')).not.toBeInTheDocument();
     expect(mockRouteEff).toHaveBeenLastCalledWith('7', '2026-05-01', '2026-05-31');
   });
 });
@@ -568,7 +578,7 @@ describe('RouteEfficiencyPage — route cards pagination', () => {
       );
       renderPage(['/route-efficiency?from=2026-01-01&to=2026-01-31&page=3']);
       expect(within(cardsRegion()).getByText('End24')).toBeInTheDocument();
-      fireEvent.click(screen.getByTestId('route-efficiency-range-picker'));
+      fireEvent.click(screen.getByTestId('header-range-change'));
       await waitFor(() => expect(within(cardsRegion()).getByText('End00')).toBeInTheDocument());
       expect(within(cardsRegion()).queryByText('End12')).not.toBeInTheDocument();
       expect(screen.getByTestId('location-search')).toHaveTextContent('from=2026-05-01');

@@ -56,8 +56,8 @@ export function NotificationBurnRatePanel() {
   );
 
   return (
-    <section id="burn-rate" aria-label={t('notificationBurnRate.title', 'Notification Burn Rate')} className="space-y-4 scroll-mt-24">
-      <div>
+    <section id="burn-rate" aria-label={t('notificationBurnRate.title', 'Notification Burn Rate')} className="min-w-0 space-y-5 scroll-mt-24">
+      <div className="max-w-3xl">
         <SectionTitle>{t('notificationBurnRate.title', 'Notification Burn Rate')}</SectionTitle>
         <Text as="p" color="secondary">
           {t('notificationBurnRate.subtitle', 'Track all recorded notification delivery attempts against a 99% SLO with short and long error-budget windows')}
@@ -66,7 +66,7 @@ export function NotificationBurnRatePanel() {
       <FadeIn>
         <section
           aria-label={t('notificationBurnRate.kpis.label', 'Delivery SLO metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4"
         >
           {isError ? (
             <GlassPanel className="col-span-full p-4 sm:p-5">
@@ -216,14 +216,14 @@ export function NotificationBurnRatePanel() {
               )}
             />
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid min-w-0 gap-3 md:grid-cols-2">
               {summary.severities.map((severity) => (
                 <div
                   key={severity.severity}
-                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+                  className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:p-4"
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <Text variant="body" className="font-medium capitalize">
+                    <Text variant="body" className="min-w-0 break-words font-medium capitalize">
                       {severity.severity}
                     </Text>
                     <Badge

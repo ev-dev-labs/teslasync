@@ -177,6 +177,47 @@ func ParseCabinOverheatProtectionModeState(s string) (CabinOverheatProtectionMod
 	return CabinOverheatProtectionModeState(0), fmt.Errorf("unknown CabinOverheatProtectionModeState %q", s)
 }
 
+// CabinPortKeepOnState is a proto3 enum from telemetry.vehicle_data.
+type CabinPortKeepOnState int32
+
+const (
+	CabinPortKeepOnState_CabinPortKeepOnStateUnknown CabinPortKeepOnState = 0
+	CabinPortKeepOnState_CabinPortKeepOnStateOff     CabinPortKeepOnState = 1
+	CabinPortKeepOnState_CabinPortKeepOnStateOn      CabinPortKeepOnState = 2
+)
+
+// String returns the symbolic name of the enum value, falling back to the
+// numeric form when the value is unknown.
+func (e CabinPortKeepOnState) String() string {
+	switch e {
+	case CabinPortKeepOnState_CabinPortKeepOnStateUnknown:
+		return "CabinPortKeepOnStateUnknown"
+	case CabinPortKeepOnState_CabinPortKeepOnStateOff:
+		return "CabinPortKeepOnStateOff"
+	case CabinPortKeepOnState_CabinPortKeepOnStateOn:
+		return "CabinPortKeepOnStateOn"
+	}
+	return fmt.Sprintf("CabinPortKeepOnState(%d)", int32(e))
+}
+
+// ParseCabinPortKeepOnState parses a symbolic enum value name and returns the
+// corresponding CabinPortKeepOnState constant. Both the full proto-cased token
+// (e.g. "CabinPortKeepOnState<Suffix>") and the bare suffix (e.g. "<Suffix>") are
+// accepted so callers can pass either the wire-format name or a
+// human-friendly short form. Returns an error if the name is not a
+// known CabinPortKeepOnState value.
+func ParseCabinPortKeepOnState(s string) (CabinPortKeepOnState, error) {
+	switch s {
+	case "CabinPortKeepOnStateUnknown", "Unknown":
+		return CabinPortKeepOnState_CabinPortKeepOnStateUnknown, nil
+	case "CabinPortKeepOnStateOff", "Off":
+		return CabinPortKeepOnState_CabinPortKeepOnStateOff, nil
+	case "CabinPortKeepOnStateOn", "On":
+		return CabinPortKeepOnState_CabinPortKeepOnStateOn, nil
+	}
+	return CabinPortKeepOnState(0), fmt.Errorf("unknown CabinPortKeepOnState %q", s)
+}
+
 // CableType is a proto3 enum from telemetry.vehicle_data.
 type CableType int32
 

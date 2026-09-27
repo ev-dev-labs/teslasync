@@ -71,6 +71,38 @@ pods after rotating the CA. Authenticated development also requires HTTPS:
 session and impersonation cookies are always `Secure`, independent of forwarded
 headers.
 
+For a publicly trusted wildcard certificate renewed in another namespace,
+reflect its TLS Secret into the proxy's namespace and set
+`commandProxy.tlsSecretName` to the reflected Secret name. The Helm deployment
+then reads `tls.crt` and `tls.key` from that Secret while retaining the separate
+Tesla command-signing `private-key.pem` in `commandProxy.secretName`. Do not
+reflect over the signing-key Secret: reflection replaces the whole Secret.
+When the API uses the in-cluster service URL but the certificate has a different
+DNS name, set `commandProxy.tlsServerName` to a name covered by the certificate
+(for example `command.example.com` for `*.example.com`). The API still connects
+to the internal Service, but verifies the configured certificate name and CA;
+this does not disable TLS verification or expose the proxy to the internet.
+Leave `tlsServerName` empty when the certificate already matches the URL.
+
+```yaml
+commandProxy:
+  enabled: true
+  secretName: command-signing-key
+  tlsSecretName: reflected-wildcard-tls
+  tlsServerName: command.example.com
+```
+
+When `tlsSecretName` is set, the chart annotates the proxy Deployment for
+Stakater Reloader to restart it when the reflected Secret changes; the
+projected volume updates automatically, but the proxy may only load its
+certificate on startup. Install Reloader for automatic rotation or restart the
+proxy after each renewal. In Argo CD deployments, ensure reconciliation does
+not undo Reloader's rollout annotation. The reflected Secret and proxy must be
+in the same namespace. Once the new chart is deployed, the old TLS certificate
+and key can be removed from the GitOps-managed signing Secret; retain its
+`private-key.pem`. If using a private CA instead, mount its `ca.pem` into the
+API and worker pods as described above.
+
 ## API surface
 
 ```

@@ -22,6 +22,7 @@ import {
 } from '@/lib/productPreferences'
 
 const OPEN_EVENT = 'teslasync:changelog:open'
+const translationCalls = vi.hoisted(() => vi.fn())
 
 type MockChangelog = {
   entries: readonly ChangelogEntry[]
@@ -51,6 +52,7 @@ vi.mock('react-i18next', async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, fallbackOrOpts?: unknown, opts?: Record<string, unknown>) => {
+        translationCalls(key)
         let fallback = key
         let vars: Record<string, unknown> | undefined
         if (typeof fallbackOrOpts === 'string') {
@@ -130,6 +132,7 @@ function openViaEvent() {
 
 describe('ChangelogModal', () => {
   beforeEach(() => {
+    translationCalls.mockClear()
     window.localStorage.clear()
     resetProductPreferences()
     mockChangelog = makeChangelog()
@@ -145,6 +148,7 @@ describe('ChangelogModal', () => {
     render(<ChangelogModal />)
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(mockChangelog.stampShown).not.toHaveBeenCalled()
+    expect(translationCalls).not.toHaveBeenCalledWith(expect.stringMatching(/^changelog\./))
   })
 
   it('opens on the imperative window event and stamps the throttle', () => {

@@ -45,8 +45,8 @@ export function NotificationLatencyPanel() {
   const isError = logsQuery.isError;
 
   return (
-    <section id="latency" aria-label={t('notificationLatency.title', 'Notification Latency')} className="space-y-4 scroll-mt-24">
-      <div>
+    <section id="latency" aria-label={t('notificationLatency.title', 'Notification Latency')} className="min-w-0 space-y-5 scroll-mt-24">
+      <div className="max-w-3xl">
         <SectionTitle>{t('notificationLatency.title', 'Notification Latency')}</SectionTitle>
         <Text as="p" color="secondary">
           {t('notificationLatency.subtitle', 'Measure all recorded delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records')}
@@ -55,7 +55,7 @@ export function NotificationLatencyPanel() {
       <FadeIn>
         <section
           aria-label={t('notificationLatency.kpis.label', 'Notification latency metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4"
         >
           {isError ? (
             <GlassPanel className="col-span-full p-4 sm:p-5">
@@ -171,7 +171,7 @@ export function NotificationLatencyPanel() {
               actionTo={{ label: t('notificationLatency.cohorts.configure', 'Manage delivery channels'), to: '/notifications/channels' }}
             />
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-2">
               {[
                 {
                   title: t('notificationLatency.cohorts.severity', 'By severity'),
@@ -188,9 +188,9 @@ export function NotificationLatencyPanel() {
                     {group.rows.map((cohort) => (
                       <div
                         key={cohort.key}
-                        className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+                        className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                       >
-                        <div>
+                        <div className="min-w-0 break-words">
                           <Text as="p" variant="bodySm" className="font-medium capitalize">
                             {cohort.key.replace('_', ' ')}
                           </Text>
@@ -218,7 +218,9 @@ export function NotificationLatencyPanel() {
             <Hourglass className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('notificationLatency.slowest.title', 'Slowest Delivery Records')}
           </PanelTitle>
-          {summary.slowest.length === 0 ? (
+          {isLoading ? (
+            <Skeleton height={180} />
+          ) : summary.slowest.length === 0 ? (
             <EmptyState /* no-action: slow records appear automatically when delivery latency is observed. */
               icon={<Hourglass className="h-8 w-8" />}
               message={t('notificationLatency.slowest.empty', 'No slow delivery records are available.')}
@@ -228,11 +230,11 @@ export function NotificationLatencyPanel() {
               {summary.slowest.map((record) => (
                 <div
                   key={record.id}
-                  className="grid gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
+                  className="grid min-w-0 gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
                 >
                   <div className="min-w-0">
-                    <Text as="p" variant="bodySm" className="truncate font-medium">{record.title}</Text>
-                    <Text as="p" variant="caption">
+                    <Text as="p" variant="bodySm" className="break-words font-medium">{record.title}</Text>
+                    <Text as="p" variant="caption" className="break-words">
                       {t('notificationLatency.slowest.meta', '{{severity}} · {{status}} · {{date}}', {
                         severity: record.severity,
                         status: record.status,
@@ -240,7 +242,7 @@ export function NotificationLatencyPanel() {
                       })}
                     </Text>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                     <Badge variant={record.source === 'measured' ? 'info' : 'neutral'} size="sm">
                       {record.source === 'measured'
                         ? t('notificationLatency.slowest.measured', 'Measured')

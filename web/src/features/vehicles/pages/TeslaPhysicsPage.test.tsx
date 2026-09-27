@@ -1,24 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
+import { features } from '../components/tesla-physics/PhysicsPageShell';
 import TeslaPhysicsPage from './TeslaPhysicsPage';
-import PhysicsClocksPage from './PhysicsClocksPage';
-import PhysicsLifeTapePage from './PhysicsLifeTapePage';
-import PhysicsContradictionsPage from './PhysicsContradictionsPage';
-import PhysicsMetersPage from './PhysicsMetersPage';
-import PhysicsUnknownPage from './PhysicsUnknownPage';
-import PhysicsCarKeptLivingPage from './PhysicsCarKeptLivingPage';
-import PhysicsLogbookPage from './PhysicsLogbookPage';
-import PhysicsFirmwareEpochsPage from './PhysicsFirmwareEpochsPage';
-import PhysicsChargePortPage from './PhysicsChargePortPage';
-import PhysicsBlackBoxPage from './PhysicsBlackBoxPage';
-import PhysicsDictionaryPage from './PhysicsDictionaryPage';
-import PhysicsVaultPage from './PhysicsVaultPage';
-import PhysicsModesPage from './PhysicsModesPage';
-import PhysicsNervousSystemPage from './PhysicsNervousSystemPage';
-import PhysicsRangePage from './PhysicsRangePage';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -108,33 +94,44 @@ function LocationLabel() {
   const location = useLocation();
   return <span data-testid="location">{location.pathname}{location.hash}</span>;
 }
-const pages = {
-  clocks: PhysicsClocksPage, 'life-tape': PhysicsLifeTapePage, contradictions: PhysicsContradictionsPage,
-  meters: PhysicsMetersPage, unknown: PhysicsUnknownPage, 'car-kept-living': PhysicsCarKeptLivingPage,
-  logbook: PhysicsLogbookPage, 'firmware-epochs': PhysicsFirmwareEpochsPage, 'charge-port': PhysicsChargePortPage,
-  'black-box': PhysicsBlackBoxPage, dictionary: PhysicsDictionaryPage, vault: PhysicsVaultPage,
-  modes: PhysicsModesPage, 'nervous-system': PhysicsNervousSystemPage, range: PhysicsRangePage,
-};
+const slugs = features.map(({ slug }) => slug);
 
-function renderAt(path = '/tesla-physics') {
-  return render(<MemoryRouter initialEntries={[path]}><LocationLabel /><Routes>
+async function renderAt(path = '/tesla-physics') {
+  const view = render(<MemoryRouter initialEntries={[path]}><LocationLabel /><Routes>
     <Route path="/tesla-physics" element={<TeslaPhysicsPage />} />
-    {Object.entries(pages).map(([slug, Page]) => <Route key={slug} path={`/tesla-physics/${slug}`} element={<Page />} />)}
+    {slugs.map((slug) => <Route key={slug} path={`/tesla-physics/${slug}`} element={<TeslaPhysicsPage />} />)}
   </Routes></MemoryRouter>);
+  const feature = features.find(({ slug }) => path === `/tesla-physics/${slug}`);
+  if (feature) {
+    if (report[feature.slice]) await within(view.container).findByRole('heading', { name: feature.title });
+    else await within(view.container).findByText('This evidence slice was not returned. No measurement is inferred from its absence.');
+  }
+  return view;
 }
 
-describe('Tesla Physics independent investigation pages', () => {
-  it('hub exposes source caps and all fifteen direct routes', () => {
-    renderAt();
+describe('Tesla Physics consolidated workbench', () => {
+  it('hub exposes source caps and all fifteen deep links in grouped navigation', async () => {
+    await renderAt();
     expect(screen.getByText('History row cap reached')).toBeInTheDocument();
     expect(screen.getByText('Drive session cap reached')).toBeInTheDocument();
-    for (const slug of Object.keys(pages)) expect(document.querySelector(`a[href="/tesla-physics/${slug}"]`)).not.toBeNull();
-    fireEvent.click(screen.getByRole('link', { name: 'Three Clocks →' }));
+    expect(screen.getByRole('heading', { name: 'Time & coverage' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Motion & states' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging & range' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Integrity & firmware' })).toBeInTheDocument();
+    for (const slug of slugs) expect(document.querySelector(`a[href="/tesla-physics/${slug}"]`)).not.toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: 'Three Clocks' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/tesla-physics/clocks');
+    expect(screen.getByRole('link', { name: 'Three Clocks' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('heading', { name: 'Three Clocks' })).toBeInTheDocument();
+    expect(screen.getAllByText('Evidence boundaries')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('link', { name: 'Mode Laws' }));
+    expect(await screen.findByRole('heading', { name: 'Mode Laws' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Three Clocks' })).toBeNull();
+    expect(screen.getAllByText('Evidence boundaries')).toHaveLength(1);
   });
 
-  it('analyzes clock lags and gaps instead of rendering repeated timestamps by default', () => {
-    renderAt('/tesla-physics/clocks');
+  it('analyzes clock lags and gaps instead of rendering repeated timestamps by default', async () => {
+    await renderAt('/tesla-physics/clocks');
     expect(screen.getByText('Stored ingest timestamps: 0 / 30')).toBeInTheDocument();
     expect(screen.getByText('Intervals over five minutes')).toBeInTheDocument();
     expect(screen.getByText('At most 60 s: 30')).toBeInTheDocument();
@@ -144,14 +141,14 @@ describe('Tesla Physics independent investigation pages', () => {
     expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument();
   });
 
-  it('calculates lag only from paired event/ingest timestamps and keeps missing timestamps unknown', () => {
+  it('calculates lag only from paired event/ingest timestamps and keeps missing timestamps unknown', async () => {
     const old = report.clocks.samples;
     report.clocks.samples = [
       { event_time: start, ingest_time: '2026-03-01T11:00:10Z', display_time: end, gap_s: null, unknown: false },
       { event_time: '2026-03-01T11:10:00Z', ingest_time: null, display_time: end, gap_s: 600, unknown: true },
     ];
     try {
-      renderAt('/tesla-physics/clocks');
+      await renderAt('/tesla-physics/clocks');
       expect(screen.getByText('Stored ingest timestamps: 1 / 2')).toBeInTheDocument();
       expect(screen.getByText('Known event intervals: 1 / 2')).toBeInTheDocument();
       expect(screen.getByText('Intervals over five minutes')).toBeInTheDocument();
@@ -163,11 +160,11 @@ describe('Tesla Physics independent investigation pages', () => {
     } finally { report.clocks.samples = old; }
   });
 
-  it('reads backend episodes with observation count and window', () => {
+  it('reads backend episodes with observation count and window', async () => {
     const old = report.contradictions.findings;
     report.contradictions.findings = [{ at: start, last_at: end, observations: 265, kind: 'unplugged_latched', detail: 'Unplugged while latched', unknown: false }];
     try {
-      renderAt('/tesla-physics/contradictions');
+      await renderAt('/tesla-physics/contradictions');
       expect(screen.getByRole('cell', { name: '265' })).toBeInTheDocument();
       expect(screen.getByText('unplugged_latched: 1 episodes / 265 readings')).toBeInTheDocument();
       expect(screen.getByText(/Nearest port sample within two minutes:/)).toBeInTheDocument();
@@ -176,8 +173,8 @@ describe('Tesla Physics independent investigation pages', () => {
     } finally { report.contradictions.findings = old; }
   });
 
-  it('filters life states and retains meter nulls', () => {
-    renderAt('/tesla-physics/life-tape');
+  it('filters life states and retains meter nulls', async () => {
+    await renderAt('/tesla-physics/life-tape');
     expect(screen.getByText('Sum of classified intervals / returned window: 16.7%')).toBeInTheDocument();
     expect(screen.getByText(/Longest returned interval: neutral_rolling for 300 s/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Filter by state'), { target: { value: 'charging' } });
@@ -185,18 +182,18 @@ describe('Tesla Physics independent investigation pages', () => {
     expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('neutral_rolling'))).toBe(false);
   });
 
-  it('shows meter context and quantified drops without filling null FSD', () => {
-    renderAt('/tesla-physics/meters');
+  it('shows meter context and quantified drops without filling null FSD', async () => {
+    await renderAt('/tesla-physics/meters');
     expect(screen.getByText('FSD trip meter')).toBeInTheDocument();
     expect(screen.getByText('Largest measured drop: 1.9 km')).toBeInTheDocument();
     expect(screen.queryByText('0.0 km')).toBeNull();
   });
 
-  it('keeps counter and firmware context when no resets were returned', () => {
+  it('keeps counter and firmware context when no resets were returned', async () => {
     const old = report.meters.resets;
     report.meters.resets = [];
     try {
-      renderAt('/tesla-physics/meters');
+      await renderAt('/tesla-physics/meters');
       expect(screen.getByText(/No meter drops were returned in this bounded window/)).toBeInTheDocument();
       expect(screen.getByText(/Firmware 2026.20.3 observed/)).toBeInTheDocument();
       expect(screen.getByText('Latest mode context: Valet No, Service No, Transport unknown')).toBeInTheDocument();
@@ -204,8 +201,8 @@ describe('Tesla Physics independent investigation pages', () => {
     } finally { report.meters.resets = old; }
   });
 
-  it('distinguishes sampled hours and overlapping signal budgets', () => {
-    renderAt('/tesla-physics/unknown');
+  it('distinguishes sampled hours and overlapping signal budgets', async () => {
+    await renderAt('/tesla-physics/unknown');
     expect(screen.getByText('Accepted telemetry: unknown')).toBeInTheDocument();
     expect(screen.getByText('fsd')).toBeInTheDocument();
     expect(screen.getByText('Unknown-flagged signal budgets: 1 / 1')).toBeInTheDocument();
@@ -213,18 +210,18 @@ describe('Tesla Physics independent investigation pages', () => {
     expect(screen.getByRole('link', { name: /Check event and ingest intervals/ })).toHaveAttribute('href', '/tesla-physics/clocks');
   });
 
-  it('derives coverage shares only when the requested window is valid', () => {
+  it('derives coverage shares only when the requested window is valid', async () => {
     const old = report.unknown_os.sample_hours;
     report.unknown_os.sample_hours = 7;
     try {
-      renderAt('/tesla-physics/unknown');
+      await renderAt('/tesla-physics/unknown');
       expect(screen.getByText('Accepted telemetry: 50.0%')).toBeInTheDocument();
       expect(screen.getByText('100.0% of requested window')).toBeInTheDocument();
     } finally { report.unknown_os.sample_hours = old; }
   });
 
-  it('only links positive-ID drive and charge logbook boundaries', () => {
-    renderAt('/tesla-physics/logbook');
+  it('only links positive-ID drive and charge logbook boundaries', async () => {
+    await renderAt('/tesla-physics/logbook');
     expect(screen.getByText('First recorded gear: Park · first charge state: unknown')).toBeInTheDocument();
     expect(screen.getByText('Last recorded gear: Park · last charge state: unknown')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Drive →' })).toHaveAttribute('href', '/drives/42');
@@ -239,26 +236,26 @@ describe('Tesla Physics independent investigation pages', () => {
     ['/tesla-physics/dictionary', 'Returned etiquette dwell observations: 2'],
     ['/tesla-physics/modes', 'Returned counter drops for comparison: 1'],
     ['/tesla-physics/nervous-system', 'No recent sample.'],
-  ])('%s exposes its own returned evidence rather than a generic panel', (path, evidence) => {
-    renderAt(path);
+  ])('%s exposes its own returned evidence rather than a generic panel', async (path, evidence) => {
+    await renderAt(path);
     expect(screen.getByText(evidence)).toBeInTheDocument();
   });
 
-  it('shows port gear/firmware and Black Box source limitations', () => {
-    renderAt('/tesla-physics/charge-port');
+  it('shows port gear/firmware and Black Box source limitations', async () => {
+    await renderAt('/tesla-physics/charge-port');
     expect(screen.getByText('Latest gear P · firmware 2026.20.3 · latch Engaged · schedule OffPeak')).toBeInTheDocument();
-    renderAt('/tesla-physics/black-box');
+    await renderAt('/tesla-physics/black-box');
     expect(screen.getAllByText('Black-box source unavailable: an empty frame list cannot exclude an event').length).toBeGreaterThan(0);
   });
 
-  it('distinguishes observed port transitions from the first returned state and filters raw rows', () => {
+  it('distinguishes observed port transitions from the first returned state and filters raw rows', async () => {
     const saved = report.charge_port_court.evidence;
     report.charge_port_court.evidence = [...saved, {
       at: end, gear: 'P', firmware: '2026.20.3', latch: 'Open', charge_state: 'Disconnected',
       scheduled_mode: 'OffPeak', door_open: true, pack_current_a: 0,
     }];
     try {
-      renderAt('/tesla-physics/charge-port');
+      await renderAt('/tesla-physics/charge-port');
       expect(screen.getByText('Observed charge-state changes: 1')).toBeInTheDocument();
       expect(screen.getByText('Disconnected readings: 1')).toBeInTheDocument();
       fireEvent.change(screen.getByLabelText('Filter charge-port samples by state'), { target: { value: 'Disconnected' } });
@@ -266,25 +263,25 @@ describe('Tesla Physics independent investigation pages', () => {
     } finally { report.charge_port_court.evidence = saved; }
   });
 
-  it('counts Black Box changes after the first frame, retaining gear and firmware context', () => {
+  it('counts Black Box changes after the first frame, retaining gear and firmware context', async () => {
     const saved = report.black_box.frames;
     report.black_box.frames = [
       { ...report.charge_port_court.evidence[0], charge_state: 'Complete' },
       { ...report.charge_port_court.evidence[0], at: end, charge_state: 'Disconnected', latch: 'Open' },
     ];
     try {
-      renderAt('/tesla-physics/black-box');
+      await renderAt('/tesla-physics/black-box');
       expect(screen.getByText('1 observed state, latch or gear changes after the first frame')).toBeInTheDocument();
       expect(screen.getByText('Recorded gears: P')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Inspect raw evidence: Black Box 90s (2 rows)' })).toBeInTheDocument();
     } finally { report.black_box.frames = saved; }
   });
 
-  it('shows firmware counter bounds, filters observed versions, and never calls it engagement', () => {
+  it('shows firmware counter bounds, filters observed versions, and never calls it engagement', async () => {
     const saved = report.firmware_epochs.epochs;
     report.firmware_epochs.epochs = [{ ...saved[0], fsd_meter_start_m: 2000, fsd_meter_end_m: 100 }];
     try {
-      renderAt('/tesla-physics/firmware-epochs');
+      await renderAt('/tesla-physics/firmware-epochs');
       expect(screen.getByText('Epochs with lower final FSD counter: 1')).toBeInTheDocument();
       expect(screen.getByText(/Latest epoch with two FSD counter bounds/)).toBeInTheDocument();
       fireEvent.change(screen.getByLabelText('Filter observed firmware version'), { target: { value: '2026.20.3' } });
@@ -292,79 +289,79 @@ describe('Tesla Physics independent investigation pages', () => {
     } finally { report.firmware_epochs.epochs = saved; }
   });
 
-  it('compares only usable Dictionary dwells and handles a missing Vault source', () => {
-    renderAt('/tesla-physics/dictionary');
+  it('compares only usable Dictionary dwells and handles a missing Vault source', async () => {
+    await renderAt('/tesla-physics/dictionary');
     expect(screen.getByText('At most one minute')).toBeInTheDocument();
     expect(screen.getByText('Returned dwell median: 83 s')).toBeInTheDocument();
     const saved = report.vault;
     try {
       Object.assign(report, { vault: null });
-      renderAt('/tesla-physics/dictionary');
+      await renderAt('/tesla-physics/dictionary');
       expect(screen.getByText(/Vault etiquette observations were not returned/)).toBeInTheDocument();
     } finally { report.vault = saved; }
   });
 
-  it('cross-checks Mode Laws and Nervous System against their separately returned sources', () => {
-    renderAt('/tesla-physics/modes');
+  it('cross-checks Mode Laws and Nervous System against their separately returned sources', async () => {
+    await renderAt('/tesla-physics/modes');
     expect(screen.getByText('Meter drops with unknown cause: 1')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Inspect before\/after meter evidence/ })).toHaveAttribute('href', '/tesla-physics/meters');
-    renderAt('/tesla-physics/nervous-system');
+    await renderAt('/tesla-physics/nervous-system');
     expect(screen.getByText('Non-alive fields with a same-named Unknown OS budget: 1 / 1')).toBeInTheDocument();
     expect(screen.getByText('FSD: silent now; 14.0 h unknown in returned budget')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Filter returned signals by status'), { target: { value: 'silent' } });
     expect(screen.getByRole('button', { name: 'Inspect raw evidence: Nervous System (1 rows)' })).toBeInTheDocument();
   });
 
-  it('keeps Car Kept Living lag unknown without a paired ingest reading', () => {
-    renderAt('/tesla-physics/car-kept-living');
+  it('keeps Car Kept Living lag unknown without a paired ingest reading', async () => {
+    await renderAt('/tesla-physics/car-kept-living');
     expect(screen.getByText('Latest paired ingest lag')).toBeInTheDocument();
     expect(screen.getByText('Bounded history: 100 rows; available: Yes')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Inspect unknown-hour budgets/ })).toHaveAttribute('href', '/tesla-physics/unknown');
   });
 
-  it('keeps Vault HMAC status, cap warnings, and drive links', () => {
-    renderAt('/tesla-physics/vault');
+  it('keeps Vault HMAC status, cap warnings, and drive links', async () => {
+    await renderAt('/tesla-physics/vault');
     expect(screen.getByText('Hash only: not an authenticated signature')).toBeInTheDocument();
     expect(screen.getByText('Drive session cap reached: drive boundaries are partial')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Drive boundaries (1 rows)' }));
     expect(screen.getByRole('link', { name: '42 →' })).toHaveAttribute('href', '/drives/42');
   });
 
-  it('compares range estimates without asserting true range', () => {
-    renderAt('/tesla-physics/range');
+  it('compares range estimates without asserting true range', async () => {
+    await renderAt('/tesla-physics/range');
     expect(screen.getByText('Estimate spread: 90.0 km')).toBeInTheDocument();
     expect(screen.getByText('Rated vs Typical: 40.0 km apart')).toBeInTheDocument();
     expect(screen.getByText('Difference relative to Rated: 10.0%')).toBeInTheDocument();
     expect(screen.getByText(/No true range/)).toBeInTheDocument();
   });
 
-  it('does not turn an empty Life Tape into a measured zero-duration state', () => {
+  it('does not turn an empty Life Tape into a measured zero-duration state', async () => {
     const saved = report.life_tape.segments;
     report.life_tape.segments = [];
     try {
-      renderAt('/tesla-physics/life-tape');
+      await renderAt('/tesla-physics/life-tape');
       expect(screen.getByText('No classified intervals returned. The report cannot reconstruct a state chronology for this window.')).toBeInTheDocument();
       expect(screen.getByText('Returned interval duration')).toBeInTheDocument();
       expect(screen.getByText('Sum of classified intervals / returned window: unknown')).toBeInTheDocument();
     } finally { report.life_tape.segments = saved; }
   });
 
-  it('keeps mode state unknown if no fields are observed and names absent meter context', () => {
+  it('keeps mode state unknown if no fields are observed and names absent meter context', async () => {
     const modes = report.modes;
     const meters = report.meters;
     try {
       Object.assign(report, { modes: { ...modes, valet: null, service: null, transport: null }, meters: null });
-      renderAt('/tesla-physics/modes');
+      await renderAt('/tesla-physics/modes');
       expect(screen.getByText('Observed active modes: unknown')).toBeInTheDocument();
       expect(screen.getByText(/Meter evidence was not returned/)).toBeInTheDocument();
     } finally { report.modes = modes; report.meters = meters; }
   });
 
-  it('keeps missing range comparisons unknown when only one estimate is returned', () => {
+  it('keeps missing range comparisons unknown when only one estimate is returned', async () => {
     const saved = report.range;
     report.range = { ...saved, est_range_m: null, ideal_range_m: null };
     try {
-      renderAt('/tesla-physics/range');
+      await renderAt('/tesla-physics/range');
       expect(screen.getByText(/At least two estimates are needed for a comparison/)).toBeInTheDocument();
       expect(screen.getByText('Estimate spread: unknown')).toBeInTheDocument();
     } finally { report.range = saved; }
@@ -376,33 +373,35 @@ describe('Tesla Physics independent investigation pages', () => {
     ['logbook', 'logbook'], ['nervous-system', 'nervous_system'], ['modes', 'modes'],
     ['charge-port', 'charge_port_court'], ['black-box', 'black_box'], ['dictionary', 'dictionary'],
     ['range', 'range'], ['firmware-epochs', 'firmware_epochs'], ['vault', 'vault'],
-  ] as const)('%s retains its own panel when source slice is null', (slug, slice) => {
+  ] as const)('%s retains its own panel when source slice is null', async (slug, slice) => {
     const saved = report[slice];
     try {
       Object.assign(report, { [slice]: null });
-      renderAt(`/tesla-physics/${slug}`);
+      await renderAt(`/tesla-physics/${slug}`);
       expect(screen.getByText('This evidence slice was not returned. No measurement is inferred from its absence.')).toBeInTheDocument();
     } finally { Object.assign(report, { [slice]: saved }); }
   });
 
-  it('honestly handles absent source metadata', () => {
+  it('honestly handles absent source metadata', async () => {
     const saved = report.evidence;
     try {
       report.evidence = undefined;
-      renderAt();
+      await renderAt();
       expect(screen.getByText('Evidence coverage metadata was not returned; counts cannot establish completeness.')).toBeInTheDocument();
     } finally { report.evidence = saved; }
   });
 
-  it('lazy-loads every page and matches route prefetch chunks', () => {
+  it('routes all deep links through one lazy workbench and splits fifteen evidence sections', () => {
     const app = readFileSync('src/App.tsx', 'utf8');
     const prefetch = readFileSync('src/lib/routePrefetch.ts', 'utf8');
+    const sections = readFileSync('src/features/vehicles/components/tesla-physics/PhysicsInvestigation.tsx', 'utf8');
     expect(app).toContain("const TeslaPhysics = lazy(() => import('./features/vehicles/pages/TeslaPhysicsPage'))");
     expect(prefetch).toContain("'/tesla-physics': () => import('../features/vehicles/pages/TeslaPhysicsPage')");
-    for (const slug of Object.keys(pages)) {
-      expect(app).toContain(`path="tesla-physics/${slug}" element={<SafeRoute`);
-      expect(prefetch).toContain(`'/tesla-physics/${slug}': () => import('../features/vehicles/pages/Physics`);
+    for (const slug of slugs) {
+      expect(app).toMatch(new RegExp(`path="tesla-physics/${slug}" element=\\{<SafeRoute name="[^"]+"><TeslaPhysics />`));
+      expect(prefetch).toContain(`'/tesla-physics/${slug}': () => import('../features/vehicles/pages/TeslaPhysicsPage')`);
     }
+    expect(sections.match(/lazy\(\(\) => import\('\.\/Physics\w+Section'\)\)/g)).toHaveLength(slugs.length);
     expect(app).toContain('path="tesla-physics/ledger"');
     expect(app).toContain('path="tesla-only/*" element={<LegacyTeslaPhysicsRedirect />}');
   });

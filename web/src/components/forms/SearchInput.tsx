@@ -269,6 +269,7 @@ export function SearchInput({
         aria-activedescendant={activeOptionId}
         aria-haspopup={historyEnabled ? 'listbox' : undefined}
         icon={<Search className="h-4 w-4" aria-hidden />}
+        className="[&::-webkit-search-cancel-button]:hidden"
         suffix={local ? (
           <button
             type="button"

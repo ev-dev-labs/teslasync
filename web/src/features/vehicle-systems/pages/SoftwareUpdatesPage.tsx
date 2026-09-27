@@ -7,7 +7,7 @@
  * data-bound section owns its loading / error / empty state independently.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,7 +20,6 @@ import { GlassPanel, Badge, Button, Pagination, PanelTitle, Text, Caption } from
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RangePicker, VehicleSelect, type RangePickerValue } from '@/components/forms';
 import { AISoftwareUpdateChangelogSummarizer } from '@/components/ai/AISoftwareUpdateChangelogSummarizer';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -165,18 +164,13 @@ export default function SoftwareUpdatesPage() {
       ? (page - 1) * PAGE_SIZE + updates.length
       : page * PAGE_SIZE + 1;
 
-  // Reset pagination to page 1 whenever the range changes, writing the range
-  // AND the page in a SINGLE navigation. Two separate URL setters (setRange +
-  // setPage) race under react-router v6: both callbacks read the same params
-  // snapshot, so the second setSearchParams(replace) discards the first — a
-  // range change made while on page ≥ 2 silently reverted the range. Batching
-  // via useUrlBatch is the same fix documented in useUrlState.ts.
-  const handleRangeChange = useCallback(
-    (r: RangePickerValue) => {
-      setUrl({ from: r.start, to: r.end, page: null });
-    },
-    [setUrl],
-  );
+  const previousRange = useRef(`${start}:${end}`);
+  useEffect(() => {
+    const currentRange = `${start}:${end}`;
+    if (previousRange.current === currentRange) return;
+    previousRange.current = currentRange;
+    if (page !== 1) setUrl({ page: null });
+  }, [start, end, page, setUrl]);
 
   const handleRetry = useCallback(() => {
     refetch();
@@ -184,13 +178,6 @@ export default function SoftwareUpdatesPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-      <VehicleSelect />
-      <RangePicker
-        value={{ start, end }}
-        onChange={handleRangeChange}
-        align="end"
-        triggerTestId="software-updates-range"
-      />
       <Button
         variant="ghost"
         onClick={handleRetry}

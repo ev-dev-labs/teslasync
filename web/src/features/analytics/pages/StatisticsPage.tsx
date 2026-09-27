@@ -17,7 +17,7 @@ import {
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks/useAnalytics';
@@ -83,7 +83,7 @@ export default function StatisticsPage() {
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 
-  const { start: startDate, end: endDate, setRange } = useRangeState({
+  const { start: startDate, end: endDate } = useRangeState({
     persistKey: 'statistics.range',
     defaultPresetId: '1y',
   });
@@ -147,15 +147,6 @@ export default function StatisticsPage() {
   /* ── Toolbar ───────────────────────────────────────────────────── */
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      <VehicleSelect
-        ariaLabel={t('statistics.selectVehicle', 'Select Vehicle')}
-      />
-      <RangePicker
-        value={{ start: startDate, end: endDate }}
-        onChange={setRange}
-        align="end"
-        triggerTestId="statistics-range"
-      />
       <Button
         size="sm"
         onClick={() => { void refetch(); }}

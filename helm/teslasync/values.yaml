@@ -414,6 +414,12 @@ commandProxy:
   caFile: ""
   # Optional secret with ca.pem only (never the proxy private key).
   caSecretName: ""
+  # DNS name on the proxy's certificate, used for TLS verification and SNI
+  # when the in-cluster service URL is different (e.g. a public wildcard cert).
+  tlsServerName: ""
+  # Optional reflected TLS secret containing tls.crt and tls.key. If set, these
+  # replace the TLS files from secretName; private-key.pem still comes from secretName.
+  tlsSecretName: ""
 
   image:
     repository: tesla/vehicle-command

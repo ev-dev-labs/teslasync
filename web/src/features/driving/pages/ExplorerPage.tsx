@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -73,7 +73,6 @@ export default function ExplorerPage() {
         'How far and how wide your car actually roams',
       )}
       query={historyQuery}
-      actions={<VehicleSelect />}
     >
       <FadeIn>
         <ExplorerKpis

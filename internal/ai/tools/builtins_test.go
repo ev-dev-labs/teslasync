@@ -67,6 +67,20 @@ type fakeCharges struct {
 	one  map[int64]*chargingmodel.ChargingSession
 }
 
+type capturingCharges struct {
+	fakeCharges
+	vehicleID int64
+	limit     int
+	offset    int
+	start     time.Time
+	end       time.Time
+}
+
+func (f *capturingCharges) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*chargingmodel.ChargingSession, error) {
+	f.vehicleID, f.limit, f.offset, f.start, f.end = vid, limit, off, st, et
+	return f.rows, nil
+}
+
 func (f *fakeCharges) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*chargingmodel.ChargingSession, error) {
 	if limit > 0 && limit < len(f.rows) {
 		return f.rows[:limit], nil
@@ -99,7 +113,7 @@ func (f *fakeFences) GetAll(ctx context.Context) ([]*systemmodel.Geofence, error
 	return f.fences, nil
 }
 
-// Register12Builtins basic shape ------------------------------------------
+// Built-in registration basic shape ----------------------------------------
 
 func TestRegister12Builtins_RegistersAllByName(t *testing.T) {
 	t.Parallel()
@@ -119,8 +133,8 @@ func TestRegister12Builtins_RegistersAllByName(t *testing.T) {
 	if !reflect.DeepEqual(got, BuiltinNames) {
 		t.Errorf("Names() = %v\nwant     %v", got, BuiltinNames)
 	}
-	if len(got) != 12 {
-		t.Fatalf("expected 12 builtins, got %d", len(got))
+	if len(got) != 13 {
+		t.Fatalf("expected 13 builtins, got %d", len(got))
 	}
 }
 
@@ -346,6 +360,92 @@ func TestQueryEfficiencyPeriod_RejectsBadPeriod(t *testing.T) {
 	tool, _ := r.Get("query_efficiency_period")
 	if _, err := tool.Validate(json.RawMessage(`{"vehicle_id":1,"period":"decade"}`)); err == nil {
 		t.Error("expected oneof rejection")
+	}
+}
+
+func TestQueryChargingPeriod_Validation(t *testing.T) {
+	t.Parallel()
+	tool := &queryChargingPeriod{src: &fakeCharges{}}
+	for _, payload := range []string{
+		`{}`, `{"vehicle_id":0,"period":"week"}`,
+		`{"vehicle_id":1,"period":"decade"}`,
+		`{"vehicle_id":1,"period":"week","limit":100000}`,
+	} {
+		if _, err := tool.Validate(json.RawMessage(payload)); err == nil {
+			t.Errorf("accepted invalid input: %s", payload)
+		}
+	}
+}
+
+func TestQueryChargingPeriod_CoverageCurrencyAndProvenance(t *testing.T) {
+	t.Parallel()
+	now := time.Now().UTC().Add(-time.Hour)
+	ended := now.Add(time.Minute)
+	energy := 12000.0
+	cost := 4.5
+	zero := 0.0
+	usd, eur := "USD", "EUR"
+	actual, estimated := "tesla_actual", "default_estimate"
+	src := &capturingCharges{fakeCharges: fakeCharges{rows: []*chargingmodel.ChargingSession{
+		{VehicleID: 7, StartedAt: now, EndedAt: &ended, TotalEnergyAddedWh: &energy, CostDecimal: &cost, CostCurrency: &usd, CostSource: &actual},
+		{VehicleID: 7, StartedAt: now, EndedAt: &ended, TotalEnergyAddedWh: &zero, CostDecimal: &zero, CostCurrency: &usd, CostSource: &estimated},
+		{VehicleID: 7, StartedAt: now, EndedAt: &ended, CostDecimal: &cost, CostCurrency: &eur},
+		{VehicleID: 7, StartedAt: now, EndedAt: &ended, TotalEnergyAddedWh: &energy},
+		{VehicleID: 7, StartedAt: now},
+	}}}
+	tool := &queryChargingPeriod{src: src}
+	input, err := tool.Validate(json.RawMessage(`{"vehicle_id":7,"period":"week"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := tool.Execute(context.Background(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := out.(chargingPeriodResult)
+	if src.vehicleID != 7 || src.limit != 501 || src.offset != 0 ||
+		src.end.Sub(src.start) != 7*24*time.Hour {
+		t.Errorf("unbounded or incorrect vehicle/window: %+v", src)
+	}
+	if got.Sessions != 5 || got.CompletedSessions != 4 || got.EnergyKnownSessions != 3 ||
+		got.TotalEnergyAddedWh != 24000 || got.CostKnownSessions != 3 || got.Truncated {
+		t.Errorf("incorrect coverage: %+v", got)
+	}
+	want := []chargingCurrencyTotal{
+		{Currency: "EUR", Source: "unknown", Cost: 4.5, Sessions: 1},
+		{Currency: "USD", Source: "default_estimate", Cost: 0, Sessions: 1},
+		{Currency: "USD", Source: "tesla_actual", Cost: 4.5, Sessions: 1},
+	}
+	if !reflect.DeepEqual(got.CostBySource, want) {
+		t.Errorf("cost breakdown = %+v, want %+v", got.CostBySource, want)
+	}
+}
+
+func TestQueryChargingPeriod_TruncationAndScope(t *testing.T) {
+	t.Parallel()
+	at := time.Now().UTC().Add(-time.Hour)
+	ended := at.Add(time.Minute)
+	src := &capturingCharges{fakeCharges: fakeCharges{rows: make([]*chargingmodel.ChargingSession, 501)}}
+	for i := range src.rows {
+		src.rows[i] = &chargingmodel.ChargingSession{VehicleID: 7, StartedAt: at, EndedAt: &ended}
+	}
+	tool := &queryChargingPeriod{src: src}
+	out, err := tool.Execute(context.Background(), chargingPeriodInput{VehicleID: 7, Period: "day"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := out.(chargingPeriodResult)
+	if got.Sessions != 500 || !got.Truncated {
+		t.Errorf("truncation not flagged: %+v", got)
+	}
+	for _, wrong := range []*chargingmodel.ChargingSession{
+		{VehicleID: 8, StartedAt: at, EndedAt: &ended},
+		{VehicleID: 7, StartedAt: at.Add(-48 * time.Hour), EndedAt: &ended},
+	} {
+		src.rows[0] = wrong
+		if _, err := tool.Execute(context.Background(), chargingPeriodInput{VehicleID: 7, Period: "day"}); err == nil {
+			t.Errorf("accepted out-of-scope source row: %+v", wrong)
+		}
 	}
 }
 

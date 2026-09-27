@@ -607,6 +607,9 @@ describe('DrivesListPage — collections', () => {
     expect(within(bar).getByRole('tab', { name: /All/ })).toHaveTextContent('(4)');
     expect(within(bar).getByRole('tab', { name: /Anomalies/ })).toHaveTextContent('(1)');
     expect(within(bar).getByRole('tab', { name: /Commutes/ })).toHaveTextContent('(3)');
+    expect(bar.querySelector('svg')).toBeNull();
+    expect(within(bar).getByRole('tab', { name: /All/ })).toHaveClass('bg-[var(--theme-primary)]');
+    expect(within(bar).getByRole('tab', { name: /Anomalies/ })).toHaveClass('border-[var(--control-border)]');
     // Tagged is not implemented yet → disabled.
     expect(within(bar).getByRole('tab', { name: /Tagged/ })).toBeDisabled();
 
@@ -641,6 +644,7 @@ describe('DrivesListPage — FSD evidence', () => {
     expect(within(listRegion()).queryByText('FSD data unknown')).toBeNull();
 
     const bar = fsdFilterBar();
+    expect(within(bar).getByRole('tab', { name: /All FSD data/ })).toHaveClass('bg-[var(--theme-primary)]');
     expect(within(bar).getByRole('tab', { name: /High confidence/ })).toHaveTextContent('(1)');
     expect(within(bar).getByRole('tab', { name: /Unknown/ })).toHaveTextContent('(1)');
     fireEvent.click(within(bar).getByRole('tab', { name: /High confidence/ }));

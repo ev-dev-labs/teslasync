@@ -144,17 +144,21 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 	}
 	pc := &controls
 	w.pollingConfig = pc
+	if !pc.AutoPollingEnabled {
+		log.Debug().Msg("Fleet API automatic polling disabled; token refresh remains active")
+		return
+	}
 
 	// When fleet telemetry is primary, periodically discover new vehicles
 	// via a lightweight ListVehicles call (no per-vehicle data fetching).
 	// Skipped if vehicle_discovery is disabled in polling config.
-	if pc.VehicleDiscovery && w.FleetTelemetryEnabled && time.Since(w.lastDiscovery) >= w.discoveryInterval {
+	if pc.PollsEndpoint("vehicles.list") && w.FleetTelemetryEnabled && time.Since(w.lastDiscovery) >= w.discoveryInterval {
 		w.discoverVehicles(ctx)
 		w.lastDiscovery = time.Now()
 	}
 
 	// Skip vehicle data polling if all sub-endpoints are disabled
-	if !pc.HasAnyVehicleDataEndpoint() {
+	if len(pc.EnabledAutoVehicleDataEndpoints()) == 0 {
 		log.Debug().Msg("all vehicle_data sub-endpoints disabled — skipping poll cycle")
 		return
 	}

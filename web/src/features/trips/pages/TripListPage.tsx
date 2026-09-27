@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Route, MapPin, Zap, DollarSign, Gauge, BatteryCharging,
@@ -16,7 +16,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   axisTickSm, chartGrid, chartAnimation, CHART_COLORS,
 } from '@/components/charts';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { PullToRefresh } from '@/components/mobile';
@@ -85,15 +85,18 @@ export default function TripListPage() {
 
   const [page, setPage] = useUrlNumber('page', 1);
   const [pageSize] = useUrlNumber('size', 50);
-  const {
-    start: startDate,
-    end: endDate,
-    setRangeWithUrlUpdates,
-  } = useRangeState({
+  const { start: startDate, end: endDate } = useRangeState({
     persistKey: 'trips.list.range',
     defaultPresetId: '1y',
   });
   const setUrlBatch = useUrlBatch();
+  const previousRange = useRef(`${startDate}:${endDate}`);
+  useEffect(() => {
+    const currentRange = `${startDate}:${endDate}`;
+    if (previousRange.current === currentRange) return;
+    previousRange.current = currentRange;
+    if (page !== 1) setUrlBatch({ page: null });
+  }, [startDate, endDate, page, setUrlBatch]);
 
   const tripsQuery = useTrips({
     vehicle_id: vehicleId ?? undefined,
@@ -125,15 +128,6 @@ export default function TripListPage() {
       loading={isLoading && allTrips.length === 0}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={(r) => {
-              setRangeWithUrlUpdates(r, { page: null });
-            }}
-            align="end"
-            triggerTestId="trip-list-range"
-          />
           <DataFreshnessAuto query={tripsQuery} />
           <SavedViewMenu
             route="/trips"

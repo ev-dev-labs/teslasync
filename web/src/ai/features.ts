@@ -170,7 +170,7 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
   }),
   "chatbot-llm": Object.freeze({
     id: "chatbot-llm",
-    name: "Helix fleet intelligence copilot",
+    name: "Helix chat (side panel)",
     description: "Evidence-first conversational agent with live fleet tools, cross-domain analysis, TeslaSync knowledge retrieval, visible provenance, and a deterministic fallback when AI is off.",
     tier: "U",
     defaultOn: false,

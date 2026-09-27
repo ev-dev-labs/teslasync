@@ -21,7 +21,7 @@ import {
 
 import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import {
   GlassPanel,
   Badge,
@@ -605,7 +605,6 @@ export default function ClimateControlPage() {
       dataSources={dataSources}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <VehicleSelect />
           <Button
             variant="ghost"
             size="sm"

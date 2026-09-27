@@ -154,6 +154,9 @@ vi.mock('../components/chatbot/ChatMessageItem', () => ({
             ? `${message.aiUsage.in + message.aiUsage.out} tokens`
             : ''}
         </span>
+        <span data-testid="chat-msg-knowledge">
+          {(message.knowledgeEvidence ?? []).map((source) => `${source.sourceId}:${source.chunkIdx}`).join(',')}
+        </span>
         {isLastAssistant && onRegenerate ? (
           <button
             type="button"
@@ -637,6 +640,30 @@ describe('ChatbotPage — session management + suggestions', () => {
 });
 
 describe('ChatbotPage — AI-on streaming path', () => {
+  it('carries successful retrieval evidence to the completed assistant turn without trusting other tools', async () => {
+    ctrl.aiEnabled = true;
+    installRequest();
+    const body =
+      sseFrame('tool_result', {
+        id: 'doc-1', name: 'retrieve_app_knowledge', ok: true,
+        data: { chunks: [{ source_type: 'docs', source_id: 'guide/helix.md', chunk_idx: 0, text: 'Configure Helix.', score: 0.8 }] },
+      }) +
+      sseFrame('tool_result', {
+        id: 'doc-2', name: 'retrieve_app_knowledge', ok: false,
+        data: { chunks: [{ source_type: 'docs', source_id: 'fake.md', chunk_idx: 0, text: 'Fake.', score: 1 }] },
+      }) +
+      sseFrame('delta', { text: 'See guide/helix.md' }) +
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 2, out: 2 } });
+    globalThis.fetch = vi.fn(async () =>
+      new Response(makeReadableStream([body]), { status: 200, headers: { 'Content-Type': 'text/event-stream' } }),
+    ) as unknown as typeof globalThis.fetch;
+    renderPage();
+    await typeAndEnter('How do I configure Helix?');
+    await waitFor(() => expect(lastAssistantRow().getAttribute('data-streaming')).toBe('false'));
+    expect(lastAssistantRow()).toHaveTextContent('guide/helix.md:0');
+    expect(lastAssistantRow()).not.toHaveTextContent('fake.md');
+  });
+
   it('opens an SSE stream to /api/v1/ai/chatbot and accumulates deltas, finalising on done', async () => {
     ctrl.aiEnabled = true;
     installRequest();

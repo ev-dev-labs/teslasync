@@ -5,7 +5,7 @@ import { useComponentSurvival } from '@/api/hooks/useAdvancedIntelligence';
 import { CHART_COLORS } from '@/components/charts';
 import { MetricBar, StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
@@ -34,7 +34,6 @@ export default function ComponentSurvivalPage() {
         'advancedIntelligence.survival.subtitle',
         'Review probabilistic service horizons, competing risks, and intervention sensitivity.',
       )}
-      actions={<VehicleSelect withIcon />}
       loading={vehicleId != null && query.isLoading}
       error={query.error instanceof Error ? query.error : null}
     >

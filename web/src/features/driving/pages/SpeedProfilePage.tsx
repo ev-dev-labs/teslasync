@@ -13,7 +13,7 @@ import {
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSpeedProfile, useDrives } from '@/api/hooks/useDriving';
@@ -64,7 +64,7 @@ export default function SpeedProfilePage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'speed-profile.range',
     defaultPresetId: 'all',
   });
@@ -194,17 +194,6 @@ export default function SpeedProfilePage() {
       title={t('speedProfile.title', 'Speed Profile')}
       subtitle={t('speedProfile.subtitle', 'Speed distribution and driving pattern analysis')}
       loading={isLoading && !data}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="speed-profile-range"
-          />
-        </div>
-      }
     >
       {/* 1 — KPI band */}
       <FadeIn>

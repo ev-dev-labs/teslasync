@@ -41,6 +41,13 @@ type LegacySettings struct {
 // settings_repo.go, and internal/api/settings_handler.go continue to build;
 // these will be rewritten in phase-5 prompts 30-66.
 type LegacyPollingConfig struct {
+	// Master switch for background Fleet API reads. On-demand requests and
+	// token refresh do not depend on this setting. Existing installs opt in.
+	AutoPollingEnabled bool `json:"auto_polling_enabled"`
+	// Route-specific overrides. Missing entries preserve legacy switches for
+	// existing installs; new routes default to enabled for on-demand use.
+	FleetEndpoints map[string]bool `json:"fleet_endpoints"`
+	AutoEndpoints  map[string]bool `json:"auto_endpoints"`
 	// Polling endpoints (automatic, worker-driven)
 	VehicleDiscovery bool `json:"vehicle_discovery"` // GET /api/1/vehicles (auto-discovery)
 	ChargeState      bool `json:"charge_state"`      // vehicle_data sub-endpoint
@@ -100,6 +107,7 @@ func DefaultPollingConfig() LegacyPollingConfig {
 		ServiceData:                   true,
 		WakeUp:                        true,
 		Commands:                      true,
+		AutoPollingEnabled:            false,
 		TelemetryCapture:              false,
 		TelemetryCaptureRetentionDays: 7,
 	}
@@ -113,6 +121,7 @@ func (pc *LegacyPollingConfig) EnabledVehicleDataEndpoints() []string {
 	if pc == nil {
 		return nil
 	}
+
 	var endpoints []string
 	if pc.ChargeState {
 		endpoints = append(endpoints, "charge_state")
@@ -133,6 +142,22 @@ func (pc *LegacyPollingConfig) EnabledVehicleDataEndpoints() []string {
 		endpoints = append(endpoints, "vehicle_config")
 	}
 	return endpoints
+}
+
+// EnabledAutoVehicleDataEndpoints selects only permitted, participating
+// sub-endpoints for the worker's filtered vehicle_data call.
+func (pc *LegacyPollingConfig) EnabledAutoVehicleDataEndpoints() []string {
+	if pc == nil || !pc.AutoPollingEnabled {
+		return nil
+	}
+	var out []string
+	for _, name := range []string{"charge_state", "climate_state", "drive_state", "location_data", "vehicle_state", "vehicle_config"} {
+		key := "vehicle_data." + name
+		if pc.PollsEndpoint(key) {
+			out = append(out, name)
+		}
+	}
+	return out
 }
 
 // VehicleDataEndpointsString returns enabled sub-endpoints as a semicolon-separated

@@ -13,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { SitePriceRadar } from '../components/SitePriceRadar';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -123,7 +123,7 @@ export default function TeslaChargingHistoryPage() {
 
   const allEntries = response?.entries ?? [];
   // Range filter (client-side) on charge_start_datetime.
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'tesla-charging-history.range',
     defaultPresetId: 'all',
   });
@@ -360,12 +360,6 @@ export default function TeslaChargingHistoryPage() {
             onChange={(e) => setSelectedVin(e.target.value)}
             aria-label={t('tesla_charging.selectVehicle', 'Select vehicle')}
             className="w-full min-w-0 sm:w-44"
-          />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="tesla-charging-history-range"
           />
           <Button
             onClick={handleRefresh}

@@ -5,7 +5,7 @@ import { ShieldAlert } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { AlertBanner } from '@/components/feedback';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -97,7 +97,7 @@ export default function SecurityAccessPage() {
   );
 
   /* ---- Range filter (client-side on history) ---- */
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'security-access.range',
     defaultPresetId: 'all',
   });
@@ -140,12 +140,6 @@ export default function SecurityAccessPage() {
       subtitle={t('admin.security.subtitle', 'Lock status, sentry mode, doors, and windows')}
       query={[vehiclesQuery, latestQuery, historyQuery]}
       dataSources={dataSources}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker value={{ start, end }} onChange={setRange} align="end" triggerTestId="security-access-range" />
-        </div>
-      }
     >
       {/* Contextual insecure-vehicle warning */}
       {!isSecure && latest && (

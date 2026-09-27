@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -45,13 +45,7 @@ export default function RangeBufferPage() {
   const selectedTimeZone = useTimezone('vehicle');
   const vehicleIdStr =
     vehicleId != null ? String(vehicleId) : undefined;
-  const {
-    start,
-    end,
-    startInstant,
-    endInstantExclusive,
-    setRange,
-  } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'range-buffer.range',
     defaultPresetId: 'all',
     timezone: selectedTimeZone,
@@ -105,17 +99,6 @@ export default function RangeBufferPage() {
         'rangeBuffer.subtitle',
         'Observed arrival SoC distribution, context, and evidence coverage in the vehicle timezone',
       )}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="range-buffer-range"
-          />
-        </div>
-      }
     >
       <FadeIn>
         <RangeBufferKpiBand

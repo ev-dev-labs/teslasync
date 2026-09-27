@@ -2,6 +2,19 @@
   "statusBar": {
     "aria": "Application status",
     "announcements": "Application status announcements",
+    "helix": {
+      "open": "Open Helix chat",
+      "close": "Close Helix chat",
+      "title": "Helix chat",
+      "disabled": "Enable Helix Chat in Integrations to ask about this page.",
+      "configure": "Configure Helix",
+      "welcome": "Ask Helix about the page you are viewing.",
+      "includePage": "Include visible page text",
+      "contextHint": "Only visible page text, not form entries or hidden panels, is sent to your configured AI provider when you ask.",
+      "question": "Ask Helix",
+      "placeholder": "Ask about this page…",
+      "send": "Send"
+    },
     "fleet": {
       "label": "Fleet"
     },

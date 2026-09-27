@@ -101,9 +101,10 @@ describe('WidgetPicker', () => {
     // "All" is the default-selected category filter.
     const selected = screen.getByRole('button', { name: 'All', pressed: true });
     expect(selected).toHaveTextContent('All');
+    expect(selected).toHaveClass('rounded-shape-sm', 'bg-[var(--theme-primary)]');
     expect(
       screen.getByRole('button', { name: 'Battery & Range', pressed: false }),
-    ).toBeInTheDocument();
+    ).toHaveClass('rounded-shape-sm', 'border-[var(--control-border)]');
 
     // The whole registry is available and the preset section is present.
     expect(

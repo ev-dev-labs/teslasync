@@ -342,10 +342,10 @@ function FormatBadge({ format }: { format: ExportFormat }) {
 function FormatInfoCards() {
   const { t } = useTranslation();
   const previewClass = cn(
-    'rounded-lg bg-[var(--surface-overlay)] p-3',
+    'rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3',
     typography.family.mono,
     typography.size['2xs'],
-    typography.color.muted,
+    typography.color.primary,
   );
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -843,14 +843,15 @@ function ColumnPickerSection({
                 key={col.name}
                 data-testid={`export-column-row-${col.name}`}
                 className={cn(
-                  'flex min-h-11 items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-3 py-2',
-                  required ? 'opacity-70' : 'hover:bg-[var(--surface-2)]',
+                  'flex min-h-11 items-center gap-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-2',
+                  !required && 'hover:bg-[var(--surface-2)]',
                 )}
               >
                 <Checkbox
                   size="sm"
                   checked={checked}
                   disabled={required}
+                  className={required ? '!opacity-100' : undefined}
                   onChange={() => toggleColumn(col.name)}
                   label={col.label}
                   aria-label={col.label}

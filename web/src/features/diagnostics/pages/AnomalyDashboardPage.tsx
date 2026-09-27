@@ -6,7 +6,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import {
   ChartTooltip, CHART_COLORS,
@@ -72,7 +72,6 @@ export default function AnomalyDashboardPage() {
     <PageContainer
       title={t('anomaly.title', 'Anomaly Detection')}
       subtitle={t('anomaly.subtitle', 'Automatic health monitoring and signal anomaly detection')}
-      actions={<VehicleSelect />}
       query={anomaliesQuery}
     >
       {/* ── 1. KPI band — full-width responsive metric grid ─────────── */}

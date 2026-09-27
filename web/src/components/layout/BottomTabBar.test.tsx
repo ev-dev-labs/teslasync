@@ -37,6 +37,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { navSections } from './Layout'
+import { navRouteIcons } from '@/lib/navRouteIcons'
+import { SIDEBAR_ROUTE_ICONS } from './sidebar/sidebarIcons'
 
 const { tSpy } = vi.hoisted(() => ({ tSpy: vi.fn() }))
 
@@ -253,6 +256,14 @@ describe('BottomTabBar', () => {
 })
 
 describe('BOTTOM_TAB_PATHS', () => {
+  it('keeps sidebar-specific glyphs distinct while sharing other route glyphs', () => {
+    const routes = new Map(navSections.flatMap(section => section.items.map(item => [item.to, item.icon] as const)))
+    for (const [path, icon] of Object.entries(navRouteIcons)) {
+      const sidebarPath = path === '/climate' ? '/climate-control' : path
+      expect(routes.get(sidebarPath), path).toBe(SIDEBAR_ROUTE_ICONS[sidebarPath] ?? icon)
+    }
+  })
+
   it('is the exact set of the five bottom-tab destinations', () => {
     expect(BOTTOM_TAB_PATHS).toBeInstanceOf(Set)
     expect(BOTTOM_TAB_PATHS.size).toBe(TABS.length)

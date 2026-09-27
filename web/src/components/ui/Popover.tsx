@@ -34,6 +34,8 @@ export interface PopoverProps {
   ariaLabel?: string;
   /** Keep tall mobile calendar footers clear of the shell's fixed bottom bars. */
   avoidMobileChrome?: boolean;
+  /** Higher stacking layer for triggers inside elevated chrome (for example, a mobile sidebar). */
+  zIndex?: number;
   children: ReactNode;
 }
 
@@ -55,6 +57,7 @@ export function Popover({
   className,
   ariaLabel,
   avoidMobileChrome = false,
+  zIndex = 60,
   children,
 }: PopoverProps) {
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -186,7 +189,7 @@ export function Popover({
         top: pos?.top ?? -9999,
         left: pos?.left ?? -9999,
         visibility: pos ? 'visible' : 'hidden',
-        zIndex: 60,
+        zIndex,
       }}
       className={cn(
         'rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl',

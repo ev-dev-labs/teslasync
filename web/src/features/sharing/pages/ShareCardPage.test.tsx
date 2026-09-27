@@ -271,13 +271,13 @@ beforeEach(() => {
 });
 
 describe('ShareCardPage persistent composition', () => {
-  it('mounts all 14 evidence section shells and both header controls', () => {
+  it('mounts all 14 evidence section shells without duplicate header controls', () => {
     renderPage();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toBeInTheDocument();
     }
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
-    expect(screen.getByTestId('share-card-range')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('share-card-range')).not.toBeInTheDocument();
   });
 
   it('converts URL calendar labels to vehicle-timezone RFC3339 query instants', () => {

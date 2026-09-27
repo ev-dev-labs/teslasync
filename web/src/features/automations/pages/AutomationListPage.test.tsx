@@ -32,6 +32,12 @@ import type { ReactNode } from 'react';
 import type { Automation } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 
+vi.mock('../components/RoutineWizard', () => ({
+  RoutineWizard: ({ actionsDisabled }: { actionsDisabled?: boolean }) => (
+    <div data-testid="routine-wizard" data-disabled={String(actionsDisabled)} />
+  ),
+}));
+
 // jsdom lacks matchMedia; framer-motion / useMotionPreference (reached via the
 // page's <FadeIn> + PageContainer freshness chip) read it at module load.
 vi.hoisted(() => {
@@ -327,7 +333,7 @@ describe('AutomationListPage', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Automations (list)' }),
+      screen.getByRole('heading', { level: 1, name: 'Automation Rules' }),
     ).toBeInTheDocument();
 
     // KPI band present with all six tiles (scoped so the "Active"/"Disabled"
@@ -347,6 +353,7 @@ describe('AutomationListPage', () => {
     // Both data sections are mounted — no gutted / hidden panels.
     expect(screen.getByTestId('stub-table')).toBeInTheDocument();
     expect(screen.getByTestId('stub-status')).toBeInTheDocument();
+    expect(screen.getByTestId('routine-wizard')).toHaveAttribute('data-disabled', 'false');
 
     // Header controls present.
     expect(
@@ -363,6 +370,7 @@ describe('AutomationListPage', () => {
     renderPage();
 
     const createButton = screen.getByRole('button', { name: 'New' });
+    expect(screen.getByTestId('routine-wizard')).toHaveAttribute('data-disabled', 'true');
     const noticeTitle = screen.getByText(
       'Bulk automation controls are read-only',
     );

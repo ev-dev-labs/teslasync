@@ -31,7 +31,7 @@ import { Badge, Button, GlassPanel, PanelTitle, SectionTitle, Slider, Text } fro
 import { DateTime, MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 
 // Minimal translate signature (subset of react-i18next's `t`) so the pure
 // formatting helpers below can be unit-reasoned without the full TFunction
@@ -357,7 +357,6 @@ export default function TimeMachinePage() {
       title={t('timeMachine.title', 'Vehicle Time Machine')}
       subtitle={t('timeMachine.subtitle', "Scrub the DVR of your car's mind — reconstruct every signal at any past instant")}
       loading={vehiclesLoading}
-      actions={<VehicleSelect />}
       query={freshnessQueries}
     >
       {!vehicle && !vehiclesLoading ? (

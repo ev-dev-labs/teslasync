@@ -7,7 +7,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, DataTable, PanelTitle, useSortToggle, type Column } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import {
   ThresholdBar, ChartTooltip, CHART_COLORS, AREA_DEFAULTS, axisTickSm,
@@ -133,7 +133,7 @@ const STATUS_LABELS: Record<PressureStatus, string> = {
   critical: 'Critical',
 };
 
-const PRESET_IDS = ['7d', '30d', '90d', 'mtd', 'ytd', 'all'];
+
 
 export function getTirePressureValue(
   reading: TirePressureReading,
@@ -257,7 +257,7 @@ export default function TirePressurePage() {
 
   // Header VehiclePicker is the source of truth.
   const { vehicleId: activeVehicleId } = useSelectedVehicle();
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'tire-pressure.range',
   });
 
@@ -471,21 +471,6 @@ export default function TirePressurePage() {
       )}
       query={[latestQuery, historyQuery]}
       dataSources={dataSources}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect
-            ariaLabel={t('tirePressure.selectVehicle', 'Select vehicle')}
-            className="w-40 sm:w-44"
-          />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            presetIds={PRESET_IDS}
-            align="end"
-            triggerTestId="tire-pressure-range"
-          />
-        </div>
-      }
     >
       {/* AI opt-in narration — renders nothing when the feature is disabled. */}
       <AITirePressureTrendReasoning vehicleId={activeVehicleId ?? undefined} />
