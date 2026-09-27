@@ -55,7 +55,19 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
         </div>
       </div>
 
-      {query.isLoading && <div className="grid gap-3 sm:grid-cols-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}</div>}
+      {query.isLoading && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-24" />)}
+          </div>
+          <Skeleton className="h-4" />
+          <Skeleton className="h-4" />
+          <Skeleton className="h-[360px]" />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-24" />)}
+          </div>
+        </>
+      )}
       {query.isError && <GlassPanel className="p-5"><QueryError error={query.error} onRetry={() => { void query.refetch(); }} /></GlassPanel>}
       {report && !query.isError && (
         <>
