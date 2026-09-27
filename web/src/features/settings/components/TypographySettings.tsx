@@ -22,10 +22,6 @@ import { RATIO_VALUES } from '@/lib/typography-agent/harmonizer'
 import type { DensityMode, ModularRatio } from '@/lib/typography-agent/types'
 import {
   useFont,
-  SANS_FAMILY_IDS,
-  MONO_FAMILY_IDS,
-  resolveSansStack,
-  resolveMonoStack,
   LEADING_OPTIONS,
   TRACKING_OPTIONS,
   HEADING_WEIGHT_OPTIONS,
@@ -36,7 +32,7 @@ import {
 } from '@/components/ui/FontProvider'
 import { FontFamilyPicker } from './FontFamilyPicker'
 import { TypographySpecimen } from './TypographySpecimen'
-import { SANS_LABELS, MONO_LABELS, SANS_GROUPS } from './fontChoices'
+import { SANS_LABELS, MONO_LABELS, SANS_CHOICES, MONO_CHOICES } from './fontChoices'
 
 /** Small block field label using the shared `label` typography role. */
 function FieldLabel({ children }: { children: ReactNode }) {
@@ -109,22 +105,6 @@ export function TypographySettings() {
     applyPreset,
     reset,
   } = useFont()
-
-  // Brand-name option lists are static; memoize so typing in a custom-font
-  // field (which re-renders on every keystroke) doesn't rebuild them.
-  const sansChoices = useMemo(
-    () => SANS_FAMILY_IDS.map(id => ({
-      id, name: SANS_LABELS[id], group: SANS_GROUPS[id],
-      stack: resolveSansStack(id, prefs.customSans),
-    })),
-    [prefs.customSans],
-  )
-  const monoChoices = useMemo(
-    () => MONO_FAMILY_IDS.map(id => ({
-      id, name: MONO_LABELS[id], stack: resolveMonoStack(id, prefs.customMono),
-    })),
-    [prefs.customMono],
-  )
 
   // Each field label doubles as the accessible group name for its segmented
   // control, so the toggle buttons are announced under a single named group.
@@ -237,7 +217,7 @@ export function TypographySettings() {
             <FontFamilyPicker
               kind="sans"
               label={t('typography.uiFont.label', 'UI font')}
-              choices={sansChoices}
+              choices={SANS_CHOICES}
               selected={prefs.sans}
               onSelect={setSans}
             />
@@ -258,7 +238,7 @@ export function TypographySettings() {
             <FontFamilyPicker
               kind="mono"
               label={t('typography.monoFont.label', 'Monospace font')}
-              choices={monoChoices}
+              choices={MONO_CHOICES}
               selected={prefs.mono}
               onSelect={setMono}
             />

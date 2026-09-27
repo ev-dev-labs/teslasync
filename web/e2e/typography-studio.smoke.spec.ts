@@ -19,12 +19,14 @@ for (const width of [390, 1920]) {
       const sans = page.getByRole('group', { name: 'UI font' })
       await sans.getByRole('searchbox', { name: 'Search UI font' }).fill('noto')
       await expect(sans.getByRole('button')).toHaveCount(1)
+      await expect(sans.locator('[data-preview-font="sans-noto-sans"]')).toHaveCSS('font-family', /Noto Sans/)
       await sans.getByRole('button', { name: /Noto Sans/ }).click()
       await expect(page.locator('html')).toHaveCSS('--font-sans', /Noto Sans/)
 
       const mono = page.getByRole('group', { name: 'Monospace font' })
       await mono.getByRole('searchbox', { name: 'Search Monospace font' }).fill('inconsolata')
       await expect(mono.getByRole('button')).toHaveCount(1)
+      await expect(mono.locator('[data-preview-font="mono-inconsolata"]')).toHaveCSS('font-family', /Inconsolata/)
       await mono.getByRole('button', { name: /Inconsolata/ }).click()
       await expect(page.locator('html')).toHaveCSS('--font-mono', /Inconsolata/)
 

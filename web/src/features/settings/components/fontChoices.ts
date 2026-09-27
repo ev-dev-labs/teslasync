@@ -1,4 +1,7 @@
-import type { FontFamilyId, MonoFamilyId } from '@/components/ui/FontProvider'
+import {
+  SANS_FAMILY_IDS, MONO_FAMILY_IDS,
+  type FontFamilyId, type MonoFamilyId,
+} from '@/components/ui/FontProvider'
 
 export const SANS_LABELS: Record<FontFamilyId, string> = {
   inter: 'Inter',
@@ -52,3 +55,11 @@ export const SANS_GROUPS: Record<FontFamilyId, string> = {
   'noto-sans': 'Readable',
   custom: 'System & custom',
 }
+
+export const SANS_CHOICES = SANS_FAMILY_IDS.map(id => ({
+  id, name: SANS_LABELS[id], group: SANS_GROUPS[id],
+}))
+
+export const MONO_CHOICES = MONO_FAMILY_IDS.map(id => ({
+  id, name: MONO_LABELS[id],
+}))

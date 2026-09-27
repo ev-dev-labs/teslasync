@@ -7,11 +7,11 @@ import {
   type FontFamilyId, type MonoFamilyId,
 } from '@/components/ui/FontProvider'
 import { cn } from '@/lib/cn'
+import './fontPreview.css'
 
 export interface FontChoice<Id extends FontFamilyId | MonoFamilyId> {
   id: Id
   name: string
-  stack: string
   group?: string
 }
 
@@ -88,7 +88,11 @@ export function FontFamilyPicker<Id extends FontFamilyId | MonoFamilyId>({
               <Text as="span" variant="bodySm" className="truncate font-medium">{choice.name}</Text>
               {selected === choice.id && <Check className="h-4 w-4 shrink-0 text-[var(--theme-primary)]" aria-hidden="true" />}
             </span>
-            <span className="text-sm text-[var(--text-secondary)]" style={{ fontFamily: choice.stack }}>
+            <span
+              className="font-family-preview text-sm text-[var(--text-secondary)]"
+              data-preview-font={`${kind}-${choice.id}`}
+              data-selected={selected === choice.id}
+            >
               {t('typography.cardSample', 'Aa 012345')}
             </span>
           </Button>

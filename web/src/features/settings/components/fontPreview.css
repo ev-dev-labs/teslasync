@@ -1,0 +1,30 @@
+.font-family-preview[data-preview-font="sans-inter"] { font-family: "Inter", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-system"] { font-family: system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-roboto"] { font-family: "Roboto", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-source"] { font-family: "Source Sans 3", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-plex"] { font-family: "IBM Plex Sans", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-atkinson"] { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-nunito"] { font-family: "Nunito", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-dm-sans"] { font-family: "DM Sans", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-manrope"] { font-family: "Manrope", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-outfit"] { font-family: "Outfit", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-poppins"] { font-family: "Poppins", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-work-sans"] { font-family: "Work Sans", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-public-sans"] { font-family: "Public Sans", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-lato"] { font-family: "Lato", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-open-sans"] { font-family: "Open Sans", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-noto-sans"] { font-family: "Noto Sans", system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-custom"] { font-family: system-ui, sans-serif; }
+.font-family-preview[data-preview-font="sans-custom"][data-selected="true"] { font-family: var(--font-sans); }
+
+.font-family-preview[data-preview-font="mono-jetbrains"] { font-family: "JetBrains Mono", ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-fira"] { font-family: "Fira Code", ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-plex-mono"] { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-source-code-pro"] { font-family: "Source Code Pro", ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-roboto-mono"] { font-family: "Roboto Mono", ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-inconsolata"] { font-family: "Inconsolata", ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-space-mono"] { font-family: "Space Mono", ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-ubuntu-mono"] { font-family: "Ubuntu Mono", ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-system"] { font-family: ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-custom"] { font-family: ui-monospace, monospace; }
+.font-family-preview[data-preview-font="mono-custom"][data-selected="true"] { font-family: var(--font-mono); }
