@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - 'helm/**'
+      - '.github/workflows/helm-ci.yml'
   workflow_dispatch:
     inputs:
       runner:
@@ -19,6 +20,10 @@ on:
           - arc-runner
           - ubuntu-latest
         default: ubuntu-latest
+
+concurrency:
+  group: helm-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

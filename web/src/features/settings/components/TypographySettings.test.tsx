@@ -125,35 +125,50 @@ describe('TypographySettings — header & preview', () => {
     expect(within(preview).getByText('The quick brown fox jumps over the lazy dog')).toBeInTheDocument()
     expect(within(preview).getByText(/Sync your Tesla fleet/i)).toBeInTheDocument()
   })
+
+  it('previews custom sample text without changing a saved preference', () => {
+    const font = setFont()
+    render(<TypographySettings />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Try your own text' }), {
+      target: { value: 'Road trips and range' },
+    })
+    expect(within(screen.getByRole('group', { name: 'Typography preview' }))
+      .getAllByText('Road trips and range').length).toBeGreaterThan(0)
+    expect(font.setSans).not.toHaveBeenCalled()
+    expect(font.setMono).not.toHaveBeenCalled()
+  })
 })
 
 describe('TypographySettings — font family selects', () => {
-  it('renders both font selects reflecting the current preferences', () => {
+  it('renders both searchable font catalogs reflecting the current preferences', () => {
     setFont({ sans: 'roboto', mono: 'fira' })
     render(<TypographySettings />)
 
-    expect(screen.getByLabelText('UI font')).toHaveValue('roboto')
-    expect(screen.getByLabelText('Monospace font')).toHaveValue('fira')
+    expect(within(screen.getByRole('group', { name: 'UI font' })).getByRole('button', { name: /Roboto/ }))
+      .toHaveAttribute('aria-pressed', 'true')
+    expect(within(screen.getByRole('group', { name: 'Monospace font' })).getByRole('button', { name: /Fira Code/ }))
+      .toHaveAttribute('aria-pressed', 'true')
   })
 
   it('lists every curated sans + mono option', () => {
     setFont()
     render(<TypographySettings />)
 
-    const sans = screen.getByLabelText('UI font')
-    const mono = screen.getByLabelText('Monospace font')
-    // 7 sans presets (incl. Custom) and 5 mono presets (incl. Custom).
-    expect(within(sans).getAllByRole('option')).toHaveLength(7)
-    expect(within(mono).getAllByRole('option')).toHaveLength(5)
-    expect(within(sans).getByRole('option', { name: 'Atkinson Hyperlegible' })).toBeInTheDocument()
-    expect(within(mono).getByRole('option', { name: 'JetBrains Mono' })).toBeInTheDocument()
+    const sans = screen.getByRole('group', { name: 'UI font' })
+    const mono = screen.getByRole('group', { name: 'Monospace font' })
+    expect(within(sans).getAllByRole('button')).toHaveLength(17)
+    expect(within(mono).getAllByRole('button')).toHaveLength(10)
+    expect(within(sans).getByRole('button', { name: /Atkinson Hyperlegible/ })).toBeInTheDocument()
+    expect(within(sans).getByRole('button', { name: /Public Sans/ })).toBeInTheDocument()
+    expect(within(mono).getByRole('button', { name: /Source Code Pro/ })).toBeInTheDocument()
   })
 
   it('routes a UI-font change to setSans with the chosen id', () => {
     const font = setFont()
     render(<TypographySettings />)
 
-    fireEvent.change(screen.getByLabelText('UI font'), { target: { value: 'plex' } })
+    fireEvent.click(within(screen.getByRole('group', { name: 'UI font' }))
+      .getByRole('button', { name: /IBM Plex Sans/ }))
     expect(font.setSans).toHaveBeenCalledTimes(1)
     expect(font.setSans).toHaveBeenCalledWith('plex')
     expect(font.setMono).not.toHaveBeenCalled()
@@ -163,8 +178,45 @@ describe('TypographySettings — font family selects', () => {
     const font = setFont()
     render(<TypographySettings />)
 
-    fireEvent.change(screen.getByLabelText('Monospace font'), { target: { value: 'plex-mono' } })
+    fireEvent.click(within(screen.getByRole('group', { name: 'Monospace font' }))
+      .getByRole('button', { name: /IBM Plex Mono/ }))
     expect(font.setMono).toHaveBeenCalledWith('plex-mono')
+  })
+
+  it('filters each font library independently and keeps the selected preference', () => {
+    const font = setFont({ sans: 'inter', mono: 'jetbrains' })
+    render(<TypographySettings />)
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search UI font' }), {
+      target: { value: 'noto' },
+    })
+    const sans = screen.getByRole('group', { name: 'UI font' })
+    expect(within(sans).getAllByRole('button')).toHaveLength(1)
+    fireEvent.click(within(sans).getByRole('button', { name: /Noto Sans/ }))
+    expect(font.setSans).toHaveBeenCalledWith('noto-sans')
+    expect(within(screen.getByRole('group', { name: 'Monospace font' }))
+      .getAllByRole('button')).toHaveLength(10)
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search UI font' }), {
+      target: { value: 'no-such-font' },
+    })
+    expect(screen.getByText('No font families match your search.')).toBeInTheDocument()
+  })
+
+  it('reveals the active font again when a reading preset changes it', () => {
+    setFont()
+    const { rerender } = render(<TypographySettings />)
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search UI font' }), {
+      target: { value: 'noto' },
+    })
+    expect(within(screen.getByRole('group', { name: 'UI font' })).queryByRole('button', {
+      name: /Atkinson Hyperlegible/,
+    })).not.toBeInTheDocument()
+
+    setFont({ sans: 'atkinson' })
+    rerender(<TypographySettings />)
+    expect(screen.getByRole('searchbox', { name: 'Search UI font' })).toHaveValue('')
+    expect(within(screen.getByRole('group', { name: 'UI font' }))
+      .getByRole('button', { name: /Atkinson Hyperlegible/ })).toHaveAttribute('aria-pressed', 'true')
   })
 })
 

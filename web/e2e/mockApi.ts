@@ -136,6 +136,22 @@ const charging = {
   live: false,
 };
 
+const chargingHistorySites = ['Fremont', 'Gilroy', 'Bakersfield', 'Kettleman City'];
+const chargingHistoryEntries = chargingHistorySites.map((site, index) => ({
+  id: index + 1,
+  session_id: index + 100,
+  vin: vehicle.vin,
+  site_location_name: `Supercharger - ${site}`,
+  charge_start_datetime: `2026-08-${25 - index}T10:00:00Z`,
+  charge_stop_datetime: `2026-08-${25 - index}T11:00:00Z`,
+  usage_wh: 40000,
+  total_due: 12 + index,
+  currency_code: 'USD',
+  rate_base: 0.3,
+  pricing_type: 'kWh',
+  invoice_content_id: null,
+}));
+
 const repairCase = {
   id: 301, fingerprint: 'mock-drive-101', kind: 'drive', session_id: 101,
   related_session_id: null, vehicle_id: 7, rule: 'missing_end_boundary',
@@ -564,6 +580,25 @@ export function resolveApiFixture(
       ? { ...charging, ended_at: null, end_soc_pct: null, avg_power_w: null, live: true }
       : { ...charging, started_at: scenario === 'stale' ? STALE : charging.started_at };
     return matched(listFor(scenario, value));
+  }
+  if (path.startsWith('/tesla/charging/history/sites')) {
+    return matched({
+      sites: scenario === 'empty' ? [] : chargingHistorySites.map((site, index) => ({
+        site: `Supercharger - ${site}`,
+        visits: 2,
+        last_visit: '2026-08-25',
+        avg_per_kwh: 0.3 + index * 0.05,
+      })),
+      unpriced_count: 0,
+    });
+  }
+  if (path.startsWith('/tesla/charging/history')) {
+    return matched({
+      entries: scenario === 'empty' ? [] : chargingHistoryEntries,
+      summary: scenario === 'empty'
+        ? { total_sessions: 0, total_wh: 0, total_spend: 0, avg_cost_per_kwh: 0 }
+        : { total_sessions: 4, total_wh: 160000, total_spend: 54, avg_cost_per_kwh: 0.34 },
+    });
   }
   if (path.startsWith('/analytics/fsd')) {
     return matched(fsdInsightsFixture(scenario));

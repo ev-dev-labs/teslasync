@@ -121,20 +121,40 @@ func TestProductionCSPHashesMatchInlineBootstrap(t *testing.T) {
 		t.Fatalf("read index.html: %v", err)
 	}
 
-	expected := map[string]string{
-		"script": "sha256-ue3mo3bS289RnivI3dUkb2fS/Z4Y2IXWPEYuKHmUdY0=",
-		"style":  "sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI=",
-	}
-	for tag, want := range expected {
+	hashes := make(map[string]string)
+	for _, tag := range []string{"script", "style"} {
 		pattern := regexp.MustCompile(`(?s)<` + tag + `[^>]*>(.*?)</` + tag + `>`)
 		match := pattern.FindSubmatch(html)
 		if len(match) != 2 {
 			t.Fatalf("find inline %s block", tag)
 		}
 		sum := sha256.Sum256(match[1])
-		got := "sha256-" + base64.StdEncoding.EncodeToString(sum[:])
-		if got != want {
-			t.Errorf("%s CSP hash = %q, want %q", tag, got, want)
+		hashes[tag] = "sha256-" + base64.StdEncoding.EncodeToString(sum[:])
+	}
+
+	for _, path := range []string{
+		filepath.Join(repositoryRoot(t), "web", "nginx.conf"),
+		filepath.Join(repositoryRoot(t), "helm", "teslasync", "templates", "configmap-nginx.yaml"),
+		filepath.Join(repositoryRoot(t), "helm", "teslasync", "templates", "middleware-security-headers.yaml"),
+	} {
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read CSP template %s: %v", path, err)
+		}
+		policies := 0
+		for _, line := range strings.Split(string(contents), "\n") {
+			if !strings.Contains(line, "script-src 'self'") {
+				continue
+			}
+			policies++
+			for tag, hash := range hashes {
+				if !strings.Contains(line, "'"+hash+"'") {
+					t.Errorf("%s: policy %d has a %s CSP hash that does not match index.html (%s)", path, policies, tag, hash)
+				}
+			}
+		}
+		if policies == 0 {
+			t.Errorf("%s: no script CSP policies found", path)
 		}
 	}
 }

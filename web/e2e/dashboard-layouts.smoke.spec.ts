@@ -3,7 +3,7 @@ import { assertMockApiComplete, expectThemeApplied, fulfillApiMock, installApiMo
 
 for (const theme of ['dark', 'light'] as const) {
   for (const width of [390, 1440]) {
-    test(`layout packs stay readable and blank dashboards survive reopening at ${width}px in ${theme} mode`, async ({ page }, testInfo) => {
+    test(`new layout gallery stays readable and blank dashboards survive reopening at ${width}px in ${theme} mode`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 })
       await seedBrowserState(page, theme, '/')
       const mockApi = await installApiMocks(page, 'populated', theme)
@@ -11,8 +11,8 @@ for (const theme of ['dark', 'light'] as const) {
       await waitForHarnessReady(page, mockApi)
       await expectThemeApplied(page, theme)
 
-      await page.getByRole('button', { name: 'Layout packs' }).first().click()
-      const gallery = page.getByRole('dialog', { name: 'Layout packs' })
+      await page.getByRole('button', { name: 'New Layout' }).first().click()
+      const gallery = page.getByRole('dialog', { name: 'Create a layout' })
       await expect(gallery).toBeVisible()
       await expect(gallery.getByRole('heading', { name: 'Default' })).toBeVisible()
       const preview = gallery.getByTestId('mini-grid-preview').first()
@@ -62,16 +62,16 @@ for (const theme of ['dark', 'light'] as const) {
   }
 }
 
-test('installs a layout pack and restores its widgets in a new browser', async ({ page, browser }) => {
+test('creates a populated layout and restores its widgets in a new browser', async ({ page, browser }) => {
   await seedBrowserState(page, 'dark', '/')
   const mockApi = await installApiMocks(page)
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
-  await page.getByRole('button', { name: 'Layout packs' }).first().click()
-  const gallery = page.getByRole('dialog', { name: 'Layout packs' })
+  await page.getByRole('button', { name: 'New Layout' }).first().click()
+  const gallery = page.getByRole('dialog', { name: 'Create a layout' })
   await gallery.getByRole('button', { name: /Daily Commuter/ }).click()
   await page.getByRole('dialog', { name: 'Template Preview' })
-    .getByRole('button', { name: 'Install as new dashboard' }).click()
+    .getByRole('button', { name: 'Create layout with these widgets' }).click()
   await expect(page.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Daily Commuter')
 
   const saved = await page.evaluate(() => ({
@@ -109,6 +109,44 @@ test('installs a layout pack and restores its widgets in a new browser', async (
   } finally {
     await context.close()
   }
+})
+
+test('mobile New Layout creates populated Operations Desk without mixing templates into Add Widget', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await seedBrowserState(page, 'dark', '/')
+  const mockApi = await installApiMocks(page)
+  await page.route('**/api/v1/analytics/fleet?**', (route) =>
+    fulfillApiMock(route, mockApi, {
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ total_vehicles: 0, total_drives: 0, total_distance_m: 0 }),
+    }),
+  )
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await waitForHarnessReady(page, mockApi)
+
+  await page.getByRole('button', { name: 'New Layout' }).first().click()
+  const gallery = page.getByRole('dialog', { name: 'Create a layout' })
+  await expect(gallery.getByRole('button', { name: /Blank Dashboard/ })).toBeVisible()
+  await gallery.getByRole('button', { name: /Operations Desk/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Template Preview' })).toContainText('Fleet Posture')
+  await page.getByRole('button', { name: 'Create layout with these widgets' }).click()
+  await expect(page.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Operations Desk')
+  const widgets = await page.evaluate(() => {
+    const dashboards = JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as
+      Array<{ id: string; widgets: Array<{ widgetId: string }>; layouts: Record<string, unknown[]> }>
+    return dashboards.find((d) => d.id === localStorage.getItem('teslasync-active-dashboard'))
+  })
+  expect(widgets?.widgets.map((widget) => widget.widgetId)).toContain('fleet-posture')
+  expect(widgets?.layouts.xs).toHaveLength(widgets?.widgets.length)
+
+  await page.getByRole('button', { name: 'Customize' }).click()
+  await page.getByRole('button', { name: 'Add Widget' }).click()
+  const picker = page.getByRole('dialog', { name: 'Add Widget' })
+  await expect(picker.getByText('Layout Presets')).toHaveCount(0)
+  await expect(picker.getByRole('textbox', { name: 'Search widgets' })).toBeVisible()
+  await waitForHarnessReady(page, mockApi)
+  await assertMockApiComplete(page, mockApi)
 })
 
 for (const width of [390, 1440]) {

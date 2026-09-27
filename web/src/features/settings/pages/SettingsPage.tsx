@@ -38,6 +38,7 @@ import {
 } from '../components'
 import { ResetSection } from '../components/ResetSection'
 import { SettingsNavigation, type SettingsSection } from '../components/SettingsNavigation'
+import { SANS_LABELS } from '../components/fontChoices'
 
 // The Tesla integration redirect cluster (Tesla Account, Feature Flags,
 // Region & API, Active Orders, Gas Price Auto-Poll), the Fleet API link
@@ -54,17 +55,6 @@ const LANGUAGE_LABELS: Record<string, string> = {
   fr: 'Français',
   es: 'Español',
   zh: '中文',
-}
-
-/** Display names for the stored font-family preset shown in the KPI band. */
-const FONT_FAMILY_LABELS: Record<string, string> = {
-  inter: 'Inter',
-  system: 'System UI',
-  roboto: 'Roboto',
-  source: 'Source Sans 3',
-  plex: 'IBM Plex Sans',
-  atkinson: 'Atkinson Hyperlegible',
-  custom: 'Custom',
 }
 
 interface OverviewCard {
@@ -98,7 +88,7 @@ export default function SettingsPage() {
     { id: 'general', title: t('settings.organization.general', 'Units, language & costs'), description: t('settings.organization.generalDescription', 'Measurements, regional formats and comparison costs') },
     { id: 'workspace', title: t('settings.organization.workspace', 'Workspace'), description: t('settings.organization.workspaceDescription', 'Landing page, default vehicle and analysis window') },
     { id: 'appearance', title: t('settings.organization.appearance', 'Appearance & experience'), description: t('settings.organization.appearanceDescription', 'Theme, layout, status bar and celebrations') },
-    { id: 'typography', title: t('settings.organization.typography', 'Fonts & readability'), description: t('settings.organization.typographyDescription', 'Font families, text size and spacing') },
+    { id: 'typography', title: t('settings.organization.typography', 'Fonts & readability'), description: t('settings.organization.typographyDescription', 'Explore fonts, preview your own text, and fine-tune readability') },
     { id: 'advanced', title: t('settings.organization.advanced', 'Confirmation prompts'), description: t('settings.organization.advancedDescription', 'Restore confirmations you previously silenced') },
     { id: 'reset', title: t('settings.organization.reset', 'Reset & recovery'), description: t('settings.organization.resetDescription', 'Restore defaults and review destructive actions') },
   ]
@@ -193,7 +183,7 @@ export default function SettingsPage() {
       {
         icon: <Type className="h-5 w-5" aria-hidden="true" />,
         label: t('overview.typography', 'Typography'),
-        value: FONT_FAMILY_LABELS[fontPrefs.sans] ?? fontPrefs.sans,
+        value: SANS_LABELS[fontPrefs.sans] ?? fontPrefs.sans,
         sublabel: `${Math.round((fontPrefs.scale ?? 1) * 100)}%`,
       },
     ]

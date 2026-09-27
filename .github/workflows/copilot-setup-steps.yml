@@ -11,11 +11,16 @@ on:
           - ubuntu-latest
         default: ubuntu-latest
   push:
+    branches: [main]
     paths:
       - .github/workflows/copilot-setup-steps.yml
   pull_request:
     paths:
       - .github/workflows/copilot-setup-steps.yml
+
+concurrency:
+  group: copilot-setup-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   copilot-setup-steps:

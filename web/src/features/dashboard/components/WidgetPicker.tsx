@@ -13,7 +13,6 @@ import { cn } from '@/lib/cn';
 import { Drawer, Badge, Button as UiButton, Input as UiInput } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
 import { WIDGET_REGISTRY } from '../widgets/registry';
-import { DASHBOARD_PRESETS } from '../hooks/useDashboardLayout';
 import type { SavedDashboard, WidgetCategory, WidgetDef } from '../widgets/types';
 import { MiniGridPreview } from './MiniGridPreview';
 
@@ -96,7 +95,6 @@ interface WidgetPickerProps {
   open: boolean;
   onClose: () => void;
   onAddWidgets: (widgetIds: string[]) => void;
-  onApplyPreset: (presetId: string) => void;
   activeWidgetIds: string[];
 }
 
@@ -104,7 +102,6 @@ export function WidgetPicker({
   open,
   onClose,
   onAddWidgets,
-  onApplyPreset,
   activeWidgetIds,
 }: WidgetPickerProps) {
   const { t } = useTranslation('dashboard');
@@ -472,44 +469,6 @@ export function WidgetPicker({
             </div>
             <div className="h-px bg-white/[0.06] mt-4" />
           </div>
-        )}
-
-        {/* Layout Presets — hide when searching or filtering by category */}
-        {!query && categoryFilter === 'all' && (
-          <>
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3">
-                {t('dashboard.presets', 'Layout Presets')}
-              </h3>
-              <div className="grid grid-cols-1 gap-2">
-                {DASHBOARD_PRESETS.map((preset) => (
-                  <UiButton
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    key={preset.id}
-                    onClick={() => {
-                      onApplyPreset(preset.id);
-                      onClose();
-                    }}
-                    className={cn(
-                      'h-auto w-full flex-col items-stretch justify-start gap-0 rounded-xl border p-3 text-left transition-all',
-                      'bg-white/[0.03] border-white/[0.06]',
-                      'hover:bg-white/[0.06] hover:border-white/[0.12] cursor-pointer',
-                    )}
-                  >
-                    <span className="text-sm font-medium text-[var(--text-primary)]">
-                      {preset.name}
-                    </span>
-                    <p className="text-2xs text-[var(--text-muted)] mt-0.5">
-                      {preset.widgets.length} {t('dashboard.widgets', 'widgets')}
-                    </p>
-                  </UiButton>
-                ))}
-              </div>
-            </div>
-            <div className="h-px bg-white/[0.06]" />
-          </>
         )}
 
         {/* Widgets — flat list when searching, grouped by category otherwise */}

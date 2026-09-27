@@ -15,6 +15,12 @@ and `/settings#appearance` continue to work. Switching categories preserves
 unsaved form edits and does not save automatically. Each section retains its own
 save or instant-apply behavior.
 
+**Fonts & readability** at `/settings#typography` offers a searchable UI and
+monospace font library, live font samples, and a text field for trying your own
+copy. Font selection, reading presets, scale, line height, letter spacing, and
+heading weight apply across the app immediately. Selected fonts are persisted
+with the rest of the settings and restored before the first page paint.
+
 Reset controls live in **Reset & recovery**, separate from everyday preferences.
 The overview retains the current-preference summary, export link, guided-tour
 launcher, and setup-checklist restart.

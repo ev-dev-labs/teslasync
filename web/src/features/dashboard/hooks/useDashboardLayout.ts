@@ -321,6 +321,30 @@ export const DASHBOARD_PRESETS: SavedDashboard[] = [
     { widgetId: 'climate-status' },
     { widgetId: 'quick-nav' },
   ]),
+  makePreset('battery_care', 'Battery Care', [
+    { widgetId: 'battery-gauge' },
+    { widgetId: 'range-estimate' },
+    { widgetId: 'battery-degradation-trend' },
+    { widgetId: 'charge-status-live' },
+    { widgetId: 'charge-history' },
+    { widgetId: 'energy-flow' },
+  ]),
+  makePreset('operations', 'Operations Desk', [
+    { widgetId: 'fleet-posture' },
+    { widgetId: 'alert-feed' },
+    { widgetId: 'recent-drives' },
+    { widgetId: 'charge-status-live' },
+    { widgetId: 'fleet-stats' },
+    { widgetId: 'uptime-monitor' },
+  ]),
+  makePreset('winter_ready', 'Winter Ready', [
+    { widgetId: 'weather-at-car' },
+    { widgetId: 'climate-status' },
+    { widgetId: 'tire-pressure-visual' },
+    { widgetId: 'battery-gauge' },
+    { widgetId: 'range-estimate' },
+    { widgetId: 'quick-nav' },
+  ]),
 ];
 
 /* ─── Migration from legacy format ─── */
@@ -700,7 +724,7 @@ export function useDashboardLayout() {
 
   const createDashboard = useCallback(
     (name: string, fromPreset?: SavedDashboard) => {
-      const id = `custom-${Date.now()}`;
+      const id = `custom-${generateId()}`;
       const base = fromPreset ?? { ...DEFAULT_DASHBOARD, widgets: [], layouts: buildDefaultLayouts([]) };
       const newDash: SavedDashboard = {
         ...base,

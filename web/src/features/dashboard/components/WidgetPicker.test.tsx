@@ -2,17 +2,17 @@
  * WidgetPicker tests.
  *
  * WidgetPicker is the slide-in drawer for adding widgets to a dashboard. It is
- * a controlled component over the widget registry + layout presets, so the
+ * a controlled component over the widget registry, so the
  * tests exercise its full behaviour contract rather than a smoke render:
  *
  *   - Visibility: renders nothing when closed, a labelled dialog when open.
  *   - Search: filters the flat list, shows a result-count header, an empty
  *     state for no matches, and matches by name/description/category.
- *   - Category pills: narrow the grouped view and hide the presets section.
+ *   - Category pills: narrow the grouped view.
  *   - Add semantics: a single click adds one widget; "Add all" batches the
  *     addable (non-active) widgets; Enter adds the sole search result;
  *     Ctrl/Cmd+Enter adds-and-closes; already-added widgets are disabled and
- *     inert; presets fire onApplyPreset + onClose.
+ *     inert.
  *   - Feedback: the footer summarises the session count with a Done action and
  *     a screen-reader live region announces each add.
  *   - Recently-added: persisted ids surface a section (excluding active ones),
@@ -61,18 +61,16 @@ type Props = React.ComponentProps<typeof WidgetPicker>;
 function renderPicker(overrides: Partial<Props> = {}) {
   const onClose = vi.fn();
   const onAddWidgets = vi.fn();
-  const onApplyPreset = vi.fn();
   const utils = render(
     <WidgetPicker
       open
       onClose={onClose}
       onAddWidgets={onAddWidgets}
-      onApplyPreset={onApplyPreset}
       activeWidgetIds={[]}
       {...overrides}
     />,
   );
-  return { ...utils, onClose, onAddWidgets, onApplyPreset };
+  return { ...utils, onClose, onAddWidgets };
 }
 
 /** The clickable widget card whose accessible name contains `desc`. */
@@ -92,7 +90,7 @@ describe('WidgetPicker', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
-  it('renders a labelled dialog, search field, category tabs and presets when open', () => {
+  it('renders only widgets in the labelled catalogue, not layout templates', () => {
     renderPicker();
 
     expect(screen.getByRole('dialog', { name: 'Add Widget' })).toBeInTheDocument();
@@ -106,11 +104,12 @@ describe('WidgetPicker', () => {
       screen.getByRole('button', { name: 'Battery & Range', pressed: false }),
     ).toHaveClass('rounded-shape-sm', 'border-[var(--control-border)]');
 
-    // The whole registry is available and the preset section is present.
+    // Layout creation lives in its own gallery, not among the widgets.
     expect(
       screen.getByText(new RegExp(`${WIDGET_REGISTRY.length} widgets available`)),
     ).toBeInTheDocument();
-    expect(screen.getByText('Layout Presets')).toBeInTheDocument();
+    expect(screen.queryByText('Layout Presets')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Daily Commuter/i })).not.toBeInTheDocument();
     expect(widgetCard(BATTERY_GAUGE_DESC)).toBeInTheDocument();
   });
 
@@ -141,7 +140,7 @@ describe('WidgetPicker', () => {
     expect(onAddWidgets).not.toHaveBeenCalled();
   });
 
-  it('filtering by category narrows the list and hides the presets section', () => {
+  it('filtering by category narrows the list', () => {
     renderPicker();
     fireEvent.click(
       screen.getByRole('button', { name: 'Battery & Range', pressed: false }),
@@ -152,7 +151,6 @@ describe('WidgetPicker', () => {
     expect(
       screen.queryByRole('button', { name: new RegExp(VEHICLE_HERO_DESC, 'i') }),
     ).toBeNull();
-    // Presets only render on the unfiltered "All" view.
     expect(screen.queryByText('Layout Presets')).toBeNull();
   });
 
@@ -170,7 +168,6 @@ describe('WidgetPicker', () => {
     expect(
       screen.queryByRole('button', { name: new RegExp(BATTERY_GAUGE_DESC, 'i') }),
     ).toBeNull();
-    // Presets are hidden while searching.
     expect(screen.queryByText('Layout Presets')).toBeNull();
   });
 
@@ -229,14 +226,6 @@ describe('WidgetPicker', () => {
     expect(ids).toContain('range-bar');
     // The active widget must not be re-added.
     expect(ids).not.toContain('range-estimate');
-  });
-
-  it('applies a layout preset and closes the drawer', () => {
-    const { onApplyPreset, onClose } = renderPicker();
-    fireEvent.click(screen.getByRole('button', { name: /Daily Commuter/i }));
-
-    expect(onApplyPreset).toHaveBeenCalledWith('commuter');
-    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('Ctrl+Enter on a widget card adds it and closes the drawer', () => {

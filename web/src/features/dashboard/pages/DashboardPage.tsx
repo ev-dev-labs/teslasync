@@ -511,20 +511,22 @@ export default function DashboardPage() {
               </Caption>
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}
+            aria-label={t('dashboard.addWidget', 'Add Widget')}>
             <Icons.add className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={autoArrange}>
+          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
+            <Icons.layoutTemplate className="h-3.5 w-3.5 me-1" />
+            {t('dashboard.newLayout', 'New Layout')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={autoArrange}
+            aria-label={t('dashboard.autoArrange', 'Auto Arrange')}>
             <Icons.layoutGrid className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
-            <Icons.layoutTemplate className="h-3.5 w-3.5 me-1" />
-            {t('dashboard.layoutPacks', 'Layout packs')}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => void handleResetRequest()} className="hidden sm:flex">
-            <Icons.undo className="h-3.5 w-3.5 me-1" />
+          <Button variant="ghost" size="sm" onClick={() => void handleResetRequest()}>
+            <Icons.undo className="h-3.5 w-3.5 sm:me-1" />
             {t('dashboard.reset', 'Reset')}
           </Button>
           <Button size="sm" onClick={() => setEditMode(false)}>
@@ -545,7 +547,7 @@ export default function DashboardPage() {
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
             <Icons.layoutTemplate className="h-4 w-4" aria-hidden="true" />
-            <span>{t('dashboard.layoutPacks', 'Layout packs')}</span>
+            <span>{t('dashboard.newLayout', 'New Layout')}</span>
           </Button>
           {vehicleList.length > 0 && (
             <>
@@ -666,7 +668,6 @@ export default function DashboardPage() {
                 onCreate={(name) => createDashboard(name)}
                 onDuplicate={duplicateDashboard}
                 onReset={resetToDefault}
-                onToggleEdit={() => setEditMode(!editMode)}
                 onPinToVehicle={pinToVehicle}
               />
               <LayoutManager
@@ -737,7 +738,6 @@ export default function DashboardPage() {
         open={showPicker}
         onClose={() => setShowPicker(false)}
         onAddWidgets={addWidgets}
-        onApplyPreset={applyPreset}
         activeWidgetIds={activeDashboard.widgets.map((w) => w.widgetId)}
       />
 

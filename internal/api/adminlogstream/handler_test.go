@@ -318,19 +318,16 @@ func TestAdminLogStreamHandler_DropTickEmitsAfterBufferOverflow(t *testing.T) {
 		reg.WriteLevel(zerolog.InfoLevel, []byte(`{"i":1}`))
 	}
 
-	stop := make(chan struct{})
-	defer close(stop)
-	events := drainSSEEvents(t, resp.Body, 6, stop)
-	sawDrop := false
-	for _, e := range events {
-		if e.event == "drop" {
-			sawDrop = true
-			break
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		if scanner.Text() == "event: drop" {
+			return
 		}
 	}
-	if !sawDrop {
-		t.Fatalf("no drop event emitted in %d events: %+v", len(events), events)
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("read drop event: %v", err)
 	}
+	t.Fatal("stream ended before emitting a drop event")
 }
 
 func TestParseLogStreamLevel(t *testing.T) {
