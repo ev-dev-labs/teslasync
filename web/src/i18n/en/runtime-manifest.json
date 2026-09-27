@@ -40,7 +40,6 @@
     "workspace"
   ],
   "missing": [
-    "a11y.navSections",
     "a11y.status.bulkDone",
     "a11y.status.bulkPartial",
     "a11y.status.empty",

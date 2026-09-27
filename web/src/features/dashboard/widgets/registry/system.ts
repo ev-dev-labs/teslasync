@@ -23,6 +23,17 @@ export const SYSTEM_WIDGETS: WidgetDef[] = [
     },
   },
   {
+    id: 'fleet-posture',
+    name: 'Fleet Posture',
+    description: 'Verified fleet coverage, scoped vehicle status, and evidence freshness',
+    icon: HeartPulse,
+    category: 'system',
+    defaultSize: { cols: 2, rows: 8 },
+    minSize: { cols: 2, rows: 5 },
+    maxSize: { cols: 4, rows: 12 },
+    component: lazy(() => import('../FleetPostureWidget')),
+  },
+  {
     id: 'uptime-monitor',
     name: 'Uptime Monitor',
     description: 'System health: DB, MQTT, Tesla API, Fleet Telemetry status',

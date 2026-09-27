@@ -8,6 +8,7 @@ export type E2EUIDensity = 'compact' | 'comfortable' | 'spacious';
 
 export interface BrowserSeedOptions {
   density?: E2EUIDensity;
+  preserveDashboardState?: boolean;
 }
 
 const NOW = '2026-08-26T16:00:00.000Z';
@@ -429,6 +430,7 @@ export function resolveApiFixture(
   if (path === '/onboarding/status') return matched({});
   if (path === '/admin/rbac/matrix') return matched({ roles: [], permissions: [] });
   if (path === '/system/update-check') return matched({ update_available: false });
+  if (path === '/system/map-config') return matched({ provider: 'free', api_key: '' });
   if (path === '/export/jobs') return matched([]);
   if (path === '/admin/impersonate') return matched({ mode: 'inactive' });
   if (path === '/push/public-key') return matched({ public_key: '' });
@@ -612,6 +614,8 @@ export function resolveApiFixture(
     });
   }
   if (path.startsWith('/charging-telemetry/latest')) return matched(null);
+  if (path.startsWith('/climate/latest?vehicle_id=')) return matched(null);
+  if (path.startsWith('/security/latest?vehicle_id=')) return matched(null);
   if (path.startsWith('/data-repair/cases/stats')) {
     return matched({ open: 1, in_review: 0, quarantined: 0, resolved: 0, total: 1, updated_at: observedAt });
   }
@@ -1091,7 +1095,7 @@ export async function seedBrowserState(
   options: BrowserSeedOptions = {},
 ): Promise<void> {
   const density = options.density ?? 'comfortable';
-  await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes }) => {
+  await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes, preserveDashboardState }) => {
     const beaconRecords: CapturedBeacon[] = [];
     const NativeBlob = Blob;
     const blobBodies = new WeakMap<Blob, string | null>();
@@ -1324,13 +1328,16 @@ export async function seedBrowserState(
       layouts: {}, createdAt: '2026-08-26T16:00:00.000Z',
       updatedAt: '2026-08-26T16:00:00.000Z', isDefault: true,
     }];
-    localStorage.setItem('teslasync-dashboards', JSON.stringify(dashboard));
-    localStorage.setItem('teslasync-active-dashboard', 'e2e');
+    if (!preserveDashboardState) {
+      localStorage.setItem('teslasync-dashboards', JSON.stringify(dashboard));
+      localStorage.setItem('teslasync-active-dashboard', 'e2e');
+    }
   }, {
     selectedTheme: theme,
     selectedDensity: density,
     activePath: routePath,
     allowedBeaconPaths: [...ALLOWED_BEACON_PATHS],
     maxBeaconBytes: MAX_BEACON_BYTES,
+    preserveDashboardState: options.preserveDashboardState ?? false,
   });
 }
