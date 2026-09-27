@@ -33,21 +33,28 @@ for (const theme of ['dark', 'light'] as const) {
       await page.keyboard.press('Escape')
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]'))
       expect(saved.at(-1)?.widgets).toEqual([])
+      await expect.poll(() => page.evaluate(() =>
+        localStorage.getItem('teslasync-dashboard-pending-save'))).toBeNull()
+      await waitForHarnessReady(page, mockApi)
       await assertMockApiComplete(page, mockApi)
+      const browserContext = page.context()
+      await page.close()
 
-      const restoredPage = await page.context().newPage()
+      const restoredPage = await browserContext.newPage()
       await seedBrowserState(restoredPage, theme, '/', { preserveDashboardState: true })
       const restoredMockApi = await installApiMocks(restoredPage, 'populated', theme)
       await restoredPage.goto('/', { waitUntil: 'domcontentloaded' })
       await expect(restoredPage.getByText('No widgets yet')).toBeVisible()
+      await expect.poll(() => restoredMockApi?.seen.has('GET /settings/dashboard-layouts')).toBe(true)
       await waitForHarnessReady(restoredPage, restoredMockApi)
       await assertMockApiComplete(restoredPage, restoredMockApi)
       await restoredPage.close()
-      const reopenedPage = await page.context().newPage()
+      const reopenedPage = await browserContext.newPage()
       await seedBrowserState(reopenedPage, theme, '/', { preserveDashboardState: true })
       const reopenedMockApi = await installApiMocks(reopenedPage, 'populated', theme)
       await reopenedPage.goto('/', { waitUntil: 'domcontentloaded' })
       await expect(reopenedPage.getByText('No widgets yet')).toBeVisible()
+      await expect.poll(() => reopenedMockApi?.seen.has('GET /settings/dashboard-layouts')).toBe(true)
       await waitForHarnessReady(reopenedPage, reopenedMockApi)
       await assertMockApiComplete(reopenedPage, reopenedMockApi)
       await reopenedPage.close()
@@ -71,6 +78,9 @@ test('installs a layout pack and restores its widgets in a new browser', async (
     dashboards: JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as unknown[],
     active_id: localStorage.getItem('teslasync-active-dashboard') ?? '',
   }))
+  await expect.poll(() => page.evaluate(() =>
+    localStorage.getItem('teslasync-dashboard-pending-save'))).toBeNull()
+  await waitForHarnessReady(page, mockApi)
   await assertMockApiComplete(page, mockApi)
   const context = await browser.newContext()
   try {
