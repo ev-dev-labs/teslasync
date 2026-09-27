@@ -17,6 +17,7 @@ for (const theme of ['light', 'dark'] as const) {
       if (!initial.matched || !initial.body || typeof initial.body !== 'object') {
         throw new Error('Settings fixture is unavailable')
       }
+
       let settings = initial.body as Record<string, unknown>
       await page.route('**/api/v1/settings', async route => {
         if (route.request().method() === 'PUT') {
@@ -55,3 +56,28 @@ for (const theme of ['light', 'dark'] as const) {
     })
   }
 }
+
+test('Drive Calendar year selection stays fixed when its range reaches another screen', async ({ page }) => {
+  await seedBrowserState(page, 'light', '/drive-calendar')
+  const mockApi = await installApiMocks(page, 'populated', 'light')
+  await page.goto('/drive-calendar', { waitUntil: 'domcontentloaded' })
+  await waitForHarnessReady(page, mockApi)
+
+  await page.getByRole('button', { name: /Analysis window:/ }).click()
+  const calendarSettings = page.getByRole('dialog', { name: 'View settings' })
+  await expect(calendarSettings.getByRole('button', { name: '1 year' })).toBeVisible()
+  await calendarSettings.getByLabel('Calendar year').fill('2024')
+  await calendarSettings.getByRole('button', { name: 'Show year' }).click()
+  await expect.poll(() => new URL(page.url()).searchParams.get('from')).toBe('2024-01-01')
+  await expect.poll(() => new URL(page.url()).searchParams.get('to')).toBe('2024-12-31')
+  expect(new URL(page.url()).searchParams.get('time_scope')).toBe('custom')
+
+  const selected = new URL(page.url()).search
+  await page.goto(`/drives${selected}`, { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: /Analysis window: Custom/ }).click()
+  const drivesSettings = page.getByRole('dialog', { name: 'View settings' })
+  await expect(drivesSettings.getByRole('button', { name: '1 year' })).toHaveCount(0)
+  await expect(drivesSettings.getByLabel('Calendar year')).toHaveCount(0)
+  expect(new URL(page.url()).searchParams.get('from')).toBe('2024-01-01')
+  expect(new URL(page.url()).searchParams.get('to')).toBe('2024-12-31')
+})

@@ -11,6 +11,7 @@ import {
 } from '@/components/ui';
 import { FormSection } from '@/components/forms';
 import { DEFAULT_KIOSK_CONFIG, type KioskConfig } from '../hooks/useKioskMode';
+import { kioskBackgroundStyle, kioskPanelStyle } from '../lib/kioskAppearance';
 import type { SavedDashboard } from '../widgets/types';
 
 interface KioskSettingsModalProps {
@@ -221,7 +222,7 @@ export function KioskSettingsModal({
         {/* Transparency controls */}
         <FormSection title={t('kiosk.transparency', 'Transparency')}>
           <p className="text-xs text-[var(--text-muted)] mb-3">
-            {t('kiosk.transparencyDesc', 'Adjust widget and background opacity. Higher values are more solid and readable.')}
+            {t('kiosk.transparencyDesc', 'Adjust widget and background opacity. Colors follow your selected app theme. Higher values are more solid and readable.')}
           </p>
 
           {/* Widget panel opacity */}
@@ -259,17 +260,14 @@ export function KioskSettingsModal({
           </div>
 
           {/* Live preview swatch */}
-          <div className="mt-3 p-3 rounded-lg border border-[var(--border-subtle)] relative overflow-hidden">
+          <div className="mt-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] relative overflow-hidden">
             <div
-              className="absolute inset-0"
-              style={{ backgroundColor: `rgba(10, 10, 20, ${cfg.backgroundOpacity})` }}
+              className="kiosk-surface absolute inset-0"
+              style={kioskBackgroundStyle(cfg.backgroundOpacity)}
             />
             <div
-              className="relative rounded-md p-2 text-xs text-[var(--text-secondary)] border border-[var(--border-subtle)]"
-              style={{
-                backgroundColor: `rgba(255, 255, 255, ${0.03 + cfg.widgetOpacity * 0.17})`,
-                backdropFilter: `blur(${4 + cfg.widgetOpacity * 12}px)`,
-              }}
+              className="kiosk-panel relative m-3 rounded-md p-2 text-xs text-[var(--text-secondary)] border border-[var(--border-subtle)]"
+              style={kioskPanelStyle(cfg.widgetOpacity)}
             >
               {t('kiosk.preview', 'Preview — this is how widgets will look')}
             </div>

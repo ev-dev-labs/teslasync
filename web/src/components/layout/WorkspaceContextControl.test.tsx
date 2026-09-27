@@ -7,6 +7,7 @@ import {
 import { WorkspaceContextControl } from './WorkspaceContextControl';
 
 const mocks = vi.hoisted(() => ({
+  pathname: '/drives',
   setPreset: vi.fn(),
   setRange: vi.fn(),
   setCompare: vi.fn(),
@@ -15,6 +16,11 @@ const mocks = vi.hoisted(() => ({
   settingsPresent: true,
   compare: false,
   presetId: '7d' as string | undefined,
+}));
+
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...await importOriginal<typeof import('react-router-dom')>(),
+  useLocation: () => ({ pathname: mocks.pathname }),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -68,6 +74,7 @@ vi.mock('@/api/hooks/useSettings', () => ({
 describe('WorkspaceContextControl', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.pathname = '/drives';
     mocks.compare = false;
     mocks.presetId = '7d';
     mocks.settingsPresent = true;
@@ -124,7 +131,7 @@ describe('WorkspaceContextControl', () => {
     expect(mocks.setRange).toHaveBeenCalledWith({
       start: '2024-12-01',
       end: '2024-12-15',
-    });
+    }, 'custom');
   });
 
   it('rolls back the density selection when the save fails', () => {
@@ -166,6 +173,39 @@ describe('WorkspaceContextControl', () => {
     expect(screen.getByRole('button', { name: 'Last 5 min' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: '30 days' }));
     expect(mocks.setPreset).toHaveBeenCalledWith('30d');
+  });
+
+  it('offers a rolling year and calendar-year navigation only on Drive Calendar', () => {
+    mocks.pathname = '/drive-calendar';
+    render(<WorkspaceContextControl />);
+    fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Last 7 days' }));
+    const choices = screen.getByRole('group', { name: 'Date range' });
+    expect(choices).toHaveTextContent('1 year');
+    expect(choices).not.toHaveTextContent('24 hours');
+    fireEvent.click(screen.getByRole('button', { name: '1 year' }));
+    expect(mocks.setPreset).toHaveBeenCalledWith('1y');
+
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Calendar year' }), {
+      target: { value: '2024' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Show year' }));
+    expect(mocks.setRange).toHaveBeenCalledWith(
+      { start: '2024-01-01', end: '2024-12-31' },
+      'custom',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Previous year' }));
+    expect(mocks.setRange).toHaveBeenCalledWith(
+      { start: '2024-01-01', end: '2024-12-31' },
+      'custom',
+    );
+  });
+
+  it('shows Custom instead of an unavailable year preset on other screens', () => {
+    mocks.presetId = undefined;
+    render(<WorkspaceContextControl />);
+    fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Custom' }));
+    expect(screen.queryByRole('button', { name: '1 year' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton', { name: 'Calendar year' })).not.toBeInTheDocument();
   });
 
   it('resets date range, comparison, and display density to configured defaults', () => {

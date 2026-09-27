@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
 import {
   Button,
@@ -14,6 +15,8 @@ import { useRangeState } from '@/hooks/useRangeState'
 import { useProductPreferences } from '@/hooks/useProductPreferences'
 import { getCurrentDensity } from '@/hooks/useDensitySync'
 import { getDatePreset } from '@/lib/datePresets'
+import { civilDateInTimeZone } from '@/lib/dateRange'
+import { getWorkspaceQuickRangePresets } from '@/lib/workspaceScope'
 import { formatDate, formatDateShort } from '@/lib/dateFormat'
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
@@ -37,8 +40,6 @@ const SHORT_PRESET_LABELS: Record<WorkspaceRangePreset, string> = {
   '1y': '1 year',
   all: 'All time',
 }
-const QUICK_PRESETS = ['24h', '7d', '30d', '90d'] as const
-
 export interface WorkspaceContextControlProps {
   className?: string
   /** Keep command listeners mounted while omitting a route-inapplicable trigger. */
@@ -58,6 +59,9 @@ export function WorkspaceContextControl({
   iconOnly = false,
 }: WorkspaceContextControlProps) {
   const { t } = useTranslation()
+  const { pathname } = useLocation()
+  const calendarRoute = pathname === '/drive-calendar'
+  const quickPresets = getWorkspaceQuickRangePresets(pathname)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const { open, toggle, close } = useStatusBarPopover(
     variant === 'status' ? 'workspace-context-status' : 'workspace-context',
@@ -74,13 +78,19 @@ export function WorkspaceContextControl({
   const [draftStart, setDraftStart] = useState(range.start)
   const [draftEnd, setDraftEnd] = useState(range.end)
   const [showCustom, setShowCustom] = useState(!range.presetId)
+  const calendarYear = new Date().getFullYear()
+  const selectedYear = range.start.slice(0, 4) === range.end.slice(0, 4)
+    ? Number(range.start.slice(0, 4))
+    : calendarYear
+  const [draftYear, setDraftYear] = useState(String(selectedYear))
 
   useEffect(() => {
     if (!open) return
     setDraftStart(range.start)
     setDraftEnd(range.end)
     setShowCustom(!range.presetId)
-  }, [open, range.start, range.end, range.presetId])
+    setDraftYear(String(selectedYear))
+  }, [open, range.start, range.end, range.presetId, selectedYear])
 
   useEffect(() => {
     if (!listenForCommands) return
@@ -130,9 +140,19 @@ export function WorkspaceContextControl({
     { range: visibleContextLabel },
   )
   const validDraft = draftStart.length > 0 && draftEnd.length > 0 && draftStart <= draftEnd
-  const visiblePresets = isWorkspaceRangePreset(range.presetId) && !QUICK_PRESETS.some(id => id === range.presetId)
-    ? [range.presetId, ...QUICK_PRESETS]
-    : QUICK_PRESETS
+  const visiblePresets = isWorkspaceRangePreset(range.presetId) && !quickPresets.some(id => id === range.presetId)
+    ? [range.presetId, ...quickPresets]
+    : quickPresets
+  const applyYear = (year: number) => {
+    if (!Number.isInteger(year) || year < 1900 || year > calendarYear) return
+    range.setRange({
+      start: `${year}-01-01`,
+      end: year === calendarYear
+        ? civilDateInTimeZone(new Date(), range.timezone)
+        : `${year}-12-31`,
+    }, 'custom')
+    setDraftYear(String(year))
+  }
 
   const updateDensity = (next: string) => {
     if (!settings || !isWorkspaceDensity(next) || next === density) return
@@ -273,6 +293,48 @@ export function WorkspaceContextControl({
                 {t('workspace.analysis.custom', 'Custom')}
               </Button>
             </div>
+            {calendarRoute && (
+              <div className="flex items-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  aria-label={t('workspace.analysis.previousYear', 'Previous year')}
+                  disabled={selectedYear <= 1900}
+                  onClick={() => applyYear(selectedYear - 1)}
+                >
+                  <Icons.previous className="h-4 w-4" aria-hidden />
+                </Button>
+                <Input
+                  type="number"
+                  label={t('workspace.analysis.calendarYear', 'Calendar year')}
+                  min={1900}
+                  max={calendarYear}
+                  value={draftYear}
+                  onChange={(event) => setDraftYear(event.target.value)}
+                  className="min-w-0 flex-1"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!/^\d{4}$/.test(draftYear) || Number(draftYear) < 1900 || Number(draftYear) > calendarYear}
+                  onClick={() => applyYear(Number(draftYear))}
+                >
+                  {t('workspace.analysis.showYear', 'Show year')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  aria-label={t('workspace.analysis.nextYear', 'Next year')}
+                  disabled={selectedYear >= calendarYear}
+                  onClick={() => applyYear(selectedYear + 1)}
+                >
+                  <Icons.next className="h-4 w-4" aria-hidden />
+                </Button>
+              </div>
+            )}
             {(range.presetId === 'live' || range.presetId === '24h' || range.presetId === 'today') && !showCustom && (
               <Caption className="block">
                 {range.presetId === 'today'
@@ -306,7 +368,7 @@ export function WorkspaceContextControl({
                   variant="primary"
                   disabled={!validDraft}
                   onClick={() => {
-                    range.setRange({ start: draftStart, end: draftEnd })
+                    range.setRange({ start: draftStart, end: draftEnd }, 'custom')
                     close()
                   }}
                   className="w-full"

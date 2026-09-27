@@ -1321,6 +1321,14 @@ html[data-status-bar='off'] {
   min-height: 100vh;
 }
 
+.kiosk-surface {
+  background-color: color-mix(in srgb, var(--bg-app) var(--kiosk-background-opacity, 100%), transparent);
+}
+
+.kiosk-panel {
+  background-color: color-mix(in srgb, var(--surface-1) var(--kiosk-panel-opacity, 100%), transparent);
+}
+
 /* === @media print (Phase-40 / Prompt 54) =====================================
  * Live SPA printing: hide app chrome, swap dark glass surfaces for white paper,
  * keep recharts SVGs readable, and avoid mid-element page breaks.

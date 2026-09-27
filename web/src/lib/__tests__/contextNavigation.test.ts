@@ -264,6 +264,16 @@ describe('preserveWorkspaceScope', () => {
     expect(params.get('vehicle_id')).toBe('7')
   })
 
+  it('freezes a calendar-only rolling year as Custom on another screen', () => {
+    const current = 'from=2025-09-27&to=2026-09-27&time_scope=1y&vehicle_id=7';
+    const drives = preserveWorkspaceScope('/drives', current);
+    expect(new URLSearchParams(drives.split('?')[1]).get('time_scope')).toBe('custom');
+    expect(new URLSearchParams(drives.split('?')[1]).get('from')).toBe('2025-09-27');
+    expect(new URLSearchParams(drives.split('?')[1]).get('to')).toBe('2026-09-27');
+    const calendar = preserveWorkspaceScope('/drive-calendar', current);
+    expect(new URLSearchParams(calendar.split('?')[1]).get('time_scope')).toBe('1y');
+  })
+
   it('does not carry the analysis window to a route that cannot consume it', () => {
     const href = preserveWorkspaceScope('/battery', scope)
     const params = new URLSearchParams(href.split('?')[1])

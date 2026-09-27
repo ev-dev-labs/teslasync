@@ -4,6 +4,8 @@ import {
   VEHICLE_DISABLED_PATHS,
   VEHICLE_DISABLED_PREFIXES,
   getWorkspaceRouteScope,
+  getWorkspaceQuickRangePresets,
+  isWorkspaceRangePresetAvailable,
 } from '../workspaceScope';
 import { ROUTE_REGISTRY } from '../routeRegistry';
 import appSource from '../../App.tsx?raw';
@@ -23,6 +25,14 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('offers rolling year and year navigation only for Drive Calendar', () => {
+    expect(getWorkspaceQuickRangePresets('/drive-calendar/')).toEqual(['7d', '30d', '90d', '1y']);
+    expect(getWorkspaceQuickRangePresets('/drives')).toEqual(['24h', '7d', '30d', '90d']);
+    expect(isWorkspaceRangePresetAvailable('/drive-calendar', '1y')).toBe(true);
+    expect(isWorkspaceRangePresetAvailable('/drives', '1y')).toBe(false);
+    expect(isWorkspaceRangePresetAvailable('/drives', 'all')).toBe(true);
+  });
+
   it('enables both canonical controls on vehicle history pages', () => {
     expect(getWorkspaceRouteScope('/driving-dynamics')).toEqual({
       range: true,

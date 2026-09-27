@@ -1528,6 +1528,10 @@
         "all": "All time"
       },
       "applyCustom": "Apply custom range",
+      "calendarYear": "Calendar year",
+      "showYear": "Show year",
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
       "density": "Display density",
       "reset": "Reset",
       "compareHint": "Adds comparison variance to supported views.",

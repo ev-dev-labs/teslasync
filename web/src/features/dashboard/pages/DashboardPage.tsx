@@ -51,6 +51,7 @@ import { useKioskMode } from '../hooks/useKioskMode';
 import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
 import { markCustomizeDashboardCompleted } from '@/features/onboarding/checklist';
+import { kioskBackgroundStyle } from '../lib/kioskAppearance';
 import {
   DASHBOARD_PRESET_REQUESTED_EVENT,
   consumePendingDashboardPreset,
@@ -819,10 +820,8 @@ export default function DashboardPage() {
           // dashboard, not user-dismissable content. New interactive dialogs
           // MUST use <Modal>.
           // eslint-disable-next-line no-restricted-syntax
-          className="kiosk-root fixed inset-0 z-[9990]"
-          style={{
-            backgroundColor: `rgba(10, 10, 20, ${kioskConfig.backgroundOpacity ?? 1})`,
-          }}
+          className="kiosk-root kiosk-surface fixed inset-0 z-[9990]"
+          style={kioskBackgroundStyle(kioskConfig.backgroundOpacity ?? 1)}
         >
           <DashboardGrid
             dashboard={activeDashboard}

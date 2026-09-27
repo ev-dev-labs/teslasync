@@ -16,6 +16,8 @@ function withRouter(initialEntries: string[]) {
       <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/charging" element={children} />
+          <Route path="/drive-calendar" element={children} />
+          <Route path="/drives" element={children} />
           <Route path="/local" element={children} />
         </Routes>
       </MemoryRouter>
@@ -227,6 +229,72 @@ describe('useRangeState — localStorage persistence', () => {
     expect(secondPage.result.current.start).toBe('2026-06-03');
     expect(secondPage.result.current.end).toBe('2026-06-19');
     expect(secondPage.result.current.presetId).toBeUndefined();
+  });
+
+  it('freezes a rolling year when entering a screen without the year preset', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 27, 12));
+    const calendar = renderHook(() => useRangeState(), {
+      wrapper: withRouter(['/drive-calendar']),
+    });
+    act(() => calendar.result.current.setPreset('1y'));
+    const selected = { start: calendar.result.current.start, end: calendar.result.current.end };
+    expect(calendar.result.current.presetId).toBe('1y');
+    calendar.unmount();
+
+    const drives = renderHook(() => useRangeState(), {
+      wrapper: withRouter(['/drives']),
+    });
+    expect({ start: drives.result.current.start, end: drives.result.current.end }).toEqual(selected);
+    expect(drives.result.current.presetId).toBeUndefined();
+    expect(JSON.parse(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? '{}'))
+      .toEqual({ version: STORED_PREFERENCE_VERSION, ...selected });
+    drives.unmount();
+
+    const sameDay = renderHook(() => useRangeState(), {
+      wrapper: withRouter(['/drive-calendar']),
+    });
+    expect(sameDay.result.current.presetId).toBeUndefined();
+    sameDay.unmount();
+
+    vi.setSystemTime(new Date(2026, 8, 28, 12));
+    const back = renderHook(() => useRangeState(), {
+      wrapper: withRouter(['/drive-calendar']),
+    });
+    expect({ start: back.result.current.start, end: back.result.current.end }).toEqual(selected);
+    expect(back.result.current.presetId).toBeUndefined();
+  });
+
+  it('keeps bookmarked unsupported year dates fixed and rewrites its scope as Custom', () => {
+    const { result } = renderHook(() => ({
+      range: useRangeState(),
+      params: useSearchParams()[0],
+    }), {
+      wrapper: withRouter(['/drives?from=2025-04-01&to=2026-04-01&time_scope=1y']),
+    });
+    expect(result.current.range.start).toBe('2025-04-01');
+    expect(result.current.range.end).toBe('2026-04-01');
+    expect(result.current.range.presetId).toBeUndefined();
+    expect(result.current.params.get('time_scope')).toBe('custom');
+  });
+
+  it('uses the stored fixed window rather than resolving an unsupported scope without dates', () => {
+    window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, JSON.stringify({
+      version: STORED_PREFERENCE_VERSION,
+      start: '2025-01-01',
+      end: '2025-12-31',
+      presetId: '1y',
+    }));
+    const { result } = renderHook(() => ({
+      range: useRangeState(),
+      params: useSearchParams()[0],
+    }), {
+      wrapper: withRouter(['/drives?time_scope=1y']),
+    });
+    expect({ start: result.current.range.start, end: result.current.range.end })
+      .toEqual({ start: '2025-01-01', end: '2025-12-31' });
+    expect(result.current.range.presetId).toBeUndefined();
+    expect(result.current.params.get('time_scope')).toBe('custom');
   });
 
   it('uses an explicit URL without replacing the shared selection', () => {
