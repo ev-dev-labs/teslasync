@@ -314,7 +314,7 @@ jobs:
           timeout: 30m
 
       - name: Upload vulnerability scan
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: vuln-${{ matrix.image }}-${{ needs.version.outputs.version }}
           path: vuln-${{ matrix.image }}.json
@@ -324,7 +324,7 @@ jobs:
       # version, so legs cannot collide and a publish job cannot pick up
       # another image's bytes.
       - name: Upload the promotable image archive
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: image-${{ matrix.image }}-${{ needs.version.outputs.version }}
           path: |
@@ -405,7 +405,7 @@ jobs:
 
       - name: Upload vulnerability status
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: vulnerability-status-${{ needs.version.outputs.version }}
           path: vulnerability-status.md
@@ -606,7 +606,7 @@ jobs:
           echo "✅ Attested CycloneDX SBOM to ${PRIMARY}@${DIGEST}"
 
       - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-${{ matrix.image }}-${{ needs.version.outputs.version }}
           path: |

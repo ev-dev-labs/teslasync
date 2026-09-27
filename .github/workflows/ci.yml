@@ -140,7 +140,7 @@ jobs:
           go test -race -coverprofile=shard/coverage.out -covermode=atomic -json "${packages[@]}" | tee shard/test-events.json
       - name: Upload raw shard evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: backend-test-${{ matrix.shard }}
           path: shard/
@@ -182,7 +182,7 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: backend-coverage
           if-no-files-found: error
@@ -353,7 +353,7 @@ jobs:
             --reporter=default --reporter=blob
       - name: Upload raw shard evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: frontend-test-${{ matrix.shard }}
           path: web/.vitest-reports/
@@ -405,7 +405,7 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: frontend-coverage
           path: web/coverage/

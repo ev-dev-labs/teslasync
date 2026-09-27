@@ -100,7 +100,7 @@ jobs:
         run: make ai-eval-full
       - name: Upload JUnit report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: ai-eval-junit
           path: ai-eval.junit.xml
@@ -134,7 +134,7 @@ jobs:
         run: make ai-eval-judged
       - name: Upload judged JUnit report
         if: steps.gate.outputs.judge == 'enabled'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: ai-eval-judged-junit
           path: ai-eval.judged.junit.xml
