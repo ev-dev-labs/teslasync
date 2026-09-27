@@ -4,8 +4,29 @@ export interface SectionGroup {
   primary: string
   label: string
   labelKey: string
-  keepPrimaryVisibleWhenPinned?: boolean
+  includeSingleton?: boolean
   pages: readonly { to: string; label: string; labelKey: string; icon?: typeof Icons.home; color?: string }[]
+}
+
+/**
+ * Canonical sidebar section input: title plus catalog items. Re-derived
+ * from Layout's exported navSections so consumers stay in lockstep with
+ * the canonical nav tree without a circular import.
+ */
+export type SidebarSectionInput = {
+  title: string
+  /** Catalog key for the section title (`nav.groups.*`) — canonical sections only. */
+  titleKey?: string
+  items: Array<{
+    to: string
+    icon: typeof Icons.home
+    label: string
+    /** Stable catalog key (`nav.items.*`) — every canonical nav item has one. */
+    labelKey: string
+    color?: string
+    dataTour?: string
+    minVehicles?: number
+  }>
 }
 
 export function findSectionGroup(groups: readonly SectionGroup[], pathname: string) {

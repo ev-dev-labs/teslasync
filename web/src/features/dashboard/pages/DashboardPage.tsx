@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStatus } from '@/api/hooks/useSettings';
 import {
   FLEET_STATES_QUERY_ROOT,
-  useFleetStates,
   useSyncVehicles,
   useVehicles,
 } from '@/api/hooks/useVehicles';
@@ -46,7 +45,6 @@ import { DashboardSettingsModal } from '../components/DashboardSettingsModal';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
 import { AddWidgetButton } from '../components/AddWidgetButton';
 import { WidgetCatalogueDialog } from '../components/WidgetCatalogueDialog';
-import { FleetOperationsBrief } from '../components/FleetOperationsBrief';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { useKioskMode } from '../hooks/useKioskMode';
@@ -78,6 +76,7 @@ const DEFAULT_WIDGET_IDS = new Set<string>([
   'charge-status',
   'security-status',
   'quick-nav',
+  'fleet-posture',
 ]);
 
 const CUSTOMIZE_HINT_DISMISSED_KEY = 'teslasync:dashboard:customizeHintDismissed:v1';
@@ -369,12 +368,10 @@ export default function DashboardPage() {
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = vehiclesQuery;
   const {
     vehicleId: selectedVehicleId,
-    vehicle: selectedVehicle,
   } = useSelectedVehicle();
 
   /* ——— Derived values ——— */
   const vehicleList = vehicles ?? [];
-  const fleetStatesQuery = useFleetStates(vehicleList);
   const dashboardVehicleId =
     activeDashboard.settings?.vehicleId ?? selectedVehicleId ?? undefined;
 
@@ -522,9 +519,9 @@ export default function DashboardPage() {
             <Icons.layoutGrid className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)} className="hidden sm:flex">
+          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
             <Icons.layoutTemplate className="h-3.5 w-3.5 me-1" />
-            {t('dashboard.templates', 'Templates')}
+            {t('dashboard.layoutPacks', 'Layout packs')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => void handleResetRequest()} className="hidden sm:flex">
             <Icons.undo className="h-3.5 w-3.5 me-1" />
@@ -545,6 +542,10 @@ export default function DashboardPage() {
           >
             <Icons.refresh className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden="true" />
             <span>{t('dashboard.refreshShort', 'Refresh')}</span>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
+            <Icons.layoutTemplate className="h-4 w-4" aria-hidden="true" />
+            <span>{t('dashboard.layoutPacks', 'Layout packs')}</span>
           </Button>
           {vehicleList.length > 0 && (
             <>
@@ -636,21 +637,6 @@ export default function DashboardPage() {
               </AlertBanner>
             )}
           </div>
-        )}
-
-        {!vehiclesLoading && vehicleList.length > 0 && (
-          <FadeIn delay={0.025}>
-            <FleetOperationsBrief
-              vehicles={vehicleList}
-              selectedVehicle={selectedVehicle}
-              fleetStates={fleetStatesQuery.data}
-              summary={fleetStatesQuery.summary}
-              isPending={fleetStatesQuery.isPending}
-              isError={fleetStatesQuery.isError}
-              isRetrying={fleetStatesQuery.isFetching}
-              onRetry={fleetStatesQuery.refetch}
-            />
-          </FadeIn>
         )}
 
         {/* Layout switcher + manager — shown whenever saved dashboards exist. */}

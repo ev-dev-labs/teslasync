@@ -4572,6 +4572,41 @@
     }
   },
   "nav": {
+    "deck": {
+      "groups": "Sections and shortcuts",
+      "search": "Search",
+      "suggested": "Suggested",
+      "saved": "Saved",
+      "allPages": "All pages",
+      "suggestedCount_one": "{{count}} suggestion",
+      "suggestedCount_other": "{{count}} suggestions",
+      "favoritesCount_one": "{{count}} pinned page",
+      "favoritesCount_other": "{{count}} pinned pages",
+      "pageCount_one": "{{count}} page",
+      "pageCount_other": "{{count}} pages",
+      "alerts": "Alerts",
+      "alertCount_one": "{{count}} unread alert",
+      "alertCount_other": "{{count}} unread alerts",
+      "vehicles": "Cars",
+      "vehicleCount_one": "{{count}} vehicle",
+      "vehicleCount_other": "{{count}} vehicles",
+      "display": "Display",
+      "expand": "Expand sidebar",
+      "collapse": "Collapse sidebar",
+      "collapseShort": "Collapse",
+      "backToRail": "Back to sections",
+      "close": "Close panel",
+      "collapsePanel": "Collapse secondary navigation",
+      "expandPanel": "Expand secondary navigation",
+      "expandToSearch": "Expand to search pages",
+      "expandAllGroups": "Expand all groups",
+      "collapseAllGroups": "Collapse all groups",
+      "searchHint": "Type to search all pages. Keyword shortcuts like “soh” work too.",
+      "allCaughtUp": "All caught up — nothing needs you right now.",
+      "now": "Now",
+      "upNext": "Up next",
+      "noFavorites": "Pin pages from any row and they will live here."
+    },
     "collections": {
       "toggle": "{{group}}, {{count}} views",
       "timeline": "Vehicle History",
@@ -4611,6 +4646,7 @@
       "telemetry": "Telemetry Troubleshooting",
       "signalAnalysis": "Signal Analysis",
       "vehicle": "Vehicle Diagnostics",
+      "vehicleCost": "Vehicle Costs",
       "sections": "{{group}} sections"
     },
     "reportGroups": {
@@ -5712,6 +5748,7 @@
     "fleetPosture": {
       "eyebrow": "Operational brief",
       "title": "Fleet posture",
+      "help": "Verified live-state coverage and evidence age across your fleet.",
       "unnamedVehicle": "Selected vehicle",
       "activeScope": "Active vehicle scope",
       "openVehicle": "Open vehicle",
@@ -5885,6 +5922,7 @@
     "redo": "Redo",
     "autoArrange": "Auto Arrange",
     "templates": "Templates",
+    "layoutPacks": "Layout packs",
     "reset": "Reset",
     "kiosk": "Kiosk",
     "customize": "Customize",
@@ -13615,9 +13653,9 @@
   },
   "templates": {
     "widgetCount": "{{count}} widgets",
-    "apply": "Use This Template",
+    "apply": "Install as new dashboard",
     "detail": "Template Preview",
-    "title": "Dashboard Templates",
+    "title": "Layout packs",
     "blank": "Blank Dashboard"
   },
   "hero": {

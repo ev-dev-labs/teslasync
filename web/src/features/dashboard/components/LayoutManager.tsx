@@ -391,7 +391,7 @@ export function LayoutManager({
                   : (current - 1 + items.length) % items.length;
             items[next]?.focus();
           }}
-          className="fixed z-50 bg-[var(--bg-secondary)] border border-[var(--border-subtle)]
+          className="fixed z-50 bg-[var(--surface-2)] border border-[var(--border-subtle)]
             rounded-lg shadow-xl py-1 min-w-[160px]"
           style={{ top: ctxMenu.y, left: ctxMenu.x }}
         >

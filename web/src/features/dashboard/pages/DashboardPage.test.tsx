@@ -327,10 +327,6 @@ function makeFleetState(
   };
 }
 
-function metricValue(brief: HTMLElement, label: string) {
-  return within(brief).getByText(label).parentElement?.querySelector('dd');
-}
-
 function setDashboard(overrides: Record<string, unknown> = {}) {
   h.layout.activeDashboard = {
     id: 'd1',
@@ -387,111 +383,15 @@ afterEach(() => {
 });
 
 describe('DashboardPage — shell', () => {
-  it('renders the Fleet Operations identity and command brief without a page-level recent panel', () => {
+  it('renders the Fleet Operations identity without a fixed posture brief or workflow column', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Fleet Operations' })).toBeInTheDocument();
     expect(
       screen.getByText('Monitor readiness, investigate exceptions, and act from one workspace'),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('fleet-operations-brief')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Fleet posture' })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Primary workflows' })).toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-operations-brief')).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Primary workflows' })).not.toBeInTheDocument();
     expect(screen.queryByText('Recently Viewed')).toBeNull();
-  });
-
-  it('uses verified charging and movement instead of stale inventory posture', () => {
-    const vehicles = [
-      { id: 1, display_name: 'Falcon', vin: 'VIN1', state: 'unknown', healthy: false },
-      { id: 2, display_name: 'Roadrunner', vin: 'VIN2', state: 'unknown', healthy: false },
-      { id: 3, display_name: 'Kestrel', vin: 'VIN3', state: 'online', healthy: true },
-    ];
-    h.vehicles = makeQuery({ data: vehicles });
-    h.fleetStates = makeQuery({
-      data: [
-        makeFleetState(
-          vehicles[0],
-          { state: 'unknown', is_charging: true },
-          ['is_charging'],
-        ),
-        makeFleetState(
-          vehicles[1],
-          { state: 'unknown', speed: 14 },
-          ['speed'],
-        ),
-        makeFleetState(
-          vehicles[2],
-          {},
-          [],
-          {
-            state: null,
-            outcome: 'failed',
-            freshness: 'unknown',
-            observedAt: null,
-            error: new Error('gateway timeout'),
-          },
-        ),
-      ],
-    });
-
-    renderPage();
-
-    const brief = screen.getByTestId('fleet-operations-brief');
-    // Verified charging outranks the stale inventory `state: 'unknown'`.
-    expect(within(brief).getByText('charging')).toBeInTheDocument();
-    // Two verified readings, one unreachable vehicle.
-    expect(metricValue(brief, 'Verified')).toHaveTextContent('2/3');
-    expect(metricValue(brief, 'Attention')).toHaveTextContent('1');
-    // The taxonomy separates "we cannot read it" from "it is offline".
-    expect(metricValue(brief, 'Reporting')).toHaveTextContent('2');
-    expect(metricValue(brief, 'Unreachable')).toHaveTextContent('1');
-    expect(metricValue(brief, 'Offline')).toHaveTextContent('0');
-    expect(
-      within(brief).getByTestId('fleet-posture-announcement'),
-    ).toHaveTextContent('2 of 3 vehicles verified. 1 need attention.');
-    expect(
-      within(brief).getByText(
-        'Vehicle data is reporting normally. Global pages and filters follow this selection.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('keeps a failed selected-vehicle state unknown rather than claiming it is offline', () => {
-    const vehicle = {
-      id: 1,
-      display_name: 'Falcon',
-      vin: 'VIN1',
-      state: 'charging',
-      healthy: true,
-    };
-    h.vehicles = makeQuery({ data: [vehicle] });
-    h.fleetStates = makeQuery({
-      data: [
-        makeFleetState(vehicle, {}, [], {
-          state: null,
-          outcome: 'failed',
-          freshness: 'unknown',
-          observedAt: null,
-          error: new Error('gateway timeout'),
-        }),
-      ],
-    });
-
-    renderPage();
-
-    const brief = screen.getByTestId('fleet-operations-brief');
-    expect(within(brief).getByText('Unknown')).toBeInTheDocument();
-    expect(metricValue(brief, 'Verified')).toHaveTextContent('0/1');
-    expect(metricValue(brief, 'Attention')).toHaveTextContent('1');
-    // A failed request is categorised as UNREACHABLE — a fact about our
-    // pipeline — and never folded into the Offline count.
-    expect(metricValue(brief, 'Unreachable')).toHaveTextContent('1');
-    expect(metricValue(brief, 'Offline')).toHaveTextContent('0');
-    expect(
-      within(brief).getByText(
-        'The live-state request failed. This is a fact about our pipeline, not about the vehicle.',
-      ),
-    ).toBeInTheDocument();
-    expect(within(brief).queryByText('offline')).not.toBeInTheDocument();
   });
 
   it('hides the layout region when there are no saved dashboards', () => {

@@ -1,11 +1,88 @@
 import { DIAGNOSTIC_GROUPS } from '../diagnosticGroups'
 import { REPORT_GROUPS } from '../reportGroups'
 import { sectionPrimaryPath, type SectionGroup } from '../sectionGroups'
-import type { Icons } from '@/lib/icons'
+import type { Icons, LucideIcon } from '@/lib/icons'
 
 type Item = { to: string; label: string; labelKey: string }
 type IconItem = Item & { icon: typeof Icons.home; color?: string }
 type Section<T extends Item> = { title: string; items: T[] }
+
+/**
+ * One flat, directly-renderable sidebar row.
+ *
+ * Every sidebar style renders collections FLAT: a group primary expands
+ * into its visible pages, each a first-class row under the section.
+ * There is no second nesting level — multi-level trees made the sidebar
+ * hard to scan. The secondary panel can show a collapsible collection
+ * heading, but pages retain their own catalog labels and direct links.
+ */
+export interface FlatSidebarEntry {
+  to: string
+  label: string
+  labelKey: string
+  icon: LucideIcon
+  color?: string
+  dataTour?: string
+}
+
+export interface SidebarEntryGroup {
+  label?: string
+  labelKey?: string
+  entries: FlatSidebarEntry[]
+}
+
+export function groupSidebarItems<
+  T extends { to: string; label: string; labelKey: string; icon: LucideIcon; color?: string; dataTour?: string },
+>(
+  items: readonly T[],
+  groups: readonly SectionGroup[],
+): SidebarEntryGroup[] {
+  return (items ?? []).flatMap(item => {
+    const group = groups.find(candidate => candidate.primary === item.to)
+    const entries = flattenSidebarItems([item], groups)
+    return entries.length ? [{
+      label: group?.label,
+      labelKey: group?.labelKey,
+      entries,
+    }] : []
+  })
+}
+
+/**
+ * Expand a section's items into flat rows: standalone items pass
+ * through, collection primaries expand into their pages. Catalog order
+ * is preserved throughout. Pinning never removes a page from its
+ * group — pins are bookmarks, so the page stays browsable in place
+ * and additionally appears under Saved.
+ */
+export function flattenSidebarItems<
+  T extends { to: string; label: string; labelKey: string; icon: LucideIcon; color?: string; dataTour?: string },
+>(
+  items: readonly T[],
+  groups: readonly SectionGroup[],
+): FlatSidebarEntry[] {
+  return (items ?? []).flatMap(item => {
+    const group = groups.find(candidate => candidate.primary === item.to)
+    if (!group) {
+      return [{
+        to: item.to,
+        label: item.label,
+        labelKey: item.labelKey,
+        icon: item.icon,
+        color: item.color,
+        dataTour: item.dataTour,
+      }]
+    }
+    return group.pages.map(page => ({
+      to: page.to,
+      label: page.label,
+      labelKey: page.labelKey,
+      icon: page.icon ?? item.icon,
+      color: page.color ?? item.color,
+      dataTour: page.to === item.to ? item.dataTour : undefined,
+    }))
+  })
+}
 
 // Keep routes in the canonical catalog. Collections only change how the
 // sidebar presents related destinations, never what a route renders.
@@ -47,22 +124,21 @@ export const COLLECTION_DEFINITIONS = DEFINITIONS.map(([label, primary, ...sibli
   primary,
   paths: [primary, ...siblings],
   labelKey: `nav.collections.${primary.slice(1).replace(/\W/g, '_')}`,
-  keepPrimaryVisibleWhenPinned: primary === '/charging',
 }))
 
 export function collectionGroups<T extends IconItem>(sections: readonly Section<T>[]): SectionGroup[] {
   const items = new Map(sections.flatMap(section => section.items.map(item => [item.to, item] as const)))
-  const custom = COLLECTION_DEFINITIONS.map(({ label, labelKey, primary, paths, keepPrimaryVisibleWhenPinned }) => ({
+  const custom = COLLECTION_DEFINITIONS.map(({ label, labelKey, primary, paths }) => ({
     primary,
     label,
     labelKey,
-    keepPrimaryVisibleWhenPinned,
     pages: paths.flatMap(path => {
       const item = items.get(path)
       return item ? [{ to: item.to, label: item.label, labelKey: item.labelKey, icon: item.icon, color: item.color }] : []
     }),
   }))
-  return [...REPORT_GROUPS, ...DIAGNOSTIC_GROUPS, ...custom]
+  const configuredGroups: SectionGroup[] = [...REPORT_GROUPS, ...DIAGNOSTIC_GROUPS, ...custom]
+  return configuredGroups
     .map(group => ({
       ...group,
       pages: group.pages.flatMap(page => {
@@ -70,43 +146,11 @@ export function collectionGroups<T extends IconItem>(sections: readonly Section<
         return item ? [{ ...page, icon: item.icon, color: item.color }] : []
       }),
     }))
-    .filter(group => group.pages.length > 1 && group.pages[0].to === group.primary)
+    .filter(group => (group.pages.length > 1 || group.includeSingleton) && group.pages[0]?.to === group.primary)
 }
 
 export function collectionPrimaryPath(groups: readonly SectionGroup[], pathname: string) {
   return sectionPrimaryPath(groups, pathname)
-}
-
-export function soleCollection<T extends Item>(section: Section<T>, groups: readonly SectionGroup[]) {
-  if (section.items.length !== 1) return undefined
-  return groups.find(group => group.primary === section.items[0].to)
-}
-
-export function unpinnedSidebarItems<T extends Item>(
-  items: readonly T[],
-  groups: readonly SectionGroup[],
-  pinnedPaths: ReadonlySet<string>,
-): T[] {
-  return items.filter(item => {
-    const group = groups.find(candidate => candidate.primary === item.to)
-    return group
-      ? group.keepPrimaryVisibleWhenPinned || group.pages.some(page => !pinnedPaths.has(page.to))
-      : !pinnedPaths.has(item.to)
-  })
-}
-
-export function quickAccessSidebarItems<T extends Item>(
-  items: readonly T[],
-  groups: readonly SectionGroup[],
-  pathname: string,
-): T[] {
-  return items.filter(item =>
-    !groups.some(group =>
-      group.keepPrimaryVisibleWhenPinned
-      && group.primary === item.to
-      && group.pages.some(page => page.to === pathname),
-    ),
-  )
 }
 
 export function collectionSidebarSections<T extends Item>(
