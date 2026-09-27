@@ -7,7 +7,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Button, Badge, Select, Slider, Toggle } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -154,7 +154,6 @@ export default function WhatIfPage() {
       query={[drivesQuery, driveQuery, telemetryQuery]}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
           {driveOptions.length > 0 && (
             <Select
               aria-label={t('whatIf.pickDrive', 'Choose a drive')}

@@ -57,6 +57,7 @@ import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
 import {
   useNotificationLogs,
@@ -145,16 +146,12 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const [source] = useUrlEnum<'all' | 'rule'>('source', ['all', 'rule'], 'all');
   const [search] = useUrlString('q', '');
   const [readState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
+  const { preferences } = useProductPreferences();
   const {
-    start: from,
-    end: to,
-    setRange: setDateRange,
-    setRangeWithUrlUpdates,
-    resetWithUrlUpdates: resetRangeWithUrlUpdates,
+    startInstant,
+    endInstantExclusive,
   } = useRangeState({
-    defaultPresetId: 'all',
-    inheritSharedPreference: false,
-    persistKey: 'notifications.inbox.full-history.range',
+    defaultPresetId: preferences.defaultAnalysisRange,
   });
   // View mode is URL-backed too so a deep link can
   // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
@@ -187,17 +184,17 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     rule_id: ruleIds.length ? ruleIds : undefined,
     source: source === 'rule' ? 'rule' : undefined,
     q: search || undefined,
-    from: from || undefined,
-    to: to || undefined,
+    from: startInstant,
+    to_exclusive: endInstantExclusive,
     read: readState === 'all' ? undefined : readState === 'read',
     limit: INBOX_PAGE_SIZE,
     offset: (page - 1) * INBOX_PAGE_SIZE,
-  }), [archived, severity, vehicleIds, ruleIds, source, search, from, to, readState, page]);
+  }), [archived, severity, vehicleIds, ruleIds, source, search, startInstant, endInstantExclusive, readState, page]);
 
   const severityKey = severityRaw.join(',');
   const vehicleKey = vehicleIdsRaw.join(',');
   const ruleKey = ruleIdsRaw.join(',');
-  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, source, search, from, to, readState, view]);
+  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, source, search, startInstant, endInstantExclusive, readState, view]);
 
   const handleFiltersChange = useCallback((next: NotificationFilters) => {
     // Bridge the existing controlled-component contract back into the
@@ -215,27 +212,8 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       q: next.q ?? null,
       read: readValue,
     };
-    const nextFrom = next.from?.slice(0, 10);
-    const nextTo = next.to?.slice(0, 10);
-    if (!nextFrom || !nextTo) {
-      resetRangeWithUrlUpdates(urlUpdates);
-      return;
-    }
-    if (nextFrom !== from || nextTo !== to) {
-      setRangeWithUrlUpdates(
-        { start: nextFrom, end: nextTo },
-        urlUpdates,
-      );
-      return;
-    }
     setFiltersBatch(urlUpdates);
-  }, [
-    from,
-    resetRangeWithUrlUpdates,
-    setFiltersBatch,
-    setRangeWithUrlUpdates,
-    to,
-  ]);
+  }, [setFiltersBatch]);
 
   // Inbox auto-categorization apply callback.
   // The AI panel's "Apply categories as filter" button passes a
@@ -658,7 +636,6 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         <NotificationFilterBar
           filters={filters}
           onChange={handleFiltersChange}
-          onRangeChange={setDateRange}
           vehicles={vehicles}
           rules={rules}
         />

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Drive } from '@/types/driving';
 
@@ -8,11 +8,13 @@ const {
   selectedVehicleMock,
   unitsMock,
   useDrivesMock,
+  sharedRange,
 } = vi.hoisted(() => ({
   pageTitleMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   unitsMock: vi.fn(),
   useDrivesMock: vi.fn(),
+  sharedRange: { set: (_range: { start: string; end: string }) => {} },
 }));
 
 vi.mock('react-i18next', () => ({
@@ -50,6 +52,7 @@ vi.mock('@/hooks/useRangeState', async () => {
         start: '2025-01-01',
         end: '2026-08-07',
       });
+      sharedRange.set = setRange;
       return { ...range, setRange };
     },
   };
@@ -268,7 +271,8 @@ describe('SpeedSweetSpotPage', () => {
 
   it('re-queries when the selected range changes', async () => {
     render(<SpeedSweetSpotPage />);
-    fireEvent.click(screen.getByTestId('speed-sweetspot-range'));
+    act(() => sharedRange.set({ start: '2026-07-01', end: '2026-07-31' }));
+    expect(screen.queryByTestId('speed-sweetspot-range')).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(useDrivesMock).toHaveBeenLastCalledWith('42', {

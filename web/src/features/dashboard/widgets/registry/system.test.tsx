@@ -115,9 +115,10 @@ const mockUseMQTTStatus = useMQTTStatus as unknown as ReturnType<typeof vi.fn>;
 const mockUseVersionInfo = useVersionInfo as unknown as ReturnType<typeof vi.fn>;
 const mockUseCaptureStats = useCaptureStats as unknown as ReturnType<typeof vi.fn>;
 
-/** The twelve system widgets, in declared order. */
+/** System widgets, in declared order. */
 const EXPECTED_IDS = [
   'onboarding-checklist',
+  'fleet-posture',
   'uptime-monitor',
   'mqtt-status',
   'quick-nav',
@@ -134,6 +135,7 @@ const EXPECTED_IDS = [
 /** id → the exact lucide icon the registry must bind (guards copy/paste swaps). */
 const EXPECTED_ICONS = {
   'onboarding-checklist': Rocket,
+  'fleet-posture': HeartPulse,
   'uptime-monitor': HeartPulse,
   'mqtt-status': Radio,
   'quick-nav': MapPin,
@@ -213,7 +215,7 @@ beforeEach(() => {
 // 1. Data contract
 // ───────────────────────────────────────────────────────────────────────────
 describe('SYSTEM_WIDGETS — registry data contract', () => {
-  it('registers exactly the twelve system widgets, in declared order, with locally unique ids', () => {
+  it('registers every system widget in declared order with locally unique ids', () => {
     const ids = SYSTEM_WIDGETS.map((w) => w.id);
     expect(ids).toEqual([...EXPECTED_IDS]);
     expect(new Set(ids).size).toBe(ids.length);

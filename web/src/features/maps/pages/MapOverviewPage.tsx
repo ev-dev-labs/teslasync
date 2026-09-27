@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import {
   GlassPanel, Badge, Button, DataTable, PanelTitle, Text, type Column,
 } from '@/components/ui';
@@ -265,7 +265,6 @@ export default function MapOverviewPage() {
       query={latestQuery}
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <VehicleSelect />
           <LiveIndicator variant="compact" />
         </div>
       }

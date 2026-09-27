@@ -592,6 +592,8 @@ func classifyExplicit(name string) fieldClass {
 		return fieldClass{cat: "vehicle_state", kind: "bool", unit: "none", isSettingUnit: false}
 	case "SemiCruiseSpeedLimitMph":
 		return fieldClass{cat: "driving", kind: "float", unit: "none", isSettingUnit: false}
+	case "Cabin12vPortKeepOn", "Cabin48vPortKeepOn":
+		return fieldClass{cat: "vehicle_state", kind: "enum", unit: "none", isSettingUnit: false}
 	}
 	return fieldClass{}
 }
@@ -608,6 +610,8 @@ func classifyExplicit(name string) fieldClass {
 // the codec dispatcher will not be able to pick a Parse<EnumName>.
 func enumTypeOf(name string) string {
 	switch name {
+	case "Cabin12vPortKeepOn", "Cabin48vPortKeepOn":
+		return "CabinPortKeepOnState"
 	case "ChargeState":
 		return "ChargingState"
 	case "Gear":

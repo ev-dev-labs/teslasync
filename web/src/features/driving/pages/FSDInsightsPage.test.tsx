@@ -1,7 +1,7 @@
 /**
  * FSDInsightsPage — orchestration, retained-data, and URL-state contracts.
  *
- * The page owns one query, one URL-backed period control, and independently
+ * The page owns one query, the header's shared URL-backed range, and independently
  * mounted panels. These tests pin the parts a refactor could
  * silently break:
  *
@@ -11,29 +11,27 @@
  *     downgrades trust via `<StaleRefreshWarning>` rather than blanking the
  *     page — panels read `state.data`, the error surface reads
  *     `state.fatalError`;
- *   - `?days=` round-trips: a direct link initialises the period, and changing
- *     the period writes it back so Copy link carries it;
- *   - the browser's IANA timezone travels with the request, falling back to
- *     UTC when `Intl` is unavailable.
+ *   - shared `from`/`to` links and header preset changes scope the FSD query;
+ *   - the workspace range's IANA timezone travels with the request.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useRangeState } from '@/hooks/useRangeState';
+import { calendarRangeToInstants } from '@/lib/dateRange';
 
 const {
   pageTitleMock,
   sectionPropsMock,
   selectedVehicleMock,
   useFsdInsightsMock,
-  browserTimezoneMock,
   staleWarningMock,
 } = vi.hoisted(() => ({
   pageTitleMock: vi.fn(),
   sectionPropsMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   useFsdInsightsMock: vi.fn(),
-  browserTimezoneMock: vi.fn(),
   staleWarningMock: vi.fn(),
 }));
 
@@ -48,7 +46,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/api/hooks/useAnalytics', () => ({
-  useFsdInsights: (...args: unknown[]) => useFsdInsightsMock(...args),
+  useFsdInsightsRange: (...args: unknown[]) => useFsdInsightsMock(...args),
 }));
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
@@ -57,14 +55,6 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 
 vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: (title: string) => pageTitleMock(title),
-}));
-
-vi.mock('@/lib/timezone', () => ({
-  browserTimezone: () => browserTimezoneMock(),
-}));
-
-vi.mock('@/components/forms', () => ({
-  VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
 
 vi.mock('@/components/feedback', () => ({
@@ -103,9 +93,6 @@ vi.mock('@/components/motion', () => ({
 
 vi.mock('../components/fsd-insights', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
-  const actualHelpers = await vi.importActual<typeof import('../components/fsd-insights/helpers')>(
-    '../components/fsd-insights/helpers',
-  );
   type State = { isLoading: boolean; error: unknown; noVehicle: boolean; onRetry: () => void };
   type Insights = { totals?: { fsd_distance_m: number | null } } | undefined;
 
@@ -129,7 +116,6 @@ vi.mock('../components/fsd-insights', async () => {
       section(testId, props.insights, props.state);
 
   return {
-    coercePeriodDays: actualHelpers.coercePeriodDays,
     FsdKpiBand: passthrough('fsd-kpis'),
     FsdObservatoryPanel: passthrough('fsd-observatory'),
     FsdDistanceTrend: passthrough('fsd-distance-trend'),
@@ -138,23 +124,6 @@ vi.mock('../components/fsd-insights', async () => {
     FsdTopDays: passthrough('fsd-top-days'),
     FsdDriveAnalyticsPanels: passthrough('fsd-drive-analytics'),
     FsdConfidencePanel: passthrough('fsd-confidence'),
-    FsdPeriodControl: ({
-      value,
-      onChange,
-      disabled,
-    }: {
-      value: number;
-      onChange: (days: number) => void;
-      disabled?: boolean;
-    }) => (
-      <div data-testid="fsd-period-control" data-value={String(value)} data-disabled={String(!!disabled)}>
-        {[7, 30, 90, 365].map((days) => (
-          <button key={days} type="button" onClick={() => onChange(days)}>
-            {`${days}d`}
-          </button>
-        ))}
-      </div>
-    ),
   };
 });
 
@@ -177,10 +146,16 @@ function LocationProbe() {
   return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
 }
 
+function HeaderRangeProbe() {
+  const { setPreset } = useRangeState({ defaultPresetId: '7d' });
+  return <button type="button" onClick={() => setPreset('90d')}>Change header range</button>;
+}
+
 function renderPage(initialEntry = '/fsd') {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <LocationProbe />
+      <HeaderRangeProbe />
       <Routes>
         <Route path="/fsd" element={<FSDInsightsPage />} />
       </Routes>
@@ -216,13 +191,13 @@ function loaded(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.localStorage.clear();
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
-  browserTimezoneMock.mockReturnValue('America/Los_Angeles');
   useFsdInsightsMock.mockReturnValue(loaded());
 });
 
 describe('FSDInsightsPage', () => {
-  it('mounts every panel and requests the default 30-day local window', () => {
+  it('mounts every panel and requests the shared default range', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'FSD Insights' })).toBeInTheDocument();
@@ -234,56 +209,67 @@ describe('FSDInsightsPage', () => {
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready:16093.44');
     }
-    expect(useFsdInsightsMock).toHaveBeenCalledWith('42', 30, 'America/Los_Angeles');
+    expect(useFsdInsightsMock).toHaveBeenCalledWith(
+      '42', expect.any(String), expect.any(String), Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
     expect(pageTitleMock).toHaveBeenCalledWith('FSD Insights');
   });
 
-  it('falls back to UTC when the browser cannot resolve a timezone', () => {
-    browserTimezoneMock.mockReturnValue('UTC');
-    renderPage();
-    expect(useFsdInsightsMock).toHaveBeenCalledWith('42', 30, 'UTC');
-  });
-
-  // ── URL state ───────────────────────────────────────────────────────────
-
-  it('initialises the period from ?days= on a direct link', () => {
-    renderPage('/fsd?days=90');
-
-    expect(useFsdInsightsMock).toHaveBeenCalledWith('42', 90, 'America/Los_Angeles');
-    expect(screen.getByTestId('fsd-period-control')).toHaveAttribute('data-value', '90');
-  });
-
-  it('falls back to the default for an unsupported ?days= value', () => {
-    renderPage('/fsd?days=45');
-    expect(useFsdInsightsMock).toHaveBeenCalledWith('42', 30, 'America/Los_Angeles');
-
-    useFsdInsightsMock.mockClear();
-    renderPage('/fsd?days=not-a-number');
-    expect(useFsdInsightsMock).toHaveBeenCalledWith('42', 30, 'America/Los_Angeles');
-  });
-
-  it.each([7, 30, 90, 365])('writes ?days=%s to the URL so Copy link preserves it', async (days) => {
-    renderPage('/fsd?days=7');
-    fireEvent.click(screen.getByRole('button', { name: `${days}d` }));
-
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent(`/fsd?days=${days}`),
+  it('uses a shared custom date link instead of the retired days filter', () => {
+    renderPage('/fsd?from=2026-05-01&to=2026-05-07');
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const { startInstant, endInstantExclusive } = calendarRangeToInstants({
+      startDate: '2026-05-01',
+      endDate: '2026-05-07',
+      timezone,
+    });
+    expect(useFsdInsightsMock).toHaveBeenCalledWith(
+      '42', startInstant, endInstantExclusive, timezone,
     );
-    await waitFor(() =>
-      expect(useFsdInsightsMock).toHaveBeenLastCalledWith('42', days, 'America/Los_Angeles'),
-    );
+    expect(screen.getByTestId('location')).toHaveTextContent('from=2026-05-01&to=2026-05-07');
+    expect(screen.queryByTestId('fsd-period-control')).toBeNull();
   });
 
-  it('preserves unrelated query params when the period changes', async () => {
-    renderPage('/fsd?vehicle_id=42&days=7');
-    fireEvent.click(screen.getByRole('button', { name: '365d' }));
-
+  it.each([
+    ['30', 30],
+    ['365', 365],
+  ])('restores an existing days=%s link through the header range', async (days, expectedDays) => {
+    renderPage(`/fsd?days=${days}&vehicle_id=42`);
     await waitFor(() => {
-      const url = screen.getByTestId('location').textContent ?? '';
-      const params = new URLSearchParams(url.split('?')[1]);
-      expect(params.get('days')).toBe('365');
+      const params = new URLSearchParams((screen.getByTestId('location').textContent ?? '').split('?')[1]);
+      expect(params.has('days')).toBe(false);
+      expect(params.get('vehicle_id')).toBe('42');
+      expect(params.get('from')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(params.get('to')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      const start = Date.parse(useFsdInsightsMock.mock.lastCall?.[1] as string);
+      const end = Date.parse(useFsdInsightsMock.mock.lastCall?.[2] as string);
+      expect((end - start) / 86_400_000).toBeGreaterThan(expectedDays - 2);
+      expect((end - start) / 86_400_000).toBeLessThan(expectedDays + 2);
+    });
+  });
+
+  it('prefers an explicit shared range over an obsolete days parameter', async () => {
+    renderPage('/fsd?days=90&from=2026-05-01&to=2026-05-07');
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const { startInstant, endInstantExclusive } = calendarRangeToInstants({
+      startDate: '2026-05-01', endDate: '2026-05-07', timezone,
+    });
+    await waitFor(() => expect(screen.getByTestId('location')).not.toHaveTextContent('days='));
+    expect(useFsdInsightsMock).toHaveBeenLastCalledWith(
+      '42', startInstant, endInstantExclusive, timezone,
+    );
+  });
+
+  it('reacts to header range changes while preserving the vehicle scope', async () => {
+    renderPage('/fsd?vehicle_id=42');
+    const priorStart = useFsdInsightsMock.mock.lastCall?.[1] as string;
+    fireEvent.click(screen.getByRole('button', { name: 'Change header range' }));
+    await waitFor(() => {
+      const params = new URLSearchParams((screen.getByTestId('location').textContent ?? '').split('?')[1]);
+      expect(params.get('time_scope')).toBe('90d');
       expect(params.get('vehicle_id')).toBe('42');
     });
+    expect(useFsdInsightsMock.mock.lastCall?.[1]).not.toBe(priorStart);
   });
 
   // ── retained data ───────────────────────────────────────────────────────
@@ -348,15 +334,17 @@ describe('FSDInsightsPage', () => {
     }
   });
 
-  it('keeps every panel mounted and disables the period control with no vehicle', () => {
+  it('keeps every panel mounted without a vehicle', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null });
     renderPage();
 
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('no-vehicle');
     }
-    expect(screen.getByTestId('fsd-period-control')).toHaveAttribute('data-disabled', 'true');
-    expect(useFsdInsightsMock).toHaveBeenCalledWith(undefined, 30, 'America/Los_Angeles');
+    expect(screen.queryByTestId('fsd-period-control')).toBeNull();
+    expect(useFsdInsightsMock).toHaveBeenCalledWith(
+      undefined, expect.any(String), expect.any(String), expect.any(String),
+    );
   });
 
   it('shares one retry callback across every panel', () => {

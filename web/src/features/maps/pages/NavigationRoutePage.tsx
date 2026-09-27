@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import {
   GlassPanel,
   Badge,
@@ -552,7 +552,6 @@ export default function NavigationRoutePage() {
       query={latestQuery}
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <VehicleSelect />
           <LiveIndicator variant="compact" />
           <Button
             variant="ghost"

@@ -149,6 +149,13 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
 
 function makePollingConfig(overrides: Partial<PollingConfig> = {}): PollingConfig {
   return {
+    auto_polling_enabled: false,
+    fleet_endpoints: { 'vehicles.list': true, 'vehicle_data.charge_state': true },
+    auto_endpoints: { 'vehicles.list': true, 'vehicle_data.charge_state': true },
+    endpoint_catalog: [
+      { key: 'vehicles.list', method: 'GET', path: '/api/1/vehicles', category: 'Vehicle data', pollable: true },
+      { key: 'vehicle_data.charge_state', method: 'GET', path: '/api/1/vehicles/{vin}/vehicle_data?endpoints=charge_state', category: 'Vehicle data', pollable: true },
+    ],
     vehicle_discovery: true,
     charge_state: true,
     climate_state: false,
@@ -169,8 +176,8 @@ function makePollingConfig(overrides: Partial<PollingConfig> = {}): PollingConfi
     service_data: false,
     wake_up: false,
     commands: true,
-    telemetry_capture: true,
-    telemetry_capture_retention_days: 30,
+    telemetry_capture: false,
+    telemetry_capture_retention_days: 7,
     ...overrides,
   };
 }
@@ -802,7 +809,7 @@ describe('useToggleAPISuspend', () => {
 
 describe('usePollingConfig', () => {
   it('GETs /settings/polling-config and surfaces the boolean flags + retention', async () => {
-    const pc = makePollingConfig({ telemetry_capture_retention_days: 14 });
+    const pc = makePollingConfig();
     mockedRequest.mockResolvedValueOnce(pc);
 
     const { Wrapper } = makeWrapper();
@@ -810,7 +817,7 @@ describe('usePollingConfig', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.vehicle_discovery).toBe(true);
-    expect(result.current.data?.telemetry_capture_retention_days).toBe(14);
+    expect(result.current.data?.telemetry_capture_retention_days).toBe(7);
     expect(callAt(0)[0]).toBe('/settings/polling-config');
     expect(callAt(0)[1].signal).toBeInstanceOf(AbortSignal);
   });
@@ -831,13 +838,33 @@ describe('useUpdatePollingConfig', () => {
     expect(callAt(0)[0]).toBe('/settings/polling-config');
     expect(callAt(0)[1].method).toBe('PUT');
     expect(callAt(0)[1].requiresLiveMode).toBe(true);
-    expect(bodyAt(0)).toEqual(pc);
+    const { endpoint_catalog, ...payload } = pc;
+    expect(endpoint_catalog).toHaveLength(2);
+    expect(bodyAt(0)).toEqual(payload);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['polling-config'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['capture-stats'] });
     expect(successToast).toHaveBeenCalledWith(
       'toast.settings.polling.success',
       'Polling config saved',
     );
+  });
+
+  it('sends only Go JSON tags when the read response contains camelCase aliases', async () => {
+    const pc = makePollingConfig();
+    mockedRequest.mockResolvedValueOnce(pc);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useUpdatePollingConfig(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync({
+      ...pc,
+      vehicleDiscovery: true,
+      onDemandChargeState: false,
+      telemetryCaptureRetentionDays: 7,
+    });
+
+    const { endpoint_catalog, ...payload } = pc;
+    expect(endpoint_catalog).toHaveLength(2);
+    expect(bodyAt(0)).toEqual(payload);
   });
 
   it('toasts the error when the polling-config save fails', async () => {

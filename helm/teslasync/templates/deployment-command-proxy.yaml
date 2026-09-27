@@ -6,6 +6,10 @@ metadata:
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
     app.kubernetes.io/component: command-proxy
+  {{- if .Values.commandProxy.tlsSecretName }}
+  annotations:
+    secret.reloader.stakater.com/reload: {{ .Values.commandProxy.tlsSecretName | quote }}
+  {{- end }}
 spec:
   replicas: 1
   selector:
@@ -65,8 +69,25 @@ spec:
             {{- toYaml .Values.commandProxy.resources | nindent 12 }}
       volumes:
         - name: proxy-data
+          {{- if .Values.commandProxy.tlsSecretName }}
+          projected:
+            sources:
+              - secret:
+                  name: {{ .Values.commandProxy.secretName | default (printf "%s-command-proxy" (include "teslasync.fullname" .)) }}
+                  items:
+                    - key: private-key.pem
+                      path: private-key.pem
+              - secret:
+                  name: {{ .Values.commandProxy.tlsSecretName }}
+                  items:
+                    - key: tls.crt
+                      path: tls-cert.pem
+                    - key: tls.key
+                      path: tls-key.pem
+          {{- else }}
           secret:
             secretName: {{ .Values.commandProxy.secretName | default (printf "%s-command-proxy" (include "teslasync.fullname" .)) }}
+          {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -19,7 +19,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
+	"sort"
 	"sync"
 	"time"
 
@@ -110,7 +112,8 @@ type Sources struct {
 	Efficiency    EfficiencySource
 }
 
-// Register12Builtins installs the 12 starter read-only tools on r.
+// Register12Builtins installs the built-in read-only tools on r. The legacy
+// function name is retained for existing production wiring.
 // Panics on duplicate registration (Registry.Register panics) so a
 // second call is detected at boot. Pass the same Sources you intend
 // production to use; tests may substitute fakes per-tool.
@@ -122,6 +125,7 @@ func Register12Builtins(r *Registry, s Sources) {
 	r.Register(&queryDriveDetail{src: s.Drives})
 	r.Register(&queryChargesRecent{src: s.Charges})
 	r.Register(&queryChargeDetail{src: s.Charges})
+	r.Register(&queryChargingPeriod{src: s.Charges})
 	r.Register(&queryAlertsActive{src: s.AlertRules})
 	r.Register(&queryAlertsRecent{src: s.Notifications})
 	r.Register(&queryGeofencesList{src: s.Geofences})
@@ -139,6 +143,7 @@ var BuiltinNames = []string{
 	"query_battery_status",
 	"query_charge_detail",
 	"query_charges_recent",
+	"query_charging_period",
 	"query_drive_detail",
 	"query_drives_recent",
 	"query_efficiency_period",
@@ -441,6 +446,120 @@ func (t *queryChargeDetail) Execute(ctx context.Context, in any) (any, error) {
 		return nil, fmt.Errorf("charging session %d not found", input.ChargeID)
 	}
 	return c, nil
+}
+
+// ---------------------------------------------------------------------------
+// query_charging_period — bounded, vehicle-scoped charging evidence.
+// ---------------------------------------------------------------------------
+
+type chargingPeriodInput struct {
+	VehicleID int64  `json:"vehicle_id" validate:"required,gte=1" desc:"Numeric vehicle ID."`
+	Period    string `json:"period" validate:"required,oneof=day week month year" desc:"Rolling UTC window: day | week | month | year."`
+}
+
+type chargingCurrencyTotal struct {
+	Currency string  `json:"currency"`
+	Source   string  `json:"cost_source"`
+	Cost     float64 `json:"cost_decimal"`
+	Sessions int     `json:"sessions"`
+}
+
+type chargingPeriodResult struct {
+	VehicleID           int64                   `json:"vehicle_id"`
+	WindowStart         time.Time               `json:"window_start"`
+	WindowEnd           time.Time               `json:"window_end"`
+	Sessions            int                     `json:"sessions"`
+	CompletedSessions   int                     `json:"completed_sessions"`
+	EnergyKnownSessions int                     `json:"energy_known_sessions"`
+	TotalEnergyAddedWh  float64                 `json:"total_energy_added_wh"`
+	CostKnownSessions   int                     `json:"cost_known_sessions"`
+	CostBySource        []chargingCurrencyTotal `json:"cost_by_source"`
+	Truncated           bool                    `json:"truncated"`
+}
+
+type queryChargingPeriod struct{ src ChargeSource }
+
+func (t *queryChargingPeriod) Name() string { return "query_charging_period" }
+func (t *queryChargingPeriod) Description() string {
+	return "Summarize completed charging sessions started in a rolling UTC day/week/month/year window for one vehicle: recorded energy in Wh and recorded costs grouped by currency and provenance (which may be estimated). Energy and cost coverage are independent; totals omit missing values. Truncated means only the newest 500 sessions were examined, not a full-period total."
+}
+func (t *queryChargingPeriod) InputSchema() json.RawMessage {
+	return CachedSchema(chargingPeriodInput{})
+}
+func (t *queryChargingPeriod) OutputSchema() json.RawMessage { return nil }
+func (t *queryChargingPeriod) Mutates() bool                 { return false }
+func (t *queryChargingPeriod) RequiredScope() string         { return "" }
+func (t *queryChargingPeriod) Validate(raw json.RawMessage) (any, error) {
+	return ValidateStruct[chargingPeriodInput](raw)
+}
+func (t *queryChargingPeriod) Execute(ctx context.Context, in any) (any, error) {
+	input := in.(chargingPeriodInput)
+	if t.src == nil {
+		return nil, fmt.Errorf("query_charging_period: no ChargeSource wired")
+	}
+	now := time.Now().UTC()
+	start := periodCutoff(input.Period, now)
+	const maxSessions = 500
+	sessions, err := t.src.GetByVehicle(ctx, input.VehicleID, maxSessions+1, 0, start, now)
+	if err != nil {
+		return nil, fmt.Errorf("query_charging_period: list sessions: %w", err)
+	}
+	result := chargingPeriodResult{
+		VehicleID:    input.VehicleID,
+		WindowStart:  start,
+		WindowEnd:    now,
+		CostBySource: []chargingCurrencyTotal{},
+		Truncated:    len(sessions) > maxSessions,
+	}
+	if result.Truncated {
+		sessions = sessions[:maxSessions]
+	}
+	type costKey struct{ currency, source string }
+	costs := make(map[costKey]*chargingCurrencyTotal)
+	for _, session := range sessions {
+		if session == nil || session.VehicleID != input.VehicleID ||
+			session.StartedAt.Before(start) || session.StartedAt.After(now) {
+			return nil, fmt.Errorf("query_charging_period: source returned out-of-scope session")
+		}
+		result.Sessions++
+		if session.EndedAt == nil || session.EndedAt.After(now) {
+			continue
+		}
+		result.CompletedSessions++
+		if session.TotalEnergyAddedWh != nil && *session.TotalEnergyAddedWh >= 0 &&
+			!math.IsNaN(*session.TotalEnergyAddedWh) && !math.IsInf(*session.TotalEnergyAddedWh, 0) {
+			result.EnergyKnownSessions++
+			result.TotalEnergyAddedWh += *session.TotalEnergyAddedWh
+		}
+		if session.CostDecimal == nil || math.IsNaN(*session.CostDecimal) ||
+			math.IsInf(*session.CostDecimal, 0) ||
+			session.CostCurrency == nil || *session.CostCurrency == "" {
+			continue
+		}
+		currency := *session.CostCurrency
+		source := "unknown"
+		if session.CostSource != nil && *session.CostSource != "" {
+			source = *session.CostSource
+		}
+		key := costKey{currency, source}
+		if costs[key] == nil {
+			costs[key] = &chargingCurrencyTotal{Currency: currency, Source: source}
+		}
+		costs[key].Cost += *session.CostDecimal
+		costs[key].Sessions++
+		result.CostKnownSessions++
+	}
+	for _, total := range costs {
+		result.CostBySource = append(result.CostBySource, *total)
+	}
+	sort.Slice(result.CostBySource, func(i, j int) bool {
+		a, b := result.CostBySource[i], result.CostBySource[j]
+		if a.Currency != b.Currency {
+			return a.Currency < b.Currency
+		}
+		return a.Source < b.Source
+	})
+	return result, nil
 }
 
 // ---------------------------------------------------------------------------

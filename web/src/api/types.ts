@@ -580,6 +580,9 @@ export interface AppSettings {
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */
 export interface PollingConfig {
+  auto_polling_enabled?: boolean
+  fleet_endpoints?: Record<string, boolean>
+  auto_endpoints?: Record<string, boolean>
   // Polling endpoints (automatic)
   vehicle_discovery: boolean
   charge_state: boolean
@@ -1096,8 +1099,12 @@ export interface NotificationLog {
 export interface NotificationReport {
   from: string
   to: string
+  from_instant: string
+  to_exclusive: string
+  timezone: string
   triggered: number
   deliveries: number
+  outbound_http_calls: number
   uncorrelated_deliveries: number
   by_source: { key: string; count: number }[]
   by_type: { key: string; count: number }[]
@@ -2686,6 +2693,28 @@ export interface AutomationHistoryListResponse {
   limit: number
   offset: number
   summary: AutomationHistoryStats
+  /** UTC day/status buckets across the entire server-filtered range, not just `items`. */
+  trend: AutomationHistoryTrendPoint[]
+}
+
+export interface AutomationHistoryTrendPoint {
+  day: string
+  status: AutomationHistoryStatus
+  count: number
+}
+
+export interface AutomationExecutionDetail extends AutomationHistory {
+  success_rate: number
+  fsm_transitions: {
+    id: number
+    vehicle_id: number
+    ts: string
+    fsm_name: string
+    from_state: string
+    to_state: string
+    trigger: string
+    details?: Record<string, unknown>
+  }[]
 }
 
 // === Automation SSE Events ===

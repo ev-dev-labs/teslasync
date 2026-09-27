@@ -46,6 +46,27 @@ func TestPowerSignConvention(t *testing.T) {
 	}
 }
 
+func TestDriveResidualRequiresEveryPredictedTerm(t *testing.T) {
+	start := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	samples := driveSamples(start, 3, time.Second, 20, 8000)
+	mass := 2000.0
+	params := DefaultParams()
+	params.MassKg = &mass
+	ledger := Solve(Window{
+		VehicleID: 1, Kind: "drive", Start: start, End: start.Add(2 * time.Second),
+		Samples: samples, Params: params,
+	})
+	if ledger.Drive.MeasuredWh.ValueWh == nil || ledger.Drive.PredictedWh == nil {
+		t.Fatal("measured pack energy and partial prediction should remain available")
+	}
+	if ledger.Drive.UnexplainedKnown || ledger.Drive.UnexplainedWh != nil {
+		t.Fatal("residual cannot be computed from a partial prediction")
+	}
+	if !ledger.Drive.GradeWh.Unknown || !ledger.Drive.AccessoryWh.Unknown {
+		t.Fatal("missing elevation and HVAC watts must remain unknown")
+	}
+}
+
 func TestSolveTable(t *testing.T) {
 	start := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 	mass := 2000.0

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { VehicleSelect } from '@/components/forms'
+
 import { PageContainer } from '@/components/layout'
 import { AlertBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
@@ -34,17 +34,6 @@ export default function VehicleManagementPage() {
         'vehicleManagement.pageSubtitle',
         'Review Tesla account metadata, paid specifications, pricing, and enterprise access separately from physical commands.',
       )}
-      actions={
-        <VehicleSelect
-          id="vehicle-management-vehicle"
-          ariaLabel={t(
-            'vehicleManagement.selectVehicle',
-            'Select management vehicle',
-          )}
-          className="min-h-11 min-w-48"
-          withIcon
-        />
-      }
     >
       <div className="space-y-4">
         {vehiclesQuery.isLoading && (

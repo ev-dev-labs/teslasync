@@ -9,6 +9,8 @@
  *
  * Precedence on initial mount:
  * **URL > shared preference > page preference > defaultPresetId > 7 days**.
+ * Header-owned routes ignore page preferences and use the header's product
+ * default, so a fresh visit cannot render a range different from the header.
  * URL ranges are navigation-specific and never overwrite the global
  * preference unless the user commits a new picker selection.
  *
@@ -20,7 +22,9 @@
  */
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 import {
   getDatePreset,
   matchPresetId,
@@ -290,18 +294,24 @@ function computeComparePrev(start: string, end: string): RangeValue | undefined 
 }
 
 export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateReturn {
+  const { pathname } = useLocation();
+  const { preferences } = useProductPreferences();
+  const headerOwned = getWorkspaceRouteScope(pathname).range &&
+    !opts.fromKey && !opts.toKey && !opts.scopeKey;
   const {
-    defaultPresetId = DEFAULT_PRESET_ID,
     fromKey = 'from',
     toKey = 'to',
     compareKey = 'compare',
     scopeKey = DEFAULT_SCOPE_KEY,
-    persistKey,
-    inheritSharedPreference = true,
     minDate,
     enableCompare = false,
     timezone,
   } = opts;
+  const defaultPresetId = headerOwned
+    ? preferences.defaultAnalysisRange
+    : opts.defaultPresetId ?? DEFAULT_PRESET_ID;
+  const persistKey = headerOwned ? undefined : opts.persistKey;
+  const inheritSharedPreference = headerOwned || (opts.inheritSharedPreference ?? true);
 
   const sourceId = useId();
   const [params, setParams] = useSearchParams();

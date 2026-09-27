@@ -133,9 +133,12 @@ export function ChangelogModal() {
     <Modal
       open={open}
       onClose={handleClose}
-      title={t('changelog.modal.title', "What's new in TeslaSync")}
+      title={open ? t('changelog.modal.title', "What's new in TeslaSync") : undefined}
       size="lg"
     >
+      {/* Modal hides its DOM when closed, but JSX props and children still evaluate.
+          Only translate the release details when the dialog actually opens. */}
+      {open && (
       <div className="space-y-4 text-sm text-[var(--text-secondary)]">
         {isFirstVisit ? (
           <p className="text-[var(--text-muted)]">
@@ -180,6 +183,7 @@ export function ChangelogModal() {
           </Button>
         </div>
       </div>
+      )}
     </Modal>
   )
 }

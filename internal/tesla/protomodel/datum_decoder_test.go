@@ -74,6 +74,14 @@ func TestDecodeValue_Variants(t *testing.T) {
 			wantType:  reflect.TypeOf(""),
 		},
 		{
+			name: "Semi cabin port enum returns canonical short string",
+			input: &ftproto.Value{
+				Value: &ftproto.Value_CabinPortKeepOnValue{CabinPortKeepOnValue: ftproto.CabinPortKeepOnState_CabinPortKeepOnStateOn},
+			},
+			wantValue: "On",
+			wantType:  reflect.TypeOf(""),
+		},
+		{
 			name: "compound variant (Location) returns typed Location struct",
 			input: &ftproto.Value{
 				Value: &ftproto.Value_LocationValue{

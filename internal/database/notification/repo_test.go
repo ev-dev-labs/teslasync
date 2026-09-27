@@ -141,6 +141,22 @@ func TestBuildNotificationLogWhere_Empty(t *testing.T) {
 	}
 }
 
+func TestBuildNotificationLogWhere_ExclusiveWorkspaceEnd(t *testing.T) {
+	end := time.Date(2026, 9, 23, 12, 0, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		exclusive bool
+		clause    string
+	}{
+		{false, "nl.created_at <= $1"},
+		{true, "nl.created_at < $1"},
+	} {
+		w := buildNotificationLogWhere(NotificationLogFilters{To: end, ToExclusive: tc.exclusive})
+		if len(w.clauses) != 1 || w.clauses[0] != tc.clause || len(w.args) != 1 || w.args[0] != end {
+			t.Errorf("exclusive=%v: clauses=%v args=%v", tc.exclusive, w.clauses, w.args)
+		}
+	}
+}
+
 func TestBuildNotificationLogWhere_GroupKey(t *testing.T) {
 	gk := strings.Repeat("a", 64)
 	w := buildNotificationLogWhere(NotificationLogFilters{GroupKey: " " + gk + " "})

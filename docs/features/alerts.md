@@ -20,6 +20,8 @@ If you want one paragraph: **rules fire when typed predicates over live signals 
 
 TeslaSync does not accept arbitrary JavaScript or JSONPath for rule conditions. Every rule is a typed CTI (Conditional Trigger Intent) contract: a known operator over a known signal with a known parameter shape. The supported operators are documented in the Alert Studio UI itself — they appear in the dropdowns because they're enumerated in code.
 
+In Alert Studio, **Templates** opens the searchable rule gallery. The category filters show the number of templates in each category and wrap on narrow screens; selecting a category narrows the gallery without changing any saved rule.
+
 Why this matters:
 
 - A typed rule **can** be evaluated against the live signal store with millisecond latency

@@ -29,12 +29,11 @@
  *   7. STALE SELECTION — when the list swaps out from under a selection the
  *      preview + AI card fall back to empty instead of pointing at a trip
  *      that is no longer on screen (the derived-id fix).
- *   8. VEHICLE PICKER — changing the canonical select updates the global
- *      vehicle context, clearing it commits null, the refresh control is
- *      labelled + wired to refetch, and the picker hides with an empty fleet.
+ *   8. SHARED VEHICLE — the page does not duplicate the application header's
+ *      vehicle picker, and refresh remains wired even with an empty fleet.
  *   9. A11Y — the KPI band + listbox expose labelled landmark roles.
  *
- * Network is never hit: the trips hook, vehicle picker, unit formatters, and
+ * Network is never hit: the trips hook, unit formatters, and
  * the heavyweight AI card are all stubbed. i18n is stubbed so visible copy is
  * the English fallback with {{placeholder}} interpolation applied.
  */
@@ -454,27 +453,21 @@ describe('SharingTripsPage — stale selection', () => {
   });
 });
 
-/* ── VEHICLE PICKER + REFRESH ──────────────────────────────────────── */
+/* ── SHARED VEHICLE SCOPE + REFRESH ─────────────────────────────────── */
 
-describe('SharingTripsPage — vehicle picker + refresh', () => {
-  it('commits and clears the global vehicle context, then refreshes', () => {
+describe('SharingTripsPage — shared vehicle scope + refresh', () => {
+  it('uses the global vehicle context without a local picker, then refreshes', () => {
     renderPage();
 
-    const select = screen.getByRole('combobox', { name: 'Select vehicle' });
-    fireEvent.change(select, { target: { value: '9' } });
-    expect(setVehicleIdMock).toHaveBeenCalledWith(9);
-
-    // Clearing the canonical selector also clears the shared vehicle context.
-    fireEvent.change(select, { target: { value: '' } });
-    expect(setVehicleIdMock).toHaveBeenLastCalledWith(null);
-    expect(setVehicleIdMock).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
+    expect(setVehicleIdMock).not.toHaveBeenCalled();
 
     // Icon-only refresh control is labelled and wired to refetch.
     fireEvent.click(pageRefreshButton());
     expect(refetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the vehicle picker when the fleet is empty but keeps the refresh control', () => {
+  it('keeps refresh when the fleet is empty without a local picker', () => {
     h.vehicles = [];
     h.vehicleId = null;
 

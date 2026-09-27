@@ -25,13 +25,14 @@
  *     imperial (mi / mph / °F) preferences.
  *
  * System time is pinned (Date only — timers stay real so userEvent works) so
- * the default 7-day window resolves to a fixed [2025-06-09, 2025-06-15].
+ * the shared URL window is fixed at [2025-06-09, 2025-06-15].
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
 
 // i18n stub: echo the fallback string so assertions target rendered English.
@@ -339,14 +340,25 @@ function installHappyPath() {
   mockCoach.mockReturnValue(qr({ data: { score: 88, style: 'efficient', trend: [] } }));
 }
 
-function renderPage() {
+function HeaderRangeControl() {
+  const [, setParams] = useSearchParams();
+  return <Button type="button" data-testid="header-widen-range" onClick={() => setParams((params) => {
+    const next = new URLSearchParams(params);
+    next.set('from', '2000-01-01');
+    next.set('to', '2999-12-31');
+    return next;
+  })}>Widen header range</Button>;
+}
+
+function renderPage(route = '/') {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[route]}>
         <DrivingDynamicsPage />
+        <HeaderRangeControl />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -368,7 +380,7 @@ afterEach(() => {
 });
 
 describe('DrivingDynamicsPage — structure & a11y', () => {
-  it('renders the title, subtitle, vehicle picker and all labelled sections', () => {
+  it('renders the title, subtitle and all labelled sections without a duplicate picker', () => {
     renderPage();
 
     expect(
@@ -378,8 +390,7 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
       screen.getByText('Live motor telemetry, G-forces, and Grok’s powertrain read'),
     ).toBeInTheDocument();
 
-    // VehicleSelect renders a labelled combobox (fleet has vehicles).
-    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
 
     // Every <section aria-label> becomes an accessible region.
     const regions = screen.getAllByRole('region');
@@ -467,11 +478,10 @@ describe('DrivingDynamicsPage — live push bridge', () => {
 });
 
 describe('DrivingDynamicsPage — drive date filtering', () => {
-  it('filters drives to the default 7-day window', () => {
-    renderPage();
-    // Fixed now = 2025-06-15 → window [2025-06-09, 2025-06-15].
-    expect(screen.getByTestId('range-start')).toHaveTextContent('2025-06-09');
-    expect(screen.getByTestId('range-end')).toHaveTextContent('2025-06-15');
+  it('filters drives to the shared URL window', () => {
+    renderPage('/driving/dynamics?from=2025-06-09&to=2025-06-15');
+    expect(screen.queryByTestId('range-start')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('range-end')).not.toBeInTheDocument();
     expect(screen.getByTestId('tt-start')).toHaveTextContent('2025-06-09');
     expect(screen.getByTestId('tt-end')).toHaveTextContent('2025-06-15');
     // Only drive #1 (2025-06-12) falls inside; #2 before, #3 after, #4 undated.
@@ -481,19 +491,18 @@ describe('DrivingDynamicsPage — drive date filtering', () => {
     expect(screen.getByTestId('tt-drive')).toHaveTextContent('1');
   });
 
-  it('re-filters when the user widens the date range', async () => {
-    renderPage();
+  it('re-filters when the shared header widens the date range', async () => {
+    renderPage('/driving/dynamics?from=2025-06-09&to=2025-06-15');
     expect(num('da-count')).toBe(1);
 
-    fireEvent.click(screen.getByTestId('widen-range'));
+    fireEvent.click(screen.getByTestId('header-widen-range'));
 
     // Widened to [2000-01-01, 2999-12-31]: the three dated drives now match;
     // the undated drive (#4) is still excluded by the `?? ''` guard.
     await waitFor(() => expect(num('da-count')).toBe(3));
     expect(num('sg-count')).toBe(3);
     expect(num('tt-count')).toBe(3);
-    expect(screen.getByTestId('range-start')).toHaveTextContent('2000-01-01');
-    expect(screen.getByTestId('range-end')).toHaveTextContent('2999-12-31');
+    expect(screen.queryByTestId('widen-range')).not.toBeInTheDocument();
   });
 
   it('passes an empty filtered list when drives have not loaded', () => {
@@ -573,7 +582,7 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
     expect(screen.getAllByRole('region')).toHaveLength(10);
     expect(num('da-count')).toBe(0);
     expect(screen.getByTestId('coach')).toHaveTextContent('undefined');
-    // VehicleSelect renders nothing when the fleet is empty.
+    // The page does not render a local vehicle selector when the fleet is empty.
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
   });
 });

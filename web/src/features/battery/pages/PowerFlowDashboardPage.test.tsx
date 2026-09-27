@@ -499,17 +499,9 @@ describe('PowerFlowDashboardPage — interactions', () => {
     expect(refreshMutate).toHaveBeenCalledWith(1);
   });
 
-  it('commits a range-preset selection through setRange', () => {
+  it('consumes the shared range without a duplicate page picker', () => {
     renderPage();
-    fireEvent.click(screen.getByTestId('power-flow-range'));
-    const dialog = screen.getByRole('dialog');
-    const options = within(dialog).getAllByRole('option');
-    expect(options.length).toBeGreaterThan(0);
-
-    fireEvent.click(options[0]);
-    expect(setRange).toHaveBeenCalledTimes(1);
-    const [range] = setRange.mock.calls[0];
-    expect(range.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(range.end).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(screen.queryByTestId('power-flow-range')).not.toBeInTheDocument();
+    expect(setRange).not.toHaveBeenCalled();
   });
 });

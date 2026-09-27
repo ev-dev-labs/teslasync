@@ -8,7 +8,7 @@
  * its own loading/error/empty state and tested separately).
  *
  * These tests isolate the ORCHESTRATION seam: the nine panels + the two
- * action controls (VehicleSelect / RangePicker) + PageContainer + FadeIn are
+ * page shell (with workspace controls owned by the application header) + PageContainer + FadeIn are
  * stubbed so every derived prop the page computes is observable, while the
  * real helpers (`isSecure`, `buildTwinStateFromAdmin`, the client-side range
  * filter), the real `AlertBanner`, and the real TanStack Query wiring for the
@@ -31,9 +31,8 @@
  *   7. Loading fans out to the summary + panels.
  *   8. Errors fan out, and retry is wired to the CORRECT refetch (latest vs
  *      history).
- *   9. RangePicker reflects the active range and forwards changes to
- *      `setRange`; VehicleSelect renders in the actions row; the page title
- *      is registered.
+ *   9. The page consumes the active shared range without mounting duplicate
+ *      date/vehicle controls.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -555,17 +554,13 @@ describe('SecurityAccessPage — error + retry wiring', () => {
 });
 
 describe('SecurityAccessPage — action controls', () => {
-  it('reflects the active range in RangePicker, forwards changes to setRange, and renders VehicleSelect', async () => {
+  it('consumes the active range without duplicating the header controls', async () => {
     setRange('2021-05-01', '2021-05-31');
 
     renderPage();
 
-    const picker = await screen.findByTestId('range-picker');
-    expect(picker).toHaveAttribute('data-start', '2021-05-01');
-    expect(picker).toHaveAttribute('data-end', '2021-05-31');
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
-
-    fireEvent.click(picker);
-    expect(setRangeSpy).toHaveBeenCalledWith({ start: '2020-02-01', end: '2020-02-28' });
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    expect(setRangeSpy).not.toHaveBeenCalled();
   });
 });

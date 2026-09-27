@@ -17,10 +17,12 @@ func TestBuildHistoryWhere_NoFilters(t *testing.T) {
 
 func TestBuildHistoryWhere_AllFilters(t *testing.T) {
 	since := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	before := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	f := HistoryFilter{
 		AutomationID: 42,
 		Status:       "failed",
 		Since:        since,
+		Before:       before,
 	}
 	where, args := buildHistoryWhere(f)
 
@@ -28,8 +30,8 @@ func TestBuildHistoryWhere_AllFilters(t *testing.T) {
 		t.Fatal("expected non-empty WHERE clause")
 	}
 
-	if len(args) != 3 {
-		t.Fatalf("expected 3 args, got %d", len(args))
+	if len(args) != 4 {
+		t.Fatalf("expected 4 args, got %d", len(args))
 	}
 	if args[0] != int64(42) {
 		t.Errorf("expected automation_id=42, got %v", args[0])
@@ -40,6 +42,9 @@ func TestBuildHistoryWhere_AllFilters(t *testing.T) {
 	if args[2] != since {
 		t.Errorf("expected since=%v, got %v", since, args[2])
 	}
+	if args[3] != before {
+		t.Errorf("expected before=%v, got %v", before, args[3])
+	}
 
 	if !containsSubstring(where, "automation_id = $1") {
 		t.Errorf("WHERE clause missing automation_id filter: %s", where)
@@ -49,6 +54,9 @@ func TestBuildHistoryWhere_AllFilters(t *testing.T) {
 	}
 	if !containsSubstring(where, "triggered_at >= $3") {
 		t.Errorf("WHERE clause missing since filter: %s", where)
+	}
+	if !containsSubstring(where, "triggered_at < $4") {
+		t.Errorf("WHERE clause missing upper bound: %s", where)
 	}
 }
 
