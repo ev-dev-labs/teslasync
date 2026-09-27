@@ -17,6 +17,10 @@ on:
     paths:
       - .github/workflows/copilot-setup-steps.yml
 
+concurrency:
+  group: copilot-setup-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   copilot-setup-steps:
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
