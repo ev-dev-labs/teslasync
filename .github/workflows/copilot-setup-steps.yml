@@ -11,6 +11,7 @@ on:
           - ubuntu-latest
         default: ubuntu-latest
   push:
+    branches: [main]
     paths:
       - .github/workflows/copilot-setup-steps.yml
   pull_request:
