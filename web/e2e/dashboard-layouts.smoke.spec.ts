@@ -6,7 +6,7 @@ for (const theme of ['dark', 'light'] as const) {
     test(`layout packs stay readable and blank dashboards survive reload at ${width}px in ${theme} mode`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 })
       await seedBrowserState(page, theme, '/')
-      const mockApi = await installApiMocks(page, 'populated', theme)
+      const mockApi = await installApiMocks(page, 'populated', theme, 'comfortable', 'context')
       await page.goto('/', { waitUntil: 'domcontentloaded' })
       await waitForHarnessReady(page, mockApi)
       await expectThemeApplied(page, theme)
@@ -37,7 +37,7 @@ for (const theme of ['dark', 'light'] as const) {
 
       const restoredPage = await page.context().newPage()
       await seedBrowserState(restoredPage, theme, '/', { preserveDashboardState: true })
-      const restoredMockApi = await installApiMocks(restoredPage, 'populated', theme)
+      const restoredMockApi = await installApiMocks(restoredPage, 'populated', theme, 'comfortable', 'context')
       await restoredPage.goto('/', { waitUntil: 'domcontentloaded' })
       await expect(restoredPage.getByText('No widgets yet')).toBeVisible()
       await restoredPage.reload({ waitUntil: 'domcontentloaded' })
@@ -51,7 +51,7 @@ for (const theme of ['dark', 'light'] as const) {
 
 test('installs a layout pack and restores its widgets in a new browser', async ({ page, browser }) => {
   await seedBrowserState(page, 'dark', '/')
-  const mockApi = await installApiMocks(page)
+  const mockApi = await installApiMocks(page, 'populated', 'dark', 'comfortable', 'context')
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
   await page.getByRole('button', { name: 'Layout packs' }).first().click()
@@ -71,7 +71,7 @@ test('installs a layout pack and restores its widgets in a new browser', async (
     const restored = await context.newPage()
     await seedBrowserState(restored, 'dark', '/', { preserveDashboardState: true })
 
-    const restoredMockApi = await installApiMocks(restored)
+    const restoredMockApi = await installApiMocks(restored, 'populated', 'dark', 'comfortable', 'context')
     await restored.route('**/api/v1/settings/dashboard-layouts', (route) => {
       if (route.request().method() === 'GET') {
         return fulfillApiMock(route, restoredMockApi, {
@@ -99,7 +99,7 @@ for (const width of [390, 1440]) {
   test(`new dashboards show fleet posture in the ${width}px widget grid without a fixed brief`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
-    const mockApi = await installApiMocks(page)
+    const mockApi = await installApiMocks(page, 'populated', 'dark', 'comfortable', 'context')
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, mockApi)
 
