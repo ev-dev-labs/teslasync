@@ -57,8 +57,7 @@ const H = vi.hoisted(() => {
     REPAIR_STATS,
     defaultReq,
     request: vi.fn(defaultReq),
-    sidebarStyle: { value: 'legacy' as string },
-    sidebarProps: { linear: null as Record<string, unknown> | null, notion: null as Record<string, unknown> | null },
+    sidebarProps: { unified: null as Record<string, unknown> | null },
     forwardAuth: { value: false },
     presentation: { mode: 'standard' as 'standard' | 'report' | 'kiosk' },
     toast: {
@@ -190,9 +189,6 @@ vi.mock('@/hooks/useTour', () => ({
     finish: vi.fn(),
   }),
 }))
-vi.mock('@/hooks/useSidebarStyle', () => ({
-  useSidebarStyle: () => H.sidebarStyle.value,
-}))
 vi.mock('@/hooks/usePresentationMode', () => ({
   usePresentationMode: () => ({
     mode: H.presentation.mode,
@@ -317,16 +313,18 @@ vi.mock('./BottomTabBar', () => ({
   BottomTabBar: () => null,
   BOTTOM_TAB_PATHS: new Set(['/', '/vehicles', '/charging', '/drives']),
 }))
-vi.mock('./sidebar/LinearSidebar', () => ({
-  LinearSidebar: (props: Record<string, unknown>) => {
-    H.sidebarProps.linear = props
-    return <div data-testid="linear-sidebar" />
-  },
-}))
-vi.mock('./sidebar/NotionSidebar', () => ({
-  NotionSidebar: (props: Record<string, unknown>) => {
-    H.sidebarProps.notion = props
-    return <div data-testid="notion-sidebar" />
+vi.mock('./sidebar/CommandDeck', () => ({
+  CommandDeck: (props: Record<string, unknown>) => {
+    H.sidebarProps.unified = props
+    // Stand-in current-page link so the active-link scroll effect has a
+    // target; the real deck's rows are covered by CommandDeck.test.tsx.
+    return (
+      <div data-testid="command-deck">
+        <a aria-current="page" href="/">
+          Current page
+        </a>
+      </div>
+    )
   },
 }))
 vi.mock('./StatusBar', () => ({
@@ -406,13 +404,9 @@ vi.mock('@/components/ui/ThemePicker', () => ({
 import Layout, { navSections, reconcileNavPaths } from './Layout'
 import { navSearchKeywords } from './navSearchKeywords'
 import { DIAGNOSTIC_GROUPS } from './diagnosticGroups'
-import {
-  CANONICAL_SECTION_TO_COMPACT_GROUP,
-  COMPACT_GROUP_TITLES,
-  COMPACT_NAV_BLUEPRINT,
-  EXPLORE_PATH,
-  MAX_COMPACT_GROUPS,
-} from './sidebar/compactNav'
+import { flattenSidebarItems } from './sidebar/collections'
+import { prioritizeCanonicalNavSections } from './sidebar/compactNav'
+import type { SectionGroup } from './sectionGroups'
 import {
   DEFAULT_PINNED_NAV_PATHS,
   PINNED_NAV_STORAGE_KEY,
@@ -453,9 +447,7 @@ beforeEach(() => {
   cleanup()
   localStorage.clear()
   __resetNavPinsSessionOverridesForTests()
-  H.sidebarStyle.value = 'legacy'
-  H.sidebarProps.linear = null
-  H.sidebarProps.notion = null
+  H.sidebarProps.unified = null
   H.forwardAuth.value = false
   H.presentation.mode = 'standard'
   H.request.mockReset()
@@ -574,232 +566,122 @@ describe('navSearchKeywords (data export)', () => {
   })
 })
 
-// ══════════════════════════════════════════════════════════════════════
-// Sidebar-style selection
-// ══════════════════════════════════════════════════════════════════════
+describe('Layout — unified sidebar wiring', () => {
+  const unifiedProps = () =>
+    H.sidebarProps.unified as unknown as {
+      sections: Array<{ title: string; items: Array<{ to: string }> }>
+      pinnedItems: Array<{ to: string }>
+      recentItems: Array<{ to: string }>
+      panelCollapsed: boolean
+      onTogglePanelCollapsed: () => void
+      onPanelOpenChange: (open: boolean) => void
+    }
 
-describe('Layout — sidebar style selection', () => {
-  it('renders the LinearSidebar when the style preference is "linear"', async () => {
-    H.sidebarStyle.value = 'linear'
+  it('renders the CommandDeck as the only sidebar', async () => {
     renderLayout('/')
-    expect(await screen.findByTestId('linear-sidebar')).toBeInTheDocument()
-    expect(screen.queryByTestId('notion-sidebar')).toBeNull()
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
   })
 
-  describe('Layout — sidebar width', () => {
-    it('restores a saved width and supports keyboard resizing across sidebar styles', async () => {
-      localStorage.setItem('teslasync-sidebar-width', '344')
-      H.sidebarStyle.value = 'notion'
-      renderLayout('/')
-      const handle = await screen.findByRole('separator', { name: 'Resize sidebar' })
-      const shell = handle.closest('[data-presentation-mode]')
-      expect(handle).toHaveAttribute('aria-valuenow', '344')
-      expect(shell).toHaveStyle({ '--shell-sidebar-width': '344px' })
+  it('sizes the Command Deck rail to 240px expanded, 76px collapsed, with no resize handle', async () => {
+    const first = renderLayout('/')
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
+      '--shell-sidebar-width': '240px',
+    })
+    expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull()
+    first.unmount()
 
-      fireEvent.keyDown(handle, { key: 'ArrowRight' })
-      expect(handle).toHaveAttribute('aria-valuenow', '360')
-      expect(localStorage.getItem('teslasync-sidebar-width')).toBe('360')
-      fireEvent.keyDown(handle, { key: 'Home' })
-      expect(handle).toHaveAttribute('aria-valuenow', '240')
-      fireEvent.keyDown(handle, { key: 'End' })
-      expect(handle).toHaveAttribute('aria-valuenow', '420')
+    localStorage.setItem('teslasync-deck-rail-collapsed', '1')
+    renderLayout('/')
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
+      '--shell-sidebar-width': '76px',
     })
   })
 
-  it('renders the NotionSidebar when the style preference is "notion"', async () => {
-    H.sidebarStyle.value = 'notion'
+  it('shrinks the docked secondary rail to icons and persists that width preference', async () => {
+    const first = renderLayout('/')
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    act(() => unifiedProps().onPanelOpenChange(true))
+    const shell = screen.getByTestId('command-deck').closest('[data-presentation-mode]')
+    expect(shell).toHaveStyle({ '--shell-sidebar-width': '560px' })
+    act(() => unifiedProps().onTogglePanelCollapsed())
+    expect(shell).toHaveStyle({ '--shell-sidebar-width': '152px' })
+    expect(localStorage.getItem('teslasync-deck-panel-collapsed')).toBe('1')
+    expect(localStorage.getItem('teslasync-deck-rail-collapsed')).toBe('1')
+    act(() => unifiedProps().onTogglePanelCollapsed())
+    expect(shell).toHaveStyle({ '--shell-sidebar-width': '396px' })
+    act(() => unifiedProps().onTogglePanelCollapsed())
+    first.unmount()
+
     renderLayout('/')
-    expect(await screen.findByTestId('notion-sidebar')).toBeInTheDocument()
-    expect(screen.queryByTestId('linear-sidebar')).toBeNull()
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    expect(unifiedProps().panelCollapsed).toBe(true)
   })
 
-  it('renders the built-in legacy nav (no sidebar component) when style is "legacy"', () => {
-    H.sidebarStyle.value = 'legacy'
-    renderLayout('/')
-    expect(screen.queryByTestId('linear-sidebar')).toBeNull()
-    expect(screen.queryByTestId('notion-sidebar')).toBeNull()
-    // The legacy nav exposes the "Sections" header from NavSectionHeader.
-    expect(screen.getByText('Sections')).toBeInTheDocument()
-  })
-})
+  it('feeds the unified sidebar the complete catalog as its search corpus', () => {
+    renderLayout('/dashcam')
 
-// ══════════════════════════════════════════════════════════════════════
-// Compact (progressive-disclosure) IA for the default Linear sidebar
-// ══════════════════════════════════════════════════════════════════════
-
-describe('compact nav blueprint ↔ navSections catalog', () => {
-  const catalogPaths = new Set(navSections.flatMap((s) => s.items).map((i) => i.to))
-  const blueprintPaths = COMPACT_NAV_BLUEPRINT.flatMap((g) => g.paths)
-
-  it('declares the everyday primary hierarchy followed by advanced groups', () => {
-    expect(COMPACT_GROUP_TITLES.length).toBeLessThanOrEqual(MAX_COMPACT_GROUPS)
-    expect(COMPACT_NAV_BLUEPRINT.map((g) => g.title)).toEqual([...COMPACT_GROUP_TITLES])
-    expect([...COMPACT_GROUP_TITLES]).toEqual([
-      'Overview',
-      'Vehicles',
-      'Drives',
-      'Charging',
-      'Energy',
-      'Insights',
-      'Operations',
-      'Advanced Intelligence',
-      'Administration',
-      'Developer',
-      'Settings & Account',
-    ])
+    const { sections } = unifiedProps()
+    expect(sections.map((s) => s.title)).toContain('Diagnostics')
+    expect(sections.length).toBeGreaterThan(11)
+    // Canonical section titles survive (no compact-group remapping).
+    expect(sections.map((s) => s.title)).toContain('Security')
   })
 
-  it('never repeats a path across the curated groups', () => {
-    expect(new Set(blueprintPaths).size).toBe(blueprintPaths.length)
+  it('passes pinned and recent items through for quick access + recents', () => {
+    localStorage.setItem('teslasync-pinned-nav-paths', JSON.stringify(['/drives']))
+    // defaultPins skips the helper's empty-pin seeding so the seed survives.
+    renderLayout('/trips', { defaultPins: true })
+
+    const { pinnedItems, recentItems } = unifiedProps()
+    expect(pinnedItems.map((i) => i.to)).toContain('/drives')
+    expect(Array.isArray(recentItems)).toBe(true)
   })
 
-  it('only curates paths that really exist in the canonical catalog', () => {
-    const orphans = blueprintPaths.filter((p) => !catalogPaths.has(p))
-    expect(orphans).toEqual([])
-  })
+  it('leads suggestions with the Action Center while a critical alert is unread', async () => {
+    renderLayout('/trips')
 
-  it('keeps the required core destinations reachable from the compact tree', () => {
-    for (const required of [
-      '/',
-      EXPLORE_PATH,
-      '/vehicles',
-      '/drives',
-      '/charging',
-      '/energy',
-      '/battery',
-      '/statistics',
-      '/automations',
-      '/settings',
-    ]) {
-      expect(blueprintPaths).toContain(required)
+    // ALERTS fixture: one unread critical entry. The alerts query resolves
+    // after first paint, so wait for the live row to take the lead.
+    await waitFor(() => {
+      const props = H.sidebarProps.unified as unknown as {
+        suggestions?: Array<{ to: string; reason: string }>
+      } | null
+      expect(props?.suggestions?.[0]?.to).toBe('/action-center')
+    })
+    const { suggestions } = H.sidebarProps.unified as unknown as {
+      suggestions: Array<{ to: string; reason: string }>
     }
-    const overview = COMPACT_NAV_BLUEPRINT.find((g) => g.title === 'Overview')
-    // The Feature Hub is a first-class Overview row — it is the escape hatch
-    // to the complete catalog for every long-tail route.
-    expect(overview?.paths).toContain(EXPLORE_PATH)
-  })
-
-  it('parks admin and developer destinations in advanced groups, never deletes them', () => {
-    const admin = COMPACT_NAV_BLUEPRINT.find((g) => g.title === 'Administration')
-    const developer = COMPACT_NAV_BLUEPRINT.find((g) => g.title === 'Developer')
-    expect(admin?.tier).toBe('advanced')
-    expect(admin?.capability).toBe('administration')
-    expect(admin?.paths.some((p) => p.startsWith('/admin/'))).toBe(true)
-    expect(developer?.tier).toBe('advanced')
-    expect(developer?.capability).toBe('developer')
-    expect(developer?.paths).toContain('/dev-tools')
-  })
-
-  it('maps every canonical section title onto a compact group', () => {
-    for (const section of navSections) {
-      const mapped = CANONICAL_SECTION_TO_COMPACT_GROUP[section.title]
-      expect(mapped, `no compact group mapped for "${section.title}"`).toBeTruthy()
-      expect(COMPACT_GROUP_TITLES).toContain(mapped)
-    }
-  })
-
-  it('leaves the canonical catalog itself untouched (still the full route list)', () => {
-    expect(navSections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
-    expect(navSections.flatMap((s) => s.items).length).toBeGreaterThan(blueprintPaths.length * 2)
-  })
-})
-
-describe('Layout — compact Linear sidebar wiring', () => {
-  const linearProps = () =>
-    H.sidebarProps.linear as unknown as {
-      sections: Array<{
-        title: string
-        tier?: string
-        restricted?: boolean
-        items: Array<{ to: string }>
-      }>
-      activeSectionTitle?: string
-    }
-
-  it('feeds the Linear sidebar the compact two-tier tree, not the full catalog', () => {
-    H.sidebarStyle.value = 'linear'
-    renderLayout('/')
-
-    const { sections } = linearProps()
-    expect(sections.length).toBeLessThanOrEqual(MAX_COMPACT_GROUPS)
-    expect(sections.map((s) => s.title)).toEqual([...COMPACT_GROUP_TITLES])
-
-    const paths = sections.flatMap((s) => s.items.map((i) => i.to))
+    expect(suggestions[0].reason).toBe('1 need attention')
+    // Related fill never echoes pins, recents, or the current page.
+    const paths = suggestions.map((s) => s.to)
+    expect(paths).not.toContain('/trips')
     expect(new Set(paths).size).toBe(paths.length)
-    expect(paths).toContain(EXPLORE_PATH)
-    expect(paths.length).toBeLessThan(navSections.flatMap((s) => s.items).length / 2)
   })
+})
 
-  it('leads with the seven everyday primary groups before any advanced group', () => {
-    H.sidebarStyle.value = 'linear'
-    renderLayout('/')
-
-    const { sections } = linearProps()
-    expect(sections.slice(0, 7).map((s) => s.title)).toEqual([
-      'Overview',
-      'Vehicles',
-      'Drives',
-      'Charging',
-      'Energy',
-      'Insights',
-      'Operations',
-    ])
-    expect(sections.slice(0, 7).every((s) => s.tier === 'primary')).toBe(true)
-    expect(sections.slice(7).every((s) => s.tier === 'advanced')).toBe(true)
-  })
-
-  it('reports the compact group as the active section for a curated route', () => {
-    H.sidebarStyle.value = 'linear'
-    renderLayout('/drives')
-    expect(linearProps().activeSectionTitle).toBe('Drives')
-  })
-
-  it('keeps a long-tail route in its expanded compact collection', () => {
-    H.sidebarStyle.value = 'linear'
-    renderLayout('/dashcam')
-
-    const { sections, activeSectionTitle } = linearProps()
-    expect(activeSectionTitle).toBe('Operations')
-    const group = sections.find((s) => s.title === 'Operations')
-    expect(group?.items.map((i) => i.to)).toContain('/security-access')
-    const paths = sections.flatMap((s) => s.items.map((i) => i.to))
-    expect(paths.filter((p) => p === '/security-access')).toHaveLength(1)
-    expect(paths).not.toContain('/dashcam')
-  })
-
-  it('keeps every authorized admin destination present in the compact tree', () => {
-    H.sidebarStyle.value = 'linear'
-    renderLayout('/')
-
-    const { sections } = linearProps()
-    const administration = sections.find((s) => s.title === 'Administration')
-    expect(administration).toBeTruthy()
-    expect(administration?.items.length).toBeGreaterThan(0)
-    // Demotion is the mechanism — deletion is never allowed.
-    expect(administration?.tier).toBe('advanced')
-  })
-
-  it('keeps the complete catalog for the Notion style (explicit user choice)', () => {
-    H.sidebarStyle.value = 'notion'
-    renderLayout('/dashcam')
-
-    const props = H.sidebarProps.notion as unknown as {
-      sections: Array<{ title: string }>
+describe('Layout — grouped sidebar sections', () => {
+  const deckSections = () =>
+    H.sidebarProps.unified as unknown as {
+      pathname: string
+      sections: Array<{ title: string; items: Array<{ to: string; label: string }> }>
       activeSectionTitle?: string
     }
+
+  it('feeds the deck the complete catalog with the canonical active section', () => {
+    renderLayout('/dashcam')
+
+    const props = deckSections()
     expect(props.sections.map((s) => s.title)).toContain('Diagnostics')
-    expect(props.sections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
+    expect(props.sections.length).toBeGreaterThan(11)
     expect(props.activeSectionTitle).toBe('Security')
   })
 
-  it('shows six Reports entries in the Notion sidebar while keeping every route in the catalog', () => {
-    H.sidebarStyle.value = 'notion'
+  it('shows six Reports entries while keeping every route in the catalog', () => {
     renderLayout('/analytics')
 
-    const props = H.sidebarProps.notion as unknown as {
-      pathname: string
-      sections: Array<{ title: string; items: Array<{ to: string; label: string }> }>
-    }
+    const props = deckSections()
     const reports = props.sections.find(section => section.title === 'Reports')
     expect(reports?.items.map(item => item.to)).toEqual([
       '/statistics', '/efficiency', '/cost-analysis',
@@ -808,36 +690,22 @@ describe('Layout — compact Linear sidebar wiring', () => {
     expect(reports?.items.slice(0, 3).map(item => item.label)).toEqual([
       'Fleet Insights', 'Driving Efficiency', 'Costs',
     ])
-    expect(props.pathname).toBe('/statistics')
+    // Flat rows key off the real location, not the group primary.
+    expect(props.pathname).toBe('/analytics')
     expect(navSections.find(section => section.title === 'Reports')?.items).toHaveLength(11)
   })
 
-  it('shows the report siblings inline on their original routes', async () => {
-    renderLayout('/tco')
-    const reports = document.querySelector('#nav-section-reports')
-    expect(reports).toBeInTheDocument()
-    await waitFor(() => expect(within(reports as HTMLElement).getAllByRole('link')).toHaveLength(5))
-    expect(within(reports as HTMLElement).getByRole('button', { name: 'Costs, 2 views' }))
-      .toHaveAttribute('aria-expanded', 'true')
-    expect(within(reports as HTMLElement).getByRole('link', { name: 'Cost of Ownership' }))
-      .toHaveAttribute('aria-current', 'page')
-  })
-
-  it('groups diagnostics in the detailed sidebar without removing any catalog destinations', () => {
-    H.sidebarStyle.value = 'notion'
+  it('groups diagnostics without removing any catalog destinations', () => {
     renderLayout('/admin/ingest-xray')
 
-    const props = H.sidebarProps.notion as unknown as {
-      pathname: string
-      sections: Array<{ title: string; items: Array<{ to: string; label: string }> }>
-    }
+    const props = deckSections()
     const diagnostics = props.sections.find(section => section.title === 'Diagnostics')
     expect(diagnostics?.items.map(item => item.to)).toEqual([
       '/system-status', '/db-health', '/anomaly-detection',
       '/signals', '/admin/flags', '/admin/vehicle-cost', '/signal-correlation',
     ])
     expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry Troubleshooting')
-    expect(props.pathname).toBe('/signals')
+    expect(props.pathname).toBe('/admin/ingest-xray')
     expect(navSections.find(section => section.title === 'Diagnostics')?.items).toHaveLength(33)
     expect(DIAGNOSTIC_GROUPS.every(group => group.pages.every(page =>
       navSections.find(section => section.title === 'Diagnostics')?.items
@@ -845,20 +713,32 @@ describe('Layout — compact Linear sidebar wiring', () => {
     ))).toBe(true)
   })
 
-  it('keeps grouped diagnostics active in the detailed sidebar and compact navigation', async () => {
-    renderLayout('/signal-entropy')
-    const diagnostics = document.querySelector('#nav-section-diagnostics')
-    expect(diagnostics).toBeInTheDocument()
-    await waitFor(() => expect(within(diagnostics as HTMLElement).getAllByRole('link')).toHaveLength(7))
-    expect(within(diagnostics as HTMLElement).getByRole('link', { name: 'Signal Entropy' }))
-      .toHaveAttribute('aria-current', 'page')
-
-    cleanup()
-    H.sidebarStyle.value = 'linear'
-    renderLayout('/signal-entropy')
-    expect(linearProps().activeSectionTitle).toBe('Developer')
-    expect(linearProps().sections.find(section => section.title === 'Developer')?.items
-      .some(item => item.to === '/signal-correlation')).toBe(true)
+  it('orders sections for the owner persona: daily driving first, admin last', () => {
+    const titles = prioritizeCanonicalNavSections(navSections, 'owner').map((section) => section.title)
+    expect(titles).toEqual([
+      'Home',
+      'Vehicles',
+      'Driving',
+      'Charging',
+      'Battery',
+      'Energy',
+      'Cabin',
+      'Reports',
+      'Service',
+      'Commands',
+      'Automation',
+      'Notifications',
+      'Security',
+      'Advanced Intelligence',
+      'Ownership Intelligence',
+      'Tesla Physics',
+      'Data',
+      'Diagnostics',
+      'Account',
+      'Settings',
+      'Integrations',
+      'About',
+    ])
   })
 
   it('uses distinct icons for system status and Tesla API usage', () => {
@@ -996,27 +876,10 @@ describe('Layout — global page chrome', () => {
 // Legacy sidebar navigation + active state
 // ══════════════════════════════════════════════════════════════════════
 
-describe('Layout — legacy nav rendering + active state', () => {
+describe('Layout — sidebar landmark', () => {
   it('exposes a labelled "Primary" navigation landmark', () => {
     renderLayout('/')
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument()
-  })
-
-  it('marks the active route link with aria-current="page" and surfaces it as the current section', () => {
-    renderLayout('/vehicles')
-    const link = screen.getByRole('link', { name: 'My Vehicles' })
-    expect(link).toHaveAttribute('aria-current', 'page')
-    // The current-section panel echoes the active item label (its <p> carries a
-    // unique "<label> — <section>" title).
-    expect(screen.getByTitle('My Vehicles — Vehicles')).toHaveTextContent('My Vehicles')
-  })
-
-  it('does not mark unrelated links as current', () => {
-    renderLayout('/vehicles')
-    // Dashboard lives in the Pinned rail and its own section; it is not active.
-    const dashboardLinks = screen.getAllByRole('link', { name: 'Dashboard' })
-    expect(dashboardLinks.length).toBeGreaterThan(0)
-    dashboardLinks.forEach((l) => expect(l).not.toHaveAttribute('aria-current', 'page'))
   })
 })
 
@@ -1025,30 +888,29 @@ describe('Layout — legacy nav rendering + active state', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — live nav badges', () => {
-  it('shows the vehicle count badge on the "My Vehicles" link', async () => {
+  const deckCounts = () =>
+    H.sidebarProps.unified as unknown as {
+      alertCount: number
+      vehicleCount: number
+      staleCount: number
+    }
+
+  it('passes the vehicle count to the deck for the "My Vehicles" badge', async () => {
     renderLayout('/vehicles')
-    await waitFor(() => {
-      const button = screen.getByRole('button', { name: 'Fleet, 5 views' })
-      expect(within(button).getByText('2')).toBeInTheDocument()
-    })
+    // VEHICLES fixture has two entries.
+    await waitFor(() => expect(deckCounts().vehicleCount).toBe(2))
   })
 
-  it('shows the unread-alert badge on the inbox link', async () => {
+  it('passes the unread-alert count to the deck for the inbox badge', async () => {
     renderLayout('/notifications/inbox')
-    await waitFor(() => {
-      const link = screen.getByRole('link', { name: 'All Notifications' })
-      // ALERTS fixture has exactly one unread entry.
-      expect(within(link.parentElement as HTMLElement).getByText('1')).toBeInTheDocument()
-    })
+    // ALERTS fixture has exactly one unread entry.
+    await waitFor(() => expect(deckCounts().alertCount).toBe(1))
   })
 
-  it('shows the active durable-case badge on the "Data Repair" link', async () => {
+  it('passes the durable-case count to the deck for the "Data Repair" badge', async () => {
     renderLayout('/data-repair')
-    await waitFor(() => {
-      const link = screen.getByRole('link', { name: 'Data Repair' })
-      // REPAIR_STATS fixture: 1 open + 2 in review = 3.
-      expect(within(link.parentElement as HTMLElement).getByText('3')).toBeInTheDocument()
-    })
+    // REPAIR_STATS fixture: 1 open + 2 in review = 3.
+    await waitFor(() => expect(deckCounts().staleCount).toBe(3))
   })
 
   it('does not run the deep stale-session diagnostic from global chrome', async () => {
@@ -1071,15 +933,26 @@ describe('Layout — live nav badges', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — nav item visibility', () => {
+  // Expand collection primaries exactly like the deck renders them.
+  const deckPaths = () => {
+    const props = H.sidebarProps.unified as unknown as {
+      sections: Array<{ items: Parameters<typeof flattenSidebarItems>[0] }>
+      collections: readonly SectionGroup[]
+    }
+    return props.sections.flatMap((section) =>
+      flattenSidebarItems(section.items, props.collections).map((entry) => entry.to),
+    )
+  }
+
   it('hides requiresAuth items in open mode and reveals them under ForwardAuth', () => {
     H.forwardAuth.value = false
     const { unmount } = renderLayout('/tesla-account')
-    expect(screen.queryByRole('link', { name: 'Two-Factor Auth' })).toBeNull()
+    expect(deckPaths()).not.toContain('/account/2fa')
     unmount()
 
     H.forwardAuth.value = true
     renderLayout('/tesla-account')
-    expect(screen.getByRole('link', { name: 'Two-Factor Auth' })).toBeInTheDocument()
+    expect(deckPaths()).toContain('/account/2fa')
   })
 
   it('hides minVehicles items when the fleet is too small', async () => {
@@ -1090,88 +963,9 @@ describe('Layout — nav item visibility', () => {
     renderLayout('/vehicles')
     // With a single vehicle, "Compare Vehicles" (minVehicles: 2) stays hidden.
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'My Vehicles' })).toBeInTheDocument()
+      expect(deckPaths()).toContain('/vehicles')
     })
-    expect(screen.queryByRole('link', { name: 'Compare Vehicles' })).toBeNull()
-  })
-})
-
-// ══════════════════════════════════════════════════════════════════════
-// Section expand / collapse
-// ══════════════════════════════════════════════════════════════════════
-
-describe('Layout — section expand/collapse', () => {
-  it('toggles a collapsed section open and closed on header click', async () => {
-    renderLayout('/')
-    const chargingToggle = screen.getByRole('button', { name: /Charging/ })
-    expect(chargingToggle).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('link', { name: 'Charging Overview' })).toBeNull()
-
-    fireEvent.click(chargingToggle)
-    expect(chargingToggle).toHaveAttribute('aria-expanded', 'true')
-    const chargingGroup = await screen.findByRole('button', { name: 'Charging Activity, 6 views' })
-    fireEvent.click(chargingGroup)
-    expect(await screen.findByRole('link', { name: 'Charging Overview' })).toBeInTheDocument()
-
-    fireEvent.click(chargingToggle)
-    expect(chargingToggle).toHaveAttribute('aria-expanded', 'false')
-    await waitFor(() =>
-      expect(screen.queryByRole('link', { name: 'Charging Overview' })).toBeNull(),
-    )
-  })
-
-  it('"Expand all" opens every section and then disables itself', async () => {
-    renderLayout('/')
-    const expandAll = screen.getByRole('button', { name: 'Expand all sections' })
-    expect(expandAll).not.toBeDisabled()
-    fireEvent.click(expandAll)
-    // The collection is visible without opening its children.
-    const chargingGroup = await screen.findByRole('button', { name: 'Charging Activity, 6 views' })
-    fireEvent.click(chargingGroup)
-    expect(await screen.findByRole('link', { name: 'Charging Overview' })).toBeInTheDocument()
-    await waitFor(() => expect(expandAll).toBeDisabled())
-  })
-})
-
-// ══════════════════════════════════════════════════════════════════════
-// Pin / unpin
-// ══════════════════════════════════════════════════════════════════════
-
-describe('Layout — pin/unpin current page', () => {
-  const PINNED_KEY = 'teslasync-pinned-nav-paths'
-
-  it('pins the current (unpinned) page and persists it', async () => {
-    renderLayout('/drives')
-    const pin = screen.getByRole('button', { name: 'Pin current page' })
-    expect(pin).toHaveAttribute('aria-pressed', 'false')
-
-    fireEvent.click(pin)
-
-    await waitFor(() => {
-      const stored = JSON.parse(localStorage.getItem(PINNED_KEY) ?? '[]') as string[]
-      expect(stored).toContain('/drives')
-    })
-    expect(
-      screen.getByRole('button', { name: 'Remove current page from pinned' }),
-    ).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('unpins a page that is pinned by default and persists the removal', async () => {
-    // '/vehicles' ships in DEFAULT_PINNED_NAV_PATHS.
-    renderLayout('/vehicles', { defaultPins: true })
-    const unpin = screen.getByRole('button', { name: 'Remove current page from pinned' })
-    expect(unpin).toHaveAttribute('aria-pressed', 'true')
-
-    fireEvent.click(unpin)
-
-    await waitFor(() => {
-      const stored = JSON.parse(localStorage.getItem(PINNED_KEY) ?? '[]') as string[]
-      expect(stored).not.toContain('/vehicles')
-    })
-    expect(screen.getByRole('button', { name: 'Pin current page' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
+    expect(deckPaths()).not.toContain('/vehicle-comparison')
   })
 })
 
@@ -1312,9 +1106,9 @@ describe('reconcileNavPaths (pure)', () => {
 })
 
 describe('Layout — nav pin persistence', () => {
-  const linearPinnedPaths = () =>
+  const deckPinnedPaths = () =>
     (
-      (H.sidebarProps.linear as unknown as {
+      (H.sidebarProps.unified as unknown as {
         pinnedItems?: Array<{ to: string }>
       } | null)?.pinnedItems ?? []
     ).map((item) => item.to)
@@ -1326,13 +1120,12 @@ describe('Layout — nav pin persistence', () => {
 
   it('does not re-persist the shipped defaults on first mount', () => {
     localStorage.clear()
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
 
     // "Never customized" must stay that way — writing the defaults back would
     // freeze them as an explicit user list and fire the change bus on boot.
     expect(readStoredPins()).toBeNull()
-    expect(linearPinnedPaths()).toEqual([...DEFAULT_PINNED_NAV_PATHS])
+    expect(deckPinnedPaths()).toEqual([...DEFAULT_PINNED_NAV_PATHS])
   })
 
   it('reconciles a stored dead path out of the rail and rewrites storage once', () => {
@@ -1340,10 +1133,9 @@ describe('Layout — nav pin persistence', () => {
       PINNED_NAV_STORAGE_KEY,
       JSON.stringify(['/drives', '/route-removed-in-v3', '/charging']),
     )
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
 
-    expect(linearPinnedPaths()).toEqual(['/drives', '/charging'])
+    expect(deckPinnedPaths()).toEqual(['/drives', '/charging'])
     expect(readStoredPins()).toEqual(['/drives', '/charging'])
   })
 
@@ -1352,16 +1144,14 @@ describe('Layout — nav pin persistence', () => {
       PINNED_NAV_STORAGE_KEY,
       JSON.stringify(['/drives', 42, null, 'https://evil.example', '//evil.example']),
     )
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
 
     expect(readStoredPins()).toEqual(['/drives'])
-    expect(linearPinnedPaths()).toEqual(['/drives'])
+    expect(deckPinnedPaths()).toEqual(['/drives'])
   })
 
   it('does not write when the persisted value already matches state (no loop)', () => {
     localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives', '/charging']))
-    H.sidebarStyle.value = 'linear'
 
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
     try {
@@ -1378,24 +1168,22 @@ describe('Layout — nav pin persistence', () => {
 
   it('adopts a same-tab pin change published on the shared bus', async () => {
     localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
-    expect(linearPinnedPaths()).toEqual(['/drives'])
+    expect(deckPinnedPaths()).toEqual(['/drives'])
 
     act(() => {
       setPinnedNavPaths(['/charging', '/battery'])
     })
 
     await waitFor(() => {
-      expect(linearPinnedPaths()).toEqual(['/charging', '/battery'])
+      expect(deckPinnedPaths()).toEqual(['/charging', '/battery'])
     })
   })
 
   it('adopts a cross-tab pin change delivered as a storage event', async () => {
     localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
-    expect(linearPinnedPaths()).toEqual(['/drives'])
+    expect(deckPinnedPaths()).toEqual(['/drives'])
 
     act(() => {
       // Another tab wrote the key directly; only the storage event reaches us.
@@ -1406,13 +1194,12 @@ describe('Layout — nav pin persistence', () => {
     })
 
     await waitFor(() => {
-      expect(linearPinnedPaths()).toEqual(['/battery', '/live'])
+      expect(deckPinnedPaths()).toEqual(['/battery', '/live'])
     })
   })
 
   it('reconciles a dead path pushed by another tab instead of rendering it', async () => {
     localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
 
     act(() => {
@@ -1426,14 +1213,13 @@ describe('Layout — nav pin persistence', () => {
     })
 
     await waitFor(() => {
-      expect(linearPinnedPaths()).toEqual(['/charging'])
+      expect(deckPinnedPaths()).toEqual(['/charging'])
     })
     expect(readStoredPins()).toEqual(['/charging'])
   })
 
   it('ignores storage events for unrelated keys', async () => {
     localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
 
     act(() => {
@@ -1442,13 +1228,12 @@ describe('Layout — nav pin persistence', () => {
     })
 
     await waitFor(() => {
-      expect(linearPinnedPaths()).toEqual(['/drives'])
+      expect(deckPinnedPaths()).toEqual(['/drives'])
     })
   })
 
   it('settles after a same-tab publish without a write storm', async () => {
     localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
 
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
@@ -1457,7 +1242,7 @@ describe('Layout — nav pin persistence', () => {
         setPinnedNavPaths(['/charging'])
       })
       await waitFor(() => {
-        expect(linearPinnedPaths()).toEqual(['/charging'])
+        expect(deckPinnedPaths()).toEqual(['/charging'])
       })
       // Exactly the one publish the test made; the subscription must not
       // bounce it back into a second write.
@@ -1476,7 +1261,6 @@ describe('Layout — nav pin persistence', () => {
       RECENT_NAV_STORAGE_KEY,
       JSON.stringify(['/charging', '/route-removed-in-v3']),
     )
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
 
     await waitFor(() => {
@@ -1488,9 +1272,9 @@ describe('Layout — nav pin persistence', () => {
 })
 
 describe('Layout — nav pins under a rejected write', () => {
-  const linearPinnedPaths = () =>
+  const deckPinnedPaths = () =>
     (
-      (H.sidebarProps.linear as unknown as {
+      (H.sidebarProps.unified as unknown as {
         pinnedItems?: Array<{ to: string }>
       } | null)?.pinnedItems ?? []
     ).map((item) => item.to)
@@ -1511,9 +1295,8 @@ describe('Layout — nav pins under a rejected write', () => {
 
   it('keeps the published pins when persistence is rejected (no stale rollback)', async () => {
     localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
-    expect(linearPinnedPaths()).toEqual(['/drives'])
+    expect(deckPinnedPaths()).toEqual(['/drives'])
 
     act(() => {
       withRejectedWrites(() => {
@@ -1522,20 +1305,19 @@ describe('Layout — nav pins under a rejected write', () => {
     })
 
     await waitFor(() => {
-      expect(linearPinnedPaths()).toEqual(['/charging', '/battery'])
+      expect(deckPinnedPaths()).toEqual(['/charging', '/battery'])
     })
     // Storage genuinely still holds the old list — the shell must not adopt it.
     expect(JSON.parse(localStorage.getItem(PINNED_NAV_STORAGE_KEY) as string)).toEqual([
       '/drives',
     ])
     await waitFor(() => {
-      expect(linearPinnedPaths()).toEqual(['/charging', '/battery'])
+      expect(deckPinnedPaths()).toEqual(['/charging', '/battery'])
     })
   })
 
   it('still reconciles dead paths out of a non-persisted payload', async () => {
     localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
 
     act(() => {
@@ -1545,13 +1327,12 @@ describe('Layout — nav pins under a rejected write', () => {
     })
 
     await waitFor(() => {
-      expect(linearPinnedPaths()).toEqual(['/charging'])
+      expect(deckPinnedPaths()).toEqual(['/charging'])
     })
   })
 
   it('does not retry a rejected write on every render', async () => {
     localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
-    H.sidebarStyle.value = 'linear'
     renderLayout('/', { defaultPins: true })
 
     act(() => {
@@ -1560,7 +1341,7 @@ describe('Layout — nav pins under a rejected write', () => {
       })
     })
     await waitFor(() => {
-      expect(linearPinnedPaths()).toEqual(['/charging'])
+      expect(deckPinnedPaths()).toEqual(['/charging'])
     })
 
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
@@ -1570,7 +1351,7 @@ describe('Layout — nav pins under a rejected write', () => {
         window.dispatchEvent(new Event('resize'))
       })
       await waitFor(() => {
-        expect(linearPinnedPaths()).toEqual(['/charging'])
+        expect(deckPinnedPaths()).toEqual(['/charging'])
       })
       const pinWrites = setItem.mock.calls.filter(
         ([key]) => key === PINNED_NAV_STORAGE_KEY,

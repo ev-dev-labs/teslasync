@@ -10,7 +10,7 @@ import { GlassPanel, Badge, PanelTitle, Caption, Text, HelperText, DataTable, ty
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 import {
   ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   ScatterChart, Scatter, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -327,7 +327,6 @@ export default function TemperatureImpactPage() {
     <PageContainer
       title={t('tempImpact.title', 'Temperature Impact')}
       subtitle={t('tempImpact.subtitle', 'How outside temperature affects driving efficiency')}
-      actions={<VehicleSelect />}
       query={query}
     >
       {/* AI cabin-temperature-impact narrator. Rendered ABOVE the deterministic

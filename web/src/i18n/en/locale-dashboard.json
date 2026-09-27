@@ -81,6 +81,7 @@
     "fleetPosture": {
       "eyebrow": "Operational brief",
       "title": "Fleet posture",
+      "help": "Verified live-state coverage and evidence age across your fleet.",
       "unnamedVehicle": "Selected vehicle",
       "activeScope": "Active vehicle scope",
       "openVehicle": "Open vehicle",
@@ -254,6 +255,7 @@
     "redo": "Redo",
     "autoArrange": "Auto Arrange",
     "templates": "Templates",
+    "layoutPacks": "Layout packs",
     "reset": "Reset",
     "kiosk": "Kiosk",
     "customize": "Customize",
@@ -557,9 +559,9 @@
   },
   "templates": {
     "widgetCount": "{{count}} widgets",
-    "apply": "Use This Template",
+    "apply": "Install as new dashboard",
     "detail": "Template Preview",
-    "title": "Dashboard Templates",
+    "title": "Layout packs",
     "blank": "Blank Dashboard"
   },
   "widget": {

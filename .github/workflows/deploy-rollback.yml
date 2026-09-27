@@ -1,4 +1,4 @@
-name: Deploy rollback
+name: Deploy Rollback
 
 # OPS-02 — Measurable, gated rollback.
 #

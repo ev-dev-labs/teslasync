@@ -18,7 +18,7 @@ import { PageContainer } from '@/components/layout';
 import { Badge } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { VehicleSelect } from '@/components/forms';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
@@ -114,7 +114,6 @@ export default function LiveSignalMonitorPage() {
       subtitle={t('liveMonitor.subtitle', 'Real-time scrolling view of incoming vehicle signals')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <VehicleSelect />
           {connectionBadge}
         </div>
       }

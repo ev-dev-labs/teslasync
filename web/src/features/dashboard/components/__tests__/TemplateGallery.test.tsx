@@ -129,14 +129,14 @@ describe('TemplateGallery', () => {
   it('renders no dialog when open=false', () => {
     renderGallery({ open: false });
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Dashboard Templates' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Layout packs' })).toBeNull();
   });
 
   it('renders the grid: dialog title, the blank option, and every preset card', () => {
     renderGallery();
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Dashboard Templates', level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Layout packs', level: 2 })).toBeInTheDocument();
     // Blank + all four fixtures each render a titled card.
     expect(screen.getByRole('heading', { name: 'Blank Dashboard', level: 4 })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Default', level: 4 })).toBeInTheDocument();
@@ -186,7 +186,7 @@ describe('TemplateGallery', () => {
     // The modal heading flips and the detail scaffold appears.
     expect(screen.getByRole('heading', { name: 'Template Preview', level: 2 })).toBeInTheDocument();
     expect(screen.getByText('8 widgets')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Use This Template' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Install as new dashboard' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
     // Real widget names from the registry are listed.
     expect(screen.getByText('Vehicle Card')).toBeInTheDocument();
@@ -201,7 +201,7 @@ describe('TemplateGallery', () => {
     fireEvent.click(cardFor('Minimal'));
     expect(screen.getByText('4 widgets')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Use This Template' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Install as new dashboard' }));
 
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply).toHaveBeenCalledWith('minimal');
@@ -213,12 +213,12 @@ describe('TemplateGallery', () => {
     const { onApply } = renderGallery();
 
     fireEvent.click(cardFor('Minimal'));
-    expect(screen.getByRole('button', { name: 'Use This Template' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Install as new dashboard' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
     expect(screen.getByRole('heading', { name: 'Blank Dashboard', level: 4 })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Use This Template' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Install as new dashboard' })).toBeNull();
     expect(onApply).not.toHaveBeenCalled();
   });
 
@@ -249,7 +249,7 @@ describe('TemplateGallery', () => {
     // Drill into a preset, then simulate the parent closing via open=false only
     // (bypassing onClose — e.g. an Apply handler that flips its own state).
     fireEvent.click(cardFor('Default'));
-    expect(screen.getByRole('button', { name: 'Use This Template' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Install as new dashboard' })).toBeInTheDocument();
 
     rerender(<TemplateGallery open={false} onClose={onClose} onApply={onApply} />);
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -257,7 +257,7 @@ describe('TemplateGallery', () => {
     rerender(<TemplateGallery open onClose={onClose} onApply={onApply} />);
     // The stale detail must NOT persist — the grid is shown instead.
     expect(screen.getByRole('heading', { name: 'Blank Dashboard', level: 4 })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Use This Template' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Install as new dashboard' })).toBeNull();
   });
 
   it('null-safely renders a malformed preset that is missing its widgets array', () => {
@@ -271,6 +271,6 @@ describe('TemplateGallery', () => {
     // Drilling in also survives the empty widget list.
     fireEvent.click(brokenCard);
     expect(screen.getByText('0 widgets')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Use This Template' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Install as new dashboard' })).toBeInTheDocument();
   });
 });

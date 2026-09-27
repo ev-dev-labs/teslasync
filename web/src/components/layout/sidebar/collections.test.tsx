@@ -1,17 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { navSections } from '../Layout'
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry'
 import en from '@/i18n/en.json'
-import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
-import { SIDEBAR_COLLECTION_ICONS } from './sidebarCollectionIcons'
-import { CollectionTreeRow } from './CollectionTreeRow'
-import { COLLECTION_DEFINITIONS, collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection } from './collections'
-
-function CurrentPath() {
-  return <span data-testid="current-path">{useLocation().pathname}</span>
-}
+import { SIDEBAR_SECTION_ICONS, SIDEBAR_SHORTCUT_ICONS } from './sidebarIcons'
+import { COLLECTION_DEFINITIONS, collectionGroups, collectionPrimaryPath, collectionSidebarSections, flattenSidebarItems, groupSidebarItems } from './collections'
 
 describe('sidebar collections', () => {
   const groups = collectionGroups(navSections)
@@ -42,11 +34,11 @@ describe('sidebar collections', () => {
     }
   })
 
-  it('uses a distinct glyph for every destination, section, and collection', () => {
+  it('uses a distinct glyph for every destination and section', () => {
     const entries = [
       ...navSections.flatMap(section => section.items.map(item => [item.to, item.icon] as const)),
       ...navSections.map(section => [`section:${section.title}`, SIDEBAR_SECTION_ICONS[section.title]] as const),
-      ...groups.map(group => [`collection:${group.primary}`, SIDEBAR_COLLECTION_ICONS[group.primary]] as const),
+      ...Object.entries(SIDEBAR_SHORTCUT_ICONS).map(([name, icon]) => [`shortcut:${name}`, icon] as const),
     ]
     expect(entries.filter(([, icon]) => !icon).map(([path]) => path)).toEqual([])
     const seen = new Map<unknown, string>()
@@ -83,21 +75,71 @@ describe('sidebar collections', () => {
     expect(visible).not.toContain('/account/2fa')
   })
 
-  it('moves pinned collection pages into Quick access without duplicating their names', () => {
-    const group = groups.find(candidate => candidate.primary === '/driving-dynamics')!
-    const pinned = new Set(['/driving-dynamics', '/drive-dna'])
-    expect(collectionSidebarSections(navSections, groups).find(section =>
-      section.items.some(item => item.to === '/driving-dynamics'),
-    )).toBeDefined()
-    render(
-      <MemoryRouter>
-        <CollectionTreeRow group={group} pathname="/driving-dynamics" pinnedPaths={pinned} />
-      </MemoryRouter>,
-    )
-    expect(screen.getByRole('button', { name: 'Driving Performance, 5 views' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Driving Dynamics' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Drive DNA' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Regen Braking' })).toBeInTheDocument()
+  it('flattens every group inline, preserving catalog order with a resolved glyph per row', () => {
+    const sections = collectionSidebarSections(navSections, groups)
+    const reports = sections.find(section => section.title === 'Reports')!
+    const flat = flattenSidebarItems(reports.items, groups)
+    // Fleet Insights (3) + Driving Efficiency (3) + Costs (2) + 3 standalones.
+    expect(flat.map(entry => entry.to)).toEqual([
+      '/statistics', '/analytics', '/period-compare',
+      '/efficiency', '/temperature-impact', '/drive-archetypes',
+      '/cost-analysis', '/tco',
+      '/share-card', '/analytics/carbon', '/benchmarks/privacy',
+    ])
+    expect(flat.every(entry => entry.icon)).toBe(true)
+    // Pages keep their own catalog labels — the group label never renders.
+    expect(flat.find(entry => entry.to === '/tco')?.label).toBe('Cost of Ownership')
+  })
+
+  it('adds collection headings without changing the flat order or hiding standalone pages', () => {
+    const reports = collectionSidebarSections(navSections, groups).find(section => section.title === 'Reports')!
+    const grouped = groupSidebarItems(reports.items, groups)
+    expect(grouped.map(group => group.label)).toEqual([
+      'Fleet Insights', 'Driving Efficiency', 'Costs', undefined, undefined, undefined,
+    ])
+    expect(grouped.flatMap(group => group.entries.map(entry => entry.to)))
+      .toEqual(flattenSidebarItems(reports.items, groups).map(entry => entry.to))
+  })
+
+  it('keeps pinned pages in the flat list: pins bookmark, they never relocate', () => {
+    const sections = collectionSidebarSections(navSections, groups)
+    const driving = sections.find(section => section.title === 'Driving')!
+    const flat = flattenSidebarItems(driving.items, groups)
+    const paths = flat.map(entry => entry.to)
+    // Group pages stay flat and in order regardless of pin state.
+    expect(paths).toContain('/driving-dynamics')
+    expect(paths).toContain('/drive-dna')
+    expect(paths).toContain('/speed-profile')
+    expect(paths).toContain('/regen-efficiency')
+    expect(paths.indexOf('/speed-profile')).toBeLessThan(paths.indexOf('/regen-efficiency'))
+    const home = sections.find(section => section.title === 'Home')!
+    const homePaths = flattenSidebarItems(home.items, groups).map(entry => entry.to)
+    expect(homePaths).toContain('/explore')
+    expect(homePaths).toContain('/action-center')
+  })
+
+  it('keeps Charging Overview first in the flat list', () => {
+    const chargingSection = collectionSidebarSections(navSections, groups).find(section => section.title === 'Charging')!
+    const flat = flattenSidebarItems(chargingSection.items, groups)
+    expect(flat[0].to).toBe('/charging')
+  })
+
+  it('lists every page directly when a section holds a single group', () => {
+    const sections = collectionSidebarSections(navSections, groups)
+    const commands = sections.find(section => section.title === 'Commands')
+    expect(commands).toBeDefined()
+    const flat = flattenSidebarItems(commands!.items, groups)
+    expect(flat.map(entry => entry.to)).toEqual(['/commands', '/command-history', '/command-reliability'])
+    expect(flat.map(entry => entry.label)).toEqual(['Send Commands', 'Command History', 'Command Reliability'])
+  })
+
+  it('groups the singleton Vehicle Cost destination in Diagnostics without duplicating it', () => {
+    const diagnostics = collectionSidebarSections(navSections, groups).find(section => section.title === 'Diagnostics')!
+    const grouped = groupSidebarItems(diagnostics.items, groups)
+    const vehicleCosts = grouped.find(group => group.label === 'Vehicle Costs')
+    expect(vehicleCosts?.labelKey).toBe('nav.diagnosticGroups.vehicleCost')
+    expect(vehicleCosts?.entries.map(entry => entry.to)).toEqual(['/admin/vehicle-cost'])
+    expect(grouped.flatMap(group => group.entries).filter(entry => entry.to === '/admin/vehicle-cost')).toHaveLength(1)
   })
 
   it('uses distinct icons for sibling destinations', () => {
@@ -110,59 +152,5 @@ describe('sidebar collections', () => {
       })
     })
     expect(repeated).toEqual([])
-  })
-
-  it('lists pages directly when a section has only one collection', () => {
-    const sections = collectionSidebarSections(navSections, groups)
-    const commands = sections.find(section => section.title === 'Commands')
-    expect(commands).toBeDefined()
-    const group = soleCollection(commands!, groups)
-    expect(group?.pages.map(page => page.to)).toEqual(['/commands', '/command-history', '/command-reliability'])
-    render(
-      <MemoryRouter>
-        <CollectionTreeRow group={group!} pathname="/commands" flattened statusCount={2} />
-      </MemoryRouter>,
-    )
-    expect(screen.queryByRole('button', { name: 'Commands, 3 views' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Send Commands' })).toHaveAttribute('href', '/commands')
-    expect(screen.getByRole('link', { name: 'Command History' })).toHaveAttribute('href', '/command-history')
-    expect(screen.getByRole('link', { name: 'Command Reliability' })).toHaveAttribute('href', '/command-reliability')
-    expect(screen.getByText('2')).toBeInTheDocument()
-    expect(soleCollection(sections.find(section => section.title === 'Charging')!, groups)).toBeUndefined()
-  })
-
-  it('opens the active group inline and switches between original routes without a detour', async () => {
-    const group = groups.find(candidate => candidate.primary === '/driving-dynamics')
-    expect(group).toBeDefined()
-    function Collection() {
-      const { pathname } = useLocation()
-      return <CollectionTreeRow group={group!} pathname={pathname} />
-    }
-    render(
-      <MemoryRouter initialEntries={['/driving-dynamics']}>
-        <Collection />
-        <CurrentPath />
-      </MemoryRouter>,
-    )
-    const button = screen.getByRole('button', { name: /Driving Performance, 7 views/ })
-    expect(button).toHaveAttribute('aria-expanded', 'true')
-    expect(button).not.toHaveTextContent('views')
-    expect(within(button).getByText('7')).toBeInTheDocument()
-    expect(button.querySelectorAll('svg')).toHaveLength(2)
-    const groupIcon = button.querySelectorAll('svg')[1]
-    const primaryIcon = screen.getByRole('link', { name: 'Driving Dynamics' }).querySelector('svg')
-    expect(groupIcon?.innerHTML).not.toBe(primaryIcon?.innerHTML)
-    expect(within(screen.getByRole('group', { name: 'Driving Performance' })).getByRole('link', { name: 'Drive DNA' }))
-      .toHaveAttribute('href', '/drive-dna')
-    expect(screen.getByRole('link', { name: 'Drive DNA' }).querySelector('svg')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('link', { name: 'Drive DNA' }))
-    await waitFor(() => expect(screen.getByTestId('current-path')).toHaveTextContent('/drive-dna'))
-    expect(screen.getByRole('link', { name: 'Drive DNA' })).toHaveAttribute('aria-current', 'page')
-    fireEvent.click(screen.getByRole('link', { name: 'Regen Braking' }))
-    await waitFor(() => expect(screen.getByTestId('current-path')).toHaveTextContent('/regen-efficiency'))
-    fireEvent.click(button)
-    expect(button).toHaveAttribute('aria-expanded', 'false')
-    fireEvent.click(button)
-    expect(screen.getByRole('link', { name: 'Drive DNA' })).toBeInTheDocument()
   })
 })

@@ -4,7 +4,7 @@ import { RefreshCw } from 'lucide-react';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button } from '@/components/ui';
@@ -201,7 +201,6 @@ export default function PreconditioningEffectivenessPage() {
               'Refresh evidence',
             )}
           </Button>
-          <VehicleSelect />
         </div>
       )}
     >

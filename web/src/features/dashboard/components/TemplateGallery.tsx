@@ -80,7 +80,7 @@ function TemplateDetail({
           </UiButton>
           <UiButton size="sm" onClick={onApply}>
             <Sparkles className="h-3.5 w-3.5 mr-1" />
-            {t('templates.apply', 'Use This Template')}
+            {t('templates.apply', 'Install as new dashboard')}
           </UiButton>
         </div>
       </div>
@@ -123,10 +123,9 @@ function TemplateCard({
       size="sm"
       onClick={onClick}
       className={cn(
-        'h-auto w-full flex-col items-stretch justify-start gap-0 p-0 text-left rounded-xl border transition-all group',
-        'bg-white/[0.02] border-white/[0.06]',
-        'hover:bg-white/[0.05] hover:border-white/[0.12]',
-        'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20',
+        'group h-auto w-full flex-col items-stretch justify-start gap-0 rounded-xl border p-0 text-left transition-all',
+        'border-[var(--border-default)] bg-[var(--surface-2)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]',
+        'hover:-translate-y-0.5 hover:shadow-lg',
       )}
     >
       {/* Preview */}
@@ -156,7 +155,7 @@ function TemplateCard({
           {categoryIcons.map(({ Icon, category }) => (
             <div
               key={category}
-              className="rounded p-1 bg-white/[0.04]"
+              className="rounded bg-[var(--surface-3)] p-1"
               title={category}
             >
               <Icon className="h-3 w-3 text-[var(--text-muted)]" />
@@ -212,10 +211,10 @@ export function TemplateGallery({ open, onClose, onApply }: TemplateGalleryProps
       title={
         selectedTemplate
           ? t('templates.detail', 'Template Preview')
-          : t('templates.title', 'Dashboard Templates')
+          : t('templates.title', 'Layout packs')
       }
       size="lg"
-      className="bg-[#0f1218] border border-white/[0.08] text-[var(--text-on-accent)] max-h-[80vh] overflow-y-auto"
+      className="sm:max-h-[80vh]"
     >
       {selectedTemplate ? (
         <TemplateDetail
@@ -237,8 +236,8 @@ export function TemplateGallery({ open, onClose, onApply }: TemplateGalleryProps
               }}
               className={cn(
                 'h-auto w-full justify-start rounded-xl border p-6 text-left transition-all',
-                'bg-white/[0.02] border-dashed border-white/[0.10]',
-                'hover:bg-white/[0.05] hover:border-white/[0.18]',
+                'border-dashed border-[var(--border-default)] bg-[var(--surface-2)]',
+                'hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]',
                 'hover:-translate-y-0.5',
               )}
             >

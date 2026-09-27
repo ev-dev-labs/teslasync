@@ -10,7 +10,7 @@ import {
 } from '@/lib/workspaceScope';
 
 /**
- * VehicleSelect — canonical per-page vehicle scope picker.
+ * VehicleSelect — fallback page vehicle picker for unmanaged or local scope.
  *
  * A drop-in `<Select>` wired to the global `useSelectedVehicle()` store.
  * Renders nothing when the fleet is empty (the page should already be
@@ -18,8 +18,8 @@ import {
  * renders for fleets of ≥1 vehicle so the user has an explicit context
  * indicator even when they only own one car.
  *
- * Use this in `PageContainer.actions` BEFORE `<RangePicker>` so the
- * canonical action row reads `[Vehicle][RangePicker][...other]`.
+ * Managed routes use the workspace header instead; do not add this to new
+ * page actions when the header already owns vehicle selection.
  *
  * For multi-vehicle pickers (rule editors, alert scopes), use
  * {@link VehicleMultiSelect} instead.

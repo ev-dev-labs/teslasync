@@ -437,16 +437,11 @@ export function WidgetPicker({
         >
           <UiButton
             type="button"
-            variant={categoryFilter === 'all' ? 'secondary' : 'ghost'}
+            variant={categoryFilter === 'all' ? 'primary' : 'outline'}
             size="sm"
             aria-pressed={categoryFilter === 'all'}
             onClick={() => setCategoryFilter('all')}
-            className={cn(
-              'h-7 rounded-full px-3 text-xs',
-              categoryFilter === 'all'
-                ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-            )}
+            className="rounded-shape-sm px-3 text-xs"
           >
             {t('widgets.allCategories', 'All')}
           </UiButton>
@@ -454,16 +449,11 @@ export function WidgetPicker({
             <UiButton
               key={cat}
               type="button"
-              variant={categoryFilter === cat ? 'secondary' : 'ghost'}
+              variant={categoryFilter === cat ? 'primary' : 'outline'}
               size="sm"
               aria-pressed={categoryFilter === cat}
               onClick={() => setCategoryFilter(cat)}
-              className={cn(
-                'h-7 rounded-full px-3 text-xs',
-                categoryFilter === cat
-                  ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-              )}
+              className="rounded-shape-sm px-3 text-xs"
             >
               {CATEGORY_LABELS[cat]}
             </UiButton>

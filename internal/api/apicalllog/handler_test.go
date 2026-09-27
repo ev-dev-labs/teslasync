@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
@@ -32,6 +33,7 @@ type getAllCall struct {
 	service       string
 	start         string
 	end           string
+	endExclusive  string
 }
 
 type fakeAPICallLogRepo struct {
@@ -45,21 +47,23 @@ type fakeAPICallLogRepo struct {
 	statsErr error
 
 	// Recorded invocations.
-	gotGetAll   []getAllCall
-	getStatsN   int
-	getStatsCtx context.Context
+	gotGetAll                  []getAllCall
+	getStatsN                  int
+	getStatsCtx                context.Context
+	getStatsStart, getStatsEnd *time.Time
 }
 
-func (f *fakeAPICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate string) ([]*teslamodel.APICallLog, int, error) {
+func (f *fakeAPICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error) {
 	f.gotGetAll = append(f.gotGetAll, getAllCall{
-		limit:    limit,
-		offset:   offset,
-		method:   method,
-		status:   statusFilter,
-		endpoint: endpoint,
-		service:  service,
-		start:    startDate,
-		end:      endDate,
+		limit:        limit,
+		offset:       offset,
+		method:       method,
+		status:       statusFilter,
+		endpoint:     endpoint,
+		service:      service,
+		start:        startDate,
+		end:          endDate,
+		endExclusive: endExclusive,
 	})
 	if f.err != nil {
 		return nil, 0, f.err
@@ -67,9 +71,10 @@ func (f *fakeAPICallLogRepo) GetAll(ctx context.Context, limit, offset int, meth
 	return f.logs, f.total, nil
 }
 
-func (f *fakeAPICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, error) {
+func (f *fakeAPICallLogRepo) GetStats(ctx context.Context, start, endExclusive *time.Time) (map[string]interface{}, error) {
 	f.getStatsN++
 	f.getStatsCtx = ctx
+	f.getStatsStart, f.getStatsEnd = start, endExclusive
 	if f.statsErr != nil {
 		return nil, f.statsErr
 	}
@@ -136,6 +141,14 @@ func TestHandler_List_QueryForwarding(t *testing.T) {
 			},
 		},
 		{
+			name:  "exclusive instant window forwarded",
+			query: "service=notify-generic&start=2026-09-19T07%3A00%3A00Z&end_exclusive=2026-09-26T07%3A00%3A00Z",
+			want: getAllCall{
+				limit: 50, offset: 0, service: "notify-generic",
+				start: "2026-09-19T07:00:00Z", endExclusive: "2026-09-26T07:00:00Z",
+			},
+		},
+		{
 			name:  "over-cap limit falls back to default",
 			query: "limit=5000",
 			want:  getAllCall{limit: 50, offset: 0},
@@ -179,6 +192,22 @@ func TestHandler_List_QueryForwarding(t *testing.T) {
 				t.Fatalf("forwarded args = %+v, want %+v", got, c.want)
 			}
 		})
+	}
+}
+
+func TestHandler_List_RejectsInvalidExactWindows(t *testing.T) {
+	t.Parallel()
+	for _, query := range []string{
+		"start=2026-09-19&end_exclusive=2026-09-26T07:00:00Z",
+		"start=2026-09-26T07:00:00Z&end_exclusive=2026-09-19T07:00:00Z",
+		"start=2026-09-19T07:00:00Z&end_exclusive=2026-09-26T07:00:00Z&end=2026-09-26",
+	} {
+		repo := &fakeAPICallLogRepo{}
+		rec := httptest.NewRecorder()
+		newHandlerForTest(repo).List(rec, httptest.NewRequest(http.MethodGet, "/api-logs?"+query, nil))
+		if rec.Code != http.StatusBadRequest || len(repo.gotGetAll) != 0 {
+			t.Errorf("query %q: status=%d, repo calls=%d", query, rec.Code, len(repo.gotGetAll))
+		}
 	}
 }
 
@@ -328,11 +357,11 @@ type ctxCapturingRepo struct {
 	onGetAll func(ctx context.Context)
 }
 
-func (c *ctxCapturingRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate string) ([]*teslamodel.APICallLog, int, error) {
+func (c *ctxCapturingRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error) {
 	if c.onGetAll != nil {
 		c.onGetAll(ctx)
 	}
-	return c.fakeAPICallLogRepo.GetAll(ctx, limit, offset, method, statusFilter, endpoint, service, startDate, endDate)
+	return c.fakeAPICallLogRepo.GetAll(ctx, limit, offset, method, statusFilter, endpoint, service, startDate, endDate, endExclusive)
 }
 
 // ---------- Stats ----------
@@ -366,6 +395,9 @@ func TestHandler_Stats_Success(t *testing.T) {
 	if repo.getStatsN != 1 {
 		t.Errorf("GetStats call count = %d, want 1", repo.getStatsN)
 	}
+	if repo.getStatsStart != nil || repo.getStatsEnd != nil {
+		t.Errorf("unbounded stats unexpectedly scoped: %v, %v", repo.getStatsStart, repo.getStatsEnd)
+	}
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
@@ -383,6 +415,40 @@ func TestHandler_Stats_Success(t *testing.T) {
 	}
 	if byMethod["GET"] != float64(900) {
 		t.Errorf("by_method[GET] = %v, want 900", byMethod["GET"])
+	}
+}
+
+func TestHandler_Stats_ExactWindow(t *testing.T) {
+	t.Parallel()
+	repo := &fakeAPICallLogRepo{stats: map[string]interface{}{"by_service": map[string]int{"notify-generic": 12}}}
+	rec := httptest.NewRecorder()
+	newHandlerForTest(repo).Stats(rec, httptest.NewRequest(http.MethodGet,
+		"/api-logs/stats?start=2026-09-19T00%3A00%3A00-07%3A00&end_exclusive=2026-09-26T00%3A00%3A00-07%3A00", nil))
+	if rec.Code != http.StatusOK || repo.getStatsStart == nil || repo.getStatsEnd == nil {
+		t.Fatalf("status=%d window=%v..%v", rec.Code, repo.getStatsStart, repo.getStatsEnd)
+	}
+	if got := repo.getStatsStart.UTC().Format(time.RFC3339); got != "2026-09-19T07:00:00Z" {
+		t.Errorf("start=%s", got)
+	}
+	if got := repo.getStatsEnd.UTC().Format(time.RFC3339); got != "2026-09-26T07:00:00Z" {
+		t.Errorf("exclusive end=%s", got)
+	}
+}
+
+func TestHandler_Stats_RejectsInvalidWindows(t *testing.T) {
+	t.Parallel()
+	for _, query := range []string{
+		"start=2026-09-19T07:00:00Z",
+		"end_exclusive=2026-09-26T07:00:00Z",
+		"start=2026-09-26T07:00:00Z&end_exclusive=2026-09-19T07:00:00Z",
+		"start=2026-09-19&end_exclusive=2026-09-26",
+	} {
+		repo := &fakeAPICallLogRepo{}
+		rec := httptest.NewRecorder()
+		newHandlerForTest(repo).Stats(rec, httptest.NewRequest(http.MethodGet, "/api-logs/stats?"+query, nil))
+		if rec.Code != http.StatusBadRequest || repo.getStatsN != 0 {
+			t.Errorf("query %q: status=%d, repo calls=%d", query, rec.Code, repo.getStatsN)
+		}
 	}
 }
 

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button } from '@/components/ui';
@@ -113,7 +113,6 @@ export default function DriveArchetypesPage() {
           >
             {t('archetypes.actions.refresh', 'Refresh evidence')}
           </Button>
-          <VehicleSelect />
         </div>
       )}
     >

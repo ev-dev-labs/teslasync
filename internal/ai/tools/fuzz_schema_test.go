@@ -174,7 +174,7 @@ func TestEverySchemaContainsTitleField(t *testing.T) {
 	}
 }
 
-// TestBuiltinsHaveNoMutators confirms the F4 starter set is read-only.
+// TestBuiltinsHaveNoMutators confirms the built-in set is read-only.
 // Mutating tools belong with their owning feature.
 func TestBuiltinsHaveNoMutators(t *testing.T) {
 	t.Parallel()

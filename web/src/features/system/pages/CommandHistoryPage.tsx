@@ -8,10 +8,9 @@
  *                        most-used command breakdown
  *   4. Detail band     — paginated command timeline + status breakdown rail
  *
- * Scoping model: the RangePicker in the header scopes the analytics (daily
- * chart, top commands, status breakdown). The filter bar (status + search)
- * additionally scopes the timeline list, its count, and pagination. The KPI
- * band reflects the full command history, not the filtered view.
+ * Scoping model: the workspace header scopes all command history and
+ * analytics. Status and search additionally scope the timeline and its
+ * pagination, while the KPI band reflects the complete selected window.
  */
 
 import { useDeferredValue, useMemo } from 'react';
@@ -19,22 +18,22 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PageContainer } from '@/components/layout';
 import {
-  GlassPanel, Input as ControlInput, Select as ControlSelect,
+  GlassPanel, Input as ControlInput,
   TabNav, Pagination, PanelTitle, Text, Caption, Badge,
 } from '@/components/ui';
 import { MetricCard, MetricBar, Timeline } from '@/components/data-display';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RangePicker } from '@/components/forms';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ChartLegend,
   ResponsiveContainer, ChartTooltip, CHART_COLORS, axisTickSm, EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlBatch, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useCommandHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
+import { useCommandReliabilityHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { localDayKey } from '@/lib/drivesAggregation';
 import { useTimezone } from '@/lib/timezone';
@@ -139,17 +138,19 @@ export default function CommandHistoryPage() {
   const { t } = useTranslation();
   usePageTitle(t('commandHistory.title', 'Command History'));
 
-  // Vehicle selection: useSelectedVehicle reads ?vehicle_id from the URL
-  // (deep-links from notifications), persists across pages via localStorage,
-  // and falls back to the first vehicle. We mirror picker changes back to
-  // the URL so /command-history?vehicle_id=N stays bookmarkable.
-  const { vehicleId, vehicles } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const activeVehicleId = vehicleId != null ? String(vehicleId) : undefined;
   const noVehicle = !activeVehicleId;
 
+  const { preferences } = useProductPreferences();
+  const timeZone = useTimezone('vehicle');
+  const { startInstant, endInstantExclusive } = useRangeState({
+    defaultPresetId: preferences.defaultAnalysisRange,
+    timezone: timeZone,
+  });
   // Data — keep the full query so PageContainer can drive a freshness chip and
   // each panel can react to loading/error independently.
-  const commandsQuery = useCommandHistory(activeVehicleId);
+  const commandsQuery = useCommandReliabilityHistory(activeVehicleId, startInstant, endInstantExclusive);
   const { data: commands, isLoading, error, refetch } = commandsQuery;
   const allCommands = commands ?? [];
 
@@ -170,15 +171,6 @@ export default function CommandHistoryPage() {
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const isSearchPending = !Object.is(searchQuery, deferredSearchQuery);
 
-  const { start, end, setRange } = useRangeState({
-    persistKey: 'command-history.range',
-    defaultPresetId: 'all',
-  });
-
-  // Stable identity for the RangePicker's controlled value so it isn't handed
-  // a fresh object literal on every render.
-  const rangeValue = useMemo(() => ({ start, end }), [start, end]);
-
   // Reset page when filters change — write both keys atomically.
   const handleStatusChange = (key: string) => {
     setUrl({ status: key === 'all' ? null : (key as StatusFilter), page: null });
@@ -194,29 +186,9 @@ export default function CommandHistoryPage() {
     const value = e.target.value;
     setUrl({ q: value || null, page: null });
   };
-  const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const n = Number(e.target.value);
-    if (Number.isFinite(n) && n > 0) {
-      setUrl({ vehicle_id: e.target.value, page: null });
-    }
-  };
-
-  // Range-scoped set — drives the analytics panels (chart, top commands,
-  // status breakdown). Kept separate from `filtered` so status/search only
-  // narrow the timeline list, never the surrounding analytics.
-  const rangeFiltered = useMemo(() => {
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
-    return allCommands.filter((c) => {
-      if (!c.created_at) return false;
-      const ts = new Date(c.created_at).getTime();
-      return ts >= startMs && ts <= endMs;
-    });
-  }, [allCommands, start, end]);
-
-  // Timeline set — range + status + search.
+  // Timeline set — workspace range + status + search.
   const filtered = useMemo(() => {
-    let result = rangeFiltered;
+    let result = allCommands;
     if (statusFilter !== 'all') {
       result = result.filter((c) => c.status === statusFilter);
     }
@@ -229,7 +201,7 @@ export default function CommandHistoryPage() {
       );
     }
     return result;
-  }, [rangeFiltered, statusFilter, deferredSearchQuery, t]);
+  }, [allCommands, statusFilter, deferredSearchQuery, t]);
 
   // Clamp the URL-driven page into range before slicing. Guards two cases:
   //   1. A filter/range change shrinks `filtered` while the user is on a later
@@ -245,7 +217,7 @@ export default function CommandHistoryPage() {
     [filtered, currentPage],
   );
 
-  // KPI stats — computed from the full history, not the filtered view.
+  // KPI stats — computed from the full selected window, not the status/search view.
   const stats = useMemo(() => {
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
@@ -272,14 +244,13 @@ export default function CommandHistoryPage() {
   }, [allCommands]);
 
   // Daily activity — success/failed counts per calendar day within the range.
-  const timeZone = useTimezone('vehicle');
   const dailyActivity = useMemo(() => {
-    if (rangeFiltered.length === 0) return [];
+    if (allCommands.length === 0) return [];
     const buckets = new Map<
       string,
       { day: string; label: string; success: number; failed: number }
     >();
-    for (const c of rangeFiltered) {
+    for (const c of allCommands) {
       // Bucket by the vehicle's calendar day: UTC slicing misattributed
       // near-midnight commands for every non-UTC user.
       const day = localDayKey(c.created_at, timeZone);
@@ -290,12 +261,12 @@ export default function CommandHistoryPage() {
       buckets.set(day, bucket);
     }
     return Array.from(buckets.values()).sort((a, b) => a.day.localeCompare(b.day));
-  }, [rangeFiltered, timeZone]);
+  }, [allCommands, timeZone]);
 
   // Top commands — most-used commands in the range, for the breakdown rail.
   const topCommands = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const c of rangeFiltered) {
+    for (const c of allCommands) {
       counts[c.command] = (counts[c.command] ?? 0) + 1;
     }
     return Object.entries(counts)
@@ -306,17 +277,17 @@ export default function CommandHistoryPage() {
         count,
         color: CHART_COLORS[i % CHART_COLORS.length],
       }));
-  }, [rangeFiltered]);
+  }, [allCommands]);
   const topCommandsMax = topCommands.length > 0 ? topCommands[0].count : 0;
 
   // Status breakdown — success / failed / other tallies in the range.
   const statusBreakdown = useMemo(() => {
-    const total = rangeFiltered.length;
-    const success = rangeFiltered.filter((c) => c.status === 'success').length;
-    const failed = rangeFiltered.filter((c) => c.status === 'failed').length;
+    const total = allCommands.length;
+    const success = allCommands.filter((c) => c.status === 'success').length;
+    const failed = allCommands.filter((c) => c.status === 'failed').length;
     const other = Math.max(0, total - success - failed);
     return { total, success, failed, other };
-  }, [rangeFiltered]);
+  }, [allCommands]);
 
   // Timeline data
   const timelineItems = useMemo(
@@ -360,23 +331,6 @@ export default function CommandHistoryPage() {
       query={commandsQuery}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          {vehicles.length > 0 && (
-            <ControlSelect
-              options={vehicles.map((v) => ({
-                value: String(v.id),
-                label: v.display_name || t('common.vehicleFallback', 'Vehicle {{id}}', { id: v.id }),
-              }))}
-              value={activeVehicleId ?? ''}
-              onChange={handleVehicleChange}
-              aria-label={t('commandHistory.selectVehicle', 'Select vehicle')}
-            />
-          )}
-          <RangePicker
-            value={rangeValue}
-            onChange={(r) => setRange(r)}
-            align="end"
-            triggerTestId="command-history-range"
-          />
           <Link
             to="/commands"
             className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"

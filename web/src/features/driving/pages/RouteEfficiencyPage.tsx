@@ -4,7 +4,7 @@ import { Route, Repeat, Gauge, Activity, TrendingUp, Award, Navigation } from 'l
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Pagination, PanelTitle, SectionTitle } from '@/components/ui';
-import { VehicleSelect, RangePicker } from '@/components/forms';
+
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -34,7 +34,7 @@ export default function RouteEfficiencyPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { start: startDate, end: endDate, setRangeWithUrlUpdates } = useRangeState({
+  const { start: startDate, end: endDate } = useRangeState({
     persistKey: 'route-efficiency.range',
   });
   const [page, setPage] = useUrlNumber('page', 1);
@@ -106,17 +106,6 @@ export default function RouteEfficiencyPage() {
       title={t('routeEfficiency.title', 'Route Efficiency')}
       subtitle={t('routeEfficiency.subtitle', 'Compare efficiency across your most-driven routes')}
       query={routeQuery}
-      actions={
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={(range) => setRangeWithUrlUpdates(range, { page: null })}
-            align="end"
-            triggerTestId="route-efficiency-range-picker"
-          />
-        </div>
-      }
     >
       {/* 1 — KPI band */}
       <FadeIn>

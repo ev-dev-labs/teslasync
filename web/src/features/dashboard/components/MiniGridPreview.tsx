@@ -11,7 +11,7 @@ interface MiniGridPreviewProps {
   className?: string;
 }
 
-/** Rows assumed when a layout has no measurable height (keeps the aspect-ratio sane). */
+/** Rows assumed when a layout has no measurable height. */
 const FALLBACK_ROWS = 2;
 
 /** Coerce a possibly-malformed numeric coordinate into a finite value. */
@@ -33,7 +33,7 @@ export function MiniGridPreview({ dashboard, className }: MiniGridPreviewProps) 
   const { t } = useTranslation('dashboard');
   const cols = GRID_COLS.lg; // 4
 
-  const { tiles, safeRows } = useMemo(() => {
+  const { tiles } = useMemo(() => {
     const layout = dashboard.layouts?.lg ?? [];
     const widgets = dashboard.widgets ?? [];
 
@@ -61,7 +61,7 @@ export function MiniGridPreview({ dashboard, className }: MiniGridPreviewProps) 
       };
     });
 
-    return { tiles: computed, safeRows: rows };
+    return { tiles: computed };
   }, [dashboard.layouts, dashboard.widgets, cols]);
 
   const label = t('preview.aria', 'Layout preview, {{count}} widgets', {
@@ -74,10 +74,9 @@ export function MiniGridPreview({ dashboard, className }: MiniGridPreviewProps) 
       aria-label={label}
       data-testid="mini-grid-preview"
       className={cn(
-        'relative w-full bg-white/[0.02] rounded-lg border border-white/[0.06] overflow-hidden',
+        'relative h-36 w-full overflow-hidden rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)]',
         className,
       )}
-      style={{ aspectRatio: `${cols} / ${safeRows}` }}
     >
       {tiles.length === 0 ? (
         <div
@@ -96,7 +95,7 @@ export function MiniGridPreview({ dashboard, className }: MiniGridPreviewProps) 
               key={tile.key}
               data-testid="mini-grid-tile"
               aria-hidden="true"
-              className="absolute rounded-sm bg-white/[0.06] border border-white/[0.08]
+              className="absolute rounded-sm bg-[var(--surface-3)] border border-[var(--border-strong)]
                 flex items-center justify-center transition-colors p-0.5"
               style={{
                 left: `${tile.left}%`,
@@ -105,7 +104,7 @@ export function MiniGridPreview({ dashboard, className }: MiniGridPreviewProps) 
                 height: `${tile.height}%`,
               }}
             >
-              {Icon && <Icon className="h-3 w-3 text-[var(--text-muted)]" />}
+              {Icon && <Icon className="h-3 w-3 text-[var(--text-secondary)]" />}
             </div>
           );
         })

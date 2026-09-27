@@ -12,7 +12,7 @@ import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, Badge, DataTable, PanelTitle, Text, Caption, type Column,
 } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { MetricCard, TimeStamp } from '@/components/data-display';
 import { EmptyState, AlertBanner, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -41,7 +41,7 @@ interface SourceSlice {
 
 /* ── Constants ─────────────────────────────────────────────────── */
 
-const PRESET_IDS = ['today', '7d', '30d', '90d', 'mtd', 'ytd', 'all'];
+
 const VOLUME_FALLBACK_MAX = 11;
 
 /* ── Helpers ───────────────────────────────────────────────────── */
@@ -96,7 +96,7 @@ export default function MediaPlayerPage() {
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const hasVehicle = activeId !== '';
 
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'media-player.range',
     defaultPresetId: '7d',
   });
@@ -324,18 +324,6 @@ export default function MediaPlayerPage() {
       title={t('media.title', 'Media Player')}
       subtitle={t('media.subtitle', 'Now playing, volume, and listening history')}
       query={[mediaQuery, historyQuery]}
-      actions={
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={(r) => setRange(r)}
-            presetIds={PRESET_IDS}
-            align="end"
-            triggerTestId="media-player-range"
-          />
-        </div>
-      }
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>

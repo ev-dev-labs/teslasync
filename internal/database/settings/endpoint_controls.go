@@ -11,35 +11,41 @@ import (
 )
 
 // Endpoint controls are installation-wide flags, not per-vehicle polling intervals.
-// Keep the persisted JSONB shape restricted to the 20 actual Fleet API switches;
+// Keep the persisted JSONB shape restricted to Fleet API switches;
 // LegacyPollingConfig's MongoDB capture fields are response-only compatibility.
 const endpointControlsKey = "fleet_api_endpoint_controls"
 
 type endpointControls struct {
-	VehicleDiscovery         bool `json:"vehicle_discovery"`
-	ChargeState              bool `json:"charge_state"`
-	ClimateState             bool `json:"climate_state"`
-	DriveState               bool `json:"drive_state"`
-	LocationData             bool `json:"location_data"`
-	VehicleState             bool `json:"vehicle_state"`
-	VehicleConfig            bool `json:"vehicle_config"`
-	OnDemandVehicleDiscovery bool `json:"on_demand_vehicle_discovery"`
-	OnDemandChargeState      bool `json:"on_demand_charge_state"`
-	OnDemandClimateState     bool `json:"on_demand_climate_state"`
-	OnDemandDriveState       bool `json:"on_demand_drive_state"`
-	OnDemandLocationData     bool `json:"on_demand_location_data"`
-	OnDemandVehicleState     bool `json:"on_demand_vehicle_state"`
-	OnDemandVehicleConfig    bool `json:"on_demand_vehicle_config"`
-	NearbyChargingSites      bool `json:"nearby_charging_sites"`
-	ReleaseNotes             bool `json:"release_notes"`
-	RecentAlerts             bool `json:"recent_alerts"`
-	ServiceData              bool `json:"service_data"`
-	WakeUp                   bool `json:"wake_up"`
-	Commands                 bool `json:"commands"`
+	AutoPollingEnabled       bool            `json:"auto_polling_enabled"`
+	FleetEndpoints           map[string]bool `json:"fleet_endpoints"`
+	AutoEndpoints            map[string]bool `json:"auto_endpoints"`
+	VehicleDiscovery         bool            `json:"vehicle_discovery"`
+	ChargeState              bool            `json:"charge_state"`
+	ClimateState             bool            `json:"climate_state"`
+	DriveState               bool            `json:"drive_state"`
+	LocationData             bool            `json:"location_data"`
+	VehicleState             bool            `json:"vehicle_state"`
+	VehicleConfig            bool            `json:"vehicle_config"`
+	OnDemandVehicleDiscovery bool            `json:"on_demand_vehicle_discovery"`
+	OnDemandChargeState      bool            `json:"on_demand_charge_state"`
+	OnDemandClimateState     bool            `json:"on_demand_climate_state"`
+	OnDemandDriveState       bool            `json:"on_demand_drive_state"`
+	OnDemandLocationData     bool            `json:"on_demand_location_data"`
+	OnDemandVehicleState     bool            `json:"on_demand_vehicle_state"`
+	OnDemandVehicleConfig    bool            `json:"on_demand_vehicle_config"`
+	NearbyChargingSites      bool            `json:"nearby_charging_sites"`
+	ReleaseNotes             bool            `json:"release_notes"`
+	RecentAlerts             bool            `json:"recent_alerts"`
+	ServiceData              bool            `json:"service_data"`
+	WakeUp                   bool            `json:"wake_up"`
+	Commands                 bool            `json:"commands"`
 }
 
 func endpointControlsFrom(pc settings.LegacyPollingConfig) endpointControls {
 	return endpointControls{
+		AutoPollingEnabled:       pc.AutoPollingEnabled,
+		FleetEndpoints:           pc.FleetEndpoints,
+		AutoEndpoints:            pc.AutoEndpoints,
 		VehicleDiscovery:         pc.VehicleDiscovery,
 		ChargeState:              pc.ChargeState,
 		ClimateState:             pc.ClimateState,

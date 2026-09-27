@@ -1,4 +1,4 @@
-name: proto-gen-check
+name: Proto Generation Check
 
 on:
   pull_request:

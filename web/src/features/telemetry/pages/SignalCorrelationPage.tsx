@@ -4,7 +4,7 @@ import { ArrowLeftRight, GitCompareArrows, Timer, Waypoints } from 'lucide-react
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, Toggle, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -156,7 +156,6 @@ export default function SignalCorrelationPage() {
       )}
       query={[signalsQuery, historyA, historyB]}
       dataSources={dataSources}
-      actions={<VehicleSelect />}
     >
       {/* 1 — Signal pickers */}
       <FadeIn>

@@ -38,6 +38,7 @@ import {
   PowerProfileChart,
   TirePressureSection,
   WhyEndedPanel,
+  RoadAnomalyPanel,
 } from '../components/drive-detail';
 
 export default function DriveDetailPage() {
@@ -199,6 +200,12 @@ export default function DriveDetailPage() {
           <SectionErrorBoundary name="drive-detail:timeline" fallbackTitle={t('driveDetail.section.timelineFailed', 'Drive timeline failed to load')}>
             <DriveTimeline drive={drive} />
           </SectionErrorBoundary>
+
+          {id && (
+            <SectionErrorBoundary name="drive-detail:road-anomalies" fallbackTitle={t('driveDetail.road.failed', 'Road-surface analysis failed to render')}>
+              <RoadAnomalyPanel driveId={id} />
+            </SectionErrorBoundary>
+          )}
 
           <SectionErrorBoundary name="drive-detail:gear-theater" fallbackTitle={t('driveDetail.section.theaterFailed', 'Gear theater failed to load')}>
             <GearTheaterPanel driveId={id} />

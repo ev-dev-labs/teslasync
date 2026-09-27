@@ -31,7 +31,7 @@ import { NotificationReportPanel } from '../components/NotificationReportPanel';
 export default function InboxPage() {
   const { t } = useTranslation();
   usePageTitle(t('notifications.inbox.title', 'Inbox'));
-  const { start: from, end: to } = useRangeState({ persistKey: 'notifications.inbox.range' });
+  const { startInstant, endInstantExclusive, timezone } = useRangeState();
 
   const { data: vehicles = [] } = useVehicles();
   const { data: rules = [] } = useAlertRules();
@@ -64,7 +64,7 @@ export default function InboxPage() {
       }
     >
       <FadeIn>
-        <NotificationReportPanel from={from} to={to} />
+        <NotificationReportPanel fromInstant={startInstant} toExclusive={endInstantExclusive} timezone={timezone} />
       </FadeIn>
       <FadeIn>
         <InboxSummary query={summaryQuery} />

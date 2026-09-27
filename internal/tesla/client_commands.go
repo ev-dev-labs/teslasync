@@ -293,6 +293,9 @@ func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader
 // doProxyRequestWithResponse sends a request through the Vehicle Command Proxy
 // and returns the raw response body and status code (for endpoints like fleet_telemetry_config).
 func (c *Client) doProxyRequestWithResponse(ctx context.Context, method, path string, body io.Reader) (respBody []byte, statusCode int, err error) {
+	if err := c.checkEndpointControls(ctx, method, path); err != nil {
+		return nil, http.StatusForbidden, err
+	}
 	ctx, span := startSpan(ctx, "tesla.proxy "+method+" "+path,
 		attribute.String("http.request.method", method),
 		attribute.String("tesla.proxy.path", path),

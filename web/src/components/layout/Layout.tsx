@@ -34,18 +34,15 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
-import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
+import { BottomTabBar } from './BottomTabBar'
 import {
-  buildCompactNavTree,
   findMostSpecificNavEntry,
   isExclusiveActivePath,
   prioritizeCanonicalNavSections,
-  prioritizeCompactNavTree,
 } from './sidebar/compactNav'
-import { collectionGroups, collectionPrimaryPath, collectionSidebarSections, soleCollection, unpinnedSidebarItems } from './sidebar/collections'
-import { SIDEBAR_ROUTE_ICONS, SIDEBAR_SECTION_ICONS } from './sidebar/sidebarIcons'
-import { labelSectionPrimaries } from './sectionGroups'
-import { useSidebarStyle } from '@/hooks/useSidebarStyle'
+import { collectionGroups, collectionPrimaryPath, collectionSidebarSections } from './sidebar/collections'
+import { suggestSidebarPages } from './sidebar/sidebarSuggest'
+import { SIDEBAR_ROUTE_ICONS } from './sidebar/sidebarIcons'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import { RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
@@ -60,15 +57,14 @@ import {
 import { VehiclePicker } from './VehiclePicker'
 import { CommandPaletteHost } from './CommandPaletteHost'
 import { NotificationBellPopover } from './NotificationBellPopover'
-import { NavSectionHeader } from './sidebar/NavSectionHeader'
-import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH, SIDEBAR_WIDTH_STORAGE_KEY } from './sidebar/sidebarWidth'
 import { request } from '@/api/client'
-import { useAuthMode, useIsForwardAuth } from '@/api/hooks/useAuthMode'
+import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useAlerts } from '@/api/hooks/useNotifications'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
-import { useVehicles } from '@/api/hooks/useVehicles'
-import type { Alert } from '@/api/types'
+import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles'
+import { deriveVehicleStatus, type Alert } from '@/api/types'
+import { useSelectedVehicleStore } from '@/store/selectedVehicle'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
@@ -84,9 +80,8 @@ import { usePresentationMode } from '@/hooks/usePresentationMode';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope';
 import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
-import { resolveNavCapabilitiesFromAuthMode } from '@/lib/navCapabilities';
+
 import {
-  MAX_PINNED_NAV_ITEMS,
   MAX_RECENT_NAV_ITEMS,
   getPinnedNavPaths,
   getRecentNavPaths,
@@ -127,16 +122,6 @@ const LazyGotoIndicator = lazy(async () => {
   return { default: module.GotoIndicator }
 })
 
-const LazyCollectionTreeRow = lazy(async () => {
-  const module = await import('./sidebar/CollectionTreeRow')
-  return { default: module.CollectionTreeRow }
-})
-
-const SidebarResizeHandle = lazy(async () => {
-  const module = await import('./sidebar/SidebarResizeHandle')
-  return { default: module.SidebarResizeHandle }
-})
-
 const WorkspaceHeader = lazy(async () => {
   const module = await import('./WorkspaceHeader')
   return { default: module.WorkspaceHeader }
@@ -152,14 +137,9 @@ const TourOverlay = lazy(async () => {
   return { default: module.TourOverlay }
 })
 
-const NotionSidebar = lazy(async () => {
-  const module = await import('./sidebar/NotionSidebar')
-  return { default: module.NotionSidebar }
-})
-
-const LinearSidebar = lazy(async () => {
-  const module = await import('./sidebar/LinearSidebar')
-  return { default: module.LinearSidebar }
+const CommandDeck = lazy(async () => {
+  const module = await import('./sidebar/CommandDeck')
+  return { default: module.CommandDeck }
 })
 
 const LazyKeyboardShortcutsModal = lazy(async () => {
@@ -182,33 +162,7 @@ const ThemeQuickSwitcherPopover = lazy(async () => {
 
 // Pinned / recent nav persistence lives in `lib/navPins.ts` so the command
 // palette can surface the same Quick-access list the sidebar renders.
-const EXPANDED_NAV_STORAGE_KEY = 'teslasync-expanded-nav-sections'
 
-const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; ring: string; dot: string; icon: typeof Icons.home; gradient: string }> = {
-  Home:           { accent: 'text-sky-700 dark:text-sky-300',         surface: 'bg-sky-400/10',     ring: 'ring-sky-400/20',     dot: 'bg-sky-400',     icon: Icons.home,            gradient: 'from-sky-500/20 via-sky-400/5 to-transparent' },
-  Vehicles:       { accent: 'text-cyan-700 dark:text-cyan-300',       surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-cyan-400',    icon: Icons.vehicle,         gradient: 'from-cyan-500/20 via-cyan-400/5 to-transparent' },
-  'Tesla Physics': { accent: 'text-cyan-700 dark:text-cyan-300',     surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-cyan-400',    icon: Icons.sparkles,        gradient: 'from-cyan-500/20 via-cyan-400/5 to-transparent' },
-  Driving:        { accent: 'text-violet-700 dark:text-violet-300',   surface: 'bg-violet-400/10',  ring: 'ring-violet-400/20',  dot: 'bg-violet-400',  icon: Icons.drive,           gradient: 'from-violet-500/25 via-violet-400/8 to-transparent' },
-  Charging:       { accent: 'text-emerald-700 dark:text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400', icon: Icons.batteryCharging, gradient: 'from-emerald-500/20 via-emerald-400/5 to-transparent' },
-  Battery:        { accent: 'text-amber-700 dark:text-amber-300',     surface: 'bg-amber-400/10',   ring: 'ring-amber-400/20',   dot: 'bg-amber-400',   icon: Icons.battery,         gradient: 'from-amber-500/20 via-amber-400/5 to-transparent' },
-  Energy:         { accent: 'text-lime-700 dark:text-lime-300',       surface: 'bg-lime-400/10',    ring: 'ring-lime-400/20',    dot: 'bg-lime-400',    icon: Icons.bolt,            gradient: 'from-lime-500/20 via-lime-400/5 to-transparent' },
-  Service:        { accent: 'text-rose-700 dark:text-rose-300',       surface: 'bg-rose-400/10',    ring: 'ring-rose-400/20',    dot: 'bg-rose-400',    icon: Icons.maintenance,     gradient: 'from-rose-500/20 via-rose-400/5 to-transparent' },
-  Reports:        { accent: 'text-green-700 dark:text-green-300',     surface: 'bg-green-400/10',   ring: 'ring-green-400/20',   dot: 'bg-green-400',   icon: Icons.analytics,       gradient: 'from-green-500/20 via-green-400/5 to-transparent' },
-  Cabin:          { accent: 'text-sky-700 dark:text-sky-300',         surface: 'bg-sky-400/10',     ring: 'ring-sky-400/20',     dot: 'bg-sky-400',     icon: Icons.cabin,           gradient: 'from-sky-500/20 via-sky-400/5 to-transparent' },
-  Commands:       { accent: 'text-fuchsia-700 dark:text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400', icon: Icons.gamepad,         gradient: 'from-fuchsia-500/20 via-fuchsia-400/5 to-transparent' },
-  Controls:       { accent: 'text-fuchsia-700 dark:text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400', icon: Icons.gamepad,         gradient: 'from-fuchsia-500/20 via-fuchsia-400/5 to-transparent' },
-  Automation:     { accent: 'text-purple-700 dark:text-purple-300',   surface: 'bg-purple-400/10',  ring: 'ring-purple-400/20',  dot: 'bg-purple-400',  icon: Icons.workflow,        gradient: 'from-purple-500/25 via-purple-400/8 to-transparent' },
-  Notifications:  { accent: 'text-orange-700 dark:text-orange-300',   surface: 'bg-orange-400/10',  ring: 'ring-orange-400/20',  dot: 'bg-orange-400',  icon: Icons.notifications,   gradient: 'from-orange-500/20 via-orange-400/5 to-transparent' },
-  Security:       { accent: 'text-yellow-700 dark:text-yellow-300',   surface: 'bg-yellow-400/10',  ring: 'ring-yellow-400/20',  dot: 'bg-yellow-400',  icon: Icons.security,        gradient: 'from-yellow-500/20 via-yellow-400/5 to-transparent' },
-  Account:        { accent: 'text-blue-700 dark:text-blue-300',       surface: 'bg-blue-400/10',    ring: 'ring-blue-400/20',    dot: 'bg-blue-400',    icon: Icons.user,            gradient: 'from-blue-500/20 via-blue-400/5 to-transparent' },
-  Integrations:   { accent: 'text-pink-700 dark:text-pink-300',       surface: 'bg-pink-400/10',    ring: 'ring-pink-400/20',    dot: 'bg-pink-400',    icon: Icons.link,            gradient: 'from-pink-500/20 via-pink-400/5 to-transparent' },
-  Settings:       { accent: 'text-slate-700 dark:text-slate-300',     surface: 'bg-slate-400/10',   ring: 'ring-slate-400/20',   dot: 'bg-slate-400',   icon: Icons.settings,        gradient: 'from-slate-500/20 via-slate-400/5 to-transparent' },
-  Data:           { accent: 'text-teal-700 dark:text-teal-300',       surface: 'bg-teal-400/10',    ring: 'ring-teal-400/20',    dot: 'bg-teal-400',    icon: Icons.database,        gradient: 'from-teal-500/20 via-teal-400/5 to-transparent' },
-  Diagnostics:    { accent: 'text-cyan-700 dark:text-neon-cyan',      surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',     dot: 'bg-neon-cyan',   icon: Icons.stethoscope,     gradient: 'from-cyan-500/25 via-cyan-400/8 to-transparent' },
-  'Advanced Intelligence': { accent: 'text-indigo-700 dark:text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400', icon: Icons.network, gradient: 'from-indigo-500/25 via-indigo-400/8 to-transparent' },
-  'Ownership Intelligence': { accent: 'text-teal-700 dark:text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400', icon: Icons.wallet, gradient: 'from-teal-500/25 via-teal-400/8 to-transparent' },
-  About:          { accent: 'text-slate-600 dark:text-[var(--text-secondary)]', surface: 'bg-[var(--surface-2)]', ring: 'ring-white/10', dot: 'bg-[var(--surface-2)]', icon: Icons.info, gradient: 'from-white/[0.06] via-white/[0.02] to-transparent' },
-}
 
 // NOTE: The legacy `SSEStatusDot` component lived here and rendered a bare
 // colored dot tied to the SSE wire state. It was replaced by the shared
@@ -216,27 +170,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
 // dot, page-level badges, and stale-data banner all derive from a single
 // `useLiveConnection` source of truth.
 
-/**
- * Feature switch for the sidebar "Recently Used" surface — disabled per
- * UX review on 2026-05-26 (duplicated items across Pinned + Recently
- * Used + canonical section added noise). Code is kept in place so we
- * can re-enable it by flipping this flag back to `true` without a diff.
- * Recent-page tracking itself still runs (it's wired into the command
- * palette + the global status bar) — only the sidebar render is muted.
- */
-const SHOW_RECENTLY_USED_NAV = false;
 
-/**
- * Sidebar style is now a user preference (Settings → Appearance →
- * Sidebar style). Backed by localStorage via `useSidebarStyle`, with
- * cross-tab sync via the `storage` event. Default is 'linear'.
- *
- * The legacy `<nav>` block below is preserved verbatim so users can
- * choose 'legacy' at any time and get a byte-identical sidebar.
- */
-// Trial flag retained for cmd+line debugging — uncomment to force a
-// specific style regardless of the user's saved preference.
-// const FORCE_SIDEBAR_STYLE: SidebarStyle | null = null;
 
 export const navSections = [
   {
@@ -268,14 +202,6 @@ export const navSections = [
       { to: '/physics-cockpit', icon: Icons.cpu, label: 'Physics Cockpit', labelKey: 'nav.items.physics-cockpit', color: 'text-cyan-400' },
       { to: '/fleet-operations', icon: Icons.users, label: 'Fleet Operations', labelKey: 'nav.items.fleet-operations', color: 'text-violet-400' },
       { to: '/resale-vault', icon: Icons.securityCheck, label: 'Warranty & Resale Vault', labelKey: 'nav.items.resale-vault', color: 'text-emerald-400' },
-    ],
-  },
-  {
-    title: 'Tesla Physics',
-    titleKey: 'nav.groups.tesla_physics',
-    items: [
-      { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics Overview', labelKey: 'nav.items.tesla-physics', color: 'text-cyan-400' },
-      { to: '/science', icon: Icons.analytics, label: 'Science Lab', labelKey: 'nav.items.science', color: 'text-cyan-400' },
     ],
   },
   {
@@ -364,6 +290,18 @@ export const navSections = [
     ],
   },
   {
+    title: 'Cabin',
+    titleKey: 'nav.groups.cabin',
+    items: [
+      { to: '/climate-control', icon: navRouteIcons['/climate-control'], label: 'Climate Control', labelKey: 'nav.items.climate-control', color: 'text-sky-400' },
+      { to: '/cabin-thermal', icon: Icons.climateHot, label: 'Cabin Thermal Model', labelKey: 'nav.items.cabin-thermal', color: 'text-orange-400' },
+      { to: '/hvac-cycling', icon: Icons.recycle, label: 'HVAC Cycling', labelKey: 'nav.items.hvac-cycling', color: 'text-cyan-400' },
+      { to: '/comfort-consistency', icon: Icons.speedCircle, label: 'Comfort Consistency', labelKey: 'nav.items.comfort-consistency', color: 'text-violet-400' },
+      { to: '/preconditioning-effectiveness', icon: Icons.calendarClock, label: 'Preconditioning Effectiveness', labelKey: 'nav.items.preconditioning-effectiveness', color: 'text-emerald-400' },
+      { to: '/media-player', icon: Icons.headphones, label: 'Media Player', labelKey: 'nav.items.media-player', color: 'text-pink-400' },
+    ],
+  },
+  {
     title: 'Service',
     titleKey: 'nav.groups.service',
     items: [
@@ -375,18 +313,6 @@ export const navSections = [
       { to: '/maintenance', icon: Icons.maintenance, label: 'Maintenance', labelKey: 'nav.items.maintenance', color: 'text-amber-400' },
       { to: '/service-intelligence', icon: Icons.stethoscope, label: 'Recall & Service Intelligence', labelKey: 'nav.items.service-intelligence', color: 'text-rose-400' },
       { to: '/diagnostics/service-evidence', icon: Icons.fileJson, label: 'Service Evidence Pack', labelKey: 'nav.items.diagnostics_service-evidence', color: 'text-cyan-400' },
-    ],
-  },
-  {
-    title: 'Cabin',
-    titleKey: 'nav.groups.cabin',
-    items: [
-      { to: '/climate-control', icon: navRouteIcons['/climate-control'], label: 'Climate Control', labelKey: 'nav.items.climate-control', color: 'text-sky-400' },
-      { to: '/cabin-thermal', icon: Icons.climateHot, label: 'Cabin Thermal Model', labelKey: 'nav.items.cabin-thermal', color: 'text-orange-400' },
-      { to: '/hvac-cycling', icon: Icons.recycle, label: 'HVAC Cycling', labelKey: 'nav.items.hvac-cycling', color: 'text-cyan-400' },
-      { to: '/comfort-consistency', icon: Icons.speedCircle, label: 'Comfort Consistency', labelKey: 'nav.items.comfort-consistency', color: 'text-violet-400' },
-      { to: '/preconditioning-effectiveness', icon: Icons.calendarClock, label: 'Preconditioning Effectiveness', labelKey: 'nav.items.preconditioning-effectiveness', color: 'text-emerald-400' },
-      { to: '/media-player', icon: Icons.headphones, label: 'Media Player', labelKey: 'nav.items.media-player', color: 'text-pink-400' },
     ],
   },
   {
@@ -469,6 +395,14 @@ export const navSections = [
       { to: '/ownership/jurisdiction-compliance', icon: Icons.globe, label: 'Jurisdiction Compliance', labelKey: 'nav.items.ownership_jurisdiction-compliance', color: 'text-indigo-400' },
       { to: '/ownership/consumables-lifecycle', icon: Icons.package, label: 'Consumables Lifecycle', labelKey: 'nav.items.ownership_consumables-lifecycle', color: 'text-rose-400' },
       { to: '/ownership/subscription-roi', icon: Icons.wallet, label: 'Subscription ROI', labelKey: 'nav.items.ownership_subscription-roi', color: 'text-emerald-400' },
+    ],
+  },
+  {
+    title: 'Tesla Physics',
+    titleKey: 'nav.groups.tesla_physics',
+    items: [
+      { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics Overview', labelKey: 'nav.items.tesla-physics', color: 'text-cyan-400' },
+      { to: '/science', icon: Icons.analytics, label: 'Science Lab', labelKey: 'nav.items.science', color: 'text-cyan-400' },
     ],
   },
   {
@@ -641,7 +575,7 @@ export function reconcileNavPaths(paths: readonly string[]): string[] {
  * A small palette icon button that opens a popover containing a compact
  * `<ThemePicker>`. The popover hides the custom-color builder to keep it
  * small; users who want to build a custom theme follow the "Customize…"
- * link to /settings/appearance.
+ * link to /settings#appearance.
  *
  * Listens for `open-theme-popover` window events so other surfaces (the
  * command palette, the dashboard first-run banner) can open the popover
@@ -763,38 +697,39 @@ function ThemeQuickSwitcher({
 export default function Layout() {
   const presentation = usePresentationMode()
   const { preferences: productPreferences } = useProductPreferences()
-  // Sidebar style preference — localStorage-backed, cross-tab synced.
-  // Defaults to 'linear'; user can change via Settings → Appearance.
-  const sidebarStyle = useSidebarStyle()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
+  // Command Deck rail collapse. Host-owned (not deck-owned) because the
+  // aside width derives from it. Persisted per browser.
+  const [deckRailCollapsed, setDeckRailCollapsed] = useState(() => {
     try {
-      const saved = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY)
-      if (saved !== null) {
-        const width = Number(saved)
-        if (Number.isFinite(width)) return clampSidebarWidth(width)
-      }
+      return window.localStorage.getItem('teslasync-deck-rail-collapsed') === '1'
     } catch {
-      // Storage may be disabled; the sidebar remains resizable for this session.
+      return false
     }
-    return DEFAULT_SIDEBAR_WIDTH
   })
   useEffect(() => {
     try {
-      window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth))
+      window.localStorage.setItem('teslasync-deck-rail-collapsed', deckRailCollapsed ? '1' : '0')
     } catch {
-      // Storage may be disabled; keep the current session's width.
+      // Storage may be disabled; the toggle still works for the session.
     }
-  }, [sidebarWidth])
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
+  }, [deckRailCollapsed])
+  // Open state is session-only; the secondary icon-width preference persists.
+  const [deckPanelOpen, setDeckPanelOpen] = useState(false)
+  const [deckPanelCollapsed, setDeckPanelCollapsed] = useState(() => {
     try {
-      const stored = window.localStorage.getItem(EXPANDED_NAV_STORAGE_KEY)
-      const parsed = stored ? JSON.parse(stored) as string[] : []
-      return new Set(parsed.length > 0 ? parsed : ['Home'])
+      return window.localStorage.getItem('teslasync-deck-panel-collapsed') === '1'
     } catch {
-      return new Set(['Home'])
+      return false
     }
   })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('teslasync-deck-panel-collapsed', deckPanelCollapsed ? '1' : '0')
+    } catch {
+      // The panel remains usable when storage is unavailable.
+    }
+  }, [deckPanelCollapsed])
   const [recentNavPaths, setRecentNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getRecentNavPaths()),
   )
@@ -1016,6 +951,24 @@ export default function Layout() {
   const { data: vehicles } = useVehicles()
   const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const vehicleCount = vehicles?.length ?? 0
+  // Focused vehicle for sidebar suggestions: the persisted selection when
+  // it still exists, else the first vehicle. Router-free on purpose —
+  // suggestions are hints and must never trigger navigation. The live
+  // state query shares its cache key with the status bar, so it rarely
+  // costs an extra request.
+  const { vehicleId: storedVehicleId } = useSelectedVehicleStore()
+  const suggestionVehicleId = useMemo(() => {
+    if (storedVehicleId != null && vehicles?.some(vehicle => vehicle.id === storedVehicleId)) {
+      return storedVehicleId
+    }
+    return vehicles?.[0]?.id ?? 0
+  }, [storedVehicleId, vehicles])
+  const suggestionVehicle = vehicles?.find(vehicle => vehicle.id === suggestionVehicleId) ?? null
+  const { data: suggestionVehicleState } = useVehicleState(suggestionVehicleId)
+  const criticalAlertCount = useMemo(
+    () => alerts?.filter(alert => !alert.is_read && (alert.severity === 'critical' || alert.severity === 'warning')).length ?? 0,
+    [alerts],
+  )
 
   // HELP-01: there is no tour auto-start effect here any more.
   //
@@ -1042,9 +995,6 @@ export default function Layout() {
   // running behind a ForwardAuth identity provider — the underlying endpoints
   // 503 in open mode and there is nothing useful to show.
   const isForwardAuth = useIsForwardAuth()
-  // Raw auth-mode contract — the only permission infrastructure the SPA has.
-  // Feeds capability-aware navigation grouping (see `navCapabilities` below).
-  const { data: authMode } = useAuthMode()
 
   const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
   const visibleNavSections = useMemo(
@@ -1069,16 +1019,8 @@ export default function Layout() {
   const visibleCollections = useMemo(() => collectionGroups(visibleNavSections), [visibleNavSections])
   const groupedPathname = collectionPrimaryPath(visibleCollections, location.pathname)
   const activeSectionTitle = findNavItemByPath(groupedPathname)?.section.title
-  const activeSectionStyle = activeSectionTitle ? SECTION_ICON_STYLES[activeSectionTitle] : undefined
   const groupedSidebarSections = useMemo(
     () => collectionSidebarSections(visibleNavSections, visibleCollections),
-    [visibleNavSections, visibleCollections],
-  )
-  const compactGroupedSections = useMemo(
-    () => visibleNavSections.map(section => ({
-      ...section,
-      items: labelSectionPrimaries(section.items, visibleCollections),
-    })),
     [visibleNavSections, visibleCollections],
   )
   const pinnedNavItems = useMemo(() =>
@@ -1103,52 +1045,8 @@ export default function Layout() {
     [recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
   )
 
-  // Progressive disclosure for the DEFAULT (Linear) sidebar only.
-  //
-  // `visibleNavSections` remains the complete catalog for `/explore`, search,
-  // and pinning. Report and diagnostic links are grouped only in the rendered sidebars. The
-  // Linear style instead renders a curated two-tier tree: seven everyday
-  // primary groups (Overview · Vehicles · Drives · Charging · Energy ·
-  // Insights · Operations) followed by intentional advanced groups. Nothing
-  // is deleted — long-tail routes stay reachable through the always-visible
-  // command-palette trigger and `/explore` (pinned into Overview), and the
-  // exact active item is injected when the current route is outside the
-  // curated set so location context is never lost. Capability resolution
-  // comes from the real permission contract (`/system/auth-mode`) and only
-  // demotes advanced groups; it never removes them.
-  // See `sidebar/compactNav.ts` and `lib/navCapabilities.ts`.
-  const navCapabilities = useMemo(
-    () => resolveNavCapabilitiesFromAuthMode(authMode, productPreferences.persona),
-    [authMode, productPreferences.persona],
-  )
-  const compactNav = useMemo(
-    () =>
-      prioritizeCompactNavTree(
-        buildCompactNavTree(compactGroupedSections, groupedPathname, {
-          capabilities: navCapabilities,
-          primaryPath: path => collectionPrimaryPath(visibleCollections, path),
-        }),
-        productPreferences.persona,
-      ),
-    [
-      compactGroupedSections,
-      groupedPathname,
-      navCapabilities,
-      productPreferences.persona,
-      visibleCollections,
-    ],
-  )
   const pinnedNavSet = useMemo(() => new Set(pinnedNavPaths), [pinnedNavPaths])
 
-  useEffect(() => {
-    if (!activeSectionTitle) return
-    setExpandedSections(prev => {
-      if (prev.has(activeSectionTitle)) return prev
-      const next = new Set(prev)
-      next.add(activeSectionTitle)
-      return next
-    })
-  }, [activeSectionTitle])
 
   // Scroll the active sidebar link into view whenever the route changes.
   // Runs on the next tick so the section-expansion effect above has a
@@ -1185,15 +1083,8 @@ export default function Layout() {
       }
     })
     return () => window.cancelAnimationFrame(id)
-  }, [location.pathname, expandedSections])
+  }, [location.pathname])
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(EXPANDED_NAV_STORAGE_KEY, JSON.stringify([...expandedSections]))
-    } catch {
-      // Ignore storage failures; navigation still works without persisted sections.
-    }
-  }, [expandedSections])
 
   useEffect(() => {
     const activeTo = activeNavEntry?.item.to
@@ -1248,24 +1139,6 @@ export default function Layout() {
     [],
   )
 
-  const toggleSection = useCallback((title: string) => {
-    setExpandedSections(prev => {
-      const next = new Set(prev)
-      if (next.has(title) && title !== activeSectionTitle) {
-        next.delete(title)
-      } else {
-        next.add(title)
-      }
-      return next
-    })
-  }, [activeSectionTitle])
-  const expandedSectionCount = groupedSidebarSections.filter(section => expandedSections.has(section.title)).length
-  const expandAllSections = useCallback(() => {
-    setExpandedSections(new Set(groupedSidebarSections.map(section => section.title)))
-  }, [groupedSidebarSections])
-  const collapseAllSections = useCallback(() => {
-    setExpandedSections(new Set())
-  }, [])
 
   const navLabel = useCallback(
     (item: { label: string; labelKey: string }) => t(item.labelKey, item.label),
@@ -1276,83 +1149,60 @@ export default function Layout() {
       section.titleKey ? t(section.titleKey, section.title) : section.title,
     [t],
   )
-  const activeNavPath = activeNavEntry?.item.to
-  const activeIsPinned = activeNavPath ? pinnedNavPaths.includes(activeNavPath) : false
   const pinNavPath = useCallback((to: string) => {
     setPinnedNavPathsState(prev => {
       if (prev.includes(to)) return prev
-      return [to, ...prev].slice(0, MAX_PINNED_NAV_ITEMS)
+      return [to, ...prev]
     })
     setRecentNavPathsState(prev => prev.filter(path => path !== to))
   }, [])
   const unpinNavPath = useCallback((to: string) => {
     setPinnedNavPathsState(prev => prev.filter(path => path !== to))
   }, [])
+  // Suggested pages for the default sidebar: live context (charging car,
+  // unread critical alerts) first, then pages related to the current
+  // route. Pure derivation — see `sidebar/sidebarSuggest.ts`.
+  const sidebarSuggestions = useMemo(
+    () => suggestSidebarPages(groupedSidebarSections, visibleCollections, location.pathname, {
+      pinnedPaths: pinnedNavSet,
+      recentPaths: new Set(recentNavPaths),
+      signals: {
+        vehicleName: suggestionVehicle?.display_name ?? undefined,
+        vehicleStatus: deriveVehicleStatus(suggestionVehicleState?.state),
+        criticalAlertCount,
+      },
+      resolveLabel: navLabel,
+      formatReason: (kind, vars) => {
+        switch (kind) {
+          case 'charging':
+            return vars.vehicle
+              ? t('nav.suggest.chargingVehicle', { vehicle: vars.vehicle, defaultValue: '{{vehicle}} is charging' })
+              : t('nav.suggest.charging', 'Charging now')
+          case 'driving':
+            return vars.vehicle
+              ? t('nav.suggest.drivingVehicle', { vehicle: vars.vehicle, defaultValue: '{{vehicle}} is on the move' })
+              : t('nav.suggest.driving', 'On the move')
+          case 'alerts':
+            return t('nav.suggest.alerts', { count: vars.count ?? 0, defaultValue: '{{count}} need attention' })
+          case 'related':
+            return t('nav.suggest.related', { page: vars.page ?? '', defaultValue: 'Related to {{page}}' })
+        }
+      },
+    }),
+    [
+      groupedSidebarSections,
+      visibleCollections,
+      location.pathname,
+      pinnedNavSet,
+      recentNavPaths,
+      suggestionVehicle,
+      suggestionVehicleState,
+      criticalAlertCount,
+      navLabel,
+      t,
+    ],
+  )
   const mainRef = useRef<HTMLElement>(null)
-  const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
-    const { to, icon: Icon, ...rest } = item
-    const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined
-    const isActive = isExclusiveActivePath(groupedPathname, to, NAV_CATALOG_PATHS)
-    const isInTabBar = BOTTOM_TAB_PATHS.has(to)
-    return (
-      <PrefetchNavLink
-        key={to}
-        to={to}
-        end={!isActive}
-        onClick={() => setSidebarOpen(false)}
-        aria-label={navLabel(item)}
-        aria-current={isActive ? 'page' : undefined}
-        data-tour={dataTour}
-        className={cn(
-          'group relative flex min-h-9 items-center gap-2.5 rounded-shape-md px-2.5 py-1.5 text-sm font-medium transition-colors duration-fast',
-          isInTabBar && 'opacity-50 lg:opacity-100'
-        )}
-      >
-        {isActive && (
-          <motion.div
-            layoutId={compact ? `nav-active-${activeScope}-${to}` : 'nav-active'}
-            className="absolute inset-0 rounded-shape-md border border-[rgba(var(--theme-primary-rgb),0.2)] bg-[rgba(var(--theme-primary-rgb),0.09)]"
-            transition={{ duration: 0.16, ease: 'easeOut' }}
-          />
-        )}
-        <span
-          className={cn(
-            'relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-shape-sm border transition-colors duration-fast',
-            isActive
-              ? 'border-[rgba(var(--theme-primary-rgb),0.24)] bg-[rgba(var(--theme-primary-rgb),0.12)]'
-              : 'border-[var(--border-subtle)] bg-[var(--surface-2)] group-hover:border-[var(--border-default)]'
-          )}
-        >
-          <Icon
-            className={cn(
-              'h-4 w-4 transition-colors duration-fast',
-              isActive
-                ? 'text-[var(--theme-primary)]'
-                : 'text-[var(--theme-primary)]',
-            )}
-          />
-        </span>
-        <span className={cn('relative z-10 min-w-0 whitespace-normal break-words leading-snug transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
-          {navLabel(item)}
-        </span>
-        {to === '/notifications/inbox' && unreadAlerts > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-rose-500/20 bg-rose-500/10 px-1.5 text-2xs font-semibold text-rose-300">
-            {unreadAlerts > 9 ? '9+' : unreadAlerts}
-          </span>
-        )}
-        {to === '/vehicles' && vehicles && vehicles.length > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-[var(--border-default)] bg-[var(--surface-3)] px-1.5 text-2xs font-semibold text-[var(--text-secondary)]">
-            {vehicles.length}
-          </span>
-        )}
-        {to === '/data-repair' && staleCount > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-amber-500/20 bg-amber-500/10 px-1.5 text-2xs font-semibold text-amber-300">
-            {staleCount > 9 ? '9+' : staleCount}
-          </span>
-        )}
-      </PrefetchNavLink>
-    )
-  }
 
   return (
     <>
@@ -1367,7 +1217,7 @@ export default function Layout() {
       <div
         data-presentation-mode={presentation.mode}
         className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
-        style={{ '--shell-sidebar-width': `${sidebarWidth}px` } as React.CSSProperties}
+        style={{ '--shell-sidebar-width': `${(deckRailCollapsed ? 76 : 240) + (deckPanelOpen ? (deckPanelCollapsed ? 76 : 320) : 0)}px` } as React.CSSProperties}
       >
       {/* Global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
@@ -1400,7 +1250,11 @@ export default function Layout() {
         data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
-          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform transition-transform duration-normal ease-out xl:top-0 xl:relative xl:z-auto xl:w-[var(--shell-sidebar-width)] xl:shrink-0 xl:translate-x-0',
+          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform duration-normal ease-out xl:top-0 xl:relative xl:z-20 xl:w-[var(--shell-sidebar-width)] xl:shrink-0 xl:translate-x-0',
+          // The deck breathes its width as the rail collapses and the
+          // secondary panel docks. Reduced motion snaps the width while
+          // preserving the drawer slide.
+          'transition-[transform,width] xl:duration-normal xl:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-transform',
           'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
           presentation.mode !== 'standard' && 'hidden',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
@@ -1433,10 +1287,22 @@ export default function Layout() {
 
         {/* Logo — desktop sidebar header. Build version intentionally not
             rendered here; canonical provenance lives in the footer
-            <VersionSegment>. */}
-        <div className="hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] px-5 xl:flex">
-          <PrefetchNavLink to="/" className="flex min-w-0 flex-1 items-center gap-3 rounded-shape-md py-1 transition-colors hover:opacity-90" onClick={() => setSidebarOpen(false)}>
-            <Logo size={32} showWordmark />
+            <VersionSegment>. The collapsed rail shrinks the aside to
+            dock width, so it gets the mark without the wordmark. */}
+        <div className={cn(
+          'hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] xl:flex',
+          deckRailCollapsed ? 'justify-center px-2' : 'px-5',
+        )}
+        >
+          <PrefetchNavLink
+            to="/"
+            className={cn(
+              'flex min-w-0 items-center gap-3 rounded-shape-md py-1 transition-colors hover:opacity-90',
+              !deckRailCollapsed && 'flex-1',
+            )}
+            onClick={() => setSidebarOpen(false)}
+          >
+            <Logo size={32} showWordmark={!deckRailCollapsed} />
           </PrefetchNavLink>
         </div>
 
@@ -1462,271 +1328,35 @@ export default function Layout() {
         )}
 
         {/* Navigation */}
-        {sidebarStyle === 'linear' ? (
-          <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
-            <LinearSidebar
-              sections={compactNav.sections}
-              pinnedItems={pinnedNavItems}
-              pathname={location.pathname}
-              navLabel={navLabel}
-              onPin={pinNavPath}
-              onUnpin={unpinNavPath}
-              onItemSelect={() => setSidebarOpen(false)}
-              activeSectionTitle={compactNav.activeSectionTitle}
-              alertCount={unreadAlerts}
-              vehicleCount={vehicleCount}
-              staleCount={staleCount}
-              collections={visibleCollections}
-            />
-          </Suspense>
-        ) : sidebarStyle === 'notion' ? (
-          <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
-            <NotionSidebar
-              sections={groupedSidebarSections}
-              pinnedItems={pinnedNavItems}
-              pathname={groupedPathname}
-              navLabel={navLabel}
-              onPin={pinNavPath}
-              onUnpin={unpinNavPath}
-              onItemSelect={() => setSidebarOpen(false)}
-              activeSectionTitle={activeSectionTitle}
-              alertCount={unreadAlerts}
-              vehicleCount={vehicleCount}
-              staleCount={staleCount}
-              collections={visibleCollections}
-            />
-          </Suspense>
-        ) : (
-        <nav
-          aria-label={t('a11y.navSections', 'Navigation sections')}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 xl:py-4 px-3 space-y-3 scrollbar-thin"
-          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
-        >
-          {activeNavEntry && (
-            <div
-              className={cn(
-                'rounded-2xl border border-[var(--glass-border)] px-3 py-2 ring-1',
-                activeSectionStyle?.surface ?? 'bg-[rgba(var(--theme-primary-rgb),0.07)]',
-                activeSectionStyle?.ring ?? 'ring-[rgba(var(--theme-primary-rgb),0.18)]',
-              )}
-              aria-label={t('nav.currentSection', 'Current')}
-            >
-              <div className="flex items-center gap-2">
-                <p
-                  className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-primary)]"
-                  title={`${navLabel(activeNavEntry.item)} — ${navSectionTitle(activeNavEntry.section)}`}
-                >
-                  {navLabel(activeNavEntry.item)}
-                </p>
-                {activeNavPath && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-pressed={activeIsPinned}
-                    aria-label={activeIsPinned ? t('nav.unpinCurrent', 'Remove current page from pinned') : t('nav.pinCurrent', 'Pin current page')}
-                    onClick={() => activeIsPinned ? unpinNavPath(activeNavPath) : pinNavPath(activeNavPath)}
-                    className={cn(
-                      'h-7 shrink-0 rounded-lg px-2 text-xs hover:bg-white/[0.08]',
-                      activeIsPinned ? 'text-amber-300' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                    )}
-                  >
-                    <Icons.star className={cn('h-3.5 w-3.5', activeIsPinned && 'fill-current')} />
-                    <span>{activeIsPinned ? t('nav.pinnedAction', 'Pinned') : t('nav.pinAction', 'Pin')}</span>
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {pinnedNavItems.length > 0 && (
-            <div>
-              <NavSectionHeader
-                id="nav-pinned-label"
-                label={t('nav.pinned', 'Pinned')}
-              />
-              <div className="space-y-0.5" aria-labelledby="nav-pinned-label">
-                {pinnedNavItems.map(item => (
-                  <div key={item.to} className="flex items-center gap-1">
-                    <div className="min-w-0 flex-1">
-                      {renderNavLink(item, true, 'pinned')}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-label={t('nav.unpinPage', { page: navLabel(item), defaultValue: 'Unpin {{page}}' })}
-                      onClick={() => unpinNavPath(item.to)}
-                      className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-muted)] opacity-80 hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
-                    >
-                      <Icons.close className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {SHOW_RECENTLY_USED_NAV && recentNavItems.length > 0 && (
-            <div>
-              <NavSectionHeader
-                id="nav-recent-label"
-                label={t('nav.recentlyUsed', 'Recently Used')}
-              />
-              <div className="space-y-0.5" aria-labelledby="nav-recent-label">
-                {recentNavItems.map(item => renderNavLink(item, true, 'recent'))}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-1" aria-labelledby="nav-sections-label">
-            <NavSectionHeader
-              id="nav-sections-label"
-              label={t('nav.sections', 'Sections')}
-              action={
-                <div className="flex items-center gap-0.5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={t('nav.expandAll', 'Expand all sections')}
-                    title={t('nav.expandAll', 'Expand all sections')}
-                    disabled={expandedSectionCount === groupedSidebarSections.length}
-                    onClick={expandAllSections}
-                    className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
-                  >
-                    <Icons.expandAll className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={t('nav.collapseAll', 'Collapse all sections')}
-                    title={t('nav.collapseAll', 'Collapse all sections')}
-                    disabled={expandedSectionCount === 0}
-                    onClick={collapseAllSections}
-                    className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
-                  >
-                    <Icons.collapseAll className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Button>
-                </div>
-              }
-            />
-            <div className="ms-3 border-s border-[var(--border-default)] ps-2">
-            {groupedSidebarSections.filter(section =>
-              unpinnedSidebarItems(section.items, visibleCollections, pinnedNavSet).length > 0,
-            ).map(section => {
-              const isExpanded = expandedSections.has(section.title)
-              const isActiveSection = section.title === activeSectionTitle
-              const singleCollection = soleCollection(section, visibleCollections)
-              const sectionStyle = SECTION_ICON_STYLES[section.title]
-              const SectionIcon = SIDEBAR_SECTION_ICONS[section.title] ?? sectionStyle?.icon ?? Icons.sparkles
-              return (
-                <div key={section.title} className="relative mt-3 first:mt-1 before:absolute before:-start-2 before:top-3.5 before:h-px before:w-2 before:bg-[var(--border-default)]">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-expanded={isExpanded}
-                    aria-controls={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
-                    onClick={() => toggleSection(section.title)}
-                    className="group/section relative mb-1.5 flex h-auto min-h-9 w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 hover:bg-transparent"
-                  >
-                    {isActiveSection && (
-                      <span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-x-0 -inset-y-0.5 rounded-shape-sm bg-[var(--surface-2)]"
-                      />
-                    )}
-                    <span className="relative z-10 flex min-w-0 flex-1 items-center gap-2">
-                      <SectionIcon
-                        className={cn(
-                          'h-3.5 w-3.5 shrink-0 transition-colors duration-fast',
-                          'text-[var(--theme-primary)]'
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span
-                        className={cn(
-                          'whitespace-normal break-words text-xs font-semibold leading-snug tracking-[0.035em] transition-colors',
-                          isActiveSection ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover/section:text-[var(--text-primary)]'
-                        )}
-                        title={navSectionTitle(section)}
-                      >
-                        {navSectionTitle(section)}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className={cn(
-                          'ms-1 h-px flex-1 bg-[var(--border-subtle)] transition-opacity',
-                          isActiveSection ? 'opacity-100' : 'opacity-60 group-hover/section:opacity-100'
-                        )}
-                      />
-                    </span>
-                    <span className="relative z-10 flex shrink-0 items-center gap-1.5">
-                      <span
-                        className={cn(
-                          'flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-2xs font-semibold tabular-nums',
-                          isActiveSection
-                            ? 'bg-[var(--surface-3)] text-[var(--text-secondary)]'
-                            : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                        )}
-                      >
-                        {singleCollection?.pages.length ?? section.items.length}
-                      </span>
-                      <Icons.expand
-                        className={cn(
-                          'h-3 w-3 transition-transform',
-                          isActiveSection ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]',
-                          isExpanded && 'rotate-180'
-                        )}
-                      />
-                    </span>
-                  </Button>
-                  <AnimatePresence initial={false}>
-                    {isExpanded && (
-                      <motion.div
-                        id={`nav-section-${section.title.replace(/\W+/g, '-').toLowerCase()}`}
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="overflow-hidden"
-                      >
-                        <div className="ms-5 space-y-0.5 border-s border-[var(--border-default)] pb-2 ps-2">
-                          {unpinnedSidebarItems(section.items, visibleCollections, pinnedNavSet).map(item => {
-                            const group = visibleCollections.find(candidate => candidate.primary === item.to)
-                            return group
-                              ? <Suspense
-                                  key={item.to}
-                                  fallback={renderNavLink(item, true, `section-${section.title}`)}
-                                >
-                                  <LazyCollectionTreeRow
-                                    group={group}
-                                    pathname={location.pathname}
-                                    flattened={group === singleCollection}
-                                    onSelect={() => setSidebarOpen(false)}
-                                    dataTour={'dataTour' in item ? item.dataTour : undefined}
-                                    statusCount={item.to === '/vehicles' ? vehicleCount : item.to === '/notifications/inbox' ? unreadAlerts : item.to === '/data-export' ? staleCount : undefined}
-                                    statusPath={item.to === '/data-export' ? '/data-repair' : undefined}
-                                    pinnedPaths={pinnedNavSet}
-                                    onPin={pinNavPath}
-                                    onUnpin={unpinNavPath}
-                                  />
-                                </Suspense>
-                              : renderNavLink(item, true, `section-${section.title}`)
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )
-            })}
-            </div>
-          </div>
-        </nav>
-        )}
+        <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
+          <CommandDeck
+            sections={groupedSidebarSections}
+            pinnedItems={pinnedNavItems}
+            recentItems={recentNavItems}
+            suggestions={sidebarSuggestions}
+            pathname={location.pathname}
+            navLabel={navLabel}
+            navSectionTitle={navSectionTitle}
+            onPin={pinNavPath}
+            onUnpin={unpinNavPath}
+            onItemSelect={() => setSidebarOpen(false)}
+            alertCount={unreadAlerts}
+            vehicleCount={vehicleCount}
+            staleCount={staleCount}
+            collections={visibleCollections}
+            railCollapsed={deckRailCollapsed}
+            onToggleRailCollapsed={() => setDeckRailCollapsed(prev => !prev)}
+            panelOpen={deckPanelOpen}
+            onPanelOpenChange={setDeckPanelOpen}
+            panelCollapsed={deckPanelCollapsed}
+            onTogglePanelCollapsed={() => {
+              const collapsed = !deckPanelCollapsed
+              setDeckPanelCollapsed(collapsed)
+              if (collapsed) setDeckRailCollapsed(true)
+            }}
+            activeSectionTitle={activeSectionTitle}
+          />
+        </Suspense>
 
         {/* Sidebar footer note:
             "Press ? for shortcuts · Take a tour · Report bug" was moved to
@@ -1737,9 +1367,6 @@ export default function Layout() {
             because their info is surfaced in the StatusBar (VersionSegment
             shows the update dot + uptime, ConnectionSegment shows API
             status, ActiveVehicleSegment shows the active vehicle). */}
-        <Suspense fallback={null}>
-          <SidebarResizeHandle width={sidebarWidth} onResize={setSidebarWidth} />
-        </Suspense>
       </aside>
 
       {/* Mobile top bar */}
@@ -1772,7 +1399,7 @@ export default function Layout() {
           <WorkspaceHeader
             notifications={<NotificationBellPopover />}
             themeControl={<ThemeQuickSwitcher />}
-            breadcrumbSections={sidebarStyle === 'linear' ? compactNav.sections : groupedSidebarSections}
+            breadcrumbSections={groupedSidebarSections}
             breadcrumbCollections={visibleCollections}
           />
         </Suspense>}
@@ -1827,7 +1454,7 @@ export default function Layout() {
             )}
             {presentation.mode === 'standard' && (
               <div data-role="compact-breadcrumbs" className="xl:hidden">
-                <LayoutBreadcrumbs className="min-w-0 text-sm" sections={sidebarStyle === 'linear' ? compactNav.sections : groupedSidebarSections} collections={visibleCollections} />
+                <LayoutBreadcrumbs className="min-w-0 text-sm" sections={groupedSidebarSections} collections={visibleCollections} />
               </div>
             )}
             <RouteTransition>

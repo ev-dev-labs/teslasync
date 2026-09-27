@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { usePhysicsLedger } from '@/api/hooks/usePhysicsLedger';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, GlassPanel, Text } from '@/components/ui';
@@ -62,7 +62,6 @@ export default function PhysicsLedgerPage() {
             status={state.status}
             updatedAt={state.updatedAt}
           />
-          <VehicleSelect />
         </div>
       )}
       query={query}

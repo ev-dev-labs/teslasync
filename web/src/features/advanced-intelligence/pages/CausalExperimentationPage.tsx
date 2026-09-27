@@ -6,7 +6,7 @@ import {
   useCreateCausalExperiment,
 } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
@@ -92,7 +92,6 @@ export default function CausalExperimentationPage() {
         'advancedIntelligence.causal.subtitle',
         'Compare explicit baseline and treatment windows with confounder coverage disclosure.',
       )}
-      actions={<VehicleSelect withIcon />}
       loading={vehicleId != null && query.isLoading}
       error={query.error instanceof Error ? query.error : null}
     >

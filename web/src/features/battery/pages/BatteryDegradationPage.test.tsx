@@ -26,10 +26,10 @@
  *     health-driven panel (including the hardened gauge) without touching the
  *     degradation panels, and vice-versa.
  *   - a11y + interaction: labelled region landmarks, the projection chart image
- *     label, and the vehicle-scope combobox (changing it calls setVehicleId).
+ *     label, without a duplicate vehicle-scope combobox.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -474,17 +474,14 @@ describe('BatteryDegradationPage — consolidated query errors', () => {
 });
 
 describe('BatteryDegradationPage — a11y + interaction', () => {
-  it('exposes labelled landmarks, the chart image, and a working vehicle picker', () => {
+  it('exposes labelled landmarks and the chart without duplicating the vehicle picker', () => {
     renderPage();
 
     expect(screen.getByRole('region', { name: 'Battery health summary' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Health Trend & Projection' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: TREND_IMG })).toBeInTheDocument();
 
-    const picker = screen.getByRole('combobox', { name: 'Select vehicle' });
-    expect(picker).toHaveValue('7');
-
-    fireEvent.change(picker, { target: { value: '8' } });
-    expect(setVehicleId).toHaveBeenCalledWith(8);
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
+    expect(setVehicleId).not.toHaveBeenCalled();
   });
 });

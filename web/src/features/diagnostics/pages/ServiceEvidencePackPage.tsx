@@ -4,7 +4,7 @@ import { ShieldCheck, ClipboardList, ListOrdered, PackageCheck } from 'lucide-re
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -169,7 +169,6 @@ export default function ServiceEvidencePackPage() {
         'serviceEvidencePack.subtitle',
         'A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.',
       )}
-      actions={<VehicleSelect />}
       query={workspace.signalsQuery}
     >
       {/* 1 — Focal signal + analysis window (shared with the Root-Cause page) */}

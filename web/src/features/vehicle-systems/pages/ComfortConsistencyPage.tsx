@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import {
@@ -98,7 +98,6 @@ export default function ComfortConsistencyPage() {
         'Evidence-qualified cabin-to-setpoint adherence, stabilization, and overshoot from the returned climate timeline',
       )}
       query={climateQuery}
-      actions={<VehicleSelect />}
     >
       <FadeIn>
         <ComfortConsistencyEvidenceKpiLedger
