@@ -31,6 +31,8 @@ export interface SidebarRowProps {
   dataTour?: string
   /** Secondary line under the label (reason, collection, …). */
   context?: string
+  ariaLabel?: string
+  actionAlwaysVisible?: boolean
 }
 
 export function SidebarRow({
@@ -47,6 +49,8 @@ export function SidebarRow({
   hoverAction,
   dataTour,
   context,
+  ariaLabel,
+  actionAlwaysVisible = false,
 }: SidebarRowProps) {
   // Cascade item: under an orchestrating AtlasPanel parent each row rises
   // in sequence on mount; without one the variants stay inert and the
@@ -78,7 +82,7 @@ export function SidebarRow({
         onMouseLeave={compact ? onHideTip : undefined}
         onFocus={compact ? event => onShowTip?.(event.currentTarget, label, context) : undefined}
         onBlur={compact ? onHideTip : undefined}
-        aria-label={compact ? (context ? `${label}, ${context}` : label) : undefined}
+        aria-label={ariaLabel ?? (compact ? (context ? `${label}, ${context}` : label) : undefined)}
         end={!active}
         // `undefined`, never `false`: NavLink adopts an explicitly passed
         // aria-current as its own active marker, so `false` would render
@@ -91,7 +95,7 @@ export function SidebarRow({
             : 'flex min-h-10 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-2 pe-2.5 ps-3 text-sm transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           active
-            ? 'bg-[var(--theme-primary)]/10 font-semibold text-[var(--text-primary)]'
+            ? 'bg-[var(--theme-primary)]/10 font-semibold text-[var(--theme-primary)] ring-1 ring-inset ring-[var(--theme-primary)]/35 shadow-[0_2px_14px_color-mix(in_srgb,var(--theme-primary)_14%,transparent)]'
             : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         )}
       >
@@ -112,9 +116,10 @@ export function SidebarRow({
         </span>}
         {compact && trailing && <span className="absolute end-0 top-0 scale-75">{trailing}</span>}
         {!compact && trailing}
+        {active && !compact && <span aria-hidden className="ms-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--theme-primary)]" />}
       </PrefetchNavLink>
       {hoverAction && !compact && (
-        <div className="ms-1 transition-opacity lg:opacity-0 lg:group-hover/sidebar-row:opacity-100 lg:focus-within:opacity-100">
+        <div className={cn('ms-1 transition-opacity', !actionAlwaysVisible && 'lg:opacity-0 lg:group-hover/sidebar-row:opacity-100 lg:focus-within:opacity-100')}>
           {hoverAction}
         </div>
       )}

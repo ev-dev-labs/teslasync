@@ -28,7 +28,6 @@ import type { SectionGroup } from '../sectionGroups'
 import type { SidebarSuggestion } from './sidebarSuggest'
 
 export type DeckSelection =
-  | { kind: 'search' }
   | { kind: 'suggested' }
   | { kind: 'favorites' }
   | { kind: 'section'; title: string }
@@ -63,12 +62,12 @@ export interface CommandDeckProps {
 
 const DECK_VIEW_STORAGE_KEY = 'teslasync-deck-view'
 
-function readStoredView(sections: readonly { title: string }[]): DeckSelection {
+function readStoredView(sections: readonly { title: string }[], activeSectionTitle?: string): DeckSelection {
   try {
     const stored = window.localStorage.getItem(DECK_VIEW_STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored) as DeckSelection | null
-      if (parsed?.kind === 'search' || parsed?.kind === 'suggested' || parsed?.kind === 'favorites') {
+      if (parsed?.kind === 'suggested' || parsed?.kind === 'favorites') {
         return parsed
       }
       if (parsed?.kind === 'section' && sections.some(section => section.title === parsed.title)) {
@@ -78,7 +77,9 @@ function readStoredView(sections: readonly { title: string }[]): DeckSelection {
   } catch {
     // Storage may be disabled or hold a stale section; default below.
   }
-  return { kind: 'search' }
+  return activeSectionTitle && sections.some(section => section.title === activeSectionTitle)
+    ? { kind: 'section', title: activeSectionTitle }
+    : { kind: 'suggested' }
 }
 
 export function CommandDeck({
@@ -111,9 +112,18 @@ export function CommandDeck({
   const safeCollections = collections ?? []
   const { reduce, durationMs } = useMotionPreference(260)
 
-  const [view, setView] = useState<DeckSelection>(() => readStoredView(sections ?? []))
+  const [view, setView] = useState<DeckSelection>(() => readStoredView(sections ?? [], activeSectionTitle))
   const [mobileLevel, setMobileLevel] = useState<'rail' | 'panel'>('rail')
   const railRefs = useRef(new Map<string, HTMLButtonElement | null>())
+  const previousPath = useRef(pathname)
+
+  useEffect(() => {
+    if (pathname === previousPath.current) return
+    previousPath.current = pathname
+    if (activeSectionTitle && safeSections.some(section => section.title === activeSectionTitle)) {
+      setView({ kind: 'section', title: activeSectionTitle })
+    }
+  }, [pathname, activeSectionTitle, safeSections])
 
   useEffect(() => {
     try {
@@ -140,7 +150,6 @@ export function CommandDeck({
       return
     }
     setView(selection)
-    if (selection.kind === 'search' && panelCollapsed) onTogglePanelCollapsed()
     onPanelOpenChange(true)
   }
 
@@ -162,11 +171,10 @@ export function CommandDeck({
 
   // Rail highlight: the open view while expanded, else the section
   // holding the current page so orientation survives collapse.
-  const railSelection: DeckSelection | null = panelOpen
-    ? view
-    : activeSectionTitle && safeSections.some(section => section.title === activeSectionTitle)
-      ? { kind: 'section', title: activeSectionTitle }
-      : null
+  const routeSelection: DeckSelection | null = activeSectionTitle && safeSections.some(section => section.title === activeSectionTitle)
+    ? { kind: 'section', title: activeSectionTitle }
+    : null
+  const railSelection: DeckSelection | null = panelOpen ? view : routeSelection
 
   const railProps = {
     sections: safeSections,
@@ -205,6 +213,7 @@ export function CommandDeck({
             collapsed={railCollapsed}
             onSelect={selectDesktop}
             selection={railSelection}
+            panelOpen={panelOpen}
             itemRef={railItemRef}
             {...railProps}
           />
@@ -241,7 +250,7 @@ export function CommandDeck({
             collapsed={false}
             showCollapseControl={false}
             onSelect={selectMobile}
-            selection={view}
+            selection={routeSelection}
             {...railProps}
           />
         </div>

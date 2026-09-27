@@ -17,6 +17,7 @@ const (
 	PinnedItemTypeAutomation PinnedItemType = "automation"
 	PinnedItemTypeDashboard  PinnedItemType = "dashboard"
 	PinnedItemTypeCommand    PinnedItemType = "command"
+	PinnedItemTypeNavigation PinnedItemType = "navigation"
 )
 
 // Valid reports whether t is a recognised pin item type. Used by the HTTP
@@ -31,7 +32,8 @@ func (t PinnedItemType) Valid() bool {
 		PinnedItemTypeGeofence,
 		PinnedItemTypeAutomation,
 		PinnedItemTypeDashboard,
-		PinnedItemTypeCommand:
+		PinnedItemTypeCommand,
+		PinnedItemTypeNavigation:
 		return true
 	}
 	return false

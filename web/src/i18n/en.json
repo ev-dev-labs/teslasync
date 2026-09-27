@@ -4576,7 +4576,6 @@
     "currentDriveScore": "Drive score {{score}}",
     "deck": {
       "groups": "Sections and shortcuts",
-      "search": "Search",
       "suggested": "Suggested",
       "saved": "Saved",
       "allPages": "All pages",
@@ -4600,10 +4599,17 @@
       "close": "Close panel",
       "collapsePanel": "Collapse secondary navigation",
       "expandPanel": "Expand secondary navigation",
-      "expandToSearch": "Expand to search pages",
+      "filterSection": "Filter {{section}} tools…",
+      "filterSectionLabel": "Filter {{section}} tools",
+      "clearFilter": "Clear filter",
+      "noFilterResults": "No tools match \"{{query}}\".",
+      "quickAccessPins": "Quick access pins",
+      "quickAccessLink": "Quick access: {{page}}",
+      "removeQuickPin": "Remove {{page}} from quick access",
+      "pinHint": "Pin pages to save",
+      "noQuickPins": "Pin a page below to keep it close.",
       "expandAllGroups": "Expand all groups",
       "collapseAllGroups": "Collapse all groups",
-      "searchHint": "Type to search all pages. Keyword shortcuts like “soh” work too.",
       "allCaughtUp": "All caught up — nothing needs you right now.",
       "now": "Now",
       "upNext": "Up next",
@@ -6621,6 +6627,11 @@
       },
       "reorder": {
         "error": "Failed to reorder pins"
+      },
+      "navigation": {
+        "loadError": "Could not load synced navigation pins",
+        "migrateError": "Could not sync existing navigation pins",
+        "pending": "Saved on this device; pin will sync when connected"
       }
     },
     "annotation": {

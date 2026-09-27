@@ -368,6 +368,13 @@ vi.mock('./sidebar/NavSectionHeader', () => ({
     </div>
   ),
 }))
+vi.mock('@/api/hooks/useNavigationPins', () => ({
+  useNavigationPins: () => ({
+    ready: true,
+    toggle: () => Promise.resolve(),
+    restore: () => undefined,
+  }),
+}))
 
 // ── @/components/ui: faithful Button + trivial ThemePicker ────────────
 vi.mock('@/components/ui/runtime', async () => {

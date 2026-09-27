@@ -2948,6 +2948,7 @@ export type PinnedItemType =
   | 'automation'
   | 'dashboard'
   | 'command'
+  | 'navigation'
 
 export interface PinnedItem {
   id: number

@@ -25,6 +25,7 @@ func TestPinnedItemType_Valid(t *testing.T) {
 		{"automation", PinnedItemTypeAutomation, true},
 		{"dashboard", PinnedItemTypeDashboard, true},
 		{"command", PinnedItemTypeCommand, true},
+		{"navigation", PinnedItemTypeNavigation, true},
 		{"empty", PinnedItemType(""), false},
 		{"unknown", PinnedItemType("spaceship"), false},
 		{"uppercased", PinnedItemType("Vehicle"), false},
@@ -53,6 +54,7 @@ func TestPinnedItemType_ConstantValues(t *testing.T) {
 		PinnedItemTypeAutomation: "automation",
 		PinnedItemTypeDashboard:  "dashboard",
 		PinnedItemTypeCommand:    "command",
+		PinnedItemTypeNavigation: "navigation",
 	}
 	for tp, s := range want {
 		if string(tp) != s {

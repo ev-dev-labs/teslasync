@@ -62,6 +62,7 @@ import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useAlerts } from '@/api/hooks/useNotifications'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
+import { useNavigationPins } from '@/api/hooks/useNavigationPins'
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles'
 import { deriveVehicleStatus, type Alert } from '@/api/types'
 import { useSelectedVehicleStore } from '@/store/selectedVehicle'
@@ -739,6 +740,11 @@ export default function Layout() {
   const [pinnedNavPaths, setPinnedNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getPinnedNavPaths()),
   )
+  const applyServerPins = useCallback((paths: string[]) => {
+    const reconciled = reconcileNavPaths(paths)
+    setPinnedNavPathsState(previous => navPathsEqual(previous, reconciled) ? previous : reconciled)
+  }, [])
+  const navigationPins = useNavigationPins(pinnedNavPaths, applyServerPins)
   const location = useLocation()
   useEffect(() => {
     setSidebarOpen(false)
@@ -1180,10 +1186,12 @@ export default function Layout() {
       return [to, ...prev]
     })
     setRecentNavPathsState(prev => prev.filter(path => path !== to))
-  }, [])
+    void navigationPins.toggle(to, true).catch(navigationPins.restore)
+  }, [navigationPins.toggle, navigationPins.restore])
   const unpinNavPath = useCallback((to: string) => {
     setPinnedNavPathsState(prev => prev.filter(path => path !== to))
-  }, [])
+    void navigationPins.toggle(to, false).catch(navigationPins.restore)
+  }, [navigationPins.toggle, navigationPins.restore])
   // Suggested pages for the default sidebar: live context (charging car,
   // unread critical alerts) first, then pages related to the current
   // route. Pure derivation — see `sidebar/sidebarSuggest.ts`.
@@ -1311,10 +1319,7 @@ export default function Layout() {
           </Button>
         </div>
 
-        {/* Logo — desktop sidebar header. Build version intentionally not
-            rendered here; canonical provenance lives in the footer
-            <VersionSegment>. The collapsed rail shrinks the aside to
-            dock width, so it gets the mark without the wordmark. */}
+        {/* Desktop brand stays visible above the rail search. */}
         <div className={cn(
           'hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] xl:flex',
           deckRailCollapsed ? 'justify-center px-2' : 'px-5',
@@ -1332,7 +1337,7 @@ export default function Layout() {
           </PrefetchNavLink>
         </div>
 
-        {/* Mobile drawer search; desktop discovery lives in WorkspaceHeader. */}
+        {/* Mobile drawer global search. */}
         <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
           <CommandPaletteTrigger />
         </div>

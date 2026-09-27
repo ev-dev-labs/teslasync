@@ -22,7 +22,7 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import type { SectionGroup } from '../sectionGroups'
@@ -163,7 +163,7 @@ describe('CommandDeck', () => {
       collections: [tripCollection],
     })
 
-    expect(desktopRail().getByRole('button', { name: 'Search' })).toBeInTheDocument()
+    expect(desktopRail().queryByRole('button', { name: 'Search' })).not.toBeInTheDocument()
     expect(desktopRail().getByRole('button', { name: 'Suggested' })).toBeInTheDocument()
     expect(desktopRail().getByRole('button', { name: 'Saved' })).toBeInTheDocument()
     expect(desktopRail().getByRole('link', { name: 'All pages' })).toHaveAttribute('href', '/explore')
@@ -298,17 +298,63 @@ describe('CommandDeck', () => {
     expect(secondaryPanel().getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
   })
 
+  it('filters only the open section and retains group controls and clear', () => {
+    renderControlledDeck({ pathname: '/drives', activeSectionTitle: 'Driving', collections: [driveCollection, tripCollection] })
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving, 5 pages' }))
+    const filter = secondaryPanel().getByRole('searchbox', { name: 'Filter Driving tools' })
+    fireEvent.change(filter, { target: { value: 'mile' } })
+    expect(secondaryPanel().getByRole('button', { name: 'Trip Records' })).toHaveAttribute('aria-expanded', 'true')
+    expect(secondaryPanel().getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
+    expect(secondaryPanel().queryByRole('link', { name: 'Drive Calendar' })).not.toBeInTheDocument()
+    fireEvent.change(filter, { target: { value: 'Drive Records' } })
+    expect(secondaryPanel().getByRole('link', { name: 'Drive Calendar' })).toBeInTheDocument()
+    fireEvent.change(filter, { target: { value: 'not-a-page' } })
+    expect(secondaryPanel().getByRole('status')).toHaveTextContent('No tools match "not-a-page".')
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Clear filter' }))
+    expect(filter).toHaveValue('')
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('moves real pinned pages into section quick access and removes them from either surface', async () => {
+    function Harness() {
+      const [pinned, setPinned] = useState(false)
+      return (
+        <MemoryRouter initialEntries={['/drives']}>
+          <CommandDeck
+            {...baseProps({ pathname: '/drives', activeSectionTitle: 'Driving', panelOpen: true })}
+            pinnedItems={pinned ? [drivesItem] : []}
+            onPin={() => setPinned(true)}
+            onUnpin={() => setPinned(false)}
+          />
+        </MemoryRouter>
+      )
+    }
+    render(<Harness />)
+    expect(secondaryPanel().getByText('Quick access pins')).toBeInTheDocument()
+    expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Drives' })).not.toBeInTheDocument()
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Pin Drives to favorites' }))
+    expect(secondaryPanel().getByRole('link', { name: 'Quick access: Drives' })).toBeInTheDocument()
+    expect(secondaryPanel().getByRole('button', { name: 'Remove Drives from quick access' })).toBeInTheDocument()
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
+    fireEvent.change(secondaryPanel().getByRole('searchbox', { name: 'Filter Driving tools' }), { target: { value: 'no matching pages' } })
+    expect(secondaryPanel().getByRole('link', { name: 'Quick access: Drives' })).toBeInTheDocument()
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Clear filter' }))
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Remove Drives from quick access' }))
+    await waitFor(() => expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Drives' })).not.toBeInTheDocument())
+    expect(secondaryPanel().getByText('Pin a page below to keep it close.')).toBeInTheDocument()
+  })
+
   it('collapses the secondary panel via its header, returning focus to the rail', () => {
     renderControlledDeck()
-    const searchButton = desktopRail().getByRole('button', { name: 'Search' })
+    const drivingButton = desktopRail().getByRole('button', { name: 'Driving, 3 pages' })
 
-    fireEvent.click(searchButton)
+    fireEvent.click(drivingButton)
     fireEvent.keyDown(screen.getByTestId('atlas-panel-secondary'), { key: 'Escape' })
     expect(screen.getByTestId('command-deck-secondary')).toBeInTheDocument()
 
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Close panel' }))
     expect(screen.queryByTestId('command-deck-secondary')).toBeNull()
-    expect(document.activeElement).toBe(searchButton)
+    expect(document.activeElement).toBe(drivingButton)
   })
 
   it('keeps a collapsed secondary rail navigable with icon labels on hover and focus', () => {
@@ -332,46 +378,31 @@ describe('CommandDeck', () => {
     expect(secondaryPanel().getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
   })
 
-  it('expands the compact secondary rail before opening search', () => {
+  it('keeps the compact secondary rail navigable after opening a section', () => {
     renderControlledDeck({ panelCollapsed: true, railCollapsed: true })
-    fireEvent.click(desktopRail().getByRole('button', { name: 'Search' }))
-    expect(secondaryPanel().getByRole('navigation', { name: 'Sidebar navigation' })).toHaveAttribute('data-collapsed', 'false')
-    expect(secondaryPanel().getByRole('combobox', { name: 'Search pages' })).toBeInTheDocument()
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving, 3 pages' }))
+    expect(secondaryPanel().getByRole('navigation', { name: 'Sidebar navigation' })).toHaveAttribute('data-collapsed', 'true')
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toBeInTheDocument()
     expect(desktopRail().queryByText('Driving')).toBeNull()
   })
 
   it('highlights the active section on the rail while the panel is docked away', () => {
     renderDeck({ pathname: '/drives', activeSectionTitle: 'Driving' })
     expect(desktopRail().getByRole('button', { name: 'Driving, 3 pages' })).toHaveAttribute('aria-pressed', 'true')
+    expect(desktopRail().getByRole('button', { name: 'Driving, 3 pages' })).toHaveAttribute('aria-expanded', 'false')
     expect(desktopRail().getByRole('button', { name: 'Home, 1 pages' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('searches the whole catalog with a count and clear', async () => {
-    renderControlledDeck()
-    fireEvent.click(desktopRail().getByRole('button', { name: 'Search' }))
-    const box = secondaryPanel().getByRole('combobox', { name: 'Search pages' })
-    fireEvent.change(box, { target: { value: 'dashboard' } })
-
-    expect(await secondaryPanel().findByText('1 results')).toBeInTheDocument()
-    expect(secondaryPanel().getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
-
-    fireEvent.change(box, { target: { value: 'zzz-no-such-page' } })
-    expect(await secondaryPanel().findByText('No pages match "zzz-no-such-page".')).toBeInTheDocument()
-    expect(secondaryPanel().getAllByRole('button', { name: 'Clear search' })).toHaveLength(1)
-    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Clear search' }))
-    expect(box).toHaveValue('')
-  })
-
-  it('fills an empty search with recents and suggestions', () => {
+  it('shows recents beside suggestions without a second search field', () => {
     renderControlledDeck({
       pathname: '/',
       recentItems: [tripsItem],
       suggestions: [{ ...alertsItem, reason: '1 need attention', kind: 'now' as const }],
     })
-    fireEvent.click(desktopRail().getByRole('button', { name: 'Search' }))
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Suggested' }))
     expect(secondaryPanel().getByText('Recently Used')).toBeInTheDocument()
     expect(secondaryPanel().getByRole('link', { name: 'Trips' })).toBeInTheDocument()
-    expect(secondaryPanel().getByText('Suggested')).toBeInTheDocument()
+    expect(secondaryPanel().queryByRole('combobox', { name: 'Search pages' })).not.toBeInTheDocument()
     expect(secondaryPanel().getByRole('link', { name: /All Notifications/ })).toHaveTextContent('1 need attention')
   })
 
@@ -442,7 +473,7 @@ describe('CommandDeck', () => {
   it('closes the mobile drill level on Escape while leaving the desktop panel untouched', () => {
     const onItemSelect = vi.fn()
     renderControlledDeck({ onItemSelect })
-    fireEvent.click(mobileRail().getByRole('button', { name: 'Search' }))
+    fireEvent.click(mobileRail().getByRole('button', { name: 'Suggested' }))
     fireEvent.keyDown(mobilePanel().getByRole('navigation', { name: 'Sidebar navigation' }), { key: 'Escape' })
     expect(onItemSelect).toHaveBeenCalledTimes(1)
   })
@@ -469,13 +500,40 @@ describe('CommandDeck', () => {
     expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Driving"}')
     first.unmount()
 
-    renderControlledDeck()
+    renderControlledDeck({ activeSectionTitle: 'Home' })
     expect(screen.queryByTestId('command-deck-secondary')).toBeNull()
-    expect(mobileRail().getByRole('button', { name: 'Driving, 3 pages' })).toHaveAttribute('aria-pressed', 'true')
+    expect(mobileRail().getByRole('button', { name: 'Home, 1 pages' })).toHaveAttribute('aria-pressed', 'true')
+    expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Driving"}')
+  })
+
+  it('replaces a retired search preference with the current section', () => {
+    window.localStorage.setItem('teslasync-deck-view', '{"kind":"search"}')
+    renderControlledDeck({ pathname: '/drives', activeSectionTitle: 'Driving' })
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving, 3 pages' }))
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
+    expect(desktopRail().getByRole('button', { name: 'Driving, 3 pages' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('follows the current section when the route changes while the panel is open', () => {
+    const props = baseProps({ pathname: '/drives', activeSectionTitle: 'Driving', panelOpen: true })
+    const { rerender } = render(
+      <MemoryRouter>
+        <CommandDeck {...props} />
+      </MemoryRouter>,
+    )
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Saved' }))
+    rerender(
+      <MemoryRouter>
+        <CommandDeck {...props} pathname="/" activeSectionTitle="Home" />
+      </MemoryRouter>,
+    )
+    expect(desktopRail().getByRole('button', { name: 'Home, 1 pages' })).toHaveAttribute('aria-expanded', 'true')
+    expect(desktopRail().getByRole('button', { name: 'Driving, 3 pages' })).toHaveAttribute('aria-pressed', 'false')
+    expect(secondaryPanel().getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('degrades instead of crashing on undefined props', () => {
     renderDeck({ sections: undefined, pinnedItems: undefined } as unknown as Partial<CommandDeckProps>)
-    expect(desktopRail().getByRole('button', { name: 'Search' })).toBeInTheDocument()
+    expect(desktopRail().getByRole('button', { name: 'Suggested' })).toBeInTheDocument()
   })
 })

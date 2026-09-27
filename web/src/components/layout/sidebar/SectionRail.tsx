@@ -2,7 +2,7 @@
  * SectionRail
  * ───────────
  * The primary column of the Command Deck: every parent group in one
- * scrolling list — hub shortcuts (Search, Suggested, Saved, All pages)
+ * scrolling list — hub shortcuts (Suggested, Saved, All pages)
  * pinned above the section groups, utility links plus the collapse
  * toggle pinned below.
  *
@@ -31,6 +31,7 @@ export interface SectionRailProps {
   showCollapseControl?: boolean
   /** Current secondary-panel selection, or null when it is closed. */
   selection: DeckSelection | null
+  panelOpen?: boolean
   onSelect: (selection: DeckSelection) => void
   onItemSelect?: () => void
   /** Ref sink so the deck can return focus here when the panel closes. */
@@ -64,6 +65,7 @@ interface RailButtonProps {
   label: string
   countLabel?: string
   active: boolean
+  expanded?: boolean
   collapsed: boolean
   onClick: () => void
   badge?: React.ReactNode
@@ -79,6 +81,7 @@ function RailButton({
   label,
   countLabel,
   active,
+  expanded,
   collapsed,
   onClick,
   badge,
@@ -104,17 +107,18 @@ function RailButton({
       onBlur={collapsed ? onHideTip : undefined}
       aria-label={countLabel ? `${label}, ${countLabel}` : label}
       aria-pressed={active}
+      aria-expanded={expanded}
       className={cn(
-        'h-auto min-h-11 w-full gap-2.5 rounded-shape-md px-2.5 py-2 text-sm',
+        'h-auto min-h-11 w-full gap-2.5 rounded-shape-md border border-transparent px-2.5 py-2 text-sm',
         collapsed ? 'justify-center px-1' : 'justify-start',
         active
-          ? 'bg-[var(--theme-primary)]/10 font-semibold text-[var(--text-primary)]'
+          ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/10 font-semibold text-[var(--theme-primary)] shadow-[0_2px_14px_color-mix(in_srgb,var(--theme-primary)_14%,transparent)]'
           : 'font-normal text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         'focus-visible:ring-[var(--focus-ring)]',
       )}
     >
-      <span className="relative inline-flex shrink-0">
-        <Icon className={cn(collapsed ? 'h-6 w-6' : 'h-5 w-5', active ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]')} aria-hidden />
+      <span className={cn('relative inline-flex shrink-0', active && 'rounded-shape-sm bg-[var(--theme-primary)] p-1')}>
+        <Icon className={cn(collapsed ? 'h-6 w-6' : 'h-5 w-5', active ? 'text-[var(--text-on-accent)]' : 'text-[var(--text-muted)]')} aria-hidden />
         {collapsed && badge && (
           <span className="absolute -end-2 -top-2">{badge}</span>
         )}
@@ -123,6 +127,7 @@ function RailButton({
         <>
           <span className="min-w-0 flex-1 truncate text-start leading-snug">{label}</span>
           {badge}
+          {expanded && <Icons.next className="h-4 w-4 shrink-0 text-[var(--theme-primary)] rtl:rotate-180" aria-hidden />}
         </>
       )}
     </Button>
@@ -134,6 +139,7 @@ export function SectionRail({
   onToggleCollapsed,
   showCollapseControl = true,
   selection,
+  panelOpen = false,
   onSelect,
   onItemSelect,
   itemRef,
@@ -163,16 +169,6 @@ export function SectionRail({
         onScroll={hideTip}
         className="min-h-0 flex-1 space-y-px overflow-y-auto overscroll-contain px-1.5 py-2 scrollbar-thin"
       >
-        <RailButton
-          icon={SIDEBAR_SHORTCUT_ICONS.search}
-          label={t('nav.deck.search', 'Search')}
-          active={isActive('search')}
-          collapsed={collapsed}
-          onClick={() => onSelect({ kind: 'search' })}
-          buttonRef={el => itemRef?.('search', el)}
-          onShowTip={showTip}
-          onHideTip={hideTip}
-        />
         <RailButton
           icon={SIDEBAR_SHORTCUT_ICONS.suggested}
           label={t('nav.deck.suggested', 'Suggested')}
@@ -242,6 +238,7 @@ export function SectionRail({
               label={navSectionTitle(section)}
               countLabel={t('nav.deck.pageCount', { count, defaultValue: '{{count}} pages' })}
               active={isActive(key)}
+              expanded={panelOpen && isActive(key)}
               collapsed={collapsed}
               onClick={() => onSelect({ kind: 'section', title: section.title })}
               buttonRef={el => itemRef?.(key, el)}

@@ -1,6 +1,7 @@
 import { expect, type Page, type Request as PlaywrightRequest, type Route } from '@playwright/test';
 import type { FsdInsights } from '../src/types/fsd';
 import type { NotificationLog, NotificationReport } from '../src/api/types';
+import type { PinnedItem } from '../src/api/types';
 import { ensureMockSseServer } from './mockSseServer';
 import type { DataScenario } from './routeRegistry';
 
@@ -752,6 +753,8 @@ export interface MockApiController {
     contentType: string;
     violations: string[];
   }>;
+  navPins: PinnedItem[];
+  nextNavPinId: number;
 }
 
 export interface CapturedBeacon {
@@ -917,6 +920,40 @@ async function fulfill(
       });
       return;
     }
+    if (url.pathname.endsWith('/pinned') && request.method() === 'GET' && url.searchParams.get('type') === 'navigation') {
+      if (record) record.disposition = 'fulfilled';
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(controller.navPins) });
+      return;
+    }
+    if (url.pathname.endsWith('/pinned') && request.method() === 'POST') {
+      const body = request.postDataJSON() as { item_type?: string; item_id?: string };
+      if (body.item_type === 'navigation' && body.item_id) {
+        const existing = controller.navPins.find(pin => pin.item_id === body.item_id);
+        if (record) record.disposition = 'fulfilled';
+        if (existing) {
+          await route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"item already pinned"}' });
+          return;
+        }
+        controller.navPins.forEach(pin => { pin.position += 1; });
+        const pin: PinnedItem = {
+          id: controller.nextNavPinId++,
+          item_type: 'navigation',
+          item_id: body.item_id,
+          position: 0,
+          pinned_at: NOW,
+        };
+        controller.navPins.unshift(pin);
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(pin) });
+        return;
+      }
+    }
+    const navPinId = /^\/pinned\/(\d+)$/.exec(path)?.[1];
+    if (request.method() === 'DELETE' && navPinId && controller.navPins.some(pin => pin.id === Number(navPinId))) {
+      controller.navPins = controller.navPins.filter(pin => pin.id !== Number(navPinId));
+      if (record) record.disposition = 'fulfilled';
+      await route.fulfill({ status: 204, body: '' });
+      return;
+    }
     const status = resolution.status ?? 200;
     if (record) record.disposition = 'fulfilled';
     await route.fulfill({
@@ -970,6 +1007,8 @@ export async function installApiMocks(
     requests: [],
     requestIndex: new WeakMap(),
     invalidRum: [],
+    navPins: [],
+    nextNavPinId: 1,
   };
   page.on('request', (request) => {
     requestRecord(controller, request);
