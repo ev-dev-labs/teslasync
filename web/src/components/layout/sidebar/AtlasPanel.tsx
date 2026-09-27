@@ -55,6 +55,7 @@ export interface AtlasPanelProps {
   navSectionTitle: (section: { title: string; titleKey?: string }) => string
   onPin: (to: string) => void
   onUnpin: (to: string) => void
+  pinSyncUnavailable?: boolean
   onItemSelect?: () => void
   alertCount?: number
   vehicleCount?: number
@@ -79,6 +80,7 @@ export function AtlasPanel({
   navSectionTitle,
   onPin,
   onUnpin,
+  pinSyncUnavailable = false,
   onItemSelect,
   alertCount = 0,
   vehicleCount = 0,
@@ -166,7 +168,9 @@ export function AtlasPanel({
         variant="ghost"
         size="sm"
         aria-label={actionLabel}
-        title={actionLabel}
+        title={pinSyncUnavailable
+          ? t('nav.deck.pinOfflineHint', 'Saved here until navigation pins can sync')
+          : actionLabel}
         onClick={() => (pinned ? onUnpin(item.to) : onPin(item.to))}
         className={cn('h-11 w-11 shrink-0 rounded-shape-md p-0 hover:bg-[var(--control-bg)]', pinned ? 'text-amber-500' : 'text-[var(--text-muted)] hover:text-[var(--theme-primary)]')}
         data-testid={`atlas-pin-${item.to}`}
@@ -274,7 +278,7 @@ export function AtlasPanel({
       data-collapsed={compact}
       onMouseLeave={hideTip}
       className={cn(
-        'relative flex min-h-0 flex-col bg-white dark:bg-[var(--surface-1)]',
+        'relative flex min-h-0 flex-col bg-[var(--nav-context-bg)]',
         variant === 'secondary' && 'h-full w-full border-s border-e border-[var(--border-default)]',
         variant === 'inline' && 'h-full w-full flex-1',
       )}

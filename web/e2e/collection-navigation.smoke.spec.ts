@@ -25,6 +25,7 @@ for (const width of [390, 1440]) {
     const sidebar = page.locator('[data-role="sidebar"]')
     const nav = page.getByRole('navigation', { name: 'Sidebar navigation' })
     const rail = page.getByRole('navigation', { name: 'Sections and shortcuts' })
+    await expect(rail).toHaveCSS('background-color', 'rgb(9, 13, 22)')
     if (width >= 1280) {
       // Section rail with hub shortcuts; the secondary panel starts closed.
       await expect(rail.getByRole('button', { name: 'Search' })).toHaveCount(0)
@@ -37,10 +38,12 @@ for (const width of [390, 1440]) {
       await captureDeck(page, testInfo, 'deck-rail')
 
       await rail.getByRole('button', { name: /Vehicles, \d+ pages/ }).click()
+      await expect(nav).toHaveCSS('background-color', 'rgb(13, 19, 33)')
       await expect(nav.getByRole('link', { name: /^My Vehicles\b/ })).toBeVisible()
 
       // Section group: the docked panel is collapsible from either column.
       await rail.getByRole('button', { name: /Driving, \d+ pages/ }).click()
+      await expect(nav).toHaveCSS('background-color', 'rgb(13, 19, 33)')
       const selectedSection = rail.getByRole('button', { name: /Driving, \d+ pages/ })
       await expect(selectedSection).toHaveAttribute('aria-expanded', 'true')
       const primaryColor = await selectedSection.evaluate(element => getComputedStyle(element).color)
@@ -169,8 +172,30 @@ for (const width of [390, 1440]) {
       await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible()
     }
+
   })
 }
+
+test('sidebar selection follows the saved accent color and live accent changes', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await seedBrowserState(page, 'light', '/drive-calendar')
+  const mockApi = await installApiMocks(page, 'populated', 'light', 'comfortable', 'solar-amber')
+  await page.goto('/drive-calendar', { waitUntil: 'domcontentloaded' })
+  await waitForHarnessReady(page, mockApi)
+
+  const rail = page.getByRole('navigation', { name: 'Sections and shortcuts' })
+  const section = rail.getByRole('button', { name: /Driving, \d+ pages/ })
+  await section.click()
+  const panel = page.getByRole('navigation', { name: 'Sidebar navigation' })
+  const indicator = panel.getByRole('link', { name: 'Drive Calendar' })
+    .locator('xpath=..').locator(':scope > span[aria-hidden]').first()
+  await expect(indicator).toHaveCSS('background-color', 'rgb(245, 158, 11)')
+  await expect(section.locator('svg').first()).toHaveCSS('color', 'rgb(245, 158, 11)')
+
+  await page.evaluate(() => document.documentElement.style.setProperty('--theme-primary', '#e31937'))
+  await expect(indicator).toHaveCSS('background-color', 'rgb(227, 25, 55)')
+  await expect(section.locator('svg').first()).toHaveCSS('color', 'rgb(227, 25, 55)')
+})
 
 for (const width of [390, 1440]) {
   test(`opens only the current Drive Calendar group at ${width}px`, async ({ page }, testInfo) => {
@@ -182,11 +207,20 @@ for (const width of [390, 1440]) {
     await openSidebarOnMobile(page, width)
 
     const rail = page.getByRole('navigation', { name: 'Sections and shortcuts' })
+    await expect(rail).toHaveCSS('background-color', 'rgb(248, 250, 252)')
     await rail.getByRole('button', { name: /Driving, \d+ pages/ }).click()
     const panel = page.getByRole('navigation', { name: 'Sidebar navigation' })
     await expect(panel.getByRole('button', { name: 'Drive Records' })).toHaveAttribute('aria-expanded', 'true')
     await expect(panel.getByRole('button', { name: 'Trip Records' })).toHaveAttribute('aria-expanded', 'false')
+    await expect(panel.getByRole('button', { name: 'Journey Planning' })).toHaveAttribute('aria-expanded', 'false')
+    await expect(panel.getByRole('button', { name: 'Driving Insights' })).toHaveAttribute('aria-expanded', 'false')
+    await expect(panel.getByRole('button', { name: 'Driving Performance' })).toHaveAttribute('aria-expanded', 'false')
     await expect(panel.getByRole('link', { name: 'Drive Calendar' })).toHaveAttribute('aria-current', 'page')
+    await expect(panel).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    const activeIndicator = panel.getByRole('link', { name: 'Drive Calendar' })
+      .locator('xpath=..').locator(':scope > span[aria-hidden]').first()
+    await expect(activeIndicator).toHaveCSS('width', '2.5px')
+    await expect(activeIndicator).toHaveCSS('background-color', 'rgb(59, 130, 246)')
     if (width >= 1280) {
       await expect(rail.getByRole('button', { name: /Driving, \d+ pages/ })).toHaveAttribute('aria-expanded', 'true')
     }
@@ -209,10 +243,13 @@ for (const width of [390, 1440]) {
     await openSidebarOnMobile(page, width)
 
     const rail = page.getByRole('navigation', { name: 'Sections and shortcuts' })
+    await expect(rail).toHaveCSS('background-color', 'rgb(248, 250, 252)')
     await expect(rail.getByRole('button', { name: /Driving, \d+ pages/ })).toBeVisible()
     await captureDeck(page, testInfo, `deck-light-rail-${width}`)
     await rail.getByRole('button', { name: /Driving, \d+ pages/ }).click()
-    await expect(page.getByRole('navigation', { name: 'Sidebar navigation' }).getByRole('button', { name: 'Driving Performance' })).toBeVisible()
+    const panel = page.getByRole('navigation', { name: 'Sidebar navigation' })
+    await expect(panel).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    await expect(panel.getByRole('button', { name: 'Driving Performance' })).toBeVisible()
     await captureDeck(page, testInfo, `deck-light-section-${width}`)
     if (width >= 1280) {
       await page.getByRole('navigation', { name: 'Sidebar navigation' })

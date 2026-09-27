@@ -116,7 +116,7 @@ describe('useNavigationPins', () => {
     const onServerPaths = vi.fn()
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
     const result = renderHook(() => useNavigationPins(['/drives'], onServerPaths), { wrapper: wrapper(qc) })
-    await waitFor(() => expect(toastError).toHaveBeenCalled())
+    await waitFor(() => expect(result.result.current.syncUnavailable).toBe(true))
     expect(result.result.current.ready).toBe(false)
 
     await act(async () => {
@@ -124,6 +124,11 @@ describe('useNavigationPins', () => {
       await result.result.current.toggle('/drives', false)
     })
     expect(window.localStorage.getItem('teslasync-navigation-pins-pending')).toContain('/drive-calendar')
+    expect(toastError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'toast.pin.navigation.pending',
+      'Saved on this device; pin will sync when connected',
+    )
     offline = false
     await act(async () => {
       await qc.invalidateQueries({ queryKey: ['pinned', 'navigation'] })
@@ -171,6 +176,26 @@ describe('useNavigationPins', () => {
     expect(onServerPaths).toHaveBeenLastCalledWith(['/drive-calendar'])
     expect(rows.some(row => row.item_id === '/drive-calendar')).toBe(true)
     expect(window.localStorage.getItem('teslasync-navigation-pins-pending')).toBeNull()
+    result.unmount()
+  })
+
+  it('serializes rapid pin then unpin so the final click wins', async () => {
+    rows = [{ id: nextId++, item_type: 'navigation', item_id: '@navigation-initialized', position: 0, pinned_at: '' }]
+    const serverRequest = requestMock.getMockImplementation()!
+    requestMock.mockImplementation(async (url: string, options?: { method?: string; body?: string }) => {
+      if (url === '/pinned' && options?.method === 'POST') {
+        await new Promise(resolve => setTimeout(resolve, 40))
+      }
+      return serverRequest(url, options)
+    })
+    const result = renderHook(() => useNavigationPins([], vi.fn()), { wrapper: wrapper() })
+    await waitFor(() => expect(result.result.current.ready).toBe(true))
+    await act(async () => {
+      const pin = result.result.current.toggle('/drives', true)
+      const unpin = result.result.current.toggle('/drives', false)
+      await Promise.all([pin, unpin])
+    })
+    expect(rows.some(row => row.item_id === '/drives')).toBe(false)
     result.unmount()
   })
 })

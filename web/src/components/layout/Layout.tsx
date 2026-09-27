@@ -1370,6 +1370,7 @@ export default function Layout() {
             navSectionTitle={navSectionTitle}
             onPin={pinNavPath}
             onUnpin={unpinNavPath}
+            pinSyncUnavailable={navigationPins.syncUnavailable}
             onItemSelect={() => setSidebarOpen(false)}
             alertCount={unreadAlerts}
             vehicleCount={vehicleCount}

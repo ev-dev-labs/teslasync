@@ -10,6 +10,12 @@ secondary filter searches only pages in the open section. Global page,
 telemetry and command search remains in the centered desktop header and the
 mobile drawer. On mobile, the sidebar drills from sections into pages with a
 Back control.
+The primary rail uses a neutral slate surface, and the context panel uses a
+separate white/deep-navy surface with a hairline divider. The current page
+has a narrow, Settings-aware accent indicator and a quiet tinted surface. Opening a
+section expands only the collection containing the current page (or its
+first collection when no page in that section is active); the other
+collections remain collapsed until selected.
 
 Pinned pages remain in their collection and also appear in the section's
 **Quick access pins** and the **Saved** view. Pins are stored on the server

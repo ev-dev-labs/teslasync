@@ -42,6 +42,7 @@ export interface CommandDeckProps {
   navSectionTitle: (section: { title: string; titleKey?: string }) => string
   onPin: (to: string) => void
   onUnpin: (to: string) => void
+  pinSyncUnavailable?: boolean
   onItemSelect?: () => void
   alertCount?: number
   vehicleCount?: number
@@ -92,6 +93,7 @@ export function CommandDeck({
   navSectionTitle,
   onPin,
   onUnpin,
+  pinSyncUnavailable = false,
   onItemSelect,
   alertCount = 0,
   vehicleCount = 0,
@@ -196,6 +198,7 @@ export function CommandDeck({
     navSectionTitle,
     onPin,
     onUnpin,
+    pinSyncUnavailable,
     onItemSelect: handleItemSelect,
     alertCount,
     vehicleCount,

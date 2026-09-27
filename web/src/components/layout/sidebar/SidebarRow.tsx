@@ -71,7 +71,7 @@ export function SidebarRow({
       {active && (
         <span
           aria-hidden
-          className="absolute inset-y-1 start-0 z-10 w-[3px] rounded-r-sm bg-[var(--theme-primary)]"
+          className="absolute inset-y-0 start-0 z-10 w-[2.5px] bg-[var(--nav-active-indicator)]"
         />
       )}
       <PrefetchNavLink
@@ -95,14 +95,14 @@ export function SidebarRow({
             : 'flex min-h-10 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-2 pe-2.5 ps-3 text-sm transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           active
-            ? 'bg-[var(--theme-primary)]/10 font-semibold text-[var(--theme-primary)] ring-1 ring-inset ring-[var(--theme-primary)]/35 shadow-[0_2px_14px_color-mix(in_srgb,var(--theme-primary)_14%,transparent)]'
+            ? 'bg-[var(--nav-active-bg)] font-semibold text-[var(--text-primary)]'
             : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         )}
       >
         <Icon
           className={cn(
             compact ? 'h-6 w-6 shrink-0 transition-colors' : 'h-4 w-4 shrink-0 transition-colors',
-            active ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]',
+            active ? 'text-[var(--nav-active-indicator)]' : 'text-[var(--text-muted)]',
           )}
           aria-hidden
         />
@@ -116,7 +116,6 @@ export function SidebarRow({
         </span>}
         {compact && trailing && <span className="absolute end-0 top-0 scale-75">{trailing}</span>}
         {!compact && trailing}
-        {active && !compact && <span aria-hidden className="ms-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--theme-primary)]" />}
       </PrefetchNavLink>
       {hoverAction && !compact && (
         <div className={cn('ms-1 transition-opacity', !actionAlwaysVisible && 'lg:opacity-0 lg:group-hover/sidebar-row:opacity-100 lg:focus-within:opacity-100')}>

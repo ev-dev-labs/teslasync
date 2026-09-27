@@ -231,15 +231,15 @@ describe('useRangeState — localStorage persistence', () => {
     expect(secondPage.result.current.presetId).toBeUndefined();
   });
 
-  it('freezes a rolling year when entering a screen without the year preset', () => {
+  it('freezes year-to-date when entering a screen without the calendar preset', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 8, 27, 12));
     const calendar = renderHook(() => useRangeState(), {
       wrapper: withRouter(['/drive-calendar']),
     });
-    act(() => calendar.result.current.setPreset('1y'));
+    act(() => calendar.result.current.setPreset('ytd'));
     const selected = { start: calendar.result.current.start, end: calendar.result.current.end };
-    expect(calendar.result.current.presetId).toBe('1y');
+    expect(calendar.result.current.presetId).toBe('ytd');
     calendar.unmount();
 
     const drives = renderHook(() => useRangeState(), {

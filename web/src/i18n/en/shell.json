@@ -524,6 +524,7 @@
       "quickAccessLink": "Quick access: {{page}}",
       "removeQuickPin": "Remove {{page}} from quick access",
       "pinHint": "Pin pages to save",
+      "pinOfflineHint": "Saved here until navigation pins can sync",
       "noQuickPins": "Pin a page below to keep it close.",
       "expandAllGroups": "Expand all groups",
       "collapseAllGroups": "Collapse all groups",

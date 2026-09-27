@@ -51,14 +51,11 @@ export function useNavigationPins(initialPaths: readonly string[], onServerPaths
   const lastAppliedAt = useRef(0)
   const [pendingPins] = useState(readPendingPins)
   const pending = useRef(pendingPins)
+  const inFlight = useRef<Promise<unknown>>(Promise.resolve())
   const initialPathsRef = useRef(initialPaths)
   initialPathsRef.current = initialPaths
   const [ready, setReady] = useState(false)
   const [syncRevision, setSyncRevision] = useState(0)
-
-  useEffect(() => {
-    if (query.isError) error(query.error, 'toast.pin.navigation.loadError', 'Could not load synced navigation pins')
-  }, [query.isError, query.error, error])
 
   useEffect(() => {
     if (!query.isSuccess || !query.data || mutation.isPending) return
@@ -139,22 +136,35 @@ export function useNavigationPins(initialPaths: readonly string[], onServerPaths
       if (!ready) {
         pending.current.set(itemId, pin)
         writePendingPins(pending.current)
+        if (query.isError) {
+          error(query.error, 'toast.pin.navigation.pending', 'Saved on this device; pin will sync when connected')
+        }
         void qc.invalidateQueries({ queryKey: pinnedKeys.type('navigation') })
         return Promise.resolve()
       }
-      return mutation.mutateAsync({ itemId, pin }).catch(cause => {
-        if (isApiError(cause) && cause.status < 500 && cause.status !== 429) {
-          error(cause, 'toast.pin.navigation.migrateError', 'Could not sync navigation pin')
-          throw cause
+      const operation = inFlight.current.catch(() => undefined).then(() => {
+        if (pending.current.has(itemId)) {
+          pending.current.set(itemId, pin)
+          writePendingPins(pending.current)
+          void qc.invalidateQueries({ queryKey: pinnedKeys.type('navigation') })
+          return undefined
         }
-        pending.current.set(itemId, pin)
-        writePendingPins(pending.current)
-        setReady(false)
-        error(cause, 'toast.pin.navigation.pending', 'Saved on this device; pin will sync when connected')
-        return undefined
+        return mutation.mutateAsync({ itemId, pin }).catch(cause => {
+          if (isApiError(cause) && cause.status < 500 && cause.status !== 429) {
+            error(cause, 'toast.pin.navigation.migrateError', 'Could not sync navigation pin')
+            throw cause
+          }
+          pending.current.set(itemId, pin)
+          writePendingPins(pending.current)
+          setReady(false)
+          error(cause, 'toast.pin.navigation.pending', 'Saved on this device; pin will sync when connected')
+          return undefined
+        })
       })
+      inFlight.current = operation
+      return operation
     },
-    [ready, mutation.mutateAsync, qc, error],
+    [ready, mutation.mutateAsync, qc, error, query.isError, query.error],
   )
   const restore = useCallback(() => {
     const cached = qc.getQueryData<PinnedItem[]>(pinnedKeys.list('navigation'))
@@ -164,5 +174,5 @@ export function useNavigationPins(initialPaths: readonly string[], onServerPaths
     void qc.invalidateQueries({ queryKey: pinnedKeys.type('navigation') })
   }, [qc, onServerPaths])
 
-  return { ready, toggle, restore }
+  return { ready, syncUnavailable: query.isError, toggle, restore }
 }

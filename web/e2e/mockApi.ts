@@ -2,6 +2,7 @@ import { expect, type Page, type Request as PlaywrightRequest, type Route } from
 import type { FsdInsights } from '../src/types/fsd';
 import type { NotificationLog, NotificationReport } from '../src/api/types';
 import type { PinnedItem } from '../src/api/types';
+import type { ThemeId } from '../src/components/ui/ThemeProvider';
 import { ensureMockSseServer } from './mockSseServer';
 import type { DataScenario } from './routeRegistry';
 
@@ -430,6 +431,7 @@ export function resolveApiFixture(
   scenario: DataScenario,
   theme: 'dark' | 'light' = 'dark',
   density: E2EUIDensity = 'comfortable',
+  accentTheme: ThemeId = 'neon-cyan',
 ): MockResolution {
   const observedAt = scenario === 'stale' ? STALE : NOW;
   if (method !== 'GET') {
@@ -438,7 +440,7 @@ export function resolveApiFixture(
     ) return matched({});
     return { matched: false };
   }
-  if (path === '/settings') return matched({ ...settings, mode: theme, ui_density: density });
+  if (path === '/settings') return matched({ ...settings, theme: accentTheme, mode: theme, ui_density: density });
   if (path === '/system/auth-mode') return matched({ mode: 'open', forward_auth: false });
   if (path === '/auth/status') return matched({ authenticated: false, connected: false });
   if (path === '/auth/session') {
@@ -833,6 +835,7 @@ async function fulfill(
   theme: 'dark' | 'light',
   density: E2EUIDensity,
   sseOrigin: string,
+  accentTheme: ThemeId,
 ): Promise<void> {
   controller.pending += 1;
   controller.lastActivityAt = Date.now();
@@ -869,7 +872,7 @@ async function fulfill(
       await fulfillSse(route, path, controller, sseOrigin);
       return;
     }
-    const resolution = resolveApiFixture(path, request.method(), scenario, theme, density);
+    const resolution = resolveApiFixture(path, request.method(), scenario, theme, density, accentTheme);
     if (!resolution.matched) {
       controller.unmatched.add(
         `${request.method()} ${url.pathname}${url.search ? '?<redacted>' : ''}`,
@@ -993,6 +996,7 @@ export async function installApiMocks(
   scenario: DataScenario = 'populated',
   theme: 'dark' | 'light' = 'dark',
   density: E2EUIDensity = 'comfortable',
+  accentTheme: ThemeId = 'neon-cyan',
 ): Promise<MockApiController | null> {
   if (process.env.E2E_MOCKS === '0') return null;
   const sseServer = await ensureMockSseServer();
@@ -1014,7 +1018,7 @@ export async function installApiMocks(
     requestRecord(controller, request);
   });
   await page.route('**/api/**', (route) =>
-    fulfill(route, scenario, controller, theme, density, sseServer.origin));
+    fulfill(route, scenario, controller, theme, density, sseServer.origin, accentTheme));
   return controller;
 }
 

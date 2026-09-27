@@ -207,12 +207,13 @@ describe('DriveCalendarPage', () => {
     expect(new Date(nextEnd)).toEqual(new Date(2026, 0, 1));
   });
 
-  it('uses the precise rolling bounds for the shared last-24-hours preset', () => {
+  it('uses the calendar default when a bookmarked rolling 24-hour preset is unavailable', () => {
     renderCalendar('/drive-calendar?time_scope=24h');
     const [, start, end] = useHistoryMock.mock.lastCall!;
-    expect(Date.now() - new Date(start).getTime()).toBeGreaterThanOrEqual(86_390_000);
-    expect(Date.now() - new Date(start).getTime()).toBeLessThan(86_410_000);
-    expect(Math.abs(Date.now() - new Date(end).getTime())).toBeLessThan(10_000);
+    expect(Date.now() - new Date(start).getTime()).toBeGreaterThan(6 * 86_400_000);
+    expect(Date.now() - new Date(start).getTime()).toBeLessThan(8 * 86_400_000);
+    expect(new Date(end).getTime() - Date.now()).toBeGreaterThan(0);
+    expect(new Date(end).getTime() - Date.now()).toBeLessThanOrEqual(86_400_000);
   });
 
   it('shows totals from every loaded drive in a year with more than 1,000 sessions', () => {
