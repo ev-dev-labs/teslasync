@@ -62,6 +62,7 @@ docs/.vitepress/dist/
 # Test artifacts
 test-results/
 web/test-results/
+web/test-results-pwa-assets/
 web/playwright-report/
 web/blob-report/
 web/e2e/.auth-state.json

@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import React from 'react'
+
+vi.mock('@/lib/appIcon', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/appIcon')>()
+  return { ...actual, renderSvgToPngDataUrl: vi.fn() }
+})
 
 // ── Theme mock ────────────────────────────────────────────────────────────
 // We control the theme from the test so we can assert that toggling
@@ -13,7 +18,7 @@ vi.mock('@/components/ui/ThemeProvider', () => ({
 }))
 
 import { useDynamicAppIcon } from '../useDynamicAppIcon'
-import { buildAppIconSvg, svgToDataUrl } from '@/lib/appIcon'
+import { buildAppIconSvg, renderSvgToPngDataUrl, svgToDataUrl } from '@/lib/appIcon'
 
 function wrapper({ children }: { children: ReactNode }) {
   return React.createElement(React.Fragment, null, children)
@@ -46,6 +51,7 @@ describe('useDynamicAppIcon', () => {
     mockTheme = { primary: '#3b82f6', accent: '#06b6d4' }
     mockMode = { bg: '#0b0d12' }
     setupHead()
+    vi.mocked(renderSvgToPngDataUrl).mockResolvedValue(null)
     // Stub URL.createObjectURL / revokeObjectURL — jsdom ships only a
     // partial implementation that throws on Blob inputs in some versions.
     let counter = 0
@@ -63,6 +69,7 @@ describe('useDynamicAppIcon', () => {
 
   afterEach(() => {
     document.head.innerHTML = ''
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
 
@@ -94,6 +101,25 @@ describe('useDynamicAppIcon', () => {
     expect(meta).not.toBeNull()
     expect(meta.getAttribute('content')).toBe('#0b0d12')
     expect(meta.getAttribute('data-dynamic-app-icon')).toBe('true')
+  })
+
+  it('re-tints every theme-color meta so the app theme owns the chrome on all OS schemes', () => {
+    for (const scheme of ['light', 'dark']) {
+      const meta = document.createElement('meta')
+      meta.setAttribute('name', 'theme-color')
+      meta.setAttribute('media', `(prefers-color-scheme: ${scheme})`)
+      meta.setAttribute('content', scheme === 'light' ? '#f8fafc' : '#0b0d12')
+      document.head.appendChild(meta)
+    }
+    renderHook(() => useDynamicAppIcon(), { wrapper })
+    const metas = Array.from(
+      document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'),
+    )
+    expect(metas).toHaveLength(2)
+    for (const meta of metas) {
+      expect(meta.getAttribute('content')).toBe('#0b0d12')
+      expect(meta.getAttribute('data-dynamic-app-icon')).toBe('true')
+    }
   })
 
   it('repaints the favicon without saturating browser chrome when the theme changes', () => {
@@ -181,5 +207,42 @@ describe('useDynamicAppIcon', () => {
     expect(() =>
       renderHook(() => useDynamicAppIcon(), { wrapper }),
     ).not.toThrow()
+  })
+
+  it('keeps the complete static manifest when it cannot be fetched', async () => {
+    vi.mocked(renderSvgToPngDataUrl).mockResolvedValue('data:image/png;base64,AAAA')
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')!
+
+    renderHook(() => useDynamicAppIcon(), { wrapper })
+    await waitFor(() => expect(warning).toHaveBeenCalledOnce())
+    expect(manifest.href).toBe('http://localhost/manifest.webmanifest')
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+
+  it('does not replace the current theme with a stale manifest fetch', async () => {
+    vi.mocked(renderSvgToPngDataUrl).mockResolvedValue('data:image/png;base64,AAAA')
+    const requests: Array<(value: Response) => void> = []
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => requests.push(resolve))))
+    const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')!
+
+    const { rerender } = renderHook(() => useDynamicAppIcon(), { wrapper })
+    await waitFor(() => expect(requests).toHaveLength(1))
+    act(() => {
+      mockTheme = { primary: '#e31937', accent: '#ff4060' }
+    })
+    rerender()
+    await waitFor(() => expect(requests).toHaveLength(2))
+
+    await act(async () => {
+      requests[1]({ ok: true, json: async () => ({ id: '/', screenshots: [] }) } as Response)
+    })
+    await waitFor(() => expect(manifest.href).toBe('blob:test-1'))
+    await act(async () => {
+      requests[0]({ ok: true, json: async () => ({ id: '/' }) } as Response)
+    })
+    expect(manifest.href).toBe('blob:test-1')
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
   })
 })

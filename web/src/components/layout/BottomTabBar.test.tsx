@@ -97,6 +97,7 @@ describe('BottomTabBar', () => {
     renderBar()
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
     expect(nav).toBeInTheDocument()
+    expect(nav.className).toContain('h-[var(--shell-tab-bar-height)]')
     expect(tSpy).toHaveBeenCalledWith('nav.quickNav', 'Quick navigation')
   })
 

@@ -37,7 +37,7 @@ export function BottomTabBar() {
       aria-label={t('nav.quickNav', 'Quick navigation')}
       data-role="bottom-tab-bar"
       className="fixed inset-x-0 bottom-0 z-50 xl:hidden
-        flex h-14 items-center justify-around border-t border-[var(--border-default)]
+        flex h-[var(--shell-tab-bar-height)] items-center justify-around border-t border-[var(--border-default)]
         bg-[var(--surface-1)] px-2 shadow-e3 dark:bg-[var(--surface-overlay)] dark:backdrop-blur-xl
         safe-bottom forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]"
     >

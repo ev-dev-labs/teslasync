@@ -11,7 +11,7 @@ import type { DriveCalendar } from '../../lib/driveCalendar';
 import { formatCalendarMonth, getWeekdayLabels } from './labels';
 import type { DriveCalendarSectionState } from './types';
 
-const WEEK_GRID = 'grid grid-flow-col auto-cols-[1.125rem] gap-1';
+const WEEK_GRID = 'grid grid-flow-col auto-cols-[minmax(1.125rem,1fr)] gap-1';
 const LEVEL_CLASSES = [
   'bg-[var(--surface-2)]',
   'bg-emerald-500/25',
@@ -83,7 +83,7 @@ export function DriveCalendarHeatmap({
           )}
         >
           <div className="overflow-x-auto pb-1">
-            <div className="w-max min-w-full">
+            <div className="w-full min-w-max">
               <div className="mb-1 grid grid-cols-[2.75rem_minmax(0,1fr)] gap-2">
                 <span aria-hidden="true" />
                 <div className={WEEK_GRID}>
@@ -127,7 +127,7 @@ export function DriveCalendarHeatmap({
                             },
                           )}
                           className={cn(
-                            'aspect-square min-h-2 rounded-[3px] border border-[var(--border-subtle)]',
+                            'h-5 rounded-[3px] border border-[var(--border-subtle)]',
                             LEVEL_CLASSES[day.level] ?? LEVEL_CLASSES[0],
                           )}
                         />

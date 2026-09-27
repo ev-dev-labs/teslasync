@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   buildAppIconSvg,
+  buildDynamicManifest,
   renderSvgToPngDataUrl,
   svgToDataUrl,
   type AppIconMode,
@@ -233,5 +234,39 @@ describe('renderSvgToPngDataUrl', () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+})
+
+describe('buildDynamicManifest', () => {
+  const icons = [{ src: 'data:themed', sizes: '512x512', type: 'image/png', purpose: 'any' }]
+
+  it('preserves static install fields while theming icons and colours', () => {
+    const manifest = buildDynamicManifest(
+      {
+        id: '/',
+        display_override: ['window-controls-overlay', 'standalone'],
+        screenshots: [{ src: '/screenshots/a.jpg' }],
+        shortcuts: [{ name: 'Glance' }],
+        share_target: { action: '/share-target' },
+      },
+      { backgroundColor: '#111111', themeColor: '#222222', icons },
+    )
+    expect(manifest.id).toBe('/')
+    expect(manifest.display_override).toEqual(['window-controls-overlay', 'standalone'])
+    expect(manifest.screenshots).toEqual([{ src: '/screenshots/a.jpg' }])
+    expect(manifest.shortcuts).toEqual([{ name: 'Glance' }])
+    expect(manifest.share_target).toEqual({ action: '/share-target' })
+    expect(manifest.background_color).toBe('#111111')
+    expect(manifest.theme_color).toBe('#222222')
+    expect(manifest.icons).toBe(icons)
+  })
+
+  it('falls back to minimal install defaults when the static manifest is unreachable', () => {
+    const manifest = buildDynamicManifest({}, { backgroundColor: '#111111', themeColor: '#222222', icons })
+    expect(manifest.name).toBe('TeslaSync')
+    expect(manifest.short_name).toBe('TeslaSync')
+    expect(manifest.start_url).toBe('/')
+    expect(manifest.display).toBe('standalone')
+    expect(manifest.icons).toBe(icons)
   })
 })

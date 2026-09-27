@@ -61,6 +61,8 @@
     "e2e": "node scripts/run-e2e-suite.mjs e2e:run",
     "e2e:run": "playwright test",
     "e2e:build": "vite build --outDir e2e/.app-dist",
+    "pwa:assets": "playwright test --config=playwright.pwa-assets.config.ts --project=pwa-assets",
+    "pwa:devices": "playwright test --config=playwright.pwa-assets.config.ts -g \"device review\"",
     "e2e:list": "playwright test --list",
     "e2e:quality": "node scripts/run-e2e-suite.mjs e2e:quality:run",
     "e2e:quality:run": "playwright test --project=chromium-*-* --project=chromium-smoke --workers=2",

@@ -174,6 +174,7 @@ export function CommandDeck({
     favoritesCount,
     alertCount,
     onToggleCollapsed: onToggleRailCollapsed,
+    onItemSelect: handleItemSelect,
   }
   const panelProps = {
     sections,

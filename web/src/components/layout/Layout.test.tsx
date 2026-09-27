@@ -978,12 +978,17 @@ describe('Layout — mobile drawer', () => {
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })
     expect(aside).toHaveAttribute('data-sidebar-open', 'false')
+    expect(aside.firstElementChild?.className).toContain('safe-area-inset-top')
+    expect(screen.getByRole('banner', { name: 'Site header' }).className).toContain('safe-area-inset-top')
 
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
     await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'true'))
+    expect(aside.className).toContain('visible')
+    expect(screen.getByRole('button', { name: 'Close sidebar' })).toHaveFocus()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+    expect(aside.className).toContain('invisible xl:visible')
   })
 })
 

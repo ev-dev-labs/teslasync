@@ -410,6 +410,16 @@ describe('CommandDeck', () => {
     expect(screen.queryByTestId('command-deck-mobile-panel')).toBeNull()
   })
 
+  it.each(['All pages', 'Alerts', 'Display'])(
+    'closes the mobile drawer for the %s rail shortcut',
+    (label) => {
+      const onItemSelect = vi.fn()
+      renderControlledDeck({ onItemSelect })
+      fireEvent.click(mobileRail().getByRole('link', { name: label }))
+      expect(onItemSelect).toHaveBeenCalledTimes(1)
+    },
+  )
+
   it('closes the mobile drill level on Escape while leaving the desktop panel untouched', () => {
     const onItemSelect = vi.fn()
     renderControlledDeck({ onItemSelect })

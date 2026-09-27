@@ -33,6 +33,7 @@ export interface SectionRailProps {
   /** Current secondary-panel selection, or null when it is closed. */
   selection: DeckSelection | null
   onSelect: (selection: DeckSelection) => void
+  onItemSelect?: () => void
   /** Ref sink so the deck can return focus here when the panel closes. */
   itemRef?: (key: string, el: HTMLButtonElement | null) => void
   sections: SidebarSectionInput[]
@@ -137,6 +138,7 @@ export function SectionRail({
   showCollapseControl = true,
   selection,
   onSelect,
+  onItemSelect,
   itemRef,
   sections,
   collections = [],
@@ -211,6 +213,7 @@ export function SectionRail({
 
         <PrefetchNavLink
           to="/explore"
+          onClick={onItemSelect}
           aria-label={t('nav.deck.allPages', 'All pages')}
           {...(collapsed ? tipHandlers(t('nav.deck.allPages', 'All pages')) : {})}
           className={cn(
@@ -257,6 +260,7 @@ export function SectionRail({
         <div className="flex flex-col gap-0.5">
           <PrefetchNavLink
             to="/notifications/inbox"
+            onClick={onItemSelect}
             aria-label={t('nav.deck.alerts', 'Alerts')}
             {...(collapsed ? tipHandlers(
               t('nav.deck.alerts', 'Alerts'),
@@ -279,6 +283,7 @@ export function SectionRail({
           </PrefetchNavLink>
           <PrefetchNavLink
             to="/settings#appearance"
+            onClick={onItemSelect}
             aria-label={t('nav.deck.display', 'Display')}
             {...(collapsed ? tipHandlers(t('nav.deck.display', 'Display')) : {})}
             className={cn(
