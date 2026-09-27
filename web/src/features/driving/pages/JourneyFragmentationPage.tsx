@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { EmptyState } from '@/components/feedback';
 import { PageContainer, Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -61,7 +61,6 @@ export default function JourneyFragmentationPage() {
       subtitle={t('journeyFragmentation.subtitle', 'Descriptive continuity analysis of a capped returned drive-history window')}
       actions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
           <Select
             aria-label={t('journeyFragmentation.maxGap', 'Maximum parking gap')}
             value={String(maxGapMin)}

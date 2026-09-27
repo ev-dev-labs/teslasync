@@ -2,7 +2,7 @@
   "apiLogs": {
     "title": "API Logs",
     "subtitle": "Record of all API calls with request/response details",
-    "statsScope": "API call totals are all-time across services; the date and filters below apply only to the request list.",
+    "statsScope": "API call totals and service counts use the View settings range. Service, method, status, and endpoint filters apply only to the request list.",
     "errorDiagnostics": "Error diagnostics",
     "backendErrors": "Backend runtime errors",
     "backendScope": "Since the current API process started; independent of API call filters.",

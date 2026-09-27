@@ -260,13 +260,13 @@ describe('ComfortConsistencyPage', () => {
     expect(screen.getAllByText('Balances')).toHaveLength(7);
   });
 
-  it('keeps the header, vehicle control, and every shell without a vehicle', () => {
+  it('keeps the header and every shell without a vehicle or duplicate control', () => {
     h.vehicleId = null;
     h.history = query();
     renderPage();
 
     expectEverySection();
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
     expect(h.historyHook).toHaveBeenLastCalledWith('');
     expect(screen.getByText(
       'Select a vehicle to analyze its returned climate timeline.',

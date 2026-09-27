@@ -22,12 +22,13 @@ import { useTranslation } from 'react-i18next';
 import { Activity, AlertCircle, Clock, Database, Radio } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Badge, HelpTooltip, Select, Label } from '@/components/ui';
+import { GlassPanel, Button, Badge, HelpTooltip, Select } from '@/components/ui';
 import { EmptyState, AlertBanner } from '@/components/feedback';
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlArray, useUrlNumber, useUrlBatch, type UrlBatchUpdate } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { getDatePreset, resolveAllTimeStart } from '@/lib/datePresets';
@@ -62,6 +63,7 @@ const PER_PAGE_OPTIONS = [
 export default function SignalExplorerPage() {
   const { t } = useTranslation();
   usePageTitle(t('signalExplorer.title', 'Signal Explorer'));
+  const { preferences } = useProductPreferences();
 
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
   const vehicleId = storeVehicleId ?? 0;
@@ -69,10 +71,7 @@ export default function SignalExplorerPage() {
   const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
-  const { start, end, setRange } = useRangeState({
-    persistKey: 'signal-explorer.range',
-    defaultPresetId: 'today',
-  });
+  const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
 
   const [exploreKey, setExploreKey] = useState<number | null>(null);
   const [page, setPage] = useUrlNumber('page', 1);
@@ -238,7 +237,6 @@ export default function SignalExplorerPage() {
       subtitle={t('signalExplorer.subtitle', 'Visualise signal history with chart and stats — or stream live')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <VehicleSelect />
           {isLive ? (
             <Badge variant={live.connected ? 'success' : 'danger'} dot>
               {live.connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}
@@ -313,7 +311,7 @@ export default function SignalExplorerPage() {
             </section>
           </FadeIn>
 
-          {/* 2 — Controls: signal picker, time range, per-page, explore / live */}
+          {/* 2 — Controls: signal picker, per-page, explore / live */}
           <FadeIn delay={0.05}>
             <GlassPanel className="p-4 sm:p-5 space-y-4">
               <SignalSelector
@@ -324,16 +322,6 @@ export default function SignalExplorerPage() {
               />
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div className="space-y-1.5">
-                  <Label className="block">{t('signalExplorer.timeRange', 'Time Range')}</Label>
-                  <RangePicker
-                    value={{ start, end }}
-                    onChange={setRange}
-                    presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
-                    align="start"
-                    triggerTestId="signal-explorer-range"
-                  />
-                </div>
                 <div className="flex flex-wrap items-end gap-2 sm:gap-3">
                   {!isLive ? (
                     <Select

@@ -87,6 +87,7 @@ jobs:
         run: |
           go test -race -v ./internal/arch/...
           go run ./tools/archmetrics -compare tools/archmetrics/baseline.json
+          go run ./cmd/trace-coverage-audit
       - name: Sharding and report regression tests
         if: matrix.check == 'architecture'
         run: |

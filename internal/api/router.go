@@ -406,6 +406,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/fleetstatesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/roadanomalysvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
@@ -414,6 +415,7 @@ import (
 	analysishandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/analysis"
 	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
+	roadanomalyhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/roadanomaly"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
@@ -685,6 +687,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		},
 	}))
 	driveHandler := apidrives.NewDriveDetail(db, stateReader, liveStateReader)
+	roadAnomalyHandler := roadanomalyhandler.NewRoadAnomalyHandler(roadanomalysvc.New(drivedb.NewDriveRepo(db), stateReader))
 	chargingHandler := apicharging.NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
 		func(r *http.Request, action string, entityID *int64, detail string) {
@@ -3323,6 +3326,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
 				r.Get("/commands/latest", commandHandler.LatestCommands)
+				// Optional from/to: RFC3339 [from,to) instants or legacy inclusive calendar dates.
 				r.Get("/commands/history", commandHandler.CommandHistory)
 				r.Get("/energy", energyHandler.Stats)
 				r.Get("/energy/flow", energyFlowHandler.Get)
@@ -3455,6 +3459,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", driveHandler.BulkDelete)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
+				r.Get("/road-anomalies", roadAnomalyHandler.Get)
 				r.Get("/positions", driveHandler.Positions)
 				r.Get("/telemetry", driveHandler.TelemetryReadings)
 				// Share link management
@@ -4171,7 +4176,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/watch", vampireDrainHandler.Watch)
 		})
 
-		// Visited Locations
+		// Visited locations: optional RFC3339 [from,to) bounds filter drives before aggregation.
 		r.Get("/locations", visitedLocationHandler.List)
 
 		// /mileage/{monthly,stats} are derived live from the SI-canonical drives
@@ -4591,6 +4596,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/users/me/activity", auditHandler.UserActivity)
 
 		// API Call Logs
+		// GET /api-logs and /api-logs/stats accept start/end_exclusive RFC3339
+		// bounds; unbounded stats and legacy inclusive list end remain supported.
 		r.Route("/api-logs", func(r chi.Router) {
 			r.Get("/", apiCallLogHandler.List)
 			r.Get("/stats", apiCallLogHandler.Stats)

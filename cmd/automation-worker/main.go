@@ -173,6 +173,7 @@ func main() {
 	vehicleRepo := vehicledb.NewVehicleRepo(db)
 	commandLogRepo := energydb.NewCommandLogRepo(db)
 	settingsRepo := settingsdb.NewSettingsRepo(db)
+	teslaClient.SetEndpointControlsReader(settingsRepo)
 	notifRepo := dbnotif.NewNotificationRepo(db)
 	varRepo := dbauto.NewAutomationVariableRepo(db)
 

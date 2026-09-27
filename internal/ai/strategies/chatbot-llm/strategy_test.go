@@ -91,6 +91,7 @@ func TestStrategy_Tools(t *testing.T) {
 		"query_vehicle_location",
 		"query_drive_detail",
 		"query_charge_detail",
+		"query_charging_period",
 		"query_alerts_recent",
 		"query_geofences_list",
 		"query_efficiency_period",

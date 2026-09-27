@@ -3,7 +3,7 @@ import { ReceiptText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChargingForensics, fetchAllChargingForensics } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, DataTable, Pagination, type Column } from '@/components/ui';
@@ -99,7 +99,6 @@ export default function ChargingForensicsPage() {
         'advancedIntelligence.forensics.subtitle',
         'Reconcile vehicle, meter, energy-loss, and cost records without filling unsupported fields.',
       )}
-      actions={<VehicleSelect withIcon />}
       loading={vehicleId != null && query.isLoading}
       error={query.error instanceof Error ? query.error : null}
     >

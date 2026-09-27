@@ -47,12 +47,109 @@ func eventFixture(t *testing.T) (*NotificationRepo, context.Context) {
 				OR (status <> 'triggered' AND channel_id IS NOT NULL)))`,
 		`CREATE UNIQUE INDEX notification_test_trigger_event ON notification_logs (trigger_id) WHERE status = 'triggered'`,
 		`CREATE TEMP TABLE notification_log_events (notification_log_id bigint, actor text, kind text, note text)`,
+		`CREATE TEMP TABLE api_call_logs (ts timestamptz NOT NULL, service text NOT NULL, status_code integer NOT NULL)`,
 	} {
 		if _, err := pool.Exec(ctx, statement); err != nil {
 			t.Fatalf("create isolated notification fixture: %v", err)
 		}
 	}
 	return NewNotificationRepo(&database.DB{Pool: pool}), ctx
+}
+
+func TestReportOutboundHTTPCallsRespectServiceAndHalfOpenUTCWindow(t *testing.T) {
+	repo, ctx := eventFixture(t)
+	from := time.Date(2026, 9, 19, 0, 0, 0, 0, time.UTC)
+	until := from.AddDate(0, 0, 7)
+	for _, row := range []struct {
+		ts      time.Time
+		service string
+		status  int
+	}{
+		{from.Add(-time.Nanosecond), "notify-generic", 200},
+		{from, "notify-generic", 200},
+		{from.Add(time.Hour), "notify-generic", 429},
+		{until.Add(-time.Nanosecond), "notify-generic", 503},
+		{until, "notify-generic", 200},
+		{from, "teslasync-api", 200},
+	} {
+		if _, err := repo.db.Pool.Exec(ctx,
+			`INSERT INTO api_call_logs (ts, service, status_code) VALUES ($1, $2, $3)`,
+			row.ts, row.service, row.status); err != nil {
+			t.Fatal(err)
+		}
+	}
+	report, err := repo.GetReport(ctx, from, until, time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.OutboundHTTPCalls != 3 || report.Deliveries != 0 || report.Triggered != 0 {
+		t.Fatalf("report=%+v, want 3 outbound requests (including errors), no deliveries or triggers", report)
+	}
+}
+
+func TestReportLocalRangeGroupsBySelectedTimezone(t *testing.T) {
+	repo, ctx := eventFixture(t)
+	from := time.Date(2026, 9, 19, 7, 0, 0, 0, time.UTC)
+	until := time.Date(2026, 9, 26, 7, 0, 0, 0, time.UTC)
+	for _, at := range []time.Time{
+		from.Add(-time.Second), from, from.Add(23*time.Hour + 59*time.Minute),
+		from.Add(24 * time.Hour), until.Add(-time.Minute), until,
+	} {
+		if _, err := repo.db.Pool.Exec(ctx, `INSERT INTO notification_logs
+			(title, message, status, trigger_id, event_type, created_at)
+			VALUES ('test', 'test', 'triggered', $1, 'system.test', $2)`,
+			uuid.NewString(), at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	location, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := repo.GetReport(ctx, from, until, location)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Daily) != 7 || report.Daily[0] != (ReportDay{Day: "2026-09-19", Triggered: 2}) ||
+		report.Daily[1] != (ReportDay{Day: "2026-09-20", Triggered: 1}) ||
+		report.Daily[6] != (ReportDay{Day: "2026-09-25", Triggered: 1}) ||
+		report.Daily[2] != (ReportDay{Day: "2026-09-21"}) ||
+		report.Triggered != 4 || report.From != "2026-09-19" || report.To != "2026-09-25" ||
+		report.Timezone != location.String() ||
+		report.FromInstant != "2026-09-19T07:00:00Z" ||
+		report.ToExclusive != "2026-09-26T07:00:00Z" {
+		t.Fatalf("local-day window represented incorrectly: %+v", report)
+	}
+}
+
+func TestReportLocalDaysAcrossDST(t *testing.T) {
+	repo, ctx := eventFixture(t)
+	location, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	from := time.Date(2026, 3, 8, 8, 0, 0, 0, time.UTC)
+	until := time.Date(2026, 3, 10, 7, 0, 0, 0, time.UTC)
+	for _, at := range []time.Time{
+		time.Date(2026, 3, 9, 6, 59, 0, 0, time.UTC),
+		time.Date(2026, 3, 9, 7, 0, 0, 0, time.UTC),
+	} {
+		if _, err := repo.db.Pool.Exec(ctx, `INSERT INTO notification_logs
+			(title, message, status, trigger_id, event_type, created_at)
+			VALUES ('test', 'test', 'triggered', $1, 'system.test', $2)`,
+			uuid.NewString(), at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	report, err := repo.GetReport(ctx, from, until, location)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Daily) != 2 ||
+		report.Daily[0] != (ReportDay{Day: "2026-03-08", Triggered: 1}) ||
+		report.Daily[1] != (ReportDay{Day: "2026-03-09", Triggered: 1}) {
+		t.Fatalf("DST-spanning local days incorrectly bucketed: %+v", report.Daily)
+	}
 }
 
 func TestEventInboxReportTwoChannelFanout(t *testing.T) {
@@ -87,7 +184,7 @@ func TestEventInboxReportTwoChannelFanout(t *testing.T) {
 		}
 	}
 	from := time.Now().UTC().Truncate(24 * time.Hour)
-	report, err := repo.GetReport(ctx, from, from.AddDate(0, 0, 1))
+	report, err := repo.GetReport(ctx, from, from.AddDate(0, 0, 1), time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +350,7 @@ func TestWebPushOnlyEventCanBeReadArchivedAndAcknowledged(t *testing.T) {
 		t.Fatal(err)
 	}
 	from := time.Now().UTC().Truncate(24 * time.Hour)
-	report, err := repo.GetReport(ctx, from, from.AddDate(0, 0, 1))
+	report, err := repo.GetReport(ctx, from, from.AddDate(0, 0, 1), time.UTC)
 	if err != nil || report.Triggered != 1 || report.Deliveries != 0 {
 		t.Fatalf("WebPush-only report=%+v err=%v, want 1 trigger and no channel rows", report, err)
 	}

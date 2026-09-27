@@ -11,7 +11,7 @@ Every other page in the product is a deeper dive into one of those questions.
 
 ## Anatomy of the page
 
-The dashboard is a customizable canvas built from a catalogue of 118 widgets organised into 16 categories. Drag widgets to arrange them, or use each widget's **Arrange** menu for one-click and keyboard move/resize controls. Dashboard tabs likewise provide **Move earlier** and **Move later** actions, so layout editing never requires dragging.
+The dashboard is a customizable canvas built from a catalogue of widgets organised into 16 categories. Drag widgets to arrange them, or use each widget's **Arrange** menu for one-click and keyboard move/resize controls. Dashboard tabs likewise provide **Move earlier** and **Move later** actions, so layout editing never requires dragging.
 
 Open the widget catalogue from the floating **+** button (the dashboard's "Add widget" affordance). The dialog lists every widget grouped by category, with a search box that matches against name, description, or category — so typing `battery` jumps you to the 10-widget Battery & Range bucket, and typing `range estimate` jumps you straight to that single widget.
 
@@ -36,18 +36,20 @@ Open the widget catalogue from the floating **+** button (the dashboard's "Add w
 
 Every widget that's already on the active dashboard is badged **Added** in the catalogue, and the picker disables it — so you can't accidentally add the same widget twice. Removing a widget from the dashboard re-enables it in the catalogue.
 
+**Fleet Posture** is a System widget on new default dashboards and is available in the widget catalogue for existing layouts. It shows verified fleet coverage, the scoped vehicle's last observation, and the evidence taxonomy; the former full-width operational brief and its investigation/workflow sidebar are no longer fixed above every layout. Existing saved layouts are not changed automatically.
+
 Widgets are self-rendering: each one declares which signals it depends on, and if the underlying signal isn't reporting (for example, a fleet without solar will never publish a Powerwall reading), the widget renders an empty state with a one-click path to the first thing you can do. We never collapse the widget away — hiding empty widgets makes the product feel "broken on day one", which is the worst onboarding experience we can ship.
 
 ## Multiple dashboards
 
-The dashboard switcher in the page header lets you create, rename, duplicate, and switch between an unlimited number of dashboards. Each one has its own widget layout and its own grid arrangement. Common patterns we've seen:
+Use **Layout packs** in the dashboard header to preview and install a ready-made dashboard without replacing your current one, or choose **Blank Dashboard** to start with no widgets. The **Personal workspace** controls let you switch, rename, duplicate, and create dashboards; **Customize** reveals the drag handles and always-visible **Arrange**, settings, and remove controls. **Auto Arrange** packs widgets into rows without resetting their chosen widths or heights. Each dashboard has its own widgets and layout. Common patterns:
 
 - **Daily** — Vehicle Hero, Battery Level, Quick Actions, Recent Alerts
 - **Long trip** — Live Drive, Charger Map, Range Bar, Tire Pressure, Energy Flow
 - **Garage / diagnostics** — Drivetrain Health, Cell Voltage Spread, SSE Status, Cache Stats
 - **Family** — Vehicle Hero (per car) × N, Quick Actions
 
-There is no per-account limit. Layouts are stored locally and synced to the API so they roam across devices.
+There is no per-account limit. Layouts are stored locally and synced to the API so they roam across devices. The **modified** badge remains visible while a save is pending; an interrupted save is retried after the dashboard reloads. On a new device, the layout is restored from the API.
 
 ## How real-time works in practice
 
@@ -59,14 +61,16 @@ If the SSE connection drops (network blip, proxy timeout, server restart), every
 
 ## How layout adapts
 
-| Viewport          | Behaviour                                                          |
-| ----------------- | ------------------------------------------------------------------ |
-| Phone (≤640 px)   | Single column, bottom tab bar, condensed live card                 |
-| Tablet (641–1023) | Two columns, sidebar collapses to icon rail                        |
-| Desktop (≥1024)   | Three columns, sidebar expanded with section grouping              |
-| Print             | Single column, all panels open, sidebar + chrome stripped (see [Printing](/guide/printing)) |
+| Available canvas width | Behaviour |
+| ---------------------- | --------- |
+| Under 480 px           | Single-column, content-height mobile stack; saved widget order is retained |
+| 480–767 px             | One-column responsive grid |
+| 768–995 px             | Two-column responsive grid |
+| 996–1199 px            | Three-column responsive grid |
+| 1200 px and above      | Four-column responsive grid |
+| Print                  | Sidebar and chrome are stripped (see [Printing](/guide/printing)) |
 
-The breakpoints are Tailwind defaults. The layout doesn't use a grid library; it's composed from semantic `<section>` elements with utility classes and CSS variables for theme tokens.
+The grid responds to the **canvas width**, not the device's screen width, so opening or collapsing the sidebar can change the column count. Resizing a widget carries its dimensions to the other grid widths while respecting each widget's allowed sizes; the phone stack uses its content height instead of a fixed grid row height.
 
 ## Units, dates, currency
 

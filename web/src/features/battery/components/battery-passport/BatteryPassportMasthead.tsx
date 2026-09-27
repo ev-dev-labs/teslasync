@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { VehicleSelect } from '@/components/forms';
 import {
   AlertBanner,
   EmptyState,
@@ -168,7 +167,6 @@ export function BatteryPassportMasthead({
             </Text>
           </div>
           <div className="flex flex-wrap items-end justify-end gap-2">
-            <VehicleSelect />
             <Button
               type="button"
               variant="secondary"

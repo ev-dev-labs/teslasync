@@ -11,7 +11,7 @@ import type { DriveCalendar } from '../../lib/driveCalendar';
 import { formatCalendarMonth, getWeekdayLabels } from './labels';
 import type { DriveCalendarSectionState } from './types';
 
-const WEEK_GRID = 'grid grid-flow-col auto-cols-fr gap-1';
+const WEEK_GRID = 'grid grid-flow-col auto-cols-[1.125rem] gap-1';
 const LEVEL_CLASSES = [
   'bg-[var(--surface-2)]',
   'bg-emerald-500/25',
@@ -22,13 +22,11 @@ const LEVEL_CLASSES = [
 
 interface DriveCalendarHeatmapProps extends DriveCalendarSectionState {
   calendar: DriveCalendar;
-  year: number | null;
 }
 
 /** Responsive Sunday-first activity grid with month and weekday context. */
 export function DriveCalendarHeatmap({
   calendar,
-  year,
   isLoading,
   error,
   onRetry,
@@ -42,7 +40,7 @@ export function DriveCalendarHeatmap({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <CalendarDays className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {year == null ? t('driveCalendar.heatmap.title', 'Last 52 Weeks') : String(year)}
+          {t('driveCalendar.heatmap.title', 'Selected period')}
           <HelpTooltip
             size="sm"
             i18nKey="help.driveCalendar.body"
@@ -67,9 +65,7 @@ export function DriveCalendarHeatmap({
       ) : calendar.totalDrives === 0 ? (
         <EmptyState
           icon={<CalendarDays className="h-8 w-8" aria-hidden="true" />}
-          message={year == null
-            ? t('driveCalendar.noDrives', 'No drives in the last year yet.')
-            : t('driveCalendar.noDrivesYear', 'No drives recorded in {{year}}.', { year })}
+          message={t('driveCalendar.noDrives', 'No drives in the selected period.')}
           actionTo={{
             label: t('driveCalendar.browseDrives', 'Browse drives'),
             to: '/drives',
@@ -79,15 +75,13 @@ export function DriveCalendarHeatmap({
         <div
           role="img"
           aria-label={t(
-            year == null ? 'driveCalendar.heatmap.aria' : 'driveCalendar.heatmap.ariaYear',
-            year == null
-              ? 'Daily driving heatmap for the last 52 weeks; {{active}} active days and a {{streak}} day current streak'
-              : 'Daily driving heatmap for {{year}}; {{active}} active days and a {{streak}} day year-end streak',
-            { year, active: calendar.activeDays, streak: calendar.currentStreak },
+            'driveCalendar.heatmap.aria',
+            'Daily driving heatmap for the selected period; {{active}} active days and a {{streak}} day end-of-period streak',
+            { active: calendar.activeDays, streak: calendar.currentStreak },
           )}
         >
           <div className="overflow-x-auto pb-1">
-            <div className="min-w-[760px]">
+            <div className="w-max min-w-full">
               <div className="mb-1 grid grid-cols-[2.75rem_minmax(0,1fr)] gap-2">
                 <span aria-hidden="true" />
                 <div className={WEEK_GRID}>

@@ -2,10 +2,14 @@ package visitedlocation
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -18,8 +22,8 @@ import (
 // at the call site lets handler tests inject an in-memory fake without standing
 // up a real Postgres pool. *tripdb.VisitedLocationRepo satisfies this interface.
 type visitedLocationRepo interface {
-	GetAll(ctx context.Context, limit int) ([]*geomodel.VisitedLocation, error)
-	GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*geomodel.VisitedLocation, error)
+	GetAll(ctx context.Context, limit, offset int, from, until time.Time) ([]*geomodel.VisitedLocation, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, from, until time.Time) ([]*geomodel.VisitedLocation, error)
 }
 
 // Compile-time guard that the production repo still satisfies the port. A
@@ -52,13 +56,18 @@ func newHandler(repo visitedLocationRepo) *Handler {
 }
 
 // List serves GET /locations. With ?vehicle_id=<id> it scopes to a single
-// vehicle; without it, it returns the fleet-wide most-visited places.
+// vehicle; from/to RFC3339 instants bound the underlying drive aggregates.
 //
-// Results are aggregated top-N by visit_count (LIMIT only), so offset-style
-// pagination is not meaningful for this endpoint — the offset returned by
-// apiparams.Pagination is intentionally discarded.
+// Results are ranked by visit count and paginated after aggregation.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	limit, _ := apiparams.Pagination(r)
+	ctx, span := otel.Tracer("api").Start(r.Context(), "locations.list")
+	defer span.End()
+	limit, offset := apiparams.Pagination(r)
+	from, until, err := parseVisitWindow(r)
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	if vehicleIDStr := r.URL.Query().Get("vehicle_id"); vehicleIDStr != "" {
 		vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
@@ -66,11 +75,14 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 			return
 		}
-		locs, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit)
+		locs, err := h.repo.GetByVehicle(ctx, vehicleID, limit, offset, from, until)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "visited locations query failed")
 			log.Error().Err(err).
 				Int64("vehicle_id", vehicleID).
 				Int("limit", limit).
+				Str("trace_id", span.SpanContext().TraceID().String()).
 				Msg("failed to get visited locations by vehicle")
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to get visited locations")
 			return
@@ -79,15 +91,40 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	locs, err := h.repo.GetAll(r.Context(), limit)
+	locs, err := h.repo.GetAll(ctx, limit, offset, from, until)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "visited locations query failed")
 		log.Error().Err(err).
 			Int("limit", limit).
+			Str("trace_id", span.SpanContext().TraceID().String()).
 			Msg("failed to get visited locations")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get visited locations")
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, nonNilLocations(locs))
+}
+
+func parseVisitWindow(r *http.Request) (time.Time, time.Time, error) {
+	q := r.URL.Query()
+	if !q.Has("from") && !q.Has("to") {
+		return time.Time{}, time.Time{}, nil
+	}
+	if q.Get("from") == "" || q.Get("to") == "" {
+		return time.Time{}, time.Time{}, fmt.Errorf("from and to must be provided together")
+	}
+	from, err := time.Parse(time.RFC3339Nano, q.Get("from"))
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("from must be an RFC3339 instant")
+	}
+	until, err := time.Parse(time.RFC3339Nano, q.Get("to"))
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("to must be an RFC3339 exclusive instant")
+	}
+	if !until.After(from) || until.Sub(from) >= 50*365*24*time.Hour {
+		return time.Time{}, time.Time{}, fmt.Errorf("time range must be ordered and at most 50 years")
+	}
+	return from, until, nil
 }
 
 // nonNilLocations guarantees a non-nil slice so the JSON body encodes as []

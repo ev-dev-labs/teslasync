@@ -128,32 +128,30 @@ describe('VehicleManagementPage', () => {
       'management:2',
     )
     expect(screen.queryByText('Vehicle Command Center')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Select management vehicle')).toHaveValue('2')
+    expect(screen.queryByLabelText('Select management vehicle')).not.toBeInTheDocument()
   })
 
-  it('updates persistent vehicle selection from the route-level picker', () => {
+  it('reads persistent vehicle selection from the shared header', () => {
     const first = makeVehicle(1, 'Roadster')
     const second = makeVehicle(2, 'Cybertruck')
     installHooks({ vehicles: [first, second], selected: first })
 
-    renderPage()
-    fireEvent.change(screen.getByLabelText('Select management vehicle'), {
-      target: { value: '2' },
-    })
-
-    expect(setVehicleIdMock).toHaveBeenCalledWith(2)
+    const page = renderPage()
+    expect(screen.getByTestId('vehicle-management-workspace')).toHaveTextContent('management:1')
+    installHooks({ vehicles: [first, second], selected: second })
+    page.rerender(<MemoryRouter><VehicleManagementPage /></MemoryRouter>)
+    expect(screen.getByTestId('vehicle-management-workspace')).toHaveTextContent('management:2')
+    expect(setVehicleIdMock).not.toHaveBeenCalled()
   })
 
-  it('keeps the vehicle dropdown visible for a single-vehicle fleet', () => {
+  it('keeps the workspace visible for a single-vehicle fleet without a local dropdown', () => {
     const vehicle = makeVehicle(1, 'Falcon')
     installHooks({ vehicles: [vehicle], selected: vehicle })
 
     renderPage()
 
-    expect(screen.getByLabelText('Select management vehicle')).toHaveValue('1')
-    expect(
-      screen.getByRole('option', { name: 'Falcon' }),
-    ).toBeInTheDocument()
+    expect(screen.getByTestId('vehicle-management-workspace')).toHaveTextContent('management:1')
+    expect(screen.queryByLabelText('Select management vehicle')).not.toBeInTheDocument()
   })
 
   it('keeps the workspace visible while the fleet loads', () => {

@@ -89,8 +89,6 @@ function renderBrief(props: Partial<React.ComponentProps<typeof FleetOperationsB
             summary={props.summary}
             isPending={props.isPending}
             isError={props.isError}
-            onRetry={props.onRetry}
-            isRetrying={props.isRetrying}
           />
         </MemoryRouter>
       </ToastProvider>
@@ -389,11 +387,10 @@ describe('FleetOperationsBrief — trust and accessibility', () => {
     expect(
       screen.getByText('No verified observation time for this vehicle'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Retry live-state read' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Run system diagnostic' })).toBeInTheDocument()
+    expect(screen.queryByText('Recommended actions')).not.toBeInTheDocument()
   })
 
-  it('offers a scoped wake action only for verified offline telemetry', () => {
+  it('labels verified offline telemetry without a wake action', () => {
     const vehicle = makeVehicle(1, 'Falcon')
     renderBrief({
       vehicles: [vehicle],
@@ -403,8 +400,8 @@ describe('FleetOperationsBrief — trust and accessibility', () => {
       })],
     })
 
-    expect(screen.getByRole('button', { name: 'Wake scoped vehicle' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Run system diagnostic' })).not.toBeInTheDocument()
+    expect(valueFor('Offline')).toBe('1')
+    expect(screen.queryByRole('button', { name: 'Wake scoped vehicle' })).not.toBeInTheDocument()
   })
 
   it('pairs every taxonomy category with an icon so colour is never the only signal', () => {
@@ -419,37 +416,16 @@ describe('FleetOperationsBrief — trust and accessibility', () => {
     }
   })
 
-  it('offers keyboard-reachable evidence drill-through and workflow navigation', () => {
+  it('keeps a scoped vehicle drill-through without the investigation column', () => {
     const vehicle = makeVehicle(1)
     renderBrief({ vehicles: [vehicle], selectedVehicle: vehicle, fleetStates: [entry(vehicle)] })
-
-    const investigate = screen.getByRole('navigation', { name: 'Investigate fleet posture' })
-    const hrefs = within(investigate)
-      .getAllByRole('link')
-      .map((link) => link.getAttribute('href'))
-    expect(hrefs).toContain('/signals')
-    expect(hrefs).toContain('/system-status')
-    expect(hrefs).toContain('/admin/live-signals')
-    expect(hrefs).toContain('/vehicles/1')
-
-    // The pre-existing workflow shortcuts are preserved, not replaced.
-    const workflows = screen.getByRole('navigation', { name: 'Primary workflows' })
-    expect(within(workflows).getAllByRole('link').length).toBe(4)
-
-    // Every link is a real anchor, so it is focusable and Enter-activatable
-    // without any custom key handling.
-    for (const link of within(investigate).getAllByRole('link')) {
-      expect(link.tagName).toBe('A')
-      expect(link.className).toContain('focus-visible:ring-2')
-    }
+    expect(screen.getByRole('link', { name: 'Open vehicle' })).toHaveAttribute('href', '/vehicles/1')
+    expect(screen.queryByRole('navigation', { name: 'Primary workflows' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Investigate fleet posture' })).not.toBeInTheDocument()
   })
 
   it('drops the vehicle drill-through when nothing is in scope', () => {
     renderBrief({ vehicles: [], fleetStates: [] })
-    const investigate = screen.getByRole('navigation', { name: 'Investigate fleet posture' })
-    const hrefs = within(investigate)
-      .getAllByRole('link')
-      .map((link) => link.getAttribute('href'))
-    expect(hrefs.some((href) => href?.startsWith('/vehicles/'))).toBe(false)
+    expect(screen.queryByRole('link', { name: 'Open vehicle' })).not.toBeInTheDocument()
   })
 })

@@ -9,7 +9,7 @@ import {
   GlassPanel, PanelTitle, Text, Button, Select, Input, HelpTooltip,
   DataTable, type Column,
 } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -78,7 +78,7 @@ export default function TripLogbookPage() {
   const { formatDistance, unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
 
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'trip-logbook.range',
     defaultPresetId: 'all',
   });
@@ -229,17 +229,6 @@ export default function TripLogbookPage() {
       title={t('logbook.title', 'Trip Logbook')}
       subtitle={t('logbook.subtitle', 'Classify drives for tax deduction and expense reimbursement')}
       query={drivesQuery}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="trip-logbook-range"
-          />
-        </div>
-      }
     >
       {/* 1 — KPI band */}
       <FadeIn>
