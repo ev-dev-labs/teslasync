@@ -4128,6 +4128,7 @@
       },
       "applyCustom": "Apply custom range",
       "fullYear": "Full year {{year}}",
+      "fullYearLabel": "Full year",
       "previousYear": "Previous year",
       "nextYear": "Next year",
       "density": "Display density",

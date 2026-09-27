@@ -97,3 +97,26 @@ test(`Drive Calendar year chips shift and preserve fixed dates at ${width}px`, a
   expect(new URL(page.url()).searchParams.get('to')).toBe(`${currentYear - 1}-12-31`)
 })
 }
+
+for (const width of [390, 1440]) {
+  test(`selected full year remains legible at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await seedBrowserState(page, 'light', '/drive-calendar')
+    const mockApi = await installApiMocks(page, 'populated', 'light')
+    await page.goto('/drive-calendar?from=2017-01-01&to=2017-12-31&time_scope=custom', { waitUntil: 'domcontentloaded' })
+    await waitForHarnessReady(page, mockApi)
+    if (width < 1280) await page.getByRole('button', { name: 'Open sidebar' }).click()
+    await page.getByRole('button', { name: 'Analysis window: Full year 2017' }).click()
+    const dialog = page.getByRole('dialog', { name: 'View settings' })
+    const selected = dialog.getByRole('button', { name: 'Full year 2017' })
+    await expect(selected).toHaveAttribute('aria-pressed', 'true')
+    await expect(selected).toContainText('2017')
+    await expect(dialog.getByLabel('Start date')).toHaveCount(0)
+    const label = await selected.locator('span').first().boundingBox()
+    const year = await selected.locator('span').last().boundingBox()
+    expect(label).not.toBeNull()
+    expect(year).not.toBeNull()
+    expect(year!.y).toBeGreaterThanOrEqual(label!.y + label!.height)
+    await dialog.screenshot({ path: testInfo.outputPath(`selected-year-${width}.png`) })
+  })
+}

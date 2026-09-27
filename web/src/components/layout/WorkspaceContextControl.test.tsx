@@ -187,7 +187,7 @@ describe('WorkspaceContextControl', () => {
     const choices = screen.getByRole('group', { name: 'Date range' });
     expect(choices).toHaveTextContent('Year to date');
     expect(choices).toHaveTextContent('All time');
-    expect(choices).toHaveTextContent(`Full year ${year}`);
+    expect(screen.getByRole('button', { name: `Full year ${year}` })).toBeInTheDocument();
     expect(choices).not.toHaveTextContent('24 hours');
     expect(screen.queryByRole('spinbutton', { name: 'Calendar year' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Year to date' }));
@@ -230,6 +230,24 @@ describe('WorkspaceContextControl', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Custom' }));
     expect(screen.queryByRole('button', { name: '1 year' })).not.toBeInTheDocument();
     expect(screen.queryByRole('spinbutton', { name: 'Calendar year' })).not.toBeInTheDocument();
+  });
+
+  it('adapts the header choices to the active route without a reload', () => {
+    const { rerender } = render(<WorkspaceContextControl />);
+    fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Last 7 days' }));
+    expect(screen.getByRole('button', { name: 'Last 24 hours' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Year to date' })).not.toBeInTheDocument();
+
+    mocks.pathname = '/drive-calendar';
+    rerender(<WorkspaceContextControl />);
+    expect(screen.getByRole('button', { name: 'Year to date' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Full year ${new Date().getFullYear()}` })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Last 24 hours' })).not.toBeInTheDocument();
+
+    mocks.pathname = '/drives';
+    rerender(<WorkspaceContextControl />);
+    expect(screen.getByRole('button', { name: 'Last 24 hours' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Year to date' })).not.toBeInTheDocument();
   });
 
   it('resets date range, comparison, and display density to configured defaults', () => {

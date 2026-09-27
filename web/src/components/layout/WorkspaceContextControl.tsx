@@ -160,7 +160,7 @@ export function WorkspaceContextControl({
         range.setPreset(id)
       }}
       className={cn(
-        'min-h-9 min-w-0 rounded-lg px-1 text-xs',
+        'min-h-12 min-w-0 rounded-lg px-1 text-xs',
         !showCustom && range.presetId === id
           ? 'bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1 ring-1 ring-inset ring-[var(--theme-primary)]'
           : 'text-[var(--text-secondary)] hover:bg-[var(--surface-3)]',
@@ -294,7 +294,12 @@ export function WorkspaceContextControl({
               {visiblePresets.filter(id => id !== 'all' || !calendarRoute).map(presetButton)}
               {calendarRoute && (
                 <div role="group" aria-label={t('workspace.analysis.fullYear', 'Full year {{year}}', { year: String(selectedYear) })}
-                  className="col-span-2 flex min-w-0 items-center rounded-lg bg-[var(--surface-1)]"
+                  className={cn(
+                    'col-span-2 flex min-w-0 items-center rounded-lg border bg-[var(--surface-1)]',
+                    !showCustom && fullYear != null
+                      ? 'border-[var(--theme-primary)] shadow-e1'
+                      : 'border-transparent',
+                  )}
                 >
                   <Button
                     type="button"
@@ -303,7 +308,7 @@ export function WorkspaceContextControl({
                     aria-label={t('workspace.analysis.previousYear', 'Previous year')}
                     disabled={selectedYear <= 1900}
                     onClick={() => applyYear(selectedYear - 1)}
-                    className="min-h-9 min-w-9 px-1"
+                    className="min-h-12 min-w-9 shrink-0 px-1"
                   >
                     <Icons.previous className="h-4 w-4" aria-hidden />
                   </Button>
@@ -311,15 +316,15 @@ export function WorkspaceContextControl({
                     type="button"
                     size="sm"
                     variant="ghost"
+                    aria-label={t('workspace.analysis.fullYear', 'Full year {{year}}', { year: String(selectedYear) })}
                     aria-pressed={!showCustom && fullYear != null}
                     onClick={() => applyYear(selectedYear)}
-                    className={cn(
-                      'min-h-9 min-w-0 flex-1 truncate px-1 text-xs',
-                      !showCustom && fullYear != null &&
-                        'font-semibold text-[var(--text-primary)] ring-1 ring-inset ring-[var(--theme-primary)]',
-                    )}
+                    className="flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-none px-0.5 text-[var(--text-primary)]"
                   >
-                    {t('workspace.analysis.fullYear', 'Full year {{year}}', { year: String(selectedYear) })}
+                    <span className="text-2xs leading-none text-[var(--text-muted)]">
+                      {t('workspace.analysis.fullYearLabel', 'Full year')}
+                    </span>
+                    <span className="text-sm font-semibold leading-none">{selectedYear}</span>
                   </Button>
                   <Button
                     type="button"
@@ -328,7 +333,7 @@ export function WorkspaceContextControl({
                     aria-label={t('workspace.analysis.nextYear', 'Next year')}
                     disabled={selectedYear >= calendarYear}
                     onClick={() => applyYear(selectedYear + 1)}
-                    className="min-h-9 min-w-9 px-1"
+                    className="min-h-12 min-w-9 shrink-0 px-1"
                   >
                     <Icons.next className="h-4 w-4" aria-hidden />
                   </Button>
@@ -342,7 +347,7 @@ export function WorkspaceContextControl({
                 aria-pressed={showCustom || (!range.presetId && fullYear == null)}
                 onClick={() => setShowCustom(true)}
                 className={cn(
-                  'min-h-9 min-w-0 rounded-lg px-1 text-xs',
+                  'min-h-12 min-w-0 rounded-lg px-1 text-xs',
                   !calendarRoute && 'max-[419px]:col-span-2',
                   showCustom || (!range.presetId && fullYear == null)
                     ? 'bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1 ring-1 ring-inset ring-[var(--theme-primary)]'
