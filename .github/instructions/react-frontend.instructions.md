@@ -78,7 +78,9 @@ Before creating a new hook, check if one already exists in the relevant file.
   its year-to-date and full-year controls live in the header's preset row.
   Previous/next shifts the full-year selection without a separate year input.
   Unsupported rolling presets and full-year windows become a fixed custom
-  window when navigating to another range-owning route.
+  window when navigating to another range-owning route; Drive Calendar also
+  treats a carried 24-hour/live/today window as Custom. Keep preset positions
+  stable as selection changes, and show custom date fields only on request.
   Retain local vehicle selection where the route deliberately disables the
   global picker and the page still needs one. Confirm desktop header and
   mobile drawer both expose any replacement control.
