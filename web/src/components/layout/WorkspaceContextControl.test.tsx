@@ -175,8 +175,8 @@ describe('WorkspaceContextControl', () => {
     expect(mocks.setPreset).toHaveBeenCalledWith('30d');
   });
 
-  it('offers a rolling year and calendar-year navigation only on Drive Calendar', () => {
-    mocks.pathname = '/drive-calendar';
+  it.each(['/drive-calendar', '/drive-calendar/'])('offers a rolling year and calendar-year navigation on %s', (pathname) => {
+    mocks.pathname = pathname;
     render(<WorkspaceContextControl />);
     fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Last 7 days' }));
     const choices = screen.getByRole('group', { name: 'Date range' });

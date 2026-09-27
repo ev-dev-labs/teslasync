@@ -743,13 +743,20 @@ export default function Layout() {
   useEffect(() => {
     setSidebarOpen(false)
   }, [location.pathname])
+  const wasSidebarOpen = useRef(false)
+  useEffect(() => {
+    const shouldRestoreFocus = wasSidebarOpen.current && !sidebarOpen
+    wasSidebarOpen.current = sidebarOpen
+    if (!shouldRestoreFocus) return
+    const frame = requestAnimationFrame(() => sidebarTriggerRef.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [sidebarOpen])
   useEffect(() => {
     if (!sidebarOpen) return
     sidebarCloseRef.current?.focus()
     const onEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return
       setSidebarOpen(false)
-      requestAnimationFrame(() => sidebarTriggerRef.current?.focus())
     }
     document.addEventListener('keydown', onEscape)
     return () => document.removeEventListener('keydown', onEscape)

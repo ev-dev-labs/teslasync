@@ -989,6 +989,34 @@ describe('Layout — mobile drawer', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
     expect(aside.className).toContain('invisible xl:visible')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open sidebar' })).toHaveFocus())
+  })
+
+  it('restores the mobile trigger after close, logo navigation, a deck shortcut, and backdrop click', async () => {
+    renderLayout('/')
+    const trigger = () => screen.getByRole('button', { name: 'Open sidebar' })
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    fireEvent.click(trigger())
+    fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
+    await waitFor(() => expect(trigger()).toHaveFocus())
+
+    fireEvent.click(trigger())
+    const mobileLogo = aside.querySelector('a[href="/"]')
+    expect(mobileLogo).not.toBeNull()
+    fireEvent.click(mobileLogo!)
+    await waitFor(() => expect(trigger()).toHaveFocus())
+
+    fireEvent.click(trigger())
+    act(() => {
+      (H.sidebarProps.unified as { onItemSelect: () => void }).onItemSelect()
+    })
+    await waitFor(() => expect(trigger()).toHaveFocus())
+
+    fireEvent.click(trigger())
+    const backdrop = aside.previousElementSibling
+    expect(backdrop).not.toBeNull()
+    fireEvent.click(backdrop!)
+    await waitFor(() => expect(trigger()).toHaveFocus())
   })
 
   it('keeps the drawer open when a nested control consumes Escape', async () => {

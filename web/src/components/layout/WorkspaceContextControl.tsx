@@ -60,8 +60,8 @@ export function WorkspaceContextControl({
 }: WorkspaceContextControlProps) {
   const { t } = useTranslation()
   const { pathname } = useLocation()
-  const calendarRoute = pathname === '/drive-calendar'
   const quickPresets = getWorkspaceQuickRangePresets(pathname)
+  const calendarRoute = quickPresets.includes('1y')
   const triggerRef = useRef<HTMLButtonElement>(null)
   const { open, toggle, close } = useStatusBarPopover(
     variant === 'status' ? 'workspace-context-status' : 'workspace-context',
