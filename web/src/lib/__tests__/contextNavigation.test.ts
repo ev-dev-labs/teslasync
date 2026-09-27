@@ -274,6 +274,16 @@ describe('preserveWorkspaceScope', () => {
     expect(new URLSearchParams(calendar.split('?')[1]).get('time_scope')).toBe('1y');
   })
 
+  it('freezes year to date when navigating away from Drive Calendar', () => {
+    const current = 'from=2026-01-01&to=2026-09-27&time_scope=ytd&vehicle_id=7';
+    const drives = new URLSearchParams(preserveWorkspaceScope('/drives', current).split('?')[1]);
+    expect(drives.get('time_scope')).toBe('custom');
+    expect(drives.get('from')).toBe('2026-01-01');
+    expect(drives.get('to')).toBe('2026-09-27');
+    const calendar = new URLSearchParams(preserveWorkspaceScope('/drive-calendar', current).split('?')[1]);
+    expect(calendar.get('time_scope')).toBe('ytd');
+  })
+
   it('does not carry the analysis window to a route that cannot consume it', () => {
     const href = preserveWorkspaceScope('/battery', scope)
     const params = new URLSearchParams(href.split('?')[1])

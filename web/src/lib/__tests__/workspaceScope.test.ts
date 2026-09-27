@@ -25,11 +25,13 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
-  it('offers rolling year and year navigation only for Drive Calendar', () => {
-    expect(getWorkspaceQuickRangePresets('/drive-calendar/')).toEqual(['7d', '30d', '90d', '1y']);
+  it('offers year-to-date and year navigation only for Drive Calendar', () => {
+    expect(getWorkspaceQuickRangePresets('/drive-calendar/')).toEqual(['7d', '30d', '90d', 'ytd', 'all']);
     expect(getWorkspaceQuickRangePresets('/drives')).toEqual(['24h', '7d', '30d', '90d']);
     expect(isWorkspaceRangePresetAvailable('/drive-calendar', '1y')).toBe(true);
     expect(isWorkspaceRangePresetAvailable('/drives', '1y')).toBe(false);
+    expect(isWorkspaceRangePresetAvailable('/drive-calendar', 'ytd')).toBe(true);
+    expect(isWorkspaceRangePresetAvailable('/drives', 'ytd')).toBe(false);
     expect(isWorkspaceRangePresetAvailable('/drives', 'all')).toBe(true);
   });
 

@@ -75,8 +75,9 @@ Before creating a new hook, check if one already exists in the relevant file.
 - Keep truly independent form dates, chart zoom, and calendar-year
   navigation only when it does not duplicate the header's analysis window.
   Drive Calendar uses the shared range for both its query and its heatmap;
-  its rolling-year preset and calendar-year navigation live in the header,
-  not a second page picker. Unsupported presets become a fixed custom
+  its year-to-date and full-year controls live in the header's preset row.
+  Previous/next shifts the full-year selection without a separate year input.
+  Unsupported rolling presets and full-year windows become a fixed custom
   window when navigating to another range-owning route.
   Retain local vehicle selection where the route deliberately disables the
   global picker and the page still needs one. Confirm desktop header and
