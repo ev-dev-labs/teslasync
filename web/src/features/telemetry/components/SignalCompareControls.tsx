@@ -178,17 +178,11 @@ export function SignalCompareControls({
                 <Button
                   key={c.id}
                   type="button"
-                  variant="ghost"
+                  variant={active ? 'primary' : 'outline'}
                   size="sm"
                   aria-pressed={active}
                   onClick={() => onCategoryChange(active ? null : c.id)}
-                  className={cn(
-                    'h-auto rounded-full border px-2.5 py-1 text-xs uppercase tracking-wide',
-                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]',
-                    active
-                      ? 'border-blue-400/40 bg-blue-500/15 text-blue-200'
-                      : 'border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
-                  )}
+                  className="rounded-shape-sm px-2.5 text-xs uppercase tracking-wide"
                 >
                   {t(c.labelKey, c.defaultLabel)}
                 </Button>

@@ -1,4 +1,4 @@
-name: load-test
+name: Load Test
 
 # Nightly smoke + soak load tests against an ephemeral docker-compose
 # stack. Catches p99 regressions before they ship.

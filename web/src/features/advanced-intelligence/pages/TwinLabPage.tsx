@@ -7,7 +7,7 @@ import {
 } from '@/components/charts';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner, EmptyState } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Text } from '@/components/ui';
@@ -69,7 +69,6 @@ export default function TwinLabPage() {
         'advancedIntelligence.twin.subtitle',
         'Compare calibrated, vehicle-specific counterfactuals with explicit uncertainty.',
       )}
-      actions={<VehicleSelect withIcon />}
     >
       <AlertBanner
         variant="info"

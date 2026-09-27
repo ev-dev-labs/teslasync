@@ -189,10 +189,37 @@ describe('ApiLogsPage', () => {
     renderPage('/api-logs?status=5xx');
     expect(await screen.findByText('3 errors · uptime 2h')).toBeInTheDocument();
     expect(screen.getByText('upstream timeout')).toBeInTheDocument();
-    expect(screen.getByText(/API call totals are all-time across services/)).toBeInTheDocument();
+    expect(screen.getByText(/API call totals and service counts use the View settings range/)).toBeInTheDocument();
     expect(screen.getByText(/Since the current API process started/)).toBeInTheDocument();
     expect(screen.getByText('Frontend errors (last hour)')).toBeInTheDocument();
     expect(mockedRuntime).toHaveBeenCalledTimes(1);
+  });
+
+  it('scopes service totals and request rows to the same exclusive header window', async () => {
+    mockedStats.mockResolvedValue(makeStats({ by_service: { 'notify-generic': 12 } }));
+    mockedLogs.mockResolvedValue(makeLogsResponse());
+    renderPage('/api-logs?service=notify-generic&from=2026-09-19&to=2026-09-25');
+
+    await waitFor(() => expect(railChip(/Notifications/)).toHaveTextContent('12'));
+    const start = new Date('2026-09-19T00:00:00').toISOString();
+    const endExclusive = new Date('2026-09-26T00:00:00').toISOString();
+    expect(mockedStats).toHaveBeenCalledWith(start, endExclusive);
+    expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({
+      service: 'notify-generic', start, endExclusive,
+    }));
+    expect(mockedLogs.mock.lastCall?.[0]).not.toHaveProperty('end');
+  });
+
+  it('preserves a precise rolling 24-hour header window for both queries', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse());
+    renderPage('/api-logs?time_scope=24h');
+    await waitFor(() => expect(mockedStats).toHaveBeenCalled());
+    const [start, end] = mockedStats.mock.lastCall as [string, string];
+    expect(new Date(end).getTime() - new Date(start).getTime()).toBe(86_400_000);
+    expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({
+      start, endExclusive: end,
+    }));
   });
 
   it('distinguishes a clean backend from a failed runtime-summary request', async () => {

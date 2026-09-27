@@ -165,7 +165,7 @@ describe('advanced intelligence page routes', () => {
   it.each(pages)('smoke-renders the %s route shell', (title, Page) => {
     renderPage(Page);
     expect(screen.getByRole('heading', { name: title, level: 1 })).toBeInTheDocument();
-    expect(screen.getByLabelText('Select vehicle')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Select vehicle')).not.toBeInTheDocument();
   });
 });
 

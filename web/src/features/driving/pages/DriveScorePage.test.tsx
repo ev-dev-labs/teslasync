@@ -18,16 +18,15 @@
  *      the Retry action is wired to the query's refetch (failure + interaction).
  *   5. EMPTY   — each section shows its own EmptyState (never a blank panel)
  *      and no achievements / insights leak.
- *   6. FILTER  — committing an out-of-range date window empties every section
- *      (the date-filter + state wiring).
+ *   6. FILTER  — a header-owned out-of-range URL window empties every section.
  *   7. REFRESH — the icon-only refresh control is labelled and calls refetch.
  *   8. HELPERS — scoreDrive branches (typical / null-fallbacks / floors),
  *      gradeFromScore boundaries, gradeVariant, gradeColor, buildTips,
  *      buildAchievements checks, and computePeriodStats
  *      including the cross-month "Best Week" collision fix.
  *
- * Network is never hit: the data hooks, vehicle picker, form controls, and the
- * chart-annotation read are all stubbed. i18n is stubbed so visible copy is the
+ * Network is never hit: the data hooks and chart-annotation read are stubbed.
+ * i18n is stubbed so visible copy is the
  * English fallback with {{placeholder}} interpolation applied.
  */
 
@@ -100,33 +99,6 @@ vi.mock('@/api/hooks/useAnnotations', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useAnnotations')>();
   return { ...actual, useChartAnnotationsAsData: () => ({ annotations: [], isLoading: false }) };
 });
-
-// RangePicker → a button that commits a fixed far-future range so the date
-// filter empties the page; VehicleSelect → an inert marker. The page owns the
-// filter wiring; the picker's own calendar is out of scope here.
-vi.mock('@/components/forms', () => ({
-  RangePicker: ({
-    value,
-    onChange,
-    triggerTestId,
-  }: {
-    value: { start: string; end: string };
-    onChange: (r: { start: string; end: string }) => void;
-    triggerTestId?: string;
-    align?: string;
-  }) => (
-    <button
-      type="button"
-      data-testid={triggerTestId ?? 'range-picker'}
-      data-start={value.start}
-      data-end={value.end}
-      onClick={() => onChange({ start: '2099-01-01', end: '2099-01-31' })}
-    >
-      change range
-    </button>
-  ),
-  VehicleSelect: () => <div data-testid="vehicle-select" />,
-}));
 
 import DriveScorePage, {
   scoreDrive,
@@ -272,14 +244,14 @@ function makeQuery(overrides: Partial<QueryStub> = {}): QueryStub {
   };
 }
 
-function renderPage() {
+function renderPage(initialEntry = '/drive-score') {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={qc}>
       <ToastProvider>
-        <MemoryRouter initialEntries={['/driving/score']}>
+        <MemoryRouter initialEntries={[initialEntry]}>
           <DriveScorePage />
         </MemoryRouter>
       </ToastProvider>
@@ -436,20 +408,13 @@ describe('DriveScorePage', () => {
     expect(screen.getByText('Best Drive')).toBeInTheDocument();
   });
 
-  it('empties every section when an out-of-range date window is committed', () => {
-    renderPage();
-
-    // Ready first: the best-drive insight is on screen.
-    expect(
-      screen.getByText('Outstanding energy efficiency — minimal energy wasted!'),
-    ).toBeInTheDocument();
-
-    // Commit a far-future range that excludes all recent drives.
-    fireEvent.click(screen.getByTestId('drive-score-range'));
+  it('empties every section when the header range excludes all drives', () => {
+    renderPage('/drive-score?from=2099-01-01&to=2099-01-31');
 
     expect(
       screen.getAllByText('Not enough drives in the selected period to calculate a score.').length,
     ).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('No drives found for the selected period.')).toBeInTheDocument();
     expect(
       screen.queryByText('Outstanding energy efficiency — minimal energy wasted!'),
     ).not.toBeInTheDocument();

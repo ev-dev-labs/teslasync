@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Drive } from '@/types/driving';
@@ -10,12 +10,14 @@ const {
   selectedVehicleMock,
   useHistoryMock,
   rangeOptionsMock,
+  sharedRange,
 } = vi.hoisted(() => ({
   pageTitleMock: vi.fn(),
   sectionPropsMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   useHistoryMock: vi.fn(),
   rangeOptionsMock: vi.fn(),
+  sharedRange: { set: (_range: { start: string; end: string }) => {} },
 }));
 
 vi.mock('react-i18next', () => ({
@@ -50,6 +52,7 @@ vi.mock('@/hooks/useRangeState', async () => {
         start: '2025-01-01',
         end: '2026-08-07',
       });
+      sharedRange.set = setRange;
       return {
         ...range,
         timezone: 'America/Los_Angeles',
@@ -249,16 +252,14 @@ describe('DrivingRhythmPage', () => {
       defaultPresetId: 'all',
       inheritSharedPreference: false,
     });
-    expect(screen.getByTestId('driving-rhythm-range')).toHaveAttribute(
-      'data-range',
-      '2025-01-01:2026-08-07',
-    );
+    expect(screen.queryByTestId('driving-rhythm-range')).not.toBeInTheDocument();
     expect(pageTitleMock).toHaveBeenCalledWith('Driving Rhythm');
   });
 
-  it('preserves RangePicker behavior and re-queries after a scope change', async () => {
+  it('re-queries after the shared header changes the range without a local picker', async () => {
     render(<DrivingRhythmPage />);
-    fireEvent.click(screen.getByTestId('driving-rhythm-range'));
+    act(() => sharedRange.set({ start: '2026-07-01', end: '2026-07-31' }));
+    expect(screen.queryByTestId('driving-rhythm-range')).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(useHistoryMock).toHaveBeenLastCalledWith('42', '2026-07-01', '2026-07-31'),

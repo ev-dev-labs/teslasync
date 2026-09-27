@@ -280,6 +280,10 @@ export function useToggleAPISuspend() {
 }
 
 export interface PollingConfig {
+  auto_polling_enabled: boolean;
+  fleet_endpoints: Record<string, boolean>;
+  auto_endpoints: Record<string, boolean>;
+  endpoint_catalog: FleetEndpoint[];
   vehicle_discovery: boolean;
   charge_state: boolean;
   climate_state: boolean;
@@ -302,7 +306,14 @@ export interface PollingConfig {
   commands: boolean;
   telemetry_capture: boolean;
   telemetry_capture_retention_days: number;
-  [key: string]: boolean | number;
+}
+
+export interface FleetEndpoint {
+  key: string;
+  method: string;
+  path: string;
+  category: string;
+  pollable: boolean;
 }
 
 export function usePollingConfig() {

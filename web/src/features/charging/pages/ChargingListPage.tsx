@@ -1,9 +1,9 @@
-import { useMemo, useState, useCallback, useEffect, useDeferredValue } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-  Zap, AlertTriangle, Star, Plug, Sun, Tag, List as ListIcon,
-  Trash2, Battery, Home, Bolt,
+  AlertTriangle, Plug,
+  Trash2, Battery,
   Activity, Bell, Car, MapPin, Route, Wrench,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
@@ -18,7 +18,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { EmptyStateThreshold } from '@/components/feedback/EmptyStateThreshold';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
 import { Skeleton } from '@/components/feedback/Skeleton';
-import { RangePicker, VehicleSelect, PillFilterBar, type PillItem } from '@/components/forms';
+import { PillFilterBar, type PillItem } from '@/components/forms';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
 import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
@@ -110,13 +110,7 @@ export default function ChargingListPage() {
   const { formatCurrency, currencySymbol } = useFormatting();
 
   /* ── URL state ───────────────────────────────────────────────── */
-  const {
-    start: startDate,
-    end: endDate,
-    startInstant,
-    endInstantExclusive,
-    setRangeWithUrlUpdates,
-  } = useRangeState({
+  const { start: startDate, end: endDate, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'charging.list.range',
     timezone: tz,
   });
@@ -129,6 +123,13 @@ export default function ChargingListPage() {
   const [page, setPage] = useUrlNumber('page', 1);
   const [pageSize] = useUrlNumber('size', 50);
   const setUrlBatch = useUrlBatch();
+  const previousRange = useRef(`${startDate}:${endDate}`);
+  useEffect(() => {
+    const currentRange = `${startDate}:${endDate}`;
+    if (previousRange.current === currentRange) return;
+    previousRange.current = currentRange;
+    if (page !== 1) setUrlBatch({ page: null });
+  }, [startDate, endDate, page, setUrlBatch]);
 
   /* ── Source query ────────────────────────────────────────────── */
   const chargingQuery = useChargingSessionsPaginated(vehicleId, {
@@ -518,16 +519,16 @@ export default function ChargingListPage() {
     </span>
   ) : null;
 
-  /* ── Collection pills ────────────────────────────────────────── */
+  /* ── Collection filters ────────────────────────────────────────── */
   const collectionPills: PillItem[] = useMemo(() => [
-    { key: 'all',          label: t('charging.coll.all', 'All'),                count: dateFilteredSessions.length, accent: 'cyan',   icon: <ListIcon className="h-3 w-3" /> },
-    { key: 'home',         label: t('charging.coll.home', 'Home'),              count: homeSessions.length,         accent: 'green',  icon: <Home className="h-3 w-3" /> },
-    { key: 'supercharger', label: t('charging.coll.supercharger', 'Supercharger'), count: scSessions.length,        accent: 'red',    icon: <Bolt className="h-3 w-3" /> },
-    { key: 'dc',           label: t('charging.coll.dc', 'DC Fast'),             count: dcSessions.length,           accent: 'amber',  icon: <Zap className="h-3 w-3" /> },
-    { key: 'free',         label: t('charging.coll.free', 'Free'),              count: freeSessions.length,         accent: 'green',  icon: <Sun className="h-3 w-3" /> },
-    { key: 'anomalies',    label: t('charging.coll.anomalies', 'Anomalies'),    count: anomalies.length,            accent: 'red',    icon: <AlertTriangle className="h-3 w-3" /> },
-    { key: 'notable',      label: t('charging.coll.notable', 'Notable'),        count: notable.length,              accent: 'purple', icon: <Star className="h-3 w-3" /> },
-    { key: 'tagged',       label: t('charging.coll.tagged', 'Tagged'),          count: 0,                           accent: 'blue',   icon: <Tag className="h-3 w-3" />, disabled: true },
+    { key: 'all',          label: t('charging.coll.all', 'All'),                  count: dateFilteredSessions.length },
+    { key: 'home',         label: t('charging.coll.home', 'Home'),                count: homeSessions.length },
+    { key: 'supercharger', label: t('charging.coll.supercharger', 'Supercharger'), count: scSessions.length },
+    { key: 'dc',           label: t('charging.coll.dc', 'DC Fast'),               count: dcSessions.length },
+    { key: 'free',         label: t('charging.coll.free', 'Free'),                count: freeSessions.length },
+    { key: 'anomalies',    label: t('charging.coll.anomalies', 'Anomalies'),      count: anomalies.length },
+    { key: 'notable',      label: t('charging.coll.notable', 'Notable'),          count: notable.length },
+    { key: 'tagged',       label: t('charging.coll.tagged', 'Tagged'),            count: 0, disabled: true },
   ], [t, dateFilteredSessions.length, homeSessions.length, scSessions.length, dcSessions.length, freeSessions.length, anomalies.length, notable.length]);
 
   const collectionLabel = collectionPills.find((p) => p.key === collection)?.label ?? 'All';
@@ -778,20 +779,6 @@ export default function ChargingListPage() {
       )}
       copyLink
       query={[chargingQuery, vehicleStateQuery]}
-      contextActions={
-        <>
-          <VehicleSelect />
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={(r, presetId) => {
-              setRangeWithUrlUpdates(r, { page: null }, presetId);
-            }}
-            timezone={tz}
-            align="end"
-            triggerTestId="charging-list-range"
-          />
-        </>
-      }
       overflowActions={
         <SavedViewMenu
           route="/charging"

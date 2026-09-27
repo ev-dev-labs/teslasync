@@ -85,6 +85,13 @@ caps, and does not reconcile partial telemetry against a complete session.
 Explicit `Disconnected` state, not latch release, denotes unplugging.
 Energy/motion integrations reject seed-only values and observations older than
 two minutes instead of treating forward-filled power as a fresh measurement.
+Mass-dependent drive terms require `TESLASYNC_VEHICLE_MASS_KG`; this is a
+single installation-wide value and must not be set to one vehicle's mass when
+vehicles differ. Tesla Fleet Telemetry's `HvacPower` is an on/off state, not
+watts; grade has no recorded elevation in this ledger. Accessory energy,
+grade, friction braking, and the complete unexplained residual stay unknown
+without their respective measured inputs. The predicted total is the sum of
+**known terms only**, never a complete estimate when a term is missing.
 
 Science fits use the latest contiguous firmware epoch. Voltage/current steps
 must be timestamp-aligned; seed-only freshness is unknown. Rest-end voltage is

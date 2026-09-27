@@ -148,6 +148,7 @@ vi.mock('../components/drive-detail', () => {
     PowerProfileChart: stub('power-profile'),
     TirePressureSection: stub('tire-pressure'),
     WhyEndedPanel: stub('why-ended'),
+    RoadAnomalyPanel: stub('road-anomalies'),
   }
 })
 

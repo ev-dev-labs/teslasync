@@ -280,7 +280,7 @@ func (a *accumulator) interval(prev, cur Sample, dt float64, hvacHold, fwHold *S
 		a.hvacSeen = true
 	} else {
 		a.accessoryBlocked = true
-		a.missing["HvacPower"] = true
+		a.missing["HVAC power (W)"] = true
 	}
 
 	// Regen: negative (absorbing) pack power while moving.
@@ -336,7 +336,7 @@ func (a *accumulator) interval(prev, cur Sample, dt float64, hvacHold, fwHold *S
 			a.precondWh += hvacW * dtH
 			a.precondHave = true
 		} else {
-			a.missing["HvacPower(precondition)"] = true
+			a.missing["HVAC power (W, precondition)"] = true
 		}
 	}
 
@@ -707,7 +707,7 @@ func (a *accumulator) driveLedger(w Window) *DriveLedger {
 	if a.accessoryHave && !a.accessoryBlocked {
 		d.AccessoryWh = Term{ValueWh: fptr(a.accessoryWh), Method: "hvac_step_hold"}
 	} else {
-		d.AccessoryWh = Term{Method: "unknown", Unknown: true, Missing: []string{"HvacPower"}}
+		d.AccessoryWh = Term{Method: "unknown", Unknown: true, Missing: []string{"HVAC power (W)"}}
 	}
 	// Drivetrain loss is a model on positive mechanical work, disclosed.
 	mechKnown, _ := a.mechanicalWh()
@@ -727,7 +727,7 @@ func (a *accumulator) driveLedger(w Window) *DriveLedger {
 	if a.aeroHave || a.rollingHave || a.gradeHave || a.accessoryHave {
 		d.PredictedWh = fptr(predicted)
 	}
-	if d.MeasuredWh.ValueWh != nil && d.PredictedWh != nil && len(a.gaps) == 0 && !a.measuredMissing && !a.speedMissing {
+	if d.MeasuredWh.ValueWh != nil && d.PredictedWh != nil && len(d.Missing) == 0 && len(a.gaps) == 0 && !a.measuredMissing && !a.speedMissing {
 		d.UnexplainedWh = fptr(*d.MeasuredWh.ValueWh - predicted)
 		d.UnexplainedKnown = true
 	}

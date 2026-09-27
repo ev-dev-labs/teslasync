@@ -51,6 +51,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/adapter/teslausage"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	teslabudgetdb "github.com/ev-dev-labs/teslasync/internal/database/teslabudget"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -206,6 +207,7 @@ func run(args []string, stdout, stderr *os.File, getenv func(string) string) int
 	defer db.Close()
 
 	teslaClient := tesla.NewClient(cfg.Tesla)
+	teslaClient.SetEndpointControlsReader(settingsdb.NewSettingsRepo(db))
 	teslausage.BindClient(ctx, teslaClient, db)
 	budgetPolicy := tesla.NewBudgetPolicy(cfg.Tesla.DailyBudgetUSD, cfg.Tesla.CommandReserveUSD)
 	if budgetPolicy.Enabled() {

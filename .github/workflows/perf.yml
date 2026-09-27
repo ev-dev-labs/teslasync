@@ -1,4 +1,4 @@
-name: perf
+name: Performance
 
 on:
   pull_request:

@@ -1,7 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import {
   DEFAULT_PINNED_NAV_PATHS,
-  MAX_PINNED_NAV_ITEMS,
   MAX_RECENT_NAV_ITEMS,
   NAV_PINS_EVENT,
   PINNED_NAV_STORAGE_KEY,
@@ -62,12 +61,11 @@ describe('getPinnedNavPaths', () => {
     expect(getPinnedNavPaths()).toEqual(['/drives', '/charging'])
   })
 
-  it('deduplicates and caps the list', () => {
+  it('deduplicates without capping the list', () => {
     const many = Array.from({ length: 20 }, (_, i) => `/p${i}`)
     setPinnedNavPaths([...many, ...many])
     const stored = getPinnedNavPaths()
-    expect(stored.length).toBe(MAX_PINNED_NAV_ITEMS)
-    expect(new Set(stored).size).toBe(stored.length)
+    expect(stored).toEqual(many)
   })
 })
 

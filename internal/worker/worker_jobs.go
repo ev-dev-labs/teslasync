@@ -29,9 +29,12 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 	pollCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	var endpoints []string
-	if w.pollingConfig != nil {
-		endpoints = w.pollingConfig.EnabledVehicleDataEndpoints()
+	if w.pollingConfig == nil || !w.pollingConfig.AutoPollingEnabled {
+		return
+	}
+	endpoints := w.pollingConfig.EnabledAutoVehicleDataEndpoints()
+	if len(endpoints) == 0 {
+		return
 	}
 
 	data, err := w.teslaClient.GetVehicleData(tesla.AutomaticPollingContext(pollCtx), vehicle.VIN, endpoints...)

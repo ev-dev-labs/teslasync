@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -46,8 +47,15 @@ func TestEndpointControlsHandlersPersistRoundTrip(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.GetPollingConfig(w, httptest.NewRequest(http.MethodGet, "/settings/polling-config", nil))
 	var got settingsmodel.LegacyPollingConfig
-	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil || got != pc {
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatalf("GET status=%d, config=%+v, decode=%v", w.Code, got, err)
+	}
+	if len(got.FleetEndpoints) <= 20 || len(got.AutoEndpoints) != 7 || !got.FleetEndpoints["command.door_lock"] {
+		t.Fatal("GET must include each implemented route and its effective flags")
+	}
+	got.FleetEndpoints, got.AutoEndpoints = nil, nil
+	if !reflect.DeepEqual(got, pc) {
+		t.Fatalf("GET legacy switches changed: got %+v, want %+v", got, pc)
 	}
 	store.err = errors.New("database unavailable")
 	w = httptest.NewRecorder()
@@ -72,5 +80,41 @@ func TestEndpointControlsRejectUnsupportedCapture(t *testing.T) {
 	h.UpdatePollingConfig(w, httptest.NewRequest(http.MethodPut, "/settings/polling-config", strings.NewReader(string(raw))))
 	if w.Code != http.StatusBadRequest || store.writes != 0 {
 		t.Fatalf("unsupported capture status=%d, writes=%d", w.Code, store.writes)
+	}
+}
+
+func TestEndpointControlsRejectUnknownAndInvalidPollingSelections(t *testing.T) {
+	tests := []struct {
+		name   string
+		change func(*settingsmodel.LegacyPollingConfig)
+	}{
+		{"unknown route", func(pc *settingsmodel.LegacyPollingConfig) {
+			pc.FleetEndpoints = map[string]bool{"unknown.route": true}
+		}},
+		{"command cannot poll", func(pc *settingsmodel.LegacyPollingConfig) {
+			pc.AutoEndpoints = map[string]bool{"command.door_lock": true}
+		}},
+		{"disabled route cannot poll", func(pc *settingsmodel.LegacyPollingConfig) {
+			pc.FleetEndpoints = map[string]bool{"vehicle_data.charge_state": false}
+			pc.AutoEndpoints = map[string]bool{"vehicle_data.charge_state": true}
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := &memoryEndpointControls{config: settingsmodel.DefaultPollingConfig()}
+			pc := store.config
+			tt.change(&pc)
+			raw, err := json.Marshal(pc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			w := httptest.NewRecorder()
+			(&SettingsHandler{endpointControls: store}).UpdatePollingConfig(
+				w, httptest.NewRequest(http.MethodPut, "/settings/polling-config", strings.NewReader(string(raw))),
+			)
+			if w.Code != http.StatusBadRequest || store.writes != 0 {
+				t.Fatalf("status=%d, writes=%d, body=%s", w.Code, store.writes, w.Body.String())
+			}
+		})
 	}
 }

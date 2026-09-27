@@ -41,6 +41,7 @@ import { AIFeatureToggleList } from './AIFeatureToggleList'
 import { AIRestorePanel } from './AIRestorePanel'
 import { AIUsageCard } from './AIUsageCard'
 import { AICostCapSpendBar } from './AICostCapSpendBar'
+import { AIFeatureSpendPanel } from './AIFeatureSpendPanel'
 import { HelixStatusStrip } from './HelixStatusStrip'
 
 type AiMode = 'off' | 'local' | 'cloud'
@@ -417,7 +418,7 @@ export function AISettings() {
       {/* Status band — at-a-glance summary, full-width metric grid. */}
       <FadeIn>
         <HelixStatusStrip
-          mode={mode}
+          mode={serverMode === 'off' ? 'off' : mode}
           enabledCount={enabledCount}
           providerName={provider.provider}
         />
@@ -532,11 +533,20 @@ export function AISettings() {
                 AIUsageCard so the numbers match. Passive read — it does
                 not gate saving the cap.
               */}
-              {isCloud && provider.cost_cap_cents > 0 && (
+              {isCloud && serverMode !== 'off' && provider.cost_cap_cents > 0 && (
                 <AICostCapSpendBar capCents={provider.cost_cap_cents} />
               )}
             </div>
           </div>
+        </FadeIn>
+      )}
+
+      {showProviderSection && (
+        <FadeIn delay={0.14}>
+          <AIFeatureSpendPanel
+            enabled={serverMode !== 'off'}
+            capCents={provider.cost_cap_cents}
+          />
         </FadeIn>
       )}
 

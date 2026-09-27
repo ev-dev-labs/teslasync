@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
-const { useDrivesMock, selectedVehicleMock, pageTitleMock } = vi.hoisted(() => ({
+const { useDrivesMock,
+sharedRange, selectedVehicleMock, pageTitleMock } = vi.hoisted(() => ({
   useDrivesMock: vi.fn(),
+  sharedRange: { set: (_range: { start: string; end: string }) => {} },
   selectedVehicleMock: vi.fn(),
   pageTitleMock: vi.fn(),
 }));
@@ -46,6 +48,7 @@ vi.mock('@/hooks/useRangeState', async () => {
         start: '2026-01-01',
         end: '2026-08-07',
       });
+      sharedRange.set = setRange;
       return { ...range, setRange };
     },
   };
@@ -179,7 +182,8 @@ describe('ColdStartPage', () => {
 
   it('re-queries with the newly selected range', async () => {
     render(<ColdStartPage />);
-    fireEvent.click(screen.getByTestId('cold-start-range'));
+    act(() => sharedRange.set({ start: '2026-07-01', end: '2026-07-31' }));
+    expect(screen.queryByTestId('cold-start-range')).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(useDrivesMock).toHaveBeenLastCalledWith('42', {

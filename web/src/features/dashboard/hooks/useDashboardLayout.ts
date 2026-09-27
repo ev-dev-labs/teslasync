@@ -26,6 +26,7 @@ import {
 
 const DASHBOARDS_KEY = 'teslasync-dashboards';
 const ACTIVE_KEY = 'teslasync-active-dashboard';
+const PENDING_SAVE_KEY = 'teslasync-dashboard-pending-save';
 const LEGACY_KEY = 'teslasync-dashboard-layout';
 const WIDGET_REGISTRY_IDS = new Set(WIDGET_REGISTRY.map((w) => w.id));
 
@@ -110,13 +111,15 @@ function buildDefaultLayouts(widgets: WidgetInstance[]): RGLLayouts {
 function sanitizeLayouts(layouts: RGLLayouts): RGLLayouts {
   const result: RGLLayouts = {};
   for (const [bp, items] of Object.entries(layouts)) {
-    result[bp] = (items as RGLLayout[]).map((item) => ({
+    result[bp] = (Array.isArray(items) ? items : [])
+      .filter((item): item is RGLLayout => item != null && typeof item.i === 'string')
+      .map((item) => ({
       ...item,
       w: Math.max(Number.isFinite(item.w) ? item.w : 1, 1),
       h: Math.max(Number.isFinite(item.h) ? item.h : 1, 1),
       x: Math.max(Number.isFinite(item.x) ? item.x : 0, 0),
       y: Math.max(Number.isFinite(item.y) ? item.y : 0, 0),
-    }));
+      }));
   }
   return result;
 }
@@ -157,9 +160,10 @@ export function reconcileLayouts(
 ): RGLLayouts {
   const widgetIds = new Set(widgets.map((w) => w.id));
   const result: RGLLayouts = {};
+  const safeLayouts = sanitizeLayouts(layouts ?? {});
 
   for (const [bp, cols] of Object.entries(GRID_COLS)) {
-    const existing: RGLLayout[] = layouts[bp] ?? [];
+    const existing: RGLLayout[] = safeLayouts[bp] ?? [];
     const existingMap = new Map<string, RGLLayout>(existing.map((item) => [item.i, item]));
 
     const items: RGLLayout[] = [];
@@ -172,10 +176,11 @@ export function reconcileLayouts(
 
       const prev = existingMap.get(widget.id);
       if (prev) {
-        // Preserve user-saved sizes — only enforce min/max from registry
+        const w = clampMinMax(prev.w, minW, maxW);
         items.push({
           ...prev,
-          w: clampMinMax(prev.w, minW, maxW),
+          x: Math.min(prev.x, cols - w),
+          w,
           h: clampMinMax(prev.h, minH, maxH),
           minW,
           minH,
@@ -236,6 +241,7 @@ const DEFAULT_DASHBOARD = makePreset(
     { widgetId: 'charge-status' },
     { widgetId: 'security-status' },
     { widgetId: 'quick-nav' },
+    { widgetId: 'fleet-posture' },
   ],
   true,
 );
@@ -387,9 +393,7 @@ function loadDashboards(): SavedDashboard[] {
         return {
           ...d,
           widgets: validWidgets,
-          layouts: sanitizeLayouts(
-            reconcileLayouts(d.layouts ?? {}, validWidgets),
-          ),
+          layouts: reconcileLayouts(d.layouts ?? {}, validWidgets),
         };
       });
     }
@@ -442,10 +446,14 @@ export function useDashboardLayout() {
 
   /* ─── Debounced backend write ─── */
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirty] = useState(() => localStorage.getItem(PENDING_SAVE_KEY) === '1');
+  useEffect(() => () => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+  }, []);
   const syncToBackend = useCallback(
     (dbs: SavedDashboard[], active: string) => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      localStorage.setItem(PENDING_SAVE_KEY, '1');
       setDirty(true);
       debounceTimerRef.current = setTimeout(() => {
         const payload: DashboardLayoutsPayload = {
@@ -453,7 +461,13 @@ export function useDashboardLayout() {
           active_id: active,
         };
         saveMutation.mutate(payload, {
-          onSuccess: () => setDirty(false),
+          onSuccess: () => {
+            if (localStorage.getItem(DASHBOARDS_KEY) === JSON.stringify(dbs)
+              && (localStorage.getItem(ACTIVE_KEY) ?? 'default') === active) {
+              localStorage.removeItem(PENDING_SAVE_KEY);
+              setDirty(false);
+            }
+          },
         });
       }, 2000);
     },
@@ -465,12 +479,26 @@ export function useDashboardLayout() {
     if (hydratedFromBackend || !backendLayouts) return;
     setHydratedFromBackend(true);
 
+    // A reload during the debounce must not replace locally edited defaults
+    // with an older server copy. Retry the pending snapshot instead.
+    if (localStorage.getItem(PENDING_SAVE_KEY) === '1') {
+      localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(dashboards));
+      syncToBackend(dashboards, activeId);
+      return;
+    }
+
     const hasBackendData =
       Array.isArray(backendLayouts.dashboards) && backendLayouts.dashboards.length > 0;
     if (!hasBackendData) return;
 
-    // Only hydrate if localStorage has no custom data (default-only or empty)
-    if (!isLocalStorageDefaultOnly()) return;
+    // A newer server edit from another machine wins over an older local
+    // snapshot; unsynced local edits were handled above.
+    const latestUpdate = (items: SavedDashboard[]) => Math.max(
+      0,
+      ...items.map((item) => Date.parse(item.updatedAt) || 0),
+    );
+    if (!isLocalStorageDefaultOnly()
+      && latestUpdate(backendLayouts.dashboards as SavedDashboard[]) <= latestUpdate(dashboards)) return;
 
     // Use backend data — user switched browser or cleared cookies
     const restored = backendLayouts.dashboards as SavedDashboard[];
@@ -484,9 +512,7 @@ export function useDashboardLayout() {
       return {
         ...d,
         widgets: validWidgets,
-        layouts: sanitizeLayouts(
-          reconcileLayouts(d.layouts ?? {}, validWidgets),
-        ),
+        layouts: reconcileLayouts(d.layouts ?? {}, validWidgets),
       };
     });
 
@@ -499,7 +525,7 @@ export function useDashboardLayout() {
       : reconciled[0].id;
     setActiveId(finalActiveId);
     localStorage.setItem(ACTIVE_KEY, finalActiveId);
-  }, [backendLayouts, hydratedFromBackend]);
+  }, [backendLayouts, hydratedFromBackend, dashboards, activeId, syncToBackend]);
 
   /* ─── Cross-tab sync ─── */
   // When another tab mutates the dashboard layout, re-read from
@@ -572,9 +598,33 @@ export function useDashboardLayout() {
 
   /* ─── Layout actions ─── */
   const updateLayouts = useCallback(
-    (layouts: RGLLayouts) => {
-      pushSnapshot({ widgets: activeDashRef.current.widgets, layouts });
-      updateActive((d) => ({ ...d, layouts }));
+    (layouts: RGLLayouts, sourceBreakpoint?: keyof typeof GRID_COLS) => {
+      const current = activeDashRef.current;
+      const next = reconcileLayouts(layouts, current.widgets);
+      if (sourceBreakpoint) {
+        const previous = new Map(
+          (current.layouts[sourceBreakpoint] ?? []).map((item) => [item.i, item]),
+        );
+        for (const item of next[sourceBreakpoint]) {
+          const before = previous.get(item.i);
+          if (!before || (before.w === item.w && before.h === item.h)) continue;
+          for (const [bp, cols] of Object.entries(GRID_COLS)) {
+            if (bp === sourceBreakpoint) continue;
+            next[bp] = next[bp].map((other) => other.i === item.i
+              ? {
+                  ...other,
+                  w: before.w === item.w
+                    ? other.w
+                    : Math.max(1, Math.round(item.w * cols / GRID_COLS[sourceBreakpoint])),
+                  h: item.h,
+                }
+              : other);
+          }
+        }
+      }
+      const canonical = sourceBreakpoint ? reconcileLayouts(next, current.widgets) : next;
+      pushSnapshot({ widgets: activeDashRef.current.widgets, layouts: canonical });
+      updateActive((d) => ({ ...d, layouts: canonical }));
     },
     [updateActive, pushSnapshot],
   );
@@ -636,17 +686,22 @@ export function useDashboardLayout() {
   const switchDashboard = useCallback(
     (id: string) => {
       setActiveId(id);
+      localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(dashboardsRef.current));
       localStorage.setItem(ACTIVE_KEY, id);
+      if (hydratedFromBackend || localStorage.getItem(PENDING_SAVE_KEY) === '1') {
+        syncToBackend(dashboardsRef.current, id);
+      }
+      broadcast({ type: 'dashboard.layout' });
       const dash = dashboardsRef.current.find((d) => d.id === id);
       if (dash) resetSnapshot({ widgets: dash.widgets, layouts: dash.layouts });
     },
-    [resetSnapshot],
+    [hydratedFromBackend, resetSnapshot, syncToBackend],
   );
 
   const createDashboard = useCallback(
     (name: string, fromPreset?: SavedDashboard) => {
       const id = `custom-${Date.now()}`;
-      const base = fromPreset ?? DEFAULT_DASHBOARD;
+      const base = fromPreset ?? { ...DEFAULT_DASHBOARD, widgets: [], layouts: buildDefaultLayouts([]) };
       const newDash: SavedDashboard = {
         ...base,
         id,
@@ -925,7 +980,25 @@ export function useDashboardLayout() {
   /* ─── Auto arrange ─── */
   const autoArrange = useCallback(() => {
     const current = activeDashRef.current;
-    const layouts = buildDefaultLayouts(current.widgets);
+    const layouts = reconcileLayouts(current.layouts, current.widgets);
+    for (const [bp, cols] of Object.entries(GRID_COLS)) {
+      const byId = new Map(layouts[bp].map((item) => [item.i, item]));
+      let x = 0;
+      let y = 0;
+      let rowHeight = 0;
+      layouts[bp] = current.widgets.map((widget) => {
+        const item = byId.get(widget.id)!;
+        if (x + item.w > cols) {
+          x = 0;
+          y += rowHeight;
+          rowHeight = 0;
+        }
+        const arranged = { ...item, x, y };
+        x += item.w;
+        rowHeight = Math.max(rowHeight, item.h);
+        return arranged;
+      });
+    }
     pushSnapshot({ widgets: current.widgets, layouts });
     updateActive((d) => ({ ...d, layouts }));
   }, [updateActive, pushSnapshot]);

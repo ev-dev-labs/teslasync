@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { PhysicsLedger } from '@/api/types';
+import type { PhysicsLedger, PhysicsTerm } from '@/api/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -117,5 +117,34 @@ describe('DriveLedgerCompactPanel', () => {
     );
     renderPanel();
     expect(screen.getByText(/Regen/)).not.toHaveTextContent(/Unknown/);
+  });
+
+  it('explains why missing physical inputs cannot be replaced with estimates', () => {
+    const missing: PhysicsTerm = { value_wh: null, method: 'unknown', unknown: true };
+    useDriveLedgerMock.mockReturnValue(queryState({
+      data: ledgerStub({
+        drive: {
+          measured_wh: { value_wh: 100, method: 'pack_vi_trapezoid', unknown: false },
+          aero_wh: { value_wh: 30, method: 'half_rho_cda_v3', unknown: false },
+          rolling_wh: missing,
+          grade_wh: missing,
+          inertial_wh: missing,
+          accessory_wh: missing,
+          drivetrain_loss_wh: missing,
+          session_wh: null,
+          reconcile_wh: null,
+          predicted_wh: 30,
+          unexplained_wh: null,
+          unexplained_known: false,
+          missing_signals: ['mass_kg', 'elevation', 'HVAC power (W)'],
+          honesty: 'Unknown inputs stay unknown.',
+        },
+      }),
+    }));
+    renderPanel();
+    expect(screen.getByText(/TESLASYNC_VEHICLE_MASS_KG/)).toBeInTheDocument();
+    expect(screen.getByText(/recorded elevation/)).toBeInTheDocument();
+    expect(screen.getByText(/HVAC on\/off state/)).toBeInTheDocument();
+    expect(screen.getByText(/Unexplained residual/).parentElement).toHaveTextContent('Unknown');
   });
 });
