@@ -1,12 +1,11 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import {
-  Route, BatteryCharging, Battery, Thermometer, BarChart3, Settings, ChevronRight,
-} from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { navRouteIcons } from '@/lib/navRouteIcons'
 
 export function QuickLinksSection() {
   const { t } = useTranslation()
@@ -16,12 +15,12 @@ export function QuickLinksSection() {
   // language — and therefore `t` — changes.
   const quickLinks = useMemo(
     () => [
-      { label: t('nav.drives', 'Drives'), icon: Route, to: '/drives' },
-      { label: t('nav.charging', 'Charging'), icon: BatteryCharging, to: '/charging' },
-      { label: t('nav.battery', 'Battery'), icon: Battery, to: '/battery' },
-      { label: t('nav.climate', 'Climate'), icon: Thermometer, to: '/climate' },
-      { label: t('nav.efficiency', 'Efficiency'), icon: BarChart3, to: '/efficiency' },
-      { label: t('nav.settings', 'Settings'), icon: Settings, to: '/settings' },
+      { label: t('nav.drives', 'Drives'), icon: navRouteIcons['/drives'], to: '/drives' },
+      { label: t('nav.charging', 'Charging'), icon: navRouteIcons['/charging'], to: '/charging' },
+      { label: t('nav.battery', 'Battery'), icon: navRouteIcons['/battery'], to: '/battery' },
+      { label: t('nav.climate', 'Climate'), icon: navRouteIcons['/climate'], to: '/climate' },
+      { label: t('nav.efficiency', 'Efficiency'), icon: navRouteIcons['/efficiency'], to: '/efficiency' },
+      { label: t('nav.settings', 'Settings'), icon: navRouteIcons['/settings'], to: '/settings' },
     ],
     [t],
   )

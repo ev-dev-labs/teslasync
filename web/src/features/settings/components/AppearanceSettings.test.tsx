@@ -102,7 +102,6 @@ vi.mock('@/lib/tourRegistry', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
-import { getSidebarStyle, setSidebarStyle } from '@/hooks/useSidebarStyle'
 import { setStatusBarPrefs } from '@/components/layout'
 import { setAchievementCelebrationPrefs } from '@/hooks/useAchievementCelebrationPrefs'
 import { startTour } from '@/lib/tourLauncher'
@@ -115,7 +114,6 @@ const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 const mockedStartTour = startTour as unknown as ReturnType<typeof vi.fn>
 const mockedResetAllTours = resetAllTours as unknown as ReturnType<typeof vi.fn>
 
-const SIDEBAR_KEY = 'teslasync:sidebar-style:v1'
 const STATUSBAR_KEY = 'teslasync-status-bar-prefs'
 const CELEBRATION_KEY = 'teslasync:achievement-celebration:v1'
 
@@ -163,7 +161,6 @@ beforeEach(() => {
   // Reset the module-scoped localStorage snapshots to their documented
   // defaults so each case is hermetic (these stores cache a snapshot at
   // import time and mutate it in place).
-  setSidebarStyle('linear')
   setStatusBarPrefs({ enabled: true, iconOnly: false })
   setAchievementCelebrationPrefs({
     showToasts: true,
@@ -191,20 +188,16 @@ describe('AppearanceSettings — structure & delegation', () => {
   it('renders every preference section label', () => {
     renderPanel()
     expect(screen.getByText('Information density')).toBeInTheDocument()
-    expect(screen.getByText('Sidebar style')).toBeInTheDocument()
     expect(screen.getByText('Default time format')).toBeInTheDocument()
     expect(screen.getByText('Chart palette')).toBeInTheDocument()
     expect(screen.getByText('Status bar')).toBeInTheDocument()
     expect(screen.getByText('Celebration')).toBeInTheDocument()
   })
 
-  it('exposes the four option groups as named radiogroups (a11y)', () => {
+  it('exposes the three option groups as named radiogroups (a11y)', () => {
     renderPanel()
     expect(
       screen.getByRole('radiogroup', { name: 'Information density' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('radiogroup', { name: 'Sidebar style' }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('radiogroup', { name: 'Default time format' }),
@@ -302,31 +295,6 @@ describe('AppearanceSettings — chart palette', () => {
       ...settingsFixture,
       chart_palette: 'neon',
     })
-  })
-})
-
-describe('AppearanceSettings — sidebar style (localStorage-backed)', () => {
-  it('defaults to Minimal and switches selection + persistence on click', () => {
-    renderPanel()
-    const group = screen.getByRole('radiogroup', { name: 'Sidebar style' })
-    expect(within(group).getByRole('radio', { name: /Minimal/i })).toBeChecked()
-
-    fireEvent.click(within(group).getByRole('radio', { name: /Classic/i }))
-
-    expect(getSidebarStyle()).toBe('legacy')
-    expect(localStorage.getItem(SIDEBAR_KEY)).toBe('legacy')
-    expect(within(group).getByRole('radio', { name: /Classic/i })).toBeChecked()
-    expect(
-      within(group).getByRole('radio', { name: /Minimal/i }),
-    ).not.toBeChecked()
-  })
-
-  it('never touches the network for a client-only preference', () => {
-    renderPanel()
-    const group = screen.getByRole('radiogroup', { name: 'Sidebar style' })
-    fireEvent.click(within(group).getByRole('radio', { name: /All groups/i }))
-    expect(getSidebarStyle()).toBe('notion')
-    expect(mockedRequest).not.toHaveBeenCalled()
   })
 })
 

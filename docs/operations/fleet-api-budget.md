@@ -44,6 +44,28 @@ running without a budget.
 
 ## Budget-aware polling
 
+Automatic Fleet API polling is **off by default**. In **Account → Fleet API**,
+turn on the schedule only after choosing which of the seven supported reads
+(vehicle discovery and six `vehicle_data` subresources) may participate.
+The route workspace groups operations by category or HTTP method, with
+search across the full catalog and sort controls for operation, path, method,
+access or auto-poll state. Each route has its own **Enabled** switch for on-demand access; eligible reads
+have a separate **Auto-poll** switch. A disabled route cannot be polled.
+The **Access all** and **Auto-poll eligible routes** switches apply to the
+entire catalog, not only the selected category or search results. Bulk
+auto-poll selects only enabled reads with a scheduled job and does not turn
+on the polling schedule. While the polling schedule is off, individual and
+bulk Auto-poll switches are read-only; saved selections remain visible and
+will take effect when the schedule is enabled. Access switches remain usable
+independently.
+Commands and other parameterized or paid operations are on-demand only.
+Pausing the schedule does not stop enabled on-demand requests or token refresh.
+An already-active legacy API suspension can be cleared with **Resume API
+actions**; it is separate from the polling schedule. The route catalog is
+served by the API container; if
+the page reports that it is unavailable after updating the web container,
+update and restart the API container as well.
+
 The default `$0.05` command reserve leaves `$0.25` for background activity,
 equivalent to at most 125 vehicle-data calls if no other background endpoint is
 used. In Fleet Telemetry primary mode, streaming vehicles do not consume those

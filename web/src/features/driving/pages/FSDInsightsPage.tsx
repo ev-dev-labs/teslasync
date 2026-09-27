@@ -1,18 +1,19 @@
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
-import { useFsdInsights } from '@/api/hooks/useAnalytics';
+import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { DataProvenanceBadge } from '@/components/data-display';
-import { VehicleSelect } from '@/components/forms';
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useUrlState } from '@/hooks/useUrlState';
-import { browserTimezone } from '@/lib/timezone';
-import { FSD_DEFAULT_PERIOD_DAYS, type FsdPeriodDays } from '@/types/fsd';
+import { getDatePreset } from '@/lib/datePresets';
+import { addCivilDays, civilDateInTimeZone } from '@/lib/dateRange';
 
 import {
   FsdConfidencePanel,
@@ -20,34 +21,23 @@ import {
   FsdDriveAnalyticsPanels,
   FsdKpiBand,
   FsdObservatoryPanel,
-  FsdPeriodControl,
   FsdShareTrend,
   FsdTopDays,
   FsdWeekdayPattern,
-  coercePeriodDays,
   type FsdSectionState,
 } from '../components/fsd-insights';
 
 const SPLIT_COLUMNS = { default: 1, xl: 2 } as const;
-
-/** `?days=` is validated on read, so a hand-edited URL degrades to the default. */
-const DAYS_URL_STATE = {
-  key: 'days',
-  defaultValue: FSD_DEFAULT_PERIOD_DAYS,
-  parse: (raw: string): FsdPeriodDays | undefined => {
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? coercePeriodDays(parsed, FSD_DEFAULT_PERIOD_DAYS) : undefined;
-  },
-  serialize: (value: FsdPeriodDays) => String(value),
-  // Keep `?days=30` in the URL after an explicit selection so a copied link
-  // always carries the period the operator was actually looking at.
-  omitDefault: false,
-} as const;
+const LEGACY_PERIOD_PRESETS: Record<string, string> = {
+  '7': '7d',
+  '30': '30d',
+  '90': '90d',
+};
 
 /**
  * FSD Insights — supervised self-driving distance telemetry.
  *
- * Thin orchestrator: one query, one URL-backed period control, and a set of
+ * Thin orchestrator: one shared workspace-range query and a set of
  * independently mounted panels. Every panel renders its own shell in the
  * loading, error, empty, and no-vehicle states, so nothing on this page ever
  * disappears.
@@ -57,9 +47,8 @@ const DAYS_URL_STATE = {
  * background refresh renders `<StaleRefreshWarning>` above retained content
  * instead of blanking it.
  *
- * The browser's IANA timezone travels with the request because the backend
- * groups counter deltas by LOCAL calendar day; `browserTimezone()` falls back
- * to UTC when `Intl` is unavailable.
+ * The workspace range's IANA timezone travels with the request because the
+ * backend groups counter deltas by local calendar day.
  */
 export default function FSDInsightsPage() {
   const { t } = useTranslation();
@@ -67,12 +56,44 @@ export default function FSDInsightsPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  // Period lives in the URL so Copy link, reload, and browser back all restore
-  // the same window. `replace` (the hook default) keeps a filter toggle out of
-  // the history stack, matching the repo's URL-state guidance.
-  const [days, setDays] = useUrlState<FsdPeriodDays>(DAYS_URL_STATE);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const legacyDays = searchParams.get('days');
+  const { preferences } = useProductPreferences();
+  const { startInstant, endInstantExclusive, timezone, setRangeWithUrlUpdates } = useRangeState({
+    defaultPresetId: preferences.defaultAnalysisRange,
+  });
+  const migratingLegacyLink = legacyDays !== null
+    && !searchParams.has('from') && !searchParams.has('to');
+  useEffect(() => {
+    if (legacyDays === null) return;
+    if (!migratingLegacyLink) {
+      setSearchParams((previous) => {
+        const next = new URLSearchParams(previous);
+        next.delete('days');
+        return next;
+      }, { replace: true });
+      return;
+    }
 
-  const insightsQuery = useFsdInsights(vehicleIdStr, days, browserTimezone());
+    const now = new Date();
+    const presetId = LEGACY_PERIOD_PRESETS[legacyDays] ?? '30d';
+    const preset = getDatePreset(presetId);
+    if (!preset) throw new Error(`Missing FSD date preset: ${presetId}`);
+    const range = legacyDays === '365'
+      ? {
+          start: addCivilDays(civilDateInTimeZone(now, timezone), -364),
+          end: civilDateInTimeZone(now, timezone),
+        }
+      : preset.resolve(now, timezone);
+    setRangeWithUrlUpdates(range, { days: null }, legacyDays === '365' ? undefined : presetId);
+  }, [legacyDays, migratingLegacyLink, setRangeWithUrlUpdates, setSearchParams, timezone]);
+
+  const insightsQuery = useFsdInsightsRange(
+    vehicleIdStr,
+    migratingLegacyLink ? undefined : startInstant,
+    migratingLegacyLink ? undefined : endInstantExclusive,
+    timezone,
+  );
   const insightsState = useDataState(insightsQuery, { provenance: 'historical' });
 
   const retry = insightsState.retry;
@@ -113,8 +134,6 @@ export default function FSDInsightsPage() {
             status={insightsState.status}
             updatedAt={insightsState.updatedAt}
           />
-          <VehicleSelect />
-          <FsdPeriodControl value={days} onChange={setDays} disabled={vehicleId == null} />
         </div>
       }
     >

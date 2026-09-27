@@ -4,7 +4,7 @@ import { Flame, Gauge, Timer, Zap } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip, Select } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -94,7 +94,6 @@ export default function ChargingThermalTaxPage() {
         'How much of a charge went into warming the battery instead of into range',
       )}
       query={numericSessionId != null ? [sessionsQuery, telemetryQuery] : sessionsQuery}
-      actions={<VehicleSelect />}
     >
       {/* 0 — Session picker */}
       <FadeIn>

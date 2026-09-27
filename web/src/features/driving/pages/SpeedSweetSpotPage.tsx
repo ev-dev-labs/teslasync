@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -32,7 +32,7 @@ export default function SpeedSweetSpotPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'speed-sweetspot.range',
     defaultPresetId: 'all',
   });
@@ -71,17 +71,6 @@ export default function SpeedSweetSpotPage() {
         'Observed efficiency by whole-drive average speed — not instantaneous cruising speed or a recommended road speed',
       )}
       query={drivesQuery}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="speed-sweetspot-range"
-          />
-        </div>
-      }
     >
       <FadeIn>
         <SpeedSweetSpotKpis summary={summary} {...sectionState} />

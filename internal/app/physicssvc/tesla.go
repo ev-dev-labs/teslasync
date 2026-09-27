@@ -12,7 +12,8 @@ import (
 // ledgerFields projects every signal the solver can consume. Values arrive
 // SI-canonical from signal_log (phase-48); Timeline forward-fills each row
 // so samples map directly without interpolation. Unprojected signals
-// (elevation, steering/yaw, per-load meters) stay unknown in this adapter.
+// (elevation, HVAC watts, steering/yaw, per-load meters) stay unknown.
+// Tesla HvacPower is an on/off state, not a power measurement.
 func ledgerFields() []signal.FieldMapping {
 	return []signal.FieldMapping{
 		{Signal: "VehicleSpeed", Field: "speed"},
@@ -34,7 +35,6 @@ func ledgerFields() []signal.FieldMapping {
 		{Signal: "ModuleTempMax", Field: "pack_temp_max_c"},
 		{Signal: "InsideTemp", Field: "inside_temp_c"},
 		{Signal: "OutsideTemp", Field: "outside_temp_c"},
-		{Signal: "HvacPower", Field: "hvac_power_w"},
 		{Signal: "PreconditioningEnabled", Field: "preconditioning_enabled"},
 		{Signal: "BatteryHeaterOn", Field: "battery_heater_on"},
 		{Signal: "SentryMode", Field: "sentry_mode"},
@@ -80,7 +80,6 @@ func samplesFromTimeline(rows []signal.TimelineRow) []physics.Sample {
 			PackTempMaxC:        fieldFloat(f, "pack_temp_max_c"),
 			InsideTempC:         fieldFloat(f, "inside_temp_c"),
 			OutsideTempC:        fieldFloat(f, "outside_temp_c"),
-			HvacPowerW:          fieldFloat(f, "hvac_power_w"),
 			RatedRangeM:         fieldFloat(f, "rated_range_m"),
 			EstRangeM:           fieldFloat(f, "est_range_m"),
 			IdealRangeM:         fieldFloat(f, "ideal_range_m"),
@@ -94,7 +93,7 @@ func samplesFromTimeline(rows []signal.TimelineRow) []physics.Sample {
 			"pack_voltage_v": &s.PackVoltageV, "pack_current_a": &s.PackCurrentA,
 			"energy_remaining_wh": &s.EnergyRemainingWh, "soc_pct": &s.SocPct,
 			"speed": &s.SpeedMps, "ac_power_w": &s.ACPowerW,
-			"dc_power_w": &s.DCPowerW, "hvac_power_w": &s.HvacPowerW,
+			"dc_power_w": &s.DCPowerW,
 		} {
 			at := row.ObservedAt[field]
 			if at.IsZero() || at.After(row.Timestamp) || row.Timestamp.Sub(at) > time.Duration(physics.DefaultUnknownGapS)*time.Second {

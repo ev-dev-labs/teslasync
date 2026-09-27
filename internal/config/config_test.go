@@ -62,6 +62,18 @@ func TestLoad_TeslaAPIBudgetDefaults(t *testing.T) {
 	}
 }
 
+func TestLoad_CommandProxyTLSServerName(t *testing.T) {
+	t.Setenv("TESLA_COMMAND_PROXY_TLS_SERVER_NAME", "command.example.com")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error from Load(): %v", err)
+	}
+	if cfg.Tesla.CommandProxyTLSServerName != "command.example.com" {
+		t.Fatalf("CommandProxyTLSServerName = %q, want command.example.com", cfg.Tesla.CommandProxyTLSServerName)
+	}
+}
+
 func TestLoad_TeslaAPIBudgetOverrides(t *testing.T) {
 	t.Setenv("TESLA_API_DAILY_BUDGET_USD", "1.75")
 	t.Setenv("TESLA_API_COMMAND_RESERVE_USD", "0.25")

@@ -154,7 +154,7 @@ for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
       if (width >= 1024) {
         const table = dialog.getByRole('table', { name: 'Choose rules' })
         await expect(table.getByRole('columnheader')).toHaveText([
-          'Selected', 'Rule', 'Operator', 'Value', 'Cooldown (minutes)', 'Alert behavior', 'Channels', 'Notification message', 'Include title', 'Defaults',
+          'Selected', 'Rule', 'Severity', 'Operator', 'Value', 'Cooldown (minutes)', 'Alert behavior', 'Notification message', 'Channels', 'Include title', 'Defaults',
         ])
         expect(await table.getByRole('columnheader').evaluateAll(headers => headers.every(header => getComputedStyle(header).textAlign === 'left'))).toBe(true)
         const row = table.locator('tbody tr').first()

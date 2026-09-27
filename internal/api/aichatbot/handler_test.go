@@ -59,6 +59,7 @@ func TestChatbotAIOffUsesBaselineAndAiRoute404(t *testing.T) {
 		mode: "off",
 		on:   map[string]bool{"chatbot-llm": true}, // toggle on, mode trumps it
 	}
+
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()
@@ -111,6 +112,32 @@ func TestChatbotAIOffUsesBaselineAndAiRoute404(t *testing.T) {
 		}
 	}()
 	apichatbot.NewBaselineResponder(nil)
+}
+
+func TestPageContextForModel(t *testing.T) {
+	t.Parallel()
+	if got := (*pageContext)(nil).forModel("What happened?"); got != "What happened?" {
+		t.Fatalf("nil context changed message: %q", got)
+	}
+	page := &pageContext{Path: "/drives", Title: "Drives", Text: "Latest drive: 12 km"}
+	if !page.valid() {
+		t.Fatal("expected valid page snapshot")
+	}
+	got := page.forModel("Explain this chart")
+	for _, part := range []string{"/drives", "Drives", "Latest drive: 12 km", "Explain this chart", "Verify fleet claims with tools"} {
+		if !strings.Contains(got, part) {
+			t.Errorf("model context missing %q: %q", part, got)
+		}
+	}
+	for _, invalid := range []*pageContext{
+		{Path: "//outside", Text: "test"},
+		{Path: "/drives", Text: strings.Repeat("x", 8001)},
+		{Path: "/drives", Title: strings.Repeat("x", 161)},
+	} {
+		if invalid.valid() {
+			t.Errorf("accepted invalid context: path=%q title length=%d text length=%d", invalid.Path, len(invalid.Title), len(invalid.Text))
+		}
+	}
 }
 
 // TestHandler_PanicsOnNilWiring asserts the handler

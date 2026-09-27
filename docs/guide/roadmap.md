@@ -37,6 +37,16 @@ In rough priority order:
 5. **Frontend consistency** — the design system is mature but new pages still occasionally bypass it; the audit skill catches that and the team rounds off the edges.
 6. **New features** — last in the list deliberately. New surfaces add code to maintain forever; we add them when the user value is clear and the operational cost is well understood.
 
+## Recently delivered in the app
+
+The in-app Roadmap (`/roadmap`) tracks broad areas rather than release dates. Recent
+deliveries include vehicle day log and state history, the drive physics ledger
+and Science Lab, charging and energy investigations, journeys and ownership
+insights, Helix provider and alert-studio improvements, curated alert packs,
+and direct sidebar collections that keep the original routes accessible.
+Desktop navigation can be resized; long labels wrap instead of disappearing.
+These are shipped surfaces, not future promises.
+
 ## Active focus areas
 
 These are the areas getting the most engineering attention right now. None are committed releases; they're directions.
@@ -53,6 +63,19 @@ These are the areas getting the most engineering attention right now. None are c
 | Backup / restore                | Automated restore drills as part of CI, smaller and faster in-app backup format                      |
 | Documentation                   | Keeping the published docs in lockstep with code reality (where you are right now)                   |
 | Observability                   | More dashboards backed by continuous aggregates, business-SLO definitions, fewer noisy alerts        |
+
+## Possible next and longer-term directions
+
+These are evaluations, not committed release milestones:
+
+- Better-grounded Helix answers, more useful citations, and clearer per-feature AI cost controls.
+- Practiced restore workflows, smaller backups, and self-hosted deployment guidance that matches what ships.
+- Home-energy and charging-network context, only where reliable integrations are available.
+- Privacy-preserving aggregate fleet comparisons with explicit provenance and operator-controlled sharing.
+- Accessible, keyboard-friendly operator workflows on smaller screens.
+
+Native mobile apps, a plugin marketplace, and a hosted SaaS are **not** part
+of this roadmap; the PWA and self-hosted architecture remain the priorities.
 
 ## Things we've considered and chose not to do
 

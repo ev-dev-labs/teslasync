@@ -21,6 +21,7 @@ export { SpeedHistogramChart } from './SpeedHistogramChart';
 export { PowerProfileChart } from './PowerProfileChart';
 export { TirePressureSection } from './TirePressureSection';
 export { WhyEndedPanel } from './WhyEndedPanel';
+export { RoadAnomalyPanel } from './RoadAnomalyPanel';
 export { useDriveDetailData } from './useDriveDetailData';
 export type {
   ChartDataPoint,

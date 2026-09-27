@@ -246,8 +246,8 @@ describe('LiveSignalMonitorPage', () => {
       rate: 0,
       args: { enabled: true, resetKey: 42 },
     });
-    // Fleet with a vehicle renders the scope picker.
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    // Scope selection is owned by the shared header.
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it('passes a null vehicle scope through and hides the picker for an empty fleet', () => {
@@ -257,7 +257,7 @@ describe('LiveSignalMonitorPage', () => {
 
     expect(h.streamOpts).toMatchObject({ vehicleId: null });
     expect(h.throughputArgs?.args.resetKey).toBeNull();
-    // VehicleSelect renders nothing when the fleet is empty.
+    // The page never duplicates the application header's vehicle picker.
     expect(screen.queryByRole('combobox')).toBeNull();
   });
 

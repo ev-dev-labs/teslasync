@@ -13,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ChartTooltip, EmbeddedChart, chartGrid, axisTickSm,
 } from '@/components/charts';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -40,7 +40,7 @@ export default function ChargingHeatmapPage() {
 
   // The header VehiclePicker is the source of truth for the active vehicle.
   const { vehicleId } = useSelectedVehicle();
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'charging-heatmap.range',
     defaultPresetId: 'all',
   });
@@ -91,13 +91,6 @@ export default function ChargingHeatmapPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-      <VehicleSelect />
-      <RangePicker
-        value={{ start, end }}
-        onChange={setRange}
-        align="end"
-        triggerTestId="charging-heatmap-range"
-      />
       <Button
         variant="ghost"
         onClick={() => refetch()}

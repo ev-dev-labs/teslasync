@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import {
   GlassPanel, Badge, Button, DataTable, PanelTitle, Text, Caption, Label,
   type Column, useSortToggle,
@@ -364,7 +364,6 @@ export default function BatteryCellsPage() {
     <PageContainer
       title={t('battery.cells.title', 'Battery Cells')}
       subtitle={t('battery.cells.subtitle', 'Individual cell voltage monitoring and analysis')}
-      actions={<VehicleSelect />}
       query={batteryQuery}
     >
       {/* 1 — KPI band */}

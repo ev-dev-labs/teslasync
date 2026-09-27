@@ -167,7 +167,8 @@ describe('DASHBOARD_PRESETS', () => {
     expect(DASHBOARD_PRESETS[0].id).toBe('default');
     expect(DASHBOARD_PRESETS[0].isDefault).toBe(true);
     expect(DASHBOARD_PRESETS[0].widgets[0].widgetId).toBe('onboarding-checklist');
-    expect(DASHBOARD_PRESETS[0].widgets).toHaveLength(8);
+    expect(DASHBOARD_PRESETS[0].widgets).toHaveLength(9);
+    expect(DASHBOARD_PRESETS[0].widgets.some((widget) => widget.widgetId === 'fleet-posture')).toBe(true);
   });
 
   it('uses unique ids across the library', () => {
@@ -238,6 +239,18 @@ describe('reconcileLayouts', () => {
     expect(out.lg[0].i).toBe('w1');
     expect(Number.isFinite(out.lg[0].y)).toBe(true);
   });
+
+  it('repairs invalid saved coordinates and out-of-bounds widths before compaction', () => {
+    const restored = JSON.parse('{"lg":[{"i":"w1","x":99,"y":null,"w":4,"h":5}]}') as RGLLayouts;
+    const out = reconcileLayouts(restored, [widget('w1', 'battery-gauge')]);
+    for (const [bp, cols] of Object.entries(GRID_COLS)) {
+      for (const item of out[bp]) {
+        expect(Number.isFinite(item.x) && Number.isFinite(item.y)).toBe(true);
+        expect(item.x + item.w).toBeLessThanOrEqual(cols);
+      }
+    }
+    expect(out.lg[0].h).toBe(5);
+  });
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -292,8 +305,8 @@ describe('useDashboardLayout — widget CRUD', () => {
     const afterUnknown = result.current.activeDashboard.widgets.length;
 
     // default already contains battery-gauge, so neither call adds anything.
-    expect(afterDup).toBe(8);
-    expect(afterUnknown).toBe(8);
+    expect(afterDup).toBe(9);
+    expect(afterUnknown).toBe(9);
   });
 
   it('adds several widgets at once and de-duplicates within the batch', () => {
@@ -309,7 +322,7 @@ describe('useDashboardLayout — widget CRUD', () => {
     const target = result.current.activeDashboard.widgets[0].id;
     act(() => result.current.removeWidget(target));
     expect(result.current.activeDashboard.widgets.some((w) => w.id === target)).toBe(false);
-    expect(result.current.activeDashboard.widgets).toHaveLength(7);
+    expect(result.current.activeDashboard.widgets).toHaveLength(8);
   });
 
   it('updates a widget instance config', () => {
@@ -325,7 +338,7 @@ describe('useDashboardLayout — widget CRUD', () => {
 // useDashboardLayout — layout actions
 // ════════════════════════════════════════════════════════════════════════════
 describe('useDashboardLayout — layout actions', () => {
-  it('replaces layouts verbatim via updateLayouts and records undo history', () => {
+  it('reconciles saved layouts across breakpoints and records undo history', () => {
     const { result } = render();
     const custom: RGLLayouts = {
       lg: [{ i: 'default-2', x: 0, y: 0, w: 3, h: 5 }],
@@ -334,7 +347,12 @@ describe('useDashboardLayout — layout actions', () => {
       xs: [],
     };
     act(() => result.current.updateLayouts(custom));
-    expect(result.current.activeDashboard.layouts).toEqual(custom);
+    const saved = result.current.activeDashboard.layouts;
+    expect(saved.lg.find((item) => item.i === 'default-2')).toMatchObject({ x: 0, w: 3, h: 5 });
+    for (const bp of BREAKPOINTS) {
+      expect(saved[bp]).toHaveLength(result.current.activeDashboard.widgets.length);
+      expect(saved[bp].every((item) => Number.isFinite(item.x) && Number.isFinite(item.y))).toBe(true);
+    }
     expect(result.current.canUndo).toBe(true);
   });
 
@@ -345,6 +363,38 @@ describe('useDashboardLayout — layout actions', () => {
       [...BREAKPOINTS].sort(),
     );
     expect(result.current.canUndo).toBe(true);
+  });
+
+  it('auto-arranges positions without discarding resized widget dimensions', () => {
+    const { result } = render();
+    const layouts = structuredClone(result.current.activeDashboard.layouts);
+    const resized = layouts.lg.find((item) => item.i === 'default-2')!;
+    resized.w = 3;
+    resized.h = 7;
+    act(() => result.current.updateLayouts(layouts));
+    const saved = result.current.activeDashboard.layouts.lg.find((item) => item.i === 'default-2')!;
+    act(() => result.current.autoArrange());
+    const arranged = result.current.activeDashboard.layouts.lg.find((item) => item.i === 'default-2')!;
+    expect({ w: arranged.w, h: arranged.h }).toEqual({ w: saved.w, h: saved.h });
+  });
+
+  it('carries resized widget dimensions to other widths without moving their saved positions', () => {
+    const { result } = render();
+    const layouts = structuredClone(result.current.activeDashboard.layouts);
+    const beforeLg = layouts.lg.find((item) => item.i === 'default-3')!;
+    layouts.sm.find((item) => item.i === 'default-3')!.w = 2;
+    layouts.sm.find((item) => item.i === 'default-3')!.h = 7;
+    act(() => result.current.updateLayouts(layouts, 'sm'));
+
+    const saved = result.current.activeDashboard.layouts;
+    expect(saved.sm.find((item) => item.i === 'default-3')).toMatchObject({ w: 2, h: 7 });
+    expect(saved.lg.find((item) => item.i === 'default-3')).toMatchObject({
+      w: 2,
+      h: 7,
+      x: beforeLg.x,
+    });
+    expect(saved.md.find((item) => item.i === 'default-3')?.h).toBe(7);
+    expect(saved.xs.find((item) => item.i === 'default-3')?.w).toBe(1);
   });
 
   it('reports widget size from the lg layout and falls back for unknown ids', () => {
@@ -371,6 +421,9 @@ describe('useDashboardLayout — dashboard CRUD', () => {
     });
     expect(result.current.dashboards.some((d) => d.id === newId)).toBe(true);
     expect(result.current.dashboards.find((d) => d.id === newId)?.name).toBe('My Dash');
+    expect(result.current.dashboards.find((d) => d.id === newId)?.widgets).toEqual([]);
+    expect(result.current.dashboards.find((d) => d.id === newId)?.layouts)
+      .toEqual({ lg: [], md: [], sm: [], xs: [] });
     expect(result.current.activeId).toBe(newId);
 
     act(() => result.current.switchDashboard('default'));
@@ -628,6 +681,7 @@ describe('useDashboardLayout — backend sync', () => {
     expect(payload.active_id).toBe('default');
     expect(Array.isArray(payload.dashboards)).toBe(true);
     expect(result.current.dirty).toBe(false);
+    expect(localStorage.getItem('teslasync-dashboard-pending-save')).toBeNull();
   });
 
   it('debounces bursts of edits into a single write', () => {
@@ -675,6 +729,33 @@ describe('useDashboardLayout — hydration', () => {
 
     expect(result.current.dashboards.some((d) => d.id === 'mine')).toBe(true);
     expect(result.current.dashboards.some((d) => d.id === 'srv')).toBe(false);
+  });
+
+  it('restores a newer backend layout when another machine updated the dashboard', () => {
+    localStorage.setItem(DASHBOARDS_KEY, JSON.stringify([
+      savedDashboard({ id: 'mine', updatedAt: '2024-01-01T00:00:00Z' }),
+    ]));
+    h.backend.data = {
+      dashboards: [savedDashboard({ id: 'remote', updatedAt: '2025-01-01T00:00:00Z' })],
+      active_id: 'remote',
+    };
+    const { result } = render();
+    expect(result.current.activeId).toBe('remote');
+    expect(result.current.dashboards.map((dashboard) => dashboard.id)).toEqual(['remote']);
+  });
+
+  it('retains an unsynced edit to the default dashboard across reload and retries the save', () => {
+    const edited = savedDashboard({ id: 'default', name: 'Customized default' });
+    localStorage.setItem(DASHBOARDS_KEY, JSON.stringify([edited]));
+    localStorage.setItem('teslasync-dashboard-pending-save', '1');
+    h.backend.data = { dashboards: [savedDashboard({ id: 'srv' })], active_id: 'srv' };
+    const { result } = render();
+    expect(result.current.activeDashboard.name).toBe('Customized default');
+    expect(result.current.dirty).toBe(true);
+    act(() => vi.advanceTimersByTime(2000));
+    expect((h.saveMutate.mock.lastCall?.[0] as { dashboards: SavedDashboard[] }).dashboards[0].name)
+      .toBe('Customized default');
+    expect(result.current.dirty).toBe(false);
   });
 });
 

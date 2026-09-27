@@ -12,11 +12,8 @@ import { cn } from '@/lib/cn'
 import type { Vehicle } from '@/types/vehicle'
 
 import {
-  PostureDrillThrough,
-  PostureActions,
   PostureTaxonomy,
   FleetHonestyMeter,
-  PostureWorkflows,
   buildFleetPosture,
   formatObservationAge,
 } from './fleet-posture'
@@ -43,10 +40,6 @@ interface FleetOperationsBriefProps {
    * so instead of rendering a confident, fully-populated fleet of unknowns.
    */
   isError?: boolean
-  /** Re-read the authoritative fleet-state batch after an operator action. */
-  onRetry?: () => Promise<unknown> | void
-  /** True while the authoritative retry is in flight. */
-  isRetrying?: boolean
 }
 
 /**
@@ -76,8 +69,6 @@ export function FleetOperationsBrief({
   summary = null,
   isPending = false,
   isError = false,
-  onRetry = () => undefined,
-  isRetrying = false,
 }: FleetOperationsBriefProps) {
   const { t } = useTranslation()
 
@@ -144,23 +135,11 @@ export function FleetOperationsBrief({
 
   return (
     <section
-      aria-labelledby="fleet-operations-brief-title"
-      className="overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] shadow-e1"
+      aria-label={t('dashboard.fleetPosture.title', 'Fleet posture')}
+      className="min-w-0"
       data-testid="fleet-operations-brief"
     >
-      <div className="flex flex-col gap-4 border-b border-[var(--border-default)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 lg:px-6">
-        <div className="min-w-0">
-          <Caption className="font-semibold uppercase tracking-[0.1em]">
-            {t('dashboard.fleetPosture.eyebrow', 'Operational brief')}
-          </Caption>
-          <Heading
-            id="fleet-operations-brief-title"
-            level="section"
-            className="mt-1"
-          >
-            {t('dashboard.fleetPosture.title', 'Fleet posture')}
-          </Heading>
-        </div>
+      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-default)] pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <DataProvenanceBadge
             provenance={dataProvenance}
@@ -195,8 +174,7 @@ export function FleetOperationsBrief({
         {headline}
       </VisuallyHidden>
 
-      <div className="grid xl:grid-cols-[minmax(0,1.35fr)_minmax(24rem,0.65fr)]">
-        <div className="border-b border-[var(--border-default)] p-4 sm:p-5 lg:p-6 xl:border-b-0 xl:border-e">
+      <div className="pt-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <Caption>
@@ -285,21 +263,6 @@ export function FleetOperationsBrief({
             pending={totalsPending}
           />
           <PostureTaxonomy counts={posture.counts} pending={totalsPending} />
-        </div>
-
-        <div className="p-4 sm:p-5 lg:p-6">
-          <Caption className="font-semibold uppercase tracking-[0.1em]">
-            {t('dashboard.fleetPosture.investigate', 'Investigate')}
-          </Caption>
-          <PostureActions
-            posture={posture}
-            vehicleId={scopeVehicle?.id}
-            retrying={isRetrying}
-            onRetry={onRetry}
-          />
-          <PostureDrillThrough vehicleId={scopeVehicle?.id} />
-          <PostureWorkflows />
-        </div>
       </div>
     </section>
   )

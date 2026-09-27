@@ -29,7 +29,7 @@ import {
 interface DashboardGridProps {
   dashboard: SavedDashboard;
   editMode: boolean;
-  onLayoutChange: (layouts: RGLLayouts) => void;
+  onLayoutChange: (layouts: RGLLayouts, breakpoint?: keyof typeof GRID_COLS) => void;
   onRemoveWidget: (instanceId: string) => void;
   onOpenSettings: (instanceId: string) => void;
   getWidgetSize: (instanceId: string) => { cols: number; rows: number };
@@ -117,6 +117,7 @@ export function DashboardGrid({
   const [liveLayouts, setLiveLayouts] = useState<RGLLayouts>(dashboard.layouts ?? EMPTY_LAYOUTS);
   const layoutRef = useRef<RGLLayouts>(dashboard.layouts ?? EMPTY_LAYOUTS);
   const interactingRef = useRef(false);
+  const activeBreakpointRef = useRef<keyof typeof GRID_COLS>('lg');
 
   // Track persist cycles to avoid syncing our own changes back
   const persistCountRef = useRef(0);
@@ -179,7 +180,7 @@ export function DashboardGrid({
     persistCountRef.current++;
     // Defer persist to microtask: RGL v2 fires onLayoutChange (which updates
     // layoutRef) synchronously AFTER this callback returns, so we must wait.
-    queueMicrotask(() => { onLayoutChange(layoutRef.current); });
+    queueMicrotask(() => { onLayoutChange(layoutRef.current, activeBreakpointRef.current); });
     requestAnimationFrame(() => { interactingRef.current = false; });
   }, [onLayoutChange]);
 
@@ -191,7 +192,7 @@ export function DashboardGrid({
     persistCountRef.current++;
     // Defer persist to microtask: RGL v2 fires onLayoutChange (which updates
     // layoutRef) synchronously AFTER this callback returns, so we must wait.
-    queueMicrotask(() => { onLayoutChange(layoutRef.current); });
+    queueMicrotask(() => { onLayoutChange(layoutRef.current, activeBreakpointRef.current); });
     requestAnimationFrame(() => { interactingRef.current = false; });
   }, [onLayoutChange]);
 
@@ -209,6 +210,7 @@ export function DashboardGrid({
     return 'xs' as const;
   }, [width]);
   const isMobileStack = activeBreakpoint === 'xs';
+  activeBreakpointRef.current = activeBreakpoint;
 
   // Compute widget size from live layouts so widgets adapt during resize.
   // Reads from the *active* breakpoint's layout (not always lg) so widgets
@@ -275,7 +277,7 @@ export function DashboardGrid({
     setLiveLayouts(nextLayouts);
     persistCountRef.current += 1;
     syncedCountRef.current = persistCountRef.current;
-    onLayoutChange(nextLayouts);
+    onLayoutChange(nextLayouts, activeBreakpoint);
     return true;
   }, [activeBreakpoint, isMobileStack, liveLayouts, onLayoutChange, widgets]);
 

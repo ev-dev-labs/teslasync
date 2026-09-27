@@ -113,6 +113,8 @@ func TestDecodeJSONField_EnumStripsPrefix(t *testing.T) {
 		{name: "charge-state", field: "ChargeState", body: `"ChargeStateCharging"`, want: "Charging"},
 		{name: "detailed-charge", field: "DetailedChargeState", body: `"DetailedChargeStateComplete"`, want: "Complete"},
 		{name: "bms-state", field: "BMSState", body: `"BMSStateStandby"`, want: "Standby"},
+		{name: "Semi 12V cabin port", field: "Cabin12vPortKeepOn", body: `"CabinPortKeepOnStateOn"`, want: "On"},
+		{name: "Semi 48V cabin port", field: "Cabin48vPortKeepOn", body: `"CabinPortKeepOnStateOff"`, want: "Off"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

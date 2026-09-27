@@ -114,6 +114,19 @@ test('catch-all API fixture rejects unknown paths', () => {
   expect(resolveApiFixture('/vehicles', 'GET', 'populated').matched).toBe(true);
 });
 
+test('dashboard widget API fixtures have reviewed no-signal and map defaults', () => {
+  for (const path of ['/climate/latest?vehicle_id=7', '/security/latest?vehicle_id=7']) {
+    expect(resolveApiFixture(path, 'GET', 'populated')).toMatchObject({
+      matched: true,
+      body: null,
+    });
+  }
+  expect(resolveApiFixture('/system/map-config', 'GET', 'populated')).toMatchObject({
+    matched: true,
+    body: { provider: 'free', api_key: '' },
+  });
+});
+
 test('axe debt registry remains zero', () => {
   expect(Object.keys(AXE_DEBT_BY_ROUTE)).toEqual([]);
   for (const routeDebt of Object.values(AXE_DEBT_BY_ROUTE)) {

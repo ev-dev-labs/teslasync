@@ -8,7 +8,7 @@
  *   2. Tokens-in / tokens-out / cost render the live values.
  *   3. micro-cents → dollars conversion is applied before currency
  *      formatting (1 dollar = 1_000_000 micro-cents).
- *   4. Loading + zero-data states fall back to "—" (visual stability).
+ *   4. Loading, zero-data, off, and failures remain distinct.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -66,8 +66,7 @@ describe('AIUsageCard (Settings)', () => {
     const values = screen.getAllByTestId('ai-usage-value')
     // Cost cell: micro-cents → $12.50 (locale-formatted currency).
     expect(values[2].textContent).toMatch(/12\.50/)
-    // Live caption replaces the placeholder when call_count > 0.
-    expect(screen.getByText(/80 Helix calls today/i)).toBeInTheDocument()
+    expect(screen.getByText(/80 calls · 0 errors/i)).toBeInTheDocument()
   })
 
   it('falls back to em-dash placeholders when no data has loaded yet', () => {
@@ -83,10 +82,10 @@ describe('AIUsageCard (Settings)', () => {
     for (const v of values) {
       expect(v.textContent).toBe('—')
     }
-    expect(screen.getByText(/Usage populates as features run/i)).toBeInTheDocument()
+    expect(screen.getByText(/Loading today’s usage/i)).toBeInTheDocument()
   })
 
-  it('keeps the em-dash placeholders on error', async () => {
+  it('shows a retryable error instead of reporting unknown totals as zero', async () => {
     requestMock.mockRejectedValue(new Error('500 server error'))
     const Wrapper = makeWrapper()
     render(
@@ -95,10 +94,36 @@ describe('AIUsageCard (Settings)', () => {
       </Wrapper>,
     )
     await waitFor(() => {
-      const values = screen.getAllByTestId('ai-usage-value')
-      for (const v of values) {
-        expect(v.textContent).toBe('—')
-      }
+      expect(screen.getByRole('alert')).toHaveTextContent('Usage could not be loaded.')
     })
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.getAllByTestId('ai-usage-value').map(node => node.textContent)).toEqual(['—', '—', '—'])
+  })
+
+  it('shows a real zero state and precise small estimated costs', async () => {
+    requestMock.mockResolvedValue({
+      call_count: 0, input_tokens: 0, output_tokens: 0,
+      cost_micro_cents: 0, error_count: 0, avg_latency_ms: 0,
+    })
+    const Wrapper = makeWrapper()
+    const { unmount } = render(<Wrapper><AIUsageCard /></Wrapper>)
+    expect(await screen.findByText('No Helix calls yet today.')).toBeInTheDocument()
+    expect(screen.getAllByTestId('ai-usage-value').map(node => node.textContent)).toEqual(['0', '0', '$0.00'])
+    unmount()
+
+    requestMock.mockResolvedValue({
+      call_count: 1, input_tokens: 42, output_tokens: 10,
+      cost_micro_cents: 1200, error_count: 0, avg_latency_ms: 10,
+    })
+    render(<Wrapper><AIUsageCard /></Wrapper>)
+    await screen.findByText('1 call · 0 errors')
+    expect(screen.getAllByTestId('ai-usage-value')[2]).toHaveTextContent('$0.001200')
+  })
+
+  it('does not call the guarded endpoint while Helix is off', () => {
+    const Wrapper = makeWrapper()
+    render(<Wrapper><AIUsageCard enabled={false} /></Wrapper>)
+    expect(screen.getByText('Helix is off. Enable it and make a call to see usage.')).toBeInTheDocument()
+    expect(requestMock).not.toHaveBeenCalled()
   })
 })

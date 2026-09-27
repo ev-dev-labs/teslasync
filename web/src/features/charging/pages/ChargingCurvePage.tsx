@@ -10,7 +10,7 @@ import { GlassPanel, Select, Caption } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import {
   SummaryStatsGrid,
   SessionCurveChart,
@@ -35,7 +35,7 @@ export default function ChargingCurvePage() {
   const activeVehicleId = vehicleId ?? null;
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
 
-  const { start, end, setRange, reset } = useRangeState({
+  const { start, end, reset } = useRangeState({
     persistKey: 'charging-curve.range',
     defaultPresetId: 'all',
   });
@@ -53,14 +53,6 @@ export default function ChargingCurvePage() {
   const handleSessionChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedSessionId(Number(e.target.value) || null);
   }, []);
-
-  const handleRangeChange = useCallback(
-    (r: { start: string; end: string }) => {
-      setRange(r);
-      setSelectedSessionId(null);
-    },
-    [setRange],
-  );
 
   const handleRetry = useCallback(() => {
     refetch();
@@ -147,17 +139,6 @@ export default function ChargingCurvePage() {
       title={t('charging.curve.title', 'Charging Curve')}
       subtitle={t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
       query={sessionsQuery}
-      actions={
-        <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end sm:gap-3">
-          <VehicleSelect />
-          <RangePicker
-            value={{ start, end }}
-            onChange={handleRangeChange}
-            align="end"
-            triggerTestId="charging-curve-range"
-          />
-        </div>
-      }
     >
       {/* AI narrators — opt-in, render null when ai_mode='off'. The inner
           Explain/Train buttons stay disabled until a vehicle is in scope. */}

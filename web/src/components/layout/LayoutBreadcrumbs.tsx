@@ -2,7 +2,10 @@ import { Breadcrumbs } from './Breadcrumbs';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { useBreadcrumbOverrides } from './BreadcrumbOverridesContext';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/cn';
+import type { SectionGroup } from './sectionGroups';
+import { sidebarBreadcrumbs, type BreadcrumbSection } from './sidebar/sidebarBreadcrumbs';
 
 /**
  * Single canonical breadcrumb row mounted in the global Layout chrome.
@@ -17,15 +20,23 @@ import { cn } from '@/lib/cn';
 interface LayoutBreadcrumbsProps {
   className?: string;
   variant?: 'page' | 'workspace';
+  sections?: readonly BreadcrumbSection[];
+  collections?: readonly SectionGroup[];
 }
 
 export function LayoutBreadcrumbs({
   className,
   variant = 'page',
+  sections,
+  collections,
 }: LayoutBreadcrumbsProps) {
   const { t } = useTranslation();
   const overrides = useBreadcrumbOverrides();
-  const items = useBreadcrumbs(overrides);
+  const routeItems = useBreadcrumbs(overrides);
+  const pathname = useLocation().pathname;
+  const items = sections && collections
+    ? sidebarBreadcrumbs(pathname, routeItems, sections, collections, (key, fallback) => t(key, fallback) as string)
+    : routeItems;
   if (items.length === 0) return null;
   const workspace = variant === 'workspace';
 

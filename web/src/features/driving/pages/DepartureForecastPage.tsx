@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { VehicleSelect } from '@/components/forms';
+
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -79,7 +79,6 @@ export default function DepartureForecastPage() {
         'departure.subtitle',
         'Vehicle-timezone departure patterns from returned drive starts, expressed as modeled likelihood estimates',
       )}
-      actions={<VehicleSelect />}
     >
       <FadeIn>
         <DepartureForecastKpiBand

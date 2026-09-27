@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Car, Zap, BarChart3, Battery } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { TabNav } from '@/components/ui';
-import { RangePicker } from '@/components/forms';
+
 import { FadeIn } from '@/components/motion';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
@@ -19,7 +19,7 @@ export default function AnalyticsPage() {
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  const { start, end, setRange } = useRangeState({
+  const { start, end } = useRangeState({
     persistKey: 'analytics.range',
   });
 
@@ -35,21 +35,11 @@ export default function AnalyticsPage() {
     [t],
   );
 
-  const headerActions = (
-    <RangePicker
-      value={{ start, end }}
-      onChange={setRange}
-      presetIds={['7d', '30d', '90d', '1y', 'all']}
-      align="end"
-      triggerTestId="analytics-range"
-    />
-  );
 
   return (
     <PageContainer
       title={t('analytics.title', 'Fleet Analytics')}
       subtitle={t('analytics.subtitle', 'Comprehensive fleet performance insights')}
-      actions={headerActions}
       query={fleetQuery}
     >
       {/* 1 — KPI band: full-width responsive metric grid, self-sufficient loading */}

@@ -19,10 +19,10 @@ current and future vehicles or a specific subset, and review each trigger,
 severity, message and cooldown. Numeric operands use canonical units; temperature
 inputs are explicitly Celsius and the preview also displays your preferred unit.
 
-Desktop previews use a flat editable table: operator, value, cooldown, behavior,
+Desktop previews use a flat editable table: severity, operator, value, cooldown, behavior,
 channels, message and title inclusion each have their own aligned column, with
 no nested forms inside cells. Phones and tablets expose the same fields on cards.
-Message fields grow on focus. Narrow desktop windows scroll the table horizontally
+The message editor shows multiple lines before focus. Narrow desktop windows scroll the labelled, keyboard-focusable table horizontally
 instead of squeezing its controls. Changing pages, filters or layouts preserves edits.
 Use **All rules**, **Selected** or **Customized** to narrow the list. The persistent
 footer shows the selected count, whether new rules will start paused, and the

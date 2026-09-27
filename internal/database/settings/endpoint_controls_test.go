@@ -13,18 +13,21 @@ func TestEndpointControlsPersistOnlyFleetSwitches(t *testing.T) {
 	pc.ChargeState = false
 	pc.OnDemandVehicleDiscovery = false
 	pc.Commands = false
+	pc.AutoPollingEnabled = true
+	pc.FleetEndpoints = map[string]bool{"command.door_lock": false}
+	pc.AutoEndpoints = map[string]bool{"vehicle_data.charge_state": false}
 	pc.TelemetryCapture = true // projection must exclude even old capture fields
 	pc.TelemetryCaptureRetentionDays = 30
 	raw, err := json.Marshal(endpointControlsFrom(pc))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var fields map[string]bool
+	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &fields); err != nil {
 		t.Fatal(err)
 	}
-	if len(fields) != 20 {
-		t.Fatalf("persisted %d switches, want 20: %s", len(fields), raw)
+	if len(fields) != 23 {
+		t.Fatalf("persisted %d settings, want 23: %s", len(fields), raw)
 	}
 	if _, present := fields["telemetry_capture"]; present {
 		t.Fatal("unsupported telemetry capture was persisted")
@@ -39,6 +42,6 @@ func TestEndpointControlsPersistOnlyFleetSwitches(t *testing.T) {
 	pc.TelemetryCapture = false
 	pc.TelemetryCaptureRetentionDays = 7
 	if !reflect.DeepEqual(restored, pc) {
-		t.Fatalf("GET projection does not restore all 20 switches: got %+v, want %+v", restored, pc)
+		t.Fatalf("GET projection does not restore switches: got %+v, want %+v", restored, pc)
 	}
 }

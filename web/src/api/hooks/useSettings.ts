@@ -280,6 +280,10 @@ export function useToggleAPISuspend() {
 }
 
 export interface PollingConfig {
+  auto_polling_enabled: boolean;
+  fleet_endpoints: Record<string, boolean>;
+  auto_endpoints: Record<string, boolean>;
+  endpoint_catalog: FleetEndpoint[];
   vehicle_discovery: boolean;
   charge_state: boolean;
   climate_state: boolean;
@@ -302,7 +306,14 @@ export interface PollingConfig {
   commands: boolean;
   telemetry_capture: boolean;
   telemetry_capture_retention_days: number;
-  [key: string]: boolean | number;
+}
+
+export interface FleetEndpoint {
+  key: string;
+  method: string;
+  path: string;
+  category: string;
+  pollable: boolean;
 }
 
 export function usePollingConfig() {
@@ -317,13 +328,15 @@ export function useUpdatePollingConfig() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (pc: PollingConfig) =>
-      request<PollingConfig>('/settings/polling-config', {
+    mutationFn: async (pc: PollingConfig) => {
+      const { pollingConfigUpdate } = await import('../pollingConfigUpdate');
+      return request<PollingConfig>('/settings/polling-config', {
         method: 'PUT',
         requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pc),
-      }),
+        body: JSON.stringify(pollingConfigUpdate(pc)),
+      });
+    },
     onSuccess: (updated) => {
       qc.setQueryData(['polling-config'], updated);
       qc.invalidateQueries({ queryKey: ['polling-config'] });

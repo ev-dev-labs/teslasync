@@ -63,6 +63,7 @@ import {
   SLOTrackingCard,
 } from '../components/status'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
+import { AiSpendWatch } from '../components/status/AiSpendWatch'
 
 // Shared cadence
 const STATUS_REFRESH_MS = 30_000
@@ -472,6 +473,8 @@ export default function SystemStatusPage() {
             <FadeIn>
               <IncidentsCard now={now} />
             </FadeIn>
+
+            <AiSpendWatch />
 
             <FadeIn>
               <section id="services" aria-label={t('systemStatus.currentComponents', 'Current component status')}>

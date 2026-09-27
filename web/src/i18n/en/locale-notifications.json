@@ -1,5 +1,8 @@
 {
   "alertPacks": {
+    "severityColumn": "Severity",
+    "scrollHint": "Scroll horizontally to review every rule setting. Use Tab to move between fields.",
+    "rulesEditor": "Rule settings editor",
     "defaultChannels": "Default channels",
     "valueColumn": "Value",
     "titleColumn": "Include title",
@@ -623,7 +626,14 @@
   "notificationHealth": {
     "title": "Notification Health",
     "subtitle": "Understand alert noise, delivery reliability, and delivery speed in one place.",
-    "navigation": "Notification health sections"
+    "navigation": "Notification health sections",
+    "overview": {
+      "label": "Delivery intelligence",
+      "description": "Explore three independent views of notification health. Select a view to jump to its metrics, charts, and detailed breakdowns.",
+      "fatigue": "Find noisy rules and the hours they fire.",
+      "burnRate": "See delivery outcomes against the 99% objective.",
+      "latency": "Inspect delivery speed and the slowest attempts."
+    }
   },
   "notificationLatency": {
     "title": "Notification Latency",

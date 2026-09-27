@@ -327,7 +327,7 @@ func (h *CommandHandler) LatestCommands(w http.ResponseWriter, r *http.Request) 
 }
 
 // CommandHistory returns recent command logs, or cursor-paged attempts in a
-// requested UTC calendar window for complete reliability analysis.
+// requested time window for complete reliability analysis.
 func (h *CommandHandler) CommandHistory(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("api").Start(r.Context(), "commands.history")
 	defer span.End()
@@ -377,19 +377,12 @@ func (h *CommandHandler) CommandHistory(w http.ResponseWriter, r *http.Request) 
 }
 
 func parseCommandHistoryWindow(fromRaw, toRaw, beforeRaw, idRaw string) (time.Time, time.Time, *time.Time, int64, error) {
-	from, err := time.Parse(time.DateOnly, fromRaw)
-	if err != nil || from.Format(time.DateOnly) != fromRaw {
-		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("from must be YYYY-MM-DD")
-	}
-	to, err := time.Parse(time.DateOnly, toRaw)
-	if err != nil || to.Format(time.DateOnly) != toRaw {
-		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("to must be YYYY-MM-DD")
-	}
-	if to.Before(from) || to.Sub(from).Hours() >= 24*18263 {
-		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("date range must be ordered and at most 50 years")
+	from, until, err := parseCommandHistoryBounds(fromRaw, toRaw)
+	if err != nil {
+		return time.Time{}, time.Time{}, nil, 0, err
 	}
 	if beforeRaw == "" && idRaw == "" {
-		return from, to.AddDate(0, 0, 1), nil, 0, nil
+		return from, until, nil, 0, nil
 	}
 	if beforeRaw == "" || idRaw == "" {
 		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("before_created_at and before_id must be provided together")
@@ -402,5 +395,28 @@ func parseCommandHistoryWindow(fromRaw, toRaw, beforeRaw, idRaw string) (time.Ti
 	if err != nil || id <= 0 {
 		return time.Time{}, time.Time{}, nil, 0, fmt.Errorf("before_id must be a positive integer")
 	}
-	return from, to.AddDate(0, 0, 1), &before, id, nil
+	return from, until, &before, id, nil
+}
+
+func parseCommandHistoryBounds(fromRaw, toRaw string) (time.Time, time.Time, error) {
+	if len(fromRaw) == len(time.DateOnly) && len(toRaw) == len(time.DateOnly) {
+		from, fromErr := time.Parse(time.DateOnly, fromRaw)
+		to, toErr := time.Parse(time.DateOnly, toRaw)
+		if fromErr != nil || toErr != nil || from.Format(time.DateOnly) != fromRaw || to.Format(time.DateOnly) != toRaw {
+			return time.Time{}, time.Time{}, fmt.Errorf("from and to must be valid YYYY-MM-DD dates")
+		}
+		if to.Before(from) || to.Sub(from) >= 50*365*24*time.Hour {
+			return time.Time{}, time.Time{}, fmt.Errorf("date range must be ordered and at most 50 years")
+		}
+		return from, to.AddDate(0, 0, 1), nil
+	}
+	from, fromErr := time.Parse(time.RFC3339Nano, fromRaw)
+	to, toErr := time.Parse(time.RFC3339Nano, toRaw)
+	if fromErr != nil || toErr != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("from and to must both be YYYY-MM-DD or RFC3339 instants")
+	}
+	if !to.After(from) || to.Sub(from) >= 50*365*24*time.Hour {
+		return time.Time{}, time.Time{}, fmt.Errorf("time range must be ordered and at most 50 years")
+	}
+	return from, to, nil
 }

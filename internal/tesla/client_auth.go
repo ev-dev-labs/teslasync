@@ -223,6 +223,9 @@ func (c *Client) doRequestWithTokenOptions(
 	token string,
 	opts partnerRequestOptions,
 ) (respBody []byte, statusCode int, err error) {
+	if err := c.checkEndpointControls(ctx, method, path); err != nil {
+		return nil, http.StatusForbidden, err
+	}
 	telemetryPath := opts.telemetryPath
 	if telemetryPath == "" {
 		telemetryPath = path

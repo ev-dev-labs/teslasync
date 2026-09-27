@@ -14,6 +14,26 @@
 version: 1
 
 slos:
+  - name: ai_spend_insights_availability
+    description: "Subject-scoped AI spend pacing reads must not return server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ai/usage/spend-insights\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ai/usage/spend-insights\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, ai, usage]
+
+  - name: road_anomalies_availability
+    description: "Bounded drive-scoped possible road-anomaly analysis must not return server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/drives/{driveID}/road-anomalies\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/drives/{driveID}/road-anomalies\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, drives, telemetry]
+
   - name: notification_report_availability
     description: "Bounded UTC notification report reads must not return server errors."
     sli:

@@ -45,6 +45,7 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/sharing/trips': '/trips',
   '/automations/new': '/automations',
   '/automations/list': '/automations',
+  '/automations/history': '/automations',
   '/automations/:id/edit': '/automations',
   '/year-review/:year': '/analytics',
   '/me/activity': '/',
