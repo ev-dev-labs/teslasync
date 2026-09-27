@@ -28,7 +28,6 @@ import { useAutomationEvents } from '@/hooks/useAutomationEvents';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
   useAutomations,
-  useAutomationHistory,
   useToggleAutomation,
   useDeleteAutomation,
   useTestRunAutomation,
@@ -38,7 +37,6 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePinned } from '@/api/hooks/usePinned';
 import { AutomationCard } from './AutomationCard';
-import { AutomationActivityFeed } from './AutomationActivityFeed';
 import { PresetGallery } from './PresetGallery';
 import { ComfortPanel } from '../components/ComfortPanel';
 import {
@@ -127,13 +125,8 @@ export default function AutomationsListPage() {
     error,
     refetch,
   } = useAutomations();
-  const {
-    data: historyResponse,
-    isLoading: historyLoading,
-    error: historyError,
-  } = useAutomationHistory(20);
   const { data: vehicles } = useVehicles();
-  const { events: liveEvents, connectionState, firingNow } = useAutomationEvents({ maxEvents: 50 });
+  const { firingNow } = useAutomationEvents({ maxEvents: 50 });
 
   // Mutations
   const toggleMutation = useToggleAutomation();
@@ -195,9 +188,6 @@ export default function AutomationsListPage() {
     () => buildVehicleLookup(vehicles ?? []),
     [vehicles],
   );
-  const historyItems = historyResponse?.items ?? [];
-  const historyStats = historyResponse?.summary ?? null;
-
   // Computed stats
   const stats = useMemo(() => computeStats(items), [items]);
 
@@ -300,6 +290,10 @@ export default function AutomationsListPage() {
             <Upload className="mr-1.5 h-4 w-4" aria-hidden="true" />
             {t('automations.import', 'Import')}
           </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/automations/list')}>
+            <ListFilter className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            {t('automations.manageRules', 'Manage rules')}
+          </Button>
           <Button
             type="button"
             variant="primary"
@@ -375,21 +369,22 @@ export default function AutomationsListPage() {
       {/* 3 — Filter toolbar */}
       <FadeIn delay={0.05}>
         <GlassPanel className="p-4 sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
             <Select
               options={localizedStatusFilterOptions}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="w-full sm:w-44"
+              className="w-full sm:w-52 sm:shrink-0"
               aria-label={t('automations.filterStatus', 'Filter by status')}
             />
-            <Input
-              placeholder={t('automations.search', 'Search automations...')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:w-64"
-              aria-label={t('automations.search', 'Search automations...')}
-            />
+            <div className="min-w-0 w-full sm:flex-1">
+              <Input
+                placeholder={t('automations.search', 'Search automations...')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label={t('automations.search', 'Search automations...')}
+              />
+            </div>
             {hasActiveFilter && (
               <Badge variant="neutral" className="self-start sm:self-auto">
                 {t('automations.filterCount', '{{shown}} / {{total}}', {
@@ -443,11 +438,10 @@ export default function AutomationsListPage() {
         <ComfortPanel />
       </FadeIn>
 
-      {/* 5 — Hero split: automations workspace + live activity sidebar */}
+      {/* 5 — Automations workspace */}
       <FadeIn delay={0.09}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-          {/* Automations workspace (hero, spans 2 of 3 on wide screens) */}
-          <div className="min-w-0 space-y-3 xl:col-span-2">
+        <section>
+          <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <SectionTitle>{t('automations.yourAutomations', 'Your Automations')}</SectionTitle>
               <Caption>
@@ -520,19 +514,6 @@ export default function AutomationsListPage() {
             )}
           </div>
 
-          {/* Live activity feed (context sidebar, spans 1 of 3; sticky on wide) */}
-          <div className="min-w-0 xl:col-span-1">
-            <div className="xl:sticky xl:top-4">
-              <AutomationActivityFeed
-                history={historyItems}
-                historyStats={historyStats}
-                isLoading={historyLoading}
-                error={historyError}
-                liveEvents={liveEvents}
-                connectionState={connectionState}
-              />
-            </div>
-          </div>
         </section>
       </FadeIn>
     </PageContainer>

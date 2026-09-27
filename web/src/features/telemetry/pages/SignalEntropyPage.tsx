@@ -4,7 +4,7 @@ import { Binary, Gauge, Repeat, Waypoints } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -102,7 +102,6 @@ export default function SignalEntropyPage() {
       )}
       query={[signalsQuery, historyQuery]}
       dataSources={dataSources}
-      actions={<VehicleSelect />}
     >
       {/* 1 — Signal picker */}
       <FadeIn>

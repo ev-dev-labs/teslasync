@@ -16,7 +16,7 @@ import { MetricCard, StatusBadge } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
-import { VehicleSelect } from '@/components/forms';
+
 import { buildTwinState } from '@/lib/vehicleState';
 import type { WindowState, TurnSignalState } from '@/lib/vehicleState';
 import { deriveVehicleStatus } from '@/api/types';
@@ -203,7 +203,6 @@ export default function DigitalTwinPage() {
       title={t('digitalTwin.title', 'Digital Twin')}
       subtitle={t('digitalTwin.subtitle', 'Real-time vehicle physical state')}
       loading={vehiclesLoading}
-      actions={<VehicleSelect />}
       query={freshnessQueries}
     >
       {!vehicle && !vehiclesLoading ? (

@@ -14,8 +14,8 @@
  *     state and the cockpit branch can each be exercised).
  *   - `useSignals` — available-signal catalog + its error path.
  *   - `@/api/client` `request` — the network boundary (never real network).
- *   - URL query params seed `signals` / `from` / `to` deterministically so we
- *     never wrestle the ComboboxMulti / RangePicker internals.
+ *   - URL query params seed `signals` / `from` / `to` deterministically; a
+ *     header-range probe exercises shared preset changes.
  *
  * Facets covered: no-vehicle empty state, idle (pre-query) zero/empty states,
  * the Query gate (disabled without signals), the full query flow (request
@@ -129,6 +129,7 @@ import { request } from '@/api/client';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { useTransportAgreement } from '@/api/hooks/useSignals';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { ToastProvider } from '@/components/feedback/Toast';
 import SignalLogViewerPage from './SignalLogViewerPage';
 
@@ -160,6 +161,19 @@ function signalsResult(over: Record<string, unknown> = {}): any {
 
 // Seed vehicle + signals + a fixed range so `canQuery` depends solely on the
 // selected-signal count. `?signals=` and `?from/&to=` fully control the cockpit.
+function HeaderRangeProbe() {
+  const { setPreset } = useRangeState();
+  return (
+    <>
+      {(['7d', '30d', '90d'] as const).map((preset) => (
+        <button key={preset} type="button" onClick={() => setPreset(preset)}>
+          Header {preset}
+        </button>
+      ))}
+    </>
+  );
+}
+
 function renderPage(search = '') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -168,6 +182,7 @@ function renderPage(search = '') {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/telemetry/signal-log${search}`]}>
         <ToastProvider>
+          <HeaderRangeProbe />
           <SignalLogViewerPage />
         </ToastProvider>
       </MemoryRouter>
@@ -350,8 +365,7 @@ describe('SignalLogViewerPage', () => {
     const signalInput = screen.getByRole('combobox', { name: 'Signals' });
     fireEvent.focus(signalInput);
     fireEvent.click(await screen.findByRole('option', { name: 'soc' }));
-    fireEvent.click(screen.getByTestId('signal-log-range'));
-    fireEvent.click(await screen.findByRole('option', { name: 'Last 7 days' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Header 7d' }));
 
     expect(mockedRequest).toHaveBeenCalledTimes(1);
     expect(screen.getByText('submitted-speed-value')).toBeInTheDocument();
@@ -374,15 +388,14 @@ describe('SignalLogViewerPage', () => {
   // as the operator chose it for BOTH the history fetch and the agreement
   // props, so nothing is silently narrowed behind their back.
   it.each([
-    ['Last 30 days', 30],
-    ['Last 90 days', 90],
-  ])('keeps the full %s window for history and agreement without truncating to 168 hours', async (presetLabel, minDays) => {
+    ['30d', 30],
+    ['90d', 90],
+  ])('keeps the full %s window for history and agreement without truncating to 168 hours', async (preset, minDays) => {
     mockedRequest.mockResolvedValue(resp('speed', [pt('2026-07-01T10:00:00Z', 42)]));
 
     renderPage(`?signals=speed&${RANGE}`);
 
-    fireEvent.click(screen.getByTestId('signal-log-range'));
-    fireEvent.click(await screen.findByRole('option', { name: presetLabel }));
+    fireEvent.click(screen.getByRole('button', { name: `Header ${preset}` }));
     fireEvent.click(screen.getByRole('button', { name: 'Query' }));
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));

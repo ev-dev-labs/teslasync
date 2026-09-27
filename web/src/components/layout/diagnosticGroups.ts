@@ -73,6 +73,15 @@ export const DIAGNOSTIC_GROUPS = [
       page('/diagnostics/root-cause', 'Root-Cause Intelligence'),
     ],
   },
+  {
+    primary: '/admin/vehicle-cost',
+    label: 'Vehicle Costs',
+    labelKey: 'nav.diagnosticGroups.vehicleCost',
+    includeSingleton: true,
+    pages: [
+      page('/admin/vehicle-cost', 'Vehicle Cost'),
+    ],
+  },
 ] as const
 
 export function findDiagnosticGroup(pathname: string) {

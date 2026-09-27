@@ -195,6 +195,32 @@ describe('AIFeatureToggleList — i18n', () => {
 })
 
 describe('AIFeatureToggleList — interaction', () => {
+  it('finds features by task, filters categories, and keeps enabled entries discoverable', () => {
+    renderList({ 'digest-narration': true } as Record<AiFeatureId, boolean>)
+    const search = screen.getByRole('searchbox', { name: 'Search AI features' })
+    fireEvent.change(search, { target: { value: 'chat' } })
+    expect(screen.getAllByRole('switch')).toHaveLength(1)
+    expect(screen.getByRole('switch', { name: 'LLM Chatbot' })).toBeVisible()
+
+    fireEvent.change(search, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Enabled (1)' }))
+    expect(screen.getAllByRole('switch')).toHaveLength(1)
+    expect(screen.getByRole('switch', { name: 'Weekly digest narration' })).toHaveAttribute('aria-checked', 'true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chat & help' }))
+    expect(screen.getAllByRole('switch')).toHaveLength(2)
+  })
+
+  it('reveals long technical descriptions on demand', () => {
+    i18nState.dict['ai.settings.feature.chatbot-llm.description'] = 'Technical details. '.repeat(20)
+    renderList()
+    const row = screen.getByTestId('ai-feature-row-chatbot-llm')
+    expect(row.querySelector('span[id="ai-feature-desc-chatbot-llm"]')).toHaveClass('line-clamp-2')
+    fireEvent.click(screen.getByRole('button', { name: 'More detail' }))
+    expect(row.querySelector('span[id="ai-feature-desc-chatbot-llm"]')).not.toHaveClass('line-clamp-2')
+    expect(screen.getByRole('button', { name: 'Less detail' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
   it('fires onToggle(id, true) when flipping an off switch on', () => {
     const { onToggle } = renderList()
     fireEvent.click(screen.getByRole('switch', { name: 'LLM Chatbot' }))

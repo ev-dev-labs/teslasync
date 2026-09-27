@@ -5,7 +5,7 @@ import { useOutageAutobiography, useSessionCertificate } from '@/api/hooks/useTe
 import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -27,7 +27,6 @@ export default function OutageAutobiographyPage() {
     <PageContainer
       title={t('system.outage.title', 'Outage autobiography')}
       subtitle={outage?.honesty ?? t('system.outage.subtitle', 'What queued, what replayed with original event time, what stayed unknown.')}
-      contextActions={<VehicleSelect />}
       secondaryActions={(
         <Button
           variant="secondary"

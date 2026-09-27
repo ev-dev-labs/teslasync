@@ -54,6 +54,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: "/arrival-reliability", name: "ArrivalReliability", label: "Arrival Reliability", i18nKey: "routes.arrivalReliability" },
   { path: "/automations", name: "Automations", label: "Automations", i18nKey: "routes.automations" },
   { path: "/automations/:id/edit", name: "AutomationBuilder", label: "Automation Builder", i18nKey: "routes.automationBuilder", hidden: true },
+  { path: "/automations/history", name: "AutomationHistory", label: "Automation History", i18nKey: "routes.automationHistory" },
   { path: "/automations/list", name: "AutomationList", label: "Automation List", i18nKey: "routes.automationList" },
   { path: "/automations/new", name: "AutomationBuilder", label: "Automation Builder", i18nKey: "routes.automationBuilder" },
   { path: "/backup", name: "BackupRestore", label: "Backup Restore", i18nKey: "routes.backupRestore" },

@@ -101,7 +101,7 @@ var Registry = map[string]Feature{
 	// LLM chatbot route stub used by the AI-off contract.
 	"chatbot-llm": {
 		ID:          "chatbot-llm",
-		Name:        "Helix fleet intelligence copilot",
+		Name:        "Helix chat (side panel)",
 		Description: "Evidence-first conversational agent with live fleet tools, cross-domain analysis, TeslaSync knowledge retrieval, visible provenance, and a deterministic fallback when AI is off.",
 		Tier:        "U",
 		DefaultOn:   false,

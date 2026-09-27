@@ -72,8 +72,14 @@ describe('Alert Packs', () => {
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     const table = screen.getByRole('table', { name: 'Choose rules' })
     expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual([
-      'Selected', 'Rule', 'Operator', 'Value', 'Cooldown (minutes)', 'Alert behavior', 'Channels', 'Notification message', 'Include title', 'Defaults',
+      'Selected', 'Rule', 'Severity', 'Operator', 'Value', 'Cooldown (minutes)', 'Alert behavior', 'Notification message', 'Channels', 'Include title', 'Defaults',
     ])
+    expect(within(table).getAllByRole('row')[1].querySelectorAll('td')[2]).toHaveTextContent('warn')
+    expect(within(table).getAllByRole('row')[1].querySelectorAll('td')[1]).not.toHaveTextContent('warn')
+    expect(screen.getByRole('region', { name: 'Rule settings editor' })).toHaveClass('overflow-x-auto')
+    expect(screen.getByRole('region', { name: 'Rule settings editor' })).toHaveAttribute('tabindex', '0')
+    expect(table.parentElement).toHaveClass('min-w-[1960px]')
+    expect(screen.getAllByLabelText('Notification message')[0]).toHaveAttribute('rows', '3')
     for (const cell of within(table).getAllByRole('cell')) {
       expect(cell.querySelectorAll('input,select,textarea').length).toBeLessThanOrEqual(1)
     }
@@ -233,6 +239,7 @@ describe('Alert Packs', () => {
     setup(<InstallPackDialog pack={comprehensive} onClose={vi.fn()} />)
     expect(screen.getByText('70 of 70 rules selected')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: 'Reminder 11' })).not.toBeInTheDocument()
+    fireEvent.change(screen.getAllByLabelText('Notification message')[1], { target: { value: 'Edited across pages' } })
     fireEvent.click(screen.getByRole('checkbox', { name: 'Reminder 1' }))
     fireEvent.click(screen.getByRole('button', { name: 'Next', exact: true }))
     expect(screen.getByText('Page 2 of 7')).toBeInTheDocument()
@@ -246,6 +253,7 @@ describe('Alert Packs', () => {
       expect(body.rules.map((rule: { template_id: string }) => rule.template_id)).not.toContain('full-0')
       expect(body.rules.map((rule: { template_id: string }) => rule.template_id)).not.toContain('full-10')
       expect(body.rules.map((rule: { template_id: string }) => rule.template_id)).toContain('full-69')
+      expect(body.rules.find((rule: { template_id: string }) => rule.template_id === 'full-1').message).toBe('Edited across pages')
     })
   })
 

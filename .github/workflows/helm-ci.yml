@@ -28,7 +28,7 @@ jobs:
     name: Lint Chart
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -64,7 +64,7 @@ jobs:
     name: Template Validation
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: azure/setup-helm@v5
         with:
@@ -143,7 +143,7 @@ jobs:
     name: Schema Validation
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: azure/setup-helm@v5
         with:
@@ -166,7 +166,7 @@ jobs:
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 

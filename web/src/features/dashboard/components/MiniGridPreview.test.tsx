@@ -8,13 +8,13 @@
  * so the tests exercise both the happy path and the defensive branches:
  *
  *   1. Geometry — each layout item becomes a tile whose left/top/width/height
- *      percentages are derived from the 4-column grid and the tallest row, and
- *      the container's aspect-ratio encodes those same rows.
+ *      percentages are derived from the 4-column grid and the tallest row,
+ *      while the thumbnail height stays fixed even for tall dashboards.
  *   2. Icon resolution — a tile shows its widget's registry icon, and gracefully
  *      shows nothing when the widget id is unknown or the layout item has no
  *      matching widget instance.
  *   3. Empty state — an empty/absent `lg` layout renders the "No widgets"
- *      placeholder (never a blank panel) and falls back to a sane aspect-ratio.
+ *      placeholder (never a blank panel) at the same fixed height.
  *   4. Null-safety — a dashboard missing `layouts` or `widgets` entirely must
  *      not throw.
  *   5. Malformed coordinates — non-finite x/y/w/h are clamped so the component
@@ -71,7 +71,7 @@ function item(partial: Partial<RGLLayout> & { i: string }): RGLLayout {
 }
 
 describe('MiniGridPreview', () => {
-  it('renders one tile per layout item with grid-relative geometry and aspect-ratio', () => {
+  it('renders one tile per layout item with grid-relative geometry and a fixed height', () => {
     const dashboard = makeDashboard({
       widgets: [
         { id: 'a', widgetId: 'vehicle-hero' },
@@ -88,8 +88,7 @@ describe('MiniGridPreview', () => {
     render(<MiniGridPreview dashboard={dashboard} />);
 
     const root = screen.getByTestId('mini-grid-preview');
-    // cols = 4, tallest row = max(0+2, 0+4) = 4 → aspect-ratio "4 / 4".
-    expect(root.style.aspectRatio).toBe('4 / 4');
+    expect(root).toHaveClass('h-36');
 
     const tiles = screen.getAllByTestId('mini-grid-tile');
     expect(tiles).toHaveLength(2);
@@ -171,8 +170,7 @@ describe('MiniGridPreview', () => {
     const empty = screen.getByTestId('mini-grid-empty');
     expect(empty).toBeInTheDocument();
     expect(empty).toHaveTextContent('No widgets');
-    // Falls back to FALLBACK_ROWS = 2 → aspect-ratio "4 / 2".
-    expect(screen.getByTestId('mini-grid-preview').style.aspectRatio).toBe('4 / 2');
+    expect(screen.getByTestId('mini-grid-preview')).toHaveClass('h-36');
     // Zero rendered tiles → the label reports zero widgets.
     expect(screen.getByRole('img')).toHaveAttribute('aria-label', 'Layout preview, 0 widgets');
   });
@@ -225,7 +223,7 @@ describe('MiniGridPreview', () => {
     expect(tile.style.width).toBe('25%');
     expect(tile.style.height).toBe('100%');
     expect(tile.getAttribute('style')).not.toContain('NaN');
-    expect(screen.getByTestId('mini-grid-preview').getAttribute('style')).not.toContain('NaN');
+    expect(screen.getByTestId('mini-grid-preview').getAttribute('style') ?? '').not.toContain('NaN');
   });
 
   it('merges the className prop onto the container while keeping base classes', () => {

@@ -455,6 +455,12 @@ describe('AutomationBuilderPage — pure model helpers', () => {
     // command
     expect(actionIsIncomplete({ kind: 'action_command', command_name: '' })).toBe(true);
     expect(actionIsIncomplete({ kind: 'action_command', command_name: 'climate_on' })).toBe(false);
+    expect(actionIsIncomplete({ kind: 'action_command', command_name: 'set_charge_limit' })).toBe(true);
+    expect(actionIsIncomplete({ kind: 'action_command', command_name: 'set_charge_limit', command_params: { percent: 80 } })).toBe(false);
+    expect(actionIsIncomplete({ kind: 'action_command', command_name: 'set_charge_limit', command_params: { percent: 101 } })).toBe(true);
+    expect(actionIsIncomplete({ kind: 'action_command', command_name: 'set_charging_amps', command_params: { charging_amps: 32 } })).toBe(false);
+    expect(actionIsIncomplete({ kind: 'action_command', command_name: 'set_temps', command_params: { driver_temp: 22 } })).toBe(true);
+    expect(actionIsIncomplete({ kind: 'action_command', command_name: 'set_temps', command_params: { driver_temp: 22, passenger_temp: 22 } })).toBe(false);
     // notify
     expect(actionIsIncomplete({ kind: 'action_notify', channel_id: 0, template: 'x' })).toBe(true);
     expect(actionIsIncomplete({ kind: 'action_notify', channel_id: 3, template: '' })).toBe(true);

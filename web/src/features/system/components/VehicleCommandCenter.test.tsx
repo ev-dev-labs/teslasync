@@ -229,7 +229,40 @@ describe('VehicleCommandCenter — summary and readiness', () => {
     expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
   });
 
-  it('retains the actual asleep-state guidance without a stale warning', () => {
+  it('does not mistake an old vehicle record for the last signal or current readiness', async () => {
+    const veryOld = new Date(Date.now() - 3_653 * 60 * 60 * 1000).toISOString();
+    stateResponse = { state: makeState({ state: 'charging' }), live: true };
+    installRequestRouter();
+
+    renderCenter(makeVehicle({ state: 'charging', updated_at: veryOld }));
+
+    expect(await within(screen.getByTestId('command-center-hero')).findByText('Last known: Charging')).toBeInTheDocument();
+    expect(screen.getByText('No verified signal time')).toBeInTheDocument();
+    expect(screen.queryByText('3653h ago')).not.toBeInTheDocument();
+    expect(await screen.findByText('Delivery uncertain')).toBeInTheDocument();
+    expect(screen.getByText('Motion unknown')).toBeInTheDocument();
+    expect(screen.getByTestId('command-readiness')).toHaveTextContent('Unknown');
+  });
+
+  it('uses a verified signal observation for current status and readiness', async () => {
+    stateResponse = {
+      state: makeState({ state: 'charging', is_charging: true }),
+      observed_at: new Date().toISOString(),
+      freshness: 'fresh',
+      verified_fields: ['state', 'is_charging', 'speed'],
+      live: true,
+    };
+    installRequestRouter();
+
+    renderCenter(makeVehicle({ state: 'offline', updated_at: '2020-01-01T00:00:00Z' }));
+
+    expect(await screen.findByText('Last signal:')).toBeInTheDocument();
+    expect(screen.queryByText('Last known: Offline')).not.toBeInTheDocument();
+    expect(screen.getByTestId('command-readiness')).toHaveTextContent('Current');
+    expect(screen.getByTestId('command-readiness')).toHaveTextContent('Ready');
+  });
+
+  it('labels unverified asleep-state guidance as last reported', () => {
     const stale = new Date(Date.now() - 30 * 60_000).toISOString();
     stateResponse = { state: makeState({ state: 'asleep' }), live: false };
     installRequestRouter();
@@ -238,7 +271,7 @@ describe('VehicleCommandCenter — summary and readiness', () => {
 
     expect(screen.queryByTestId('command-freshness-warning')).not.toBeInTheDocument();
     expect(
-      screen.getByText(/The vehicle is asleep\. Commands remain selectable/i),
+      screen.getByText(/Last reported asleep\. Commands remain selectable/i),
     ).toBeInTheDocument();
     searchFor('flash_lights');
     expect(

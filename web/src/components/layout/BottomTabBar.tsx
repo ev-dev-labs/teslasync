@@ -1,9 +1,9 @@
 import { PrefetchLink } from './PrefetchLink';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Home, Car, BatteryCharging, HeartPulse, MapPin } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { LucideIcon } from 'lucide-react';
+import { navRouteIcons } from '@/lib/navRouteIcons';
 
 interface Tab {
   path: string;
@@ -18,11 +18,11 @@ interface Tab {
  * Dashboard → Drives → Charging → Battery → Map.
  */
 const TABS: Tab[] = [
-  { path: '/',         icon: Home,             i18nKey: 'nav.mobileHome',     fallback: 'Home' },
-  { path: '/drives',   icon: Car,              i18nKey: 'nav.mobileDrives',   fallback: 'Drives' },
-  { path: '/charging', icon: BatteryCharging,  i18nKey: 'nav.mobileCharging', fallback: 'Charging' },
-  { path: '/battery',  icon: HeartPulse,       i18nKey: 'nav.mobileBattery',  fallback: 'Battery' },
-  { path: '/live',     icon: MapPin,           i18nKey: 'nav.mobileMap',      fallback: 'Map' },
+  { path: '/',         icon: navRouteIcons['/'],         i18nKey: 'nav.mobileHome',     fallback: 'Home' },
+  { path: '/drives',   icon: navRouteIcons['/drives'],   i18nKey: 'nav.mobileDrives',   fallback: 'Drives' },
+  { path: '/charging', icon: navRouteIcons['/charging'], i18nKey: 'nav.mobileCharging', fallback: 'Charging' },
+  { path: '/battery',  icon: navRouteIcons['/battery'],  i18nKey: 'nav.mobileBattery',  fallback: 'Battery' },
+  { path: '/live',     icon: navRouteIcons['/live'],     i18nKey: 'nav.mobileMap',      fallback: 'Map' },
 ];
 
 /** Paths shown in the bottom tab bar — used to de-emphasize sidebar duplicates on mobile */

@@ -3,7 +3,7 @@ import { BadgeDollarSign, Scale } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useRunTCOOptimizer } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Text } from '@/components/ui';
@@ -52,7 +52,6 @@ export default function TCOOptimizerPage() {
         'advancedIntelligence.tco.subtitle',
         'Compare constrained cost, risk, and convenience alternatives on a Pareto-like frontier.',
       )}
-      actions={<VehicleSelect withIcon />}
     >
       <AlertBanner
         variant="info"

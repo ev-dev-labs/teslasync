@@ -226,9 +226,11 @@ describe('ActionBuilder — action type switching', () => {
 // ── Command editor ──────────────────────────────────────────────────────────
 describe('ActionFields — command', () => {
   it('changes the selected command name', () => {
-    const { onChange } = renderBuilder([command('climate_on')]);
+    const { onChange } = renderBuilder([command('climate_on', { temp: 21 })]);
     fireEvent.change(screen.getByLabelText('Command'), { target: { value: 'lock' } });
     expect(lastAction(onChange).command_name).toBe('lock');
+    expect(lastAction(onChange).command_params).toBeUndefined();
+    expect(screen.queryByLabelText(/Params \(JSON/i)).not.toBeInTheDocument();
   });
 
   it('pretty-prints existing command params on mount', () => {
@@ -237,8 +239,14 @@ describe('ActionFields — command', () => {
     expect(textarea.value).toBe(JSON.stringify({ temp: 21 }, null, 2));
   });
 
+  it('exposes existing custom command params even when the command has no guided inputs', () => {
+    renderBuilder([command('sentry_on', { percent: 80 })]);
+    expect(screen.getByLabelText(/Params \(JSON/i)).toHaveValue('{\n  "percent": 80\n}');
+  });
+
   it('commits parsed params and does NOT reformat compact JSON while typing (regression)', () => {
     const { onChange } = renderBuilder([command('climate_on')]);
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced parameters (JSON)' }));
     const textarea = screen.getByLabelText(/params/i) as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '{"temp":21}' } });
     // The in-progress compact text must be preserved (no pretty-print clobber).
@@ -248,16 +256,20 @@ describe('ActionFields — command', () => {
 
   it('rejects non-object JSON with an inline error and does not commit', () => {
     const { onChange } = renderBuilder([command('climate_on')]);
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced parameters (JSON)' }));
     fireEvent.change(screen.getByLabelText(/params/i), { target: { value: '[1,2,3]' } });
     expect(screen.getByText('Params must be a JSON object.')).toBeInTheDocument();
+    expect((screen.getByLabelText(/params/i) as HTMLTextAreaElement).checkValidity()).toBe(false);
     expect(onChange).not.toHaveBeenCalled();
   });
 
   it('keeps malformed JSON in the field without committing', () => {
     const { onChange } = renderBuilder([command('climate_on')]);
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced parameters (JSON)' }));
     const textarea = screen.getByLabelText(/params/i) as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '{oops' } });
     expect((screen.getByLabelText(/params/i) as HTMLTextAreaElement).value).toBe('{oops');
+    expect((screen.getByLabelText(/params/i) as HTMLTextAreaElement).checkValidity()).toBe(false);
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -267,6 +279,17 @@ describe('ActionFields — command', () => {
     const action = lastAction(onChange);
     expect(action.command_params).toBeUndefined();
     expect(action.command_name).toBe('climate_on');
+  });
+
+  it('edits a charge limit with a labeled number field and keeps the JSON editor optional', () => {
+    const { onChange } = renderBuilder([command('set_charge_limit', { percent: 80 })]);
+    expect(screen.queryByLabelText(/Params \(JSON/i)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Charge limit (%)' }), {
+      target: { value: '90' },
+    });
+    expect(lastAction(onChange).command_params).toEqual({ percent: 90 });
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced parameters (JSON)' }));
+    expect(screen.getByLabelText(/Params \(JSON/i)).toHaveValue('{\n  "percent": 90\n}');
   });
 });
 

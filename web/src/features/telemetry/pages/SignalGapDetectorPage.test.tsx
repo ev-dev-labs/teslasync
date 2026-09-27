@@ -273,8 +273,8 @@ describe('SignalGapDetectorPage — vehicle selected', () => {
       screen.queryByText('Select a vehicle to inspect its signal freshness.'),
     ).not.toBeInTheDocument();
     expect(screen.getByRole('button', REFRESH)).toBeEnabled();
-    // The picker + all four sections mount — nothing is gutted or hidden.
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
+    // The header owns vehicle selection; all four sections still mount.
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
     expect(screen.getByTestId('kpis')).toBeInTheDocument();
     expect(screen.getByTestId('health')).toBeInTheDocument();
     expect(screen.getByTestId('freshness')).toBeInTheDocument();

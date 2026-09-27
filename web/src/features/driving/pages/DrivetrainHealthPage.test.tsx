@@ -20,7 +20,7 @@
  *      converters are `useCallback`-memoised, so equal inputs must yield the
  *      SAME array reference (a regression guard for the memo-defeat bug the
  *      inline closures used to cause).
- *   9. Live band wiring + range-picker → shared range write.
+ *   9. Live band wiring + header range filtering without duplicate controls.
  *
  * Strategy (mirrors web/src/features/admin/pages/VehicleCostPage.test.tsx):
  *   - Every data hook + the vehicle selector + useUnits / useDateFormat /
@@ -28,8 +28,8 @@
  *     touched and each render is deterministic. The REAL `HEALTH_SCORE`
  *     constant + REAL `convertDistanceFromSI` / `convertTempFromSI` run, so
  *     the conversions are genuinely exercised.
- *   - The 12 sections + the two toolbar controls are stubbed to capture the
- *     exact props the page computed, keeping orchestration assertions crisp.
+ *   - The 12 sections are stubbed to capture the exact props the page
+ *     computed, keeping orchestration assertions crisp.
  *   - react-i18next resolves the developer fallback string.
  *
  * user-event is intentionally NOT a dependency of this codebase (see
@@ -37,7 +37,7 @@
  * page tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -183,31 +183,6 @@ vi.mock('../components/drivetrain-health', async () => {
     PowerOutputChart: makeStub('power', 'stub-power'),
     HealthRecommendations: makeStub('recommendations', 'stub-recommendations'),
     DetailCards: makeStub('details', 'stub-details'),
-  };
-});
-
-// Stub the two toolbar controls; RangePicker forwards a fixed range on click so
-// the shared range wiring can be asserted.
-vi.mock('@/components/forms', async () => {
-  const actual = await vi.importActual<typeof import('@/components/forms')>('@/components/forms');
-  const React = await vi.importActual<typeof import('react')>('react');
-  return {
-    ...actual,
-    VehicleSelect: function VehicleSelectStub() {
-      return React.createElement('div', { 'data-testid': 'vehicle-select' });
-    },
-    RangePicker: function RangePickerStub(props: Record<string, unknown>) {
-      captured.rangePicker = props;
-      const onChange = props.onChange as ((r: { start: string; end: string }) => void) | undefined;
-      return React.createElement(
-        'button',
-        {
-          'data-testid': 'range-picker',
-          onClick: () => onChange?.({ start: '2024-03-01', end: '2024-03-31' }),
-        },
-        'range',
-      );
-    },
   };
 });
 
@@ -375,7 +350,7 @@ beforeEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('DrivetrainHealthPage', () => {
-  it('renders the page title and mounts every section + toolbar control', () => {
+  it('renders the page title and every section without duplicate toolbar controls', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Drivetrain Health' })).toBeInTheDocument();
@@ -395,8 +370,8 @@ describe('DrivetrainHealthPage', () => {
     ]) {
       expect(screen.getByTestId(testid)).toBeInTheDocument();
     }
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
-    expect(screen.getByTestId('range-picker')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
   });
 
   it('wires the health-derived sensor bag and score into the KPI/gauge sections', () => {
@@ -562,13 +537,12 @@ describe('DrivetrainHealthPage', () => {
     expect(captured.live.motorLatest).toBe(MOTOR_LATEST);
   });
 
-  it('commits range-picker changes through shared range state', () => {
+  it('filters chart series by the header-owned range', () => {
+    rangeStateMock.mockReturnValue({ start: '2024-03-01', end: '2024-03-31', setRange: setRangeMock });
     renderPage();
 
-    fireEvent.click(screen.getByTestId('range-picker'));
-    expect(setRangeMock).toHaveBeenCalledWith({
-      start: '2024-03-01',
-      end: '2024-03-31',
-    });
+    expect(captured.power.data).toEqual([]);
+    expect(captured.tempTrend.data).toEqual([]);
+    expect(setRangeMock).not.toHaveBeenCalled();
   });
 });

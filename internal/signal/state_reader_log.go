@@ -456,6 +456,9 @@ func (r *LogStateReader) Timeline(ctx context.Context, vehicleID int64, fields [
 	if window := to.Sub(from); window > 366*24*time.Hour {
 		return nil, fmt.Errorf("timeline: window > 366 days is not supported (got %s)", window)
 	}
+	if opts.MaxEvents < 0 || opts.MaxEvents > 1000000 {
+		return nil, fmt.Errorf("timeline: MaxEvents must be between 0 and 1000000")
+	}
 	// Validate opts.CollapseBy entries reference declared output Field
 	// names. Run BEFORE any SQL so a misconfigured caller (typo in a
 	// collapse-key name) fails loudly at the contract boundary instead
@@ -560,9 +563,14 @@ ORDER BY field, ts DESC`
        received_at
 FROM signal_log
 WHERE vehicle_id = $1 AND ts > $2 AND ts <= $3 AND field = ANY($4)
-ORDER BY ts ASC`
+ORDER BY ts ASC
+LIMIT NULLIF($5, 0)`
 
-	windowRows, err := r.pool.Query(ctx, windowQuery, vehicleID, from, to, signals)
+	rawLimit := opts.MaxEvents
+	if rawLimit > 0 {
+		rawLimit++
+	}
+	windowRows, err := r.pool.Query(ctx, windowQuery, vehicleID, from, to, signals, rawLimit)
 	if err != nil {
 		r.log.Error().
 			Err(err).
@@ -575,7 +583,12 @@ ORDER BY ts ASC`
 	defer windowRows.Close()
 
 	folder := newTimelineFolder(seed, fields, opts.CollapseBy, opts.MaxRows)
+	rawEvents := 0
 	for windowRows.Next() {
+		rawEvents++
+		if opts.MaxEvents > 0 && rawEvents > opts.MaxEvents {
+			return nil, ErrTimelineEventLimit
+		}
 		var eventTs time.Time
 		var fld string
 		var kind int16

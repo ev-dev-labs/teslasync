@@ -342,7 +342,7 @@ describe('DriveArchetypesPage', () => {
 
     expectEverySection();
     expect(h.hook).toHaveBeenLastCalledWith(undefined, 1000);
-    expect(screen.getByTestId('vehicle-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh evidence' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
     expect(within(screen.getByTestId('drive-archetypes-kpis')).getByText(

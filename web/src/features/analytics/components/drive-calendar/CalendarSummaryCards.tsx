@@ -8,20 +8,20 @@ import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDayKey } from '@/lib/dateFormat';
 
-import type { DriveCalendar } from '../../lib/driveCalendar';
+import { calendarDayKey, type DriveCalendar } from '../../lib/driveCalendar';
 import type { DriveCalendarSectionState } from './types';
 
 const KPI_COLUMNS = { default: 2, xl: 4 } as const;
 
 interface CalendarSummaryCardsProps extends DriveCalendarSectionState {
   calendar: DriveCalendar;
-  year: number | null;
+  rangeEnd: string;
 }
 
 /** Existing four-card summary, kept independent from every richer section. */
 export function CalendarSummaryCards({
   calendar,
-  year,
+  rangeEnd,
   isLoading,
   error,
   onRetry,
@@ -45,15 +45,13 @@ export function CalendarSummaryCards({
             <MetricCard
               label={t('driveCalendar.activeDays', 'Active Days')}
               value={calendar.activeDays}
-              subtitle={year == null
-                ? t('driveCalendar.inYear', 'in the last 52 weeks')
-                : t('driveCalendar.inSelectedYear', 'in {{year}}', { year })}
+              subtitle={t('driveCalendar.inRange', 'in the selected period')}
               icon={<CalendarDays className="h-5 w-5" aria-hidden="true" />}
               color="cyan"
             />
             <MetricCard
-              label={year != null && year < new Date().getFullYear()
-                ? t('driveCalendar.yearEndStreak', 'Year-end Streak')
+              label={rangeEnd < calendarDayKey(new Date())
+                ? t('driveCalendar.rangeEndStreak', 'End-of-period Streak')
                 : t('driveCalendar.currentStreak', 'Current Streak')}
               value={t('driveCalendar.days', '{{count}} days', {
                 count: calendar.currentStreak,
@@ -95,9 +93,7 @@ export function CalendarSummaryCards({
               <EmptyState
                 className="col-span-full py-6"
                 icon={<CalendarDays className="h-7 w-7" aria-hidden="true" />}
-                message={year == null
-                  ? t('driveCalendar.noDrives', 'No drives in the last year yet.')
-                  : t('driveCalendar.noDrivesYear', 'No drives recorded in {{year}}.', { year })}
+                message={t('driveCalendar.noDrives', 'No drives in the selected period.')}
                 actionTo={{
                   label: t('driveCalendar.browseDrives', 'Browse drives'),
                   to: '/drives',

@@ -21,7 +21,7 @@ import {
   chartMargin,
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
@@ -294,7 +294,6 @@ export default function InsuranceTelematicsPage() {
             value={String(windowDays)}
             onChange={(event) => setWindowDays(Number(event.target.value))}
           />
-          <VehicleSelect withIcon />
         </div>
       }
     >

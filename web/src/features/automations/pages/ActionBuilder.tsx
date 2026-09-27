@@ -165,6 +165,25 @@ const COMMAND_GROUPS: {
   },
 ];
 
+const GUIDED_COMMAND_FIELDS: Record<string, {
+  key: string;
+  labelKey: string;
+  fallback: string;
+  min: number;
+  max?: number;
+}[]> = {
+  set_charge_limit: [
+    { key: 'percent', labelKey: 'automations.builder.chargeLimit', fallback: 'Charge limit (%)', min: 0, max: 100 },
+  ],
+  set_charging_amps: [
+    { key: 'charging_amps', labelKey: 'automations.builder.chargingAmps', fallback: 'Charging current (A)', min: 1 },
+  ],
+  set_temps: [
+    { key: 'driver_temp', labelKey: 'automations.builder.driverTemp', fallback: 'Driver temperature (°C)', min: 15, max: 30 },
+    { key: 'passenger_temp', labelKey: 'automations.builder.passengerTemp', fallback: 'Passenger temperature (°C)', min: 15, max: 30 },
+  ],
+};
+
 interface ActionBuilderProps {
   actions: AutomationActionStepInput[];
   channels: NotificationChannel[];
@@ -283,64 +302,66 @@ export function ActionBuilder({ actions = [], channels = [], onChange }: ActionB
   return (
     <div className="space-y-3">
       {actions.map((action, index) => (
-        <GlassPanel key={`${action.kind}-${index}`} className="p-4">
-          <div className="flex items-start gap-2">
-            <Text as="span" mono size="xs" color="muted" className="mt-8 w-6 shrink-0 text-right">
-              {index + 1}.
-            </Text>
-            <div className="flex-1 space-y-3">
-              <div className="flex flex-wrap items-end gap-3">
+        <GlassPanel key={`${action.kind}-${index}`} className="p-4 sm:p-5">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Text as="span" variant="bodySm">
+                {t('automations.builder.actionNumber', 'Action {{number}}', { number: index + 1 })}
+              </Text>
+              <div className="flex items-center gap-1">
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => moveAction(index, -1)}
+                  disabled={index === 0}
+                  aria-label={t('automations.builder.moveUp', 'Move up')}
+                  className="p-1"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </UiButton>
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => moveAction(index, 1)}
+                  disabled={index === actions.length - 1}
+                  aria-label={t('automations.builder.moveDown', 'Move down')}
+                  className="p-1"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </UiButton>
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeAction(index)}
+                  aria-label={t('automations.builder.removeAction', 'Remove action')}
+                  className="p-1 text-red-400 hover:text-red-300"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </UiButton>
+              </div>
+            </div>
+            <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(180px,220px)_minmax(0,1fr)]">
+              <div className="min-w-0">
                 <UiSelect
-                  label={index === 0 ? t('automations.builder.actionType', 'Action Type') : undefined}
-                  aria-label={index === 0 ? undefined : t('automations.builder.actionType', 'Action Type')}
+                  id={`automation-action-kind-${index}`}
+                  label={t('automations.builder.actionType', 'Action Type')}
                   options={actionTypeOptions}
                   value={action.kind}
                   onChange={(event) => replaceAction(
                     index,
                     createDefaultAction(event.target.value as AutomationActionKind, defaultChannelId),
                   )}
-                  className="w-48"
-                />
-                <ActionFields
-                  action={action}
-                  channelOptions={channelOptions}
-                  onChange={(nextAction) => replaceAction(index, nextAction)}
+                  className="w-full"
                 />
               </div>
-            </div>
-            <div className="mt-6 flex shrink-0 flex-col gap-1">
-              <UiButton
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => moveAction(index, -1)}
-                disabled={index === 0}
-                aria-label={t('automations.builder.moveUp', 'Move up')}
-                className="p-1"
-              >
-                <ChevronUp className="h-3.5 w-3.5" />
-              </UiButton>
-              <UiButton
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => moveAction(index, 1)}
-                disabled={index === actions.length - 1}
-                aria-label={t('automations.builder.moveDown', 'Move down')}
-                className="p-1"
-              >
-                <ChevronDown className="h-3.5 w-3.5" />
-              </UiButton>
-              <UiButton
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeAction(index)}
-                aria-label={t('automations.builder.removeAction', 'Remove action')}
-                className="p-1 text-red-400 hover:text-red-300"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </UiButton>
+              <ActionFields
+                action={action}
+                channelOptions={channelOptions}
+                onChange={(nextAction) => replaceAction(index, nextAction)}
+              />
             </div>
           </div>
         </GlassPanel>
@@ -356,6 +377,8 @@ export function ActionBuilder({ actions = [], channels = [], onChange }: ActionB
 
 function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
   const { t } = useTranslation();
+  const guidedFields = action.kind === 'action_command'
+    ? GUIDED_COMMAND_FIELDS[action.command_name] ?? [] : [];
   // Initialise the params editor once from the action's stored params. The
   // parent remounts this component (its GlassPanel key includes action.kind
   // and the row index) whenever the kind changes or rows are reordered, so a
@@ -368,6 +391,10 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
       : ''
   ));
   const [paramsError, setParamsError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(Boolean(
+    action.kind === 'action_command' && action.command_params &&
+    Object.keys(action.command_params).some((key) => !guidedFields.some((field) => field.key === key)),
+  ));
 
   const commandOptions = useMemo(
     () => [
@@ -386,15 +413,56 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
   switch (action.kind) {
     case 'action_command':
       return (
-        <div className="flex flex-1 flex-wrap items-end gap-3">
+        <div className="min-w-0 space-y-4">
           <UiSelect
             label={t('automations.builder.command', 'Command')}
             options={commandOptions}
             value={action.command_name}
-            onChange={(event) => onChange({ ...action, command_name: event.target.value })}
-            className="w-64"
+            onChange={(event) => {
+              setParamsText('');
+              setParamsError(null);
+              setShowAdvanced(false);
+              onChange({ ...action, command_name: event.target.value, command_params: undefined });
+            }}
+            className="w-full sm:max-w-md"
           />
-          <div className="min-w-[220px] flex-1">
+          {guidedFields.length > 0 && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {guidedFields.map(({ key, labelKey, fallback, min, max }) => (
+                <UiInput
+                  key={key}
+                  label={t(labelKey, fallback)}
+                  type="number"
+                  min={min}
+                  max={max}
+                  step={action.command_name === 'set_temps' ? 0.5 : 1}
+                  value={typeof action.command_params?.[key] === 'number'
+                    ? String(action.command_params[key]) : ''}
+                  onChange={(event) => {
+                    const next = { ...action.command_params };
+                    if (event.target.value === '') delete next[key];
+                    else next[key] = Number(event.target.value);
+                    const command_params = Object.keys(next).length ? next : undefined;
+                    setParamsText(command_params ? JSON.stringify(command_params, null, 2) : '');
+                    onChange({ ...action, command_params });
+                  }}
+                  className="w-full"
+                />
+              ))}
+            </div>
+          )}
+          <UiButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={showAdvanced && Boolean(paramsError)}
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            {showAdvanced
+              ? t('automations.builder.hideAdvancedParams', 'Hide advanced parameters')
+              : t('automations.builder.showAdvancedParams', 'Advanced parameters (JSON)')}
+          </UiButton>
+          {showAdvanced && (
             <UiTextarea
               label={t('automations.builder.commandParams', 'Params (JSON, optional)')}
               value={paramsText}
@@ -403,32 +471,38 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
                 setParamsText(nextText);
                 if (!nextText.trim()) {
                   setParamsError(null);
+                  event.target.setCustomValidity('');
                   onChange({ ...action, command_params: undefined });
                   return;
                 }
                 try {
                   const parsed: unknown = JSON.parse(nextText);
                   if (!isCommandParams(parsed)) {
-                    setParamsError(t(
+                    const message = t(
                       'automations.builder.commandParamsObjectError',
                       'Params must be a JSON object.',
-                    ));
+                    );
+                    setParamsError(message);
+                    event.target.setCustomValidity(message);
                     return;
                   }
                   setParamsError(null);
+                  event.target.setCustomValidity('');
                   onChange({ ...action, command_params: parsed });
                 } catch (error) {
-                  setParamsError(error instanceof Error
+                  const message = error instanceof Error
                     ? error.message
-                    : t('automations.builder.invalidJson', 'Invalid JSON'));
+                    : t('automations.builder.invalidJson', 'Invalid JSON');
+                  setParamsError(message);
+                  event.target.setCustomValidity(message);
                 }
               }}
-              placeholder={t('automations.builder.commandParamsPlaceholder', '{"temp": 21}')}
+              placeholder={t('automations.builder.commandParamsPlaceholder', '{}')}
               rows={2}
               error={paramsError ?? undefined}
               className="font-mono text-xs"
             />
-          </div>
+          )}
         </div>
       );
 

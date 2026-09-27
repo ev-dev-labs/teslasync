@@ -23,7 +23,7 @@ npm run docs:dev
 npm run docs:build
 ```
 
-Check links in the rendered site under `/teslasync/`, including screenshots,
+Check links in the rendered site under `/`, including screenshots,
 anchors, and sidebar entries. The site currently ignores dead links during
 build, so build success is not a link audit. No Go or frontend build is needed
 for prose-only changes.

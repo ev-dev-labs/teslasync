@@ -43,6 +43,31 @@ describe('Notification Health', () => {
     expect(screen.getByText(/No measured channel deliveries yet/)).toBeInTheDocument();
   });
 
+  it('offers a responsive, keyboard-accessible overview without collapsing any analysis', () => {
+    render(<MemoryRouter initialEntries={['/notifications/health#burn-rate']}><NotificationHealthPage /></MemoryRouter>);
+    const nav = screen.getByRole('navigation', { name: 'Notification health sections' });
+    expect(nav).toHaveClass('grid', 'md:grid-cols-3');
+    expect(within(nav).getAllByRole('link')).toHaveLength(3);
+    expect(within(nav).getByRole('link', { name: /Notification Burn Rate/ }))
+      .toHaveAttribute('aria-current', 'location');
+    for (const title of ['Alert Fatigue', 'Notification Burn Rate', 'Notification Latency']) {
+      const section = screen.getByRole('region', { name: title });
+      expect(section).toHaveClass('min-w-0', 'scroll-mt-24');
+      expect(within(section).getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole('region', { name: /metrics/i })).toHaveLength(3);
+  });
+
+  it('keeps each metrics band readable at phone, tablet, and desktop widths', () => {
+    render(<MemoryRouter><NotificationHealthPage /></MemoryRouter>);
+    for (const name of ['Alert fatigue metrics', 'Delivery SLO metrics', 'Notification latency metrics']) {
+      expect(screen.getByRole('region', { name }))
+        .toHaveClass('grid-cols-1', 'sm:grid-cols-2', 'xl:grid-cols-4');
+    }
+    expect(screen.getByRole('link', { name: 'Manage delivery channels' }))
+      .toHaveAttribute('href', '/notifications/channels');
+  });
+
   it('leaves reliability and latency visible if fatigue history fails', () => {
     queries.events.isError = true;
     queries.events.error = new Error('history unavailable');
@@ -50,6 +75,15 @@ describe('Notification Health', () => {
     expect(screen.getByRole('region', { name: 'Notification Burn Rate' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Notification Latency' })).toBeInTheDocument();
     expect(screen.getByText('No notification outcomes are available in the last 24 hours.')).toBeInTheDocument();
+  });
+
+  it('leaves fatigue visible when the shared delivery-history query fails', () => {
+    queries.deliveries.isError = true;
+    queries.deliveries.error = new Error('deliveries unavailable');
+    render(<MemoryRouter><NotificationHealthPage /></MemoryRouter>);
+    expect(screen.getByRole('region', { name: 'Alert Fatigue' })).toBeInTheDocument();
+    expect(screen.getByText('No notifications have been delivered yet, so there is nothing to score.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThan(0);
   });
 
   it('retains populated rule breakdowns, SLO outcomes, and measured latency records', () => {
@@ -71,5 +105,21 @@ describe('Notification Health', () => {
     const latency = screen.getByRole('region', { name: 'Notification Latency' });
     expect(within(latency).getByText('Slowest Delivery Records')).toBeInTheDocument();
     expect(within(latency).getByText('Measured')).toBeInTheDocument();
+  });
+
+  it('wraps long rule and delivery names instead of clipping details on narrow screens', () => {
+    const now = new Date().toISOString();
+    const title = 'Unusually long battery alert rule with important identifying details';
+    const log: NotificationLog = {
+      id: 42, channel_id: 1, alert_id: 7, title, message: '',
+      status: 'sent', severity: 'warning', error: '', created_at: now, sent_at: now,
+    };
+    queries.events.data = [log];
+    queries.deliveries.data = [{ ...log, latency_ms: 450 }];
+    render(<MemoryRouter><NotificationHealthPage /></MemoryRouter>);
+    const fatigue = screen.getByRole('region', { name: 'Alert Fatigue' });
+    expect(within(fatigue).getAllByText(title).some((element) => element.classList.contains('break-words'))).toBe(true);
+    const latency = screen.getByRole('region', { name: 'Notification Latency' });
+    expect(within(latency).getAllByText(title).some((element) => element.classList.contains('break-words'))).toBe(true);
   });
 });

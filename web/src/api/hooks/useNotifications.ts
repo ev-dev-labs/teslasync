@@ -119,7 +119,7 @@ export const notificationKeys = {
   bellUnread: (limit: number) => ['notification-logs', 'bell-unread', limit] as const,
   unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
-  report: (from: string, to: string) => ['notification-report', from, to] as const,
+  report: (fromInstant: string, toExclusive: string, timezone: string) => ['notification-report', fromInstant, toExclusive, timezone] as const,
   quietHours: ['notification-quiet-hours'] as const,
 };
 
@@ -134,6 +134,7 @@ export interface NotificationFilters {
   source?: 'rule';
   from?: string;
   to?: string;
+  to_exclusive?: string;
   read?: boolean;
   archived?: boolean;
   q?: string;
@@ -152,6 +153,7 @@ function serializeNotificationFilters(filters: NotificationFilters): string {
   if (filters.source) params.set('source', filters.source);
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
+  if (filters.to_exclusive) params.set('to_exclusive', filters.to_exclusive);
   if (typeof filters.read === 'boolean') params.set('read', String(filters.read));
   if (typeof filters.archived === 'boolean') params.set('archived', String(filters.archived));
   if (filters.q) params.set('q', filters.q);
@@ -1268,12 +1270,12 @@ export function useNotificationStats() {
   });
 }
 
-export function useNotificationReport(from: string, to: string) {
-  const params = new URLSearchParams({ from, to });
+export function useNotificationReport(fromInstant: string, toExclusive: string, timezone: string) {
+  const params = new URLSearchParams({ from_instant: fromInstant, to_exclusive: toExclusive, timezone });
   return useQuery({
-    queryKey: notificationKeys.report(from, to),
+    queryKey: notificationKeys.report(fromInstant, toExclusive, timezone),
     queryFn: ({ signal }) => request<NotificationReport>(`/notifications/report?${params}`, { signal }),
-    enabled: Boolean(from && to),
+    enabled: Boolean(fromInstant && toExclusive && timezone),
   });
 }
 

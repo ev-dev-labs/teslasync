@@ -291,7 +291,7 @@ beforeEach(() => {
 });
 
 describe('ClimateControlPage — structure, wiring & a11y', () => {
-  it('renders the title/subtitle/vehicle picker and wires hooks with snake_case-safe ids', () => {
+  it('renders the title/subtitle and wires shared vehicle context to the hooks', () => {
     install({ latest: climate(), history: HISTORY });
     renderPage();
 
@@ -303,8 +303,7 @@ describe('ClimateControlPage — structure, wiring & a11y', () => {
     ).toBeInTheDocument();
     expect(document.title).toContain('Climate Control');
 
-    // VehicleSelect renders a labelled combobox (fleet has ≥1 vehicle).
-    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
 
     // Climate hooks take the string id; charging telemetry takes the numeric id.
     expect(mockClimate).toHaveBeenCalledWith('1');

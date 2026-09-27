@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+
 import { SavedViewMenu } from '@/components/data-display';
 import { PrintButton } from '@/components/ui';
 import { AICostForecastNarration } from '@/components/ai/AICostForecastNarration';
@@ -49,12 +49,7 @@ export default function CostAnalysisPage() {
   const { vehicleId } = useSelectedVehicle();
 
   // ── Filters ──────────────────────────────────────────────────────────
-  const {
-    start: startDate,
-    end: endDate,
-    setRange,
-    reset: resetRange,
-  } = useRangeState({
+  const { start: startDate, end: endDate, reset: resetRange } = useRangeState({
     persistKey: 'cost-analysis.range',
     defaultPresetId: '1y',
   });
@@ -87,13 +82,6 @@ export default function CostAnalysisPage() {
 
   const actions = (
     <div data-print-hide className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <VehicleSelect />
-      <RangePicker
-        value={{ start: startDate, end: endDate }}
-        onChange={setRange}
-        align="end"
-        triggerTestId="cost-analysis-range"
-      />
       <SavedViewMenu
         route="/cost-analysis"
         currentQuery={savedView.currentQuery}

@@ -9,7 +9,7 @@ import {
 } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
@@ -84,7 +84,6 @@ export default function SignalDeadbandPage() {
         'signalDeadband.subtitle',
         'Estimate a robust numeric noise floor and retain material telemetry changes with fewer redundant emissions',
       )}
-      actions={<VehicleSelect />}
       query={[signalsQuery, historyQuery]}
       dataSources={dataSources}
     >

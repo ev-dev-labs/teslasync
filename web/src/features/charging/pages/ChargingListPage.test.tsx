@@ -506,6 +506,11 @@ describe('ChargingListPage — happy path', () => {
     renderPage();
     expect(await screen.findByText('Supercharger')).toBeInTheDocument();
     expect(screen.getByText('Anomalies')).toBeInTheDocument();
+    const filters = screen.getByRole('tablist', { name: 'Filter charging sessions by collection' });
+    expect(filters.querySelector('svg')).toBeNull();
+    expect(within(filters).getByRole('tab', { name: /All/ })).toHaveClass('bg-[var(--theme-primary)]');
+    expect(within(filters).getByRole('tab', { name: /Home/ })).toHaveClass('border-[var(--control-border)]');
+    expect(within(filters).getByRole('tab', { name: /Tagged/ })).toBeDisabled();
     // 2 home (s1,s4) · 2 supercharger (s2,s5) · 2 dc / CCS (s3,s6).
     expect(screen.getByText('2 home · 2 SC · 2 DC')).toBeInTheDocument();
   });

@@ -89,33 +89,32 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
     onChange: (choice: PackSelection) => setSelections(previous => ({ ...previous, [template.id]: choice })),
   })
   const columns: Column<PackTemplate>[] = [
-    { key: 'selection', header: t('alertPacks.selected', 'Selected'), align: 'left', className: 'w-16', render: template => <div className="flex h-11 items-center">
+    { key: 'selection', header: t('alertPacks.selected', 'Selected'), align: 'left', className: 'w-20 min-w-20', render: template => <div className="flex h-11 items-center">
       <Checkbox aria-label={t(`alertPacks.rules.${template.id}.name`, template.rule.name)}
         checked={selected.includes(template.id)} disabled={install.isPending} onChange={checked => toggleRule(template.id, checked)} /></div> },
-    { key: 'rule', header: t('alertPacks.rule', 'Rule'), align: 'left', className: 'min-w-48 max-w-60 whitespace-normal', render: template => <div className="min-w-0 space-y-1">
+    { key: 'rule', header: t('alertPacks.rule', 'Rule'), align: 'left', className: 'w-52 min-w-52 whitespace-normal', render: template => <div className="min-w-0 space-y-1">
       <Text as="p" variant="bodySm" weight="medium">
         {t(`alertPacks.rules.${template.id}.name`, template.rule.name)}
       </Text>
-      <div className="flex flex-wrap gap-1">
-        <SeverityBadge severity={template.rule.severity} size="sm" />
-        {customized.has(template.id) && <Badge variant="info" size="sm">{t('alertPacks.customized', 'Customized')}</Badge>}
-      </div>
+      {customized.has(template.id) && <Badge variant="info" size="sm">{t('alertPacks.customized', 'Customized')}</Badge>}
     </div> },
-    { key: 'operator', header: t('alertPacks.operator', 'Operator'), align: 'left', className: 'min-w-32 w-32', render: template =>
+    { key: 'severity', header: t('alertPacks.severityColumn', 'Severity'), align: 'left', className: 'w-28 min-w-28', render: template =>
+      <div className="flex min-h-11 items-center"><SeverityBadge severity={template.rule.severity} size="sm" /></div> },
+    { key: 'operator', header: t('alertPacks.operator', 'Operator'), align: 'left', className: 'w-28 min-w-28', render: template =>
       <PackRuleTriggerEditor {...ruleProps(template)} field="operator" compact /> },
-    { key: 'value', header: t('alertPacks.valueColumn', 'Value'), align: 'left', className: 'min-w-32 w-32', render: template =>
+    { key: 'value', header: t('alertPacks.valueColumn', 'Value'), align: 'left', className: 'w-32 min-w-32', render: template =>
       <PackRuleTriggerEditor {...ruleProps(template)} field="value" compact /> },
-    { key: 'cooldown', header: t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)'), align: 'left', className: 'min-w-40 w-40', render: template =>
+    { key: 'cooldown', header: t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)'), align: 'left', className: 'w-40 min-w-40', render: template =>
       <PackRuleDeliveryEditor {...ruleProps(template)} field="cooldown" compact /> },
-    { key: 'behavior', header: t('alertPacks.behavior', 'Alert behavior'), align: 'left', className: 'min-w-64 w-64', render: template =>
+    { key: 'behavior', header: t('alertPacks.behavior', 'Alert behavior'), align: 'left', className: 'w-56 min-w-56', render: template =>
       <PackRuleDeliveryEditor {...ruleProps(template)} field="behavior" compact /> },
-    { key: 'channels', header: t('alertPacks.channels', 'Channels'), align: 'left', className: 'min-w-56 w-56 whitespace-normal', render: template => <PackRuleChannels
+    { key: 'message', header: t('alertPacks.message', 'Notification message'), align: 'left', className: 'w-[30rem] min-w-[30rem] whitespace-normal', render: template => <PackRuleMessageEditor {...ruleProps(template)} compact /> },
+    { key: 'channels', header: t('alertPacks.channels', 'Channels'), align: 'left', className: 'w-64 min-w-64 whitespace-normal', render: template => <PackRuleChannels
       id={template.id} value={resolvePackChannels(selections[template.id], master)} channels={channels.data ?? []} disabled={install.isPending || channels.isLoading} compact
       onChange={channel_ids => ruleProps(template).onChange(withPackChannels(selections[template.id], channel_ids, master))} /> },
-    { key: 'message', header: t('alertPacks.message', 'Notification message'), align: 'left', className: 'min-w-80 whitespace-normal', render: template => <PackRuleMessageEditor {...ruleProps(template)} compact /> },
-    { key: 'title', header: t('alertPacks.titleColumn', 'Include title'), align: 'left', className: 'w-24', render: template =>
+    { key: 'title', header: t('alertPacks.titleColumn', 'Include title'), align: 'left', className: 'w-28 min-w-28', render: template =>
       <PackRuleDeliveryEditor {...ruleProps(template)} field="title" compact /> },
-    { key: 'defaults', header: t('alertPacks.defaultsColumn', 'Defaults'), align: 'left', className: 'w-16', render: template =>
+    { key: 'defaults', header: t('alertPacks.defaultsColumn', 'Defaults'), align: 'left', className: 'w-24 min-w-24', render: template =>
       <PackRuleResetButton {...ruleProps(template)} /> },
   ]
   const settings = <div className="space-y-3">
@@ -155,7 +154,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
   </div>
   const result = install.data
   return (
-    <Modal open onClose={close} size="full" className="sm:max-w-[96vw]" title={t('alertPacks.preview', 'Preview {{name}}', { name: pack.id === 'custom' ? name : t(`alertPacks.catalog.${pack.id}.name`, pack.name) })}
+    <Modal open onClose={close} size="full" className="sm:max-w-[96vw] [&_[data-modal-scroll-body]]:overflow-x-hidden" title={t('alertPacks.preview', 'Preview {{name}}', { name: pack.id === 'custom' ? name : t(`alertPacks.catalog.${pack.id}.name`, pack.name) })}
       footer={result ? <Button onClick={onClose}>{t('alertPacks.done', 'Done')}</Button> : <div className="space-y-2">
         {install.error && <ErrorDisplay error={install.error} compact />}
         {!valid && <Caption className="block">{t('alertPacks.invalid', 'Select at least one rule and a vehicle scope, and check message, threshold and cooldown values.')}</Caption>}
@@ -193,7 +192,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       </div> : <div className="space-y-4">
         {pack.id === 'custom' && <Input label={t('alertPacks.packName', 'Pack name')} value={name} maxLength={100} disabled={install.isPending} onChange={e => setName(e.target.value)} />}
         <div className="min-w-0 space-y-4">
-          {desktop ? <section aria-label={t('alertPacks.masterSettings', 'Pack defaults')} className="space-y-3 self-start rounded-lg bg-[var(--surface-2)] p-4">
+          {desktop ? <section aria-label={t('alertPacks.masterSettings', 'Pack defaults')} className="space-y-3 self-start rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
             <PanelTitle>{t('alertPacks.masterSettings', 'Pack defaults')}</PanelTitle>{settings}
           </section> : <Accordion title={t('alertPacks.masterSettings', 'Pack defaults')} icon={<Icons.settings className="h-4 w-4" />}
             className="border-[var(--border-default)] bg-[var(--surface-2)]"
@@ -223,9 +222,18 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
                   { value: 'customized', label: t('alertPacks.customized', 'Customized') }]} />
               <Caption>{t('alertPacks.showingRules', '{{count}} matching rules', { count: filtered.length })}</Caption>
             </div>
-            {desktop ? <DataTable tableId="notifications:pack-preview" caption={t('alertPacks.chooseRules', 'Choose rules')} columns={columns} density="compact"
-              data={visible} keyExtractor={template => template.id} className="[&_td]:align-top [&_th]:whitespace-nowrap [&_th]:text-left"
-              mobileColumns={columns.map(column => column.key)} />
+            {desktop ? <>
+              <Caption className="block" id="pack-rules-scroll-hint">{t('alertPacks.scrollHint', 'Scroll horizontally to review every rule setting. Use Tab to move between fields.')}</Caption>
+              {/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- the scroll region needs keyboard focus for off-screen columns */}
+              <div role="region" aria-label={t('alertPacks.rulesEditor', 'Rule settings editor')} aria-describedby="pack-rules-scroll-hint"
+                tabIndex={0} className="max-w-full overflow-x-auto rounded-panel focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-strong)]">
+                <DataTable tableId="notifications:pack-preview" caption={t('alertPacks.chooseRules', 'Choose rules')} columns={columns} density="compact"
+                  data={visible} keyExtractor={template => template.id}
+                  className="min-w-[1960px] !overflow-visible [&_td]:align-top [&_td]:py-3 [&_th]:whitespace-nowrap [&_th]:text-left"
+                  mobileColumns={columns.map(column => column.key)} />
+              </div>
+              {/* eslint-enable jsx-a11y/no-noninteractive-tabindex */}
+            </>
               : <div className="space-y-2">{visible.map(template => <PackRulePreview key={template.id} {...ruleProps(template)} />)}</div>}
             {filtered.length === 0 && <div className="space-y-2 rounded-lg border border-[var(--border-default)] p-4">
               <Caption className="block">{t('alertPacks.noMatchingRules', 'No matching rules. Clear the search to see the full pack.')}</Caption>

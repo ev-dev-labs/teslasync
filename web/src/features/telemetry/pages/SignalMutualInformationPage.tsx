@@ -9,7 +9,7 @@ import {
 } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
@@ -125,7 +125,6 @@ export default function SignalMutualInformationPage() {
         'signalMutualInformation.subtitle',
         'Detect nonlinear dependence between quantile states after robust cadence alignment — not linear signal correlation',
       )}
-      actions={<VehicleSelect />}
       query={[signalsQuery, historyA, historyB]}
       dataSources={dataSources}
     >

@@ -19,7 +19,8 @@
  *   stale storage and undoes the in-memory update.
  * - Only rooted in-app paths (`/…`) are ever stored, so a poisoned storage
  *   value cannot turn a pin into an off-site link.
- * - The list is capped at {@link MAX_PINNED_NAV_ITEMS} entries.
+ * - The pinned list is uncapped (pin as many pages as you like); only the
+ *   recent list is capped at {@link MAX_RECENT_NAV_ITEMS} entries.
  */
 
 export const PINNED_NAV_STORAGE_KEY = 'teslasync-pinned-nav-paths'
@@ -28,7 +29,6 @@ export const RECENT_NAV_STORAGE_KEY = 'teslasync-recent-nav-paths'
 /** Emitted on `window` whenever the pinned list changes in THIS tab. */
 export const NAV_PINS_EVENT = 'teslasync:nav-pins-change'
 
-export const MAX_PINNED_NAV_ITEMS = 8
 export const MAX_RECENT_NAV_ITEMS = 3
 
 export const DEFAULT_PINNED_NAV_PATHS: readonly string[] = [
@@ -79,7 +79,7 @@ function isRootedPath(value: unknown): value is string {
   return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')
 }
 
-function sanitizePaths(value: unknown, max: number): string[] {
+function sanitizePaths(value: unknown, max = Number.POSITIVE_INFINITY): string[] {
   if (!Array.isArray(value)) return []
   const seen = new Set<string>()
   const out: string[] = []
@@ -92,7 +92,7 @@ function sanitizePaths(value: unknown, max: number): string[] {
   return out
 }
 
-function readPaths(key: string, max: number): string[] | null {
+function readPaths(key: string, max = Number.POSITIVE_INFINITY): string[] | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = window.localStorage.getItem(key)
@@ -185,7 +185,7 @@ export function pinnedNavPathsNeedRewrite(paths: readonly string[]): boolean {
     PINNED_NAV_STORAGE_KEY,
     paths,
     DEFAULT_PINNED_NAV_PATHS,
-    MAX_PINNED_NAV_ITEMS,
+    Number.POSITIVE_INFINITY,
     sessionPinnedOverride,
   )
 }
@@ -211,7 +211,7 @@ export function recentNavPathsNeedRewrite(paths: readonly string[]): boolean {
  */
 export function getPinnedNavPaths(): string[] {
   if (sessionPinnedOverride) return [...sessionPinnedOverride]
-  const stored = readPaths(PINNED_NAV_STORAGE_KEY, MAX_PINNED_NAV_ITEMS)
+  const stored = readPaths(PINNED_NAV_STORAGE_KEY)
   if (stored == null) return [...DEFAULT_PINNED_NAV_PATHS]
   return stored
 }
@@ -224,7 +224,7 @@ export function getPinnedNavPaths(): string[] {
  * quota failure, still holds the previous value and would undo the update.
  */
 export function setPinnedNavPaths(paths: readonly string[]): NavPinsWriteResult {
-  const next = sanitizePaths(paths, MAX_PINNED_NAV_ITEMS)
+  const next = sanitizePaths(paths)
   const persisted = writePaths(PINNED_NAV_STORAGE_KEY, next)
   sessionPinnedOverride = persisted ? null : next
   notify({

@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.61.3
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.4
 	github.com/SherClockHolmes/webpush-go v1.4.0
-	github.com/alicebob/miniredis/v2 v2.37.0
+	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.13
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.13
@@ -31,7 +31,7 @@ require (
 	github.com/rs/zerolog v1.32.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/sony/gobreaker v0.5.0
-	github.com/teslamotors/fleet-telemetry v0.9.0
+	github.com/teslamotors/fleet-telemetry v0.9.5-0.20260924184623-3d366a3da23c
 	go.mongodb.org/mongo-driver/v2 v2.5.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0
 	go.opentelemetry.io/otel v1.45.0

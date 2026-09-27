@@ -7,17 +7,17 @@
 import { useMemo, useState, type ElementType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Button as UiButton, Badge, Text } from '@/components/ui';
+import { GlassPanel, Button as UiButton, Badge, Text, Caption, Tooltip } from '@/components/ui';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { QueryError } from '@/components/feedback/QueryError';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
-import { PillFilterBar, type PillItem } from '@/components/forms';
+import { SearchInput } from '@/components/forms';
 import { useAutomationPresets } from '@/api/hooks/useAutomations';
-import { RoutineWizard } from '../components/RoutineWizard';
 import { Icons } from '@/lib/icons';
+import { fmtInt } from '@/lib/numberFormat';
 import type { AutomationPreset } from '@/api/types';
 import type { AutomationTriggerKind } from '@/types/automations';
 
@@ -79,8 +79,8 @@ function PresetCard({
   };
 
   return (
-    <GlassPanel hover glow="cyan" className="p-5 flex flex-col gap-3">
-      <div className="flex items-start gap-3">
+    <GlassPanel hover glow="cyan" className="flex h-full flex-col gap-3 p-5">
+      <div className="flex min-h-24 items-start gap-3">
         <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
           <Icon className="h-5 w-5 text-cyan-400" aria-hidden="true" />
         </div>
@@ -93,12 +93,26 @@ function PresetCard({
               ? t(triggerLabel.key, triggerLabel.fallback)
               : t('automations.builder.noTrigger', 'No trigger configured')}
           </Text>
+          <Badge variant="neutral" size="sm" className="mt-1">
+            {actionCount === 1
+              ? t('automations.presets.actionOne', '1 action')
+              : t('automations.presets.actionCount', '{{count}} actions', { count: actionCount })}
+          </Badge>
         </div>
-        <Badge variant="neutral" size="sm">
-          {t('automations.presets.actionCount', '{{count}} actions', {
-            count: actionCount,
-          })}
-        </Badge>
+        <Tooltip
+          multiline
+          content={<div className="max-w-xs space-y-1"><strong>{preset.name}</strong><p>{preset.description}</p></div>}
+        >
+          <UiButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={t('automations.presets.details', 'Details for {{name}}', { name: preset.name })}
+            className="h-8 w-8 shrink-0 p-0"
+          >
+            <Icons.info className="h-4 w-4" aria-hidden="true" />
+          </UiButton>
+        </Tooltip>
       </div>
 
       <Text as="p" variant="bodySm" className="leading-relaxed line-clamp-2">
@@ -114,7 +128,7 @@ function PresetCard({
         aria-label={t('automations.presets.installNamed', 'Install {{name}}', {
           name: preset.name,
         })}
-        className="mt-1 w-full"
+        className="mt-auto w-full"
       >
         <Icons.add className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
         {t('automations.presets.install', 'Install')}
@@ -125,7 +139,7 @@ function PresetCard({
 
 function PresetCardSkeleton() {
   return (
-    <GlassPanel className="p-5 flex flex-col gap-3">
+    <GlassPanel className="flex h-full flex-col gap-3 p-5">
       <div className="flex items-start gap-3">
         <Skeleton className="w-10 h-10 rounded-lg" />
         <div className="flex-1">
@@ -153,21 +167,20 @@ export function PresetGallery({
   const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useAutomationPresets(category);
   const [activeCategory, setActiveCategory] = useState(category ?? 'all');
+  const [search, setSearch] = useState('');
 
   const presetList = useMemo(() => data?.presets ?? [], [data]);
   const categories = useMemo(() => data?.categories ?? [], [data]);
   const filteredPresets = useMemo(() => {
-    if (category) {
-      return presetList;
-    }
-    if (activeCategory === 'all') {
-      return presetList;
-    }
-    return presetList.filter((p) => p.category === activeCategory);
-  }, [presetList, activeCategory, category]);
+    const query = search.trim().toLocaleLowerCase();
+    return presetList.filter((preset) =>
+      (category || activeCategory === 'all' || preset.category === activeCategory) &&
+      (!query || `${preset.name} ${preset.description}`.toLocaleLowerCase().includes(query)),
+    );
+  }, [presetList, activeCategory, category, search]);
 
-  const pills: PillItem[] = useMemo(() => {
-    const items: PillItem[] = [
+  const pills = useMemo(() => {
+    const items = [
       {
         key: 'all',
         label: t('automations.presets.allCategory', 'All'),
@@ -215,25 +228,54 @@ export function PresetGallery({
 
   return (
     <div className="space-y-6">
-      <RoutineWizard actionsDisabled={actionsDisabled} />
-      {!category && pills.length > 1 && (
-        <PillFilterBar
-          items={pills}
-          activeKey={activeCategory}
-          onChange={setActiveCategory}
-          ariaLabel={t('automations.presets.filterAria', 'Filter presets by category')}
+      {!category && (
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={t('automations.presets.searchPlaceholder', 'Search templates...')}
+          ariaLabel={t('automations.presets.searchLabel', 'Search templates')}
+          className="w-full"
         />
+      )}
+      {!category && pills.length > 1 && (
+        <div
+          role="group"
+          aria-label={t('automations.presets.filterAria', 'Filter presets by category')}
+          className="flex flex-wrap gap-2"
+        >
+          {pills.map((item) => (
+            <UiButton
+              key={item.key}
+              type="button"
+              size="sm"
+              variant={activeCategory === item.key ? 'primary' : 'ghost'}
+              aria-pressed={activeCategory === item.key}
+              onClick={() => setActiveCategory(item.key)}
+              className="min-h-9 rounded-shape-lg border border-[var(--border-default)] px-3"
+            >
+              {item.label} ({fmtInt(item.count)})
+            </UiButton>
+          ))}
+        </div>
+      )}
+      {!category && (
+        <Caption role="status" className="block">
+          {t('automations.presets.showing', '{{count}} of {{total}} templates', {
+            count: filteredPresets.length,
+            total: presetList.length,
+          })}
+        </Caption>
       )}
       {filteredPresets.length === 0 ? (
         <EmptyState /* no-action: informational empty — no CTA */
           icon={<Icons.clock className="h-8 w-8" />}
-          message={t('automations.presets.emptyCategory', 'No presets in this category')}
+          message={t('automations.presets.emptyCategory', 'No templates match your filters')}
         />
       ) : (
         <FadeIn>
           <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredPresets.map((preset) => (
-              <StaggerItem key={preset.id}>
+              <StaggerItem key={preset.id} className="h-full">
                 <PresetCard
                   preset={preset}
                   actionsDisabled={actionsDisabled}
