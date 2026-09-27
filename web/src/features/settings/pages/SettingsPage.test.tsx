@@ -73,7 +73,8 @@ vi.mock('@/api/hooks/useSettings', () => ({
   useSettings: useSettingsMock,
 }))
 
-vi.mock('@/components/ui/FontProvider', () => ({
+vi.mock('@/components/ui/FontProvider', async (importActual) => ({
+  ...await importActual<typeof import('@/components/ui/FontProvider')>(),
   useFont: useFontMock,
 }))
 
