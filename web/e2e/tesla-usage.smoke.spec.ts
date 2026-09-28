@@ -83,7 +83,7 @@ test('Tesla usage page and status overview render desktop/mobile, light/dark and
       await page.getByRole('button', { name: 'Date range' }).click()
       await expect(page.getByRole('option', { name: 'Last year' })).toBeVisible()
       await expect(page.locator('.rdp-month').first()).toBeVisible()
-      await expect(page.getByRole('dialog', { name: 'Date range picker' }).getByRole('gridcell', { name: '20' }).first()).toBeVisible()
+      await expect(page.getByRole('dialog', { name: 'Date range picker' }).locator('.rdp-day_button').first()).toBeVisible()
       const applyButton = page.getByRole('dialog', { name: 'Date range picker' }).getByRole('button', { name: 'Apply' })
       await expect.poll(async () => {
         const bounds = await applyButton.boundingBox()
@@ -140,9 +140,11 @@ test('custom calendar dates submit inclusive UTC days as an exclusive-end API qu
   const picker = page.getByRole('dialog', { name: 'Date range picker' })
   await picker.getByRole('button', { name: 'New range' }).click()
   const september = picker.getByRole('grid', { name: 'September' })
-  await expect(september.getByRole('gridcell', { name: '20' })).toBeVisible()
-  await september.getByRole('gridcell', { name: '20' }).click()
-  await september.getByRole('gridcell', { name: '21' }).click()
+  const day20 = september.locator('[data-day="2026-09-20"] button')
+  const day21 = september.locator('[data-day="2026-09-21"] button')
+  await expect(day20).toBeVisible()
+  await day20.click()
+  await day21.click()
   await picker.getByRole('button', { name: 'Apply' }).click()
   await expect.poll(() => historyRange).toEqual({
     start: '2026-09-20T00:00:00.000Z', end: '2026-09-22T00:00:00.000Z',
