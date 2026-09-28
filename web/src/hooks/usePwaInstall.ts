@@ -114,12 +114,8 @@ export interface UsePwaInstallResult {
   capability: InstallCapability
   /** `true` when the app is already running in a standalone window. */
   standalone: boolean
-  /**
-   * Trigger the Chromium install dialog. Resolves `false` on every platform
-   * where no native prompt exists — it never pretends to have installed
-   * anything.
-   */
-  promptInstall: () => Promise<boolean>
+  /** Trigger the Chromium install dialog without conflating refusal with failure. */
+  promptInstall: () => Promise<'accepted' | 'dismissed' | 'failed'>
   /** Forget the captured event (after install, or after a dismissal). */
   clearPrompt: () => void
 }
@@ -178,17 +174,16 @@ export function usePwaInstall(): UsePwaInstallResult {
     [standalone, deferredPrompt],
   )
 
-  const promptInstall = useCallback(async (): Promise<boolean> => {
+  const promptInstall = useCallback(async (): Promise<'accepted' | 'dismissed' | 'failed'> => {
     const event = deferredPrompt
-    if (event == null) return false
+    if (event == null) return 'failed'
     try {
       await event.prompt()
       const choice = await event.userChoice
-      return choice?.outcome === 'accepted'
-    } catch {
-      // prompt() rejects when the event was already consumed or the browser
-      // refused; there is nothing to recover.
-      return false
+      return choice?.outcome === 'accepted' ? 'accepted' : 'dismissed'
+    } catch (error) {
+      console.error('Unable to open the PWA install dialog', error)
+      return 'failed'
     } finally {
       // `beforeinstallprompt` is single-use — the browser will not let us
       // replay a consumed event, so the captured handle must be retired.

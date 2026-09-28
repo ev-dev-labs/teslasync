@@ -65,12 +65,15 @@ export default function InstallPrompt() {
   const { reduce } = useMotionPreference()
   const { capability, promptInstall, clearPrompt } = usePwaInstall()
   const [dismissed, setDismissed] = useState<boolean>(() => wasDismissedRecently())
+  const [installFailed, setInstallFailed] = useState(false)
 
   const handleInstall = useCallback(async () => {
-    await promptInstall()
-    // Retire the banner regardless of the outcome: the event is single-use,
-    // so leaving it up would wire the button to a consumed (null) handle.
-    setDismissed(true)
+    const outcome = await promptInstall()
+    if (outcome === 'failed') {
+      setInstallFailed(true)
+    } else {
+      setDismissed(true)
+    }
   }, [promptInstall])
 
   const handleDismiss = useCallback(() => {
@@ -96,7 +99,7 @@ export default function InstallPrompt() {
 
   const showNative = capability === 'native-prompt'
   const showIosGuide = capability === 'ios-manual'
-  const visible = !dismissed && (showNative || showIosGuide)
+  const visible = !dismissed && (showNative || showIosGuide || installFailed)
 
   return (
     <AnimatePresence>
@@ -128,7 +131,11 @@ export default function InstallPrompt() {
                 {t('installPrompt.title', 'Install TeslaSync')}
               </p>
 
-              {showIosGuide ? (
+              {installFailed ? (
+                <p role="alert" className="mt-1 text-xs leading-tight text-rose-300">
+                  {t('installPrompt.failed', 'The install dialog could not open. In Chrome, open the menu and choose Install app.')}
+                </p>
+              ) : showIosGuide ? (
                 // No fake button: iOS has no install API, so the only honest
                 // affordance is the exact sequence of taps.
                 <div data-testid="install-prompt-ios-steps" className="mt-1">
@@ -170,7 +177,7 @@ export default function InstallPrompt() {
               )}
             </div>
 
-            {showNative && (
+            {showNative && !installFailed && (
               <Button
                 type="button"
                 onClick={handleInstall}

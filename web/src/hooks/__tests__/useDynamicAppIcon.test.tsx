@@ -209,40 +209,18 @@ describe('useDynamicAppIcon', () => {
     ).not.toThrow()
   })
 
-  it('keeps the complete static manifest when it cannot be fetched', async () => {
+  it('keeps the HTTP manifest and icons installable after theme changes', async () => {
     vi.mocked(renderSvgToPngDataUrl).mockResolvedValue('data:image/png;base64,AAAA')
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
-    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')!
-
-    renderHook(() => useDynamicAppIcon(), { wrapper })
-    await waitFor(() => expect(warning).toHaveBeenCalledOnce())
-    expect(manifest.href).toBe('http://localhost/manifest.webmanifest')
-    expect(URL.createObjectURL).not.toHaveBeenCalled()
-  })
-
-  it('does not replace the current theme with a stale manifest fetch', async () => {
-    vi.mocked(renderSvgToPngDataUrl).mockResolvedValue('data:image/png;base64,AAAA')
-    const requests: Array<(value: Response) => void> = []
-    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => requests.push(resolve))))
     const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')!
 
     const { rerender } = renderHook(() => useDynamicAppIcon(), { wrapper })
-    await waitFor(() => expect(requests).toHaveLength(1))
+    await waitFor(() => expect(document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')?.href).toBe('data:image/png;base64,AAAA'))
     act(() => {
       mockTheme = { primary: '#e31937', accent: '#ff4060' }
     })
     rerender()
-    await waitFor(() => expect(requests).toHaveLength(2))
-
-    await act(async () => {
-      requests[1]({ ok: true, json: async () => ({ id: '/', screenshots: [] }) } as Response)
-    })
-    await waitFor(() => expect(manifest.href).toBe('blob:test-1'))
-    await act(async () => {
-      requests[0]({ ok: true, json: async () => ({ id: '/' }) } as Response)
-    })
-    expect(manifest.href).toBe('blob:test-1')
-    expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+    expect(manifest.href).toBe('http://localhost/manifest.webmanifest')
+    expect(manifest).not.toHaveAttribute('data-dynamic-app-icon')
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
   })
 })

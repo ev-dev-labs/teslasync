@@ -153,12 +153,12 @@ describe('usePwaInstall', () => {
     const event = fireBeforeInstallPrompt('accepted')
     await waitFor(() => expect(result.current.capability).toBe('native-prompt'))
 
-    let accepted: boolean | undefined
+    let accepted: 'accepted' | 'dismissed' | 'failed' | undefined
     await act(async () => {
       accepted = await result.current.promptInstall()
     })
 
-    expect(accepted).toBe(true)
+    expect(accepted).toBe('accepted')
     expect(event.prompt).toHaveBeenCalledTimes(1)
     // The event cannot be replayed, so the capability must fall back rather
     // than leaving a button wired to a consumed handle.
@@ -170,23 +170,41 @@ describe('usePwaInstall', () => {
     fireBeforeInstallPrompt('dismissed')
     await waitFor(() => expect(result.current.capability).toBe('native-prompt'))
 
-    let accepted: boolean | undefined
+    let accepted: 'accepted' | 'dismissed' | 'failed' | undefined
     await act(async () => {
       accepted = await result.current.promptInstall()
     })
-    expect(accepted).toBe(false)
+    expect(accepted).toBe('dismissed')
   })
 
-  it('resolves false instead of throwing when there is nothing to prompt', async () => {
+  it('reports failure instead of pretending to install when there is nothing to prompt', async () => {
     setUserAgent(UA.iphoneSafari)
     const { result } = renderHook(() => usePwaInstall())
     expect(result.current.capability).toBe('ios-manual')
 
-    let accepted: boolean | undefined
+    let accepted: 'accepted' | 'dismissed' | 'failed' | undefined
     await act(async () => {
       accepted = await result.current.promptInstall()
     })
-    expect(accepted).toBe(false)
+    expect(accepted).toBe('failed')
+  })
+
+  it('reports a rejected native prompt and retires the consumed event', async () => {
+    const error = new Error('dialog unavailable')
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { result } = renderHook(() => usePwaInstall())
+    const event = fireBeforeInstallPrompt()
+    event.prompt.mockRejectedValue(error)
+    await waitFor(() => expect(result.current.capability).toBe('native-prompt'))
+
+    let outcome: 'accepted' | 'dismissed' | 'failed' | undefined
+    await act(async () => {
+      outcome = await result.current.promptInstall()
+    })
+
+    expect(outcome).toBe('failed')
+    expect(log).toHaveBeenCalledWith('Unable to open the PWA install dialog', error)
+    expect(result.current.capability).toBe('unavailable')
   })
 
   it('flips to installed on appinstalled', async () => {
