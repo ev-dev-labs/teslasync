@@ -15,6 +15,8 @@ import type {
   AutomationStateChangedEvent,
   AutomationSSEEventType,
 } from '../api/types'
+import { createEventStream } from './eventStream'
+import { getAccessToken } from './serverConnection'
 
 type AutomationEventData =
   | AutomationTriggeredEvent
@@ -87,7 +89,7 @@ function doConnect() {
     source = null
   }
 
-  const es = new EventSource('/api/v1/automations/events')
+  const es = createEventStream('/api/v1/automations/events')
   source = es
 
   es.addEventListener('connected', () => {
@@ -113,6 +115,7 @@ function doConnect() {
   es.addEventListener('heartbeat', () => {})
 
   es.onerror = () => {
+    const authRejected = getAccessToken() != null && es.readyState === EventSource.CLOSED
     es.close()
     source = null
     connecting = false
@@ -124,6 +127,7 @@ function doConnect() {
     // transitions forward to 'connected' (via the 'connected' event) and
     // any status badge stays green through the entire disconnection.
     notifyDisconnect()
+    if (authRejected) return
     const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, failCount - 1), MAX_BACKOFF_MS)
     reconnectTimer = window.setTimeout(() => {
       doConnect()

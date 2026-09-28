@@ -37,6 +37,7 @@ import {
   SettingsActionCard,
 } from '../components'
 import { ResetSection } from '../components/ResetSection'
+import { ServerSection } from '../components/ServerSection'
 import { SettingsNavigation, type SettingsSection } from '../components/SettingsNavigation'
 import { SANS_LABELS } from '../components/fontChoices'
 
@@ -90,6 +91,7 @@ export default function SettingsPage() {
     { id: 'appearance', title: t('settings.organization.appearance', 'Appearance & experience'), description: t('settings.organization.appearanceDescription', 'Theme, layout, status bar and celebrations') },
     { id: 'typography', title: t('settings.organization.typography', 'Fonts & readability'), description: t('settings.organization.typographyDescription', 'Explore fonts, preview your own text, and fine-tune readability') },
     { id: 'advanced', title: t('settings.organization.advanced', 'Confirmation prompts'), description: t('settings.organization.advancedDescription', 'Restore confirmations you previously silenced') },
+    { id: 'server', title: t('serverConnect.settings.section', 'Server'), description: t('serverConnect.settings.sectionDescription', 'Which TeslaSync server this app talks to') },
     { id: 'reset', title: t('settings.organization.reset', 'Reset & recovery'), description: t('settings.organization.resetDescription', 'Restore defaults and review destructive actions') },
   ]
   const activeSection = sections.find(section => section.id === location.hash.slice(1)) ?? sections[0]
@@ -99,6 +101,7 @@ export default function SettingsPage() {
     { id: 'appearance', content: <AppearanceSettings /> },
     { id: 'typography', content: <TypographySettings /> },
     { id: 'advanced', content: <AdvancedSettings /> },
+    { id: 'server', content: <ServerSection /> },
     { id: 'reset', content: <ResetSection /> },
   ]
 

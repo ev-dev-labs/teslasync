@@ -1,0 +1,7 @@
+# Generated per-owner TWA project files — never commit the keystore.
+twa-manifest.json
+android.keystore
+android-keystore.passwords
+*.aab
+*.apk
+gradle/

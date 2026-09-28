@@ -66,9 +66,17 @@ data:
   {{- if and (not $publicOrigins) .Values.ingressRoute.enabled .Values.ingressRoute.tls.enabled }}
   {{- fail "config.webEndpoint is required when ingressRoute TLS is enabled so CSRF has a trusted public origin" }}
   {{- end }}
+  {{- $allowedOrigins := list }}
   {{- if $publicOrigins }}
-  CORS_ORIGINS: {{ $publicOrigins | quote }}
+  {{- $allowedOrigins = append $allowedOrigins $publicOrigins }}
   {{- end }}
+  {{- range .Values.config.nativeAppOrigins }}
+  {{- $allowedOrigins = append $allowedOrigins . }}
+  {{- end }}
+  {{- if $allowedOrigins }}
+  CORS_ORIGINS: {{ join "," $allowedOrigins | quote }}
+  {{- end }}
+  ANDROID_ASSETLINKS_JSON: {{ .Values.config.androidAssetLinksJSON | quote }}
   {{- $ftHost := include "teslasync.fleetTelemetry.host" . }}
   {{- if or .Values.fleetTelemetry.enabled $ftHost }}
   FLEET_TELEMETRY_ENABLED: "true"

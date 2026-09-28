@@ -37,6 +37,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getApiBase } from '@/lib/resilience';
+import { authHeaders, serverCredentials } from '@/lib/serverConnection';
 
 // AiStreamEvent is the discriminated union of every event the backend
 // SSE writer emits. The discriminator is `type`; the payload shape
@@ -339,13 +340,13 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
       try {
         const res = await fetch(fullURL, {
           method: 'POST',
-          headers: {
+          headers: authHeaders({
             'Content-Type': 'application/json',
             Accept: 'text/event-stream',
-          },
+          }),
           body: requestBody,
           signal: controller.signal,
-          credentials: 'include',
+          credentials: serverCredentials(),
         });
 
         if (!res.ok) {

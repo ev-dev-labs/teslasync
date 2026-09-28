@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { getApiBase } from '@/lib/resilience'
+import { authHeaders } from '@/lib/serverConnection'
 import { request } from '@/api/client'
 import { broadcast, subscribe } from '@/lib/broadcast'
 import { themePresets, themeCategories } from './themePresets'
@@ -372,7 +373,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Uses raw fetch intentionally — ThemeProvider mounts before auth context
   // is available, so request() (which handles 401 token refresh) may not work.
   useEffect(() => {
-    fetch(`${getApiBase()}/api/v1/settings`)
+    fetch(`${getApiBase()}/api/v1/settings`, { headers: authHeaders() })
       .then(r => r.ok ? r.json() : null)
       .then(settings => {
         if (!settings) return

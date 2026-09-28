@@ -312,6 +312,17 @@ export default defineConfig({
             url: 'url',
           },
         },
+        // Custom-protocol deep links for the installed app builds
+        // (docs/apps.md): `web+teslasync://vehicles/7` opens the installed
+        // Android / Windows / ChromeOS app instead of a browser tab. The
+        // launch URL lands on the glance page; NativeDeepLinks routes the
+        // `link` query param only to allowlisted in-app destinations.
+        protocol_handlers: [
+          {
+            protocol: 'web+teslasync',
+            url: '/glance?link=%s',
+          },
+        ],
       },
       devOptions: {
         enabled: enablePwaInDev,

@@ -3,6 +3,8 @@ export interface APIKey {
   name: string;
   keyPrefix: string;
   permissions: 'read' | 'read-write' | 'admin';
+  /** Owner identity for app-bound keys; absent for device-scoped keys. */
+  subject?: string;
   createdAt: string;
   lastUsedAt: string | null;
   expiresAt: string | null;

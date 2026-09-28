@@ -8,6 +8,7 @@
  */
 
 import { broadcast } from './broadcast'
+import { authHeaders, getServerBaseUrl, isRemoteMode } from './serverConnection'
 import { purgeServiceWorkerApiCache } from '@/sw/purgeApiCache'
 // HELP-12. `demoMode` imports nothing from this module, so there is no cycle;
 // it is a leaf that reads `import.meta.env` and validates it.
@@ -51,6 +52,10 @@ declare global {
 }
 
 export function getApiBase(): string {
+  // Generic native shells (docs/apps.md): a picked server origin wins over
+  // every same-origin default. Demo mode still overrides downstream.
+  const remote = getServerBaseUrl()
+  if (remote !== '') return remote
   const metaValue = typeof document === 'undefined'
     ? ''
     : document.querySelector('meta[name="teslasync-api-base"]')?.getAttribute('content') ?? ''
@@ -747,10 +752,14 @@ async function _doFetch<T>(
       const url = demoBase !== null
         ? `${demoBase}${path}`
         : `${getApiBase()}/api/v1${path}`
+      // Preserve the historical shape: caller headers replace (not merge
+      // with) the Content-Type default. authHeaders only overlays the
+      // stored access token and is a no-op without one.
+      const { headers: optHeaders, ...restFetch } = restOpts
       const res = await fetch(url, {
-        headers: { 'Content-Type': 'application/json' },
-        ...restOpts,
-        ...(demoCredentialsMode() ? { credentials: demoCredentialsMode() } : {}),
+        headers: authHeaders(optHeaders ?? { 'Content-Type': 'application/json' }),
+        ...restFetch,
+        ...(isRemoteMode() ? { credentials: 'omit' as const } : demoCredentialsMode() ? { credentials: demoCredentialsMode() } : {}),
         signal: merged.signal,
       })
 

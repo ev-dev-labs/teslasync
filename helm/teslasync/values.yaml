@@ -835,6 +835,13 @@ ingressRoute:
 # ─────────────────────────────────────────────────────────────────────────────
 config:
   logLevel: info
+  # -- Digital Asset Links JSON statement list for Android TWA domain verification.
+  # Empty (default) disables /.well-known/assetlinks.json.
+  androidAssetLinksJSON: ""
+  # -- Exact origins of separately bundled native app renderers, in addition
+  # to the public web endpoint. Never add "*" or "null" to credentialed CORS.
+  # Example: ["capacitor://localhost", "https://localhost", "teslasync-app://app"]
+  nativeAppOrigins: []
   pollInterval: "30s"
   # -- Multiplier for polling interval when vehicle is sleeping
   sleepPollMultiplier: 4

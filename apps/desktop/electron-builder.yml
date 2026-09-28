@@ -1,0 +1,31 @@
+appId: com.teslasync.app
+productName: TeslaSync
+copyright: Copyright © TeslaSync contributors
+files:
+  - main.js
+  - assets.js
+  - titlebar.js
+  - preload.js
+  - package.json
+extraResources:
+  - from: ../../web/dist
+    to: web/dist
+directories:
+  output: release
+win:
+  icon: assets/icon.ico
+  target:
+    - nsis
+  protocols:
+    - name: TeslaSync
+      schemes:
+        - teslasync
+appx:
+  identityName: TeslaSync.TeslaSync
+  publisher: CN=TeslaSync
+  publisherDisplayName: TeslaSync
+  backgroundColor: '#0b0d12'
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: TeslaSync

@@ -1,0 +1,23 @@
+{
+  "name": "teslasync-mobile",
+  "version": "2.0.0",
+  "private": true,
+  "description": "TeslaSync generic native app shell (iOS + Android) via Capacitor. Wraps the web UI build; users pick their own server at first launch.",
+  "scripts": {
+    "sync": "cap sync",
+    "open:android": "cap open android",
+    "open:ios": "cap open ios",
+    "build:web": "npm --prefix ../../web run build"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.6.9"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0",
+    "typescript": "^7.0.2"
+  }
+}

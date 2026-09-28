@@ -1,4 +1,5 @@
 import { apiUrl, request, ApiError } from './client'
+import { authHeaders } from '../lib/serverConnection'
 import type {
   CaptureStats,
   TelemetryStatus,
@@ -222,6 +223,7 @@ export const submitImportJob = async (
   // raw-fetch pattern in useUploadVehiclePhoto so the browser owns Content-Type.
   const res = await fetch(apiUrl('/export/jobs/import'), {
     method: 'POST',
+    headers: authHeaders(),
     body: formData,
   })
   if (!res.ok) {

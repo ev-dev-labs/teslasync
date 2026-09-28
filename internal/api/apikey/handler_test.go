@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
@@ -364,8 +365,8 @@ func TestList_ReturnsRows(t *testing.T) {
 	created2 := time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
 
 	rows := newFakeRows([][]any{
-		{int64(1), "prod", "ts_abc1234...", "admin", ptrTime(last), created1, ptrTime(expires)},
-		{int64(2), "ci", "ts_def5678...", "read", (*time.Time)(nil), created2, (*time.Time)(nil)},
+		{int64(1), "prod", "ts_abc1234...", "admin", "alice@example.com", ptrTime(last), created1, ptrTime(expires)},
+		{int64(2), "ci", "ts_def5678...", "read", "", (*time.Time)(nil), created2, (*time.Time)(nil)},
 	})
 	fq := &fakeQuerier{queryRows: rows}
 	h := newHandler(fq, "X-Forwarded-User")
@@ -402,6 +403,12 @@ func TestList_ReturnsRows(t *testing.T) {
 	}
 	if got[0].ID != 1 || got[0].Name != "prod" || got[0].Permissions != "admin" || got[0].KeyPrefix != "ts_abc1234..." {
 		t.Fatalf("row0 mismatch: %+v", got[0])
+	}
+	if got[0].Subject != "alice@example.com" {
+		t.Fatalf("row0 subject = %q, want alice@example.com", got[0].Subject)
+	}
+	if got[1].Subject != "" {
+		t.Fatalf("row1 subject = %q, want empty (device-scoped)", got[1].Subject)
 	}
 	if got[0].LastUsedAt == nil || !got[0].LastUsedAt.Equal(last) {
 		t.Fatalf("row0 last_used_at = %v, want %v", got[0].LastUsedAt, last)
@@ -460,8 +467,8 @@ func TestList_EmptyAndDegraded(t *testing.T) {
 func TestList_SkipsUnscannableRow(t *testing.T) {
 	created := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	rows := newFakeRows([][]any{
-		{int64(1), "bad", "ts_bad...", "read", (*time.Time)(nil), created, (*time.Time)(nil)},
-		{int64(2), "good", "ts_good...", "read", (*time.Time)(nil), created, (*time.Time)(nil)},
+		{int64(1), "bad", "ts_bad...", "read", "", (*time.Time)(nil), created, (*time.Time)(nil)},
+		{int64(2), "good", "ts_good...", "read", "", (*time.Time)(nil), created, (*time.Time)(nil)},
 	})
 	rows.scanErrAt = 0 // first row fails Scan and must be skipped
 	h := newHandler(&fakeQuerier{queryRows: rows}, "H")
@@ -484,7 +491,7 @@ func TestList_SkipsUnscannableRow(t *testing.T) {
 func TestList_RowsErrDoesNotDropCollected(t *testing.T) {
 	created := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	rows := newFakeRows([][]any{
-		{int64(5), "k", "ts_k...", "read", (*time.Time)(nil), created, (*time.Time)(nil)},
+		{int64(5), "k", "ts_k...", "read", "", (*time.Time)(nil), created, (*time.Time)(nil)},
 	})
 	rows.iterErr = errors.New("connection reset mid-iteration")
 	h := newHandler(&fakeQuerier{queryRows: rows}, "H")
@@ -607,8 +614,8 @@ func TestCreate_Success(t *testing.T) {
 			if !strings.Contains(call.sql, "INSERT INTO api_keys") || !strings.Contains(call.sql, "RETURNING id") {
 				t.Fatalf("unexpected INSERT SQL: %s", call.sql)
 			}
-			if len(call.args) != 4 {
-				t.Fatalf("insert args = %d, want 4", len(call.args))
+			if len(call.args) != 5 {
+				t.Fatalf("insert args = %d, want 5", len(call.args))
 			}
 			if call.args[0] != "prod" {
 				t.Fatalf("arg0 (name) = %v, want prod", call.args[0])
@@ -621,6 +628,9 @@ func TestCreate_Success(t *testing.T) {
 			}
 			if call.args[3] != tt.wantPerm {
 				t.Fatalf("arg3 (permissions) = %v, want %s", call.args[3], tt.wantPerm)
+			}
+			if subjectArg, ok := call.args[4].(*string); !ok || subjectArg != nil {
+				t.Fatalf("arg4 (subject) = %#v, want nil for a device key", call.args[4])
 			}
 
 			// Audit fired exactly once with the created id.
@@ -869,3 +879,101 @@ func TestRevoke(t *testing.T) {
 
 // Compile-time assurance the seam type stays an io.Reader.
 var _ io.Reader = failingReader{}
+
+// ---------------------------------------------------------------------------
+// App-bound keys (app_token)
+// ---------------------------------------------------------------------------
+
+func TestCreate_AppTokenBindsSubject(t *testing.T) {
+	fq := &fakeQuerier{queryRowResult: fakeRow{id: 7}}
+	h := newHandler(fq, "X-Forwarded-User")
+
+	req := httptest.NewRequest(http.MethodPost, "/api-keys", strings.NewReader(`{"name":"phone","permissions":"admin","app_token":true}`))
+	req.Header.Set("X-Forwarded-User", "alice@example.com")
+	rr := httptest.NewRecorder()
+	h.Create(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201; body=%s", rr.Code, rr.Body.String())
+	}
+	m := decodeJSONMap(t, rr.Body.Bytes())
+	if m["subject"] != "alice@example.com" {
+		t.Fatalf("subject = %v, want alice@example.com", m["subject"])
+	}
+	if len(fq.queryRowCalls) != 1 {
+		t.Fatalf("QueryRow calls = %d, want 1", len(fq.queryRowCalls))
+	}
+	args := fq.queryRowCalls[0].args
+	if len(args) != 5 {
+		t.Fatalf("insert args = %d, want 5", len(args))
+	}
+	if args[3] != "admin" {
+		t.Fatalf("permissions = %v, want admin", args[3])
+	}
+	subjectArg, ok := args[4].(*string)
+	if !ok || subjectArg == nil || *subjectArg != "alice@example.com" {
+		t.Fatalf("subject arg = %#v, want alice@example.com", args[4])
+	}
+}
+
+func TestCreate_AppTokenRejectsReadPermission(t *testing.T) {
+	fq := &fakeQuerier{}
+	h := newHandler(fq, "X-Forwarded-User")
+	req := httptest.NewRequest(http.MethodPost, "/api-keys", strings.NewReader(`{"name":"phone","permissions":"read","app_token":true}`))
+	req.Header.Set("X-Forwarded-User", "alice@example.com")
+	rr := httptest.NewRecorder()
+	h.Create(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", rr.Code, rr.Body.String())
+	}
+	if len(fq.queryRowCalls) != 0 {
+		t.Fatal("read-only app token must not be stored")
+	}
+}
+
+func TestCreate_AppTokenOpenModeRefused(t *testing.T) {
+	h := newHandler(&fakeQuerier{}, "")
+
+	rr := httptest.NewRecorder()
+	h.Create(rr, httptest.NewRequest(http.MethodPost, "/api-keys", strings.NewReader(`{"name":"phone","permissions":"admin","app_token":true}`)))
+
+	if rr.Code != http.StatusNotImplemented {
+		t.Fatalf("status = %d, want 501", rr.Code)
+	}
+	if code := decodeJSONMap(t, rr.Body.Bytes())["code"]; code != "AUTH_MODE_OPEN" {
+		t.Fatalf("code = %v, want AUTH_MODE_OPEN", code)
+	}
+}
+
+func TestCreate_AppTokenViaTokenForbidden(t *testing.T) {
+	h := newHandler(&fakeQuerier{}, "X-Forwarded-User")
+
+	req := httptest.NewRequest(http.MethodPost, "/api-keys", strings.NewReader(`{"name":"sibling","permissions":"admin","app_token":true}`))
+	req.Header.Set("X-Forwarded-User", "alice@example.com")
+	req = req.WithContext(tsauth.WithAppTokenSubject(req.Context(), "alice@example.com"))
+	rr := httptest.NewRecorder()
+	h.Create(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", rr.Code)
+	}
+}
+
+func TestCreate_DeviceKeyLeavesSubjectNull(t *testing.T) {
+	fq := &fakeQuerier{queryRowResult: fakeRow{id: 8}}
+	h := newHandler(fq, "X-Forwarded-User")
+
+	rr := httptest.NewRecorder()
+	h.Create(rr, httptest.NewRequest(http.MethodPost, "/api-keys", strings.NewReader(`{"name":"watch"}`)))
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201; body=%s", rr.Code, rr.Body.String())
+	}
+	if _, present := decodeJSONMap(t, rr.Body.Bytes())["subject"]; present {
+		t.Fatal("device key response must omit subject")
+	}
+	args := fq.queryRowCalls[0].args
+	if subjectArg, ok := args[4].(*string); !ok || subjectArg != nil {
+		t.Fatalf("subject arg = %#v, want nil", args[4])
+	}
+}

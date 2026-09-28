@@ -622,7 +622,11 @@
       "readWriteDesc": "Read data and send vehicle commands.",
       "admin": "Admin",
       "adminDesc": "Full administrative access to every resource."
-    }
+    },
+    "appToken": "App sign-in",
+    "appTokenHint": "Signs in as you with full admin access. Treat this key like a password.",
+    "appBadge": "App",
+    "signedInAs": "Signed in as {{subject}}"
   },
   "backup": {
     "title": "Backup & Restore",

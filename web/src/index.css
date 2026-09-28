@@ -240,6 +240,42 @@ body {
   overflow: hidden;
 }
 
+/* Electron's native window controls occupy the first 32px. Keep the React
+   shell below them while matching the caption to the active theme tokens. */
+html[data-teslasync-desktop='true'] body {
+  padding-top: 32px;
+}
+html[data-teslasync-desktop='true'] .teslasync-desktop-titlebar {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 12px;
+  z-index: 100;
+  -webkit-app-region: drag;
+}
+html[data-teslasync-desktop='true'] .teslasync-desktop-titlebar img {
+  width: 17px;
+  height: 17px;
+}
+html[data-teslasync-desktop='true'] .teslasync-desktop-titlebar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: calc(100% - 165px);
+}
+html[data-teslasync-desktop='true'] .h-dvh {
+  height: calc(100dvh - 32px);
+}
+html[data-teslasync-desktop='true'] .min-h-dvh {
+  min-height: calc(100dvh - 32px);
+}
+
 /* Force dark dropdown options in all selects */
 select option {
   background: var(--surface-1);

@@ -120,6 +120,11 @@ const writeText = vi.fn(() => Promise.resolve());
 
 beforeEach(() => {
   mockedRequest.mockReset();
+  mockedRequest.mockImplementation((path: string) =>
+    path === '/system/auth-mode'
+      ? Promise.resolve({ mode: 'open' })
+      : Promise.reject(new Error(`unexpected API request: ${path}`)),
+  );
   writeText.mockClear();
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
@@ -181,6 +186,7 @@ describe('CreateApiKeyModal', () => {
     fireEvent.change(within(dialog).getByLabelText('Name'), {
       target: { value: '  CI Bot  ' },
     });
+
     fireEvent.change(within(dialog).getByLabelText('Permissions'), {
       target: { value: 'admin' },
     });
@@ -202,6 +208,28 @@ describe('CreateApiKeyModal', () => {
     expect(
       screen.getByText("Copy this key now — it won't be shown again."),
     ).toBeInTheDocument();
+  });
+
+  it('requires admin permission for app sign-in keys', async () => {
+    mockedRequest.mockImplementation((path: string) =>
+      Promise.resolve(path === '/system/auth-mode' ? { mode: 'forward_auth' } : createdResponse()),
+    );
+    renderModal();
+    const dialog = screen.getByRole('dialog');
+    const appSignIn = await within(dialog).findByRole('checkbox', { name: 'App sign-in' });
+    fireEvent.click(appSignIn);
+    const select = within(dialog).getByLabelText('Permissions') as HTMLSelectElement;
+    expect(select.value).toBe('admin');
+    expect(select).toBeDisabled();
+    expect(within(dialog).getByText(/full admin access/i)).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Phone' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate Key' }));
+    await waitFor(() =>
+      expect(mockedRequest).toHaveBeenCalledWith(
+        '/api-keys',
+        expect.objectContaining({ body: JSON.stringify({ name: 'Phone', permissions: 'admin', app_token: true }) }),
+      ),
+    );
   });
 
   it('shows a loading state on Generate while the create request is in flight', async () => {
@@ -340,5 +368,36 @@ describe('CreateApiKeyModal', () => {
     expect(within(dialog).getByText('New API Key')).toBeInTheDocument();
     expect(screen.queryByText('API Key Created')).not.toBeInTheDocument();
     expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('');
+  });
+
+  it('offers app sign-in only in forward-auth mode and sends app_token', async () => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/system/auth-mode') return Promise.resolve({ mode: 'forward_auth' });
+      return Promise.resolve(createdResponse());
+    });
+    renderModal();
+
+    const toggle = await screen.findByLabelText('App sign-in');
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Phone' } });
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Key' }));
+    await screen.findByText('API Key Created');
+
+    const post = mockedRequest.mock.calls.find(([path]) => path === '/api-keys');
+    expect(post).toBeDefined();
+    expect(JSON.parse((post?.[1] as { body: string }).body)).toMatchObject({
+      name: 'Phone',
+      app_token: true,
+    });
+  });
+
+  it('hides app sign-in in open mode', async () => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/system/auth-mode') return Promise.resolve({ mode: 'open' });
+      return Promise.resolve(createdResponse());
+    });
+    renderModal();
+    await screen.findByRole('dialog');
+    await waitFor(() => expect(screen.queryByLabelText('App sign-in')).not.toBeInTheDocument());
   });
 });

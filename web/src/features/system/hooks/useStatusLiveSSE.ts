@@ -20,6 +20,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createEventStream } from '@/lib/eventStream'
 
 export type StatusSeverity = 'operational' | 'degraded' | 'down' | 'maintenance'
 
@@ -126,7 +127,7 @@ export function useStatusLiveSSE(opts: UseStatusLiveSSEOptions = {}): UseStatusL
 
     let es: EventSource
     try {
-      es = new EventSource(endpoint, { withCredentials: true })
+      es = createEventStream(endpoint, { withCredentials: true })
     } catch {
       setState('offline')
       return

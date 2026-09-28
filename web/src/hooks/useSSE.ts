@@ -17,6 +17,7 @@ import { useEffect, useRef } from 'react'
 import type { SignalChangeEvent } from '@/api/types'
 import { normalizeSignalKind } from '@/api/hooks/useSignals'
 import { sseManager } from '@/lib/sseManager'
+import { createEventStream } from '@/lib/eventStream'
 
 export interface UseSignalChangeStreamOptions {
   /** Disable the subscription (e.g., behind a feature flag). Defaults to true. */
@@ -130,7 +131,7 @@ export function useSignalChangeStream(
       }
     }
 
-    const source = new EventSource(endpoint)
+    const source = createEventStream(endpoint)
     const onMessage = (ev: MessageEvent<string>) => {
       let parsed: unknown = null
       try {

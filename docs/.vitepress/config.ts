@@ -101,6 +101,8 @@ export default withMermaid(defineConfig({
           { text: 'Connect Tesla', link: '/guide/tesla-fleet-api' },
           { text: 'Enable streaming', link: '/guide/fleet-telemetry' },
           { text: 'Configuration', link: '/guide/configuration' },
+          { text: 'Apps', link: '/apps' },
+          { text: 'Privacy policy', link: '/privacy' },
           { text: 'FAQ', link: '/guide/faq' },
         ],
       },
@@ -191,7 +193,7 @@ export default withMermaid(defineConfig({
     },
 
     footer: {
-      message: 'Self-hosted Tesla intelligence · MIT licensed',
+      message: `Self-hosted Tesla intelligence · MIT licensed · <a href="${base}privacy">Privacy policy</a>`,
       copyright: `Copyright © ${new Date().getFullYear()} TeslaSync contributors`,
     },
 
