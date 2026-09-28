@@ -21,6 +21,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   name: string
   load: () => Promise<unknown>
 }> = [
+  { name: 'ConnectPage', load: () => import('../features/server/ConnectPage') },
   // Dashboard
   { name: 'Dashboard', load: () => import('../features/dashboard/pages/DashboardPage') },
   { name: 'QuickStats', load: () => import('../features/dashboard/pages/QuickStatsPage') },

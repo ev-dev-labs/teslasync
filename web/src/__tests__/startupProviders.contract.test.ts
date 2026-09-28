@@ -69,6 +69,8 @@ const MAIN_GLOBAL_MOUNTS: Record<string, string> = {
 const APP_GLOBAL_MOUNTS: Record<string, string> = {
   DemoModeBanner: 'Self-gating synthetic-data label; must be the topmost element of any screenshot.',
   OnboardingGate: 'First-run gate; must decide before a route renders.',
+  ServerGate: 'Native shells must select a server before loading application routes.',
+  NativeDeepLinks: 'Processes native protocol links for all routes.',
   TaskOnboardingHost: 'Route-scoped onboarding hint host; must observe every navigation.',
   Suspense: 'React loading boundary for the on-demand onboarding hint UI; no subscriptions or feature imports.',
   VitalsConsentPolicyGate: 'Publishes cookie-consent policy into RUM before any beacon is sent.',

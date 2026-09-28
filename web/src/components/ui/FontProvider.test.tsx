@@ -318,7 +318,7 @@ describe('FontProvider — mount + hydration', () => {
     expect(stylesheet.href).toContain('family=JetBrains+Mono')
     await waitFor(() => expect(result.current.initialized).toBe(true))
     // Raw fetch, not the resilient client, drives hydration.
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/settings')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/settings', { headers: new Headers() })
   })
 
   it('merges font_* fields from the backend blob and persists + applies them', async () => {

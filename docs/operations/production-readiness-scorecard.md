@@ -4,9 +4,9 @@
      Source of truth: ops/scorecard/dimensions.yaml
      Regenerate with: go run ./cmd/readiness-scorecard -write -->
 
-Generated: 2026-08-29T13:38:03Z
+Generated: 2026-09-28T23:20:48Z
 
-Commit: `c1b59bbaaa78f7fe9b4470b3bd5bb60f36b0d62d`
+Commit: `36fd988f53d4d16dbfed5a856007145edf05507e`
 
 ## How to read this
 

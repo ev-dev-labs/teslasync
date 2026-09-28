@@ -74,7 +74,6 @@ baseline:
   missing_in_compose:
     - AUTH_ENABLED
     - AUTH_JWT_SECRET
-    - CORS_ORIGINS
     - DATABASE_CONN_MAX_IDLE_TIME
     - DATABASE_CONN_MAX_LIFETIME
     - DATABASE_MIGRATIONS
