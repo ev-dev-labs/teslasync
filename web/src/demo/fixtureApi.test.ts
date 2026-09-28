@@ -36,6 +36,24 @@ describe('static public demo', () => {
     expect(setup.vehicle_count).toBe(2)
   })
 
+  it('serves a consistent synthetic alert, notification, and demo-only runtime status', async () => {
+    const alerts = await request<{ id: number; vehicle_id: number; title: string }[]>('/alerts?vehicle_id=7')
+    const logs = await request<{ alert_id: number; title: string }[]>('/notifications/logs?read=false&archived=false')
+    const unread = await request<{ count: number }>('/notifications/unread-count')
+    const status = await request<{ components: { name: string }[] }>('/status/')
+    const repair = await request<{ total: number; open: number }>('/data-repair/cases/stats')
+    expect(alerts).toHaveLength(1)
+    expect(logs).toMatchObject([{ alert_id: alerts[0].id, title: alerts[0].title }])
+    expect(unread.count).toBe(logs.length)
+    expect(await request('/notifications/logs?count_only=true')).toEqual({ total: logs.length })
+    expect(await request('/notifications/logs?grouped=true')).toMatchObject([{
+      group_key: null, latest: { id: 401 }, count: 1, unread_count: 1,
+    }])
+    expect(status.components.map(component => component.name)).toEqual(['Synthetic fixture viewer'])
+    expect(repair).toMatchObject({ total: 0, open: 0 })
+    expect(demoResponse('/alerts?vehicle_id=999', 'GET').status).toBe(400)
+  })
+
   it('keeps each supported dashboard widget scoped to a fictional vehicle', async () => {
     const climate = await request<{ vehicle_id: number; inside_temp_c: number }>(
       '/climate/latest?vehicle_id=7',
@@ -60,6 +78,43 @@ describe('static public demo', () => {
     expect(battery.prediction.has_enough_data).toBe(true)
     expect(battery.charging_analysis.total_sessions).toBeGreaterThan(0)
     expect(demoResponse('/analytics/battery-health?vehicle_id=99', 'GET').status).toBe(400)
+  })
+
+  it('derives energy from the same fictional drives and charges, including parked drain', async () => {
+    const energy = await request<{
+      total_energy_used_wh: number; total_distance_m: number;
+      avg_efficiency_wh_per_m: number; daily_breakdown: { energy_wh: number }[];
+    }>('/vehicles/7/energy?days=30')
+    const drain = await request<{ event_count: number }>('/vampire-drain/stats?vehicle_id=7')
+    const events = await request<{ events: unknown[] }>('/vampire-drain?vehicle_id=7')
+    expect(energy.total_energy_used_wh).toBeGreaterThan(0)
+    expect(energy.total_energy_used_wh / energy.total_distance_m)
+      .toBeCloseTo(energy.avg_efficiency_wh_per_m)
+    expect(energy.daily_breakdown.reduce((sum, day) => sum + day.energy_wh, 0))
+      .toBe(energy.total_energy_used_wh)
+    expect(drain.event_count).toBe(events.events.length)
+    expect(await request('/charging-telemetry/latest?vehicle_id=7')).toBeNull()
+    expect(demoResponse('/vehicles/999/energy', 'GET').status).toBe(400)
+  })
+
+  it('scopes supporting work orders, chart annotations, and charging optimizer to sample vehicles', async () => {
+    const orders = await request<{ items: { vehicle_id: number }[]; total: number }>(
+      '/fleet-ops/work-orders?vehicle_id=8&limit=10',
+    )
+    const markers = await request<{ scope: string[] }[]>(
+      '/annotations?vehicle_id=7&scope=energy',
+    )
+    const optimizer = await request<{
+      current_schedule: { home_charging_pct: number };
+      cost_analysis: { sessions_during_peak_pct: number };
+    }>('/analytics/charging-optimizer?vehicle_id=7')
+    expect(orders.items).toHaveLength(orders.total)
+    expect(orders.items[0]?.vehicle_id).toBe(8)
+    expect(markers).toHaveLength(1)
+    expect(markers[0].scope).toContain('energy')
+    expect(optimizer.current_schedule.home_charging_pct).toBe(100)
+    expect(optimizer.cost_analysis.sessions_during_peak_pct).toBe(0)
+    expect(demoResponse('/fleet-ops/work-orders?limit=0', 'GET').status).toBe(400)
   })
 
   it('respects instant bounds, inclusive calendar days, and pagination', async () => {

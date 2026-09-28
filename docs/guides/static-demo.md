@@ -22,6 +22,23 @@ Provisioning an Azure Static Web Apps Free resource, attaching
 `demo.teslasync.dev`, and creating its publish workflow require separate
 approval. Do not route `/api/v1` to a production TeslaSync instance. This
 demo does not implement live updates, Tesla login, commands, uploads, downloads,
-fleet work orders, FSD analytics, or server-backed administration; unsupported
+FSD analytics, or server-backed administration; unsupported
 reads display an explicit error rather than fabricated results. The normal
 application keeps those features.
+
+## Screen coverage
+
+A local browser sweep of the 261 concrete `SafeRoute` screens on 2026-09-28
+found 195 screens requesting at least one unsupported synthetic endpoint
+(227 distinct missing read paths). The other 66 had no missing fixture read
+during initial navigation, but that alone does not establish that every
+panel, tab, or interaction has representative data. Three of those routes
+(`api-keys`, `api-logs`, `api-playground`) had no `<main>` content in the
+browser sweep. The current build is a **curated showcase, not a full-product
+synthetic replica**; do not describe every screen as populated.
+
+The most common remaining gaps include physics, signal history and live state,
+FSD analytics, fleet analytics, notification rule/report pages, and
+administrative views. For each additional public screen, provide typed,
+internally consistent fixtures for every required read, verify the complete
+page and its secondary views in a browser, and keep every mutation blocked.

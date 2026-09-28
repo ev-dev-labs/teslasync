@@ -1,5 +1,14 @@
 import type { Vehicle } from '@/types/vehicle'
-import type { BatteryHealthAnalytics } from '@/types/energy'
+import type {
+  BatteryHealthAnalytics, EnergyStats, VampireDrainEvent,
+  VampireDrainStats, VampireDrainWatch,
+} from '@/types/energy'
+import type { Alert, NotificationLog } from '@/api/types'
+import type { RuntimeStatusSnapshot } from '@/types/admin'
+import type { RepairCaseStats } from '@/api/hooks/useRepairCaseStats'
+import type { FleetWorkOrder } from '@/api/hooks/useFleetOps'
+import type { ChartAnnotationRow } from '@/types/annotations'
+import type { ChargingOptimizerData } from '@/types/charging'
 
 const now = new Date()
 const daysAgo = (days: number, hour = 12) => {
@@ -67,6 +76,165 @@ export const charging = Array.from({ length: 6 }, (_, index) => {
     start_place: 'Sample Home Charger', live: false,
   }
 })
+
+export const alerts: Alert[] = [{
+  id: 301,
+  vehicle_id: 7,
+  type: 'charging_complete',
+  severity: 'info',
+  title: 'Sample home charging complete',
+  message: 'Aurora finished a fictional home charging session.',
+  is_read: false,
+  created_at: charging[1].ended_at,
+}]
+
+export const notificationLogs: NotificationLog[] = [{
+  id: 401,
+  channel_id: null,
+  alert_id: alerts[0].id,
+  title: alerts[0].title,
+  message: alerts[0].message,
+  severity: alerts[0].severity,
+  event_type: alerts[0].type,
+  status: 'triggered',
+  error: '',
+  created_at: alerts[0].created_at,
+  sent_at: null,
+  read_at: null,
+  archived_at: null,
+}]
+
+export const workOrders: FleetWorkOrder[] = [{
+  id: 501, vehicle_id: 8, vehicle_display_name: vehicles[1].display_name,
+  cost_center_id: null, cost_center_name: null,
+  title: 'Sample tire rotation', description: 'Fictional scheduled tire inspection.',
+  status: 'scheduled', severity: 'low',
+  due_odometer_m: null, due_at: daysAgo(-14),
+  scheduled_start_at: daysAgo(-14, 10), scheduled_end_at: daysAgo(-14, 11),
+  cost_minor: 7500, currency: 'USD', version: 1,
+  created_at: daysAgo(2), updated_at: daysAgo(2),
+}]
+
+export const annotations: ChartAnnotationRow[] = [{
+  id: 601, vehicle_id: 7, occurred_at: charging[1].ended_at,
+  category: 'milestone', title: 'Sample home charge',
+  description: 'A fictional charge event in the demo history.',
+  scope: ['energy', 'charging'], color: null,
+  created_at: charging[1].ended_at, updated_at: charging[1].ended_at,
+}]
+
+export function chargingOptimizer(vehicleId: number): ChargingOptimizerData {
+  const sessions = charging.filter(row => row.vehicle_id === vehicleId)
+  const cost = sessions.reduce((sum, row) => sum + row.cost_decimal, 0)
+  const energyWh = sessions.reduce((sum, row) => sum + row.total_energy_added_wh, 0)
+  return {
+    current_schedule: {
+      most_common_start_hour: 21,
+      most_common_day: new Date(sessions[0].started_at).toLocaleDateString('en-US', {
+        weekday: 'long', timeZone: 'UTC',
+      }),
+      avg_sessions_per_week: sessions.length / 3,
+      home_charging_pct: 100,
+      avg_charge_to_pct: sessions.reduce((sum, row) => sum + row.end_soc_pct, 0) / sessions.length,
+    },
+    cost_analysis: {
+      peak_hours: [16, 17, 18, 19, 20], offpeak_hours: [21, 22, 23, 0, 1, 2, 3, 4, 5],
+      peak_cost_per_kwh: 0.32,
+      offpeak_cost_per_kwh: energyWh > 0 ? cost / (energyWh / 1000) : 0,
+      sessions_during_peak_pct: 0, potential_monthly_savings: 0,
+    },
+    battery_health_score: batteryHealth(vehicleId).current_soh,
+    recommendations: [{
+      type: 'schedule', priority: 'low', title: 'Sample off-peak schedule',
+      detail: 'Fictional sessions already start after the sample peak window.',
+      estimated_savings: 0,
+    }],
+    weekly_heatmap: sessions.map(row => ({
+      day: new Date(row.started_at).getUTCDay(),
+      hour: new Date(row.started_at).getUTCHours(),
+      sessions: 1,
+      avg_cost_per_kwh: row.cost_decimal / (row.total_energy_added_wh / 1000),
+    })),
+  }
+}
+
+export const repairCaseStats: RepairCaseStats = {
+  total: 0, open: 0, in_review: 0, applied: 0, dismissed: 0,
+  quarantined: 0, restored: 0, resolved: 0, drive: 0, charging: 0,
+  oldest_open_at: null, last_scan_at: null,
+}
+
+export function runtimeStatus(): RuntimeStatusSnapshot {
+  const generatedAt = new Date().toISOString()
+  return {
+    status: 'operational', generated_at: generatedAt,
+    components: [{
+      name: 'Synthetic fixture viewer', status: 'healthy',
+      consecutive_failures: 0, last_check_at: generatedAt,
+    }],
+    counts: {
+      components_total: 1, components_healthy: 1,
+      components_degraded: 0, components_unhealthy: 0,
+    },
+  }
+}
+
+export function energyStats(vehicleId: number, days: number): EnergyStats {
+  const cutoff = Date.now() - days * 86_400_000
+  const vehicleDrives = drives.filter(row => row.vehicle_id === vehicleId && Date.parse(row.start_ts) >= cutoff)
+  const sessions = charging.filter(row => row.vehicle_id === vehicleId && Date.parse(row.started_at) >= cutoff)
+  const dates = new Map<string, { energy_wh: number; cost: number; distance_m: number }>()
+  for (const row of vehicleDrives) {
+    const date = row.start_ts.slice(0, 10)
+    const entry = dates.get(date) ?? { energy_wh: 0, cost: 0, distance_m: 0 }
+    entry.energy_wh += row.energy_used_wh
+    entry.distance_m += row.distance_m
+    dates.set(date, entry)
+  }
+  for (const row of sessions) {
+    const date = row.started_at.slice(0, 10)
+    const entry = dates.get(date) ?? { energy_wh: 0, cost: 0, distance_m: 0 }
+    entry.cost += row.cost_decimal
+    dates.set(date, entry)
+  }
+  const totalEnergyWh = vehicleDrives.reduce((sum, row) => sum + row.energy_used_wh, 0)
+  const totalDistanceM = vehicleDrives.reduce((sum, row) => sum + row.distance_m, 0)
+  return {
+    vehicle_id: vehicleId, period_days: days,
+    total_energy_used_wh: totalEnergyWh,
+    total_energy_charged_wh: sessions.reduce((sum, row) => sum + row.total_energy_added_wh, 0),
+    total_wh: totalEnergyWh,
+    total_cost: sessions.reduce((sum, row) => sum + row.cost_decimal, 0),
+    total_distance_m: totalDistanceM,
+    avg_efficiency_wh_per_m: totalDistanceM ? totalEnergyWh / totalDistanceM : 0,
+    co2_saved_kg: totalEnergyWh / 1000 * 0.4,
+    daily_breakdown: [...dates].sort(([a], [b]) => a.localeCompare(b)).map(([date, row]) => ({
+      date, ...row, efficiency_wh_per_m: row.distance_m ? row.energy_wh / row.distance_m : 0,
+    })),
+  }
+}
+
+export const vampireEvents: VampireDrainEvent[] = [
+  {
+    started_at: daysAgo(4, 20), ended_at: daysAgo(3, 8),
+    duration_hours: 12, start_battery_pct: 73, end_battery_pct: 72,
+    drain_pct: 1, drain_pct_per_day: 2,
+    ambient_temp_c_avg: 17,
+  },
+]
+
+export const vampireStats: VampireDrainStats = {
+  event_count: vampireEvents.length, total_observed_hours: 12,
+  avg_drain_pct_per_day: 2, median_drain_pct_per_day: 2,
+  p95_drain_pct_per_day: 2, sample_window_days: 30,
+}
+
+export const vampireWatch: VampireDrainWatch = {
+  status: 'ok', threshold_pct_per_day: 3, avg_drain_pct_per_day: 2,
+  events_evaluated: vampireEvents.length, breach_streak: 0,
+  breaches_last_7_days: 0, worst_event: vampireEvents[0],
+  recommendation: 'Sample parked-drain rate is below the alert threshold.',
+}
 
 export const settings = {
   unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',

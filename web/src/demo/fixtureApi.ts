@@ -1,6 +1,10 @@
 import { assertDemoModeEnabled } from '@/lib/demoMode'
 import type { ClimateSnapshot, SecurityEvent } from '@/api/types'
-import { batteryHealth, charging, drives, settings, vehicles } from './fixtures'
+import {
+  alerts, annotations, batteryHealth, charging, chargingOptimizer, drives,
+  energyStats, notificationLogs, repairCaseStats, runtimeStatus, settings,
+  vampireEvents, vampireStats, vampireWatch, vehicles, workOrders,
+} from './fixtures'
 
 type FixtureResult = { status: number; body: unknown }
 
@@ -71,6 +75,94 @@ function fixture(path: string): FixtureResult {
     })
   }
   if (pathname === '/settings') return found(settings)
+  if (pathname === '/alerts') {
+    const vehicleId = searchParams.get('vehicle_id')
+    const from = searchParams.get('from')
+    const to = searchParams.get('to')
+    const limit = Number(searchParams.get('limit') ?? 50)
+    const offset = Number(searchParams.get('offset') ?? 0)
+    if ((vehicleId != null && (!/^\d+$/.test(vehicleId) || !vehicles.some(row => row.id === Number(vehicleId))))
+      || (from != null && !Number.isFinite(Date.parse(from)))
+      || (to != null && !Number.isFinite(Date.parse(to)))
+      || (from != null && to != null && Date.parse(from) > Date.parse(to))
+      || !Number.isInteger(limit) || limit < 1 || limit > 1000
+      || !Number.isInteger(offset) || offset < 0) {
+      return { status: 400, body: { error: 'Invalid demo alert filters', code: 'INVALID_FILTER' } }
+    }
+    return found(alerts.filter(alert =>
+      (vehicleId == null || alert.vehicle_id === Number(vehicleId))
+      && (from == null || Date.parse(alert.created_at) >= Date.parse(from))
+      && (to == null || Date.parse(alert.created_at) < Date.parse(to)))
+      .slice(offset, offset + limit))
+  }
+  if (pathname === '/notifications/unread-count') {
+    return found({ count: notificationLogs.filter(log => !log.read_at && !log.archived_at).length })
+  }
+  if (pathname === '/notifications/logs' || pathname === '/notifications') {
+    const limit = Number(searchParams.get('limit') ?? 50)
+    const offset = Number(searchParams.get('offset') ?? 0)
+    const from = searchParams.get('from')
+    const to = searchParams.get('to')
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000 || !Number.isInteger(offset) || offset < 0
+      || (from != null && !Number.isFinite(Date.parse(from)))
+      || (to != null && !Number.isFinite(Date.parse(to)))
+      || (from != null && to != null && Date.parse(from) > Date.parse(to))) {
+      return { status: 400, body: { error: 'Invalid demo notification filters', code: 'INVALID_FILTER' } }
+    }
+    const matching = notificationLogs.filter(log =>
+      (searchParams.get('read') !== 'false' || !log.read_at)
+      && (searchParams.get('read') !== 'true' || !!log.read_at)
+      && (searchParams.get('archived') !== 'false' || !log.archived_at)
+      && (searchParams.get('archived') !== 'true' || !!log.archived_at)
+      && (from == null || Date.parse(log.created_at) >= Date.parse(from))
+      && (to == null || Date.parse(log.created_at) < Date.parse(to)))
+    if (searchParams.get('count_only') === 'true') return found({ total: matching.length })
+    if (searchParams.get('group_key')) return found([])
+    if (searchParams.get('grouped') === 'true') {
+      return found(matching.slice(offset, offset + limit).map(log => ({
+        group_key: null, latest: log, count: 1,
+        unread_count: log.read_at ? 0 : 1, vehicle_ids: [alerts[0].vehicle_id],
+      })))
+    }
+    return found(matching.slice(offset, offset + limit))
+  }
+  if (pathname === '/status/') return found(runtimeStatus())
+  if (pathname === '/data-repair/cases/stats') return found(repairCaseStats)
+  if (pathname === '/fleet-ops/work-orders') {
+    const limit = Number(searchParams.get('limit') ?? 50)
+    const offset = Number(searchParams.get('offset') ?? 0)
+    const vehicleId = searchParams.get('vehicle_id')
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000
+      || !Number.isInteger(offset) || offset < 0
+      || (vehicleId != null && !vehicles.some(row => String(row.id) === vehicleId))) {
+      return { status: 400, body: { error: 'Invalid demo work-order filters', code: 'INVALID_FILTER' } }
+    }
+    const filtered = workOrders.filter(row => vehicleId == null || row.vehicle_id === Number(vehicleId))
+    return found({ items: filtered.slice(offset, offset + limit), total: filtered.length, limit, offset })
+  }
+  if (pathname === '/annotations') {
+    const vehicleId = searchParams.get('vehicle_id')
+    const scope = searchParams.get('scope')
+    const from = searchParams.get('from')
+    const to = searchParams.get('to')
+    if ((vehicleId != null && !vehicles.some(row => String(row.id) === vehicleId))
+      || (from != null && !Number.isFinite(Date.parse(from)))
+      || (to != null && !Number.isFinite(Date.parse(to)))
+      || (from != null && to != null && Date.parse(from) > Date.parse(to))) {
+      return { status: 400, body: { error: 'Invalid demo annotation filters', code: 'INVALID_FILTER' } }
+    }
+    return found(annotations.filter(row =>
+      (vehicleId == null || row.vehicle_id == null || row.vehicle_id === Number(vehicleId))
+      && (scope == null || row.scope.includes(scope))
+      && (from == null || Date.parse(row.occurred_at) >= Date.parse(from))
+      && (to == null || Date.parse(row.occurred_at) < Date.parse(to))))
+  }
+  if (pathname === '/analytics/charging-optimizer') {
+    const vehicleId = Number(searchParams.get('vehicle_id'))
+    return vehicles.some(row => row.id === vehicleId)
+      ? found(chargingOptimizer(vehicleId))
+      : { status: 400, body: { error: 'Invalid demo vehicle ID', code: 'INVALID_FILTER' } }
+  }
   if (pathname === '/climate/latest' || pathname === '/security/latest') {
     const id = searchParams.get('vehicle_id')
     const vehicle = vehicles.find(row => String(row.id) === id)
@@ -146,6 +238,34 @@ function fixture(path: string): FixtureResult {
       avgEfficiency: totalM > 0 ? totalEnergyWh / totalM : 0,
       totalCostCents: Math.round(charging.reduce((sum, row) => sum + row.cost_decimal, 0) * 100),
     })
+  }
+  const energy = pathname.match(/^\/vehicles\/(\d+)\/energy$/)
+  if (energy) {
+    const vehicleId = Number(energy[1])
+    const days = Number(searchParams.get('days') ?? 30)
+    const start = searchParams.get('start')
+    if (!vehicles.some(row => row.id === vehicleId)
+      || !Number.isInteger(days) || days < 1 || days > 3650
+      || (start != null && !Number.isFinite(Date.parse(start)))) {
+      return { status: 400, body: { error: 'Invalid demo energy filters', code: 'INVALID_FILTER' } }
+    }
+    const periodDays = start == null ? days : Math.max(1, Math.ceil((Date.now() - Date.parse(start)) / 86_400_000))
+    return found(energyStats(vehicleId, periodDays))
+  }
+  if (pathname === '/charging-telemetry/latest') {
+    return vehicles.some(row => String(row.id) === searchParams.get('vehicle_id'))
+      ? found(null)
+      : { status: 400, body: { error: 'Invalid demo vehicle ID', code: 'INVALID_FILTER' } }
+  }
+  if (pathname === '/vampire-drain/stats' || pathname === '/vampire-drain'
+    || pathname === '/vampire-drain/watch') {
+    const vehicleId = Number(searchParams.get('vehicle_id'))
+    if (!vehicles.some(row => row.id === vehicleId)) {
+      return { status: 400, body: { error: 'Invalid demo vehicle ID', code: 'INVALID_FILTER' } }
+    }
+    if (pathname === '/vampire-drain/stats') return found(vampireStats)
+    if (pathname === '/vampire-drain/watch') return found(vampireWatch)
+    return found({ vehicle_id: vehicleId, events: vampireEvents })
   }
   if (pathname === '/analytics/battery-health') {
     const vehicleId = Number(searchParams.get('vehicle_id'))
