@@ -469,6 +469,7 @@
     "title": "Install TeslaSync",
     "subtitle": "Add to home screen for native experience",
     "install": "Install",
+    "failed": "The install dialog could not open. In Chrome, open the menu and choose Install app.",
     "dismiss": "Dismiss install prompt"
   },
   "lightbox": {

@@ -264,8 +264,8 @@ export default defineConfig({
         ],
         // Rich install UI on Android / Windows / ChromeOS. Captured from
         // the mocked build via `npm run pwa:assets` — re-run after major
-        // visual changes. `useDynamicAppIcon` merges these into its
-        // runtime manifest instead of stripping them.
+        // visual changes. Keep the manifest at its build-time URL so
+        // Chromium can reliably install it.
         screenshots: [
           {
             src: '/screenshots/screenshot-narrow.jpg',

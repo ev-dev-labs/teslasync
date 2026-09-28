@@ -26,6 +26,13 @@ while the server is unavailable appear locally and remain queued across
 reloads until a successful sync. The desktop rail and secondary panel can
 each collapse to icons; those display preferences remain browser-local.
 
+On Android Chrome, the install banner opens the browser's native install
+dialog. If Chrome rejects that dialog, the banner explains how to use
+Chrome's **Install app** menu instead. On iOS Safari, use **Share → Add to
+Home Screen**; Safari does not offer a programmatic install dialog. The
+Android manifest and launcher icons are served as static files, while the
+browser-tab and Apple touch icons can reflect the selected theme.
+
 | Sidebar group | Screens | Catalogue page |
 | ------------- | ------: | -------------- |
 | Home | 7 | [catalogue-home.md](./catalogue-home.md) |

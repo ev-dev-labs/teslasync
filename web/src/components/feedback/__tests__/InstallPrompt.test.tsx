@@ -173,7 +173,8 @@ describe('InstallPrompt', () => {
     })
   })
 
-  it('retires the banner when prompt() rejects instead of leaving it stuck', async () => {
+  it('shows actionable feedback when prompt() rejects instead of silently disappearing', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const event = makeInstallEvent('accepted', () => Promise.reject(new Error('already used')))
     render(<InstallPrompt />)
     fireInstallEvent(event)
@@ -181,9 +182,12 @@ describe('InstallPrompt', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Install' }))
 
     await waitFor(() => {
-      expect(screen.queryByTestId('install-prompt')).not.toBeInTheDocument()
+      expect(screen.getByRole('alert')).toHaveTextContent('In Chrome, open the menu and choose Install app.')
     })
+    expect(screen.getByRole('alert').parentElement).toHaveClass('flex-1')
     expect(event.prompt).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument()
+    expect(log).toHaveBeenCalledOnce()
   })
 
   it('persists a snooze and broadcasts to peer tabs on manual dismiss', () => {
