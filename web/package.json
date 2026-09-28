@@ -154,7 +154,7 @@
     "@typescript-eslint/eslint-plugin": "^8.66.0",
     "@typescript-eslint/parser": "^8.66.0",
     "@vitejs/plugin-react": "^4.7.0",
-    "@vitest/coverage-v8": "^5.0.1",
+    "@vitest/coverage-v8": "^4.1.11",
     "autoprefixer": "^10.4.18",
     "culori": "^4.0.2",
     "eslint": "^8.57.0",
@@ -163,7 +163,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "js-yaml": "^5.4.2",
+    "js-yaml": "^4.3.2",
     "jsdom": "^30.0.1",
     "postcss": "^8.5.23",
     "sharp": "^0.35.4",
@@ -171,7 +171,7 @@
     "typescript": "^5.4.2",
     "vite": "^6.4.3",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^5.0.1"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "import-in-the-middle": "3.4.0",
