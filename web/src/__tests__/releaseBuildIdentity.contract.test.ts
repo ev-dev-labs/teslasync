@@ -425,7 +425,7 @@ describe('release gate tooling dependencies are declared', () => {
       join(webRoot, 'scripts', 'check-release-build-identity.mjs'),
       'utf8',
     )
-    expect(gate).toMatch(/^import yaml from 'js-yaml'$/m)
+    expect(gate).toMatch(/^import \{ load \} from 'js-yaml'$/m)
 
     const lock = JSON.parse(readFileSync(join(webRoot, 'package-lock.json'), 'utf8')) as {
       packages: Record<string, { devDependencies?: Record<string, string> }>

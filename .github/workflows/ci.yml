@@ -41,7 +41,7 @@ jobs:
     # feature mirror, the SLO rules/dashboards).
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: "26"
@@ -73,7 +73,7 @@ jobs:
       matrix:
         check: [lint, architecture]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -120,7 +120,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -140,7 +140,7 @@ jobs:
           go test -race -coverprofile=shard/coverage.out -covermode=atomic -json "${packages[@]}" | tee shard/test-events.json
       - name: Upload raw shard evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: backend-test-${{ matrix.shard }}
           path: shard/
@@ -155,7 +155,7 @@ jobs:
     env:
       CGO_ENABLED: 1
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -182,7 +182,7 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: backend-coverage
           if-no-files-found: error
@@ -217,7 +217,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -267,7 +267,7 @@ jobs:
       matrix:
         binary: [teslasync, notification-worker, export-worker]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -299,7 +299,7 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: "26"
@@ -337,7 +337,7 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: "26"
@@ -353,7 +353,7 @@ jobs:
             --reporter=default --reporter=blob
       - name: Upload raw shard evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: frontend-test-${{ matrix.shard }}
           path: web/.vitest-reports/
@@ -370,7 +370,7 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -405,7 +405,7 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: frontend-coverage
           path: web/coverage/
@@ -447,7 +447,7 @@ jobs:
           - image: web
             file: Dockerfile.web
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
 
       - name: Build ${{ matrix.image }}

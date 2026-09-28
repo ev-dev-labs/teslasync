@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen, RefreshCw, Boxes, ArrowDownToLine, ArrowUpToLine, Tags, History, Timer,
 } from 'lucide-react';
-import yaml from 'js-yaml';
+import { load } from 'js-yaml';
 import { cn } from '@/lib/cn';
 import { type NeonColor } from '@/lib/tokens';
 import { PageContainer } from '@/components/layout';
@@ -286,7 +286,7 @@ export default function ApiPlaygroundPage() {
         credentials: 'same-origin',
         headers: { Accept: 'text/yaml' },
       });
-      const spec = yaml.load(text) as OpenAPISpec;
+      const spec = load(text) as OpenAPISpec;
       return parseSpec(spec);
     },
     staleTime: Infinity,

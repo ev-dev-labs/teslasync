@@ -307,8 +307,11 @@ export function RangePicker({
                     selected={staged}
                     onSelect={setStaged}
                     numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
-                    fromDate={minDateObj}
-                    toDate={maxDateObj}
+                    startMonth={minDateObj}
+                    endMonth={maxDateObj}
+                    disabled={minDateObj
+                      ? [{ before: minDateObj }, { after: maxDateObj }]
+                      : { after: maxDateObj }}
                     showOutsideDays={false}
                     className="rdp-tesla"
                     weekStartsOn={(i18n.language?.startsWith('en') ? 0 : 1) as 0 | 1}

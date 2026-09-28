@@ -53,7 +53,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import yaml from 'js-yaml'
+import { load } from 'js-yaml'
 import { releaseIdentityProblems, resolveBuildIdentity } from './buildIdentity.mjs'
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
@@ -130,7 +130,7 @@ export function auditReleaseSources({ dockerfile, workflow, compose }) {
   // ── release.yml ───────────────────────────────────────────────────────────
   let doc
   try {
-    doc = yaml.load(workflow)
+    doc = load(workflow)
   } catch (error) {
     problems.push(`release.yml is not parseable YAML: ${error.message}`)
     return problems
