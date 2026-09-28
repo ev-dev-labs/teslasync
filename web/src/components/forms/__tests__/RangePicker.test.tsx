@@ -110,6 +110,27 @@ describe('<RangePicker /> preset behavior — auto-apply, no Apply needed', () =
 });
 
 describe('<RangePicker /> Apply button', () => {
+  it('keeps dates outside the configured bounds unselectable', async () => {
+    render(
+      <RangePicker
+        {...baseProps}
+        onChange={vi.fn()}
+        minDate="2025-01-03"
+        maxDate="2025-01-07"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /date range/i }));
+    expect(
+      await screen.findByRole(
+        'button',
+        { name: /Thursday, January 2nd, 2025/i },
+        { timeout: 20_000 },
+      ),
+    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Saturday, January 4th, 2025/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Wednesday, January 8th, 2025/i })).toBeDisabled();
+  });
+
   it('Apply is disabled when staged range matches the current value', () => {
     render(<RangePicker {...baseProps} onChange={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /date range/i }));

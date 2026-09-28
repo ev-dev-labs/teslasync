@@ -1818,35 +1818,32 @@ figure[data-print-card]:fullscreen p {
 /* react-day-picker theming for the RangePicker popover.
    Keeps the calendar consistent with the dark glass surface tokens. */
 .rdp-tesla {
-  --rdp-cell-size: 36px;
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-width: 34px;
   --rdp-accent-color: var(--accent, #2563eb);
-  --rdp-background-color: rgba(255, 255, 255, 0.06);
-  --rdp-accent-color-dark: var(--accent, #2563eb);
-  --rdp-background-color-dark: rgba(255, 255, 255, 0.08);
-  --rdp-outline: 2px solid var(--accent, #2563eb);
-  --rdp-outline-selected: 2px solid var(--accent, #2563eb);
+  --rdp-accent-background-color: rgba(37, 99, 235, 0.18);
   margin: 0;
   color: var(--text-primary);
 }
-.rdp-tesla .rdp-day_today:not(.rdp-day_selected) {
+.rdp-tesla .rdp-today:not(.rdp-selected) {
   font-weight: 700;
   color: var(--accent, #2563eb);
 }
-.rdp-tesla .rdp-day_selected,
-.rdp-tesla .rdp-day_selected:focus-visible,
-.rdp-tesla .rdp-day_selected:hover {
+.rdp-tesla .rdp-selected .rdp-day_button {
   background-color: var(--accent, #2563eb);
   color: white;
 }
-.rdp-tesla .rdp-day_range_middle {
-  background-color: rgba(37, 99, 235, 0.18);
+.rdp-tesla .rdp-range_middle .rdp-day_button {
+  background-color: var(--rdp-accent-background-color);
   color: var(--text-primary);
 }
-.rdp-tesla .rdp-button:focus-visible {
+.rdp-tesla .rdp-day_button:focus-visible {
   outline: 2px solid var(--accent, #2563eb);
   outline-offset: 2px;
 }
-.rdp-tesla .rdp-head_cell {
+.rdp-tesla .rdp-weekday {
   color: var(--text-muted);
   font-weight: 500;
 }
@@ -1854,10 +1851,12 @@ figure[data-print-card]:fullscreen p {
   color: var(--text-primary);
   font-weight: 600;
 }
-.rdp-tesla .rdp-nav_button {
+.rdp-tesla .rdp-button_previous,
+.rdp-tesla .rdp-button_next {
   color: var(--text-secondary);
 }
-.rdp-tesla .rdp-nav_button:hover {
+.rdp-tesla .rdp-button_previous:hover,
+.rdp-tesla .rdp-button_next:hover {
   background-color: rgba(255, 255, 255, 0.06);
 }
 
