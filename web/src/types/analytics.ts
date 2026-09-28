@@ -172,16 +172,35 @@ export interface TcoLedgerCreate {
 }
 
 export interface TimelineEvent {
-  id: string;
-  state: string;
-  startDate: string;
-  durationMin: number;
+  ts: string;
+  from_state: string | null;
+  to_state: string;
+  trigger_field: string | null;
+  trigger_value: string | null;
 }
 
 export interface StateSummary {
   state: string;
-  totalMin: number;
-  count: number;
+  total_seconds: number;
+  percentage: number;
+  transition_count: number;
+}
+
+export interface StateTimelineResponse {
+  vehicle_id: number;
+  days: number;
+  start: string;
+  end: string;
+  transitions: TimelineEvent[];
+}
+
+export interface StateSummaryResponse {
+  vehicle_id: number;
+  days: number;
+  start: string;
+  end: string;
+  total_seconds: number;
+  by_state: StateSummary[];
 }
 
 export interface WeeklyDigestData {

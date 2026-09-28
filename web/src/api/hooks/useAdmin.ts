@@ -6,10 +6,11 @@ import { INTERVALS } from '@/lib/constants';
 import type {
   APIKey, APICallLog, APICallLogStats, BackupConfig, BackupRun,
   SystemHealth, AuditLogEntry, SecurityEvent, DBStats, MigrationStatus,
-  ConnectionPool, ExportJob, VehicleState, StateTransition,
+  ConnectionPool, ExportJob, VehicleState,
   WebErrorsSummary, MaintenanceState, MaintenanceUpdateInput,
   RuntimeStatusSnapshot,
 } from '@/types/admin';
+import { assertStateTimelineResponse } from './_vehicleStateResponse';
 import type { ExtendedHealthResponse } from '@/api/types';
 
 export const adminKeys = {
@@ -309,25 +310,15 @@ export function useVehicleStateMachine(vehicleId: string) {
   });
 }
 
-/**
- * @deprecated Phase-42 / Prompt 0077 removed the `/vehicle-states/timeline`
- * route alongside the `vehicle_states` table drop. The endpoint now returns
- * 404. This hook is retained because the out-of-scope dashboard widget
- * `features/dashboard/widgets/DashboardStatsWidget.tsx` still imports it;
- * useQuery surfaces the 404 gracefully via `error` per ADR-005 #1. A
- * future replacement should derive state-duration timelines from the
- * canonical `fsm_transitions` table instead. Locked-policy continuation
- * from Phase-43 prompts 0023 + 0024 + 0025 + 0026 + 0027 + 0029 + 0030 +
- * 0031 + 0032.
- */
+/** Vehicle FSM transition timeline; the restored endpoint reads fsm_transitions. */
 export function useStateTimeline(vehicleId: string, days = 7) {
   return useQuery({
     queryKey: [...adminKeys.stateTimeline(vehicleId), days],
     queryFn: ({ signal }) =>
-      request<{ transitions: StateTransition[] }>(
+      request<unknown>(
         `/vehicle-states/timeline?vehicle_id=${encodeURIComponent(vehicleId)}&days=${days}`,
         { signal },
-      ),
+      ).then(assertStateTimelineResponse),
     enabled: !!vehicleId,
     refetchInterval: INTERVALS.FAST,
   });

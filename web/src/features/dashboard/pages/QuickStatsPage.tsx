@@ -184,7 +184,7 @@ export default function QuickStatsPage() {
               />
               <MetricCard
                 label={t('quickStats.co2Saved', 'CO₂ Saved')}
-                value={`${fmtNumber(analytics.co2SavedKg ?? 0)} kg`}
+                value={analytics.co2SavedKg == null ? '—' : `${fmtNumber(analytics.co2SavedKg)} kg`}
                 icon={<Leaf className="h-4 w-4" />}
                 color="green"
               />

@@ -25,7 +25,7 @@
  *   - Loading / error / empty branches for the period-stats query.
  *   - Battery, mileage, state-distribution and fleet-comparison each: loaded +
  *     empty (+ error where the source surfaces one).
- *   - `total_min` snake_case fallback for the deleted state-summary endpoint.
+ *   - SI-second state-summary envelope and a visible chart/error/empty state.
  *   - Bug-fix regression guard: the fleet comparison is scoped by BOTH the URL
  *     `from` AND `to` dates (previously the end date was silently dropped).
  *   - Request contract: snake_case `vehicle_id`, no `/api/v1` double-prefix.
@@ -235,11 +235,15 @@ function makeMileage(over: Record<string, unknown> = {}) {
 }
 
 function makeStateSummary() {
-  return [
-    { state: 'driving', totalMin: 120, count: 10 },
-    { state: 'parked', totalMin: 300, count: 5 },
-    { state: 'charging', totalMin: 60, count: 3 },
-  ];
+  return {
+    vehicle_id: 1, days: 7, start: '2024-01-01T00:00:00Z',
+    end: '2024-01-08T00:00:00Z', total_seconds: 28_800,
+    by_state: [
+      { state: 'driving', total_seconds: 7_200, percentage: 25, transition_count: 10 },
+      { state: 'parked', total_seconds: 18_000, percentage: 62.5, transition_count: 5 },
+      { state: 'charging', total_seconds: 3_600, percentage: 12.5, transition_count: 3 },
+    ],
+  };
 }
 
 /** Partial FleetAnalytics — the page only reads `vehicle_comparison`. */
@@ -456,16 +460,20 @@ describe('StatisticsPage', () => {
       screen.getByRole('img', { name: 'Vehicle state distribution pie chart' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
+    expect(mockStateSummary).toHaveBeenCalledWith('1', expect.objectContaining({
+      start: expect.any(String), end: expect.any(String),
+    }));
   });
 
-  it('reads the snake_case total_min fallback for state summary rows', async () => {
+  it('reads per-state seconds and percentages from the current summary envelope', async () => {
     mockStateSummary.mockReturnValue(
-      qr({ data: [{ state: 'driving', total_min: 90, count: 4 }] }),
+      qr({ data: { ...makeStateSummary(), total_seconds: 5_400, by_state: [
+        { state: 'driving', total_seconds: 5_400, percentage: 100, transition_count: 4 },
+      ] } }),
     );
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
-    // total_min is read via fallback → the chart branch renders (no empty state).
     expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Vehicle state distribution pie chart' }),
@@ -473,11 +481,19 @@ describe('StatisticsPage', () => {
   });
 
   it('shows the state-distribution empty state when there are no rows', async () => {
-    mockStateSummary.mockReturnValue(qr({ data: [] }));
+    mockStateSummary.mockReturnValue(qr({ data: { ...makeStateSummary(), by_state: [] } }));
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(screen.getByText('No state distribution data')).toBeInTheDocument();
+  });
+
+  it('keeps the state-distribution panel visible on a summary request error', async () => {
+    mockStateSummary.mockReturnValue(qr({ error: new Error('summary unavailable') }));
+    renderPage();
+    await screen.findByRole('region', { name: 'Statistics' });
+    expect(screen.getByRole('heading', { name: 'State Distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 
   it('renders the vehicle-comparison chart with 2+ vehicles', async () => {

@@ -7,7 +7,8 @@ import { STALE_TIMES } from '@/lib/constants';
 import { browserTimezone } from '@/lib/timezone';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
-import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
+import type { AnalyticsSummary, MileageStats, CostBreakdown, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
+import { assertStateSummaryResponse, assertStateTimelineResponse } from './_vehicleStateResponse';
 import { FSD_DEFAULT_PERIOD_DAYS, type FsdInsights } from '@/types/fsd';
 import type { FleetAnalytics } from '@/api/types';
 
@@ -19,8 +20,9 @@ export const analyticsKeys = {
   monthlyMileage: (vehicleId: string) => ['analytics', 'monthly-mileage', vehicleId] as const,
   dailyMileage: (vehicleId: string, days: number) => ['analytics', 'daily-mileage', vehicleId, days] as const,
   cost: (vehicleId: string) => ['analytics', 'cost', vehicleId] as const,
-  timeline: (vehicleId: string) => ['analytics', 'timeline', vehicleId] as const,
-  stateSummary: (vehicleId: string) => ['analytics', 'state-summary', vehicleId] as const,
+  timeline: (vehicleId: string, days?: number) => ['analytics', 'timeline', vehicleId, days] as const,
+  stateSummary: (vehicleId: string, start?: string, end?: string) =>
+    ['analytics', 'state-summary', vehicleId, start, end] as const,
   weeklyDigest: (vehicleId: string) => ['analytics', 'weekly-digest', vehicleId] as const,
   lifetime: (vehicleId?: string) => ['analytics', 'lifetime', vehicleId] as const,
   batteryCells: (vehicleId: string) => ['analytics', 'battery-cells', vehicleId] as const,
@@ -160,30 +162,32 @@ export function useDeleteTcoLedgerEntry() {
   });
 }
 
-/**
- * @deprecated Phase-42 / Prompt 0077 removed `/vehicle-states/timeline`
- * along with the `vehicle_states` snapshot table. State transitions are
- * now derived from `signal_log` directly via the FSM endpoints
- * (`/fsm/transitions`). Hook retained so `TimelinePage.tsx` and
- * `StateTimelineWidget.tsx` continue to type-check; the UI surfaces the
- * empty state via the query's `error` channel.
- */
-export function useTimeline(vehicleId: string) {
+/** Vehicle FSM transitions, sourced from fsm_transitions in the selected window. */
+export function useTimeline(vehicleId: string, days?: number) {
+  const window = days == null ? '' : `&days=${days}`;
   return useQuery({
-    queryKey: analyticsKeys.timeline(vehicleId),
-    queryFn: ({ signal }) => request<{ transitions: TimelineEvent[] }>(`/vehicle-states/timeline?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
+    queryKey: analyticsKeys.timeline(vehicleId, days),
+    queryFn: ({ signal }) =>
+      request<unknown>(`/vehicle-states/timeline?vehicle_id=${encodeURIComponent(vehicleId)}${window}`, { signal })
+        .then(assertStateTimelineResponse),
     enabled: !!vehicleId,
-    select: (data) => safeArray(data?.transitions),
   });
 }
 
-/** @deprecated See `useTimeline` — `/vehicle-states/summary` was removed by Phase-42 / Prompt 0077. */
-export function useStateSummary(vehicleId: string) {
+/** Raw SI-second dwell totals and per-state percentages for vehicle FSM transitions. */
+export function useStateSummary(
+  vehicleId: string,
+  range?: { start?: string; end?: string },
+) {
+  const params = new URLSearchParams({ vehicle_id: vehicleId });
+  if (range?.start) params.set('start', range.start);
+  if (range?.end) params.set('end', range.end);
   return useQuery({
-    queryKey: analyticsKeys.stateSummary(vehicleId),
-    queryFn: ({ signal }) => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
+    queryKey: analyticsKeys.stateSummary(vehicleId, range?.start, range?.end),
+    queryFn: ({ signal }) =>
+      request<unknown>(`/vehicle-states/summary?${params}`, { signal })
+        .then(assertStateSummaryResponse),
     enabled: !!vehicleId,
-    select: safeArray,
   });
 }
 

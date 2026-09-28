@@ -122,16 +122,18 @@ function assertCostBreakdownShape(c: CostBreakdown): void {
 }
 
 function assertTimelineEventShape(e: TimelineEvent): void {
-  expect(typeof e.id).toBe('string');
-  expect(typeof e.state).toBe('string');
-  expect(typeof e.startDate).toBe('string');
-  expect(typeof e.durationMin).toBe('number');
+  expect(typeof e.ts).toBe('string');
+  expect(e.from_state === null || typeof e.from_state === 'string').toBe(true);
+  expect(typeof e.to_state).toBe('string');
+  expect(e.trigger_field === null || typeof e.trigger_field === 'string').toBe(true);
+  expect(e.trigger_value === null || typeof e.trigger_value === 'string').toBe(true);
 }
 
 function assertStateSummaryShape(s: StateSummary): void {
   expect(typeof s.state).toBe('string');
-  expect(typeof s.totalMin).toBe('number');
-  expect(typeof s.count).toBe('number');
+  expect(typeof s.total_seconds).toBe('number');
+  expect(typeof s.percentage).toBe('number');
+  expect(typeof s.transition_count).toBe('number');
 }
 
 function assertWeeklyDigestShape(w: WeeklyDigestData): void {
@@ -258,15 +260,18 @@ describe('analytics type contracts — interface shape guards (frontend fixtures
     expect(summary.co2SavedKg ?? 0).toBe(0);
   });
 
-  it('TimelineEvent + StateSummary conform (deprecated vehicle-states shapes)', () => {
+  it('TimelineEvent + StateSummary conform to the vehicle FSM wire shapes', () => {
     const event: TimelineEvent = {
-      id: 'evt-1', state: 'driving', startDate: '2024-05-01T12:00:00Z', durationMin: 45,
+      ts: '2024-05-01T12:00:00Z', from_state: null, to_state: 'driving',
+      trigger_field: 'Gear', trigger_value: 'D',
     };
-    const summary: StateSummary = { state: 'asleep', totalMin: 620, count: 3 };
+    const summary: StateSummary = {
+      state: 'asleep', total_seconds: 37_200, percentage: 75, transition_count: 3,
+    };
     assertTimelineEventShape(event);
     assertStateSummaryShape(summary);
-    expect(event.durationMin).toBe(45);
-    expect(summary.count).toBe(3);
+    expect(event.to_state).toBe('driving');
+    expect(summary.total_seconds / 60).toBe(620);
   });
 
   it('MonthlyCostEntry conforms in isolation', () => {

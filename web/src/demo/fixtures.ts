@@ -33,6 +33,8 @@ export const vehicles: Vehicle[] = [
   },
 ]
 
+export const currentOdometerM = 32_100_000
+
 export const drives = Array.from({ length: 14 }, (_, index) => {
   const start = daysAgo(index + 1, 8 + index % 5)
   const distance = 12_000 + (index % 5) * 4_200
@@ -47,30 +49,45 @@ export const drives = Array.from({ length: 14 }, (_, index) => {
     start_address: 'Sample North Campus',
     end_address: 'Sample City Center',
     start_lat: 37.4, start_lon: -122.1,
-    end_lat: 37.5, end_lon: -122.2,
-    start_soc_pct: 78, end_soc_pct: 68,
+    end_lat: 37.45, end_lon: -122.15,
+    start_soc_pct: 78, end_soc_pct: Number((78 - energy / 780).toFixed(1)),
     energy_used_wh: energy, regen_energy_wh: Math.round(energy * 0.12),
-    avg_speed_mps: 14.5, max_speed_mps: 25,
-    avg_power_w: 8_900, outside_temp_avg_c: 20,
+    avg_speed_mps: distance / 1_800, max_speed_mps: 25,
+    avg_power_w: energy * 2, outside_temp_avg_c: 20,
     inside_temp_avg_c: 21, score: 85 + index % 10,
     ended_status: 'completed', created_at: start, updated_at: start,
+  }
+}).map((row, index, rows) => {
+  const newerDistance = rows.slice(0, index)
+    .filter(other => other.vehicle_id === row.vehicle_id)
+    .reduce((sum, other) => sum + other.distance_m, 0)
+  const endOdometer = currentOdometerM - newerDistance
+  return {
+    ...row, start_odometer_m: endOdometer - row.distance_m,
+    end_odometer_m: endOdometer,
   }
 })
 
 export const charging = Array.from({ length: 6 }, (_, index) => {
   const started = daysAgo(index * 3 + 1, 21)
+  const energyAddedWh = 39_000 + index * 1_100
+  const vehicleId = index % 3 === 0 ? 8 : 7
+  const newerDistance = drives.filter(row =>
+    row.vehicle_id === vehicleId && Date.parse(row.start_ts) > Date.parse(started))
+    .reduce((sum, row) => sum + row.distance_m, 0)
+  const odometer = currentOdometerM - newerDistance
   return {
     id: 201 + index,
-    vehicle_id: index % 3 === 0 ? 8 : 7,
+    vehicle_id: vehicleId,
     started_at: started,
     start_ts: started,
-    ended_at: new Date(Date.parse(started) + 10_800_000).toISOString(),
+    ended_at: new Date(Date.parse(started) + 14_400_000).toISOString(),
     start_soc_pct: 26 + index % 5, end_soc_pct: 80,
     delta_soc_pct: 54 - index % 5,
-    start_odometer_m: 32_100_000 + index * 60_000,
-    end_odometer_m: 32_100_000 + index * 60_000,
-    total_energy_added_wh: 39_000 + index * 1_100,
-    peak_power_w: 11_200, avg_power_w: 9_800,
+    start_odometer_m: odometer,
+    end_odometer_m: odometer,
+    total_energy_added_wh: energyAddedWh,
+    peak_power_w: 11_200, avg_power_w: energyAddedWh / 4,
     cost_decimal: Number((6.5 + index * 0.5).toFixed(2)),
     cost_currency: 'USD', charger_type: 'AC', cable_type: 'Type 2',
     start_place: 'Sample Home Charger', live: false,

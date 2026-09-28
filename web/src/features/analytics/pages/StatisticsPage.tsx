@@ -83,7 +83,9 @@ export default function StatisticsPage() {
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 
-  const { start: startDate, end: endDate } = useRangeState({
+  const {
+    start: startDate, end: endDate, startInstant, endInstantExclusive,
+  } = useRangeState({
     persistKey: 'statistics.range',
     defaultPresetId: '1y',
   });
@@ -106,7 +108,9 @@ export default function StatisticsPage() {
   const { data: batteryHealth, isLoading: batteryLoading, error: batteryError } =
     useBatteryHealthAnalytics(activeId || null);
   const { data: mileage, isLoading: mileageLoading, error: mileageError } = useMileageStats(activeId);
-  const { data: stateSummary, isLoading: stateLoading } = useStateSummary(activeId);
+  const {
+    data: stateSummary, isLoading: stateLoading, error: stateError,
+  } = useStateSummary(activeId, { start: startInstant, end: endInstantExclusive });
   const { data: fleet, isLoading: fleetLoading, error: fleetError } =
     useFleetAnalytics({ start: startDate, end: endDate });
 
@@ -115,24 +119,13 @@ export default function StatisticsPage() {
     ? (stats.total_distance ?? 0) / stats.total_drives : 0;
 
   const stateData = useMemo(() => {
-    if (!stateSummary?.length) return [];
-    // Backend (deleted) returned `total_min`; the legacy camelCase wrapper
-    // surfaced `totalMin`. Reading both via fallback keeps the empty-state
-    // correct even if a future replacement endpoint emits snake_case.
-    const total = stateSummary.reduce((s, e) => {
-      const minutes = (e as { totalMin?: number; total_min?: number }).totalMin
-        ?? (e as { total_min?: number }).total_min ?? 0;
-      return s + minutes;
-    }, 0);
-    return stateSummary.map((e) => {
-      const minutes = (e as { totalMin?: number; total_min?: number }).totalMin
-        ?? (e as { total_min?: number }).total_min ?? 0;
-      return {
-        name: e.state,
-        value: Math.round((minutes / Math.max(total, 1)) * 100),
-        fill: STATE_COLORS[e.state] ?? palette[5],
-      };
-    });
+    return (stateSummary?.by_state ?? [])
+      .filter((row) => row.total_seconds > 0)
+      .map((row) => ({
+        name: row.state,
+        value: row.percentage,
+        fill: STATE_COLORS[row.state] ?? palette[5],
+      }));
   }, [stateSummary, palette]);
 
   const compData = useMemo(() => {
@@ -281,6 +274,8 @@ export default function StatisticsPage() {
           >
             {stateLoading ? (
               <Skeleton className="h-full w-full rounded-xl" />
+            ) : stateError ? (
+              <QueryError error={stateError} />
             ) : stateData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>

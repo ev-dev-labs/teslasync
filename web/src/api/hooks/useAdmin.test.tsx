@@ -667,22 +667,43 @@ describe('useVehicleStateMachine', () => {
 
 describe('useStateTimeline', () => {
   it('GETs the timeline endpoint with the default 7-day window', async () => {
-    mockedRequest.mockResolvedValueOnce({ transitions: [{ state: 'parked' }] });
+    mockedRequest.mockResolvedValueOnce({
+      vehicle_id: 7, days: 7, start: '2024-01-01T00:00:00Z',
+      end: '2024-01-08T00:00:00Z',
+      transitions: [{
+        ts: '2024-01-01T01:00:00Z', from_state: 'driving', to_state: 'parked',
+        trigger_field: null, trigger_value: null,
+      }],
+    });
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useStateTimeline('7'), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(callArgs()[0]).toBe('/vehicle-states/timeline?vehicle_id=7&days=7');
     expect(result.current.data?.transitions).toHaveLength(1);
+    expect(result.current.data?.transitions[0].to_state).toBe('parked');
   });
 
   it('threads a custom day window and encodes the vehicle id', async () => {
-    mockedRequest.mockResolvedValueOnce({ transitions: [] });
+    mockedRequest.mockResolvedValueOnce({
+      vehicle_id: 7, days: 30, start: '2024-01-01T00:00:00Z',
+      end: '2024-01-31T00:00:00Z', transitions: [],
+    });
     const { wrapper } = makeWrapper();
     renderHook(() => useStateTimeline('a b', 30), { wrapper });
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
     expect(callArgs()[0]).toBe('/vehicle-states/timeline?vehicle_id=a%20b&days=30');
+  });
+
+  it('rejects a missing transition envelope instead of treating it as empty history', async () => {
+    mockedRequest.mockResolvedValueOnce({ transitions: [] });
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useStateTimeline('7'), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toEqual(new Error('Invalid vehicle state timeline response'));
   });
 
   it('is disabled when the vehicle id is empty', async () => {
@@ -693,7 +714,7 @@ describe('useStateTimeline', () => {
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 
-  it('surfaces the deprecated route 404 gracefully via error', async () => {
+  it('surfaces an unknown vehicle 404 through the error channel', async () => {
     mockedRequest.mockRejectedValueOnce(new ApiError('Not Found', 404));
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useStateTimeline('7'), { wrapper });

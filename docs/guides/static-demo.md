@@ -1,8 +1,13 @@
 # Static public demo
 
 The public demo is a separate, read-only SPA build. Its vehicles, drives, charging
-sessions, battery-health history, and settings are fictional and live in
+sessions, battery-health history, fleet analytics, mileage, state transitions,
+last-known vehicle positions, and settings are fictional and derived from
 `web/src/demo/fixtures.ts`.
+FSD insights use separate paired synthetic counter observations in
+`web/src/demo/fsdAnalytics.ts`; reported distances do **not** identify exact
+engagement segments, interventions, or driving safety. Unobserved days and
+drives retain `null` rather than being labeled as zero use.
 `web/src/demo/fixtureApi.ts` supplies supported read responses in the browser;
 there is no Go API, Tesla account, database, or telemetry stream behind it.
 The fixtures are loaded as a separate chunk. Unknown endpoints report
@@ -22,23 +27,36 @@ Provisioning an Azure Static Web Apps Free resource, attaching
 `demo.teslasync.dev`, and creating its publish workflow require separate
 approval. Do not route `/api/v1` to a production TeslaSync instance. This
 demo does not implement live updates, Tesla login, commands, uploads, downloads,
-FSD analytics, or server-backed administration; unsupported
+or server-backed administration; unsupported
 reads display an explicit error rather than fabricated results. The normal
 application keeps those features.
 
 ## Screen coverage
 
-A local browser sweep of the 261 concrete `SafeRoute` screens on 2026-09-28
-found 195 screens requesting at least one unsupported synthetic endpoint
-(227 distinct missing read paths). The other 66 had no missing fixture read
-during initial navigation, but that alone does not establish that every
-panel, tab, or interaction has representative data. Three of those routes
-(`api-keys`, `api-logs`, `api-playground`) had no `<main>` content in the
-browser sweep. The current build is a **curated showcase, not a full-product
+A local browser sweep on 2026-09-27 found 185 of 262 `SafeRoute` entries
+(including the index route) requesting at least one unsupported synthetic
+endpoint (217 distinct missing read paths). The other 77 had no missing
+fixture read during initial navigation, but that alone does not establish
+that every panel, tab, or interaction has representative data. Five routes
+(`s/:token`, `watch`, `api-keys`, `api-logs`, `api-playground`) had no
+`<main>` content in the browser sweep. The current build is a **curated
+showcase, not a full-product
 synthetic replica**; do not describe every screen as populated.
 
 The most common remaining gaps include physics, signal history and live state,
-FSD analytics, fleet analytics, notification rule/report pages, and
+notification rule/report pages, and
 administrative views. For each additional public screen, provide typed,
 internally consistent fixtures for every required read, verify the complete
 page and its secondary views in a browser, and keep every mutation blocked.
+
+After `npm run build:demo`, serve `web/dist/` locally (for example, run
+`npm run preview -- --host 127.0.0.1 --port 4173` in `web/`) and run
+`node scripts/audit-demo-coverage.mjs --output=demo-coverage.json` from
+`web/`. This reads concrete `SafeRoute` paths from `App.tsx`, opens them in a
+browser, and records unsupported fixture reads, blank content, unexpected
+network API calls, runtime exceptions, and navigation errors. Use
+`--route=quick-stats --route=analytics --route=mileage --route=fsd
+--interactions --strict` to check the fleet pages, picker, tabs, mileage
+charts, and FSD evidence panels; `--strict` on the full scan intentionally fails until the
+remaining screens are implemented. The scan checks initial route rendering,
+not all nested panels and interactions.

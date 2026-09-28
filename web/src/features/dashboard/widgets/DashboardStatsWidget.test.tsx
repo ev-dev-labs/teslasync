@@ -8,11 +8,11 @@
  *     FSM + timeline queries stay disabled). The resolved id string is what the
  *     admin hooks are queried with;
  *   - every render state fanned out by `WidgetShell` — the loading skeleton
- *     (driven by stats OR fsm, never by the deprecated timeline), the empty
+ *     (driven by stats OR fsm, not by the secondary timeline), the empty
  *     state when no stats have landed (never a blank panel), and that a genuine
  *     primary-source failure still paints a red freshness dot;
- *   - the REGRESSION FIX at the heart of this elevation: the deprecated,
- *     always-404 `useStateTimeline` secondary must NOT poison the widget's
+ *   - the REGRESSION FIX at the heart of this elevation: a failed
+ *     `useStateTimeline` secondary must NOT poison the widget's
  *     health indicator. A timeline `isError` / `isFetching` while stats + FSM
  *     are healthy now renders a *fresh* (emerald) dot, not a red/sky one;
  *   - the populated full-size body — the stat grid (vehicles / trips / charge
@@ -40,7 +40,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { DashboardStats } from '@/types/dashboard';
-import type { VehicleState, StateTransition } from '@/types/admin';
+import type { VehicleState } from '@/types/admin';
+import type { TimelineEvent } from '@/types/analytics';
 import type { WidgetSize } from './types';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -130,12 +131,13 @@ function makeFsm(state = 'online'): VehicleState {
   return { state, since: new Date().toISOString(), vehicleId: '1' };
 }
 
-function makeTransition(over: Partial<StateTransition> = {}): StateTransition {
+function makeTransition(over: Partial<TimelineEvent> = {}): TimelineEvent {
   return {
-    state: 'driving',
-    startedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
-    endedAt: null,
-    durationSeconds: 300,
+    to_state: 'driving',
+    ts: new Date(Date.now() - 5 * 60_000).toISOString(),
+    from_state: 'parked',
+    trigger_field: null,
+    trigger_value: null,
     ...over,
   };
 }
@@ -157,7 +159,7 @@ beforeEach(() => {
   useVehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
   useDashboardStatsMock.mockReturnValue(makeQ(makeStats()));
   useVehicleStateMachineMock.mockReturnValue(makeQ(makeFsm('online')));
-  useStateTimelineMock.mockReturnValue(makeQ({ transitions: [] as StateTransition[] }));
+  useStateTimelineMock.mockReturnValue(makeQ({ transitions: [] as TimelineEvent[] }));
 });
 
 // ── Data-source resolution ───────────────────────────────────────────────────
@@ -229,12 +231,12 @@ describe('DashboardStatsWidget — states', () => {
 // ── Freshness merge — deprecated-timeline poison guard (the elevation fix) ────
 
 describe('DashboardStatsWidget — freshness does not follow the deprecated timeline', () => {
-  it('keeps a fresh (emerald) dot when only the always-404 timeline errors', () => {
+  it('keeps a fresh (emerald) dot when only the optional timeline errors', () => {
     // Primary sources healthy; the deprecated timeline 404s.
     useDashboardStatsMock.mockReturnValue(makeQ(makeStats(), { dataUpdatedAt: Date.now() }));
     useVehicleStateMachineMock.mockReturnValue(makeQ(makeFsm('online')));
     useStateTimelineMock.mockReturnValue(
-      makeQ<{ transitions: StateTransition[] }>(undefined, { isError: true, dataUpdatedAt: 0 }),
+      makeQ<{ transitions: TimelineEvent[] }>(undefined, { isError: true, dataUpdatedAt: 0 }),
     );
 
     const { container } = renderWidget();
@@ -246,7 +248,7 @@ describe('DashboardStatsWidget — freshness does not follow the deprecated time
   it('does not flip to the fetching tier when only the timeline is refetching', () => {
     useDashboardStatsMock.mockReturnValue(makeQ(makeStats(), { dataUpdatedAt: Date.now() }));
     useStateTimelineMock.mockReturnValue(
-      makeQ<{ transitions: StateTransition[] }>(undefined, { isFetching: true, dataUpdatedAt: 0 }),
+      makeQ<{ transitions: TimelineEvent[] }>(undefined, { isFetching: true, dataUpdatedAt: 0 }),
     );
 
     const { container } = renderWidget();
@@ -346,9 +348,9 @@ describe('DashboardStatsWidget — wide (recent transitions)', () => {
     useStateTimelineMock.mockReturnValue(
       makeQ({
         transitions: [
-          makeTransition({ state: 'driving', startedAt: new Date(Date.now() - 5 * 60_000).toISOString() }),
-          makeTransition({ state: 'charging', startedAt: new Date(Date.now() - 2 * 3_600_000).toISOString() }),
-          makeTransition({ state: 'parked', startedAt: new Date(Date.now() - 3 * 86_400_000).toISOString() }),
+          makeTransition({ to_state: 'parked', ts: new Date(Date.now() - 3 * 86_400_000).toISOString() }),
+          makeTransition({ to_state: 'charging', ts: new Date(Date.now() - 2 * 3_600_000).toISOString() }),
+          makeTransition({ to_state: 'driving', ts: new Date(Date.now() - 5 * 60_000).toISOString() }),
         ],
       }),
     );
@@ -366,23 +368,23 @@ describe('DashboardStatsWidget — wide (recent transitions)', () => {
 
   it('caps the visible transitions at five rows', () => {
     const transitions = Array.from({ length: 7 }, (_, i) =>
-      makeTransition({ state: `st${i}`, startedAt: new Date(Date.now() - (i + 1) * 60_000).toISOString() }),
+      makeTransition({ to_state: `st${i}`, ts: new Date(Date.now() - (7 - i) * 60_000).toISOString() }),
     );
     useStateTimelineMock.mockReturnValue(makeQ({ transitions }));
     renderWidget({ cols: 3, rows: 4 });
 
-    expect(screen.getByText('st0')).toBeInTheDocument();
-    expect(screen.getByText('st4')).toBeInTheDocument();
-    // 6th and 7th are sliced off.
-    expect(screen.queryByText('st5')).toBeNull();
-    expect(screen.queryByText('st6')).toBeNull();
+    expect(screen.getByText('st2')).toBeInTheDocument();
+    expect(screen.getByText('st6')).toBeInTheDocument();
+    // The oldest two are outside the five most recent transitions.
+    expect(screen.queryByText('st0')).toBeNull();
+    expect(screen.queryByText('st1')).toBeNull();
   });
 
   it('renders an em-dash for a transition missing its timestamp', () => {
     useStateTimelineMock.mockReturnValue(
       makeQ({
         transitions: [
-          makeTransition({ state: 'sleeping', startedAt: '' as unknown as string }),
+          makeTransition({ to_state: 'sleeping', ts: '' }),
         ],
       }),
     );
@@ -392,7 +394,7 @@ describe('DashboardStatsWidget — wide (recent transitions)', () => {
   });
 
   it('hides the transitions section when the timeline is empty', () => {
-    useStateTimelineMock.mockReturnValue(makeQ({ transitions: [] as StateTransition[] }));
+    useStateTimelineMock.mockReturnValue(makeQ({ transitions: [] as TimelineEvent[] }));
     renderWidget({ cols: 3, rows: 4 });
     expect(screen.queryByText('Recent Transitions')).toBeNull();
   });
@@ -408,7 +410,7 @@ describe('DashboardStatsWidget — refresh', () => {
     useDashboardStatsMock.mockReturnValue(makeQ(makeStats(), { refetch: refetchStats }));
     useVehicleStateMachineMock.mockReturnValue(makeQ(makeFsm('online'), { refetch: refetchFsm }));
     useStateTimelineMock.mockReturnValue(
-      makeQ({ transitions: [] as StateTransition[] }, { refetch: refetchTimeline }),
+      makeQ({ transitions: [] as TimelineEvent[] }, { refetch: refetchTimeline }),
     );
 
     renderWidget({ cols: 2, rows: 2 });

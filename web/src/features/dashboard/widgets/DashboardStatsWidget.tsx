@@ -49,18 +49,15 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
   ], [dashStats, fsmState, t]);
 
   const recentTransitions = useMemo(
-    () => (isWide ? (timeline.data?.transitions ?? []).slice(0, 5) : []),
+    () => (isWide ? [...(timeline.data?.transitions ?? [])].slice(-5).reverse() : []),
     [timeline.data, isWide],
   );
 
   /*
    * Freshness reflects the two live primary sources — the dashboard stats and
-   * the FSM vehicle state. The state-transition timeline is a deprecated,
-   * best-effort secondary whose endpoint is expected to 404 (see
-   * useStateTimeline); its failure and background-refetch churn must NOT drive
-   * the widget's health indicator. `isLoading` already excluded it — the other
-   * signals are aligned here so a 404 timeline never paints a red/stale/fetching
-   * freshness dot on top of otherwise-healthy stats.
+   * the FSM vehicle state. The transition timeline is a secondary source;
+   * its failure or background-refetch churn must not drive the widget's
+   * health indicator.
    */
   const updatedAt = Math.max(stats.dataUpdatedAt ?? 0, fsm.dataUpdatedAt ?? 0);
   const isFetching = stats.isFetching || fsm.isFetching;
@@ -121,17 +118,17 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
               <div className="flex flex-col gap-1">
                 {recentTransitions.map((tr, i) => (
                   <div
-                    key={`${tr.state}-${tr.startedAt}-${i}`}
+                    key={`${tr.to_state}-${tr.ts}-${i}`}
                     className="flex items-center justify-between min-h-[44px]"
                   >
                     <div className="flex items-center gap-2">
                       <Badge variant="neutral" className="text-2xs capitalize truncate">
-                        {tr.state ?? '—'}
+                        {tr.to_state}
                       </Badge>
                     </div>
                     <span className="text-xs text-[var(--text-secondary)] tabular-nums truncate">
-                      {tr.startedAt
-                        ? formatRelative(tr.startedAt)
+                      {tr.ts
+                        ? formatRelative(tr.ts)
                         : '—'}
                     </span>
                   </div>

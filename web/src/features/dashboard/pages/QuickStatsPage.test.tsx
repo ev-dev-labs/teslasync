@@ -368,6 +368,7 @@ describe('QuickStatsPage', () => {
     expect(screen.getByText('Distance Driven')).toBeInTheDocument();
     expect(screen.getByText('0 km')).toBeInTheDocument();
     expect(screen.getByText('0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('CO₂ Saved').closest('[data-role="metric-card"]')).toHaveTextContent('—');
     expect((captured.fleet.entries as unknown[]).length).toBe(0);
   });
 

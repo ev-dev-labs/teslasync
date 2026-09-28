@@ -1,7 +1,14 @@
 import { assertDemoModeEnabled } from '@/lib/demoMode'
 import type { ClimateSnapshot, SecurityEvent } from '@/api/types'
+import { fsdAnalytics } from './fsdAnalytics'
+import { fleetAnalytics, periodStats } from './fleetAnalytics'
+import { locationHistory } from './locationHistory'
+import { drivingStats, mileageDaily, mileageMonthly, mileageStats } from './mileage'
+import { driveShares, publicDriveShare, sessionShares } from './shareFixtures'
+import { vehicleStates } from './vehicleStates'
+import { visitedLocations } from './visitedLocations'
 import {
-  alerts, annotations, batteryHealth, charging, chargingOptimizer, drives,
+  alerts, annotations, batteryHealth, charging, chargingOptimizer, currentOdometerM, drives,
   energyStats, notificationLogs, repairCaseStats, runtimeStatus, settings,
   vampireEvents, vampireStats, vampireWatch, vehicles, workOrders,
 } from './fixtures'
@@ -19,7 +26,7 @@ function sampleState(vehicleId: number) {
   if (!vehicle) return null
   return {
     vehicle_id: vehicle.id, state: vehicle.state, battery_level: vehicle.id === 7 ? 72 : 64,
-    rated_range: 410_000, ideal_range: 430_000, odometer: 32_100_000,
+    rated_range: 410_000, ideal_range: 430_000, odometer: currentOdometerM,
     speed: 0, power: 0, inside_temp: 21, outside_temp: 18,
     is_charging: false, is_locked: true, updated_at: vehicle.updated_at,
   }
@@ -55,6 +62,125 @@ function filteredRows<T extends { vehicle_id: number }>(
 function fixture(path: string): FixtureResult {
   const url = new URL(path, 'https://demo.invalid')
   const { pathname, searchParams } = url
+  if (pathname === '/analytics/fsd') {
+    const rawVehicle = searchParams.get('vehicle_id')
+    const rawDrive = searchParams.get('drive_id')
+    const rawDays = searchParams.get('days')
+    const rawEvidence = searchParams.get('include_evidence')
+    if (rawVehicle == null || !/^\d+$/.test(rawVehicle)
+      || !vehicles.some(row => String(row.id) === rawVehicle)
+      || (rawDrive != null && !/^\d+$/.test(rawDrive))
+      || (rawDays != null && (!/^\d+$/.test(rawDays) || Number(rawDays) < 1 || Number(rawDays) > 366))
+      || (rawEvidence != null && rawEvidence !== 'true' && rawEvidence !== 'false')) {
+      return { status: 400, body: { error: 'Invalid demo FSD filters', code: 'INVALID_FILTER' } }
+    }
+    try {
+      return found(fsdAnalytics(Number(rawVehicle), {
+        days: rawDays == null ? undefined : Number(rawDays),
+        start: searchParams.get('start') ?? undefined,
+        end: searchParams.get('end') ?? undefined,
+        timezone: searchParams.get('timezone') ?? undefined,
+        includeEvidence: rawEvidence === 'true',
+        driveId: rawDrive == null ? undefined : Number(rawDrive),
+      }))
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error
+      return { status: 400, body: { error: error.message, code: 'INVALID_FILTER' } }
+    }
+  }
+  if (pathname === '/analytics/fleet') {
+    const start = searchParams.get('start') ?? undefined
+    const end = searchParams.get('end') ?? undefined
+    const rawDays = searchParams.get('days')
+    if ((start && !Number.isFinite(Date.parse(start)))
+      || (end && !Number.isFinite(Date.parse(end)))
+      || (start && end && Date.parse(start) > Date.parse(end))
+      || (rawDays != null && (!/^\d+$/.test(rawDays) || Number(rawDays) < 1 || Number(rawDays) > 3650))) {
+      return { status: 400, body: { error: 'Invalid demo fleet analytics filters', code: 'INVALID_FILTER' } }
+    }
+    return found(fleetAnalytics(start, end, start || end ? undefined : rawDays == null ? undefined : Number(rawDays)))
+  }
+  if (pathname === '/analytics/period-stats') {
+    const rawVehicle = searchParams.get('vehicle_id')
+    const rawDays = searchParams.get('days')
+    const days = Number(rawDays ?? 0)
+    if (rawVehicle == null || !/^\d+$/.test(rawVehicle)
+      || !vehicles.some(row => String(row.id) === rawVehicle)
+      || (rawDays != null && (!/^\d+$/.test(rawDays) || !Number.isInteger(days) || days > 3650))) {
+      return { status: 400, body: { error: 'Invalid demo period stats filters', code: 'INVALID_FILTER' } }
+    }
+    return found(periodStats(Number(rawVehicle), days))
+  }
+  if (pathname === '/mileage/stats' || pathname === '/mileage/monthly' || pathname === '/mileage/daily') {
+    const rawVehicle = searchParams.get('vehicle_id')
+    const vehicleId = Number(rawVehicle)
+    const rawWindow = pathname === '/mileage/monthly' ? searchParams.get('months') : searchParams.get('days')
+    const maxWindow = pathname === '/mileage/monthly' ? 120 : 730
+    const window = rawWindow == null ? (pathname === '/mileage/monthly' ? 24 : 90) : Number(rawWindow)
+    if (rawVehicle == null || !/^\d+$/.test(rawVehicle)
+      || !vehicles.some(row => row.id === vehicleId)
+      || (rawWindow != null && (!/^\d+$/.test(rawWindow) || !Number.isInteger(window)
+        || window < 1 || window > maxWindow))) {
+      return { status: 400, body: { error: 'Invalid demo mileage filters', code: 'INVALID_FILTER' } }
+    }
+    if (pathname === '/mileage/stats') return found(mileageStats(vehicleId))
+    return found(pathname === '/mileage/monthly'
+      ? mileageMonthly(vehicleId, window) : mileageDaily(vehicleId, window))
+  }
+  if (pathname === '/drives/stats') {
+    const rawVehicle = searchParams.get('vehicle_id')
+    return rawVehicle != null && vehicles.some(row => String(row.id) === rawVehicle)
+      ? found(drivingStats(Number(rawVehicle)))
+      : { status: 400, body: { error: 'Invalid demo vehicle ID', code: 'INVALID_FILTER' } }
+  }
+  if (pathname === '/locations') {
+    const rawVehicle = searchParams.get('vehicle_id')
+    const from = searchParams.get('from')
+    const to = searchParams.get('to')
+    const limit = Number(searchParams.get('limit') ?? 50)
+    const offset = Number(searchParams.get('offset') ?? 0)
+    if ((rawVehicle != null && (!/^\d+$/.test(rawVehicle)
+      || !vehicles.some(row => String(row.id) === rawVehicle)))
+      || (from != null && !Number.isFinite(Date.parse(from)))
+      || (to != null && !Number.isFinite(Date.parse(to)))
+      || (from == null) !== (to == null)
+      || (from != null && to != null && Date.parse(from) >= Date.parse(to))
+      || !Number.isInteger(limit) || limit < 1 || limit > 1000
+      || !Number.isInteger(offset) || offset < 0) {
+      return { status: 400, body: { error: 'Invalid demo visited locations filters', code: 'INVALID_FILTER' } }
+    }
+    const matching = drives.filter(row =>
+      (rawVehicle == null || row.vehicle_id === Number(rawVehicle))
+      && (from == null || Date.parse(row.end_ts) >= Date.parse(from))
+      && (to == null || Date.parse(row.end_ts) < Date.parse(to)))
+    return found(visitedLocations(matching).slice(offset, offset + limit))
+  }
+  if (pathname === '/vehicle-states/timeline' || pathname === '/vehicle-states/summary') {
+    const rawVehicle = searchParams.get('vehicle_id')
+    const rawDays = searchParams.get('days')
+    const rawStart = searchParams.get('start')
+    const rawEnd = searchParams.get('end')
+    const days = Number(rawDays ?? 7)
+    const datePattern = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/
+    const validDate = (value: string | null) =>
+      value == null || (datePattern.test(value) && Number.isFinite(Date.parse(value)))
+    const end = rawEnd == null ? Date.now() : Date.parse(rawEnd)
+      + (/^\d{4}-\d{2}-\d{2}$/.test(rawEnd) ? 86_400_000 : 0)
+    const start = rawStart == null
+      ? rawEnd == null ? end - days * 86_400_000 : 0
+      : Date.parse(rawStart)
+    if (rawVehicle == null || !/^\d+$/.test(rawVehicle)
+      || !vehicles.some(row => String(row.id) === rawVehicle)
+      || (rawDays != null && (!/^\d+$/.test(rawDays) || !Number.isInteger(days)
+        || days < 1 || days > 3650))
+      || !validDate(rawStart) || !validDate(rawEnd)
+      || !Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
+      return { status: 400, body: { error: 'Invalid demo state history filters', code: 'INVALID_FILTER' } }
+    }
+    const response = vehicleStates(Number(rawVehicle), start, end,
+      rawStart != null || rawEnd != null ? Math.max(1, Math.floor((end - start) / 86_400_000)) : days)
+    return found(pathname === '/vehicle-states/summary' ? response.summary : response.timeline)
+  }
   if (pathname === '/vehicles') return found(vehicles)
   if (pathname === '/vehicles/states') {
     const rawIds = searchParams.get('vehicle_ids') ?? ''
@@ -163,6 +289,19 @@ function fixture(path: string): FixtureResult {
       ? found(chargingOptimizer(vehicleId))
       : { status: 400, body: { error: 'Invalid demo vehicle ID', code: 'INVALID_FILTER' } }
   }
+  if (pathname === '/location-snapshots/latest' || pathname === '/location-snapshots') {
+    const vehicleId = searchParams.get('vehicle_id')
+    if (!vehicles.some(row => String(row.id) === vehicleId)) {
+      return { status: 400, body: { error: 'Invalid demo vehicle ID', code: 'INVALID_FILTER' } }
+    }
+    const history = locationHistory(Number(vehicleId))
+    if (pathname === '/location-snapshots/latest') return found(history[0] ?? null)
+    const limit = Number(searchParams.get('limit') ?? 200)
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
+      return { status: 400, body: { error: 'Invalid demo location limit', code: 'INVALID_FILTER' } }
+    }
+    return found(history.slice(0, limit))
+  }
   if (pathname === '/climate/latest' || pathname === '/security/latest') {
     const id = searchParams.get('vehicle_id')
     const vehicle = vehicles.find(row => String(row.id) === id)
@@ -210,6 +349,17 @@ function fixture(path: string): FixtureResult {
   if (pathname === '/admin/rbac/matrix') return found({ roles: [], permissions: [] })
   if (pathname === '/system/update-check') return found({ update_available: false })
   if (pathname === '/system/map-config') return found({ provider: 'free', api_key: '' })
+  if (pathname === '/share/sample-link') return found(publicDriveShare())
+  const driveShareList = pathname.match(/^\/drives\/(\d+)\/shares$/)
+  if (driveShareList) {
+    const id = Number(driveShareList[1])
+    return drives.some(row => row.id === id) ? found(driveShares(id)) : missing(pathname)
+  }
+  const sessionShareList = pathname.match(/^\/charging\/(\d+)\/shares$/)
+  if (sessionShareList) {
+    const id = Number(sessionShareList[1])
+    return charging.some(row => row.id === id) ? found(sessionShares(id)) : missing(pathname)
+  }
   const photo = pathname.match(/^\/vehicles\/(\d+)\/photo$/)
   if (photo) return vehicles.some(row => row.id === Number(photo[1]))
     ? found({ has_photo: false, uploaded_at: null })
@@ -287,6 +437,23 @@ function fixture(path: string): FixtureResult {
   if (vehicle) return vehicles.some(row => row.id === Number(vehicle[1]))
     ? found(vehicles.find(row => row.id === Number(vehicle[1])))
     : missing(pathname)
+  const positions = pathname.match(/^\/vehicles\/(\d+)\/positions$/)
+  if (positions) {
+    const vehicleId = Number(positions[1])
+    if (!vehicles.some(row => row.id === vehicleId)) return missing(pathname)
+    const limit = Number(searchParams.get('limit') ?? 50)
+    const days = Number(searchParams.get('days') ?? 30)
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000
+      || !Number.isInteger(days) || days < 1 || days > 365) {
+      return { status: 400, body: { error: 'Invalid demo position filters', code: 'INVALID_FILTER' } }
+    }
+    return found(locationHistory(vehicleId)
+      .filter(row => Date.parse(row.created_at) >= Date.now() - days * 86_400_000)
+      .slice(0, limit)
+      .map(row => ({
+        ...row, ts: row.created_at, speed: row.speed_mph,
+      })))
+  }
   const drive = pathname.match(/^\/drives\/(\d+)$/)
   if (drive) {
     const row = drives.find(item => item.id === Number(drive[1]))

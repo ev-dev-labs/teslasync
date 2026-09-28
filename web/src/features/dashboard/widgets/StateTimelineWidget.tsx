@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useStateSummary, useTimeline } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import type { StateSummary, StateTimelineResponse } from '@/types/analytics';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -46,22 +47,45 @@ export interface StateSegment {
 }
 
 export function buildSegments(
-  data:
-    | Array<{ state?: string | null; totalMin?: number | null; count?: number | null }>
-    | null
-    | undefined,
+  data: StateSummary[] | null | undefined,
 ): StateSegment[] {
   const items = data ?? [];
-  const totalMin = items.reduce((sum, d) => sum + (d.totalMin ?? 0), 0);
-  // Guard an empty payload *and* nonsensical non-positive totals so we never
-  // divide by zero (or a negative) when computing per-state percentages.
-  if (totalMin <= 0) return [];
-  return items.map((d) => ({
-    state: d.state ?? '—',
-    pct: ((d.totalMin ?? 0) / totalMin) * 100,
-    totalMin: d.totalMin ?? 0,
-    count: d.count ?? 0,
+  return items.filter((row) => row.total_seconds > 0).map((row) => ({
+    state: row.state,
+    pct: row.percentage,
+    totalMin: row.total_seconds / 60,
+    count: row.transition_count,
   }));
+}
+
+interface TimelineSpan {
+  state: string;
+  durationSeconds: number;
+}
+
+export function buildTimelineSpans(data: StateTimelineResponse | null | undefined): TimelineSpan[] {
+  if (!data?.transitions.length) return [];
+  const start = Date.parse(data.start);
+  const end = Date.parse(data.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return [];
+  const transitions = data.transitions;
+  const spans: TimelineSpan[] = [];
+  const first = transitions[0];
+  if (first.from_state && Date.parse(first.ts) > start) {
+    spans.push({
+      state: first.from_state,
+      durationSeconds: (Math.min(Date.parse(first.ts), end) - start) / 1000,
+    });
+  }
+  for (let i = 0; i < transitions.length; i++) {
+    const at = Date.parse(transitions[i].ts);
+    const next = i + 1 < transitions.length ? Date.parse(transitions[i + 1].ts) : end;
+    const seconds = (Math.min(next, end) - Math.max(at, start)) / 1000;
+    if (Number.isFinite(seconds) && seconds > 0) {
+      spans.push({ state: transitions[i].to_state, durationSeconds: seconds });
+    }
+  }
+  return spans;
 }
 
 /* ── Compact stacked bar (pure CSS) ─────────────────────────────── */
@@ -85,31 +109,37 @@ function TimelineStripe({
   transitions,
   t,
 }: {
-  transitions: Array<{ state: string; startDate: string; durationMin: number }>;
+  transitions: TimelineSpan[];
   t: (k: string, d: string) => string;
 }) {
-  const totalMin = transitions.reduce((sum, tr) => sum + (tr.durationMin ?? 0), 0);
-  if (totalMin === 0) return null;
+  const totalSeconds = transitions.reduce((sum, tr) => sum + tr.durationSeconds, 0);
 
   return (
     <div className="space-y-1.5">
       <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
         {t('widget.stateTimeline.timeline', '24h Timeline')}
       </span>
-      <div className="flex h-4 w-full rounded overflow-hidden">
-        {transitions.map((tr, i) => {
-          const pct = ((tr.durationMin ?? 0) / totalMin) * 100;
-          if (pct < 0.5) return null;
-          return (
-            <div
-              key={`${tr.state}-${i}`}
-              className="h-full transition-all duration-normal"
-              style={{ width: `${pct}%`, backgroundColor: stateColor(tr.state ?? '') }}
-              title={`${tr.state}: ${fmtNumber(tr.durationMin ?? 0, 0)} min`}
-            />
-          );
-        })}
-      </div>
+      {totalSeconds > 0 ? (
+        <div className="flex h-4 w-full rounded overflow-hidden">
+          {transitions.map((tr, i) => {
+            const pct = tr.durationSeconds / totalSeconds * 100;
+            if (pct < 0.5) return null;
+            return (
+              <div
+                key={`${tr.state}-${i}`}
+                className="h-full transition-all duration-normal"
+                style={{ width: `${pct}%`, backgroundColor: stateColor(tr.state) }}
+                title={`${tr.state}: ${fmtNumber(tr.durationSeconds / 60, 0)} min`}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          message={t('widget.stateTimeline.noTimeline', 'No transitions recorded in the last 24 hours')}
+          className="py-2"
+        />
+      )}
     </div>
   );
 }
@@ -151,22 +181,18 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
   const idStr = id != null ? String(id) : '';
 
   const summary = useStateSummary(idStr);
-  const timeline = useTimeline(idStr);
+  const timeline = useTimeline(idStr, 1);
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
   const segments = useMemo(
-    () => buildSegments(summary.data ?? []),
+    () => buildSegments(summary.data?.by_state),
     [summary.data],
   );
 
   const transitions = useMemo(
-    () => (timeline.data ?? []).map((tr) => ({
-      state: tr.state ?? '',
-      startDate: tr.startDate ?? '',
-      durationMin: tr.durationMin ?? 0,
-    })),
+    () => buildTimelineSpans(timeline.data),
     [timeline.data],
   );
 
@@ -225,10 +251,6 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
             </div>
           )}
 
-          {/* Wide: 24h timeline stripe */}
-          {isWide && transitions.length > 0 && (
-            <TimelineStripe transitions={transitions} t={t} />
-          )}
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -237,6 +259,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
           className="py-4"
         />
       )}
+      {isWide && <TimelineStripe transitions={transitions} t={t} />}
     </WidgetShell>
   );
 }

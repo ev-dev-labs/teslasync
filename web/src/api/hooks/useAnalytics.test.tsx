@@ -107,11 +107,17 @@ describe('analyticsKeys', () => {
       90,
     ]);
     expect(analyticsKeys.cost('7')).toEqual(['analytics', 'cost', '7']);
-    expect(analyticsKeys.timeline('7')).toEqual(['analytics', 'timeline', '7']);
+    expect(analyticsKeys.timeline('7')).toEqual(['analytics', 'timeline', '7', undefined]);
+    expect(analyticsKeys.timeline('7', 1)).toEqual(['analytics', 'timeline', '7', 1]);
     expect(analyticsKeys.stateSummary('7')).toEqual([
       'analytics',
       'state-summary',
       '7',
+      undefined,
+      undefined,
+    ]);
+    expect(analyticsKeys.stateSummary('7', '2024-01-01', '2024-01-02')).toEqual([
+      'analytics', 'state-summary', '7', '2024-01-01', '2024-01-02',
     ]);
     expect(analyticsKeys.weeklyDigest('7')).toEqual([
       'analytics',
@@ -364,58 +370,106 @@ describe('useCostBreakdown', () => {
 });
 
 // ---------------------------------------------------------------------------
-// useTimeline (deprecated) — unwraps { transitions } via safeArray
+// useTimeline — preserves the registered FSM timeline envelope
 // ---------------------------------------------------------------------------
 
 describe('useTimeline', () => {
-  it('unwraps the {transitions} envelope into a plain event array', async () => {
-    mockedRequest.mockResolvedValueOnce({
+  it('returns timestamped transitions in the SI wire envelope', async () => {
+    const response = {
+      vehicle_id: 7, days: 7, start: '2024-01-01T00:00:00Z', end: '2024-01-08T00:00:00Z',
       transitions: [
-        { id: 't1', state: 'driving', startDate: '2024-01-01', durationMin: 30 },
+        { ts: '2024-01-02T00:00:00Z', from_state: 'parked', to_state: 'driving',
+          trigger_field: 'Gear', trigger_value: 'D' },
       ],
-    });
+    };
+    mockedRequest.mockResolvedValueOnce(response);
     const { result } = renderHook(() => useTimeline('7'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(callAt()[0]).toBe('/vehicle-states/timeline?vehicle_id=7');
-    expect(result.current.data).toHaveLength(1);
-    expect(result.current.data?.[0].state).toBe('driving');
+    expect(result.current.data).toEqual(response);
   });
 
-  it('defaults a missing transitions field to an empty array', async () => {
-    mockedRequest.mockResolvedValueOnce({});
-    const { result } = renderHook(() => useTimeline('7'), { wrapper });
+  it('requests a one-day window for the 24-hour widget', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      vehicle_id: 7, days: 1, start: '2024-01-01T00:00:00Z',
+      end: '2024-01-02T00:00:00Z', transitions: [],
+    });
+    const { result } = renderHook(() => useTimeline('7', 1), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual([]);
+    expect(callAt()[0]).toBe('/vehicle-states/timeline?vehicle_id=7&days=1');
+    expect(result.current.data?.transitions).toEqual([]);
   });
 
-  it('routes a removed-endpoint 404 to the error channel', async () => {
+  it('routes a failed timeline request to the error channel', async () => {
     mockedRequest.mockRejectedValueOnce(new Error('not found'));
     const { result } = renderHook(() => useTimeline('7'), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
   });
+
+  it('rejects missing or malformed transitions instead of normalizing them to []', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      vehicle_id: 7, days: 7, start: '2024-01-01T00:00:00Z',
+      end: '2024-01-08T00:00:00Z', transitions: [{ to_state: 'parked' }],
+    });
+    const { result } = renderHook(() => useTimeline('7'), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toEqual(new Error('Invalid vehicle state timeline response'));
+  });
 });
 
 // ---------------------------------------------------------------------------
-// useStateSummary (deprecated) — safeArray select
+// useStateSummary — preserves SI seconds and the backend summary envelope
 // ---------------------------------------------------------------------------
 
 describe('useStateSummary', () => {
-  it('passes an array payload straight through', async () => {
-    mockedRequest.mockResolvedValueOnce([
-      { state: 'asleep', totalMin: 600, count: 3 },
-    ]);
+  it('returns the SI-second summary envelope instead of coercing it to an array', async () => {
+    const response = {
+      vehicle_id: 7, days: 7, start: '2024-01-01T00:00:00Z',
+      end: '2024-01-08T00:00:00Z', total_seconds: 36_000,
+      by_state: [{ state: 'asleep', total_seconds: 36_000, percentage: 100, transition_count: 3 }],
+    };
+    mockedRequest.mockResolvedValueOnce(response);
     const { result } = renderHook(() => useStateSummary('7'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(callAt()[0]).toBe('/vehicle-states/summary?vehicle_id=7');
-    expect(result.current.data?.[0].state).toBe('asleep');
+    expect(result.current.data).toEqual(response);
   });
 
-  it('coerces a non-array payload to an empty array', async () => {
-    mockedRequest.mockResolvedValueOnce(null);
-    const { result } = renderHook(() => useStateSummary('7'), { wrapper });
+  it('scopes summary to the shared instant range without converting seconds', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      vehicle_id: 7, days: 1, start: '2024-01-01T00:00:00Z',
+      end: '2024-01-02T00:00:00Z', total_seconds: 0, by_state: [],
+    });
+    const { result } = renderHook(() => useStateSummary('7', {
+      start: '2024-01-01T00:00:00Z', end: '2024-01-02T00:00:00Z',
+    }), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual([]);
+    expect(callAt()[0]).toBe(
+      '/vehicle-states/summary?vehicle_id=7&start=2024-01-01T00%3A00%3A00Z&end=2024-01-02T00%3A00%3A00Z',
+    );
+    expect(result.current.data?.total_seconds).toBe(0);
+    expect(result.current.data?.by_state).toEqual([]);
+  });
+
+  it('rejects an invalid summary envelope rather than showing an empty distribution', async () => {
+    mockedRequest.mockResolvedValueOnce({ by_state: [] });
+    const { result } = renderHook(() => useStateSummary('7'), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toEqual(new Error('Invalid vehicle state summary response'));
+  });
+
+  it('rejects a malformed state row even when the envelope exists', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      vehicle_id: 7, days: 7, start: '2024-01-01T00:00:00Z',
+      end: '2024-01-08T00:00:00Z', total_seconds: 3600,
+      by_state: [{ state: 'driving', total_seconds: '3600', percentage: 100, transition_count: 1 }],
+    });
+    const { result } = renderHook(() => useStateSummary('7'), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
   });
 });
 

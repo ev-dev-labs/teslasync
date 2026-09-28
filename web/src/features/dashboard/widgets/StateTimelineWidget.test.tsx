@@ -15,9 +15,8 @@
  * "1h 0m" / "2h 0m"; both are asserted below. It also locks in the null-safety
  * hardening (`stateColor(undefined)` no longer throws; `buildSegments` guards
  * null input and non-positive totals), the three responsive layouts, the
- * loading / empty states, the removed-endpoint error degradation (these two
- * analytics endpoints were dropped in Phase-42, so the queries error and the
- * widget must fall back to a non-blank empty state), the refresh interaction,
+ * loading / empty states, transient endpoint error degradation (the widget
+ * must fall back to a non-blank empty state), the refresh interaction,
  * and vehicle-id resolution.
  *
  * Network is never touched — the two analytics hooks and `useVehicles` are
@@ -63,6 +62,7 @@ import { useStateSummary, useTimeline } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import StateTimelineWidget, {
   buildSegments,
+  buildTimelineSpans,
   stateColor,
   fmtDuration,
 } from './StateTimelineWidget';
@@ -91,17 +91,27 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 
 // driving 180 min (75%) + idle 60 min (25%) — clean, unique percentages.
 function summaryRows() {
-  return [
-    { state: 'driving', totalMin: 180, count: 3 },
-    { state: 'idle', totalMin: 60, count: 1 },
-  ];
+  return {
+    vehicle_id: 1, days: 7, start: '2024-01-01T00:00:00Z',
+    end: '2024-01-08T00:00:00Z', total_seconds: 14_400,
+    by_state: [
+      { state: 'driving', total_seconds: 10_800, percentage: 75, transition_count: 3 },
+      { state: 'idle', total_seconds: 3_600, percentage: 25, transition_count: 1 },
+    ],
+  };
 }
 
 function timelineRows() {
-  return [
-    { id: 't1', state: 'driving', startDate: '2020-01-01T00:00:00Z', durationMin: 100 },
-    { id: 't2', state: 'idle', startDate: '2020-01-01T02:00:00Z', durationMin: 50 },
-  ];
+  return {
+    vehicle_id: 1, days: 1, start: '2020-01-01T00:00:00Z',
+    end: '2020-01-01T03:00:00Z',
+    transitions: [
+      { ts: '2020-01-01T01:40:00Z', from_state: 'driving' as string | null, to_state: 'idle',
+        trigger_field: 'Gear', trigger_value: 'P' },
+      { ts: '2020-01-01T02:30:00Z', from_state: 'idle', to_state: 'parked',
+        trigger_field: null, trigger_value: null },
+    ],
+  };
 }
 
 function renderWidget(props: Partial<WidgetProps> = {}) {
@@ -120,13 +130,13 @@ beforeEach(() => {
   mockTimeline.mockReset();
   mockVehicles.mockReset();
   mockVehicles.mockReturnValue({ data: [{ id: 1 }] });
-  mockSummary.mockReturnValue(makeQuery({ data: [] }));
-  mockTimeline.mockReturnValue(makeQuery({ data: [] }));
+  mockSummary.mockReturnValue(makeQuery({ data: { ...summaryRows(), by_state: [] } }));
+  mockTimeline.mockReturnValue(makeQuery({ data: { ...timelineRows(), transitions: [] } }));
 });
 
 describe('buildSegments (utility)', () => {
   it('computes per-state percentages from the minute totals', () => {
-    expect(buildSegments(summaryRows())).toEqual([
+    expect(buildSegments(summaryRows().by_state)).toEqual([
       { state: 'driving', pct: 75, totalMin: 180, count: 3 },
       { state: 'idle', pct: 25, totalMin: 60, count: 1 },
     ]);
@@ -139,24 +149,33 @@ describe('buildSegments (utility)', () => {
   });
 
   it('treats an all-zero or non-positive total as empty (no divide-by-zero)', () => {
-    expect(buildSegments([{ state: 'idle', totalMin: 0, count: 0 }])).toEqual([]);
-    // A stray negative total must not produce negative percentages.
-    expect(buildSegments([{ state: 'idle', totalMin: -10, count: 1 }])).toEqual([]);
+    expect(buildSegments([{ state: 'idle', total_seconds: 0, percentage: 0, transition_count: 0 }])).toEqual([]);
+    expect(buildSegments([{ state: 'idle', total_seconds: -10, percentage: 0, transition_count: 1 }])).toEqual([]);
   });
 
-  it('coalesces null state/minutes/count fields without leaking NaN', () => {
-    expect(
-      buildSegments([
-        { state: null, totalMin: null, count: null },
-        { state: 'idle', totalMin: 60, count: 2 },
-      ]),
-    ).toEqual([
-      { state: '—', pct: 0, totalMin: 0, count: 0 },
-      { state: 'idle', pct: 100, totalMin: 60, count: 2 },
-    ]);
+  it('converts seconds to displayed minutes while preserving backend percentages', () => {
+    expect(buildSegments([
+      { state: 'idle', total_seconds: 3_630, percentage: 33, transition_count: 2 },
+    ])).toEqual([{ state: 'idle', pct: 33, totalMin: 60.5, count: 2 }]);
   });
 });
 
+describe('buildTimelineSpans (utility)', () => {
+  it('derives dwell from timestamped transitions and the response bounds', () => {
+    expect(buildTimelineSpans(timelineRows())).toEqual([
+      { state: 'driving', durationSeconds: 6_000 },
+      { state: 'idle', durationSeconds: 3_000 },
+      { state: 'parked', durationSeconds: 1_800 },
+    ]);
+  });
+
+  it('does not guess the prefix state when from_state is null', () => {
+    const data = timelineRows();
+    data.transitions[0].from_state = null;
+    expect(buildTimelineSpans(data)[0]).toEqual({ state: 'idle', durationSeconds: 3_000 });
+    expect(buildTimelineSpans({ ...data, transitions: [] })).toEqual([]);
+  });
+});
 describe('stateColor (utility)', () => {
   it('maps each known state to its palette colour, case-insensitively', () => {
     expect(stateColor('driving')).toBe('#22d3ee');
@@ -248,6 +267,7 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     expect(screen.getByText('24h Timeline')).toBeInTheDocument();
     expect(screen.getByTitle('driving: 100 min')).toBeInTheDocument();
     expect(screen.getByTitle('idle: 50 min')).toBeInTheDocument();
+    expect(screen.getByTitle('parked: 30 min')).toBeInTheDocument();
   });
 });
 
@@ -263,8 +283,8 @@ describe('StateTimelineWidget — loading / empty / error', () => {
   });
 
   it('shows the empty state (not a blank panel) when no state data has arrived', () => {
-    mockSummary.mockReturnValue(makeQuery({ data: [] }));
-    mockTimeline.mockReturnValue(makeQuery({ data: [] }));
+    mockSummary.mockReturnValue(makeQuery({ data: { ...summaryRows(), by_state: [] } }));
+    mockTimeline.mockReturnValue(makeQuery({ data: { ...timelineRows(), transitions: [] } }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // Title still renders; the body degrades to a labelled empty state.
@@ -273,16 +293,22 @@ describe('StateTimelineWidget — loading / empty / error', () => {
     expect(screen.queryByText('driving')).not.toBeInTheDocument();
   });
 
-  it('degrades to the empty state (never a crash) when the removed endpoints error', () => {
-    // /vehicle-states/{summary,timeline} were dropped in Phase-42, so these
-    // queries always error in production — the widget must stay non-blank.
-    mockSummary.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('410 Gone') }));
-    mockTimeline.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('410 Gone') }));
+  it('degrades to the empty state (never a crash) when the endpoints error', () => {
+    mockSummary.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('Unavailable') }));
+    mockTimeline.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('Unavailable') }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     expect(screen.getByText('No state data available')).toBeInTheDocument();
     // The refresh control stays available so the user can retry.
     expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
+  });
+
+  it('keeps the wide timeline visible independently of missing summary rows', () => {
+    mockSummary.mockReturnValue(makeQuery({ data: { ...summaryRows(), by_state: [] } }));
+    mockTimeline.mockReturnValue(makeQuery({ data: timelineRows() }));
+    renderWidget({ size: { cols: 4, rows: 3 } });
+    expect(screen.getByText('No state data available')).toBeInTheDocument();
+    expect(screen.getByTitle('driving: 100 min')).toBeInTheDocument();
   });
 });
 
@@ -302,20 +328,20 @@ describe('StateTimelineWidget — refresh + vehicle resolution', () => {
   it('queries both hooks for the vehicleId prop (as a string)', () => {
     renderWidget({ vehicleId: 7 });
     expect(mockSummary).toHaveBeenCalledWith('7');
-    expect(mockTimeline).toHaveBeenCalledWith('7');
+    expect(mockTimeline).toHaveBeenCalledWith('7', 1);
   });
 
   it('falls back to the first vehicle id when no vehicleId prop is given', () => {
     mockVehicles.mockReturnValue({ data: [{ id: 42 }] });
     renderWidget();
     expect(mockSummary).toHaveBeenCalledWith('42');
-    expect(mockTimeline).toHaveBeenCalledWith('42');
+    expect(mockTimeline).toHaveBeenCalledWith('42', 1);
   });
 
   it('passes an empty string (disabling the queries) when no vehicle is available', () => {
     mockVehicles.mockReturnValue({ data: [] });
     renderWidget();
     expect(mockSummary).toHaveBeenCalledWith('');
-    expect(mockTimeline).toHaveBeenCalledWith('');
+    expect(mockTimeline).toHaveBeenCalledWith('', 1);
   });
 });
