@@ -37,6 +37,7 @@ web/dist/
 .env
 .env.*
 !.env.example
+!web/.env.demo
 *.pem
 *.key
 *.p12
@@ -80,6 +81,7 @@ PROMPT_COMMANDS.txt
 
 # Copilot session state (per-user, not committed)
 .copilot/
+.copilot-azure/
 
 # Temporary files from audits/scripts
 /tmp/

@@ -7,6 +7,7 @@
  * Auth is handled via ForwardAuth cookie (same-domain, automatic).
  */
 
+import { isStaticDemoBuild } from './demoMode'
 import type {
   AutomationTriggeredEvent,
   AutomationSucceededEvent,
@@ -70,6 +71,7 @@ function notifyDisconnect() {
 }
 
 function doConnect() {
+  if (isStaticDemoBuild()) return
   if (connecting) return
   connecting = true
 

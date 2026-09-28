@@ -33,6 +33,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { Palette } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { isStaticDemoBuild } from '@/lib/demoMode';
 import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
@@ -626,7 +627,7 @@ export default function DashboardPage() {
               </AlertBanner>
             )}
 
-            {auth && !auth.authenticated && (
+            {auth && !auth.authenticated && !isStaticDemoBuild() && (
               <AlertBanner
                 variant="warning"
                 icon={<Icons.alertCircle className="h-5 w-5" />}

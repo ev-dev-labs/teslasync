@@ -39,6 +39,7 @@ import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useDrives, useBulkDeleteDrives } from '@/api/hooks/useDriving';
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { apiUrl } from '@/api/client';
+import { isStaticDemoBuild } from '@/lib/demoMode';
 import { scopedPath } from '@/api/scope';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
@@ -1487,19 +1488,23 @@ export default function DrivesListPage() {
                     </span>
                   </Button>
                 ))}
-                <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
-                <a
-                  href={apiUrl(scopedPath('/export/drives', exportScope))}
-                  download="teslasync-drives.csv"
-                >
-                  <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
-                </a>
-                <a
-                  href={apiUrl(scopedPath('/export/drives', { ...exportScope, filters: { format: 'json' } }))}
-                  download="teslasync-drives.json"
-                >
-                  <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
-                </a>
+                {!isStaticDemoBuild() && (
+                  <>
+                    <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
+                    <a
+                      href={apiUrl(scopedPath('/export/drives', exportScope))}
+                      download="teslasync-drives.csv"
+                    >
+                      <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
+                    </a>
+                    <a
+                      href={apiUrl(scopedPath('/export/drives', { ...exportScope, filters: { format: 'json' } }))}
+                      download="teslasync-drives.json"
+                    >
+                      <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
+                    </a>
+                  </>
+                )}
               </div>
             )}
           </div>

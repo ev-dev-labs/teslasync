@@ -1,5 +1,10 @@
 {
   "operationalMode": {
+    "demo": {
+      "label": "Demo",
+      "description": "Synthetic sample data. Live actions are unavailable.",
+      "writeBlocked": "This public demo is read-only."
+    },
     "live": {
       "label": "Live",
       "shortLabel": "Live",

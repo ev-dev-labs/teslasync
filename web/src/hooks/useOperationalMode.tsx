@@ -13,6 +13,7 @@ import {
   type OperationalMode,
 } from '@/lib/operationalMode';
 import { formatDateTime } from '@/lib/dateFormat';
+import { isStaticDemoBuild } from '@/lib/demoMode';
 
 export interface OperationalModeContextValue {
   mode: OperationalMode;
@@ -49,6 +50,18 @@ export function OperationalModeProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<OperationalModeContextValue>(() => {
+    if (isStaticDemoBuild()) {
+      return {
+        ...snapshot,
+        mode: 'cached',
+        online: false,
+        isReadOnly: true,
+        label: t('operationalMode.demo.label', 'Demo'),
+        description: t('operationalMode.demo.description', 'Synthetic sample data. Live actions are unavailable.'),
+        writeBlockReason: t('operationalMode.demo.writeBlocked', 'This public demo is read-only.'),
+        canWrite: false,
+      };
+    }
     if (snapshot.mode === 'as_of') {
       const when = snapshot.asOf
         ? formatDateTime(snapshot.asOf, { locale: i18n.language })

@@ -314,18 +314,19 @@ describe('computeAcDcBreakdown', () => {
     const b = computeAcDcBreakdown([
       // AC: no charger_type and peak ≤ 22 kW.
       sessionMin(1, 60, { total_energy_added_wh: 10_000, cost_decimal: 3, peak_power_w: 7_000 }),
-      // DC: charger_type present.
+      // DC: a known fast-charger category.
       sessionMin(2, 30, { total_energy_added_wh: 50_000, cost_decimal: 25, charger_type: 'Supercharger' }),
       // DC: peak > 22 kW, free (no cost).
       sessionMin(3, 20, { total_energy_added_wh: 20_000, cost_decimal: null, peak_power_w: 30_000 }),
       // AC: free (cost exactly 0).
       sessionMin(4, 10, { total_energy_added_wh: 5_000, cost_decimal: 0, peak_power_w: 5_000 }),
+      sessionMin(5, 20, { total_energy_added_wh: 7_000, cost_decimal: 2, charger_type: 'AC', peak_power_w: 11_000 }),
     ]);
 
-    // Regression: kWh, NOT Wh (AC 15 kWh, DC 70 kWh).
-    expect(b.ac.energy).toBe(15);
-    expect(b.ac.count).toBe(2);
-    expect(b.ac.totalDuration).toBe(70);
+    // Regression: explicit AC chargers remain AC, and totals are kWh, NOT Wh.
+    expect(b.ac.energy).toBe(22);
+    expect(b.ac.count).toBe(3);
+    expect(b.ac.totalDuration).toBe(90);
     expect(b.ac.freeCount).toBe(1);
     expect(b.ac.freeEnergy).toBe(5);
 
@@ -334,8 +335,8 @@ describe('computeAcDcBreakdown', () => {
     expect(b.dc.freeCount).toBe(1);
     expect(b.dc.freeEnergy).toBe(20);
 
-    expect(b.total.energy).toBe(85);
-    expect(b.total.cost).toBe(28);
+    expect(b.total.energy).toBe(92);
+    expect(b.total.cost).toBe(30);
     expect(b.total.freeCount).toBe(2);
     expect(b.total.freeEnergy).toBe(25);
   });

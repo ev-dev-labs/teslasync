@@ -269,6 +269,19 @@ export function getDemoApiBase(env?: EnvRecord): string | null {
 }
 
 /**
+ * The static public showcase uses bundled fixtures; other demo deployments
+ * may still use their own isolated API host.
+ */
+export function isStaticDemoBuild(env?: EnvRecord): boolean {
+  const source = readEnv(env)
+  if (source.VITE_DEMO_STATIC_FIXTURES !== 'true') return false
+  if (getDemoApiBase(source) !== '/demo-api/v1') {
+    throw new Error('Static demo requires VITE_DEMO_MODE=true and VITE_DEMO_API_BASE=/demo-api/v1')
+  }
+  return true
+}
+
+/**
  * True when the demo base points at a different origin than the app.
  *
  * Cross-origin demo fixtures are a normal deployment (a static bucket, a

@@ -166,7 +166,10 @@ export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown
   const ac: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   const dc: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   sessions.forEach((s) => {
-    const isDC = !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 22_000));
+    const category = getChargerCategory(s.charger_type);
+    const isDC = category === 'dc' || category === 'supercharger'
+      || (category === 'unknown' && (s.peak_power_w ?? 0) > 22_000)
+      || (!s.charger_type && (s.peak_power_w ?? 0) > 22_000);
     const bucket = isDC ? dc : ac;
     const energyKwh = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
     bucket.energy += energyKwh;

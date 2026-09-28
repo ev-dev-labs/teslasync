@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getApiBase } from '@/api/client';
+import { isStaticDemoBuild } from '@/lib/demoMode';
 
 /**
  * Polls the backend `/healthz` endpoint every 15 seconds and reports the
@@ -51,6 +52,9 @@ export const POLL_INTERVAL_MS = 15_000;
 const STALE_TIME_MS = 10_000;
 
 export async function probe(externalSignal?: AbortSignal): Promise<ProbeResult> {
+  if (isStaticDemoBuild()) {
+    throw new Error('No server health endpoint exists in the static demo');
+  }
   const url = `${getApiBase()}/healthz`;
   const controller = new AbortController();
   // Distinguishes "our 5s deadline fired" (a real outage → offline) from
@@ -111,6 +115,7 @@ export function useApiHealth(): ApiHealthState {
     refetchIntervalInBackground: false,
     staleTime: STALE_TIME_MS,
     retry: false,
+    enabled: !isStaticDemoBuild(),
   });
 
   // Memoise on `data` so consumers get a referentially stable object

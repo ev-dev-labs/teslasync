@@ -13,6 +13,7 @@
  */
 
 import { isRateLimitError, isUpstreamUnavailableError } from './resilience'
+import { isStaticDemoBuild } from './demoMode'
 import { getConsent, subscribeConsent, type ConsentState } from './cookieConsent'
 import { normalizeRouteTemplate, redactLocationInText } from './routeTemplate'
 import {
@@ -228,6 +229,7 @@ function shouldCoalesce(key: string, now: number): boolean {
 }
 
 function sendPayload(payload: FrontendErrorPayload): void {
+  if (isStaticDemoBuild()) return
   try {
     if (typeof fetch !== 'function') return
     void fetch(ENDPOINT, {

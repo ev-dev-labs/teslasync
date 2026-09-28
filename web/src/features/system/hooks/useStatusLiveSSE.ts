@@ -20,6 +20,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isStaticDemoBuild } from '@/lib/demoMode'
 
 export type StatusSeverity = 'operational' | 'degraded' | 'down' | 'maintenance'
 
@@ -119,6 +120,7 @@ export function useStatusLiveSSE(opts: UseStatusLiveSSEOptions = {}): UseStatusL
   }, [])
 
   const connect = useCallback(() => {
+    if (isStaticDemoBuild()) return
     if (!enabled) return
     if (cancelledRef.current) return
     closeSource()

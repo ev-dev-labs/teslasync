@@ -26,6 +26,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiUrl, request } from '@/api/client';
 import type { VehiclePhotoMeta, VehiclePhotoSize } from '@/api/types';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { isStaticDemoBuild } from '@/lib/demoMode';
 
 import { vehicleKeys } from './useVehicles';
 
@@ -64,6 +65,7 @@ export function vehiclePhotoUrl(
   size: VehiclePhotoSize,
   meta: VehiclePhotoMeta | null | undefined,
 ): string | null {
+  if (isStaticDemoBuild()) return null;
   if (!meta || !meta.has_photo) return null;
   // A non-finite id (NaN from a bad `Number(...)`, Infinity) would render a
   // broken `/vehicles/NaN/photo/...` <img src>. Treat it like "no photo" so
@@ -144,6 +146,7 @@ export function useUploadVehiclePhoto() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ vehicleId, file }: UploadVehiclePhotoArgs) => {
+      if (isStaticDemoBuild()) throw new Error('This public demo is read-only');
       const validation = validateVehiclePhotoFile(file);
       if (validation) throw new Error(validation.message);
       const form = new FormData();

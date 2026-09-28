@@ -16,6 +16,8 @@
  *     app has been live earlier in the session.
  */
 
+import { isStaticDemoBuild } from './demoMode'
+
 type SSEListener = (data: unknown) => void
 type SSEEventType =
   | 'vehicle_update'
@@ -84,6 +86,7 @@ function safeParse(raw: unknown): unknown {
 }
 
 function doConnect() {
+  if (isStaticDemoBuild()) return
   if (connecting) return
   connecting = true
 

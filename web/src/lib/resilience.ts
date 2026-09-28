@@ -11,7 +11,8 @@ import { broadcast } from './broadcast'
 import { purgeServiceWorkerApiCache } from '@/sw/purgeApiCache'
 // HELP-12. `demoMode` imports nothing from this module, so there is no cycle;
 // it is a leaf that reads `import.meta.env` and validates it.
-import { demoCredentialsMode, getDemoApiBase } from './demoMode'
+import { demoCredentialsMode, getDemoApiBase, isStaticDemoBuild } from './demoMode'
+import { demoFetch } from './demoFetch'
 
 type RequestStatus = 'online' | 'offline'
 
@@ -725,7 +726,7 @@ async function _doFetch<T>(
       throw new DOMException('aborted', 'AbortError')
     }
 
-    if (!navigator.onLine) {
+    if (!isStaticDemoBuild() && !navigator.onLine) {
       setStatus('offline')
       throw new ApiError('No network connection', 0)
     }
@@ -747,12 +748,15 @@ async function _doFetch<T>(
       const url = demoBase !== null
         ? `${demoBase}${path}`
         : `${getApiBase()}/api/v1${path}`
-      const res = await fetch(url, {
+      const options: RequestInit = {
         headers: { 'Content-Type': 'application/json' },
         ...restOpts,
         ...(demoCredentialsMode() ? { credentials: demoCredentialsMode() } : {}),
         signal: merged.signal,
-      })
+      }
+      const res = isStaticDemoBuild()
+        ? await demoFetch(path, options)
+        : await fetch(url, options)
 
       // Any server response (even errors) means we're online
       setStatus('online')

@@ -1,4 +1,5 @@
 import { apiUrl, request, ApiError } from './client'
+import { isStaticDemoBuild } from '@/lib/demoMode'
 import type {
   CaptureStats,
   TelemetryStatus,
@@ -182,7 +183,10 @@ export const triggerBackup = (configId: number) => request<BackupRun>(`/backup/c
 export const triggerQuickBackup = () => request<BackupRun>('/backup/quick', { method: 'POST' })
 export const getBackupRuns = (limit = 50, offset = 0) => request<BackupRun[]>(`/backup/runs?limit=${limit}&offset=${offset}`)
 export const getBackupRun = (id: number) => request<BackupRun>(`/backup/runs/${id}`)
-export const downloadBackup = (runId: number) => window.open(apiUrl(`/backup/runs/${runId}/download`), '_blank')
+export const downloadBackup = (runId: number) => {
+  if (isStaticDemoBuild()) throw new ApiError('This public demo is read-only', 403, 'DEMO_READ_ONLY')
+  return window.open(apiUrl(`/backup/runs/${runId}/download`), '_blank')
+}
 export const verifyBackup = (runId: number) => request<{ verified: boolean; error?: string; checksum?: string }>(`/backup/runs/${runId}/verify`, { method: 'POST' })
 export const previewRestore = (runId: number) => request<{ tables: { name: string; rows: number }[]; metadata: Record<string, unknown>; checksum_verified: boolean }>(`/backup/runs/${runId}/preview`)
 
@@ -206,8 +210,10 @@ export const getExportJobs = (limit?: number, offset?: number) =>
   request<ExportJobSummary[]>(`/export/jobs?limit=${limit || 50}&offset=${offset || 0}`)
 export const getExportJob = (jobId: string) =>
   request<ExportJobSummary>(`/export/jobs/${jobId}`)
-export const getExportJobDownloadUrl = (jobId: string) =>
-  apiUrl(`/export/jobs/${jobId}/download`)
+export const getExportJobDownloadUrl = (jobId: string) => {
+  if (isStaticDemoBuild()) throw new ApiError('This public demo is read-only', 403, 'DEMO_READ_ONLY')
+  return apiUrl(`/export/jobs/${jobId}/download`)
+}
 export const submitImportJob = async (
   type: 'import_drives' | 'import_charging',
   file: File,
@@ -220,6 +226,7 @@ export const submitImportJob = async (
   // the `boundary=…` the browser needs to emit for a FormData body and makes
   // the server's multipart parser reject the upload. Mirror the canonical
   // raw-fetch pattern in useUploadVehiclePhoto so the browser owns Content-Type.
+  if (isStaticDemoBuild()) throw new ApiError('This public demo is read-only', 403, 'DEMO_READ_ONLY')
   const res = await fetch(apiUrl('/export/jobs/import'), {
     method: 'POST',
     body: formData,

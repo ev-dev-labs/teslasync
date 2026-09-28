@@ -1037,6 +1037,11 @@
       "shortLabel": "Cached",
       "writeBlocked": "Reconnect before making operational changes."
     },
+    "demo": {
+      "description": "Synthetic sample data. Live actions are unavailable.",
+      "label": "Demo",
+      "writeBlocked": "This public demo is read-only."
+    },
     "live": {
       "description": "Current data with live actions available.",
       "label": "Live",

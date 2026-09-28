@@ -65,6 +65,7 @@
  */
 
 import { onCLS, onFCP, onINP, onLCP, onTTFB, type Metric } from 'web-vitals'
+import { isStaticDemoBuild } from './demoMode'
 import { getConsent, subscribeConsent, type ConsentState } from './cookieConsent'
 import { normalizeRouteTemplate } from './routeTemplate'
 import {
@@ -480,6 +481,7 @@ export function reportUxEvent(event: UxEventPayload): void {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function send(body: string): Promise<void> | void {
+  if (isStaticDemoBuild()) return
   try {
     if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
       const blob = new Blob([body], { type: 'application/json' })

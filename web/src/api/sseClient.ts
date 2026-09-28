@@ -37,6 +37,8 @@
  * primitive.
  */
 
+import { isStaticDemoBuild } from '@/lib/demoMode'
+
 const SSE_EVENTS_PATH = '/api/v1/events'
 const SIGNAL_CHANGE_EVENT = 'signal_change'
 
@@ -261,6 +263,7 @@ export function subscribeSignals(
   onError: SignalErrorHandler,
   options: SubscribeOptions = {},
 ): () => void {
+  if (isStaticDemoBuild()) return () => {}
   const endpoint = options.endpoint ?? SSE_EVENTS_PATH
   const fieldFilter = new Set(fields)
   const filterByField = fieldFilter.size > 0

@@ -9,6 +9,8 @@ import {
 } from 'react'
 import { getApiBase } from '@/lib/resilience'
 import { request } from '@/api/client'
+import { isStaticDemoBuild } from '@/lib/demoMode'
+import { demoFetch } from '@/lib/demoFetch'
 import { broadcast, subscribe } from '@/lib/broadcast'
 import { TOPICS } from '@/lib/broadcastTopics'
 
@@ -394,7 +396,9 @@ export function FontProvider({ children }: { children: ReactNode }) {
   // Load persisted font prefs from backend settings on first mount. Raw fetch,
   // like ThemeProvider — the provider mounts before auth context exists.
   useEffect(() => {
-    fetch(`${getApiBase()}/api/v1/settings`)
+    (isStaticDemoBuild()
+      ? demoFetch('/settings', { method: 'GET' })
+      : fetch(`${getApiBase()}/api/v1/settings`))
       .then((r) => (r.ok ? r.json() : null))
       .then((s: Record<string, unknown> | null) => {
         if (!s) return

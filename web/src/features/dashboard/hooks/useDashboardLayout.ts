@@ -17,6 +17,7 @@ import {
 } from '@/api/hooks/useSettings';
 import type { DashboardLayoutsPayload } from '@/api/hooks/useSettings';
 import { broadcast, subscribe } from '@/lib/broadcast';
+import { isStaticDemoBuild } from '@/lib/demoMode';
 import {
   presetWidgetIds,
   reconcileAppliedPresetRole,
@@ -242,7 +243,7 @@ const DEFAULT_DASHBOARD = makePreset(
     { widgetId: 'security-status' },
     { widgetId: 'quick-nav' },
     { widgetId: 'fleet-posture' },
-  ],
+  ].filter(spec => !isStaticDemoBuild() || spec.widgetId !== 'onboarding-checklist'),
   true,
 );
 

@@ -28,10 +28,12 @@
  */
 import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys } from '../lib/resilience'
 import { assertOperationalWriteAllowed } from '../lib/operationalMode'
+import { demoFetch } from '../lib/demoFetch'
 import { assertNeverQueuedOffline } from './offlineCache'
 import {
   demoCredentialsMode,
   getDemoApiBase,
+  isStaticDemoBuild,
   stripCredentialHeadersForDemo,
 } from '../lib/demoMode'
 
@@ -257,14 +259,17 @@ async function directRequest<T>(
 ): Promise<T> {
   const { headers, body, ...rest } = options
   const credentials = demoCredentialsMode()
-  const res = await fetch(apiUrl(path), {
+  const requestOptions: RequestInit = {
     ...rest,
     body,
     headers: buildHeaders(headers, body != null),
     // Only set when a cross-origin demo base is active; `undefined` leaves
     // fetch's `same-origin` default untouched for every normal request.
     ...(credentials ? { credentials } : {}),
-  })
+  }
+  const res = isStaticDemoBuild()
+    ? await demoFetch(path, requestOptions)
+    : await fetch(apiUrl(path), requestOptions)
 
   if (!res.ok && !acceptedStatuses.includes(res.status)) {
     const { message, code } = await parseError(res)
@@ -373,6 +378,9 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
     ...fetchOptions
   } = options
 
+  if (isStaticDemoBuild() && (fetchOptions.method ?? 'GET').toUpperCase() !== 'GET') {
+    throw new ApiError('This public demo is read-only', 403, 'DEMO_READ_ONLY')
+  }
   assertOperationalWriteAllowed(fetchOptions.method, requiresLiveMode)
 
   // Normalise once at the entry point: ensures a leading slash AND
@@ -412,7 +420,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
     // Propagate the original AbortError unchanged so downstream consumers
     // can distinguish it from an HTTP 408 timeout — matching the
     // cancellation contract documented on ApiRequestOptions.signal.
-    if (isAbortError(err)) throw err
+    if (isAbortError(err) || isStaticDemoBuild()) throw err
 
     if (isSudoRequired(err)) {
       let cred: SudoCredential
