@@ -37,6 +37,8 @@
  * primitive.
  */
 
+import { createEventStream } from '../lib/eventStream'
+
 const SSE_EVENTS_PATH = '/api/v1/events'
 const SIGNAL_CHANGE_EVENT = 'signal_change'
 
@@ -266,7 +268,7 @@ export function subscribeSignals(
   const filterByField = fieldFilter.size > 0
   const filterByVehicle = vehicleId > 0
 
-  const source = new EventSource(endpoint)
+  const source = createEventStream(endpoint)
 
   const onMessage = (ev: MessageEvent<string>) => {
     const data = typeof ev.data === 'string' ? ev.data : String(ev.data ?? '')

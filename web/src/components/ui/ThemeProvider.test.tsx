@@ -285,7 +285,7 @@ describe('backend settings load', () => {
 
   it('requests the settings endpoint without an /api/v1 double prefix', async () => {
     await renderSettled()
-    expect(global.fetch).toHaveBeenCalledWith('/api/v1/settings')
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/settings', { headers: new Headers() })
   })
 
   it('tolerates a failed settings fetch yet still unlocks backend writes', async () => {

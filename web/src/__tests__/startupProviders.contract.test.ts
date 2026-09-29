@@ -44,6 +44,9 @@ const appSource = readFileSync(join(srcRoot, 'App.tsx'), 'utf8')
 /** Components mounted in main.tsx's render tree. */
 const MAIN_GLOBAL_MOUNTS: Record<string, string> = {
   ErrorBoundary: 'Root render-error trap. Must wrap everything.',
+  Suspense: 'Loads the native-only server picker before any API providers mount.',
+  Spinner: 'Loading state while the native server picker chunk loads.',
+  NativeConnectPage: 'Native first-run server picker; no API providers mount until a server is selected.',
   QueryClientProvider: 'Data layer. Every hook in the app resolves through it.',
   QueryBroadcastBridge: 'Rebroadcasts cross-tab query invalidation into this tab.',
   FormatterPrefsBridge: 'Keeps module-level number/locale formatters in sync with settings.',
@@ -69,6 +72,8 @@ const MAIN_GLOBAL_MOUNTS: Record<string, string> = {
 const APP_GLOBAL_MOUNTS: Record<string, string> = {
   DemoModeBanner: 'Self-gating synthetic-data label; must be the topmost element of any screenshot.',
   OnboardingGate: 'First-run gate; must decide before a route renders.',
+  ServerGate: 'Native shells must select a server before loading application routes.',
+  NativeDeepLinks: 'Processes native protocol links for all routes.',
   TaskOnboardingHost: 'Route-scoped onboarding hint host; must observe every navigation.',
   Suspense: 'React loading boundary for the on-demand onboarding hint UI; no subscriptions or feature imports.',
   VitalsConsentPolicyGate: 'Publishes cookie-consent policy into RUM before any beacon is sent.',

@@ -54,14 +54,14 @@ describe('buildAppIconSvg — shared artwork across every mode', () => {
 describe('buildAppIconSvg — per-mode geometry', () => {
   it('standard: rounded canvas with no inner frame (favicon only)', () => {
     const svg = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'standard' })
-    expect(svg).toContain('<rect width="200" height="200" rx="44" fill="#0b0d12"/>')
+    expect(svg).toContain('<rect width="200" height="200" rx="44" fill="#f5f6f8"/>')
     expect(svg).not.toContain('x="8"')
     expect(svg).not.toContain('<g transform')
   })
 
   it('apple: full-bleed rect with NO rounding (iOS applies its own mask)', () => {
     const svg = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'apple' })
-    expect(svg).toContain('<rect width="200" height="200" fill="#0b0d12"/>')
+    expect(svg).toContain('<rect width="200" height="200" fill="#f5f6f8"/>')
     expect(svg).not.toContain('rx="44"')
     expect(svg).not.toContain('<g transform')
   })
@@ -69,7 +69,7 @@ describe('buildAppIconSvg — per-mode geometry', () => {
   it('maskable: bolt shifted into the inner 80% safe-zone, no rounding', () => {
     const svg = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'maskable' })
     expect(svg).toContain('<g transform="translate(20 20) scale(0.8)">')
-    expect(svg).toContain('<rect width="200" height="200" fill="#0b0d12"/>')
+    expect(svg).toContain('<rect width="200" height="200" fill="#f5f6f8"/>')
     expect(svg).not.toContain('rx="32"')
     expect(svg).not.toContain('rx="44"')
   })

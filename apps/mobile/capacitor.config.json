@@ -1,0 +1,12 @@
+{
+  "appId": "com.teslasync.app",
+  "appName": "TeslaSync",
+  "webDir": "../../web/dist",
+  "backgroundColor": "#0b0d12",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}

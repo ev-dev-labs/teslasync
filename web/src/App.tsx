@@ -7,6 +7,8 @@ import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { VitalsConsentPolicyGate } from './components/feedback/VitalsConsentPolicyGate'
 import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgressBoundary'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
+import { ServerGate } from '@/features/server/ServerGate'
+import { NativeDeepLinks } from '@/features/server/NativeDeepLinks'
 import { DemoModeBanner } from '@/components/feedback/DemoModeBanner'
 import { DensityApplier } from '@/components/ui/DensityApplier'
 import { ContextMenuRoot } from '@/components/ui/ContextMenu'
@@ -344,6 +346,8 @@ const SharingTrips = lazy(() => import('./features/sharing/pages/SharingTripsPag
 
 // Watch (standalone — no Layout, API key auth)
 const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
+// Server picker (standalone — no Layout, pre-auth)
+const ConnectPage = lazy(() => import('./features/server/ConnectPage'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation.
  *  Uses PageLoadSkeleton (layout-shaped) instead of a plain spinner so the page
@@ -516,6 +520,8 @@ export default function App() {
           the topmost element of any screenshot. */}
       <DemoModeBanner />
       <OnboardingGate />
+      <ServerGate />
+      <NativeDeepLinks />
       {/* HELP-01 — at most one inline, dismissible, route-scoped onboarding
           hint. Replaces the automatic dashboard tour: it never takes focus,
           never blocks, and is suppressed entirely for experienced users and
@@ -553,6 +559,7 @@ export default function App() {
       <Route path="s/:token" element={<SafeRoute name="SharedDrive"><SharedDrive /></SafeRoute>} />
       <Route path="watch" element={<SafeRoute name="WatchFace"><WatchFace /></SafeRoute>} />
       <Route path="onboarding" element={<SafeRoute name="Onboarding"><Onboarding /></SafeRoute>} />
+      <Route path="connect" element={<SafeRoute name="Connect"><ConnectPage /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="explore" element={<SafeRoute name="Explore"><Explore /></SafeRoute>} />

@@ -1,0 +1,20 @@
+{
+  "name": "teslasync-desktop",
+  "version": "2.0.0",
+  "private": true,
+  "description": "TeslaSync generic desktop app shell (Windows, plus macOS/Linux) via Electron. Serves the web UI build locally; users pick their own server at first launch.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test assets.test.js titlebar.test.js",
+    "dist": "electron-builder",
+    "dist:appx": "electron-builder --win appx",
+    "dist:dir": "electron-builder --dir",
+    "build:web": "npm --prefix ../../web run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

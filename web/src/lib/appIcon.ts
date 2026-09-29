@@ -18,7 +18,7 @@
 const VIEWBOX = 200
 const RX_STANDARD = 44
 const BOLT_PATH = 'M112 30L62 108h34L78 170l58-82h-34z'
-const BRAND_BG = '#0b0d12'
+const BRAND_BG = '#f5f6f8'
 const DEFAULT_PRIMARY = '#3b82f6'
 const DEFAULT_ACCENT = '#06b6d4'
 

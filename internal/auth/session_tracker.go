@@ -132,6 +132,15 @@ func Middleware(headerName string, store SessionStore, opts SessionTrackerOption
 				return
 			}
 
+			if _, ok := AppTokenSubjectFromContext(r.Context()); ok {
+				// App-token request: the client authenticates every call
+				// with a Bearer token and holds no session cookie.
+				// Minting here would create one orphan session row per
+				// request, so skip tracking entirely.
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			cookie, err := r.Cookie(cookieName)
 			cookieValue := ""
 			if err == nil {

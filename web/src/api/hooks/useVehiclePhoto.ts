@@ -24,6 +24,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiUrl, request } from '@/api/client';
+import { authHeaders, serverCredentials } from '@/lib/serverConnection';
 import type { VehiclePhotoMeta, VehiclePhotoSize } from '@/api/types';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 
@@ -150,8 +151,9 @@ export function useUploadVehiclePhoto() {
       form.append(VEHICLE_PHOTO_FORM_FIELD, file, file.name);
       const res = await fetch(apiUrl(`/vehicles/${vehicleId}/photo`), {
         method: 'POST',
+        headers: authHeaders(),
         body: form,
-        credentials: 'include',
+        credentials: serverCredentials(),
       });
       if (!res.ok) {
         let detail = '';

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
 // CSRFRejectedCode is the stable machine-readable error returned when a
@@ -38,7 +40,10 @@ func CSRFProtectionWithOptions(opts CSRFOptions) func(http.Handler) http.Handler
 	allowedOrigins := normalizeAllowedOrigins(opts.AllowedOrigins)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !isUnsafeMethod(r.Method) || isSameOriginUnsafeRequest(r, allowedOrigins, opts.AllowLoopbackOrigins) {
+			// A validated app token is explicitly supplied on each request;
+			// it cannot be sent by a cross-site form using the proxy cookie.
+			_, appToken := auth.AppTokenSubjectFromContext(r.Context())
+			if !isUnsafeMethod(r.Method) || appToken || isSameOriginUnsafeRequest(r, allowedOrigins, opts.AllowLoopbackOrigins) {
 				next.ServeHTTP(w, r)
 				return
 			}

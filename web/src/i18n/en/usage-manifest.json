@@ -605,7 +605,8 @@
     "journey": "trips",
     "dayLog": "vehicles",
     "physicsLedger": "vehicles",
-    "science": "science"
+    "science": "science",
+    "serverConnect": "settings"
   },
   "bundles": {
     "explore": [
@@ -1191,6 +1192,7 @@
       "orders",
       "quietHours",
       "safetySettings",
+      "serverConnect",
       "settingsReset",
       "totp"
     ],
@@ -1465,6 +1467,7 @@
     "a11y.breadcrumbHome",
     "a11y.dataFreshness",
     "a11y.helpFor",
+    "a11y.loading",
     "a11y.pagination",
     "a11y.primaryHeader",
     "a11y.primaryNav",
@@ -2124,6 +2127,7 @@
     "routes.commandReliability",
     "routes.commands",
     "routes.componentSurvival",
+    "routes.connect",
     "routes.consumablesLifecycle",
     "routes.costAnalysis",
     "routes.cycleStress",
@@ -3523,13 +3527,15 @@
     "journey": "trips",
     "dayLog": "vehicles",
     "physicsLedger": "vehicles",
-    "science": "science"
+    "science": "science",
+    "serverConnect": "settings"
   },
   "shellCriticalKeys": [
     "a11y.breadcrumb",
     "a11y.breadcrumbHome",
     "a11y.dataFreshness",
     "a11y.helpFor",
+    "a11y.loading",
     "a11y.pagination",
     "a11y.primaryHeader",
     "a11y.primaryNav",
@@ -4206,6 +4212,7 @@
     "routes.commandReliability",
     "routes.commands",
     "routes.componentSurvival",
+    "routes.connect",
     "routes.consumablesLifecycle",
     "routes.costAnalysis",
     "routes.cycleStress",

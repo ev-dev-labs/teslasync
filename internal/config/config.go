@@ -22,14 +22,18 @@ type Config struct {
 	//
 	// See internal/app/drain.go and the exposure assertions in
 	// .github/workflows/ops-gate.yml.
-	DrainPort            int
-	LogLevel             string
-	CORSOrigins          string
-	VehiclePhotoDir      string
-	Environment          string
-	ServiceVersion       string
-	OTLPEndpoint         string
-	OTELTracesSamplerArg string
+	DrainPort   int
+	LogLevel    string
+	CORSOrigins string
+	// AndroidAssetLinksJSON is the raw Digital Asset Links statement list
+	// served at /.well-known/assetlinks.json so a Trusted Web Activity build
+	// (see apps/twa) verifies against this domain. Empty disables the endpoint.
+	AndroidAssetLinksJSON string
+	VehiclePhotoDir       string
+	Environment           string
+	ServiceVersion        string
+	OTLPEndpoint          string
+	OTELTracesSamplerArg  string
 	// RequireCookieConsent opts the deployment into the GDPR / ePrivacy
 	// cookie-consent banner. Default false so
 	// the typical self-hosted single-user instance is unaffected — only
@@ -452,15 +456,16 @@ type RetentionConfig struct {
 // these fields first or log only non-sensitive values.
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:                 envInt("TESLASYNC_PORT", 4000),
-		DrainPort:            envInt("TESLASYNC_DRAIN_PORT", 8090),
-		LogLevel:             envStr("TESLASYNC_LOG_LEVEL", "info"),
-		CORSOrigins:          envStr("CORS_ORIGINS", ""),
-		VehiclePhotoDir:      envStr("TESLASYNC_VEHICLE_PHOTO_DIR", "/var/lib/teslasync/photos"),
-		Environment:          envStr("TESLASYNC_ENVIRONMENT", envStr("ENVIRONMENT", "development")),
-		ServiceVersion:       envStr("TESLASYNC_SERVICE_VERSION", envStr("VERSION", "dev")),
-		OTLPEndpoint:         envStr("OTEL_EXPORTER_OTLP_ENDPOINT", envStr("OTEL_ENDPOINT", "http://otel-collector:4317")),
-		OTELTracesSamplerArg: envStr("OTEL_TRACES_SAMPLER_ARG", "1.0"),
+		Port:                  envInt("TESLASYNC_PORT", 4000),
+		DrainPort:             envInt("TESLASYNC_DRAIN_PORT", 8090),
+		LogLevel:              envStr("TESLASYNC_LOG_LEVEL", "info"),
+		CORSOrigins:           envStr("CORS_ORIGINS", ""),
+		AndroidAssetLinksJSON: envStr("ANDROID_ASSETLINKS_JSON", ""),
+		VehiclePhotoDir:       envStr("TESLASYNC_VEHICLE_PHOTO_DIR", "/var/lib/teslasync/photos"),
+		Environment:           envStr("TESLASYNC_ENVIRONMENT", envStr("ENVIRONMENT", "development")),
+		ServiceVersion:        envStr("TESLASYNC_SERVICE_VERSION", envStr("VERSION", "dev")),
+		OTLPEndpoint:          envStr("OTEL_EXPORTER_OTLP_ENDPOINT", envStr("OTEL_ENDPOINT", "http://otel-collector:4317")),
+		OTELTracesSamplerArg:  envStr("OTEL_TRACES_SAMPLER_ARG", "1.0"),
 		// Default off so self-hosted installs keep working without a banner.
 		// Set TESLASYNC_REQUIRE_COOKIE_CONSENT=true
 		// only on multi-user / public-facing deployments where GDPR /

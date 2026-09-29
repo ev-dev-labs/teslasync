@@ -14,6 +14,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
 )
@@ -81,12 +82,15 @@ func newHandler(q database.DBTX, forwardAuthHeader string, opts ...Option) *Hand
 }
 
 // apiKeyRow is the redacted wire shape returned by List — deliberately
-// omits key_hash so a stored secret is never echoed back.
+// omits key_hash so a stored secret is never echoed back. Subject is
+// empty for device-scoped keys and carries the owner's identity for
+// app-bound keys (see Create).
 type apiKeyRow struct {
 	ID          int64      `json:"id"`
 	Name        string     `json:"name"`
 	KeyPrefix   string     `json:"key_prefix"`
 	Permissions string     `json:"permissions"`
+	Subject     string     `json:"subject,omitempty"`
 	LastUsedAt  *time.Time `json:"last_used_at"`
 	CreatedAt   time.Time  `json:"created_at"`
 	ExpiresAt   *time.Time `json:"expires_at"`
@@ -108,7 +112,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	rows, err := h.db.Query(ctx,
-		`SELECT id, name, key_prefix, permissions, last_used_at, created_at, expires_at FROM api_keys ORDER BY created_at DESC`)
+		`SELECT id, name, key_prefix, permissions, COALESCE(subject, ''), last_used_at, created_at, expires_at FROM api_keys ORDER BY created_at DESC`)
 	if err != nil {
 		// Table may not exist yet — return empty array gracefully.
 		log.Debug().Err(err).Msg("apikey: list query failed, returning empty array")
@@ -120,7 +124,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	keys := []apiKeyRow{}
 	for rows.Next() {
 		var k apiKeyRow
-		if err := rows.Scan(&k.ID, &k.Name, &k.KeyPrefix, &k.Permissions, &k.LastUsedAt, &k.CreatedAt, &k.ExpiresAt); err != nil {
+		if err := rows.Scan(&k.ID, &k.Name, &k.KeyPrefix, &k.Permissions, &k.Subject, &k.LastUsedAt, &k.CreatedAt, &k.ExpiresAt); err != nil {
 			log.Debug().Err(err).Msg("apikey: skipping unscannable api_keys row")
 			continue
 		}
@@ -133,10 +137,19 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // Create generates a new API key, stores its hash, and returns the raw key once.
+//
+// With `"app_token": true` the key is bound to the caller's subject and
+// additionally authenticates as that subject on the whole API via
+// `Authorization: Bearer` (see AppTokenAuth) — this is how the generic
+// phone/desktop apps sign in. App binding requires forward-auth mode
+// (open deployments authenticate nothing) and is refused to callers
+// that authenticated with an app token themselves, so one leaked
+// token can never mint its own siblings.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Name        string `json:"name"`
 		Permissions string `json:"permissions"`
+		AppToken    bool   `json:"app_token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -161,6 +174,24 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var subjectArg *string
+	if body.AppToken {
+		if perm != "admin" {
+			httpx.WriteError(w, http.StatusBadRequest, "app sign-in keys require admin permissions")
+			return
+		}
+		subject, ok := tsauth.SubjectFromRequest(r, h.forwardAuthHeader)
+		if tsauth.IsOpenMode(h.forwardAuthHeader) || !ok {
+			httpx.WriteErrorCode(w, http.StatusNotImplemented, "app tokens require forward-auth mode", tsauth.AuthModeOpenCode)
+			return
+		}
+		if _, isAppToken := tsauth.AppTokenSubjectFromContext(r.Context()); isAppToken {
+			httpx.WriteError(w, http.StatusForbidden, "tokens cannot create tokens")
+			return
+		}
+		subjectArg = &subject
+	}
+
 	if h.db == nil {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "database unavailable")
 		return
@@ -181,9 +212,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var id int64
 	err := h.db.QueryRow(ctx,
-		`INSERT INTO api_keys (name, key_hash, key_prefix, permissions, created_at)
-		 VALUES ($1, $2, $3, $4, NOW()) RETURNING id`,
-		name, hash, prefix, perm).Scan(&id)
+		`INSERT INTO api_keys (name, key_hash, key_prefix, permissions, subject, created_at)
+		 VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING id`,
+		name, hash, prefix, perm, subjectArg).Scan(&id)
 	if err != nil {
 		log.Error().Err(err).Str("name", name).Str("permissions", perm).Msg("apikey: failed to create API key")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to create API key")
@@ -192,13 +223,17 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	h.logAudit(r, "create", &id, fmt.Sprintf("created key %q", name))
 
-	httpx.WriteJSON(w, http.StatusCreated, map[string]interface{}{
+	resp := map[string]interface{}{
 		"id":          id,
 		"key":         rawKey,
 		"name":        name,
 		"key_prefix":  prefix,
 		"permissions": perm,
-	})
+	}
+	if subjectArg != nil {
+		resp["subject"] = *subjectArg
+	}
+	httpx.WriteJSON(w, http.StatusCreated, resp)
 }
 
 // Delete removes an API key by ID.

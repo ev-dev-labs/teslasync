@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
 func TestCSRFProtection(t *testing.T) {
@@ -117,9 +119,25 @@ func TestCSRFProtection_PublicRoutesRemainOutsideProtectedGroup(t *testing.T) {
 		if path == "/api/v1/web-vitals" && res.Code != http.StatusNoContent {
 			t.Errorf("public route status = %d, want %d", res.Code, http.StatusNoContent)
 		}
+
 		if path == "/api/v1/settings" && res.Code != http.StatusForbidden {
 			t.Errorf("protected route status = %d, want %d", res.Code, http.StatusForbidden)
 		}
+	}
+}
+
+func TestCSRFProtection_AppTokenCanSubmitCrossOrigin(t *testing.T) {
+	handler := CSRFProtection(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings", nil)
+	req.Header.Set("Origin", "capacitor://localhost")
+	req.Header.Set("Sec-Fetch-Site", "cross-site")
+	req = req.WithContext(auth.WithAppTokenSubject(req.Context(), "alice"))
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusNoContent {
+		t.Fatalf("app token status = %d, want %d; body=%s", res.Code, http.StatusNoContent, res.Body.String())
 	}
 }
 

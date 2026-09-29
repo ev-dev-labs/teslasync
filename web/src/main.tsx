@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { createQueryClient } from '@/api/queryClient'
+import { Spinner } from './components/feedback/Spinner'
 import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { NavigationGuardProvider } from './components/feedback/NavigationGuardProvider'
@@ -16,9 +17,16 @@ import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
 import { OperationalModeProvider } from './hooks/useOperationalMode'
 import { installGlobalErrorReporting, reportFrontendError } from './lib/errorReporter'
+import { isNativeShell, needsServerSetup } from './lib/serverConnection'
 import App from './App'
 import './i18n'
 import './index.css'
+
+const NativeConnectPage = React.lazy(() => import('./features/server/ConnectPage'))
+const standaloneNativeConnect = isNativeShell() && needsServerSetup()
+if (standaloneNativeConnect && window.location.pathname !== '/connect') {
+  window.history.replaceState(null, '', '/connect')
+}
 
 // ── RUM bootstrap (Phase 44 / Prompt 0060) ────────────────────────────────────
 // OpenTelemetry and Zone.js are intentionally loaded outside the entry chunk.
@@ -112,45 +120,55 @@ queryClient.getQueryCache().subscribe((event) => {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        {/* Phase-40 / Prompt 69: rebroadcast cross-tab queryInvalidate
-            messages into this tab's QueryClient. Mounted directly under
-            QueryClientProvider so useQueryClient() resolves. */}
-        <QueryBroadcastBridge />
-        {/* Phase-45 / Prompt 06: keep module-level formatter globals
-            (numberFormat locale + precision) in sync with the persisted
-            settings even on pages that never call useSettings() and after
-            cross-tab settings broadcasts. */}
-        <FormatterPrefsBridge />
+      {standaloneNativeConnect ? (
         <BrowserRouter>
-          {/* Phase-45 / Prompt 16: in-app unsaved-changes guard. Intercepts
-              <GuardedLink> / <GuardedNavLink> clicks and browser back/forward
-              navigation when any registered useNavigationGuard reports a
-              dirty form. Coexists with useDirtyForm's beforeunload listener
-              (tab close / reload / external links). MUST live inside
-              <BrowserRouter> so useNavigate / useLocation resolve. */}
-          <NavigationGuardProvider>
-            <ThemeProvider>
-              <FontProvider>
-                <SelectedVehicleProvider>
-                  <ToastProvider>
-                    <OperationalModeProvider>
-                      <TypographyAgentProvider>
-                        <App />
-                      </TypographyAgentProvider>
-                      <ReloadPrompt />
-                      {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
-                          with a transient toast + confetti. Mounted alongside the
-                          standard toast stack so the SSE subscription is global. */}
-                      <AchievementUnlockListener />
-                    </OperationalModeProvider>
-                  </ToastProvider>
-                </SelectedVehicleProvider>
-              </FontProvider>
-            </ThemeProvider>
-          </NavigationGuardProvider>
+          <React.Suspense
+            fallback={<div className="flex min-h-dvh items-center justify-center"><Spinner /></div>}
+          >
+            <NativeConnectPage />
+          </React.Suspense>
         </BrowserRouter>
-      </QueryClientProvider>
+      ) : (
+        <QueryClientProvider client={queryClient}>
+          {/* Phase-40 / Prompt 69: rebroadcast cross-tab queryInvalidate
+              messages into this tab's QueryClient. Mounted directly under
+              QueryClientProvider so useQueryClient() resolves. */}
+          <QueryBroadcastBridge />
+          {/* Phase-45 / Prompt 06: keep module-level formatter globals
+              (numberFormat locale + precision) in sync with the persisted
+              settings even on pages that never call useSettings() and after
+              cross-tab settings broadcasts. */}
+          <FormatterPrefsBridge />
+          <BrowserRouter>
+            {/* Phase-45 / Prompt 16: in-app unsaved-changes guard. Intercepts
+                <GuardedLink> / <GuardedNavLink> clicks and browser back/forward
+                navigation when any registered useNavigationGuard reports a
+                dirty form. Coexists with useDirtyForm's beforeunload listener
+                (tab close / reload / external links). MUST live inside
+                <BrowserRouter> so useNavigate / useLocation resolve. */}
+            <NavigationGuardProvider>
+              <ThemeProvider>
+                <FontProvider>
+                  <SelectedVehicleProvider>
+                    <ToastProvider>
+                      <OperationalModeProvider>
+                        <TypographyAgentProvider>
+                          <App />
+                        </TypographyAgentProvider>
+                        <ReloadPrompt />
+                        {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
+                            with a transient toast + confetti. Mounted alongside the
+                            standard toast stack so the SSE subscription is global. */}
+                        <AchievementUnlockListener />
+                      </OperationalModeProvider>
+                    </ToastProvider>
+                  </SelectedVehicleProvider>
+                </FontProvider>
+              </ThemeProvider>
+            </NavigationGuardProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      )}
     </ErrorBoundary>
   </React.StrictMode>,
 )
@@ -172,7 +190,7 @@ window.requestAnimationFrame(() => {
 // the backend (`POST /api/v1/web-vitals`) where they're aggregated as
 // Prometheus histograms. In dev we log to the console — production reporting
 // would be noisy from HMR reloads and unhelpful before the bundle is final.
-if (import.meta.env.PROD) {
+if (import.meta.env.PROD && !standaloneNativeConnect) {
   void import('./lib/webVitalsReporter')
     .then(({ startWebVitalsReporter }) => {
       startWebVitalsReporter()

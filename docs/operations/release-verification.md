@@ -25,6 +25,13 @@ cannot transplant an attestation onto different bytes.
 
 ## Verify a release
 
+The release workflow creates a draft, attaches the Windows installer, unsigned
+MSIX, and debug Android APK, then publishes it. This order is required when
+GitHub release immutability is enabled: assets cannot be added after publication,
+including to branch prereleases. Check that all three downloads appear on the
+published release before using them. A failed, published prerelease with missing
+assets cannot be repaired in place; rerun from a new commit to create a new tag.
+
 Set the version you are checking:
 
 ```bash

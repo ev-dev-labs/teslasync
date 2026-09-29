@@ -57,6 +57,11 @@ export function ApiKeyCard({
               {displayName}
             </Text>
             <ApiKeyPermissionBadge perm={apiKey.permissions} />
+            {apiKey.subject != null && apiKey.subject !== '' && (
+              <Badge variant="info" size="sm">
+                {t('apiKeys.appBadge', 'App')}
+              </Badge>
+            )}
             {expired && (
               <Badge variant="danger" size="sm">
                 <XCircle className="h-3 w-3" aria-hidden="true" />
@@ -102,6 +107,11 @@ export function ApiKeyCard({
             ? `${t('apiKeys.lastUsed', 'Last used')} ${formatDate(apiKey.lastUsedAt)}`
             : t('apiKeys.neverUsed', 'Never used')}
         </Caption>
+        {apiKey.subject != null && apiKey.subject !== '' && (
+          <Caption className="truncate">
+            {t('apiKeys.signedInAs', 'Signed in as {{subject}}', { subject: apiKey.subject })}
+          </Caption>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { Button } from './Button'
 import { CopyButton } from './CopyButton'
 import { apiUrl } from '@/api/client'
+import { authHeaders, serverCredentials } from '@/lib/serverConnection'
 import { maskFor, type MaskVariant } from '@/lib/maskValue'
 import { cn } from '@/lib/cn'
 
@@ -83,9 +84,9 @@ function postRevealAudit(variant: string): void {
   try {
     void fetch(apiUrl('/audit/reveal'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ kind: 'masked_reveal', variant }),
-      credentials: 'include',
+      credentials: serverCredentials(),
       keepalive: true,
     }).catch(() => {
       /* silent: audit is defense-in-depth; never block reveal UX */

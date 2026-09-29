@@ -43,6 +43,7 @@ import {
   type SudoCredential,
   apiUrl,
 } from '@/api/client'
+import { authHeaders, serverCredentials } from '@/lib/serverConnection'
 import { useTOTPStatus } from '@/api/hooks/useTOTP'
 
 export { SudoCanceledError } from '@/api/client'
@@ -287,11 +288,11 @@ interface SudoSubmitBody {
 async function defaultSubmitCredential(body: SudoSubmitBody): Promise<SudoCredential> {
   const res = await fetch(apiUrl('/auth/reauth'), {
     method: 'POST',
-    credentials: 'include',
-    headers: {
+    credentials: serverCredentials(),
+    headers: authHeaders({
       Accept: 'application/json',
       'Content-Type': 'application/json',
-    },
+    }),
     body: JSON.stringify(body),
   })
   if (!res.ok) {
@@ -333,11 +334,11 @@ async function defaultSubmitCredential(body: SudoSubmitBody): Promise<SudoCreden
 async function submitPerUserTotp(code: string): Promise<SudoCredential> {
   const res = await fetch(apiUrl('/auth/totp/sudo'), {
     method: 'POST',
-    credentials: 'include',
-    headers: {
+    credentials: serverCredentials(),
+    headers: authHeaders({
       Accept: 'application/json',
       'Content-Type': 'application/json',
-    },
+    }),
     body: JSON.stringify({ code }),
   })
   if (!res.ok) {

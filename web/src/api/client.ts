@@ -27,6 +27,7 @@
  * pipeline.
  */
 import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys } from '../lib/resilience'
+import { authHeaders, isRemoteMode } from '../lib/serverConnection'
 import { assertOperationalWriteAllowed } from '../lib/operationalMode'
 import { assertNeverQueuedOffline } from './offlineCache'
 import {
@@ -263,7 +264,7 @@ async function directRequest<T>(
     headers: buildHeaders(headers, body != null),
     // Only set when a cross-origin demo base is active; `undefined` leaves
     // fetch's `same-origin` default untouched for every normal request.
-    ...(credentials ? { credentials } : {}),
+    ...(isRemoteMode() ? { credentials: 'omit' as const } : credentials ? { credentials } : {}),
   })
 
   if (!res.ok && !acceptedStatuses.includes(res.status)) {
@@ -289,11 +290,12 @@ async function directRequest<T>(
 
 /**
  * Builds a fresh Headers from the user-supplied options and overlays
- * the cached sudo token (if any). Always returns a new Headers
- * instance so we never mutate the caller's object across retries.
+ * the stored access token (remote mode) plus the cached sudo token
+ * (if any). Always returns a new Headers instance so we never mutate
+ * the caller's object across retries.
  */
 function withSudoToken(headers: HeadersInit | undefined, token: string | null): Headers {
-  const merged = new Headers(headers)
+  const merged = authHeaders(headers)
   if (token != null) merged.set('X-Sudo-Token', token)
   return merged
 }

@@ -14,6 +14,7 @@ import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { apiUrl, request } from '@/api/client';
+import { authHeaders } from '@/lib/serverConnection';
 import EndpointSidebar, { type ParsedEndpoint, type ParsedParam, type ParsedBody } from '../components/EndpointSidebar';
 import RequestBuilder from '../components/RequestBuilder';
 import ResponseViewer, { SnippetPanel, type ApiResponse, type HistoryEntry } from '../components/ResponseViewer';
@@ -158,10 +159,10 @@ async function executeRequest(
   const options: RequestInit = {
     method,
     credentials: 'same-origin',
-    headers: {
+    headers: authHeaders({
       ...(body && method !== 'GET' ? { 'Content-Type': 'application/json' } : {}),
       ...headers,
-    },
+    }),
   };
 
   if (body && method !== 'GET') {

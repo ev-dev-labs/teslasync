@@ -45,7 +45,7 @@ export function useCreateApiKey() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (data: { name: string; permissions: string }) =>
+    mutationFn: (data: { name: string; permissions: string; app_token?: boolean }) =>
       request<APIKey & { key: string }>('/api-keys', {
         method: 'POST',
         requiresLiveMode: true,

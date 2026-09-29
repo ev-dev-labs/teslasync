@@ -16,6 +16,9 @@
  *     app has been live earlier in the session.
  */
 
+import { createEventStream } from './eventStream'
+import { getAccessToken } from './serverConnection'
+
 type SSEListener = (data: unknown) => void
 type SSEEventType =
   | 'vehicle_update'
@@ -101,7 +104,7 @@ function doConnect() {
     source = null
   }
 
-  const es = new EventSource('/api/v1/events')
+  const es = createEventStream('/api/v1/events')
   source = es
 
   es.addEventListener('connected', (e) => {
@@ -147,6 +150,7 @@ function doConnect() {
   })
 
   es.onerror = () => {
+    const authRejected = getAccessToken() != null && es.readyState === EventSource.CLOSED
     es.close()
     source = null
     connecting = false
@@ -157,6 +161,7 @@ function doConnect() {
     // not a server message. UI consumers ("last update Xs ago") would lie if
     // we bumped it on disconnect.
     emit('disconnected')
+    if (authRejected) return
 
     const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, failCount - 1), MAX_BACKOFF_MS)
     reconnectTimer = window.setTimeout(() => {

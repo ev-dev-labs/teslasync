@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
-import { Modal, Button, Input, Select, GlassPanel, CopyButton, MaskedValue, Text } from '@/components/ui';
+import { Modal, Button, Input, Select, Checkbox, GlassPanel, CopyButton, MaskedValue, Text, HelperText } from '@/components/ui';
 import { useCreateApiKey } from '@/api/hooks/useAdmin';
+import { useAuthMode } from '@/api/hooks/useAuthMode';
 import { PERMISSION_ORDER, type ApiKeyPermission } from './constants';
 
 interface CreateApiKeyModalProps {
@@ -18,16 +19,31 @@ interface CreateApiKeyModalProps {
  * closes so a stale secret can never leak into the next open.
  */
 export function CreateApiKeyModal({ open, onClose }: CreateApiKeyModalProps) {
+  // The form owns queries (auth mode) — keep it unmounted while closed so
+  // the page pays nothing until the dialog opens. Unmounting also resets
+  // form + generated-secret state for free on every close.
+  if (!open) return null;
+  return <CreateApiKeyDialog onClose={onClose} />;
+}
+
+function CreateApiKeyDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const createMut = useCreateApiKey();
+  const authMode = useAuthMode();
 
   const [name, setName] = useState('');
   const [perm, setPerm] = useState<ApiKeyPermission>('read');
+  const [appToken, setAppToken] = useState(false);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+
+  // App binding needs an identity to bind to — open-mode servers have
+  // none, so the toggle stays hidden there (the backend 501s anyway).
+  const canBindApp = authMode.data?.mode === 'forward_auth';
 
   const reset = () => {
     setName('');
     setPerm('read');
+    setAppToken(false);
     setGeneratedKey(null);
     createMut.reset();
   };
@@ -41,7 +57,7 @@ export function CreateApiKeyModal({ open, onClose }: CreateApiKeyModalProps) {
     const trimmed = name.trim();
     if (!trimmed) return;
     createMut.mutate(
-      { name: trimmed, permissions: perm },
+      { name: trimmed, permissions: perm, ...(appToken ? { app_token: true as const } : {}) },
       { onSuccess: (data) => setGeneratedKey(data?.key ?? null) },
     );
   };
@@ -62,7 +78,7 @@ export function CreateApiKeyModal({ open, onClose }: CreateApiKeyModalProps) {
 
   return (
     <Modal
-      open={open}
+      open
       onClose={handleClose}
       title={generatedKey ? t('apiKeys.keyCreated', 'API Key Created') : t('apiKeys.newKey', 'New API Key')}
     >
@@ -109,7 +125,21 @@ export function CreateApiKeyModal({ open, onClose }: CreateApiKeyModalProps) {
             value={perm}
             onChange={(e) => setPerm(e.target.value as ApiKeyPermission)}
             options={permissionOptions}
+            disabled={appToken}
           />
+          {canBindApp && (
+            <div className="space-y-1">
+              <Checkbox
+                label={t('apiKeys.appToken', 'App sign-in')}
+                checked={appToken}
+                onChange={(checked) => {
+                  setAppToken(checked);
+                  setPerm(checked ? 'admin' : 'read');
+                }}
+              />
+              <HelperText>{t('apiKeys.appTokenHint', 'Signs in as you with full admin access. Treat this key like a password.')}</HelperText>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button
               variant="primary"

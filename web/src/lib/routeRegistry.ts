@@ -88,6 +88,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: "/command-history", name: "CommandHistory", label: "Command History", i18nKey: "routes.commandHistory" },
   { path: "/command-reliability", name: "CommandReliability", label: "Command Reliability", i18nKey: "routes.commandReliability" },
   { path: "/commands", name: "Commands", label: "Commands", i18nKey: "routes.commands" },
+  { path: "/connect", name: "Connect", label: "Connect", i18nKey: "routes.connect" },
   { path: "/cost-analysis", name: "CostAnalysis", label: "Cost Analysis", i18nKey: "routes.costAnalysis" },
   { path: "/cycle-stress", name: "CycleStress", label: "Cycle Stress", i18nKey: "routes.cycleStress" },
   { path: "/dashcam", name: "DashcamIntelligence", label: "Dashcam Intelligence", i18nKey: "routes.dashcamIntelligence" },

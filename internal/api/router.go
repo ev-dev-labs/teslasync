@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -3184,6 +3185,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			return DefaultAPILogSkip(p)
 		}))
 
+		// App-bound API keys: after APICallLog (so Bearer 401s are captured)
+		// but before ForwardAuth so a valid token injects the subject
+		// header every downstream gate reads. No-op without the header.
+		r.Use(AppTokenAuth(db, cfg.Auth.ForwardAuthHeader))
+
 		// ForwardAuth: protect all /api/v1/* routes via reverse-proxy header.
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
@@ -5132,6 +5138,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Tesla public key (.well-known path required by Tesla Fleet API)
 	r.Get("/.well-known/appspecific/com.tesla.3p.public-key.pem", devToolsHandler.ServePublicKey)
 
+	// Android Digital Asset Links (required by Trusted Web Activity builds in
+	// apps/twa). Serves ANDROID_ASSETLINKS_JSON; 404s when unconfigured.
+	r.Get("/.well-known/assetlinks.json", ServeAssetLinks(cfg.AndroidAssetLinksJSON))
+
 	// Serve frontend static files (SPA)
 	// Static assets found on disk are served directly; all other GET
 	// requests fall back to index.html for client-side routing.
@@ -5140,6 +5150,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if _, err := os.Stat(staticDir); err != nil {
 		staticDir = "./web/dist"
 	}
+
 	fs := http.FileServer(http.Dir(staticDir))
 	r.NotFound(spaFallback(staticDir, fs))
 
@@ -5160,6 +5171,36 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 
 	return apimw.WithMatchedRoute(r)
+}
+
+// ServeAssetLinks serves the deployment-specific Android Digital Asset Links
+// statement list; an unset value leaves the association endpoint disabled.
+func ServeAssetLinks(configuredJSON string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		raw := bytes.TrimSpace([]byte(configuredJSON))
+		if len(raw) == 0 {
+			http.Error(w, "not configured", http.StatusNotFound)
+			return
+		}
+		var statements []json.RawMessage
+		if err := json.Unmarshal(raw, &statements); err != nil || statements == nil {
+			http.Error(w, "asset links misconfigured", http.StatusInternalServerError)
+			return
+		}
+		compact, err := json.Marshal(statements)
+		if err != nil {
+			http.Error(w, "asset links misconfigured", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(compact)
+	}
 }
 
 // spaFallback returns an http.Handler that serves static files from dir

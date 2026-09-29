@@ -479,7 +479,7 @@ describe('submitImportJob (multipart upload)', () => {
     expect(init.body).toBeInstanceOf(FormData)
     // Critical: NO Content-Type header — the browser must set the multipart
     // boundary itself. A forced application/json here breaks server parsing.
-    expect(init.headers).toBeUndefined()
+    expect(new Headers(init.headers).has('Content-Type')).toBe(false)
     const form = init.body as FormData
     expect(form.get('type')).toBe('import_drives')
     expect(form.get('file')).toBeInstanceOf(File)

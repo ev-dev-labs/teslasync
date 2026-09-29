@@ -5100,7 +5100,8 @@
     "emergencyResilience": "Emergency Resilience",
     "causalExperimentLab": "Causal Experiment Lab",
     "tCOOptimizer": "TCO Optimizer",
-    "journeys": "Journeys"
+    "journeys": "Journeys",
+    "connect": "Connect"
   },
   "vehiclePicker": {
     "aria": "Select vehicle",
@@ -10852,7 +10853,11 @@
       "readWriteDesc": "Read data and send vehicle commands.",
       "admin": "Admin",
       "adminDesc": "Full administrative access to every resource."
-    }
+    },
+    "appToken": "App sign-in",
+    "appTokenHint": "Signs in as you with full admin access. Treat this key like a password.",
+    "appBadge": "App",
+    "signedInAs": "Signed in as {{subject}}"
   },
   "timeline": {
     "title": "Timeline",
@@ -29069,6 +29074,43 @@
       "noneReported": "None reported",
       "residual": "Fit residual (mean / RMSE)",
       "recordId": "Generated record"
+    }
+  },
+  "serverConnect": {
+    "connect": {
+      "title": "Connect to your server",
+      "subtitle": "Enter your TeslaSync address to continue.",
+      "serverLabel": "Server address",
+      "serverPlaceholder": "https://teslasync.example.com",
+      "serverHint": "Your self-hosted TeslaSync URL — local addresses like http://192.168.1.10:4000 work too.",
+      "tokenLabel": "Access token",
+      "tokenOptional": "optional",
+      "tokenPlaceholder": "ts_…",
+      "tokenHint": "Only needed when your server uses forward-auth login. Create one under Admin → API Keys.",
+      "submit": "Connect",
+      "connecting": "Connecting…",
+      "errorEmpty": "Enter a server address, e.g. https://teslasync.example.com.",
+      "errorScheme": "Use an http:// or https:// address.",
+      "errorParse": "That address doesn't look valid — check it and try again.",
+      "errorHost": "That address has no host — e.g. https://teslasync.example.com.",
+      "errorCredentials": "Leave usernames and passwords out of the address.",
+      "errorSubpath": "Enter just the server origin, without a /path.",
+      "errorUnreachable": "Couldn't reach a TeslaSync server there. Check the address and that the server is running.",
+      "errorTokenRequired": "This server needs an access token — paste one to continue.",
+      "errorSave": "Could not save this connection. Check whether browser storage is enabled.",
+      "modeOpen": "Open server — no token needed.",
+      "modeForwardAuth": "This server uses login — an access token is required."
+    },
+    "settings": {
+      "section": "Server",
+      "sectionDescription": "Which TeslaSync server this app talks to",
+      "current": "Connected to",
+      "sameOrigin": "This server (browser default)",
+      "change": "Change server",
+      "disconnect": "Disconnect",
+      "disconnectHint": "Forget this server and go back to the browser default.",
+      "disconnectError": "Could not forget this server. Check whether browser storage is enabled.",
+      "saveHint": "Changing server reloads the app."
     }
   }
 }
