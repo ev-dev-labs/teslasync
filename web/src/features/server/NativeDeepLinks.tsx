@@ -41,14 +41,28 @@ export function nativeLinkToRoute(raw: unknown): string | null {
 }
 
 interface CapacitorAppPlugin {
-  addListener(event: 'appUrlOpen', cb: (data: { url: string }) => void): Promise<{ remove: () => void }>
+  addListener(
+    event: 'appUrlOpen',
+    cb: (data: { url: string }) => void,
+  ): NativeListenerHandle | Promise<NativeListenerHandle>
+}
+
+interface NativeListenerHandle {
+  remove: () => void | Promise<void>
 }
 
 function getAppPlugin(): CapacitorAppPlugin | null {
   const cap = (window as unknown as {
     Capacitor?: { Plugins?: { App?: CapacitorAppPlugin } }
   }).Capacitor
-  return cap?.Plugins?.App ?? null
+  const plugin = cap?.Plugins?.App
+  return typeof plugin?.addListener === 'function' ? plugin : null
+}
+
+function removeNativeListener(handle: NativeListenerHandle): void {
+  void Promise.resolve()
+    .then(() => handle.remove())
+    .catch((error: unknown) => console.error('Failed to remove native deep-link listener', error))
 }
 
 /**
@@ -81,23 +95,21 @@ export function NativeDeepLinks() {
     if (plugin == null) {
       return () => window.removeEventListener('teslasync:deep-link', onElectronLink)
     }
-    let remove: (() => void) | null = null
+    let handle: NativeListenerHandle | null = null
     let cancelled = false
-    void plugin
-      .addListener('appUrlOpen', (data) => {
+    void Promise.resolve()
+      .then(() => plugin.addListener('appUrlOpen', (data) => {
         const route = nativeLinkToRoute(data?.url)
         if (route != null) navigate(route)
+      }))
+      .then((registered) => {
+        if (cancelled) removeNativeListener(registered)
+        else handle = registered
       })
-      .then((handle) => {
-        if (cancelled) handle.remove()
-        else remove = () => handle.remove()
-      })
-      .catch(() => {
-        // Listener registration is best-effort; links still open the app.
-      })
+      .catch((error: unknown) => console.error('Failed to register native deep-link listener', error))
     return () => {
       cancelled = true
-      remove?.()
+      if (handle != null) removeNativeListener(handle)
       window.removeEventListener('teslasync:deep-link', onElectronLink)
     }
   }, [navigate])

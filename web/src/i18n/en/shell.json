@@ -4,6 +4,7 @@
     "breadcrumbHome": "Dashboard",
     "dataFreshness": "Data freshness: {{state}}",
     "helpFor": "Help for {{field}}",
+    "loading": "Loading",
     "pagination": "Pagination",
     "primaryHeader": "Site header",
     "primaryNav": "Primary",
