@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { request } from '../client';
+import { request, SudoCanceledError } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS } from '@/lib/constants';
@@ -74,7 +74,10 @@ export function useDeleteApiKey() {
       qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
       success('toast.admin.apiKey.delete.success', 'API key deleted');
     },
-    onError: (e) => error(e, 'toast.admin.apiKey.delete.error', 'Failed to delete API key'),
+    onError: (e) => {
+      if (e instanceof SudoCanceledError) return;
+      error(e, 'toast.admin.apiKey.delete.error', 'Failed to delete API key');
+    },
   });
 }
 
@@ -91,7 +94,10 @@ export function useRevokeApiKey() {
       qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
       success('toast.admin.apiKey.revoke.success', 'API key revoked');
     },
-    onError: (e) => error(e, 'toast.admin.apiKey.revoke.error', 'Failed to revoke API key'),
+    onError: (e) => {
+      if (e instanceof SudoCanceledError) return;
+      error(e, 'toast.admin.apiKey.revoke.error', 'Failed to revoke API key');
+    },
   });
 }
 

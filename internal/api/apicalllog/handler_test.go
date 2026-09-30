@@ -31,6 +31,8 @@ type getAllCall struct {
 	status        string
 	endpoint      string
 	service       string
+	client        string
+	key           string
 	start         string
 	end           string
 	endExclusive  string
@@ -53,7 +55,7 @@ type fakeAPICallLogRepo struct {
 	getStatsStart, getStatsEnd *time.Time
 }
 
-func (f *fakeAPICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error) {
+func (f *fakeAPICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, client, key, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error) {
 	f.gotGetAll = append(f.gotGetAll, getAllCall{
 		limit:        limit,
 		offset:       offset,
@@ -61,6 +63,8 @@ func (f *fakeAPICallLogRepo) GetAll(ctx context.Context, limit, offset int, meth
 		status:       statusFilter,
 		endpoint:     endpoint,
 		service:      service,
+		client:       client,
+		key:          key,
 		start:        startDate,
 		end:          endDate,
 		endExclusive: endExclusive,
@@ -132,11 +136,11 @@ func TestHandler_List_QueryForwarding(t *testing.T) {
 		},
 		{
 			name:  "all filters forwarded",
-			query: "method=POST&status=5xx&endpoint=%2Fvehicles&service=fleet-api&start=2026-01-01&end=2026-02-01",
+			query: "method=POST&status=5xx&endpoint=%2Fvehicles&service=fleet-api&client=windows%3A550e8400&key=My+Laptop&start=2026-01-01&end=2026-02-01",
 			want: getAllCall{
 				limit: 50, offset: 0,
 				method: http.MethodPost, status: "5xx",
-				endpoint: "/vehicles", service: "fleet-api",
+				endpoint: "/vehicles", service: "fleet-api", client: "windows:550e8400", key: "My Laptop",
 				start: "2026-01-01", end: "2026-02-01",
 			},
 		},
@@ -198,6 +202,9 @@ func TestHandler_List_QueryForwarding(t *testing.T) {
 func TestHandler_List_RejectsInvalidExactWindows(t *testing.T) {
 	t.Parallel()
 	for _, query := range []string{
+		"client=android%3Asecret%25",
+		"key=" + strings.Repeat("x", 256),
+		"key=hello%0Aworld",
 		"start=2026-09-19&end_exclusive=2026-09-26T07:00:00Z",
 		"start=2026-09-26T07:00:00Z&end_exclusive=2026-09-19T07:00:00Z",
 		"start=2026-09-19T07:00:00Z&end_exclusive=2026-09-26T07:00:00Z&end=2026-09-26",
@@ -357,11 +364,11 @@ type ctxCapturingRepo struct {
 	onGetAll func(ctx context.Context)
 }
 
-func (c *ctxCapturingRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error) {
+func (c *ctxCapturingRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, client, key, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error) {
 	if c.onGetAll != nil {
 		c.onGetAll(ctx)
 	}
-	return c.fakeAPICallLogRepo.GetAll(ctx, limit, offset, method, statusFilter, endpoint, service, startDate, endDate, endExclusive)
+	return c.fakeAPICallLogRepo.GetAll(ctx, limit, offset, method, statusFilter, endpoint, service, client, key, startDate, endDate, endExclusive)
 }
 
 // ---------- Stats ----------

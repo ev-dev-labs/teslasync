@@ -139,12 +139,13 @@ func appTokenAuth(q database.DBTX, headerName string) func(http.Handler) http.Ha
 			}
 
 			var id int64
+			var name string
 			var subject string
 			err := q.QueryRow(r.Context(),
-				`SELECT id, COALESCE(subject, '') FROM api_keys
+				`SELECT id, name, COALESCE(subject, '') FROM api_keys
 				 WHERE key_hash = $1 AND permissions = 'admin'
 				   AND (expires_at IS NULL OR expires_at > NOW())`,
-				sha256Hex(strings.TrimSpace(token))).Scan(&id, &subject)
+				sha256Hex(strings.TrimSpace(token))).Scan(&id, &name, &subject)
 			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				writeError(w, http.StatusServiceUnavailable, "token lookup unavailable")
 				return
@@ -166,6 +167,9 @@ func appTokenAuth(q database.DBTX, headerName string) func(http.Handler) http.Ha
 
 			_, _ = q.Exec(r.Context(), `UPDATE api_keys SET last_used_at = NOW() WHERE id = $1`, id)
 
+			if key, ok := r.Context().Value(verifiedAppKeyContextKey{}).(*verifiedAppKey); ok {
+				key.id, key.name = id, name
+			}
 			r.Header.Set(headerName, subject)
 			ctx := tsauth.WithAppTokenSubject(r.Context(), subject)
 			next.ServeHTTP(w, r.WithContext(ctx))

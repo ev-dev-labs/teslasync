@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
+	"unicode"
 
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 	"go.opentelemetry.io/otel"
@@ -24,9 +27,11 @@ import (
 // used by internal/api/vampiredrain. The concrete *systemdb.APICallLogRepo
 // returned by systemdb.NewAPICallLogRepo satisfies this interface.
 type apiCallLogRepository interface {
-	GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error)
+	GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, client, key, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error)
 	GetStats(ctx context.Context, start, endExclusive *time.Time) (map[string]interface{}, error)
 }
+
+var clientFilterPattern = regexp.MustCompile(`^[a-zA-Z0-9:-]{1,64}$`)
 
 // Handler handles API call log HTTP requests.
 type Handler struct {
@@ -50,6 +55,16 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	status := q.Get("status")
 	endpoint := q.Get("endpoint")
 	service := q.Get("service")
+	client := q.Get("client")
+	if client != "" && !clientFilterPattern.MatchString(client) {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid app installation filter")
+		return
+	}
+	key := strings.TrimSpace(q.Get("key"))
+	if len(key) > 255 || strings.IndexFunc(key, unicode.IsControl) >= 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid app key filter")
+		return
+	}
 	start := q.Get("start")
 	end := q.Get("end")
 	endExclusive := q.Get("end_exclusive")
@@ -63,7 +78,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		endExclusive = until.Format(time.RFC3339Nano)
 	}
 
-	logs, total, err := h.repo.GetAll(ctx, limit, offset, method, status, endpoint, service, start, end, endExclusive)
+	logs, total, err := h.repo.GetAll(ctx, limit, offset, method, status, endpoint, service, client, key, start, end, endExclusive)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "api call log list failed")
@@ -73,6 +88,8 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			Str("method", method).
 			Str("status", status).
 			Str("service", service).
+			Bool("client_filtered", client != "").
+			Bool("app_key_filtered", key != "").
 			Msg("failed to list api call logs")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to list api call logs")
 		return

@@ -119,6 +119,11 @@ const LazySessionExpiringModal = lazy(async () => {
   return { default: module.SessionExpiringModal }
 })
 
+const LazyReauthDialogRoot = lazy(async () => {
+  const module = await import('../feedback/ReauthDialog')
+  return { default: module.ReauthDialogRoot }
+})
+
 const LazyGotoIndicator = lazy(async () => {
   const module = await import('../feedback/GotoIndicator')
   return { default: module.GotoIndicator }
@@ -1590,6 +1595,7 @@ export default function Layout() {
           Both are no-ops in open mode (no FORWARD_AUTH_HEADER). */}
       <Suspense fallback={null}><LazySessionExpiringModal /></Suspense>
       <SessionExpiredModal />
+      <Suspense fallback={null}><LazyReauthDialogRoot /></Suspense>
 
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />

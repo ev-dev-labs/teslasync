@@ -85,6 +85,7 @@ import {
 import {
   SudoCanceledError,
   __resetSudoStateForTests,
+  request,
   type SudoCredential,
 } from '@/api/client'
 
@@ -310,6 +311,63 @@ describe('ReauthDialog (presentation-only)', () => {
 })
 
 describe('ReauthDialogRoot (queue + provider wiring)', () => {
+  it('waits for TOTP enrollment status before exposing the per-user code path', async () => {
+    mockTotpStatus = { data: undefined, isError: false, isFetched: false }
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ mode: 'session', sudo_token: 'fresh-sudo' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+    const { rerender } = render(<ReauthDialogRoot />)
+    act(() => { void __enqueueSudoChallengeForTests('/api-keys/42').catch(() => {}) })
+    expect(await screen.findByTestId('reauth-dialog')).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /Authenticator/i })).not.toBeInTheDocument()
+
+    mockTotpStatus = { data: { mode: 'session', activated: true }, isError: false, isFetched: true }
+    rerender(<ReauthDialogRoot />)
+    fireEvent.click(screen.getByRole('tab', { name: /Authenticator/i }))
+    fireEvent.change(screen.getByTestId('reauth-totp'), { target: { value: '123456' } })
+    fireEvent.click(screen.getByTestId('reauth-submit'))
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled())
+    expect(fetchSpy.mock.calls[0][0]).toContain('/auth/totp/sudo')
+    expect(fetchSpy.mock.calls[0][0]).not.toContain('/auth/reauth')
+  })
+
+  it('prompts for step-up and replays API key deletion after reauth', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ error: 'step-up required', code: 'SUDO_REQUIRED' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ mode: 'session', sudo_token: 'fresh-sudo', expires_at: new Date(Date.now() + 60_000).toISOString() }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+    render(<ReauthDialogRoot />)
+
+    let deletion: Promise<void> | undefined
+    act(() => {
+      deletion = request<void>('/api-keys/windows', { method: 'DELETE' })
+    })
+
+    expect(await screen.findByTestId('reauth-dialog')).toBeTruthy()
+    fireEvent.change(screen.getByTestId('reauth-password'), {
+      target: { value: 'test-password' },
+    })
+    fireEvent.click(screen.getByTestId('reauth-submit'))
+
+    await act(async () => {
+      await deletion
+    })
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+    expect(fetchSpy.mock.calls[1][0]).toContain('/auth/reauth')
+    expect(fetchSpy.mock.calls[2][0]).toContain('/api-keys/windows')
+    expect(new Headers(fetchSpy.mock.calls[2][1]?.headers).get('X-Sudo-Token')).toBe('fresh-sudo')
+  })
+
   it('opens when a challenge is enqueued and resolves the Promise on submit', async () => {
     // Mock the /auth/reauth endpoint that the default submit calls.
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(

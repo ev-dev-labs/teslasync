@@ -292,7 +292,7 @@ export function isDemoBaseCrossOrigin(env?: EnvRecord): boolean {
 }
 
 /** Header names that carry caller identity and must never cross to a demo host. */
-const CREDENTIAL_HEADERS = ['authorization', 'x-sudo-token', 'cookie'] as const
+const CREDENTIAL_HEADERS = ['authorization', 'x-sudo-token', 'x-teslasync-app', 'cookie'] as const
 
 /**
  * Strip credential-bearing headers when the request is going to a

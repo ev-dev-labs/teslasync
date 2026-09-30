@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  appIdentityHeaders,
   authHeaders,
   clearAccessToken,
   clearServerConnection,
@@ -27,6 +28,7 @@ afterEach(() => {
   delete window.__TESLASYNC_SHELL__
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 describe('normalizeServerUrl', () => {
@@ -146,6 +148,46 @@ describe('authHeaders', () => {
     const out = authHeaders({ Authorization: 'Basic abc' })
     expect(out.get('Authorization')).toBe('Basic abc')
   })
+
+  it('reuses a distinct per-install ID across token replacement and server switches', () => {
+    window.__TESLASYNC_SHELL__ = 'electron'
+    setServerConnection('https://srv.example.com', 'ts_test_secret')
+    const first = authHeaders().get('X-Teslasync-App')
+    expect(first).toMatch(/^(?:windows|macos|linux):[0-9a-f-]{36}$/)
+    clearAccessToken()
+    setServerConnection('https://other.example.com', 'ts_other')
+    expect(authHeaders().get('X-Teslasync-App')).toBe(first)
+    clearServerConnection()
+    expect(appIdentityHeaders().get('X-Teslasync-App')).toBe(first)
+    window.localStorage.removeItem('teslasync-app-installation-id')
+    expect(authHeaders().get('X-Teslasync-App')).not.toBe(first)
+  })
+
+  it('labels Android and iOS independently but never labels browser traffic', () => {
+    expect(authHeaders().has('X-Teslasync-App')).toBe(false)
+    vi.stubGlobal('Capacitor', { isNativePlatform: () => true, getPlatform: () => 'android' })
+    expect(authHeaders().get('X-Teslasync-App')).toMatch(/^android:/)
+    vi.stubGlobal('Capacitor', { isNativePlatform: () => true, getPlatform: () => 'ios' })
+    expect(authHeaders().get('X-Teslasync-App')).toMatch(/^ios:/)
+  })
+
+  it('warns and securely replaces a corrupted stored installation ID', () => {
+    window.__TESLASYNC_SHELL__ = 'electron'
+    window.localStorage.setItem('teslasync-app-installation-id', 'invalid')
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(appIdentityHeaders().get('X-Teslasync-App')).toMatch(/:[0-9a-f-]{36}$/)
+    expect(warn).toHaveBeenCalledWith('Invalid native app installation ID; generating a new diagnostic ID')
+  })
+
+  it('withholds the installation label and token from a cross-origin demo host', () => {
+    window.__TESLASYNC_SHELL__ = 'electron'
+    setServerConnection('https://srv.example.com', 'ts_test_secret')
+    vi.stubEnv('VITE_DEMO_MODE', 'true')
+    vi.stubEnv('VITE_DEMO_API_BASE', 'https://demo.example.com/api/v1')
+    const headers = authHeaders()
+    expect(headers.has('X-Teslasync-App')).toBe(false)
+    expect(headers.has('Authorization')).toBe(false)
+  })
 })
 
 describe('needsServerSetup', () => {
@@ -188,12 +230,21 @@ describe('probeServer', () => {
       ok: true,
       json: () => Promise.resolve({ mode: 'forward_auth' }),
     })
+
     vi.stubGlobal('fetch', fetchMock)
     const result = await probeServer('https://srv.example.com', 'ts_test_x')
     expect(result).toEqual({ ok: true, mode: 'forward_auth' })
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(fetchMock.mock.calls[0][0]).toBe('https://srv.example.com/api/v1/system/auth-mode')
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer ts_test_x')
+  })
+
+  it('never sends an installation identifier to a candidate server probe', async () => {
+    window.__TESLASYNC_SHELL__ = 'electron'
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ mode: 'forward_auth' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    await probeServer('https://candidate.example.com', 'ts_test_secret')
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).has('X-Teslasync-App')).toBe(false)
   })
 
   it('fails closed on transport errors and bad payloads', async () => {

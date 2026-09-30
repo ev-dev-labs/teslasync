@@ -18,6 +18,7 @@ import (
 // appTokenFakeQuerier satisfies database.DBTX with a scripted key lookup.
 type appTokenFakeQuerier struct {
 	id      int64
+	name    string
 	subject string
 	lookup  error
 	execs   int
@@ -30,7 +31,7 @@ func (f *appTokenFakeQuerier) Query(_ context.Context, _ string, _ ...any) (pgx.
 
 func (f *appTokenFakeQuerier) QueryRow(_ context.Context, query string, _ ...any) pgx.Row {
 	f.query = query
-	return appTokenFakeRow{id: f.id, subject: f.subject, err: f.lookup}
+	return appTokenFakeRow{id: f.id, name: f.name, subject: f.subject, err: f.lookup}
 }
 
 func (f *appTokenFakeQuerier) Exec(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
@@ -42,6 +43,7 @@ var _ database.DBTX = (*appTokenFakeQuerier)(nil)
 
 type appTokenFakeRow struct {
 	id      int64
+	name    string
 	subject string
 	err     error
 }
@@ -50,13 +52,16 @@ func (r appTokenFakeRow) Scan(dest ...any) error {
 	if r.err != nil {
 		return r.err
 	}
-	if len(dest) != 2 {
-		return errors.New("appTokenFakeRow: want 2 scan destinations")
+	if len(dest) != 3 {
+		return errors.New("appTokenFakeRow: want 3 scan destinations")
 	}
 	if p, ok := dest[0].(*int64); ok {
 		*p = r.id
 	}
 	if p, ok := dest[1].(*string); ok {
+		*p = r.name
+	}
+	if p, ok := dest[2].(*string); ok {
 		*p = r.subject
 	}
 	return nil

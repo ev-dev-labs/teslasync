@@ -76,7 +76,7 @@ func (r *APICallLogRepo) CreateBatch(ctx context.Context, batch []*teslamodel.AP
 	return err
 }
 
-func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error) {
+func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, client, key, startDate, endDate, endExclusive string) ([]*teslamodel.APICallLog, int, error) {
 	query := `SELECT id, ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited, request_body, response_body, request_headers, response_headers FROM api_call_logs WHERE 1=1`
 	countQuery := `SELECT COUNT(*) FROM api_call_logs WHERE 1=1`
 	args := []interface{}{}
@@ -114,6 +114,19 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 		query += ` AND service = $` + itoa(argIdx)
 		countQuery += ` AND service = $` + itoa(argIdx)
 		args = append(args, service)
+		argIdx++
+	}
+	if client != "" {
+		query += ` AND request_headers ->> 'X-Teslasync-App' ILIKE '%' || $` + itoa(argIdx) + ` || '%'`
+		countQuery += ` AND request_headers ->> 'X-Teslasync-App' ILIKE '%' || $` + itoa(argIdx) + ` || '%'`
+		args = append(args, client)
+		argIdx++
+	}
+	if key != "" {
+		predicate := ` AND (strpos(lower(request_headers ->> 'App-Key-Name'), lower($` + itoa(argIdx) + `)) > 0 OR strpos(request_headers ->> 'App-Key-ID', $` + itoa(argIdx) + `) > 0)`
+		query += predicate
+		countQuery += predicate
+		args = append(args, key)
 		argIdx++
 	}
 	if startDate != "" {

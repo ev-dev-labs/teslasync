@@ -18,7 +18,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { renderHook, waitFor, act, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('@/api/client', async () => {
@@ -29,7 +29,7 @@ vi.mock('@/api/client', async () => {
   };
 });
 
-import { ApiError, request } from '@/api/client';
+import { ApiError, request, SudoCanceledError } from '@/api/client';
 import { ToastProvider } from '@/components/feedback/Toast';
 import {
   adminKeys,
@@ -208,6 +208,17 @@ describe('useDeleteApiKey', () => {
     expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: adminKeys.apiKeys });
   });
+
+  it('does not report a dismissed step-up dialog as a delete failure', async () => {
+    mockedRequest.mockRejectedValueOnce(new SudoCanceledError());
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useDeleteApiKey(), { wrapper });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync('k1')).rejects.toBeInstanceOf(SudoCanceledError);
+    });
+    expect(screen.queryByText('Failed to delete API key')).toBeNull();
+  });
 });
 
 describe('useRevokeApiKey', () => {
@@ -223,6 +234,17 @@ describe('useRevokeApiKey', () => {
     expect(path).toBe('/api-keys/k2/revoke');
     expect(opts.method).toBe('POST');
     expect(opts.requiresLiveMode).toBe(true);
+  });
+
+  it('does not report a dismissed step-up dialog as a revoke failure', async () => {
+    mockedRequest.mockRejectedValueOnce(new SudoCanceledError());
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useRevokeApiKey(), { wrapper });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync('k2')).rejects.toBeInstanceOf(SudoCanceledError);
+    });
+    expect(screen.queryByText('Failed to revoke API key')).toBeNull();
   });
 });
 

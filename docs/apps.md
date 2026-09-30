@@ -115,7 +115,7 @@ wildcard (`*`). Check the effective deployment environment rather than
 assuming an ingress proxy supplies these origins automatically.
 
 The API's CORS middleware must handle OPTIONS preflights and allow
-`Authorization` and `Content-Type`; the reverse proxy must pass these
+`Authorization`, `Content-Type`, `X-Sudo-Token`, and `X-Teslasync-App`; the reverse proxy must pass these
 requests through without an interactive-login redirect. Generic
 remote-mode requests omit cookies (including forward-auth browser
 cookies); forward-auth servers require a bearer app key instead. The
@@ -157,6 +157,39 @@ route skips only the interactive proxy login: the API still validates the
 app key. OPTIONS requests reach the API's CORS handler. Keep the browser
 catch-all behind forward auth. This opt-in requires a chart version that
 includes `nativeAppAuth`; older published charts ignore unknown values.
+
+To bypass the web Nginx hop for native apps, an API-only Traefik route can
+use the **same public hostname** and forward just `/api/v1/` OPTIONS and
+bearer-authorized requests to the Go API Service. Give these routes higher
+priority than the chart's native-app routes, apply the chart's identity-strip
+middleware to both, and retain the chart routes as a fallback. The app's
+saved server address does not change. Do not forward the whole hostname or
+anonymous API traffic directly: ordinary browser requests must still use
+the web ingress with interactive proxy authentication. The Go API must
+continue to validate bearer keys and enforce its native-origin CORS allowlist.
+
+Generic shells attach an `X-Teslasync-App` diagnostic header containing
+`platform:installation-uuid` on API calls. The random ID persists per app
+installation, including across server switches and app-token renewals; a
+separate Windows, Android, or iOS install receives a different ID. Admin
+→ API Logs displays the platform and short ID on each inbound request;
+expand a row to copy the full ID, then filter the list by platform or ID.
+This client-supplied header is informational, not proof of identity; browser
+requests and older app builds do not carry it. No hardware identifier or
+bearer secret is stored in the log.
+For authenticated app tokens, the API also looks up the key's saved name and
+database ID and records both in the API log after authentication. These
+server-verified fields appear next to the platform/installation label and can
+be filtered by key name or ID, even if several devices share a key. Name your
+app key when creating it (for example, "Living room tablet"); the name is not
+derived from the secret, and revoked/invalid tokens never receive a verified
+key label. Older log entries have no key attribution.
+The server displays an installation hint only for requests with a verified
+app token; it ignores forged key-name headers and does not label rejected
+tokens as trusted. A copied key can still be reused on a second device:
+create **one named app key per installation** and revoke it individually
+for reliable, server-verified device attribution. The UUID alone is not a
+security boundary.
 
 ## How app sign-in works
 

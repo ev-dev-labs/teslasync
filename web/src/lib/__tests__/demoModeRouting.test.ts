@@ -87,20 +87,23 @@ describe('cross-origin credential protection', () => {
       Accept: 'application/json',
       Authorization: 'Bearer production-secret',
       'X-Sudo-Token': 'sudo-secret',
+      'X-Teslasync-App': 'windows:550e8400-e29b-41d4-a716-446655440000',
     })
 
     stripCredentialHeadersForDemo(headers, ENABLED_CROSS_ORIGIN)
 
     expect(headers.get('authorization')).toBeNull()
     expect(headers.get('x-sudo-token')).toBeNull()
+    expect(headers.get('x-teslasync-app')).toBeNull()
     // Non-credential headers survive — this is a filter, not a reset.
     expect(headers.get('accept')).toBe('application/json')
   })
 
   it('leaves headers untouched in normal mode', () => {
-    const headers = new Headers({ 'X-Sudo-Token': 'sudo-secret' })
+    const headers = new Headers({ 'X-Sudo-Token': 'sudo-secret', 'X-Teslasync-App': 'windows:test' })
     stripCredentialHeadersForDemo(headers, {})
     expect(headers.get('x-sudo-token')).toBe('sudo-secret')
+    expect(headers.get('x-teslasync-app')).toBe('windows:test')
   })
 
   it('leaves headers untouched for a same-origin demo base', () => {

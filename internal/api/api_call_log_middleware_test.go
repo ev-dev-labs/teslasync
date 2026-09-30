@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5"
 	dto "github.com/prometheus/client_model/go"
 )
 
@@ -225,6 +226,61 @@ func TestT01_HappyPath_GET_Vehicles_RecordsOneRow_ServiceTeslasyncApi(t *testing
 	// to zero and should not fail this test).
 	if e.DurationMs < 0 {
 		t.Errorf("duration_ms=%d, want >= 0", e.DurationMs)
+	}
+}
+
+func TestAppKeyAttributionRequiresVerifiedToken(t *testing.T) {
+	cases := []struct {
+		name    string
+		querier *appTokenFakeQuerier
+		token   string
+		want    int
+		keyID   string
+	}{
+		{"verified", &appTokenFakeQuerier{id: 7, name: "Living room tablet", subject: "alice"}, "Bearer valid", http.StatusTeapot, "7"},
+		{"invalid", &appTokenFakeQuerier{lookup: pgx.ErrNoRows}, "Bearer invalid", http.StatusUnauthorized, ""},
+		{"browser", &appTokenFakeQuerier{}, "", http.StatusTeapot, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &fakeAPILogStore{}
+			handler := APICallLogMiddleware(store, false, nil)(
+				appTokenAuth(tc.querier, appTokenTestHeader)(http.HandlerFunc(appTokenNext)),
+			)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/vehicles", nil)
+			req.Header.Set("X-Teslasync-App", "android:550e8400-e29b-41d4-a716-446655440000")
+			req.Header.Set("App-Key-ID", "999")
+			req.Header.Set("App-Key-Name", "Forged")
+			if tc.token != "" {
+				req.Header.Set("Authorization", tc.token)
+			}
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			if rec.Code != tc.want {
+				t.Fatalf("status=%d, want %d", rec.Code, tc.want)
+			}
+			logs := store.Entries()
+			if len(logs) != 1 {
+				t.Fatalf("entries=%d, want 1", len(logs))
+			}
+			h := logs[0].RequestHeaders
+			if h["App-Key-ID"] != tc.keyID {
+				t.Errorf("key id=%q, want %q", h["App-Key-ID"], tc.keyID)
+			}
+			if tc.keyID == "" {
+				if _, ok := h["App-Key-Name"]; ok {
+					t.Error("unverified key name persisted")
+				}
+				if _, ok := h["X-Teslasync-App"]; ok {
+					t.Error("unverified installation label persisted")
+				}
+			} else if h["App-Key-Name"] != tc.querier.name || h["X-Teslasync-App"] == "" {
+				t.Errorf("verified attribution missing: %+v", h)
+			}
+			if strings.Contains(fmt.Sprint(h), "Bearer") || strings.Contains(fmt.Sprint(h), "valid") {
+				t.Errorf("raw token leaked to logged headers")
+			}
+		})
 	}
 }
 

@@ -512,6 +512,8 @@ func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes, sudo func(http.Hand
 	})
 }
 
+var nativeAppCORSHeaders = []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key", "X-Sudo-Token", "X-Teslasync-App"}
+
 // NewRouter creates and configures the main HTTP router with all API routes,
 // middleware (logging, recovery, CORS, rate limiting, security headers), and
 // a static file server for the SPA frontend. It wires up handler dependencies
@@ -584,7 +586,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: corsOrigins,
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
+		AllowedHeaders: nativeAppCORSHeaders,
 		ExposedHeaders: []string{"X-Request-ID", "X-Response-Time"},
 		// AllowCredentials is only enabled when explicit origins are set.
 		// With wildcard ("*"), credentials are disabled per the Fetch spec,
