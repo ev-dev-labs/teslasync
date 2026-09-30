@@ -29,8 +29,16 @@ prerequisites and store/packaging steps.
 
 Each GitHub Release includes a Windows NSIS installer (`.exe`), an
 unsigned Windows MSIX (`.msix`), and a debug-signed Android test APK
-(`-debug.apk`). The MSIX needs a matching publisher certificate and
-trusted signing before sideloading; it is **not** a Store-ready package.
+(`-debug.apk`). An MSIX built from the current configuration has the
+TeslaSync Partner Center identity for Store submission, but needs a
+matching publisher certificate and trusted signing before sideloading.
+Microsoft signs the Store-distributed package; it does not sign the
+GitHub Release asset.
+
+The prerelease MSIX built before the Store identity was configured
+still has the placeholder identity and cannot be submitted to this
+Store product. Rebuild from the current desktop configuration.
+
 The APK is for local testing, **not** a Play Store release; CI's debug
 signing key changes per build, so uninstall an older CI APK before
 installing the next (clearing local app data). The unsigned
