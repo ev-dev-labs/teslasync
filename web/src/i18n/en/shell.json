@@ -1017,24 +1017,8 @@
   },
   "notifications": {
     "bellPopover": {
-      "allRead": "All caught up",
-      "emptyFiltered": "No matches in this preview. View all for older notifications.",
-      "emptyMessage": "No unread notifications right now.",
-      "emptyTitle": "You're all caught up",
-      "error": "Could not load notifications",
-      "filterAll": "All",
-      "filterCountLabel": "{{label}}, {{count}} in latest {{previewCount}}",
-      "filterCritical": "Critical",
-      "filterInfo": "Info",
-      "filterLabel": "Filter latest notifications by severity",
-      "filterWarning": "Warning",
       "loading": "Loading…",
-      "markAllRead": "Mark all read",
-      "previewScope": "Latest {{count}} unread",
-      "title": "Notifications",
-      "unreadCount": "{{count}} unread",
-      "untitled": "Notification",
-      "viewAll": "View all"
+      "title": "Notifications"
     }
   },
   "operationalMode": {
