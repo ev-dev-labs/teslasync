@@ -311,6 +311,29 @@ describe('ReauthDialog (presentation-only)', () => {
 })
 
 describe('ReauthDialogRoot (queue + provider wiring)', () => {
+  it('waits for TOTP enrollment status before exposing the per-user code path', async () => {
+    mockTotpStatus = { data: undefined, isError: false, isFetched: false }
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ mode: 'session', sudo_token: 'fresh-sudo' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+    const { rerender } = render(<ReauthDialogRoot />)
+    act(() => { void __enqueueSudoChallengeForTests('/api-keys/42').catch(() => {}) })
+    expect(await screen.findByTestId('reauth-dialog')).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /Authenticator/i })).not.toBeInTheDocument()
+
+    mockTotpStatus = { data: { mode: 'session', activated: true }, isError: false, isFetched: true }
+    rerender(<ReauthDialogRoot />)
+    fireEvent.click(screen.getByRole('tab', { name: /Authenticator/i }))
+    fireEvent.change(screen.getByTestId('reauth-totp'), { target: { value: '123456' } })
+    fireEvent.click(screen.getByTestId('reauth-submit'))
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled())
+    expect(fetchSpy.mock.calls[0][0]).toContain('/auth/totp/sudo')
+    expect(fetchSpy.mock.calls[0][0]).not.toContain('/auth/reauth')
+  })
+
   it('prompts for step-up and replays API key deletion after reauth', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(

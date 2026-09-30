@@ -14,6 +14,7 @@
  */
 
 import { safeRandomUUID } from './safeUUID'
+import { stripCredentialHeadersForDemo } from './demoMode'
 
 const SERVER_URL_KEY = 'teslasync-server-base-url'
 const ACCESS_TOKEN_KEY = 'teslasync-access-token'
@@ -171,7 +172,7 @@ export function authHeaders(init?: HeadersInit): Headers {
   if (token != null && !merged.has('Authorization')) {
     merged.set('Authorization', `Bearer ${token}`)
   }
-  return appIdentityHeaders(merged)
+  return stripCredentialHeadersForDemo(appIdentityHeaders(merged))
 }
 
 /** Adds a per-install diagnostic label only to bundled native app requests. */
@@ -258,7 +259,7 @@ export async function probeServer(base: string, token: string | null): Promise<S
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), 10_000)
   try {
-    const headers = appIdentityHeaders({ Accept: 'application/json' })
+    const headers = new Headers({ Accept: 'application/json' })
     if (token != null && token.trim() !== '') {
       headers.set('Authorization', `Bearer ${token.trim()}`)
     }

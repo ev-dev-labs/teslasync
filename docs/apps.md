@@ -115,7 +115,7 @@ wildcard (`*`). Check the effective deployment environment rather than
 assuming an ingress proxy supplies these origins automatically.
 
 The API's CORS middleware must handle OPTIONS preflights and allow
-`Authorization`, `Content-Type`, and `X-Teslasync-App`; the reverse proxy must pass these
+`Authorization`, `Content-Type`, `X-Sudo-Token`, and `X-Teslasync-App`; the reverse proxy must pass these
 requests through without an interactive-login redirect. Generic
 remote-mode requests omit cookies (including forward-auth browser
 cookies); forward-auth servers require a bearer app key instead. The

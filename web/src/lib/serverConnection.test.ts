@@ -28,6 +28,7 @@ afterEach(() => {
   delete window.__TESLASYNC_SHELL__
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 describe('normalizeServerUrl', () => {
@@ -177,6 +178,16 @@ describe('authHeaders', () => {
     expect(appIdentityHeaders().get('X-Teslasync-App')).toMatch(/:[0-9a-f-]{36}$/)
     expect(warn).toHaveBeenCalledWith('Invalid native app installation ID; generating a new diagnostic ID')
   })
+
+  it('withholds the installation label and token from a cross-origin demo host', () => {
+    window.__TESLASYNC_SHELL__ = 'electron'
+    setServerConnection('https://srv.example.com', 'ts_test_secret')
+    vi.stubEnv('VITE_DEMO_MODE', 'true')
+    vi.stubEnv('VITE_DEMO_API_BASE', 'https://demo.example.com/api/v1')
+    const headers = authHeaders()
+    expect(headers.has('X-Teslasync-App')).toBe(false)
+    expect(headers.has('Authorization')).toBe(false)
+  })
 })
 
 describe('needsServerSetup', () => {
@@ -219,12 +230,21 @@ describe('probeServer', () => {
       ok: true,
       json: () => Promise.resolve({ mode: 'forward_auth' }),
     })
+
     vi.stubGlobal('fetch', fetchMock)
     const result = await probeServer('https://srv.example.com', 'ts_test_x')
     expect(result).toEqual({ ok: true, mode: 'forward_auth' })
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(fetchMock.mock.calls[0][0]).toBe('https://srv.example.com/api/v1/system/auth-mode')
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer ts_test_x')
+  })
+
+  it('never sends an installation identifier to a candidate server probe', async () => {
+    window.__TESLASYNC_SHELL__ = 'electron'
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ mode: 'forward_auth' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    await probeServer('https://candidate.example.com', 'ts_test_secret')
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).has('X-Teslasync-App')).toBe(false)
   })
 
   it('fails closed on transport errors and bad payloads', async () => {

@@ -219,10 +219,8 @@ export function ReauthDialogRoot({ forceMode }: ReauthDialogProps = {}) {
   // backward compat with installs that have only the shared secret
   // and never call the per-user endpoint.
   const totpTabAvailable =
-    !totpStatus.isFetched ||
     totpStatus.isError ||
-    totpEnrolled ||
-    (totpStatus.data?.mode !== 'open')
+    (totpStatus.isFetched && (totpEnrolled || totpStatus.data?.mode !== 'open'))
 
   const submitCredential = useMemo<
     PureReauthDialogProps['onSubmitCredential']
