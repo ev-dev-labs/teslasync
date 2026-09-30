@@ -238,6 +238,8 @@ export function ReauthDialogRoot({ forceMode }: ReauthDialogProps = {}) {
     }
   }, [totpEnrolled])
 
+  if (!open) return null
+
   return (
     <ReauthDialog
       open={open}

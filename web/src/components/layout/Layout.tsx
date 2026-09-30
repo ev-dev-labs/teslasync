@@ -8,7 +8,6 @@ import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
 import { ImpersonationBanner } from '../feedback/ImpersonationBanner'
 import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
-import { ReauthDialogRoot } from '../feedback/ReauthDialog'
 import { AnnouncerRegion } from '@/components/a11y'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -118,6 +117,11 @@ const LazyChangelogModal = lazy(async () => {
 const LazySessionExpiringModal = lazy(async () => {
   const module = await import('../feedback/SessionExpiringModal')
   return { default: module.SessionExpiringModal }
+})
+
+const LazyReauthDialogRoot = lazy(async () => {
+  const module = await import('../feedback/ReauthDialog')
+  return { default: module.ReauthDialogRoot }
 })
 
 const LazyGotoIndicator = lazy(async () => {
@@ -1591,7 +1595,7 @@ export default function Layout() {
           Both are no-ops in open mode (no FORWARD_AUTH_HEADER). */}
       <Suspense fallback={null}><LazySessionExpiringModal /></Suspense>
       <SessionExpiredModal />
-      <ReauthDialogRoot />
+      <Suspense fallback={null}><LazyReauthDialogRoot /></Suspense>
 
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />
