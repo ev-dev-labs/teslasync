@@ -32,6 +32,8 @@ test('existing aggregate names reject any required job that did not succeed', ()
       ['backend-checks', 'backend-tests', 'backend-coverage', 'backend-database', 'backend-build']],
     [ci.jobs, 'frontend', 'Frontend (lint + test + build)',
       ['frontend-checks', 'frontend-tests', 'frontend-coverage']],
+    [ci.jobs, 'ci-gate', 'CI (generated + backend + frontend + Docker)',
+      ['generated', 'backend', 'frontend', 'docker']],
     [browser.jobs, 'chromium-quality', 'Chromium responsive, a11y, keyboard, and performance',
       ['contract', 'browser-build', 'chromium-tests']],
     [browser.jobs, 'visual', 'Deliberate visual snapshot gate (Windows baseline)',
@@ -46,11 +48,10 @@ test('existing aggregate names reject any required job that did not succeed', ()
   }
 });
 
-test('independent validation runs in parallel but Docker waits for successful gates', () => {
-  for (const id of ['generated', 'backend-checks', 'backend-build', 'backend-database', 'frontend-checks']) {
+test('independent validation and Docker builds start together; final gate checks their results', () => {
+  for (const id of ['generated', 'backend-checks', 'backend-build', 'backend-database', 'frontend-checks', 'docker']) {
     assert.equal(ci.jobs[id].needs, undefined);
   }
-  assert.deepEqual(ci.jobs.docker.needs, ['generated', 'backend', 'frontend']);
   assert.equal(ci.jobs.docker.if, undefined);
   const build = ci.jobs.docker.steps.find(step => step.uses?.startsWith('docker/build-push-action'));
   assert.equal(build.with.push, false);
