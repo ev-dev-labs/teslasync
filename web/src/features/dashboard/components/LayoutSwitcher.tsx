@@ -6,6 +6,7 @@ import { Icons } from '@/lib/icons';
 import { Button, Badge, ConfirmDialog } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import type { SavedDashboard } from '../widgets/types';
 
 export interface LayoutSwitcherProps {
@@ -74,6 +75,7 @@ export function LayoutSwitcher({
   className,
 }: LayoutSwitcherProps) {
   const { t } = useTranslation('dashboard');
+  const { preferences } = useProductPreferences();
   const { vehicleId, vehicles } = useSelectedVehicle();
   const { confirm, dialogProps } = useConfirm();
   const [open, setOpen] = useState(false);
@@ -233,6 +235,7 @@ export function LayoutSwitcher({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t('layout.switcherLabel', 'Switch dashboard layout')}
+        title={preferences.contextualHelp ? t('layout.discoveryHint', 'Switch, create, or edit layouts here') : undefined}
         className={cn(
           'h-auto items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white/[0.03] px-3 py-1.5',
           'text-sm font-medium text-[var(--text-primary)] transition-colors',
@@ -262,10 +265,15 @@ export function LayoutSwitcher({
           role="menu"
           aria-label={t('layout.menuLabel', 'Saved layouts')}
           className={cn(
-            'absolute left-0 top-full z-50 mt-1 min-w-[16rem] rounded-xl border border-[var(--border-subtle)]',
-            'bg-[var(--surface-elevated,#15151a)] p-1.5 shadow-xl',
+            'absolute bottom-full left-0 z-50 mb-1 min-w-[16rem] max-h-[min(18rem,calc(100dvh-8rem))] overflow-y-auto rounded-xl border border-[var(--border-subtle)]',
+            'bg-[var(--surface-1)] p-1.5 shadow-xl sm:bottom-auto sm:top-full sm:mb-0 sm:mt-1',
           )}
         >
+          {preferences.contextualHelp && (
+            <p className="px-2 py-1.5 text-xs text-[var(--text-muted)]">
+              {t('layout.discoveryHint', 'Switch, create, or edit layouts here')}
+            </p>
+          )}
           <div className="max-h-72 overflow-y-auto">
             {visible.length === 0 ? (
               <p className="px-3 py-2 text-xs text-[var(--text-muted)]">
@@ -310,6 +318,37 @@ export function LayoutSwitcher({
               })
             )}
           </div>
+
+          <div className="my-1 h-px bg-white/[0.06]" />
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            role="menuitem"
+            onClick={handleNewBlank}
+            className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+          >
+            <Icons.add className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+            {t('layout.newBlank', 'New blank layout')}
+          </Button>
+
+          {onOpenTemplates && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onOpenTemplates();
+              }}
+              className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+            >
+              <Icons.layoutTemplate className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+              {t('layout.newFromTemplate', 'New from template…')}
+            </Button>
+          )}
 
           <div className="my-1 h-px bg-white/[0.06]" />
 
@@ -406,35 +445,6 @@ export function LayoutSwitcher({
           )}
 
           <div className="my-1 h-px bg-white/[0.06]" />
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            role="menuitem"
-            onClick={handleNewBlank}
-            className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
-          >
-            <Icons.add className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-            {t('layout.newBlank', 'New blank layout')}
-          </Button>
-
-          {onOpenTemplates && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                onOpenTemplates();
-              }}
-              className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
-            >
-              <Icons.layoutTemplate className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-              {t('layout.newFromTemplate', 'New from template…')}
-            </Button>
-          )}
 
           {onOpenSettings && active && (
             <Button

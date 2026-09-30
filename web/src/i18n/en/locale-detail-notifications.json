@@ -238,12 +238,12 @@
       "viewAll": "View all",
       "filterLabel": "Filter latest notifications by severity",
       "filterCountLabel": "{{label}}, {{count}} in latest {{previewCount}}",
-      "previewScope": "Latest {{count}} unread",
+      "previewScope": "Preview: {{count}} of {{total}} unread",
       "filterAll": "All",
       "filterCritical": "Critical",
       "filterWarning": "Warning",
       "filterInfo": "Info",
-      "emptyFiltered": "No matches in this preview. View all for older notifications."
+      "emptyFiltered": "No matches in this preview. Open the inbox for older notifications."
     },
     "view": {
       "label": "View",

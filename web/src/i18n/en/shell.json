@@ -306,6 +306,10 @@
       "last7": "Last 7 days"
     }
   },
+  "demoData": {
+    "title": "Sample data present",
+    "detail": "DRILL vehicles and their drive and charging history are synthetic, not live activity."
+  },
   "draft": {
     "recovery": {
       "close": "Close",

@@ -190,6 +190,7 @@ describe('LayoutSwitcher', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'false');
     expect(within(btn).getByText('Layout')).toBeInTheDocument();
     expect(within(btn).getByText('Main')).toBeInTheDocument();
+    expect(btn).toHaveAttribute('title', 'Switch, create, or edit layouts here');
     // Dirty ⇒ the "modified" badge is present.
     expect(screen.getByText('modified')).toBeInTheDocument();
     // Menu is not mounted until opened.
@@ -208,6 +209,11 @@ describe('LayoutSwitcher', () => {
     });
 
     openMenu();
+    expect(screen.getByText('Switch, create, or edit layouts here')).toBeInTheDocument();
+    const entries = screen.getAllByRole('menuitem');
+    expect(entries.findIndex(item => item.textContent?.includes('New from template'))).toBeLessThan(
+      entries.findIndex(item => item.textContent?.includes('Edit dashboard')),
+    );
 
     const menu = screen.getByRole('menu', { name: 'Saved layouts' });
     expect(menu).toBeInTheDocument();

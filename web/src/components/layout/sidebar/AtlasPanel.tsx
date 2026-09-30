@@ -64,6 +64,25 @@ export interface AtlasPanelProps {
   collections?: readonly SectionGroup[]
 }
 
+const QUICK_PINS_OPEN_KEY = 'teslasync-deck-quick-pins-open'
+const RECENT_OPEN_KEY = 'teslasync-deck-recent-open'
+
+function readExpanded(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function persistExpanded(key: string, expanded: boolean): void {
+  try {
+    window.localStorage.setItem(key, String(expanded))
+  } catch {
+    // Private browsing can disallow storage; expansion still works for this mount.
+  }
+}
+
 export function AtlasPanel({
   variant,
   collapsed = false,
@@ -244,11 +263,9 @@ export function AtlasPanel({
   const quickPins = openSection
     ? safePinnedItems.filter(item => sectionPaths.has(item.to) && !itemIsActive(item.to))
     : []
-  // Quick access + Recently Used start collapsed so the panel opens on the
-  // canonical navigation instead of repeating it. Filtering forces the
-  // quick pins open — a collapsed match would look like a missing result.
-  const [quickPinsOpen, setQuickPinsOpen] = useState(false)
-  const [recentOpen, setRecentOpen] = useState(false)
+  // Filtering forces pins open without overwriting the stored preference.
+  const [quickPinsOpen, setQuickPinsOpen] = useState(() => readExpanded(QUICK_PINS_OPEN_KEY))
+  const [recentOpen, setRecentOpen] = useState(() => readExpanded(RECENT_OPEN_KEY))
   const collapsibleGroupKeys = sectionGroups.filter(group => group.label).map(group => group.entries[0].to)
   const activeGroupKey = sectionGroups.find(group =>
     group.label && group.entries.some(entry => itemIsActive(entry.to)),
@@ -469,7 +486,11 @@ export function AtlasPanel({
                           title={recentOpen
                             ? t('nav.deck.collapseRecent', 'Hide recently used')
                             : t('nav.deck.expandRecent', 'Show recently used')}
-                          onClick={() => setRecentOpen(open => !open)}
+                          onClick={() => {
+                            const next = !recentOpen
+                            setRecentOpen(next)
+                            persistExpanded(RECENT_OPEN_KEY, next)
+                          }}
                           className="h-7 w-7 shrink-0 rounded-shape-sm p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                         >
                           {recentOpen
@@ -556,7 +577,11 @@ export function AtlasPanel({
                     title={filtering || quickPinsOpen
                       ? t('nav.deck.collapseQuickPins', 'Hide quick access pins')
                       : t('nav.deck.expandQuickPins', 'Show quick access pins')}
-                    onClick={() => setQuickPinsOpen(open => !open)}
+                    onClick={() => {
+                      const next = !quickPinsOpen
+                      setQuickPinsOpen(next)
+                      persistExpanded(QUICK_PINS_OPEN_KEY, next)
+                    }}
                     className="min-h-11 w-full justify-start gap-2 rounded-shape-md px-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                   >
                     {filtering || quickPinsOpen

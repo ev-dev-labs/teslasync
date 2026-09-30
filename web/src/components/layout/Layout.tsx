@@ -45,7 +45,7 @@ import { suggestSidebarPages } from './sidebar/sidebarSuggest'
 import { SIDEBAR_ROUTE_ICONS } from './sidebar/sidebarIcons'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
-import { RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
+import { DemoDataNotice, RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
 import {
   Button,
   CommandPaletteTrigger,
@@ -1460,6 +1460,7 @@ export default function Layout() {
             <TimeMachineBanner />
             <ServiceStatusBanner />
             <RuntimeHealthBanner />
+            <DemoDataNotice vehicles={vehicles ?? []} />
           </>
         )}
         <main

@@ -88,6 +88,11 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
     const visibleLogs = severityFilter === 'all'
       ? logs
       : logs.filter((_, index) => severities[index] === severityFilter)
+    const selectedSeverityLabel = severityFilter === 'critical'
+      ? t('notifications.bellPopover.filterCritical', 'Critical')
+      : severityFilter === 'warn'
+        ? t('notifications.bellPopover.filterWarning', 'Warning')
+        : t('notifications.bellPopover.filterInfo', 'Info')
 
     const vehicleMap = useMemo(() => {
       const m: Record<number, Vehicle> = {}
@@ -223,6 +228,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
               onChange={setSeverityFilter}
               severities={severities}
               previewCount={logs.length}
+              totalUnread={unreadBadgeCount}
               tones={SEVERITY_TONE}
             />
           </Suspense>
@@ -274,7 +280,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
               className="flex flex-col items-center gap-1 px-4 py-8 text-center text-xs text-[var(--text-muted)]"
               role="status"
             >
-              {t('notifications.bellPopover.emptyFiltered', 'No matches in this preview. View all for older notifications.')}
+              {t('notifications.bellPopover.emptyFiltered', 'No matches in this preview. Open the inbox for older notifications.')}
             </div>
           )}
 
@@ -352,10 +358,20 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => onNavigate('/notifications/inbox')}
+            onClick={() => onNavigate(
+              severityFilter === 'all'
+                ? '/notifications/inbox'
+                : `/notifications/inbox?severity=${severityFilter}&read=unread`,
+            )}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-cyan-300 hover:bg-white/[0.06] hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
-            <span>{t('notifications.bellPopover.viewAll', 'View all')}</span>
+            <span>
+              {severityFilter === 'all'
+                ? t('notifications.bellPopover.viewAll', 'Open full inbox')
+                : t('notifications.bellPopover.viewAllSeverity', 'See all {{severity}} unread', {
+                    severity: selectedSeverityLabel.toLowerCase(),
+                  })}
+            </span>
             <Icons.next className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         </footer>

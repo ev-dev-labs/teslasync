@@ -1,4 +1,8 @@
 {
+  "demoData": {
+    "title": "Sample data present",
+    "detail": "DRILL vehicles and their drive and charging history are synthetic, not live activity."
+  },
   "explore": {
     "subtitle": {
       "category": "{{matches}} features in the selected category"
@@ -6013,6 +6017,7 @@
       "newBlank": "New blank layout",
       "newBlankPrompt": "Name for the new layout:",
       "newFromTemplate": "New from template…",
+      "discoveryHint": "Switch, create, or edit layouts here",
       "moveEarlier": "Move earlier",
       "moveLater": "Move later",
       "layoutSettings": "Layout settings"
@@ -13509,7 +13514,8 @@
     "drive": "drive",
     "charged": "charged",
     "title": "Recent Activity",
-    "viewAll": "View all",
+    "viewAll": "Open full inbox",
+    "viewAllSeverity": "See all {{severity}} unread",
     "empty": "No activity yet. Start driving!",
     "myActivity": {
       "title": "My Activity",
@@ -16578,12 +16584,12 @@
       "viewAll": "View all",
       "filterLabel": "Filter latest notifications by severity",
       "filterCountLabel": "{{label}}, {{count}} in latest {{previewCount}}",
-      "previewScope": "Latest {{count}} unread",
+      "previewScope": "Preview: {{count}} of {{total}} unread",
       "filterAll": "All",
       "filterCritical": "Critical",
       "filterWarning": "Warning",
       "filterInfo": "Info",
-      "emptyFiltered": "No matches in this preview. View all for older notifications."
+      "emptyFiltered": "No matches in this preview. Open the inbox for older notifications."
     },
     "view": {
       "label": "View",

@@ -3,7 +3,8 @@
     "drive": "drive",
     "charged": "charged",
     "title": "Recent Activity",
-    "viewAll": "View all",
+    "viewAll": "Open full inbox",
+    "viewAllSeverity": "See all {{severity}} unread",
     "empty": "No activity yet. Start driving!",
     "myActivity": {
       "title": "My Activity",

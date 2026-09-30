@@ -363,6 +363,51 @@ describe('CommandDeck', () => {
     expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('remembers quick pins and recents expansion across remounts without opening filtered pins permanently', () => {
+    const props = baseProps({
+      pathname: '/drives',
+      activeSectionTitle: 'Driving',
+      panelOpen: true,
+      pinnedItems: [tripsItem],
+      recentItems: [tripsItem],
+    })
+    const first = render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <CommandDeck {...props} />
+      </MemoryRouter>,
+    )
+    const pins = secondaryPanel().getByRole('button', { name: 'Quick access pins' })
+    fireEvent.change(secondaryPanel().getByRole('searchbox', { name: 'Filter Driving tools' }), {
+      target: { value: 'Trips' },
+    })
+    expect(pins).toHaveAttribute('aria-expanded', 'true')
+    expect(window.localStorage.getItem('teslasync-deck-quick-pins-open')).toBeNull()
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Clear filter' }))
+    expect(pins).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(pins)
+    expect(window.localStorage.getItem('teslasync-deck-quick-pins-open')).toBe('true')
+    first.unmount()
+
+    render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <CommandDeck {...props} />
+      </MemoryRouter>,
+    )
+    expect(secondaryPanel().getByRole('button', { name: 'Quick access pins' })).toHaveAttribute('aria-expanded', 'true')
+    expect(secondaryPanel().getByRole('link', { name: 'Quick access: Trips' })).toBeInTheDocument()
+
+    cleanup()
+    renderControlledDeck({ pathname: '/', recentItems: [tripsItem] })
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Suggested' }))
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Show recently used' }))
+    expect(window.localStorage.getItem('teslasync-deck-recent-open')).toBe('true')
+    cleanup()
+    renderControlledDeck({ pathname: '/', recentItems: [tripsItem] })
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Suggested' }))
+    expect(secondaryPanel().getByRole('button', { name: 'Hide recently used' })).toHaveAttribute('aria-expanded', 'true')
+    expect(secondaryPanel().getByRole('link', { name: 'Trips' })).toBeInTheDocument()
+  })
+
   it('collapses the secondary panel via its header, returning focus to the rail', () => {
     renderControlledDeck()
     const drivingButton = desktopRail().getByRole('button', { name: 'Driving, 3 pages' })

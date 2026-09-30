@@ -332,6 +332,7 @@
       "newBlank": "New blank layout",
       "newBlankPrompt": "Name for the new layout:",
       "newFromTemplate": "New from template…",
+      "discoveryHint": "Switch, create, or edit layouts here",
       "moveEarlier": "Move earlier",
       "moveLater": "Move later",
       "layoutSettings": "Layout settings"

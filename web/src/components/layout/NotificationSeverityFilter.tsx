@@ -9,6 +9,7 @@ interface NotificationSeverityFilterProps {
   onChange: (value: 'all' | Severity) => void
   severities: Severity[]
   previewCount: number
+  totalUnread: number
   tones: Record<Severity, { dot: string }>
 }
 
@@ -58,6 +59,7 @@ export default function NotificationSeverityFilter({
   onChange,
   severities,
   previewCount,
+  totalUnread,
   tones,
 }: NotificationSeverityFilterProps) {
   const { t } = useTranslation()
@@ -94,7 +96,10 @@ export default function NotificationSeverityFilter({
         />
       ))}
       <span className="ml-auto text-xs text-[var(--text-muted)]">
-        {t('notifications.bellPopover.previewScope', 'Latest {{count}} unread', { count: previewCount })}
+        {t('notifications.bellPopover.previewScope', 'Preview: {{count}} of {{total}} unread', {
+          count: previewCount,
+          total: totalUnread,
+        })}
       </span>
     </div>
   )

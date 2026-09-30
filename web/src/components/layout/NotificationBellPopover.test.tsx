@@ -139,7 +139,12 @@ import { NotificationBellPopover } from './NotificationBellPopover'
 
 function LocationProbe() {
   const loc = useLocation()
-  return <div data-testid="location">{loc.pathname}</div>
+  return (
+    <>
+      <div data-testid="location">{loc.pathname}</div>
+      <div data-testid="location-search">{loc.search}</div>
+    </>
+  )
 }
 
 function renderPopover(initialEntry = '/') {
@@ -300,13 +305,13 @@ describe('NotificationBellPopover', () => {
     expect(bulkMarkReadMutate).not.toHaveBeenCalled()
   })
 
-  it('"View all" navigates to /notifications/inbox and closes the popover', async () => {
+  it('opens the full inbox without filters when showing all severities', async () => {
     renderPopover('/dashboard')
     fireEvent.click(
       screen.getByRole('button', { name: /3 unread notifications/i }),
     )
     await screen.findByRole('dialog')
-    fireEvent.click(screen.getByRole('button', { name: /View all/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Open full inbox/i }))
     await waitFor(() =>
       expect(screen.getByTestId('location').textContent).toBe('/notifications/inbox'),
     )
@@ -418,7 +423,7 @@ describe('NotificationBellPopover', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Critical, 0 in latest 1' }))
     expect(screen.queryByText('Battery low')).toBeNull()
     expect(screen.queryByTestId('bell-popover-list')).toBeNull()
-    expect(screen.getByText('No matches in this preview. View all for older notifications.')).toBeInTheDocument()
+    expect(screen.getByText('No matches in this preview. Open the inbox for older notifications.')).toBeInTheDocument()
   })
 
   it('scopes zero severity counts to the latest ten when older unread items exist', async () => {
@@ -430,11 +435,12 @@ describe('NotificationBellPopover', () => {
     fireEvent.click(screen.getByRole('button', { name: /25 unread notifications/i }))
     await screen.findByRole('dialog')
 
-    expect(screen.getByText('Latest 10 unread')).toBeInTheDocument()
+    expect(screen.getByText('Preview: 10 of 25 unread')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Critical, 0 in latest 10' }))
-    expect(screen.getByText('No matches in this preview. View all for older notifications.')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /View all/i }))
+    expect(screen.getByText('No matches in this preview. Open the inbox for older notifications.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'See all critical unread' }))
     expect(screen.getByTestId('location')).toHaveTextContent('/notifications/inbox')
+    expect(screen.getByTestId('location-search')).toHaveTextContent('severity=critical&read=unread')
   })
 
   it('Tab from the last focusable element wraps back to the first (focus trap)', async () => {

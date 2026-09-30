@@ -27,6 +27,8 @@
 --
 -- Columns are SI-canonical (phase-42 / ADR-004): meters, seconds, watt
 -- hours, m/s, watts. Do not reintroduce mi/min/kWh/mph suffixes.
+-- The UI labels vehicles whose VIN is DRILL followed by 12 digits, and
+-- their related history, as synthetic sample data rather than live activity.
 
 BEGIN;
 

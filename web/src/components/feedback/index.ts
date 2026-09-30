@@ -42,6 +42,7 @@ export {
   type PermissionGuidanceNoticeProps,
 } from './PermissionGuidanceNotice';
 export { DemoModeBanner, type DemoModeBannerProps } from './DemoModeBanner';
+export { DemoDataNotice } from './DemoDataNotice';
 export { ProblemReportModal, type ProblemReportModalProps } from './ProblemReportModal';
 export {
   StaleRefreshWarning,
