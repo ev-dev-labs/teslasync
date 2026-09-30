@@ -42,6 +42,10 @@ interface DashboardGridProps {
   showWidgetBorders?: boolean;
   /** Kiosk mode widget opacity boost (0.3–1.0). Increases GlassPanel background. */
   kioskWidgetOpacity?: number;
+  /** Empty-state primary CTA: open the add-widget surface. */
+  onAddWidgets?: () => void;
+  /** Empty-state secondary CTA: open the starter-layout gallery. */
+  onBrowseTemplates?: () => void;
 }
 
 /* Stable empty fallbacks so a malformed dashboard (undefined widgets/layouts —
@@ -103,6 +107,8 @@ export function DashboardGrid({
   compactMode,
   showWidgetBorders,
   kioskWidgetOpacity,
+  onAddWidgets,
+  onBrowseTemplates,
 }: DashboardGridProps) {
   const { t } = useTranslation();
   // Null-safety: a malformed dashboard (corrupt localStorage, partial API
@@ -443,10 +449,15 @@ export function DashboardGrid({
         />
       )}
       {widgets.length === 0 ? (
-        // no-action: the "Add widget" floating action button rendered by the parent DashboardPage is the real trigger; this grid only lays out widgets that already exist.
         <EmptyState
           title={t('dashboard.grid.emptyTitle', 'No widgets yet')}
           message={t('dashboard.grid.emptyMessage', 'Add widgets to start building your dashboard.')}
+          action={onAddWidgets
+            ? { label: t('dashboard.grid.addWidgets', 'Add widgets'), onClick: onAddWidgets }
+            : undefined}
+          secondaryAction={onBrowseTemplates
+            ? { label: t('dashboard.grid.browseTemplates', 'Browse starter layouts'), onClick: onBrowseTemplates }
+            : undefined}
         />
       ) : isMobileStack ? (
         <div

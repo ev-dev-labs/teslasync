@@ -533,7 +533,11 @@
       "allCaughtUp": "All caught up — nothing needs you right now.",
       "now": "Now",
       "upNext": "Up next",
-      "noFavorites": "Pin pages from any row and they will live here."
+      "noFavorites": "Pin pages from any row and they will live here.",
+      "expandQuickPins": "Show quick access pins",
+      "collapseQuickPins": "Hide quick access pins",
+      "expandRecent": "Show recently used",
+      "collapseRecent": "Hide recently used"
     },
     "collections": {
       "toggle": "{{group}}, {{count}} views",
@@ -640,6 +644,7 @@
     "mobileCharging": "Charging",
     "mobileBattery": "Battery",
     "mobileMap": "Map",
+    "mobileMore": "More",
     "currentPage": "Current page",
     "closeSidebar": "Close sidebar",
     "currentSection": "Current",
@@ -672,7 +677,6 @@
     "compactSettingsAccount": "Settings & Account",
     "browseAllFeatures": "Browse all features",
     "openSidebar": "Open sidebar",
-    "quickSearchHint": "Ctrl+K to jump",
     "minDelay": "min delay",
     "pageTitle": "Navigation & Route",
     "col": {
@@ -1014,11 +1018,19 @@
   "notifications": {
     "bellPopover": {
       "allRead": "All caught up",
+      "emptyFiltered": "No matches in this preview. View all for older notifications.",
       "emptyMessage": "No unread notifications right now.",
       "emptyTitle": "You're all caught up",
       "error": "Could not load notifications",
+      "filterAll": "All",
+      "filterCountLabel": "{{label}}, {{count}} in latest {{previewCount}}",
+      "filterCritical": "Critical",
+      "filterInfo": "Info",
+      "filterLabel": "Filter latest notifications by severity",
+      "filterWarning": "Warning",
       "loading": "Loading…",
       "markAllRead": "Mark all read",
+      "previewScope": "Latest {{count}} unread",
       "title": "Notifications",
       "unreadCount": "{{count}} unread",
       "untitled": "Notification",

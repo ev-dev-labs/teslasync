@@ -66,6 +66,7 @@ import {
 } from '@/api/hooks/useNotifications'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useIsMobile } from '@/hooks/useMediaQuery'
+import { Button } from '@/components/ui'
 import type { AlertRule } from '@/api/types'
 import type { Vehicle } from '@/types/vehicle'
 
@@ -216,9 +217,11 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
       className={cn('relative inline-block', className)}
       data-role="notification-bell-popover"
     >
-      <button
+      <Button
         ref={triggerRef}
         type="button"
+        variant="ghost"
+        size="sm"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? `${headingId}-panel` : undefined}
@@ -235,7 +238,7 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
             {display}
           </span>
         )}
-      </button>
+      </Button>
 
       {open &&
         coords &&
@@ -262,6 +265,47 @@ interface NotificationBellPanelProps {
   onNavigate: (to: string) => void
 }
 
+function SeverityFilterChip({
+  active,
+  onClick,
+  label,
+  count,
+  dotClassName,
+  previewCount,
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+  count: number
+  dotClassName?: string
+  previewCount: number
+}) {
+  const { t } = useTranslation()
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={t('notifications.bellPopover.filterCountLabel', '{{label}}, {{count}} in latest {{previewCount}}', { label, count, previewCount })}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+        active
+          ? 'bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/40'
+          : 'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
+      )}
+    >
+      {dotClassName && (
+        <span aria-hidden="true" className={cn('inline-block h-1.5 w-1.5 rounded-full', dotClassName)} />
+      )}
+      <span>{label}</span>
+      <span className="tabular-nums text-[var(--text-muted)]">{count}</span>
+    </Button>
+  )
+}
+
 const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelProps>(
   function NotificationBellPanel(
     { headingId, coords, unreadBadgeCount, onClose, onNavigate },
@@ -286,6 +330,22 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
       }
       return m
     }, [rules])
+
+    // Filters and counts cover only the fetched preview; "Mark all read"
+    // remains global even when a severity is selected.
+    const [severityFilter, setSeverityFilter] = useState<'all' | Severity>('all')
+    const severityCounts = useMemo(() => {
+      const counts: Record<Severity, number> = { info: 0, warn: 0, critical: 0 }
+      for (const log of logs) {
+        counts[severityOf(log.alert_id != null ? ruleMap[log.alert_id] : undefined)] += 1
+      }
+      return counts
+    }, [logs, ruleMap])
+    const visibleLogs = severityFilter === 'all'
+      ? logs
+      : logs.filter(
+          (log) => severityOf(log.alert_id != null ? ruleMap[log.alert_id] : undefined) === severityFilter,
+        )
 
     const vehicleMap = useMemo(() => {
       const m: Record<number, Vehicle> = {}
@@ -402,15 +462,53 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
                 : t('notifications.bellPopover.allRead', 'All caught up')}
             </p>
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onClose}
             aria-label={t('common.close', 'Close')}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <Icons.close className="h-4 w-4" aria-hidden="true" />
-          </button>
+          </Button>
         </header>
+
+        {hasLogs && (
+          <div
+            role="group"
+            aria-label={t('notifications.bellPopover.filterLabel', 'Filter latest notifications by severity')}
+            className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-[var(--glass-border)] px-4 py-2"
+          >
+            <SeverityFilterChip
+              active={severityFilter === 'all'}
+              onClick={() => setSeverityFilter('all')}
+              label={t('notifications.bellPopover.filterAll', 'All')}
+              count={logs.length}
+              previewCount={logs.length}
+            />
+            {(['critical', 'warn', 'info'] as const).map((severity) => (
+              <SeverityFilterChip
+                key={severity}
+                active={severityFilter === severity}
+                onClick={() => setSeverityFilter(severity)}
+                label={
+                  severity === 'critical'
+                    ? t('notifications.bellPopover.filterCritical', 'Critical')
+                    : severity === 'warn'
+                      ? t('notifications.bellPopover.filterWarning', 'Warning')
+                      : t('notifications.bellPopover.filterInfo', 'Info')
+                }
+                count={severityCounts[severity]}
+                previewCount={logs.length}
+                dotClassName={SEVERITY_TONE[severity].dot}
+              />
+            ))}
+            <span className="ml-auto text-xs text-[var(--text-muted)]">
+              {t('notifications.bellPopover.previewScope', 'Latest {{count}} unread', { count: logs.length })}
+            </span>
+          </div>
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {showSpinner && (
@@ -453,9 +551,18 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
             </div>
           )}
 
-          {!showSpinner && !error && hasLogs && (
+          {!showSpinner && !error && hasLogs && visibleLogs.length === 0 && (
+            <div
+              className="flex flex-col items-center gap-1 px-4 py-8 text-center text-xs text-[var(--text-muted)]"
+              role="status"
+            >
+              {t('notifications.bellPopover.emptyFiltered', 'No matches in this preview. View all for older notifications.')}
+            </div>
+          )}
+
+          {!showSpinner && !error && visibleLogs.length > 0 && (
             <ul className="divide-y divide-white/[0.04]" data-testid="bell-popover-list">
-              {logs.map((log) => {
+              {visibleLogs.map((log) => {
                 const rule = log.alert_id != null ? ruleMap[log.alert_id] : undefined
                 const vehicle =
                   rule?.vehicle_id != null ? vehicleMap[rule.vehicle_id] : undefined
@@ -463,8 +570,10 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
                 const tone = SEVERITY_TONE[sev]
                 return (
                   <li key={log.id}>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => onNavigate('/notifications/inbox')}
                       className="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
                     >
@@ -499,7 +608,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
                           )}
                         </span>
                       </span>
-                    </button>
+                    </Button>
                   </li>
                 )
               })}
@@ -508,8 +617,10 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
         </div>
 
         <footer className="flex items-center justify-between gap-2 border-t border-[var(--glass-border)] bg-[var(--surface-2)] px-3 py-2">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={handleMarkAllRead}
             disabled={!hasLogs || bulkMarkRead.isPending}
             className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
@@ -518,15 +629,17 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
             <span>
               {t('notifications.bellPopover.markAllRead', 'Mark all read')}
             </span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => onNavigate('/notifications/inbox')}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-cyan-300 hover:bg-white/[0.06] hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <span>{t('notifications.bellPopover.viewAll', 'View all')}</span>
             <Icons.next className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          </Button>
         </footer>
       </div>
       /* eslint-enable jsx-a11y/no-noninteractive-element-interactions */

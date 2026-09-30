@@ -211,6 +211,12 @@ vi.mock('../components/DashboardGrid', () => ({
       <button type="button" data-testid="grid-open-settings" onClick={() => props.onOpenSettings('w-hero')}>
         open settings
       </button>
+      <button type="button" data-testid="grid-add-widgets" onClick={() => props.onAddWidgets?.()}>
+        add widgets
+      </button>
+      <button type="button" data-testid="grid-browse-templates" onClick={() => props.onBrowseTemplates?.()}>
+        browse templates
+      </button>
     </div>
   ),
 }));
@@ -229,9 +235,6 @@ vi.mock('../components/WidgetSettingsModal', () => ({
         </button>
       </div>
     ) : null,
-}));
-vi.mock('../components/LayoutManager', () => ({
-  LayoutManager: () => <div data-testid="layout-manager" />,
 }));
 vi.mock('../components/LayoutSwitcher', () => ({
   LayoutSwitcher: () => <div data-testid="layout-switcher" />,
@@ -398,16 +401,14 @@ describe('DashboardPage — shell', () => {
     h.layout.dashboards = [];
     renderPage();
     expect(screen.queryByTestId('layout-switcher')).toBeNull();
-    expect(screen.queryByTestId('layout-manager')).toBeNull();
   });
 
-  it('renders the layout switcher and manager when dashboards exist', () => {
+  it('renders the layout switcher when dashboards exist', () => {
     h.layout.dashboards = [
       { id: 'd1', name: 'Main', widgets: [], layouts: {}, createdAt: '', updatedAt: '' },
     ];
     renderPage();
     expect(screen.getByTestId('layout-switcher')).toBeInTheDocument();
-    expect(screen.getByTestId('layout-manager')).toBeInTheDocument();
   });
 });
 
@@ -554,6 +555,16 @@ describe('DashboardPage — widget settings flow', () => {
     fireEvent.click(screen.getByTestId('ws-close'));
     expect(screen.queryByTestId('widget-settings')).toBeNull();
     expect(h.layout.updateWidgetConfig).not.toHaveBeenCalled();
+  });
+});
+
+describe('DashboardPage — empty-grid guidance', () => {
+  it('wires the empty-state CTAs to the widget catalogue and template gallery', () => {
+    renderPage();
+    fireEvent.click(screen.getByTestId('grid-add-widgets'));
+    expect(screen.getByTestId('widget-catalogue')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('grid-browse-templates'));
+    expect(screen.getByTestId('template-gallery')).toBeInTheDocument();
   });
 });
 

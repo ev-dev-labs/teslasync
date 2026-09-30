@@ -67,7 +67,9 @@ describe('LayoutBreadcrumbs', () => {
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
     expect(container.querySelector('a[href="/"]')).toBeInTheDocument();
     expect(screen.getByText('Drives').closest('a')).toBeNull();
-    expect(screen.getByText('Ctrl+K to jump')).toBeInTheDocument();
+    // The Ctrl+K hint pill was removed: the shortcut is discoverable from the
+    // command-palette trigger's kbd badge instead of floating over the page.
+    expect(screen.queryByText('Ctrl+K to jump')).toBeNull();
   });
 
   it('uses compact workspace framing without duplicating the command-search hint', () => {

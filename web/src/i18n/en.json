@@ -4614,7 +4614,11 @@
       "allCaughtUp": "All caught up — nothing needs you right now.",
       "now": "Now",
       "upNext": "Up next",
-      "noFavorites": "Pin pages from any row and they will live here."
+      "noFavorites": "Pin pages from any row and they will live here.",
+      "expandQuickPins": "Show quick access pins",
+      "collapseQuickPins": "Hide quick access pins",
+      "expandRecent": "Show recently used",
+      "collapseRecent": "Hide recently used"
     },
     "collections": {
       "toggle": "{{group}}, {{count}} views",
@@ -4721,6 +4725,7 @@
     "mobileCharging": "Charging",
     "mobileBattery": "Battery",
     "mobileMap": "Map",
+    "mobileMore": "More",
     "currentPage": "Current page",
     "closeSidebar": "Close sidebar",
     "currentSection": "Current",
@@ -4753,7 +4758,6 @@
     "compactSettingsAccount": "Settings & Account",
     "browseAllFeatures": "Browse all features",
     "openSidebar": "Open sidebar",
-    "quickSearchHint": "Ctrl+K to jump",
     "minDelay": "min delay",
     "pageTitle": "Navigation & Route",
     "col": {
@@ -5999,12 +6003,22 @@
       "noneVisible": "No layouts available for this vehicle.",
       "editTitle": "Edit dashboard (E)",
       "editEnter": "Edit",
-      "editExit": "Done"
+      "editExit": "Done",
+      "rename": "Rename",
+      "renamePrompt": "New name for this layout:",
+      "delete": "Delete layout",
+      "deleteTitle": "Delete this layout?",
+      "deleteMessage": "This permanently removes \"{{name}}\" and its widget arrangement. This cannot be undone.",
+      "deleteConfirm": "Delete",
+      "newBlank": "New blank layout",
+      "newBlankPrompt": "Name for the new layout:",
+      "newFromTemplate": "New from template…",
+      "moveEarlier": "Move earlier",
+      "moveLater": "Move later",
+      "layoutSettings": "Layout settings"
     },
     "printSnapshot": "Print snapshot",
     "layoutActions": "Actions for {{name}}",
-    "moveLayoutEarlier": "Move earlier",
-    "moveLayoutLater": "Move later",
     "layoutMovedEarlier": "{{name}} moved earlier",
     "layoutMovedLater": "{{name}} moved later",
     "grid": {
@@ -6034,7 +6048,9 @@
       "exitFullscreen": "Exit Fullscreen",
       "widgetFailed": "{{name}} failed to load",
       "emptyTitle": "No widgets yet",
-      "emptyMessage": "Add widgets to start building your dashboard."
+      "emptyMessage": "Add widgets to start building your dashboard.",
+      "addWidgets": "Add widgets",
+      "browseTemplates": "Browse starter layouts"
     }
   },
   "charging": {
@@ -16559,7 +16575,15 @@
       "emptyMessage": "No unread notifications right now.",
       "untitled": "Notification",
       "markAllRead": "Mark all read",
-      "viewAll": "View all"
+      "viewAll": "View all",
+      "filterLabel": "Filter latest notifications by severity",
+      "filterCountLabel": "{{label}}, {{count}} in latest {{previewCount}}",
+      "previewScope": "Latest {{count}} unread",
+      "filterAll": "All",
+      "filterCritical": "Critical",
+      "filterWarning": "Warning",
+      "filterInfo": "Info",
+      "emptyFiltered": "No matches in this preview. View all for older notifications."
     },
     "view": {
       "label": "View",
@@ -19961,6 +19985,9 @@
     "viewDetails": "View details",
     "openDetail": "Open {{name}} details",
     "removeAria": "Remove {{name}}",
+    "remove": "Remove",
+    "cardActions": "Actions for {{name}}",
+    "vinLabel": "Vehicle identification number",
     "locked": "Locked",
     "sentryOn": "Sentry mode on",
     "noLiveData": "No live data",

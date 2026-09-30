@@ -25,7 +25,7 @@
  * deterministic without a SettingsProvider/QueryClient (it also feeds the real
  * <Currency> renderer, which reads `currencySymbol` from the same hook), and
  * `react-i18next` is stubbed to a passthrough `t(key, default)` (repo
- * convention — see LayoutManager / FleetComparisonPanel tests). Renders are
+ * convention — see FleetComparisonPanel tests). Renders are
  * wrapped in <MemoryRouter> because the panel renders a react-router <Link>.
  * No network is touched.
  */

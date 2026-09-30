@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, ChevronDown, Edit3, MoreHorizontal, Pin, Plus, RotateCcw, Save } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, ChevronDown, Pin, RotateCcw, Save } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Icons } from '@/lib/icons';
 import { Button, Badge, ConfirmDialog } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -26,11 +27,23 @@ export interface LayoutSwitcherProps {
   onReset: () => void;
   onToggleEdit?: () => void;
   onPinToVehicle?: (id: string, vehicleId: number | null | undefined) => void;
+  /** Rename the active layout. */
+  onRename?: (id: string, name: string) => void;
+  /** Delete the active layout (routed through a danger confirm first). */
+  onDelete?: (id: string) => void;
+  /** Reorder by indices in the complete dashboards array, including hidden vehicle layouts. */
+  onReorder?: (fromIndex: number, toIndex: number) => void;
+  /** Open the template gallery to create a layout from a starter. */
+  onOpenTemplates?: () => void;
+  /** Open the settings modal for the active layout. */
+  onOpenSettings?: (id: string) => void;
   className?: string;
 }
 
 /**
- * Compact dropdown for switching between saved dashboard layouts.
+ * The single control for dashboard layouts: a compact dropdown for switching
+ * plus every layout command (edit, rename, save-as, delete, new blank, new
+ * from template, settings, vehicle pin, reset) inside its menu.
  *
  * The dropdown surfaces dashboards visible for the currently selected vehicle:
  * any layout pinned to the same `vehicleId` plus all user-global layouts
@@ -39,11 +52,8 @@ export interface LayoutSwitcherProps {
  * users can carve out vehicle-specific dashboards.
  *
  * Save-As prompts for a name and creates a duplicate of the current layout via
- * `onCreate`. Reset routes through a `<ConfirmDialog>` from `useConfirm()`.
- *
- * Replaces the legacy header tab strip as the primary layout-selection
- * affordance. The full `<LayoutManager>` remains available for
- * reordering / renaming via its context menu.
+ * `onCreate`. Reset and Delete route through a `<ConfirmDialog>` from
+ * `useConfirm()`.
  */
 export function LayoutSwitcher({
   dashboards,
@@ -56,6 +66,11 @@ export function LayoutSwitcher({
   onReset,
   onToggleEdit,
   onPinToVehicle,
+  onRename,
+  onDelete,
+  onReorder,
+  onOpenTemplates,
+  onOpenSettings,
   className,
 }: LayoutSwitcherProps) {
   const { t } = useTranslation('dashboard');
@@ -81,6 +96,18 @@ export function LayoutSwitcher({
       }),
     [dashboards, vehicleId],
   );
+  const activeVisibleIndex = visible.findIndex((d) => d.id === active?.id);
+
+  const moveActive = (offset: -1 | 1) => {
+    if (!onReorder || activeVisibleIndex < 0) return;
+    const neighbor = visible[activeVisibleIndex + offset];
+    if (!neighbor) return;
+    const fromIndex = dashboards.findIndex((d) => d.id === active?.id);
+    const toIndex = dashboards.findIndex((d) => d.id === neighbor.id);
+    if (fromIndex < 0 || toIndex < 0) return;
+    onReorder(fromIndex, toIndex);
+    setOpen(false);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -141,6 +168,45 @@ export function LayoutSwitcher({
     }
   }, [onPinToVehicle, active, vehicleId]);
 
+  const handleRename = useCallback(() => {
+    if (!onRename || !active) return;
+    setOpen(false);
+    const name = window.prompt(
+      t('layout.renamePrompt', 'New name for this layout:'),
+      active.name,
+    );
+    const trimmed = name?.trim();
+    if (!trimmed || trimmed === active.name) return;
+    onRename(active.id, trimmed);
+  }, [onRename, active, t]);
+
+  const handleDelete = useCallback(async () => {
+    if (!onDelete || !active) return;
+    setOpen(false);
+    const ok = await confirm({
+      title: t('layout.deleteTitle', 'Delete this layout?'),
+      message: t(
+        'layout.deleteMessage',
+        'This permanently removes "{{name}}" and its widget arrangement. This cannot be undone.',
+        { name: active.name },
+      ),
+      variant: 'danger',
+      confirmLabel: t('layout.deleteConfirm', 'Delete'),
+    });
+    if (ok) onDelete(active.id);
+  }, [confirm, onDelete, active, t]);
+
+  const handleNewBlank = useCallback(() => {
+    setOpen(false);
+    const name = window.prompt(
+      t('layout.newBlankPrompt', 'Name for the new layout:'),
+      t('layout.newLayoutDefault', 'New Layout'),
+    );
+    const trimmed = name?.trim();
+    if (!trimmed) return;
+    onCreate(trimmed);
+  }, [onCreate, t]);
+
   const activeName = active?.name ?? t('layout.untitled', 'Untitled');
 
   // Resolve the vehicle the ACTIVE layout is pinned to from the fleet list —
@@ -190,49 +256,6 @@ export function LayoutSwitcher({
         )}
         <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
       </Button>
-
-      <div className="hidden items-center gap-1 sm:flex">
-        {onToggleEdit && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleEdit}
-            aria-pressed={editMode}
-            aria-label={editMode
-              ? t('layout.editExitLabel', 'Exit edit mode')
-              : t('layout.editEnterLabel', 'Edit dashboard')}
-            title={editMode
-              ? t('layout.editTitleExit', 'Exit edit (E)')
-              : t('layout.editTitleEnter', 'Edit dashboard (E)')}
-          >
-            <Edit3 className="h-3.5 w-3.5" />
-            <span className="ml-1 hidden md:inline">
-              {editMode
-                ? t('layout.editExit', 'Done')
-                : t('layout.editEnter', 'Edit')}
-            </span>
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleSaveAs}
-          aria-label={t('layout.saveAs', 'Save as new layout')}
-          title={t('layout.saveAs', 'Save as new layout')}
-        >
-          <Save className="h-3.5 w-3.5" />
-          <span className="ml-1 hidden md:inline">{t('layout.saveAsShort', 'Save as')}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleReset}
-          aria-label={t('layout.reset', 'Reset to default')}
-          title={t('layout.reset', 'Reset to default')}
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-        </Button>
-      </div>
 
       {open && (
         <div
@@ -290,6 +313,68 @@ export function LayoutSwitcher({
 
           <div className="my-1 h-px bg-white/[0.06]" />
 
+          {onToggleEdit && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onToggleEdit();
+              }}
+              className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+            >
+              <Icons.edit className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+              {editMode
+                ? t('layout.editExitLabel', 'Exit edit mode')
+                : t('layout.editEnterLabel', 'Edit dashboard')}
+            </Button>
+          )}
+
+          {onRename && active && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              role="menuitem"
+              onClick={handleRename}
+              className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+            >
+              <Icons.pencil className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+              {t('layout.rename', 'Rename')}
+            </Button>
+          )}
+
+          {onReorder && activeVisibleIndex >= 0 && (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                role="menuitem"
+                disabled={activeVisibleIndex === 0}
+                onClick={() => moveActive(-1)}
+                className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+              >
+                <ArrowUp className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+                {t('layout.moveEarlier', 'Move earlier')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                role="menuitem"
+                disabled={activeVisibleIndex === visible.length - 1}
+                onClick={() => moveActive(1)}
+                className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+              >
+                <ArrowDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+                {t('layout.moveLater', 'Move later')}
+              </Button>
+            </>
+          )}
+
           <Button
             type="button"
             variant="ghost"
@@ -298,9 +383,75 @@ export function LayoutSwitcher({
             onClick={handleSaveAs}
             className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
           >
-            <Plus className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-            {t('layout.newFromCurrent', 'New layout from current')}
+            <Save className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+            {t('layout.saveAs', 'Save as new layout')}
           </Button>
+
+          {onDelete && active && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              role="menuitem"
+              onClick={handleDelete}
+              disabled={active.isDefault}
+              className={cn(
+                'h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-rose-300',
+                'hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
+              )}
+            >
+              <Icons.delete className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('layout.delete', 'Delete layout')}
+            </Button>
+          )}
+
+          <div className="my-1 h-px bg-white/[0.06]" />
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            role="menuitem"
+            onClick={handleNewBlank}
+            className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+          >
+            <Icons.add className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+            {t('layout.newBlank', 'New blank layout')}
+          </Button>
+
+          {onOpenTemplates && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onOpenTemplates();
+              }}
+              className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+            >
+              <Icons.layoutTemplate className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+              {t('layout.newFromTemplate', 'New from template…')}
+            </Button>
+          )}
+
+          {onOpenSettings && active && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onOpenSettings(active.id);
+              }}
+              className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+            >
+              <Icons.settings className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+              {t('layout.layoutSettings', 'Layout settings')}
+            </Button>
+          )}
 
           {onPinToVehicle && active && (
             <Button
@@ -322,6 +473,8 @@ export function LayoutSwitcher({
             </Button>
           )}
 
+          <div className="my-1 h-px bg-white/[0.06]" />
+
           <Button
             type="button"
             variant="ghost"
@@ -333,13 +486,6 @@ export function LayoutSwitcher({
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
             {t('layout.reset', 'Reset to default')}
           </Button>
-
-          <div className="my-1 h-px bg-white/[0.06]" />
-
-          <p className="flex items-center gap-2 px-2 py-1 text-2xs uppercase tracking-wider text-[var(--text-muted)]">
-            <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
-            {t('layout.menuFooter', 'Manage layouts in the tab strip below')}
-          </p>
         </div>
       )}
 

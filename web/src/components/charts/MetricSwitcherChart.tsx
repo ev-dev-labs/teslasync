@@ -84,6 +84,45 @@ export interface MetricSwitcherChartProps<P> {
 
 const DEFAULT_X_KEY = 'date';
 
+/** Cap for bar width (px) so a lone datum never renders as a full-width block. */
+const MAX_BAR_SIZE_PX = 72;
+
+/**
+ * Y-axis guards shared by every switchable metric.
+ *
+ * - Integer-only series get integer ticks (`allowDecimals: false`), which
+ *   kills the "1, 1, 1, 0, 0" repeated-label axis recharts otherwise
+ *   derives from a fractional domain like [0, 1].
+ * - Bar charts pin the floor at 0 (bars read as magnitude-from-zero) with
+ *   guaranteed headroom, so a single small bar can't fill the frame and an
+ *   all-zero series renders a flat baseline instead of a degenerate axis.
+ * - Line/area charts keep the automatic domain — their values (efficiency,
+ *   score) are meaningful far from zero.
+ *
+ * Pure so the axis contract is unit-testable without rendering recharts.
+ */
+export function resolveYAxisProps(
+  values: readonly number[],
+  chartType: 'bar' | 'area' | 'line',
+): { allowDecimals: boolean; domain: [number | 'auto', number | 'auto'] } {
+  const finite = values.filter((value) => Number.isFinite(value));
+  const allIntegers = finite.length > 0 && finite.every((value) => Number.isInteger(value));
+  if (chartType !== 'bar' || finite.length === 0) {
+    return { allowDecimals: !allIntegers, domain: ['auto', 'auto'] };
+  }
+  const min = Math.min(...finite);
+  const max = Math.max(...finite);
+  if (min < 0) {
+    return { allowDecimals: !allIntegers, domain: ['auto', 'auto'] };
+  }
+  // Headroom is additive (+10 %, min +1) rather than multiplicative so the
+  // ceiling lands on round numbers (110, not 111 from 100 * 1.1 float error).
+  return {
+    allowDecimals: !allIntegers,
+    domain: [0, Math.max(2, max + Math.max(1, Math.ceil(max * 0.1)))],
+  };
+}
+
 /**
  * `MetricSwitcherChart` — chart with a pill row above for switching the
  * displayed metric. Used by overview pages where one chart should answer
@@ -161,6 +200,10 @@ export function MetricSwitcherChart<P extends { date: string }>({
   const chartType = active?.chart ?? 'bar';
   const color = active?.color ?? 'var(--theme-primary, #3b82f6)';
   const gradId = `metricSwitcherGrad-${active?.key ?? 'x'}`;
+  const yAxis = resolveYAxisProps(
+    projected.map((point) => (point as Record<string, unknown>)[valueKey] as number),
+    chartType,
+  );
 
   const switcher = (
     <PillFilterBar
@@ -220,9 +263,9 @@ export function MetricSwitcherChart<P extends { date: string }>({
                 interval="preserveStartEnd"
                 minTickGap={16}
               />
-              <YAxis tick={axisTick} tickFormatter={yTickFormatter} />
+              <YAxis tick={axisTick} tickFormatter={yTickFormatter} allowDecimals={yAxis.allowDecimals} domain={yAxis.domain} />
               <Tooltip content={<ChartTooltip />} formatter={tooltipFormatter} />
-              <Bar dataKey={valueKey} name={active?.label ?? ''} fill={color} fillOpacity={0.65} radius={[4, 4, 0, 0]} />
+              <Bar dataKey={valueKey} name={active?.label ?? ''} fill={color} fillOpacity={0.65} radius={[4, 4, 0, 0]} maxBarSize={MAX_BAR_SIZE_PX} />
             </BarChart>
           ) : chartType === 'area' ? (
             <AreaChart data={projected}>
@@ -236,7 +279,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
                 interval="preserveStartEnd"
                 minTickGap={16}
               />
-              <YAxis tick={axisTick} tickFormatter={yTickFormatter} />
+              <YAxis tick={axisTick} tickFormatter={yTickFormatter} allowDecimals={yAxis.allowDecimals} domain={yAxis.domain} />
               <Tooltip content={<ChartTooltip />} formatter={tooltipFormatter} />
               <Area
                 {...AREA_DEFAULTS}
@@ -257,7 +300,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
                 interval="preserveStartEnd"
                 minTickGap={16}
               />
-              <YAxis tick={axisTick} tickFormatter={yTickFormatter} />
+              <YAxis tick={axisTick} tickFormatter={yTickFormatter} allowDecimals={yAxis.allowDecimals} domain={yAxis.domain} />
               <Tooltip content={<ChartTooltip />} formatter={tooltipFormatter} />
               <Line type="monotone" dataKey={valueKey} name={active?.label ?? ''} stroke={color} strokeWidth={2} dot={false} />
             </LineChart>

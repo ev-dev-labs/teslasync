@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Car, RefreshCw, Battery, Gauge, Zap, Activity, ListChecks,
-  ExternalLink, Trash2, Lock, Shield, ArrowLeftRight, AlertCircle,
+  ExternalLink, Lock, Shield, ArrowLeftRight, AlertCircle,
   BatteryCharging, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
 
@@ -12,11 +12,10 @@ import { PageContainer, PrefetchLink } from '@/components/layout';
 import { VirtualizedVehicleGrid } from '@/components/vehicles';
 import {
   GlassPanel, Badge, Button, ConfirmDialog, PinButton,
-  SectionTitle, PanelTitle, Text,
+  SectionTitle, PanelTitle, Text, Popover, MaskedValue,
 } from '@/components/ui';
 import {
   AnimatedNumber,
-  DataFreshnessAuto,
   DataProvenanceBadge,
   MetricBar,
   MetricCard,
@@ -53,6 +52,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { formatObservationAge } from '@/lib/observationAge';
 import { batteryColor, statusHexColor } from '@/lib/colors';
+import { maskFor } from '@/lib/maskValue';
 import { typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import { statusVariant } from '@/api/types';
@@ -511,6 +511,85 @@ function FleetStatusPanel({
 
 /* ── Vehicle card ──────────────────────────────────────────── */
 
+/**
+ * Per-card overflow menu: Quick view + Remove.
+ *
+ * The destructive Remove action used to sit one tap from the Quick view
+ * icon as a tiny low-contrast glyph; burying it one level deep behind an
+ * explicit menu (which still routes through the confirm dialog) makes
+ * accidental removal much harder without hiding the action.
+ */
+function VehicleCardMenu({
+  name,
+  onPreview,
+  onDelete,
+}: {
+  name: string;
+  onPreview: () => void;
+  onDelete: () => void;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuLabel = t('vehicles.cardActions', 'Actions for {{name}}', { name });
+
+  return (
+    <>
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen((value) => !value)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={menuLabel}
+        title={menuLabel}
+        className="min-h-11 min-w-11 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+      >
+        <Icons.moreInline className="h-4 w-4" aria-hidden="true" />
+      </Button>
+      <Popover
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={triggerRef}
+        align="end"
+        ariaLabel={menuLabel}
+        className="w-56 p-2"
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setOpen(false);
+            onPreview();
+          }}
+          aria-label={t('vehicles.quickViewAria', 'Quick view {{name}}', { name })}
+          className="w-full justify-start"
+        >
+          <Icons.show className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('common.quickView', 'Quick view')}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setOpen(false);
+            onDelete();
+          }}
+          aria-label={t('vehicles.removeAria', 'Remove {{name}}', { name })}
+          className="w-full justify-start text-rose-300 hover:bg-rose-500/10 hover:text-rose-200"
+        >
+          <Icons.delete className="h-4 w-4" aria-hidden="true" />
+          {t('vehicles.remove', 'Remove')}
+        </Button>
+      </Popover>
+    </>
+  );
+}
+
 interface VehicleCardProps {
   vehicle: Vehicle;
   entry: FleetStateEntry | undefined;
@@ -532,7 +611,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
   const statusLabel = status ?? t('vehicles.statusUnknown', 'Unknown');
   const level = knownNumber(state?.battery_level);
   const color = batteryColor(level ?? 0);
-  const name = vehicle.display_name || vehicle.vin;
+  const name = vehicle.display_name || maskFor(vehicle.vin ?? '', 'vin');
   const modelLine = [vehicle.model, vehicle.trim_badging].filter(Boolean).join(' ');
 
   return (
@@ -560,7 +639,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
                   'truncate rounded outline-none transition-colors hover:text-cyan-300 focus-visible:text-cyan-300 focus-visible:ring-1 focus-visible:ring-cyan-400/40',
                 )}
               >
-                {name}
+                {vehicle.display_name || maskFor(vehicle.vin ?? '', 'vin')}
               </PrefetchLink>
               <Badge variant={status != null ? statusVariant(status) : 'neutral'} dot size="sm">
                 {statusLabel}
@@ -574,7 +653,12 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
             <Text variant="caption" as="p" className="mt-1 truncate">
               {modelLine || t('vehicles.unknownModel', 'Unknown model')}
               {' · '}
-              <span className={typography.family.mono}>{vehicle.vin}</span>
+              <MaskedValue
+                value={vehicle.vin}
+                variant="vin"
+                copyable
+                ariaLabel={t('vehicles.vinLabel', 'Vehicle identification number')}
+              />
             </Text>
           </div>
           <PinButton itemType="vehicle" itemId={vehicle.id} size="md" />
@@ -665,28 +749,11 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
             <ExternalLink className="h-4 w-4" aria-hidden="true" />
             {t('vehicles.viewDetails', 'View details')}
           </PrefetchLink>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onPreview}
-              aria-label={t('vehicles.quickViewAria', 'Quick view {{name}}', { name })}
-              title={t('common.quickView', 'Quick view')}
-              className="min-h-11 min-w-11 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
-              <Icons.show className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(vehicle)}
-              aria-label={t('vehicles.removeAria', 'Remove {{name}}', { name })}
-              className="min-h-11 min-w-11 p-0 text-[var(--text-muted)] hover:bg-rose-500/10 hover:text-rose-300"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </div>
+          <VehicleCardMenu
+            name={name}
+            onPreview={onPreview}
+            onDelete={() => onDelete(vehicle)}
+          />
         </div>
       </div>
     </GlassPanel>
@@ -1408,15 +1475,7 @@ export default function VehicleListPage() {
                   status={fleetStateData.status}
                   updatedAt={fleetStateData.updatedAt}
                 />
-                <DataFreshnessAuto
-                  query={fleetFreshnessQuery}
-                  source={t('operations.vehicles.liveStateSource', 'Live vehicle state')}
-                />
                 <DataProvenanceBadge provenance="historical" />
-                <DataFreshnessAuto
-                  query={workOrdersQuery}
-                  source={t('operations.vehicles.workOrdersSource', 'Fleet work orders')}
-                />
               </div>
             }
             actions={

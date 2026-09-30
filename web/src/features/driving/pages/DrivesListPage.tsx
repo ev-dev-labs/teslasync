@@ -16,7 +16,7 @@ import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
   BulkActionsToolbar, type BulkAction,
   KpiOverviewCard, MetricCard, DateGroupedList, OperationalBrief,
-  DataFreshnessAuto, DataProvenanceBadge, EntityPreviewDrawer,
+  DataProvenanceBadge, EntityPreviewDrawer,
   type DateGroupedListGroup, type OperationalAttention,
 } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
@@ -1017,10 +1017,6 @@ export default function DrivesListPage() {
                 provenance={drivesState.provenance}
                 status={drivesState.status}
                 updatedAt={drivesState.updatedAt}
-              />
-              <DataFreshnessAuto
-                query={drivesQuery}
-                source={t('operations.drives.historySource', 'Drive history')}
               />
             </div>
           )}

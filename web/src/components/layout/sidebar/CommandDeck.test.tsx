@@ -322,7 +322,7 @@ describe('CommandDeck', () => {
         <MemoryRouter initialEntries={['/drives']}>
           <CommandDeck
             {...baseProps({ pathname: '/drives', activeSectionTitle: 'Driving', panelOpen: true })}
-            pinnedItems={pinned ? [drivesItem] : []}
+            pinnedItems={pinned ? [tripsItem] : []}
             onPin={() => setPinned(true)}
             onUnpin={() => setPinned(false)}
           />
@@ -330,18 +330,37 @@ describe('CommandDeck', () => {
       )
     }
     render(<Harness />)
-    expect(secondaryPanel().getByText('Quick access pins')).toBeInTheDocument()
-    expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Drives' })).not.toBeInTheDocument()
-    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Pin Drives to favorites' }))
-    expect(secondaryPanel().getByRole('link', { name: 'Quick access: Drives' })).toBeInTheDocument()
-    expect(secondaryPanel().getByRole('button', { name: 'Remove Drives from quick access' })).toBeInTheDocument()
+    const toggle = secondaryPanel().getByRole('button', { name: 'Quick access pins' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Trips' })).not.toBeInTheDocument()
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Pin Trips to favorites' }))
+    // Quick access starts collapsed: the pin lands but stays hidden until expanded.
+    expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Trips' })).not.toBeInTheDocument()
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(secondaryPanel().getByRole('link', { name: 'Quick access: Trips' })).toBeInTheDocument()
+    expect(secondaryPanel().getByRole('button', { name: 'Remove Trips from quick access' })).toBeInTheDocument()
     expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
+    // Collapsing hides the pins again, but filtering forces them back open so
+    // a collapsed match never reads as a missing result.
+    fireEvent.click(toggle)
+    expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Trips' })).not.toBeInTheDocument()
     fireEvent.change(secondaryPanel().getByRole('searchbox', { name: 'Filter Driving tools' }), { target: { value: 'no matching pages' } })
-    expect(secondaryPanel().getByRole('link', { name: 'Quick access: Drives' })).toBeInTheDocument()
+    expect(secondaryPanel().getByRole('link', { name: 'Quick access: Trips' })).toBeInTheDocument()
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Clear filter' }))
-    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Remove Drives from quick access' }))
-    await waitFor(() => expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Drives' })).not.toBeInTheDocument())
+    fireEvent.click(toggle)
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Remove Trips from quick access' }))
+    await waitFor(() => expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Trips' })).not.toBeInTheDocument())
     expect(secondaryPanel().getByText('Pin a page below to keep it close.')).toBeInTheDocument()
+  })
+
+  it('never duplicates the current page into section quick access', () => {
+    renderControlledDeck({ pathname: '/drives', activeSectionTitle: 'Driving', pinnedItems: [drivesItem, tripsItem] })
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving, 3 pages' }))
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Quick access pins' }))
+    expect(secondaryPanel().getByRole('link', { name: 'Quick access: Trips' })).toBeInTheDocument()
+    expect(secondaryPanel().queryByRole('link', { name: 'Quick access: Drives' })).not.toBeInTheDocument()
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('collapses the secondary panel via its header, returning focus to the rail', () => {
@@ -401,6 +420,9 @@ describe('CommandDeck', () => {
     })
     fireEvent.click(desktopRail().getByRole('button', { name: 'Suggested' }))
     expect(secondaryPanel().getByText('Recently Used')).toBeInTheDocument()
+    // Recently Used starts collapsed so suggestions own the first paint.
+    expect(secondaryPanel().queryByRole('link', { name: 'Trips' })).not.toBeInTheDocument()
+    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Show recently used' }))
     expect(secondaryPanel().getByRole('link', { name: 'Trips' })).toBeInTheDocument()
     expect(secondaryPanel().queryByRole('combobox', { name: 'Search pages' })).not.toBeInTheDocument()
     expect(secondaryPanel().getByRole('link', { name: /All Notifications/ })).toHaveTextContent('1 need attention')
@@ -462,10 +484,12 @@ describe('CommandDeck', () => {
 
   it.each(['All pages', 'Alerts', 'Display'])(
     'closes the mobile drawer for the %s rail shortcut',
-    (label) => {
+    async (label) => {
       const onItemSelect = vi.fn()
       renderControlledDeck({ onItemSelect })
-      fireEvent.click(mobileRail().getByRole('link', { name: label }))
+      await act(async () => {
+        fireEvent.click(mobileRail().getByRole('link', { name: label }))
+      })
       expect(onItemSelect).toHaveBeenCalledTimes(1)
     },
   )
@@ -478,17 +502,21 @@ describe('CommandDeck', () => {
     expect(onItemSelect).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the desktop panel open when a link is followed, resets mobile levels', () => {
+  it('keeps the desktop panel open when a link is followed, resets mobile levels', async () => {
     const onItemSelect = vi.fn()
     renderControlledDeck({ pinnedItems: [drivesItem], onItemSelect })
 
     fireEvent.click(desktopRail().getByRole('button', { name: 'Saved' }))
-    fireEvent.click(secondaryPanel().getByRole('link', { name: 'Drives' }))
+    await act(async () => {
+      fireEvent.click(secondaryPanel().getByRole('link', { name: 'Drives' }))
+    })
     expect(onItemSelect).toHaveBeenCalledTimes(1)
     expect(screen.getByTestId('command-deck-secondary')).toBeInTheDocument()
 
     fireEvent.click(mobileRail().getByRole('button', { name: 'Saved' }))
-    fireEvent.click(mobilePanel().getByRole('link', { name: 'Drives' }))
+    await act(async () => {
+      fireEvent.click(mobilePanel().getByRole('link', { name: 'Drives' }))
+    })
     expect(onItemSelect).toHaveBeenCalledTimes(2)
     expect(screen.getByTestId('command-deck-mobile-rail')).toBeInTheDocument()
     expect(screen.queryByTestId('command-deck-mobile-panel')).toBeNull()

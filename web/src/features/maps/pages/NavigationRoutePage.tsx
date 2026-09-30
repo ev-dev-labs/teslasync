@@ -33,7 +33,7 @@ import {
   Caption,
   type Column,
 } from '@/components/ui';
-import { MetricCard, LiveIndicator, TimeStamp } from '@/components/data-display';
+import { MetricCard, TimeStamp } from '@/components/data-display';
 import {
   Skeleton,
   EmptyState,
@@ -552,7 +552,6 @@ export default function NavigationRoutePage() {
       query={latestQuery}
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <LiveIndicator variant="compact" />
           <Button
             variant="ghost"
             size="sm"

@@ -91,12 +91,12 @@ const VEHICLES: Vehicle[] = [
   },
 ]
 
-const RULES: AlertRule[] = [
-  {
-    id: 10,
-    name: 'Battery Low',
+function makeRule(id: number, name: string, severity: string): AlertRule {
+  return {
+    id,
+    name,
     enabled: true,
-    severity: 'warn',
+    severity,
     vehicle_id: 1,
     signal: 'battery_level',
     operator: '<',
@@ -105,16 +105,22 @@ const RULES: AlertRule[] = [
     notification_channels: [],
     created_at: '',
     updated_at: '',
-  } as unknown as AlertRule,
+  } as unknown as AlertRule
+}
+
+const RULES: AlertRule[] = [
+  makeRule(10, 'Battery Low', 'warn'),
+  makeRule(11, 'Thermal Runaway', 'critical'),
+  makeRule(12, 'Charge Complete', 'info'),
 ]
 
 const NOW = new Date()
 const ONE_HOUR_AGO = new Date(NOW.getTime() - 60 * 60 * 1000).toISOString()
 
-function makeLog(id: number, title: string, message: string): NotificationLog {
+function makeLog(id: number, title: string, message: string, alertId = 10): NotificationLog {
   return {
     id,
-    alert_id: 10,
+    alert_id: alertId,
     channel_id: 1,
     title,
     message,
@@ -371,6 +377,64 @@ describe('NotificationBellPopover', () => {
     await waitFor(() =>
       expect(screen.getByTestId('location').textContent).toBe('/notifications/inbox'),
     )
+  })
+
+  it('filters the preview by severity with per-severity counts', async () => {
+    unreadLogsMock = [
+      makeLog(100, 'Battery low', 'Battery dropped below 20%', 10),
+      makeLog(101, 'Pack overheating', 'Cell delta too high', 11),
+      makeLog(102, 'Charge complete', 'Reached target SoC', 12),
+    ]
+    renderPopover()
+    fireEvent.click(
+      screen.getByRole('button', { name: /3 unread notifications/i }),
+    )
+    await screen.findByRole('dialog')
+
+    expect(screen.getByRole('button', { name: 'All, 3 in latest 3' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Critical, 1 in latest 3' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Warning, 1 in latest 3' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Info, 1 in latest 3' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Critical, 1 in latest 3' }))
+    expect(screen.getByText('Pack overheating')).toBeInTheDocument()
+    expect(screen.queryByText('Battery low')).toBeNull()
+    expect(screen.queryByText('Charge complete')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'All, 3 in latest 3' }))
+    expect(screen.getByText('Battery low')).toBeInTheDocument()
+    expect(screen.getByText('Pack overheating')).toBeInTheDocument()
+    expect(screen.getByText('Charge complete')).toBeInTheDocument()
+  })
+
+  it('shows an empty-filter state instead of a blank list', async () => {
+    unreadLogsMock = [makeLog(100, 'Battery low', 'Battery dropped below 20%', 10)]
+    renderPopover()
+    fireEvent.click(
+      screen.getByRole('button', { name: /3 unread notifications/i }),
+    )
+    await screen.findByRole('dialog')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Critical, 0 in latest 1' }))
+    expect(screen.queryByText('Battery low')).toBeNull()
+    expect(screen.queryByTestId('bell-popover-list')).toBeNull()
+    expect(screen.getByText('No matches in this preview. View all for older notifications.')).toBeInTheDocument()
+  })
+
+  it('scopes zero severity counts to the latest ten when older unread items exist', async () => {
+    unreadCountMock = 25
+    unreadLogsMock = Array.from({ length: 10 }, (_, index) =>
+      makeLog(index + 100, `Info ${index}`, 'Recent informational item', 12),
+    )
+    renderPopover()
+    fireEvent.click(screen.getByRole('button', { name: /25 unread notifications/i }))
+    await screen.findByRole('dialog')
+
+    expect(screen.getByText('Latest 10 unread')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Critical, 0 in latest 10' }))
+    expect(screen.getByText('No matches in this preview. View all for older notifications.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /View all/i }))
+    expect(screen.getByTestId('location')).toHaveTextContent('/notifications/inbox')
   })
 
   it('Tab from the last focusable element wraps back to the first (focus trap)', async () => {

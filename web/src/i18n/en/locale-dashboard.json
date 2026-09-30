@@ -322,12 +322,22 @@
       "noneVisible": "No layouts available for this vehicle.",
       "editTitle": "Edit dashboard (E)",
       "editEnter": "Edit",
-      "editExit": "Done"
+      "editExit": "Done",
+      "rename": "Rename",
+      "renamePrompt": "New name for this layout:",
+      "delete": "Delete layout",
+      "deleteTitle": "Delete this layout?",
+      "deleteMessage": "This permanently removes \"{{name}}\" and its widget arrangement. This cannot be undone.",
+      "deleteConfirm": "Delete",
+      "newBlank": "New blank layout",
+      "newBlankPrompt": "Name for the new layout:",
+      "newFromTemplate": "New from template…",
+      "moveEarlier": "Move earlier",
+      "moveLater": "Move later",
+      "layoutSettings": "Layout settings"
     },
     "printSnapshot": "Print snapshot",
     "layoutActions": "Actions for {{name}}",
-    "moveLayoutEarlier": "Move earlier",
-    "moveLayoutLater": "Move later",
     "layoutMovedEarlier": "{{name}} moved earlier",
     "layoutMovedLater": "{{name}} moved later",
     "grid": {
@@ -357,7 +367,9 @@
       "exitFullscreen": "Exit Fullscreen",
       "widgetFailed": "{{name}} failed to load",
       "emptyTitle": "No widgets yet",
-      "emptyMessage": "Add widgets to start building your dashboard."
+      "emptyMessage": "Add widgets to start building your dashboard.",
+      "addWidgets": "Add widgets",
+      "browseTemplates": "Browse starter layouts"
     }
   },
   "glance": {

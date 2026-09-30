@@ -130,7 +130,7 @@ vi.mock('../../components/DashboardGrid', () => ({
 }))
 vi.mock('../../components/WidgetPicker', () => ({ WidgetPicker: () => null }))
 vi.mock('../../components/WidgetSettingsModal', () => ({ WidgetSettingsModal: () => null }))
-vi.mock('../../components/LayoutManager', () => ({ LayoutManager: () => null }))
+
 vi.mock('../../components/LayoutSwitcher', () => ({ LayoutSwitcher: () => null }))
 vi.mock('../../components/TemplateGallery', () => ({ TemplateGallery: () => null }))
 vi.mock('../../components/ExportModal', () => ({ ExportModal: () => null }))

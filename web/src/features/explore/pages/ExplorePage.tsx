@@ -401,7 +401,9 @@ function FeatureCard({
             className={cn(
               'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
               'border border-[var(--glass-border)] bg-white/[0.04]',
-              entry.color,
+              // Neutral icon tone: per-page rainbow colors carried no
+              // information, so color is reserved for status instead.
+              'text-[var(--text-secondary)]',
             )}
             aria-hidden="true"
           >

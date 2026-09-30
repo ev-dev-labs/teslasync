@@ -36,7 +36,6 @@ import { cn } from '@/lib/cn';
 import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
-import { LayoutManager } from '../components/LayoutManager';
 import { LayoutSwitcher } from '../components/LayoutSwitcher';
 import { TemplateGallery } from '../components/TemplateGallery';
 import { ExportModal } from '../components/ExportModal';
@@ -246,7 +245,7 @@ export default function DashboardPage() {
     addWidgets, removeWidget, updateWidgetConfig,
     updateLayouts, autoArrange, getWidgetSize,
     switchDashboard, createDashboard, renameDashboard, deleteDashboard,
-    reorderDashboards, duplicateDashboard, updateDashboardSettings, updateDashboardIcon,
+    duplicateDashboard, reorderDashboards, updateDashboardSettings, updateDashboardIcon,
     applyPreset, applyRolePreset, resetToDefault, exportDashboard, importDashboardFromData,
     canUndo, canRedo, undoCount, undo, redo,
     dirty, pinToVehicle,
@@ -517,10 +516,6 @@ export default function DashboardPage() {
             <Icons.add className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
-            <Icons.layoutTemplate className="h-3.5 w-3.5 me-1" />
-            {t('dashboard.newLayout', 'New Layout')}
-          </Button>
           <Button variant="ghost" size="sm" onClick={autoArrange}
             aria-label={t('dashboard.autoArrange', 'Auto Arrange')}>
             <Icons.layoutGrid className="h-3.5 w-3.5 sm:me-1" />
@@ -545,10 +540,6 @@ export default function DashboardPage() {
           >
             <Icons.refresh className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden="true" />
             <span>{t('dashboard.refreshShort', 'Refresh')}</span>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
-            <Icons.layoutTemplate className="h-4 w-4" aria-hidden="true" />
-            <span>{t('dashboard.newLayout', 'New Layout')}</span>
           </Button>
           {vehicleList.length > 0 && (
             <>
@@ -670,18 +661,12 @@ export default function DashboardPage() {
                 onDuplicate={duplicateDashboard}
                 onReset={resetToDefault}
                 onPinToVehicle={pinToVehicle}
-              />
-              <LayoutManager
-                dashboards={dashboards}
-                activeId={activeId}
-                onSwitch={switchDashboard}
-                onCreate={createDashboard}
+                onToggleEdit={() => setEditMode((value) => !value)}
                 onRename={renameDashboard}
                 onDelete={deleteDashboard}
                 onReorder={reorderDashboards}
-                onDuplicate={duplicateDashboard}
-                onOpenSettings={(id) => setShowDashSettings(id)}
                 onOpenTemplates={() => setShowTemplates(true)}
+                onOpenSettings={(id) => setShowDashSettings(id)}
               />
             </section>
           </FadeIn>
@@ -719,6 +704,8 @@ export default function DashboardPage() {
                   dashboardVehicleId={dashboardVehicleId}
                   compactMode={activeDashboard.settings?.compactMode}
                   showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
+                  onAddWidgets={() => setCatalogueOpen(true)}
+                  onBrowseTemplates={() => setShowTemplates(true)}
                 />
               </div>
             </section>
