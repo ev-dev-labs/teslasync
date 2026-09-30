@@ -129,6 +129,27 @@ interactive login. Allow CORS preflight requests too. Restrict the bypass
 to TeslaSync API routes and keep the server's API-key validation enabled.
 Browser sessions can continue to use the proxy's normal login.
 
+For the bundled Traefik IngressRoute chart, enable the opt-in routes instead
+of maintaining separate middleware manifests:
+
+```yaml
+config:
+  forwardAuthHeader: X-Forwarded-User # use your proxy's actual subject header
+ingressRoute:
+  enabled: true
+  nativeAppAuth:
+    enabled: true
+    host: teslasync.example.com
+    identityHeaders: [] # list every OTHER identity header your proxy forwards
+```
+
+The chart always strips `config.forwardAuthHeader` on bearer requests; list
+any additional forwarded identity headers in `identityHeaders`. The bearer
+route skips only the interactive proxy login: the API still validates the
+app key. OPTIONS requests reach the API's CORS handler. Keep the browser
+catch-all behind forward auth. This opt-in requires a chart version that
+includes `nativeAppAuth`; older published charts ignore unknown values.
+
 ## How app sign-in works
 
 - Admin → API Keys → **App sign-in** binds a key to your login

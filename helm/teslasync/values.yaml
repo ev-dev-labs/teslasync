@@ -805,6 +805,17 @@ ingressRoute:
     enabled: true
   entryPoints:
     - websecure
+  # Optional native-shell access behind a forward-auth proxy. The chart
+  # routes API preflights and bearer-token requests around interactive login;
+  # the backend still validates app tokens before accepting any API request.
+  nativeAppAuth:
+    enabled: false
+    host: "" # public host served by this IngressRoute, without scheme or path
+    # Other identity headers forwarded by the auth provider; the configured
+    # config.forwardAuthHeader is always stripped as well.
+    identityHeaders: []
+    # Optional site-specific middlewares (e.g. Traefik default-headers).
+    middlewares: []
   # SSE bypass route — auto-added before catch-all when a ForwardAuth provider is used.
   # Bypasses ForwardAuth for /api/v1/events so the Go backend validates JWT directly.
   sseBypass:
