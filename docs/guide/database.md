@@ -84,9 +84,16 @@ The platform's hypertables:
 | `positions`       | 7 days per chunk        | GPS positions over time                                         |
 | `signal_history`  | Variable                | Older format retained for compatibility; new code reads `signal_log` |
 | `audit_logs`      | 30 days per chunk       | Auth events, settings changes, sensitive operations             |
-| `api_logs`        | 7 days per chunk        | HTTP access log (when enabled)                                  |
+| `api_call_logs`   | 7 days per chunk        | Outbound API calls and app-request diagnostics                    |
 
 You query a hypertable like any normal table. TimescaleDB's planner handles chunk pruning and parallelism transparently.
+
+The `/api-logs/stats` totals and service/method breakdowns use one grouped
+scan of `api_call_logs`. Supplying a date range lets TimescaleDB exclude
+irrelevant chunks; the All range still reads across the retained history.
+The `/api-logs` paginated list separately calculates an **exact** filtered
+total, which can be expensive for broad ranges or text searches. Do not
+replace that total with an estimate without changing the pagination contract.
 
 ## Continuous aggregates — how charts stay fast
 
