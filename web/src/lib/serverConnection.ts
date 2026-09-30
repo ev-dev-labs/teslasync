@@ -138,6 +138,11 @@ export function clearServerConnection(): void {
   window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
 }
 
+/** Discard a rejected app token without forgetting the server address. */
+export function clearAccessToken(): void {
+  window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+}
+
 /**
  * Absolute API URL for a path. In same-origin mode this is the identity
  * (relative path preserved, no behaviour change); in remote mode the
@@ -228,7 +233,7 @@ export async function probeServer(base: string, token: string | null): Promise<S
       signal: controller.signal,
       credentials: 'omit',
     })
-    if (res.status === 401 && token == null) {
+    if (res.status === 401) {
       return { ok: false, authenticationRequired: true }
     }
     if (!res.ok) return { ok: false }

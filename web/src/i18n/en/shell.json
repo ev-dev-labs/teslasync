@@ -1209,6 +1209,11 @@
     }
   },
   "session": {
+    "appTokenExpired": {
+      "body": "The server rejected your app access token. Reconnect with a valid key.",
+      "reconnect": "Reconnect",
+      "title": "App connection expired"
+    },
     "expired": {
       "body": "For your security, your session has timed out. Sign in again to pick up where you left off.",
       "signIn": "Sign in again",

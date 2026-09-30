@@ -1,5 +1,10 @@
 {
   "session": {
+    "appTokenExpired": {
+      "title": "App connection expired",
+      "body": "The server rejected your app access token. Reconnect with a valid key.",
+      "reconnect": "Reconnect"
+    },
     "expiring": {
       "title": "Your session is about to expire",
       "body": "You will be signed out in {{countdown}}.",

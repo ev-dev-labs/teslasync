@@ -76,7 +76,9 @@ export default function ConnectPage() {
       if (!probe.ok) {
         if (probe.authenticationRequired) {
           setModeHint('forward_auth')
-          setError(t('serverConnect.connect.errorTokenRequired', 'This server needs an access token — paste one to continue.'))
+          setError(token.trim() === ''
+            ? t('serverConnect.connect.errorTokenRequired', 'This server needs an access token — paste one to continue.')
+            : t('serverConnect.connect.errorTokenRejected', 'This server rejected the access token. Check the key and try again.'))
         } else {
           setError(t('serverConnect.connect.errorUnreachable', "Couldn't reach a TeslaSync server there. Check the address and that the server is running."))
         }

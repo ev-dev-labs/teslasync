@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   authHeaders,
+  clearAccessToken,
   clearServerConnection,
   getAccessToken,
   getServerBaseUrl,
@@ -98,6 +99,15 @@ describe('stored connection', () => {
     clearServerConnection()
     expect(getServerBaseUrl()).toBe('')
     expect(getAccessToken()).toBeNull()
+  })
+
+  it('forgets only a rejected token while keeping the server for reconnection', () => {
+    window.__TESLASYNC_SHELL__ = 'electron'
+    setServerConnection('https://srv.example.com', 'ts_test_secret')
+    clearAccessToken()
+    expect(getAccessToken()).toBeNull()
+    expect(getServerBaseUrl()).toBe('https://srv.example.com')
+    expect(needsServerSetup()).toBe(true)
   })
 
   it('treats a corrupt stored value as same-origin', () => {
@@ -203,6 +213,15 @@ describe('probeServer', () => {
   it('asks for a token when an auth-protected server rejects an anonymous probe', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
     expect(await probeServer('https://srv.example.com', null)).toEqual({
+      ok: false,
+      authenticationRequired: true,
+    })
+
+  })
+
+  it('reports authentication failure when the server rejects a supplied token', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
+    expect(await probeServer('https://srv.example.com', 'ts_invalid')).toEqual({
       ok: false,
       authenticationRequired: true,
     })

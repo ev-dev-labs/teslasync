@@ -8,7 +8,7 @@
  */
 
 import { broadcast } from './broadcast'
-import { authHeaders, getServerBaseUrl, isRemoteMode } from './serverConnection'
+import { authHeaders, clearAccessToken, getServerBaseUrl, isRemoteMode } from './serverConnection'
 import { purgeServiceWorkerApiCache } from '@/sw/purgeApiCache'
 // HELP-12. `demoMode` imports nothing from this module, so there is no cycle;
 // it is a leaf that reads `import.meta.env` and validates it.
@@ -174,6 +174,12 @@ export function navigateToReauth(): void {
     broadcast({ type: 'auth.logout' })
   } catch {
     // The bus is best-effort; never let it block a sign-out.
+  }
+
+  if (isRemoteMode()) {
+    clearAccessToken()
+    window.location.assign('/?connect=1')
+    return
   }
 
   try {
