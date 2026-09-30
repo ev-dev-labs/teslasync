@@ -13,9 +13,14 @@
  * from `lib/resilience.ts`, so it imports nothing from the API layer.
  */
 
+import { safeRandomUUID } from './safeUUID'
+
 const SERVER_URL_KEY = 'teslasync-server-base-url'
 const ACCESS_TOKEN_KEY = 'teslasync-access-token'
 const TOKEN_REQUIRED_KEY = 'teslasync-server-token-required'
+const APP_INSTALLATION_KEY = 'teslasync-app-installation-id'
+const APP_HEADER = 'X-Teslasync-App'
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 /** Query param that forces the connect screen (manual testing, server switching). */
 export const CONNECT_QUERY_PARAM = 'connect'
@@ -166,7 +171,36 @@ export function authHeaders(init?: HeadersInit): Headers {
   if (token != null && !merged.has('Authorization')) {
     merged.set('Authorization', `Bearer ${token}`)
   }
-  return merged
+  return appIdentityHeaders(merged)
+}
+
+/** Adds a per-install diagnostic label only to bundled native app requests. */
+export function appIdentityHeaders(init?: HeadersInit): Headers {
+  const headers = new Headers(init)
+  if (!isNativeShell()) return headers
+
+  const capacitor = (window as Window & {
+    Capacitor?: { getPlatform?: () => string }
+  }).Capacitor
+  const capacitorPlatform = capacitor?.getPlatform?.()
+  const platform = window.__TESLASYNC_SHELL__ === 'electron'
+    ? /Windows/i.test(navigator.userAgent) ? 'windows'
+      : /Macintosh/i.test(navigator.userAgent) ? 'macos' : 'linux'
+    : capacitorPlatform === 'ios' ? 'ios'
+      : capacitorPlatform === 'android' ? 'android' : 'mobile'
+
+  let id = window.localStorage.getItem(APP_INSTALLATION_KEY)
+  if (id !== null && !UUID_V4.test(id)) {
+    console.warn('Invalid native app installation ID; generating a new diagnostic ID')
+    id = null
+  }
+  if (id === null) {
+    id = safeRandomUUID(true)
+    if (!UUID_V4.test(id)) throw new Error('Could not generate a valid native app installation ID')
+    window.localStorage.setItem(APP_INSTALLATION_KEY, id)
+  }
+  headers.set(APP_HEADER, `${platform}:${id}`)
+  return headers
 }
 
 declare global {
@@ -224,7 +258,7 @@ export async function probeServer(base: string, token: string | null): Promise<S
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), 10_000)
   try {
-    const headers = new Headers({ Accept: 'application/json' })
+    const headers = appIdentityHeaders({ Accept: 'application/json' })
     if (token != null && token.trim() !== '') {
       headers.set('Authorization', `Bearer ${token.trim()}`)
     }

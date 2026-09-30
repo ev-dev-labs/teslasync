@@ -584,7 +584,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: corsOrigins,
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key", "X-Teslasync-App"},
 		ExposedHeaders: []string{"X-Request-ID", "X-Response-Time"},
 		// AllowCredentials is only enabled when explicit origins are set.
 		// With wildcard ("*"), credentials are disabled per the Fetch spec,

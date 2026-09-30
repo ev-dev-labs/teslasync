@@ -209,7 +209,7 @@ export function ReauthDialogRoot({ forceMode }: ReauthDialogProps = {}) {
   // Query per-user TOTP enrollment only in credential mode. It controls tab
   // visibility and routes enrolled users to /auth/totp/sudo; legacy shared-secret
   // installs continue through /auth/reauth.
-  const totpStatus = useTOTPStatus({ enabled: mode === 'credential' })
+  const totpStatus = useTOTPStatus({ enabled: open && mode === 'credential' })
   const totpEnrolled =
     totpStatus.data != null &&
     totpStatus.data.mode === 'session' &&

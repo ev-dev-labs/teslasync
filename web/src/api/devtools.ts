@@ -108,6 +108,8 @@ export const getAPICallLogs = (params: {
   status?: string
   endpoint?: string
   service?: string
+  client?: string
+  key?: string
   start?: string
   end?: string
   endExclusive?: string
@@ -119,6 +121,8 @@ export const getAPICallLogs = (params: {
   if (params.status) query.set('status', params.status)
   if (params.endpoint) query.set('endpoint', params.endpoint)
   if (params.service) query.set('service', params.service)
+  if (params.client) query.set('client', params.client)
+  if (params.key) query.set('key', params.key)
   if (params.start) query.set('start', params.start)
   if (params.end) query.set('end', params.end)
   if (params.endExclusive) query.set('end_exclusive', params.endExclusive)

@@ -14,13 +14,17 @@
  * Permissions Policy disabling Web Crypto). It is NOT cryptographically
  * secure and must not be used for secrets — but for uniqueness-only IDs
  * (tab IDs, list keys, devtools sample output) it is acceptable.
+ * Set requireSecure for identifiers that must never use that fallback.
  */
-export function safeRandomUUID(): string {
+export function safeRandomUUID(requireSecure = false): string {
   try {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
       return crypto.randomUUID()
     }
   } catch {
+    if (requireSecure && (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function')) {
+      throw new Error('Secure randomness is unavailable')
+    }
     /* ITP / locked iframe — drop through to the constructed-UUID branch */
   }
 
@@ -29,9 +33,11 @@ export function safeRandomUUID(): string {
     if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
       crypto.getRandomValues(bytes)
     } else {
+      if (requireSecure) throw new Error('Secure randomness is unavailable')
       for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256)
     }
   } catch {
+    if (requireSecure) throw new Error('Secure randomness is unavailable')
     for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256)
   }
 

@@ -8,12 +8,14 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"regexp"
 	"runtime/debug"
+	"strconv"
 	"sync"
 	"time"
 
@@ -56,6 +58,13 @@ const (
 	// truncationMarker is appended to bodies that exceeded MaxAPILogBodyBytes.
 	truncationMarker = "... [truncated]"
 )
+
+type verifiedAppKeyContextKey struct{}
+
+type verifiedAppKey struct {
+	id   int64
+	name string
+}
 
 // redactKeyPattern matches header names, query parameter names and JSON keys
 // that may carry credentials or private vehicle/identity data; matching values
@@ -166,6 +175,8 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 
 			start := time.Now()
 			ww := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
+			key := &verifiedAppKey{}
+			r = r.WithContext(context.WithValue(r.Context(), verifiedAppKeyContextKey{}, key))
 
 			var (
 				reqBuf  *cappedBuffer
@@ -212,6 +223,14 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 					DurationMs:      int32(duration.Milliseconds()),
 					RequestHeaders:  httputil.SafeHeaders(r.Header),
 					ResponseHeaders: httputil.SafeHeaders(ww.Header()),
+				}
+				delete(entry.RequestHeaders, "App-Key-ID")
+				delete(entry.RequestHeaders, "App-Key-Name")
+				if key.id > 0 {
+					entry.RequestHeaders["App-Key-ID"] = strconv.FormatInt(key.id, 10)
+					entry.RequestHeaders["App-Key-Name"] = key.name
+				} else {
+					delete(entry.RequestHeaders, httputil.AppInstallationHeader)
 				}
 				if entry.StatusCode == 0 {
 					entry.StatusCode = http.StatusOK

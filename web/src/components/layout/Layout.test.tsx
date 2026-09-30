@@ -279,6 +279,9 @@ vi.mock('../feedback/ImpersonationBanner', () => ({ ImpersonationBanner: () => n
 vi.mock('../feedback/TopProgress', () => ({ TopProgress: () => null }))
 vi.mock('../feedback/SessionExpiringModal', () => ({ SessionExpiringModal: () => null }))
 vi.mock('../feedback/SessionExpiredModal', () => ({ SessionExpiredModal: () => null }))
+vi.mock('../feedback/ReauthDialog', () => ({
+  ReauthDialogRoot: () => <div data-testid="reauth-root" />,
+}))
 vi.mock('../feedback/GotoIndicator', () => ({ GotoIndicator: () => null }))
 vi.mock('../feedback/KeyboardShortcutsModal', () => ({ KeyboardShortcutsModal: () => null }))
 vi.mock('../feedback/FeedbackModal', () => ({ FeedbackModal: () => null }))
@@ -587,6 +590,11 @@ describe('Layout — unified sidebar wiring', () => {
   it('renders the CommandDeck as the only sidebar', async () => {
     renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+  })
+
+  it('mounts one step-up challenge host for sensitive actions', () => {
+    renderLayout('/api-keys')
+    expect(screen.getAllByTestId('reauth-root')).toHaveLength(1)
   })
 
   it('sizes the Command Deck rail to 240px expanded, 76px collapsed, with no resize handle', async () => {

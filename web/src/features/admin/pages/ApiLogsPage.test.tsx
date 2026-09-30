@@ -284,6 +284,48 @@ describe('ApiLogsPage', () => {
     expect(screen.getByText('N/A')).toBeInTheDocument();
   });
 
+  it('shows verified app key and installation separately and filters full server results', async () => {
+    const id = 'android:550e8400-e29b-41d4-a716-446655440000';
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({
+      data: [makeLog({
+        id: 77, service: 'teslasync-api',
+        request_headers: {
+          'App-Key-ID': '42',
+          'App-Key-Name': 'Living room tablet',
+          'X-Teslasync-App': id,
+          Authorization: 'REDACTED',
+        },
+      })],
+      total: 1,
+    }));
+    renderPage();
+    const row = await screen.findByRole('button', { name: /Living room tablet/ });
+    expect(row).toHaveTextContent('42');
+    expect(row).toHaveTextContent('android');
+    expect(row).toHaveTextContent('550e8400');
+    fireEvent.click(row);
+    expect(screen.getByText(`App installation: ${id}`)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy app installation ID' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('App key'), { target: { value: 'Living room' } });
+    await waitFor(() => expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({ key: 'Living room' })));
+    fireEvent.change(screen.getByLabelText('App installation'), { target: { value: 'android' } });
+    await waitFor(() => expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({ client: 'android', key: 'Living room' })));
+  });
+
+  it('does not treat a client installation header without verified key metadata as trusted', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({
+      data: [makeLog({ request_headers: { 'X-Teslasync-App': 'android:550e8400-e29b-41d4-a716-446655440000' } })],
+      total: 1,
+    }));
+    renderPage();
+    const row = await screen.findByRole('button', { name: /\/vehicles/ });
+    expect(row).not.toHaveTextContent('android');
+    fireEvent.click(row);
+    expect(screen.queryByText(/App installation:/)).not.toBeInTheDocument();
+  });
+
   it('expands a row: toggles aria-expanded and reveals pretty JSON + a Copy affordance', async () => {
     mockedStats.mockResolvedValue(makeStats());
     mockedLogs.mockResolvedValue(makeLogsResponse());

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  appIdentityHeaders,
   authHeaders,
   clearAccessToken,
   clearServerConnection,
@@ -145,6 +146,36 @@ describe('authHeaders', () => {
     setServerConnection('https://srv.example.com', 'ts_test_secret')
     const out = authHeaders({ Authorization: 'Basic abc' })
     expect(out.get('Authorization')).toBe('Basic abc')
+  })
+
+  it('reuses a distinct per-install ID across token replacement and server switches', () => {
+    window.__TESLASYNC_SHELL__ = 'electron'
+    setServerConnection('https://srv.example.com', 'ts_test_secret')
+    const first = authHeaders().get('X-Teslasync-App')
+    expect(first).toMatch(/^(?:windows|macos|linux):[0-9a-f-]{36}$/)
+    clearAccessToken()
+    setServerConnection('https://other.example.com', 'ts_other')
+    expect(authHeaders().get('X-Teslasync-App')).toBe(first)
+    clearServerConnection()
+    expect(appIdentityHeaders().get('X-Teslasync-App')).toBe(first)
+    window.localStorage.removeItem('teslasync-app-installation-id')
+    expect(authHeaders().get('X-Teslasync-App')).not.toBe(first)
+  })
+
+  it('labels Android and iOS independently but never labels browser traffic', () => {
+    expect(authHeaders().has('X-Teslasync-App')).toBe(false)
+    vi.stubGlobal('Capacitor', { isNativePlatform: () => true, getPlatform: () => 'android' })
+    expect(authHeaders().get('X-Teslasync-App')).toMatch(/^android:/)
+    vi.stubGlobal('Capacitor', { isNativePlatform: () => true, getPlatform: () => 'ios' })
+    expect(authHeaders().get('X-Teslasync-App')).toMatch(/^ios:/)
+  })
+
+  it('warns and securely replaces a corrupted stored installation ID', () => {
+    window.__TESLASYNC_SHELL__ = 'electron'
+    window.localStorage.setItem('teslasync-app-installation-id', 'invalid')
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(appIdentityHeaders().get('X-Teslasync-App')).toMatch(/:[0-9a-f-]{36}$/)
+    expect(warn).toHaveBeenCalledWith('Invalid native app installation ID; generating a new diagnostic ID')
   })
 })
 

@@ -58,6 +58,13 @@ const SERVICE_CONFIG: Record<string, { label: string; variant: LogBadgeVariant }
 /** Static catalog of services the frontend knows the backend can write.
  *  Stable identity → safe to pass to deriveServiceOptions / useMemo deps. */
 const KNOWN_SERVICES = Object.freeze(Object.keys(SERVICE_CONFIG));
+const APP_ID_PATTERN = /^(windows|macos|linux|desktop|android|ios|mobile):([0-9a-f]{8})-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+function appInstallation(headers: APICallLog['request_headers']): { id: string; platform: string; shortId: string } | null {
+  const id = headers?.['X-Teslasync-App'];
+  const match = id?.match(APP_ID_PATTERN);
+  return match && id ? { id, platform: match[1], shortId: match[2] } : null;
+}
 
 function statusBadgeVariant(code: number | null): LogBadgeVariant {
   if (!code) return 'neutral';
@@ -121,6 +128,8 @@ export default function ApiLogsPage() {
   const [status] = useUrlString('status', '');
   const [endpoint] = useUrlString('endpoint', '');
   const [service] = useUrlString('service', '');
+  const [client] = useUrlString('client', '');
+  const [key] = useUrlString('key', '');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 25;
 
@@ -145,7 +154,7 @@ export default function ApiLogsPage() {
     if (page !== 0) setUrl({ page: null });
   }, [startInstant, endInstantExclusive, page, setUrl]);
 
-  type FilterKey = 'method' | 'status' | 'endpoint' | 'service';
+  type FilterKey = 'method' | 'status' | 'endpoint' | 'service' | 'client' | 'key';
   const setFilter = useCallback(
     (key: FilterKey, value: string) => {
       setUrl({ [key]: value, page: '' });
@@ -165,7 +174,7 @@ export default function ApiLogsPage() {
   });
 
   const logsQuery = useQuery({
-    queryKey: ['api-logs', page, method, status, endpoint, service, startInstant, endInstantExclusive],
+    queryKey: ['api-logs', page, method, status, endpoint, service, client, key, startInstant, endInstantExclusive],
     queryFn: () => getAPICallLogs({
       limit,
       offset: page * limit,
@@ -173,6 +182,8 @@ export default function ApiLogsPage() {
       status: status || undefined,
       endpoint: endpoint || undefined,
       service: service || undefined,
+      client: client || undefined,
+      key: key || undefined,
       start: startInstant,
       endExclusive: endInstantExclusive,
     }),
@@ -192,10 +203,10 @@ export default function ApiLogsPage() {
 
   const logs = data?.data ?? [];
   const total = data?.total ?? 0;
-  const hasFilters = !!(method || status || endpoint || service);
+  const hasFilters = !!(method || status || endpoint || service || client || key);
 
   const clearFilters = useCallback(() => {
-    setUrl({ method: '', status: '', endpoint: '', service: '', page: '' });
+    setUrl({ method: '', status: '', endpoint: '', service: '', client: '', key: '', page: '' });
   }, [setUrl]);
 
   const selectService = useCallback(
@@ -257,6 +268,9 @@ export default function ApiLogsPage() {
         timestamp: log.ts,
         vehicle_id: log.vehicle_id,
         service: log.service,
+        app_installation: appInstallation(log.request_headers)?.id ?? '',
+        app_key_id: log.request_headers?.['App-Key-ID'] ?? '',
+        app_key_name: log.request_headers?.['App-Key-Name'] ?? '',
         method: log.http_method,
         endpoint: log.endpoint,
         status_code: log.status_code,
@@ -321,7 +335,7 @@ export default function ApiLogsPage() {
 
       <FadeIn delay={0.05}>
         <Caption className="block">
-          {t('apiLogs.statsScope', 'API call totals and service counts use the View settings range. Service, method, status, and endpoint filters apply only to the request list.')}
+          {t('apiLogs.statsScope', 'API call totals and service counts use the View settings range. Service, method, status, endpoint, app key, and installation filters apply only to the request list.')}
         </Caption>
         <section
           aria-label={t('apiLogs.errorDiagnostics', 'Error diagnostics')}
@@ -486,6 +500,22 @@ export default function ApiLogsPage() {
                   onChange={(e) => setFilter('endpoint', e.target.value)}
                   size="sm"
                 />
+                <Input
+                  label={t('apiLogs.client', 'App installation')}
+                  type="text"
+                  placeholder={t('apiLogs.filterClient', 'Platform or installation ID...')}
+                  value={client}
+                  onChange={(e) => setFilter('client', e.target.value)}
+                  size="sm"
+                />
+                <Input
+                  label={t('apiLogs.key', 'App key')}
+                  type="text"
+                  placeholder={t('apiLogs.filterKey', 'Key name or ID...')}
+                  value={key}
+                  onChange={(e) => setFilter('key', e.target.value)}
+                  size="sm"
+                />
               </div>
             </GlassPanel>
           </div>
@@ -539,6 +569,10 @@ export default function ApiLogsPage() {
               <ul aria-label={t('apiLogs.logTitle', 'API Call Log')} className="divide-y divide-[var(--glass-border)]">
                 {logs.map((log: APICallLog) => {
                   const svc = serviceBadgeConfig(log.service);
+                  const installation = appInstallation(log.request_headers);
+                  const keyName = log.request_headers?.['App-Key-Name'];
+                  const keyId = log.request_headers?.['App-Key-ID'];
+                  const verifiedKey = keyName && /^\d+$/.test(keyId ?? '');
                   const open = expandedId === log.id;
                   const detailId = `api-log-${log.id}`;
                   return (
@@ -555,6 +589,16 @@ export default function ApiLogsPage() {
                           <DateTime value={log.ts} in="utc" />
                         </Text>
                         <Badge variant={svc.variant} size="sm">{svc.label}</Badge>
+                        {verifiedKey && (
+                          <Badge variant="info" size="sm" title={`${keyName} (#${keyId})`}>
+                            {keyName} #{keyId}
+                          </Badge>
+                        )}
+                        {verifiedKey && installation && (
+                          <Badge variant="neutral" size="sm" title={installation.id}>
+                            {t(`apiLogs.platform.${installation.platform}`, installation.platform)} · {installation.shortId}
+                          </Badge>
+                        )}
                         <Badge variant={METHOD_VARIANTS[log.http_method] ?? 'neutral'} size="sm">
                           {log.http_method}
                         </Badge>
@@ -613,6 +657,15 @@ export default function ApiLogsPage() {
                             <Text as="span" variant="bodySm">{t('apiLogs.duration', 'Duration')}: {fmtInt(log.duration_ms ?? 0)}ms</Text>
                             <Text as="span" variant="bodySm">{t('apiLogs.vehicleId', 'Vehicle ID')}: {log.vehicle_id ?? '—'}</Text>
                             <Text as="span" variant="bodySm">{t('apiLogs.rateLimited', 'Rate limited')}: {log.rate_limited ? t('apiLogs.yes', 'Yes') : t('apiLogs.no', 'No')}</Text>
+                            {verifiedKey && (
+                              <Text as="span" variant="bodySm">{t('apiLogs.key', 'App key')}: {keyName} (#{keyId})</Text>
+                            )}
+                            {verifiedKey && installation && (
+                              <div className="flex items-center gap-2">
+                                <Text as="span" variant="bodySm">{t('apiLogs.client', 'App installation')}: {installation.id}</Text>
+                                <CopyButton text={installation.id} iconOnly size="sm" ariaLabel={t('apiLogs.copyClient', 'Copy app installation ID')} />
+                              </div>
+                            )}
                           </div>
                           {log.error_message && (
                             <div className="space-y-1">

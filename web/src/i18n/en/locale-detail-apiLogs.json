@@ -2,7 +2,21 @@
   "apiLogs": {
     "title": "API Logs",
     "subtitle": "Record of all API calls with request/response details",
-    "statsScope": "API call totals and service counts use the View settings range. Service, method, status, and endpoint filters apply only to the request list.",
+    "statsScope": "API call totals and service counts use the View settings range. Service, method, status, endpoint, app key, and installation filters apply only to the request list.",
+    "client": "App installation",
+    "filterClient": "Platform or installation ID...",
+    "copyClient": "Copy app installation ID",
+    "key": "App key",
+    "filterKey": "Key name or ID...",
+    "platform": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux",
+      "desktop": "Desktop",
+      "android": "Android",
+      "ios": "iOS",
+      "mobile": "Mobile"
+    },
     "errorDiagnostics": "Error diagnostics",
     "backendErrors": "Backend runtime errors",
     "backendScope": "Since the current API process started; independent of API call filters.",

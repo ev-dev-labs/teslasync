@@ -207,11 +207,13 @@ describe('getAPICallLogs', () => {
       status: '200',
       endpoint: '/vehicles',
       service: 'api',
+      client: 'android:550e8400',
+      key: 'Living room',
       start: '2025-01-01',
       end: '2025-01-02',
     })
     expect(call()[0]).toBe(
-      '/api-logs?limit=10&offset=20&method=GET&status=200&endpoint=%2Fvehicles&service=api&start=2025-01-01&end=2025-01-02',
+      '/api-logs?limit=10&offset=20&method=GET&status=200&endpoint=%2Fvehicles&service=api&client=android%3A550e8400&key=Living+room&start=2025-01-01&end=2025-01-02',
     )
   })
 
