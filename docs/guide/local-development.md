@@ -187,17 +187,20 @@ CI scales out across hosted runners rather than oversubscribing one machine:
 - Vitest uses eight native shards with two workers per runner. The merge job
   checks all shard artifacts against full test-file discovery before merging
   Vitest's coverage maps. Go profiles merge atomic block counts, not percentages.
-- Lint, architecture checks, individual Go binary builds, frontend builds, and
-  database replay/rollback start independently of unit tests. Docker image builds
-  wait for generated-artifact, backend, and frontend gates to pass; failed tests
-  or incomplete coverage merges skip Docker rather than spending build compute.
+- Lint, architecture checks, individual Go binary builds, frontend builds,
+  database replay/rollback, and all five Docker image builds start alongside
+  unit tests. The final CI gate requires generated artifacts, backend, frontend,
+  and Docker to succeed; failed tests or incomplete coverage merges still fail
+  CI without delaying image builds.
 - Browser jobs reuse one hermetic build. Chromium responsive/smoke tests and
   Windows visual snapshots each use four shards. Accessibility and performance
   run on separate runners with one worker each; Firefox and WebKit remain independent.
 
 The existing **Backend (lint + test + build)**, **Frontend (lint + test + build)**,
-Chromium quality, and Windows snapshot check names remain aggregate gates. Failed,
-cancelled, skipped, or incomplete required shards cannot turn those gates green.
+Chromium quality, and Windows snapshot check names remain aggregate gates. The new
+**CI (generated + backend + frontend + Docker)** gate requires all four outcomes
+to succeed. Failed, cancelled, skipped, or incomplete required shards cannot
+turn those gates green.
 `backend-coverage` and `frontend-coverage` still contain the merged reports; raw
 shard artifacts remain available for diagnosis. The pre-existing telemetry replay
 `continue-on-error` exception is unchanged; this parallelization adds no new waivers
