@@ -118,11 +118,11 @@ describe('SessionBreakdownPanel', () => {
     const first = screen.getByText('5')
     const second = screen.getByText('7')
 
-    expect(first).toHaveStyle({ color: chartTokens.series[0] })
-    expect(second).toHaveStyle({ color: chartTokens.series[3] })
-    expect((first as HTMLElement).style.color).not.toBe(
-      (second as HTMLElement).style.color,
-    )
+    expect(first).toHaveClass('text-[var(--text-primary)]')
+    expect(second).toHaveClass('text-[var(--text-primary)]')
+    const bars = screen.getAllByRole('progressbar')
+    expect(bars[0].querySelector('.h-full')).toHaveStyle({ background: `linear-gradient(90deg, ${chartTokens.series[0]}99, ${chartTokens.series[0]})` })
+    expect(bars[1].querySelector('.h-full')).toHaveStyle({ background: `linear-gradient(90deg, ${chartTokens.series[3]}99, ${chartTokens.series[3]})` })
   })
 
   it('still renders a bar when total is zero (denominator fallback)', () => {
