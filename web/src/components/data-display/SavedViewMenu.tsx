@@ -11,7 +11,7 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import { Button, Input, Modal, Badge, ConfirmDialog } from '@/components/ui';
+import { Button, Input, Modal, Badge, ConfirmDialog, Checkbox } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
@@ -464,15 +464,13 @@ function SavedViewSaveDialog({ open, onClose, onSave, saving }: SavedViewSaveDia
           autoFocus
           label={t('savedViews.name', 'Name')}
         />
-        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-          <input
-            type="checkbox"
+        <div className="text-sm text-[var(--text-secondary)]">
+          <Checkbox
             checked={makeDefault}
-            onChange={(e) => setMakeDefault(e.target.checked)}
-            className="rounded border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+            onChange={setMakeDefault}
+            label={t('savedViews.makeDefault', 'Apply automatically when I open this page')}
           />
-          {t('savedViews.makeDefault', 'Apply automatically when I open this page')}
-        </label>
+        </div>
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="ghost" size="sm" type="button" onClick={onClose}>
             {t('common.cancel', 'Cancel')}

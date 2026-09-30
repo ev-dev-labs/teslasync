@@ -215,6 +215,16 @@ describe('DiskForecastPage', () => {
     expect(screen.getAllByText('5.00 d').length).toBeGreaterThan(0)
   })
 
+  it('keeps growth values readable when the bar is green', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse([makeRow({ growth_bytes_per_day: 10 * MB })]))
+
+    renderPage()
+
+    const outlook = await screen.findByRole('region', { name: 'Growth and quota outlook' })
+    const bar = await within(outlook).findByRole('progressbar', { name: 'table' })
+    expect(within(bar).getByText('10.0 MB/d')).toHaveClass('text-[var(--text-primary)]')
+  })
+
   it('renders one detail-table row per hypertable with its chunk count', async () => {
     mockedRequest.mockResolvedValueOnce(makeResponse())
 

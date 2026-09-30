@@ -6,6 +6,7 @@ import { tableTokens } from '../../lib/tokens'
 import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Download, GripVertical } from 'lucide-react'
 import { Pagination } from './Pagination'
 import { Button } from './Button'
+import { Checkbox } from './Checkbox'
 import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
 import { useOptionalToast } from '../feedback/Toast'
 import { DataTableColumnMenu } from './DataTableColumnMenu'
@@ -601,10 +602,6 @@ export function DataTable<T>({
   const allRowKeys = useMemo(() => data.map(keyExtractor), [data, keyExtractor])
   const allSelected = isSelectable && allRowKeys.length > 0 && allRowKeys.every(k => selectionSet.has(k))
   const someSelected = isSelectable && allRowKeys.some(k => selectionSet.has(k)) && !allSelected
-  const headerCheckboxRef = useRef<HTMLInputElement>(null)
-  useEffect(() => {
-    if (headerCheckboxRef.current) headerCheckboxRef.current.indeterminate = someSelected
-  }, [someSelected])
 
   const setSelection = useCallback(
     (next: RowKey[]) => {
@@ -893,6 +890,14 @@ export function DataTable<T>({
           openMenu(items, e.clientX, e.clientY)
         }
       : undefined
+    const selectedRowLabel = isSelectable ? rowLabelFor(row, rowKey) : null
+    const selectionLabel = selectedRowLabel
+      ? selected
+        ? t('table.selection.deselectRowNamed', 'Deselect {{row}}', { row: selectedRowLabel })
+        : t('table.selection.selectRowNamed', 'Select {{row}}', { row: selectedRowLabel })
+      : selected
+        ? t('table.selection.deselectRow', 'Deselect row')
+        : t('table.selection.selectRow', 'Select row')
     const rows: ReactNode[] = [
       <tr
         key={rowKey}
@@ -914,35 +919,31 @@ export function DataTable<T>({
       >
         {isSelectable && (
           <td className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}>
-            <input
-              type={selectable === 'single' ? 'radio' : 'checkbox'}
-              checked={selected}
-              // Stop the click bubbling so a click on the checkbox
-              // doesn't also fire the row's onClick (when consumers
-              // attach one via `tr` wrappers around content).
-              onClick={(e) => {
-                e.stopPropagation()
-                toggleRow(rowKey, e)
-              }}
-              // Read-only because we drive state via onClick to
-              // capture shiftKey for range selection.
-              onChange={() => { /* handled in onClick */ }}
-              aria-label={(() => {
-                const label = rowLabelFor(row, rowKey)
-                if (!label) {
-                  return selected
-                    ? t('table.selection.deselectRow', 'Deselect row')
-                    : t('table.selection.selectRow', 'Select row')
-                }
-                return selected
-                  ? t('table.selection.deselectRowNamed', 'Deselect {{row}}', { row: label })
-                  : t('table.selection.selectRowNamed', 'Select {{row}}', { row: label })
-              })()}
-              className={cn(
-                'border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0',
-                selectable === 'single' ? '' : 'rounded',
-              )}
-            />
+            {selectable === 'multi' ? (
+              <Checkbox
+                checked={selected}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleRow(rowKey, e)
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+                onChange={() => { /* handled in onClick to retain shift selection */ }}
+                aria-label={selectionLabel}
+              />
+            ) : (
+              <input
+                type="radio"
+                checked={selected}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleRow(rowKey, e)
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+                onChange={() => { /* handled in onClick */ }}
+                aria-label={selectionLabel}
+                className="border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+              />
+            )}
           </td>
         )}
         {expandable && (
@@ -1178,17 +1179,15 @@ export function DataTable<T>({
                   className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}
                 >
                   {selectable === 'multi' ? (
-                    <input
-                      ref={headerCheckboxRef}
-                      type="checkbox"
+                    <Checkbox
                       checked={allSelected}
+                      indeterminate={someSelected}
                       onChange={toggleAll}
                       aria-label={
                         allSelected
                           ? t('table.selection.deselectAll', 'Deselect all rows')
                           : t('table.selection.selectAll', 'Select all rows')
                       }
-                      className="rounded border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
                     />
                   ) : null}
                 </th>

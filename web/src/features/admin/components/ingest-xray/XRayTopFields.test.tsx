@@ -80,11 +80,8 @@ function renderPanel(overrides: Partial<Props> = {}) {
   return { ...utils, onRetry };
 }
 
-/** The MetricBar sublabel is the only `.font-mono` node in a row and carries
- *  the inline palette colour, so it doubles as a colour probe. */
 function rowColor(item: HTMLElement): string {
-  const sub = item.querySelector<HTMLElement>('.font-mono');
-  return sub?.style.color ?? '';
+  return item.querySelector<HTMLElement>('.h-full')?.style.background ?? '';
 }
 
 const HEADING = /top fields by volume/i;
@@ -229,9 +226,12 @@ describe('XRayTopFields — ranking & formatting', () => {
     const second = rowColor(items[1]);
     const wrapped = rowColor(items[CHART_COLORS.length]); // index === length
 
-    expect(first).toBeTruthy();
+    expect(items[0].querySelector('.h-full')).toHaveStyle({
+      background: `linear-gradient(90deg, ${CHART_COLORS[0]}99, ${CHART_COLORS[0]})`,
+    });
     expect(second).not.toEqual(first); // adjacent rows use distinct colours
     expect(wrapped).toEqual(first); // i % length wraps back to colour 0
+    expect(items[0].querySelector('.font-mono')).toHaveClass('text-[var(--text-primary)]');
   });
 });
 

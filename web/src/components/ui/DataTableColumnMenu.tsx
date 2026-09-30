@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Columns3, RotateCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
+import { Checkbox } from './Checkbox'
 import {
   applyColumnLayout,
   defaultColumnLayout,
@@ -212,18 +213,13 @@ export function DataTableColumnMenu({
                     )}
                   >
                     {toggleable && (
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={checked}
                         disabled={checkboxDisabled}
                         onChange={() => handleToggle(col.key)}
                         aria-label={t('table.columns.toggleColumn', 'Show or hide {{col}}', {
                           col: col.header || col.key,
                         })}
-                        className={cn(
-                          'rounded border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0',
-                          checkboxDisabled && 'opacity-50 cursor-not-allowed',
-                        )}
                       />
                     )}
                     <span className="flex-1 truncate">{col.header || col.key}</span>

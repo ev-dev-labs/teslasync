@@ -9,7 +9,7 @@
  * What is covered:
  *   1. ORDER    — bars render in `UPDATE_STATUS_ORDER`, not insertion order.
  *   2. FORMAT   — the count is run through `fmtInt` (locale thousands
- *                 separators) and the sublabel is coloured with the status hex.
+ *                 separators) and the bar uses the status hex while text remains legible.
  *   3. FILTER   — zero, negative, absent, and unknown-status keys are skipped.
  *   4. BUG-FIX  — when `total > 0` but every update carries an UNKNOWN status
  *                 (so no known bar has a positive count), the panel renders an
@@ -73,7 +73,7 @@ describe('SoftwareUpdateStatusBreakdown', () => {
     expect(screen.queryByText('Scheduled')).not.toBeInTheDocument();
   });
 
-  it('formats the count via fmtInt (locale separators) and colours the sublabel with the status hex', () => {
+  it('formats the count and colors the bar while keeping the count legible', () => {
     render(
       <SoftwareUpdateStatusBreakdown counts={{ installed: 1234 }} total={1234} />,
     );
@@ -83,8 +83,9 @@ describe('SoftwareUpdateStatusBreakdown', () => {
     expect(sublabel).toBeInTheDocument();
     expect(screen.queryByText('1234')).not.toBeInTheDocument();
 
-    // The MetricBar sublabel carries the status meta hex as an inline colour.
-    expect(sublabel).toHaveStyle({ color: UPDATE_STATUS.installed.hex });
+    expect(sublabel).toHaveClass('text-[var(--text-primary)]');
+    expect(screen.getByRole('progressbar', { name: 'Installed' }).querySelector('.h-full'))
+      .toHaveStyle({ background: `linear-gradient(90deg, ${UPDATE_STATUS.installed.hex}99, ${UPDATE_STATUS.installed.hex})` });
     expect(screen.getByText('Installed')).toBeInTheDocument();
   });
 

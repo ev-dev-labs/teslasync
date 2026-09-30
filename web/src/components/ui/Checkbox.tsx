@@ -69,17 +69,16 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
       <span
         aria-hidden="true"
         className={cn(
-          'inline-flex shrink-0 items-center justify-center rounded border transition-colors',
+          'checkbox-indicator inline-flex shrink-0 items-center justify-center rounded border transition-colors',
           dims.box,
-          'border-[var(--border-strong)] bg-white/[0.04]',
-          'peer-checked:border-cyan-700 peer-checked:bg-cyan-600 peer-checked:text-[var(--surface-1)] dark:peer-checked:border-cyan-400 dark:peer-checked:bg-cyan-500/20 dark:peer-checked:text-cyan-200',
-          'peer-indeterminate:border-cyan-700 peer-indeterminate:bg-cyan-600 peer-indeterminate:text-[var(--surface-1)] dark:peer-indeterminate:border-cyan-400 dark:peer-indeterminate:bg-cyan-500/20 dark:peer-indeterminate:text-cyan-200',
+          'border-[var(--border-strong)] bg-[var(--surface-2)] text-transparent',
+          'peer-checked:border-cyan-700 peer-checked:bg-cyan-700 peer-checked:text-[var(--text-on-accent)] dark:peer-checked:border-cyan-400 dark:peer-checked:bg-cyan-400 dark:peer-checked:text-[var(--text-inverse)]',
+          'peer-indeterminate:border-cyan-700 peer-indeterminate:bg-cyan-700 peer-indeterminate:text-[var(--text-on-accent)] dark:peer-indeterminate:border-cyan-400 dark:peer-indeterminate:bg-cyan-400 dark:peer-indeterminate:text-[var(--text-inverse)]',
           'peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-transparent',
           'peer-disabled:cursor-not-allowed peer-disabled:opacity-80',
-          'text-transparent',
         )}
       >
-        {indeterminate ? <Minus className={dims.icon} /> : <Check className={dims.icon} />}
+        {indeterminate ? <Minus className={dims.icon} strokeWidth={3} /> : <Check className={dims.icon} strokeWidth={3} />}
       </span>
     );
 

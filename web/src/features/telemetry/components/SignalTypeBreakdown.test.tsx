@@ -173,12 +173,18 @@ describe('SignalTypeBreakdown', () => {
     expect(renderedRowOrder(container)).toEqual(['Numeric', 'Boolean', 'String']);
   });
 
-  it('threads the color-blind-safe series color into each row', () => {
+  it('colors the bars while keeping their readouts legible', () => {
     renderBreakdown({ numericCount: 3, booleanCount: 2, stringCount: 1 });
 
-    expect(sublabelEl('Numeric')).toHaveStyle({ color: chartTokens.series[5] });
-    expect(sublabelEl('Boolean')).toHaveStyle({ color: chartTokens.series[2] });
-    expect(sublabelEl('String')).toHaveStyle({ color: chartTokens.series[1] });
+    for (const [label, color] of [
+      ['Numeric', chartTokens.series[5]],
+      ['Boolean', chartTokens.series[2]],
+      ['String', chartTokens.series[1]],
+    ]) {
+      const row = screen.getByRole('progressbar', { name: label });
+      expect(row.querySelector('.h-full')).toHaveStyle({ background: `linear-gradient(90deg, ${color}99, ${color})` });
+      expect(sublabelEl(label)).toHaveClass('text-[var(--text-primary)]');
+    }
   });
 
   it('formats the total caption with locale grouping', () => {
