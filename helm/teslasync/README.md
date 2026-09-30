@@ -450,6 +450,34 @@ spec:
 
 > **Important:** There is no `/api` route in the IngressRoute. All API traffic is proxied internally by Nginx.
 
+For generic desktop/mobile shells behind a forward-auth proxy, opt in to
+two additional chart-managed routes (API preflights and bearer-token
+requests). Both still target `teslasync-web`; normal browser requests
+continue through your protected catch-all route:
+
+```yaml
+config:
+  webEndpoint: https://teslasync.example.com
+  forwardAuthHeader: X-Forwarded-User
+  nativeAppOrigins:
+    - teslasync-app://app
+    - https://localhost
+ingressRoute:
+  enabled: true
+  nativeAppAuth:
+    enabled: true
+    host: teslasync.example.com
+    identityHeaders: [] # all other headers your proxy uses for identity
+    middlewares: [] # optional site-specific headers middleware
+```
+
+The chart strips `forwardAuthHeader` plus the specified additional identity
+headers on the bearer route before the backend validates the app-sign-in
+key. Set `identityHeaders` to **every** additional identity header forwarded
+by your proxy; never allow clients to supply them. The chart requires a
+nonempty forward-auth header and host when this option is enabled. Without
+external forward auth, leave it disabled; only the CORS origin list is needed.
+
 ## API Routing
 
 TeslaSync uses Nginx as both a static file server and a reverse proxy for API traffic. This keeps API requests on the internal Kubernetes network and eliminates the need for multiple ingress routes.

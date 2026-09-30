@@ -29,8 +29,16 @@ prerequisites and store/packaging steps.
 
 Each GitHub Release includes a Windows NSIS installer (`.exe`), an
 unsigned Windows MSIX (`.msix`), and a debug-signed Android test APK
-(`-debug.apk`). The MSIX needs a matching publisher certificate and
-trusted signing before sideloading; it is **not** a Store-ready package.
+(`-debug.apk`). An MSIX built from the current configuration has the
+TeslaSync Partner Center identity for Store submission, but needs a
+matching publisher certificate and trusted signing before sideloading.
+Microsoft signs the Store-distributed package; it does not sign the
+GitHub Release asset.
+
+The prerelease MSIX built before the Store identity was configured
+still has the placeholder identity and cannot be submitted to this
+Store product. Rebuild from the current desktop configuration.
+
 The APK is for local testing, **not** a Play Store release; CI's debug
 signing key changes per build, so uninstall an older CI APK before
 installing the next (clearing local app data). The unsigned
@@ -128,6 +136,27 @@ to pass bearer-authorized API calls through without redirecting them to
 interactive login. Allow CORS preflight requests too. Restrict the bypass
 to TeslaSync API routes and keep the server's API-key validation enabled.
 Browser sessions can continue to use the proxy's normal login.
+
+For the bundled Traefik IngressRoute chart, enable the opt-in routes instead
+of maintaining separate middleware manifests:
+
+```yaml
+config:
+  forwardAuthHeader: X-Forwarded-User # use your proxy's actual subject header
+ingressRoute:
+  enabled: true
+  nativeAppAuth:
+    enabled: true
+    host: teslasync.example.com
+    identityHeaders: [] # list every OTHER identity header your proxy forwards
+```
+
+The chart always strips `config.forwardAuthHeader` on bearer requests; list
+any additional forwarded identity headers in `identityHeaders`. The bearer
+route skips only the interactive proxy login: the API still validates the
+app key. OPTIONS requests reach the API's CORS handler. Keep the browser
+catch-all behind forward auth. This opt-in requires a chart version that
+includes `nativeAppAuth`; older published charts ignore unknown values.
 
 ## How app sign-in works
 

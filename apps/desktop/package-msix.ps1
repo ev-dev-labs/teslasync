@@ -25,6 +25,12 @@ try {
     & $makeappx unpack /p $appxPath /d $source /o | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Unpacking AppX failed ($LASTEXITCODE)." }
 
+    $manifest = [xml](Get-Content -LiteralPath (Join-Path $source 'AppxManifest.xml') -Raw)
+    $minVersion = $manifest.Package.Dependencies.TargetDeviceFamily.MinVersion
+    if (-not $minVersion -or [version]$minVersion -le [version]'10.0.17134.0') {
+        throw "Partner Center rejects MSIX packages with Windows MinVersion <= 10.0.17134.0 (found '$minVersion')."
+    }
+
     New-Item -ItemType Directory -Path (Split-Path $msixPath) -Force | Out-Null
     & $makeappx pack /d $source /p $msixPath /o | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Packing MSIX failed ($LASTEXITCODE)." }

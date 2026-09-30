@@ -883,8 +883,8 @@ jobs:
           Download the Windows NSIS installer (\`.exe\`), unsigned Windows package
           (\`.msix\`), or debug-signed Android test build (\`-debug.apk\`) from the
           assets below. The MSIX needs signing with a trusted publisher certificate
-          before sideloading; its default publisher is a placeholder, not a Store
-          identity. The debug APK is for testing, **not** Play Store distribution.
+          before sideloading; the Store signs packages installed through the Store.
+          The debug APK is for testing, **not** Play Store distribution.
           Its signing key changes per CI run; uninstall an older CI APK before
           installing a newer one (this clears local app data).
           Windows may warn about the unsigned installer.

@@ -1,6 +1,6 @@
 {
   "name": "teslasync-desktop",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "TeslaSync generic desktop app shell (Windows, plus macOS/Linux) via Electron. Serves the web UI build locally; users pick their own server at first launch.",
   "main": "main.js",

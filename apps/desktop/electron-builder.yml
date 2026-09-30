@@ -12,6 +12,7 @@ extraResources:
     to: web/dist
 directories:
   output: release
+  buildResources: assets
 win:
   icon: assets/icon.ico
   target:
@@ -21,9 +22,10 @@ win:
       schemes:
         - teslasync
 appx:
-  identityName: TeslaSync.TeslaSync
-  publisher: CN=TeslaSync
-  publisherDisplayName: TeslaSync
+  identityName: 21112CushyApps.TeslaSync
+  publisher: CN=7495AF23-917D-411F-BD1B-CC9476AFD700
+  publisherDisplayName: Own Apps
+  minVersion: 10.0.17763.0
   backgroundColor: '#0b0d12'
 nsis:
   oneClick: false
