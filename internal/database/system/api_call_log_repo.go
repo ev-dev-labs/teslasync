@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -175,78 +176,84 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 }
 
 func (r *APICallLogRepo) GetStats(ctx context.Context, start, endExclusive *time.Time) (map[string]interface{}, error) {
-	stats := make(map[string]interface{})
-
-	var total, errorCount, last24h int
-	var avgDuration float64
-	err := r.db.Pool.QueryRow(ctx, `
-		SELECT
-			COUNT(*),
-			COUNT(*) FILTER (WHERE status_code >= 400 OR error_message IS NOT NULL),
-			COALESCE(AVG(duration_ms), 0),
-			COUNT(*) FILTER (WHERE ts >= NOW() - INTERVAL '24 hours')
-		FROM api_call_logs
-		WHERE ($1::timestamptz IS NULL OR ts >= $1)
-		  AND ($2::timestamptz IS NULL OR ts < $2)
-	`, start, endExclusive).Scan(&total, &errorCount, &avgDuration, &last24h)
+	query, args := buildAPICallLogStatsQuery(start, endExclusive)
+	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
-	}
-	stats["total_calls"] = total
-	stats["error_count"] = errorCount
-	if total > 0 {
-		stats["error_rate"] = float64(errorCount) / float64(total) * 100
-	} else {
-		stats["error_rate"] = 0.0
-	}
-	stats["avg_duration_ms"] = avgDuration
-	stats["last_24h"] = last24h
-
-	// Grouped result needs its own query.
-	rows, err := r.db.Pool.Query(ctx, `SELECT http_method, COUNT(*) as count FROM api_call_logs
-		WHERE ($1::timestamptz IS NULL OR ts >= $1) AND ($2::timestamptz IS NULL OR ts < $2)
-		GROUP BY http_method ORDER BY count DESC`, start, endExclusive)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("query API call log stats: %w", err)
 	}
 	defer rows.Close()
+	stats := map[string]interface{}{
+		"total_calls":     0,
+		"error_count":     0,
+		"error_rate":      0.0,
+		"avg_duration_ms": 0.0,
+		"last_24h":        0,
+	}
 	methodCounts := make(map[string]int)
-	for rows.Next() {
-		var method string
-		var count int
-		if err := rows.Scan(&method, &count); err != nil {
-			return nil, err
-		}
-		methodCounts[method] = count
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	rows.Close()
-	stats["by_method"] = methodCounts
-
-	svcRows, err := r.db.Pool.Query(ctx, `SELECT service, COUNT(*) as count FROM api_call_logs
-		WHERE ($1::timestamptz IS NULL OR ts >= $1) AND ($2::timestamptz IS NULL OR ts < $2)
-		GROUP BY service ORDER BY count DESC`, start, endExclusive)
-	if err != nil {
-		return nil, err
-	}
-	defer svcRows.Close()
 	serviceCounts := make(map[string]int)
-	for svcRows.Next() {
-		var svc string
-		var count int
-		if err := svcRows.Scan(&svc, &count); err != nil {
-			return nil, err
-		}
-		serviceCounts[svc] = count
-	}
-	if err := svcRows.Err(); err != nil {
-		return nil, err
-	}
+	stats["by_method"] = methodCounts
 	stats["by_service"] = serviceCounts
 
+	hasTotal := false
+	for rows.Next() {
+		var service, method string
+		var serviceGrouped, methodGrouped, count, errorCount, last24h int
+		var avgDuration float64
+		if err := rows.Scan(&service, &method, &serviceGrouped, &methodGrouped, &count, &errorCount, &avgDuration, &last24h); err != nil {
+			return nil, fmt.Errorf("scan API call log stats: %w", err)
+		}
+		switch {
+		case serviceGrouped == 1 && methodGrouped == 1:
+			hasTotal = true
+			stats["total_calls"] = count
+			stats["error_count"] = errorCount
+			stats["avg_duration_ms"] = avgDuration
+			stats["last_24h"] = last24h
+			if count > 0 {
+				stats["error_rate"] = float64(errorCount) / float64(count) * 100
+			}
+		case serviceGrouped == 0 && methodGrouped == 1:
+			serviceCounts[service] = count
+		case serviceGrouped == 1 && methodGrouped == 0:
+			methodCounts[method] = count
+		default:
+			return nil, fmt.Errorf("unexpected API call log stats grouping: service=%d method=%d", serviceGrouped, methodGrouped)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate API call log stats: %w", err)
+	}
+	if !hasTotal {
+		return nil, fmt.Errorf("API call log stats query returned no total")
+	}
+
 	return stats, nil
+}
+
+func buildAPICallLogStatsQuery(start, endExclusive *time.Time) (string, []any) {
+	// Grouping sets produce the total and both breakdowns in one hypertable scan.
+	query := `SELECT COALESCE(service, ''), COALESCE(http_method, ''),
+		GROUPING(service), GROUPING(http_method),
+		COUNT(*),
+		COUNT(*) FILTER (WHERE status_code >= 400 OR error_message IS NOT NULL),
+		COALESCE(AVG(duration_ms), 0),
+		COUNT(*) FILTER (WHERE ts >= NOW() - INTERVAL '24 hours')
+		FROM api_call_logs`
+	var args []any
+	if start != nil {
+		args = append(args, *start)
+		query += ` WHERE ts >= $1`
+	}
+	if endExclusive != nil {
+		args = append(args, *endExclusive)
+		if start == nil {
+			query += ` WHERE ts < $1`
+		} else {
+			query += ` AND ts < $2`
+		}
+	}
+	query += ` GROUP BY GROUPING SETS ((), (service), (http_method))`
+	return query, args
 }
 
 func itoa(i int) string {
