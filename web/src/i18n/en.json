@@ -17680,6 +17680,11 @@
     }
   },
   "session": {
+    "appTokenExpired": {
+      "title": "App connection expired",
+      "body": "The server rejected your app access token. Reconnect with a valid key.",
+      "reconnect": "Reconnect"
+    },
     "expiring": {
       "title": "Your session is about to expire",
       "body": "You will be signed out in {{countdown}}.",
@@ -29097,6 +29102,7 @@
       "errorSubpath": "Enter just the server origin, without a /path.",
       "errorUnreachable": "Couldn't reach a TeslaSync server there. Check the address and that the server is running.",
       "errorTokenRequired": "This server needs an access token — paste one to continue.",
+      "errorTokenRejected": "This server rejected the access token. Check the key and try again.",
       "errorSave": "Could not save this connection. Check whether browser storage is enabled.",
       "modeOpen": "Open server — no token needed.",
       "modeForwardAuth": "This server uses login — an access token is required."

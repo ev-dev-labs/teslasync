@@ -102,7 +102,20 @@ describe('ConnectPage', () => {
     fireEvent.change(screen.getByPlaceholderText('https://teslasync.example.com'), {
       target: { value: 'https://down.example.com' },
     })
+
     fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't reach/i)
+  })
+
+  it('distinguishes a rejected key from a missing key', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
+    renderPage()
+    fireEvent.change(screen.getByPlaceholderText('https://teslasync.example.com'), {
+      target: { value: 'https://srv.example.com' },
+    })
+    fireEvent.change(screen.getByPlaceholderText(/ts_/), { target: { value: 'ts_invalid' } })
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/rejected the access token/i)
+    expect(window.sessionStorage.getItem('teslasync-access-token')).toBeNull()
   })
 })

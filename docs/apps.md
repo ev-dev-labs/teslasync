@@ -181,6 +181,9 @@ includes `nativeAppAuth`; older published charts ignore unknown values.
   builds; use a trusted HTTPS certificate.
 - **"This server needs an access token":** the server uses
   forward-auth login — create a key with App sign-in checked.
+- **"App connection expired":** the server rejected the app token.
+  Choose **Reconnect** and enter a valid App sign-in key. This keeps
+  the saved server address but discards the rejected key.
 - **TWA still shows a browser bar:** `/.well-known/assetlinks.json`
   must return your package + signing-key fingerprint with no
   redirects.

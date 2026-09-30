@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, act, fireEvent } from '@testing-library/react'
+import { getAccessToken, getServerBaseUrl, setServerConnection } from '@/lib/serverConnection'
 
 /**
  * SessionExpiredModal contract tests.
@@ -13,7 +14,7 @@ import { render, screen, act, fireEvent } from '@testing-library/react'
  */
 
 type MockMonitor = {
-  mode: 'open' | 'session' | 'unknown'
+  mode: 'open' | 'session' | 'app' | 'unknown'
   hasExpired: boolean
 }
 
@@ -36,10 +37,12 @@ describe('SessionExpiredModal', () => {
   beforeEach(() => {
     mockMonitor = { mode: 'session', hasExpired: false }
     window.sessionStorage.clear()
+    window.localStorage.clear()
   })
 
   afterEach(() => {
     window.sessionStorage.clear()
+    window.localStorage.clear()
   })
 
   it('renders nothing in open mode regardless of any state', () => {
@@ -69,6 +72,35 @@ describe('SessionExpiredModal', () => {
       document.dispatchEvent(new CustomEvent('teslasync:session-expired'))
     })
     expect(screen.getByTestId('session-expired-modal')).toBeTruthy()
+  })
+
+  it('offers reconnection instead of proxy login when an app token is rejected', () => {
+    mockMonitor = { mode: 'app', hasExpired: false }
+    setServerConnection('https://srv.example.com', 'ts_test_secret')
+    const assignSpy = vi.fn()
+    const origLocation = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...origLocation, assign: assignSpy },
+    })
+    try {
+      render(<SessionExpiredModal />)
+      expect(screen.queryByTestId('session-expired-modal')).toBeNull()
+      act(() => {
+        document.dispatchEvent(new CustomEvent('teslasync:session-expired'))
+      })
+      expect(screen.getByText('App connection expired')).toBeTruthy()
+      expect(screen.queryByText('Sign in again')).toBeNull()
+      fireEvent.click(screen.getByText('Reconnect'))
+      expect(assignSpy).toHaveBeenCalledWith('/?connect=1')
+      expect(getAccessToken()).toBeNull()
+      expect(getServerBaseUrl()).toBe('https://srv.example.com')
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: origLocation,
+      })
+    }
   })
 
   it('clicking "Sign in again" hands off to the IdP outpost with rd= deep-link', () => {

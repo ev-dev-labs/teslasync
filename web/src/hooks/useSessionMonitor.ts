@@ -24,12 +24,17 @@
  * `isExpiringSoon: false` / `hasExpired: false` regardless of any
  * other state. Both modal components must check `mode` and render
  * nothing in this branch.
+ *
+ * **App mode**: native shells use a bearer token rather than a proxy
+ * cookie. Do not poll this endpoint in remote mode: it intentionally
+ * returns unauthenticated without a forwarded browser identity.
  */
 
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { request } from '@/api/client'
 import type { SessionInfo } from '@/api/types'
+import { getAccessToken, isRemoteMode } from '@/lib/serverConnection'
 
 const SESSION_POLL_MS = 5 * 60 * 1000
 const SESSION_STALE_MS = 4 * 60 * 1000
@@ -53,10 +58,9 @@ export interface SessionMonitorState {
   /** Raw response from /auth/session; null while pending or after a hard error. */
   data: SessionInfo | null
   /**
-   * Resolved deployment mode. 'open' means there is no auth provider —
-   * caller MUST treat this as "session timeout doesn't apply".
+   * 'open' has no auth provider; 'app' uses a bearer token, not a browser session.
    */
-  mode: 'open' | 'session' | 'unknown'
+  mode: 'open' | 'session' | 'app' | 'unknown'
   /** Seconds until expiry against the live clock; null when unavailable. */
   expiresInSeconds: number | null
   /** True when expiresInSeconds < SESSION_EXPIRING_THRESHOLD_S and > 0. */
@@ -65,7 +69,7 @@ export interface SessionMonitorState {
   hasExpired: boolean
   /** True when the upstream proxy reports the session is renewable. */
   renewable: boolean
-  /** True while the initial poll is in flight. */
+  /** True while the initial browser-session poll is in flight. */
   isLoading: boolean
   /** Triggers an immediate refetch — bound to the modal's "Stay signed in" CTA. */
   refresh: () => Promise<void>
@@ -153,9 +157,11 @@ export function deriveSessionState(
  * Session{Expiring,Expired}Modal components in <Layout>.
  */
 export function useSessionMonitor(): SessionMonitorState {
+  const remote = isRemoteMode()
   const query = useQuery<SessionInfo>({
     queryKey: sessionMonitorKey,
     queryFn: ({ signal }) => request<SessionInfo>('/auth/session', { signal }),
+    enabled: !remote,
     // Tighten the poll when expiry is near so the modal countdown
     // tracks the upstream cookie within ~30s instead of up to 5min.
     // TanStack Query v5 accepts a functional form here; the query
@@ -195,13 +201,13 @@ export function useSessionMonitor(): SessionMonitorState {
   }
 
   return {
-    data: query.data ?? null,
-    mode: derived.mode,
-    expiresInSeconds: derived.expiresInSeconds,
-    isExpiringSoon: derived.isExpiringSoon,
-    hasExpired: derived.hasExpired,
-    renewable: derived.renewable,
-    isLoading: query.isPending,
+    data: remote ? null : query.data ?? null,
+    mode: remote ? (getAccessToken() == null ? 'open' : 'app') : derived.mode,
+    expiresInSeconds: remote ? null : derived.expiresInSeconds,
+    isExpiringSoon: !remote && derived.isExpiringSoon,
+    hasExpired: !remote && derived.hasExpired,
+    renewable: !remote && derived.renewable,
+    isLoading: !remote && query.isPending,
     refresh,
   }
 }

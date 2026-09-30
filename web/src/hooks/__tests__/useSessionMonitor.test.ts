@@ -1,6 +1,13 @@
-import { describe, it, expect } from 'vitest'
-import { deriveSessionState, SESSION_EXPIRING_THRESHOLD_S } from '../useSessionMonitor'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { createElement, type ReactNode } from 'react'
+import { renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { deriveSessionState, SESSION_EXPIRING_THRESHOLD_S, useSessionMonitor } from '../useSessionMonitor'
 import type { SessionInfo } from '@/api/types'
+import { request } from '@/api/client'
+import { setServerConnection } from '@/lib/serverConnection'
+
+vi.mock('@/api/client', () => ({ request: vi.fn() }))
 
 /**
  * useSessionMonitor unit tests.
@@ -33,6 +40,52 @@ describe('deriveSessionState', () => {
     expect(state.isExpiringSoon).toBe(false)
     expect(state.hasExpired).toBe(false)
     expect(state.renewable).toBe(false)
+  })
+
+  describe('useSessionMonitor', () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+      window.sessionStorage.clear()
+      vi.mocked(request).mockReset()
+    })
+
+    afterEach(() => {
+      window.localStorage.clear()
+      window.sessionStorage.clear()
+    })
+
+    function wrapper({ children }: { children: ReactNode }) {
+      return createElement(QueryClientProvider, {
+        client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+      }, children)
+    }
+
+    it('does not poll the browser-cookie session endpoint in app-token mode', async () => {
+      setServerConnection('https://srv.example.com', 'ts_test_secret')
+      const { result } = renderHook(() => useSessionMonitor(), { wrapper })
+
+      expect(result.current.mode).toBe('app')
+      expect(result.current.hasExpired).toBe(false)
+      expect(result.current.isLoading).toBe(false)
+      await Promise.resolve()
+      expect(request).not.toHaveBeenCalled()
+    })
+
+    it('does not require a browser session on an open remote server', async () => {
+      setServerConnection('https://srv.example.com', null)
+      const { result } = renderHook(() => useSessionMonitor(), { wrapper })
+      expect(result.current.mode).toBe('open')
+      expect(result.current.hasExpired).toBe(false)
+      await Promise.resolve()
+      expect(request).not.toHaveBeenCalled()
+    })
+
+    it('still polls and detects expired browser sessions in same-origin mode', async () => {
+      vi.mocked(request).mockResolvedValue(session({ authenticated: false, user: null }))
+      const { result } = renderHook(() => useSessionMonitor(), { wrapper })
+      await waitFor(() => expect(result.current.hasExpired).toBe(true))
+      expect(request).toHaveBeenCalledWith('/auth/session', expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    })
   })
 
   it('open mode → no expiry tracking, never expired', () => {

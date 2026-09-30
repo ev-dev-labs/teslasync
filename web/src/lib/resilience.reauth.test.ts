@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getAccessToken, getServerBaseUrl, setServerConnection } from './serverConnection'
 
 /**
  * Identity-transition purge — direct funnel (`lib/resilience.ts`).
@@ -66,16 +67,33 @@ beforeEach(() => {
     },
   })
   window.sessionStorage.clear()
+  window.localStorage.clear()
   delete (window as { __TESLASYNC_REAUTH_URL__?: string }).__TESLASYNC_REAUTH_URL__
 })
 
 afterEach(() => {
+  window.localStorage.clear()
+  window.sessionStorage.clear()
   vi.doUnmock('@/sw/purgeApiCache')
   vi.doUnmock('@/lib/broadcast')
   vi.resetModules()
 })
 
 describe('navigateToReauth — identity transition', () => {
+  it('sends rejected app tokens to the server picker without visiting the browser IdP', async () => {
+    setServerConnection('https://srv.example.com', 'ts_test_secret')
+    const { navigateToReauth } = await loadResilience()
+
+    navigateToReauth()
+
+    expect(getServerBaseUrl()).toBe('https://srv.example.com')
+    expect(getAccessToken()).toBeNull()
+    expect(purgeMock).toHaveBeenCalledTimes(1)
+    expect(broadcastMock).toHaveBeenCalledWith({ type: 'auth.logout' })
+    expect(assignSpy).toHaveBeenCalledWith('/?connect=1')
+    expect(ORDER.indexOf('purge')).toBeLessThan(ORDER.indexOf('navigate'))
+  })
+
   it('purges the cached API reads before navigating to the IdP', async () => {
     const { navigateToReauth } = await loadResilience()
 
