@@ -1504,6 +1504,15 @@ html[data-status-bar='off'] {
 }
 
 
+.checkbox-indicator svg {
+  visibility: hidden;
+}
+
+.peer:checked + .checkbox-indicator svg,
+.peer:indeterminate + .checkbox-indicator svg {
+  visibility: visible;
+}
+
 /* === @media (forced-colors: active) (Phase-46 / Prompt 11) ====================
  * Windows High Contrast / Aquatic / Contrast Themes support.
  *
@@ -1640,6 +1649,19 @@ html[data-status-bar='off'] {
   *:focus-visible {
     outline: 2px solid Highlight !important;
     outline-offset: 2px !important;
+  }
+
+  .peer:checked + .checkbox-indicator,
+  .peer:indeterminate + .checkbox-indicator {
+    forced-color-adjust: none;
+    background-color: Highlight !important;
+    border-color: Highlight !important;
+    color: HighlightText !important;
+  }
+
+  .peer:focus-visible + .checkbox-indicator {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
   }
 
   /* GlassPanel / Card / any opted-in print-card surface. These are the

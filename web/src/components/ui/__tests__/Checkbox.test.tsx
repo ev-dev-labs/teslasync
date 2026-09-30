@@ -58,6 +58,19 @@ describe('Checkbox', () => {
     expect(input.checked).toBe(true);
   });
 
+  it('uses opaque, contrasting checked and mixed indicators in both themes', () => {
+    render(<Checkbox aria-label="Pick" checked indeterminate />);
+    const input = screen.getByRole('checkbox');
+    const indicator = input.nextElementSibling as HTMLElement;
+    expect(indicator.className).toContain('peer-checked:bg-cyan-700');
+    expect(indicator.className).toContain('peer-checked:text-[var(--text-on-accent)]');
+    expect(indicator.className).toContain('dark:peer-checked:bg-cyan-400');
+    expect(indicator.className).toContain('dark:peer-checked:text-[var(--text-inverse)]');
+    expect(indicator.className).toContain('peer-indeterminate:bg-cyan-700');
+    expect(indicator.className).toContain('dark:peer-indeterminate:bg-cyan-400');
+    expect(indicator.querySelector('svg')).toHaveAttribute('stroke-width', '3');
+  });
+
   it('forwards indeterminate state to the DOM', () => {
     render(<Checkbox aria-label="All" indeterminate checked={false} onChange={() => {}} />);
     const input = screen.getByRole('checkbox') as HTMLInputElement;

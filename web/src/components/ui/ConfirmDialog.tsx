@@ -7,6 +7,7 @@ import { isSilenced, silence } from '@/lib/confirmSilence';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Input } from './Input';
+import { Checkbox } from './Checkbox';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -179,17 +180,14 @@ export function ConfirmDialog({
           />
         )}
         {silenceHonored && (
-          <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer select-none">
-            <input
-              type="checkbox"
+          <div className="text-sm text-[var(--text-secondary)]">
+            <Checkbox
               checked={dontAskAgain}
-              onChange={(e) => setDontAskAgain(e.target.checked)}
+              onChange={setDontAskAgain}
               disabled={loading}
-              className="rounded border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
-              aria-label={t('confirm.silence.checkbox', "Don't ask again for this action")}
+              label={t('confirm.silence.checkbox', "Don't ask again for this action")}
             />
-            <span>{t('confirm.silence.checkbox', "Don't ask again for this action")}</span>
-          </label>
+          </div>
         )}
         <div className="flex items-center justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>

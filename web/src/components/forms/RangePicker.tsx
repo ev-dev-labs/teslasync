@@ -23,6 +23,7 @@ import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react';
 import type { DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { Button } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { Popover } from '@/components/ui/Popover';
 import { cn } from '@/lib/cn';
 import {
@@ -321,15 +322,14 @@ export function RangePicker({
 
               <div className="flex flex-col gap-2 border-t border-[var(--glass-border)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                 {enableCompare ? (
-                  <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                    <input
-                      type="checkbox"
+                  <div className="text-xs text-[var(--text-secondary)]">
+                    <Checkbox
+                      size="sm"
                       checked={compare}
-                      onChange={(e) => onCompareChange?.(e.target.checked)}
-                      className="h-3.5 w-3.5"
+                      onChange={(checked) => onCompareChange?.(checked)}
+                      label={t('date.range.compare', 'Compare to previous period')}
                     />
-                    {t('date.range.compare', 'Compare to previous period')}
-                  </label>
+                  </div>
                 ) : (
                   <span className="text-2xs text-[var(--text-muted)]">
                     {stagedDays

@@ -33,7 +33,7 @@ export function MetricBar({ value, max, color, label, sublabel }: {
     >
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-[var(--text-secondary)]">{label}</span>
-        <span className="font-mono text-sm" style={{ color }}>{sublabel ?? fmtNumber(safeValue)}</span>
+        <span className="font-mono text-sm text-[var(--text-primary)]">{sublabel ?? fmtNumber(safeValue)}</span>
       </div>
       <div className="h-2.5 overflow-hidden rounded-pill bg-[var(--surface-2)]">
         <motion.div

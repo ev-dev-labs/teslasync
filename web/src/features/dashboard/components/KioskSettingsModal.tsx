@@ -6,8 +6,8 @@ import {
   Button as UiButton,
   Toggle,
   Select as UiSelect,
-  Input as UiInput,
   Slider,
+  Checkbox,
 } from '@/components/ui';
 import { FormSection } from '@/components/forms';
 import { DEFAULT_KIOSK_CONFIG, type KioskConfig } from '../hooks/useKioskMode';
@@ -129,26 +129,23 @@ export function KioskSettingsModal({
                 </label>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto">
                   {safeDashboards.map((d) => (
-                    <label
+                    <Checkbox
                       key={d.id}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03]
-                        hover:bg-white/[0.06] transition-colors cursor-pointer"
-                    >
-                      <UiInput
-                        type="checkbox"
-                        checked={selectedIds.has(d.id)}
-                        onChange={() => toggleDashboard(d.id)}
-                        className="h-4 w-4 rounded border-[var(--border-strong)] bg-[var(--surface-2)] p-0 text-blue-500
-                          focus:ring-blue-500/30 focus:ring-offset-0"
-                        aria-label={d.name}
-                      />
-                      <span className="text-sm text-[var(--text-primary)]">{d.name}</span>
-                      {d.isDefault && (
-                        <span className="text-2xs text-[var(--text-muted)] ml-auto">
-                          {t('kiosk.default', 'Default')}
+                      checked={selectedIds.has(d.id)}
+                      onChange={() => toggleDashboard(d.id)}
+                      aria-label={d.name}
+                      label={
+                        <span className="flex flex-1 items-center gap-2">
+                          <span>{d.name}</span>
+                          {d.isDefault && (
+                            <span className="ml-auto text-2xs text-[var(--text-muted)]">
+                              {t('kiosk.default', 'Default')}
+                            </span>
+                          )}
                         </span>
-                      )}
-                    </label>
+                      }
+                      className="flex w-full rounded-lg bg-white/[0.03] px-3 py-2 hover:bg-white/[0.06]"
+                    />
                   ))}
                 </div>
               </div>

@@ -154,6 +154,26 @@ describe('DataTable — selection (multi)', () => {
     expect(onChange).toHaveBeenCalledWith([1, 2, 3])
   })
 
+  it('shows a mixed header when some rows are selected and toggles the visible row indicator', () => {
+    const onChange = vi.fn()
+    render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        selectable="multi"
+        selectedKeys={[1]}
+        onSelectionChange={onChange}
+      />,
+    )
+    const [header, selectedRow] = screen.getAllByRole('checkbox') as HTMLInputElement[]
+    expect(header.indeterminate).toBe(true)
+    expect(header.nextElementSibling).toHaveClass('checkbox-indicator')
+    expect(selectedRow.checked).toBe(true)
+    fireEvent.click(selectedRow.nextElementSibling!)
+    expect(onChange).toHaveBeenCalledWith([])
+  })
+
   it('shift-click extends a range from the last clicked row', () => {
     let selectedKeys: (string | number)[] = []
     const onChange = vi.fn((keys: (string | number)[]) => { selectedKeys = keys })

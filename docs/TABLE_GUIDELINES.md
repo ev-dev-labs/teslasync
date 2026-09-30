@@ -51,6 +51,10 @@ Every `Column<T>` accepts these optional fields in addition to the original
 - Shift-click extends the range from the last clicked row (additive, not
   replacing).
 - The header checkbox toggles the entire data set, not just the visible page.
+- Use the shared `Checkbox` for table and column-menu selection (and for
+  checkboxes in page forms). Checked and mixed states have a solid fill and a
+  visible glyph; the header shows the mixed state when only some rows are
+  selected. Do not use a native checkbox with ad-hoc styling.
 
 ## Bulk-action toolbar
 

@@ -42,7 +42,8 @@ describe('MetricBar — sublabel rendering', () => {
 
   it('renders sublabel verbatim when it is a non-empty string', () => {
     render(<MetricBar value={42.5} max={100} color="#22c55e" label="Power" sublabel="42.5 kW" />)
-    expect(screen.getByText('42.5 kW')).toBeInTheDocument()
+    expect(screen.getByText('42.5 kW')).toHaveClass('text-[var(--text-primary)]')
+    expect(screen.getByText('42.5 kW')).not.toHaveStyle({ color: '#22c55e' })
     // The auto-formatted value should NOT also appear.
     expect(screen.queryByText('42.50')).toBeNull()
   })

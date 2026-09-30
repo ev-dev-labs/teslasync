@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Columns3 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
+import { Checkbox } from './Checkbox'
 
 interface ColumnDescriptor {
   key: string
@@ -167,23 +168,17 @@ export function DataTableColumnsMenu({
                 const disabled = col.required || (checked && visibleColumnKeys.length <= 1)
                 return (
                   <li key={col.key}>
-                    <label
+                    <Checkbox
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={() => toggle(col.key)}
+                      data-testid={`datatable-columns-menu-checkbox-${col.key}`}
+                      label={<span className="truncate">{col.header || col.key}</span>}
                       className={cn(
-                        'flex items-center gap-2 px-2 py-1.5 rounded text-sm cursor-pointer',
+                        'flex w-full gap-2 rounded px-2 py-1.5 text-sm',
                         'text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]',
-                        disabled && 'opacity-50 cursor-not-allowed',
                       )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        disabled={disabled}
-                        onChange={() => toggle(col.key)}
-                        data-testid={`datatable-columns-menu-checkbox-${col.key}`}
-                        className="rounded border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
-                      />
-                      <span className="truncate">{col.header || col.key}</span>
-                    </label>
+                    />
                   </li>
                 )
               })}
