@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutGrid, Search, Sparkles } from 'lucide-react';
 import { Modal, Button, Input, Text, Badge } from '@/components/ui';
-import { DASHBOARD_PRESETS } from '../hooks/useDashboardLayout';
-import { getWidgetDef } from '../widgets/registry';
+import { arrangeLayouts, DASHBOARD_PRESETS } from '../hooks/useDashboardLayout';
+import { getWidgetDef, WIDGET_REGISTRY } from '../widgets/registry';
 import { MiniGridPreview } from './MiniGridPreview';
+import { HelixDashboardDraft } from './HelixDashboardDraft';
 import type { SavedDashboard } from '../widgets/types';
+import type { DashboardWidgetDraft } from '@/api/hooks/useDashboard';
 
 const TEMPLATE_DESCRIPTIONS: Record<string, { key: string; fallback: string }> = {
   default: { key: 'templates.default.desc', fallback: 'Balanced overview of vehicle status, battery, climate, and recent drives' },
@@ -26,7 +28,7 @@ const TEMPLATE_DESCRIPTIONS: Record<string, { key: string; fallback: string }> =
 interface TemplateGalleryProps {
   open: boolean;
   onClose: () => void;
-  onApply: (presetId: string, name: string) => void;
+  onApply: (presetId: string, name: string, widgetIds?: string[]) => void;
   initialTemplateId?: string;
 }
 
@@ -36,6 +38,7 @@ export function TemplateGallery({ open, onClose, onApply, initialTemplateId }: T
   const [name, setName] = useState('');
   const [search, setSearch] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [helixDraft, setHelixDraft] = useState<DashboardWidgetDraft | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -47,14 +50,28 @@ export function TemplateGallery({ open, onClose, onApply, initialTemplateId }: T
     setName(preset ? t(`templates.${preset.id}.name`, preset.name) : t('layout.newLayoutDefault', 'New Layout'));
     setSearch('');
     setSubmitted(false);
+    setHelixDraft(null);
   }, [open, initialTemplateId, t]);
 
-  const selected: SavedDashboard | null = DASHBOARD_PRESETS.find((preset) => preset.id === selectedId) ?? null;
+  const selected: SavedDashboard | null = useMemo(() => {
+    if (selectedId === '__helix__' && helixDraft) {
+      const valid = new Set(WIDGET_REGISTRY.map((widget) => widget.id));
+      const widgets = helixDraft.widget_ids
+        .filter((id) => valid.has(id))
+        .map((widgetId) => ({ id: `helix-preview-${widgetId}`, widgetId }));
+      return { ...DASHBOARD_PRESETS[0], id: '__helix__', name: helixDraft.title, widgets, layouts: arrangeLayouts({}, widgets) };
+    }
+    return DASHBOARD_PRESETS.find((preset) => preset.id === selectedId) ?? null;
+  }, [selectedId, helixDraft]);
   const description = selected ? TEMPLATE_DESCRIPTIONS[selected.id] : undefined;
-  const previewName = selected
+  const previewName = selectedId === '__helix__' && helixDraft
+    ? helixDraft.title
+    : selected
     ? t(`templates.${selected.id}.name`, selected.name)
     : t('templates.blank', 'Blank Dashboard');
-  const previewDescription = description
+  const previewDescription = selectedId === '__helix__'
+    ? t('templates.helixPreview', 'Helix selected these widgets and packed them into a responsive layout.')
+    : description
     ? t(description.key, description.fallback)
     : selected
       ? t('templates.customDescription', 'A ready-to-customize dashboard layout.')
@@ -79,7 +96,12 @@ export function TemplateGallery({ open, onClose, onApply, initialTemplateId }: T
     setSubmitted(true);
     const trimmed = name.trim();
     if (!trimmed) return;
-    onApply(selectedId, trimmed);
+    if (selectedId === '__helix__' && !helixDraft) return;
+    if (selectedId === '__helix__' && helixDraft) {
+      onApply(selectedId, trimmed, helixDraft.widget_ids);
+    } else {
+      onApply(selectedId, trimmed);
+    }
   };
   const handleNameKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') handleCreate();
@@ -98,7 +120,7 @@ export function TemplateGallery({ open, onClose, onApply, initialTemplateId }: T
           </Text>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>{t('common.cancel', 'Cancel')}</Button>
-            <Button size="sm" onClick={handleCreate} disabled={!name.trim()}>
+            <Button size="sm" onClick={handleCreate} disabled={!name.trim() || (selectedId === '__helix__' && !helixDraft)}>
               <Sparkles className="h-4 w-4" aria-hidden="true" />
               {t('templates.create', 'Create layout')}
             </Button>
@@ -113,6 +135,12 @@ export function TemplateGallery({ open, onClose, onApply, initialTemplateId }: T
         <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="min-w-0 space-y-3">
             <Text as="h3" variant="sectionTitle">{t('templates.startingPoint', 'Choose a starting point')}</Text>
+            <HelixDashboardDraft onDraft={(draft) => {
+              setHelixDraft(draft);
+              setSelectedId('__helix__');
+              setName(draft.title);
+              setSubmitted(false);
+            }} />
             <Input
               type="search"
               value={search}

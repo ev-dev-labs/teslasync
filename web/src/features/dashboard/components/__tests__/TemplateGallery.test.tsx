@@ -30,6 +30,13 @@ vi.mock('@/features/dashboard/hooks/useDashboardLayout', async () => {
   );
   return { ...actual, DASHBOARD_PRESETS: fixtures };
 });
+vi.mock('../HelixDashboardDraft', () => ({
+  HelixDashboardDraft: ({ onDraft }: { onDraft: (draft: { title: string; widget_ids: string[] }) => void }) => (
+    <button type="button" onClick={() => onDraft({ title: 'Battery Care', widget_ids: ['battery-gauge', 'charge-status'] })}>
+      Draft with Helix
+    </button>
+  ),
+}));
 
 import { TemplateGallery } from '../TemplateGallery';
 
@@ -68,6 +75,16 @@ describe('TemplateGallery', () => {
     fireEvent.change(screen.getByLabelText(/Layout name/), { target: { value: '  My commute  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create layout' }));
     expect(onApply).toHaveBeenCalledWith('minimal', 'My commute');
+  });
+
+  it('previews a Helix proposal before creating an arranged widget layout', () => {
+    const { onApply } = setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Draft with Helix' }));
+    expect(screen.getByLabelText(/Layout name/)).toHaveValue('Battery Care');
+    expect(screen.getByText('2 widgets')).toBeVisible();
+    expect(onApply).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Create layout' }));
+    expect(onApply).toHaveBeenCalledWith('__helix__', 'Battery Care', ['battery-gauge', 'charge-status']);
   });
 
   it('opens blank selection directly and only creates it after naming', () => {

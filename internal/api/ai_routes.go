@@ -118,6 +118,7 @@ type AIHandlers struct {
 	NLSqlPlayground                      http.Handler
 	NLGrafanaPanel                       http.Handler
 	NLDashboardComposer                  http.Handler
+	WidgetDashboardComposer              http.Handler
 	TripPostcardShareCardImageGeneration http.Handler
 	VehiclePaintPreview                  http.Handler
 }
@@ -768,6 +769,9 @@ func mountAIRoutes(
 			nlDashboardComposerHandler = h.NLDashboardComposer.ServeHTTP
 		}
 		r.Post("/power/dashboard/draft", g.Wrap("nl-dashboard-composer", nlDashboardComposerHandler))
+		if h.WidgetDashboardComposer != nil {
+			r.Post("/dashboard/widgets/draft", g.Wrap("nl-dashboard-composer", h.WidgetDashboardComposer.ServeHTTP))
+		}
 
 		// trip-postcard-share-card-image-generation (Phase-50 / 0060,
 		// GEN1 slice) drafts a typed share-card image-prompt + a

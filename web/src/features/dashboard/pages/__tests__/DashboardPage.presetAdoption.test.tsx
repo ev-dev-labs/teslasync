@@ -139,7 +139,6 @@ vi.mock('../../components/DashboardSettingsModal', () => ({
   DashboardSettingsModal: () => null,
 }))
 vi.mock('../../components/KioskSettingsModal', () => ({ KioskSettingsModal: () => null }))
-vi.mock('../../components/AddWidgetButton', () => ({ AddWidgetButton: () => null }))
 vi.mock('../../components/FleetOperationsBrief', () => ({
   FleetOperationsBrief: () => null,
 }))

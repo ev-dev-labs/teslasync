@@ -177,7 +177,7 @@ export function compactLayouts(layouts: RGLLayouts): RGLLayouts {
   return result;
 }
 
-function arrangeLayouts(source: RGLLayouts, widgets: WidgetInstance[]): RGLLayouts {
+export function arrangeLayouts(source: RGLLayouts, widgets: WidgetInstance[]): RGLLayouts {
   const layouts = reconcileLayouts(source, widgets);
   for (const [bp, cols] of Object.entries(GRID_COLS)) {
     const byId = new Map(layouts[bp].map((item) => [item.i, item]));
@@ -187,21 +187,27 @@ function arrangeLayouts(source: RGLLayouts, widgets: WidgetInstance[]): RGLLayou
       if (!pa || !pb) return 0;
       return pa.y - pb.y || pa.x - pb.x;
     });
-    let x = 0;
-    let y = 0;
-    let rowHeight = 0;
-    layouts[bp] = ordered.map((widget) => {
+    const placed: RGLLayout[] = [];
+    for (const widget of ordered) {
       const item = byId.get(widget.id)!;
-      if (x + item.w > cols) {
-        x = 0;
-        y += rowHeight;
-        rowHeight = 0;
+      let bestX = 0;
+      let bestY = Infinity;
+      for (let x = 0; x <= cols - item.w; x++) {
+        let y = 0;
+        for (const neighbor of [...placed].sort((a, b) => a.y - b.y)) {
+          if (x < neighbor.x + neighbor.w && x + item.w > neighbor.x
+            && y < neighbor.y + neighbor.h && y + item.h > neighbor.y) {
+            y = neighbor.y + neighbor.h;
+          }
+        }
+        if (y < bestY || (y === bestY && Math.abs(x - item.x) < Math.abs(bestX - item.x))) {
+          bestX = x;
+          bestY = y;
+        }
       }
-      const arranged = { ...item, x, y };
-      x += item.w;
-      rowHeight = Math.max(rowHeight, item.h);
-      return arranged;
-    });
+      placed.push({ ...item, x: bestX, y: bestY });
+    }
+    layouts[bp] = placed;
   }
   return compactLayouts(layouts);
 }
@@ -772,8 +778,8 @@ export function useDashboardLayout() {
    * Placement-aware add for toolbox drops. The widget lands at the drop cell
    * on the source breakpoint (clamped to grid bounds + registry min/max);
    * other breakpoints auto-place at the bottom as usual. The target column
-   * is compacted so collisions with existing items resolve by pushing down,
-   * matching the placeholder preview RGL showed during the drag.
+   * is reserved during compaction so existing items move out of the way
+   * instead of pushing the dropped widget to the bottom.
    */
   const addWidgetAt = useCallback(
     (widgetId: string, placement: DropPlacement, sourceBreakpoint: keyof typeof GRID_COLS) => {
@@ -795,7 +801,7 @@ export function useDashboardLayout() {
       const maxH = def?.maxSize.rows ?? 20;
       const w = clampMinMax(Math.round(placement.w) || 1, minW, maxW);
       const h = clampMinMax(Math.round(placement.h) || 1, minH, maxH);
-      layouts[sourceBreakpoint] = verticalCompactor.compact(
+      const positioned = verticalCompactor.compact(
         layouts[sourceBreakpoint].map((item) => item.i === newWidget.id
           ? {
               ...item,
@@ -803,10 +809,14 @@ export function useDashboardLayout() {
               y: Math.max(Math.round(placement.y) || 0, 0),
               w,
               h,
+              static: true,
             }
           : item),
         cols,
       ) as RGLLayout[];
+      layouts[sourceBreakpoint] = positioned.map((item) => item.i === newWidget.id
+        ? { ...item, static: false }
+        : item);
       pushSnapshot({ widgets, layouts });
       updateActive((d) => ({ ...d, widgets, layouts }));
     },
@@ -869,6 +879,20 @@ export function useDashboardLayout() {
       return id;
     },
     [dashboards, persist, resetSnapshot],
+  );
+
+  const createDashboardFromWidgets = useCallback(
+    (name: string, widgetIds: string[]) => {
+      const ids = [...new Set(widgetIds)].filter((id) => WIDGET_REGISTRY_IDS.has(id));
+      if (ids.length === 0) return;
+      const widgets = ids.map((widgetId) => ({ id: generateId(), widgetId }));
+      return createDashboard(name, {
+        ...DEFAULT_DASHBOARD,
+        widgets,
+        layouts: arrangeLayouts({}, widgets),
+      });
+    },
+    [createDashboard],
   );
 
   const renameDashboard = useCallback(
@@ -1217,6 +1241,7 @@ export function useDashboardLayout() {
     pinToVehicle,
     switchDashboard,
     createDashboard,
+    createDashboardFromWidgets,
     renameDashboard,
     deleteDashboard,
     reorderDashboards,

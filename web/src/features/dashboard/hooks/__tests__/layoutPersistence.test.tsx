@@ -33,9 +33,7 @@ function seedDashboard(dash: SavedDashboard, rowVersion?: string) {
 }
 
 function craftedDashboard(): SavedDashboard {
-  // 5 widgets whose md flow leaves a hole WITH an item below it: E must rise
-  // to y2. D sits at (1,2) so visual order flows D before E (E lands x1y4,
-  // below B's row-2 edge), and compaction then pulls E up into rows 2-4.
+  // A tall first widget leaves shorter columns available at y2.
   const widgets = [
     { id: 'w-a', widgetId: 'battery-gauge' },
     { id: 'w-b', widgetId: 'range-estimate' },
@@ -89,8 +87,8 @@ describe('useDashboardLayout — row-height migration stamp', () => {
   });
 });
 
-describe('useDashboardLayout — autoArrange compacts after flowing', () => {
-  it('pulls items below a flow hole upward (E rises to y2)', () => {
+describe('useDashboardLayout — autoArrange packs available grid cells', () => {
+  it('fills a hole beside taller widgets without changing their sizes', () => {
     seedDashboard(craftedDashboard(), '2');
     const { result } = renderHook(() => useDashboardLayout());
 
@@ -99,9 +97,25 @@ describe('useDashboardLayout — autoArrange compacts after flowing', () => {
     });
 
     const md = result.current.activeDashboard.layouts.md;
-    // Column 1 rows 2-4 are empty (B ends at y2); E must rise into them.
-    // Without compact-after-flow E stays at y4 and the reload visibly shifts.
-    expect(md.find((l) => l.i === 'w-e')).toMatchObject({ x: 1, y: 2 });
+    expect(md.find((l) => l.i === 'w-d')).toMatchObject({ x: 1, y: 2, w: 1, h: 2 });
+    expect(md.find((l) => l.i === 'w-e')).toMatchObject({ x: 2, y: 2, w: 1, h: 2 });
+    expect(md.find((l) => l.i === 'w-a')).toMatchObject({ x: 0, y: 0, w: 1, h: 4 });
+    const first = result.current.activeDashboard.layouts;
+    act(() => result.current.autoArrange());
+    expect(result.current.activeDashboard.layouts).toEqual(first);
+    for (const [bp, items] of Object.entries(first)) {
+      for (const item of items) {
+        expect(item.x + item.w).toBeLessThanOrEqual({ lg: 4, md: 3, sm: 2, xs: 1 }[bp as 'lg' | 'md' | 'sm' | 'xs']);
+        for (const other of items) {
+          if (other.i === item.i) continue;
+          expect(
+            item.x < other.x + other.w && item.x + item.w > other.x
+            && item.y < other.y + other.h && item.y + item.h > other.y,
+            `${bp}: ${item.i} overlaps ${other.i}`,
+          ).toBe(false);
+        }
+      }
+    }
   });
 });
 
@@ -125,12 +139,12 @@ describe('useDashboardLayout — addWidgetAt (toolbox drops)', () => {
     expect(layouts.xs.find((l) => l.i === added.id)).toBeDefined();
   });
 
-  it('pushes colliding drops down (matching the placeholder preview)', () => {
+  it('reserves an occupied drop cell and moves the existing widget down', () => {
     seedDashboard(craftedDashboard(), '2');
     const { result } = renderHook(() => useDashboardLayout());
 
     act(() => {
-      // (0,0) is occupied by w-a (h4): the drop must resolve below it.
+      // (0,0) is occupied by w-a (h4): the new widget takes this cell.
       result.current.addWidgetAt('quick-nav', { x: 0, y: 0, w: 1, h: 2 }, 'md');
     });
 
@@ -138,8 +152,20 @@ describe('useDashboardLayout — addWidgetAt (toolbox drops)', () => {
     const added = widgets.find((w) => w.widgetId === 'quick-nav')!;
     const item = layouts.md.find((l) => l.i === added.id)!;
     expect(item.x).toBe(0);
-    expect(item.y).toBeGreaterThanOrEqual(4);
+    expect(item.y).toBe(0);
     expect(item.x + item.w).toBeLessThanOrEqual(3);
+    expect(item.static).toBe(false);
+    expect(layouts.md.find((l) => l.i === 'w-a')?.y).toBeGreaterThanOrEqual(item.h);
+    for (const candidate of layouts.md) {
+      if (candidate.i === item.i) continue;
+      expect(
+        item.x < candidate.x + candidate.w
+        && item.x + item.w > candidate.x
+        && item.y < candidate.y + candidate.h
+        && item.y + item.h > candidate.y,
+        `${candidate.i} overlaps the dropped widget`,
+      ).toBe(false);
+    }
   });
 
   it('clamps out-of-bounds placements to the grid', () => {

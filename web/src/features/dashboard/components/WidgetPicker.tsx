@@ -396,23 +396,22 @@ export function WidgetPicker({
       <VisuallyHidden as="div" liveRegion>
         {announcement}
       </VisuallyHidden>
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {/* Search input — sticky at top */}
-        <div className="sticky top-0 z-10 pb-3">
-          <UiInput
-            ref={inputRef}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={handleKeyDown}
-            aria-label={t('widgets.searchLabel', 'Search widgets')}
-            placeholder={t('widgets.search', 'Search widgets... (e.g. battery, chart, map)')}
-            icon={<Search className="h-4 w-4" />}
-            className="w-full"
-          />
-          <span className="text-2xs text-[var(--text-muted)] mt-1 block">
-            {filteredWidgets.length} {t('widgets.available', 'widgets available')}
-          </span>
-        </div>
+      <div className="shrink-0 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3">
+        <UiInput
+          ref={inputRef}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-label={t('widgets.searchLabel', 'Search widgets')}
+          placeholder={t('widgets.search', 'Search widgets... (e.g. battery, chart, map)')}
+          icon={<Search className="h-4 w-4" />}
+          className="w-full"
+        />
+        <span className="mt-1 block text-2xs text-[var(--text-muted)]">
+          {filteredWidgets.length} {t('widgets.available', 'widgets available')}
+        </span>
+      </div>
+      <div data-testid="widget-picker-list" className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
 
         {/* Categories are filters, not document tabs: pressed state communicates
             the active scope without implying a separate tabpanel relationship. */}

@@ -83,11 +83,16 @@ test('drag persists on the active breakpoint without touching the others', async
   expect(after.xs).toEqual(before.xs)
   expect(countOverlaps(after.md)).toBe(0)
 
-  // The gesture survives a reload with no stretching (no re-migration).
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  await waitForHarnessReady(page, mockApi)
-  const reloaded = await readLayouts(page)
+  // Opening a fresh document in the same context verifies persistence across
+  // mounts without navigating the old page while its API mocks are active.
+  const restoredPage = await page.context().newPage()
+  await seedBrowserState(restoredPage, 'dark', '/', { preserveDashboardState: true })
+  const restoredApi = await installApiMocks(restoredPage, 'populated')
+  await restoredPage.goto('/', { waitUntil: 'domcontentloaded' })
+  await waitForHarnessReady(restoredPage, restoredApi)
+  const reloaded = await readLayouts(restoredPage)
   expect(reloaded).toEqual(after)
+  await restoredPage.close()
 })
 
 test('auto arrange compacts every breakpoint without overlaps', async ({ page }) => {
@@ -144,7 +149,10 @@ test('docked picker drops onto the grid, rejects duplicates, and adds-and-arrang
   expect(box).not.toBeNull()
   const dropBreakpoint = box!.width > 996 ? 'md' : 'sm'
   const source = dock.getByRole('button', { name: /Odometer/ })
-  await source.dragTo(grid, { targetPosition: { x: box!.width * 0.75, y: Math.min(140, box!.height / 2) } })
+  await source.dragTo(grid, {
+    targetPosition: { x: box!.width * 0.75, y: Math.min(140, box!.height / 2) },
+    steps: 12,
+  })
 
   await expect.poll(async () => page.evaluate(() => {
     const dashboards = JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{
@@ -187,6 +195,15 @@ test('picker leaves the grid unobstructed on desktop and remains usable on a pho
   await page.getByRole('button', { name: 'Add Widget' }).first().click()
   const dock = page.getByRole('complementary', { name: 'Add Widget' })
   const grid = page.getByRole('region', { name: 'Dashboard widgets' })
+  const search = dock.getByRole('textbox', { name: 'Search widgets' })
+  const list = dock.getByTestId('widget-picker-list')
+  await list.evaluate((element) => { element.scrollTop = element.scrollHeight })
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  const searchBox = await search.boundingBox()
+  const listBox = await list.boundingBox()
+  expect(searchBox).not.toBeNull()
+  expect(listBox).not.toBeNull()
+  expect(searchBox!.y + searchBox!.height).toBeLessThan(listBox!.y)
   const desktopGrid = await grid.boundingBox()
   const desktopDock = await dock.boundingBox()
   expect(desktopGrid).not.toBeNull()
@@ -291,6 +308,40 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
   }
 
   await page.setViewportSize({ width: 1440, height: 900 })
+  const dock = page.getByRole('complementary', { name: 'Add Widget' })
+  for (const [label, widgetId, minRows] of [
+    ['Export Status', 'export-status', 2],
+    ['Digital Twin', 'vehicle-twin', 4],
+    ['Software Update', 'software-update-status', 2],
+    ['Automation History', 'automation-history', 2],
+  ] as const) {
+    await dock.getByRole('textbox', { name: 'Search widgets' }).fill(label)
+    await dock.getByRole('button', { name: new RegExp(`^${label} `) }).first().click()
+    const addedId = await page.evaluate((id) => {
+      const dashboards = JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{
+        id: string
+        widgets: Array<{ id: string; widgetId: string }>
+      }>
+      return dashboards.find((d) => d.id === localStorage.getItem('teslasync-active-dashboard'))
+        ?.widgets.find((w) => w.widgetId === id)?.id
+    }, widgetId)
+    expect(addedId, `${label} was saved`).toBeTruthy()
+    await expect.poll(async () =>
+      (await readLayouts(page)).md.find((item) => item.i === addedId)?.h ?? 0,
+      { message: `${label} should not collapse below its minimum size` },
+    ).toBeGreaterThanOrEqual(minRows)
+    const panel = page.locator(`[data-widget-id="${addedId}"] .widget-panel`)
+    await expect.poll(async () => panel.evaluate((element) => {
+      const nested = [...element.querySelectorAll<HTMLElement>('*')]
+        .filter((child) => ['auto', 'scroll'].includes(getComputedStyle(child).overflowY))
+        .map((child) => child.scrollHeight - child.clientHeight)
+      return Math.max(element.scrollHeight - element.clientHeight, ...nested, 0)
+    }), {
+      message: `${label} should not need a scrollbar on initial add`,
+    }).toBeLessThanOrEqual(4)
+    expect(await panel.evaluate((element) => element.getBoundingClientRect().height))
+      .toBeGreaterThanOrEqual(minRows * 80)
+  }
   const previousHeight = (await readLayouts(page)).md.find((item) => item.i === instanceId)?.h ?? 0
   await widget.locator('.overflow-auto').evaluate((content) => {
     const lateContent = document.createElement('div')

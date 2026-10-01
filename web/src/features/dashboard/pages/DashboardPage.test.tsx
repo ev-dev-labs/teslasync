@@ -22,7 +22,7 @@
  *                   catalogue (fake-timer path).
  *  10. CATALOGUE  — adding from the catalogue calls addWidgets + marks onboarding.
  *  11. PALETTE    — the command-palette CustomEvent bridge (add/toggle/reset).
- *  12. KIOSK      — kiosk surface renders and the FAB is hidden.
+ *  12. KIOSK      — kiosk surface replaces the standard dashboard.
  *  13. URL IMPORT — a `#import=` share hash opens the import modal with the
  *                   decoded payload.
  *
@@ -66,6 +66,7 @@ const h = vi.hoisted(() => {
     getWidgetSize: vi.fn(() => ({ cols: 1, rows: 1 })),
     switchDashboard: vi.fn(),
     createDashboard: vi.fn(),
+    createDashboardFromWidgets: vi.fn(),
     renameDashboard: vi.fn(),
     deleteDashboard: vi.fn(),
     reorderDashboards: vi.fn(),
@@ -246,7 +247,11 @@ vi.mock('../components/LayoutSwitcher', () => ({
   LayoutSwitcher: () => <div data-testid="layout-switcher" />,
 }));
 vi.mock('../components/TemplateGallery', () => ({
-  TemplateGallery: (props: any) => (props.open ? <div data-testid="template-gallery" /> : null),
+  TemplateGallery: (props: any) => (props.open
+    ? <div data-testid="template-gallery">
+        <button type="button" onClick={() => props.onApply('__helix__', 'Charging Desk', ['charge-status'])}>Create Helix layout</button>
+      </div>
+    : null),
 }));
 vi.mock('../components/ExportModal', () => ({
   ExportModal: (props: any) => (props.open ? <div data-testid="export-modal" /> : null),
@@ -260,11 +265,6 @@ vi.mock('../components/DashboardSettingsModal', () => ({
 }));
 vi.mock('../components/KioskSettingsModal', () => ({
   KioskSettingsModal: (props: any) => (props.open ? <div data-testid="kiosk-settings" /> : null),
-}));
-vi.mock('../components/AddWidgetButton', () => ({
-  AddWidgetButton: (props: any) => (
-    <button type="button" data-testid="add-widget-fab" onClick={props.onClick} />
-  ),
 }));
 import DashboardPage from './DashboardPage';
 import { toUrlSafeBase64 } from '../hooks/validateImport';
@@ -562,6 +562,14 @@ describe('DashboardPage — empty-grid guidance', () => {
     fireEvent.click(screen.getByTestId('grid-browse-templates'));
     expect(screen.getByTestId('template-gallery')).toBeInTheDocument();
   });
+
+  it('creates the Helix-proposed widget set only after confirmation', () => {
+    renderPage();
+    fireEvent.click(screen.getByTestId('grid-browse-templates'));
+    expect(h.layout.createDashboardFromWidgets).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Create Helix layout' }));
+    expect(h.layout.createDashboardFromWidgets).toHaveBeenCalledWith('Charging Desk', ['charge-status']);
+  });
 });
 
 describe('DashboardPage — banners', () => {
@@ -679,8 +687,9 @@ describe('DashboardPage — customize hint', () => {
 
 describe('DashboardPage — widget picker', () => {
   it('adding from the dock calls addWidgets and marks onboarding complete', () => {
+    h.layout.editMode = true;
     renderPage();
-    fireEvent.click(screen.getByTestId('add-widget-fab'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Widget' }));
     expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('picker-add'));
     expect(h.layout.addWidgets).toHaveBeenCalledWith(['battery-gauge']);
@@ -736,17 +745,16 @@ describe('DashboardPage — command palette bridge', () => {
 });
 
 describe('DashboardPage — kiosk mode', () => {
-  it('renders the kiosk surface and hides the add-widget FAB in kiosk mode', () => {
+  it('renders the kiosk surface in kiosk mode', () => {
     (h.kiosk as Record<string, unknown>).isKiosk = true;
     renderPage();
     expect(screen.getByTestId('kiosk-grid')).toBeInTheDocument();
-    expect(screen.queryByTestId('add-widget-fab')).toBeNull();
   });
 
-  it('shows the add-widget FAB when not in kiosk mode', () => {
+  it('shows the dashboard grid when not in kiosk mode', () => {
     (h.kiosk as Record<string, unknown>).isKiosk = false;
     renderPage();
-    expect(screen.getByTestId('add-widget-fab')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-grid')).toBeInTheDocument();
     expect(screen.queryByTestId('kiosk-grid')).toBeNull();
   });
 });

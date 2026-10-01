@@ -42,7 +42,6 @@ import { ExportModal } from '../components/ExportModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { DashboardSettingsModal } from '../components/DashboardSettingsModal';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
-import { AddWidgetButton } from '../components/AddWidgetButton';
 import { DASHBOARD_PRESETS, useDashboardLayout, type GridBreakpoint } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { useKioskMode } from '../hooks/useKioskMode';
@@ -243,7 +242,7 @@ export default function DashboardPage() {
     editMode, setEditMode,
     addWidgets, addWidgetAndArrange, addWidgetAt, removeWidget, updateWidgetConfig,
     updateLayouts, autoArrange, getWidgetSize,
-    switchDashboard, createDashboard, renameDashboard, deleteDashboard,
+    switchDashboard, createDashboard, createDashboardFromWidgets, renameDashboard, deleteDashboard,
     duplicateDashboard, reorderDashboards, updateDashboardSettings, updateDashboardIcon,
     applyRolePreset, resetToDefault, exportDashboard, importDashboardFromData,
     canUndo, canRedo, undoCount, undo, redo,
@@ -484,8 +483,10 @@ export default function DashboardPage() {
   }, [editMode, setEditMode, handleResetRequest]);
 
   /* ——— Template gallery handler ——— */
-  const handleApplyTemplate = (presetId: string, name: string) => {
-    if (presetId === '__blank__') {
+  const handleApplyTemplate = (presetId: string, name: string, widgetIds?: string[]) => {
+    if (presetId === '__helix__' && widgetIds) {
+      createDashboardFromWidgets(name, widgetIds);
+    } else if (presetId === '__blank__') {
       createDashboard(name);
     } else {
       const preset = DASHBOARD_PRESETS.find((candidate) => candidate.id === presetId);
@@ -834,11 +835,6 @@ export default function DashboardPage() {
           onRename={(name) => renameDashboard(showDashSettings, name)}
           onChangeIcon={(icon) => updateDashboardIcon(showDashSettings, icon)}
         />
-      )}
-
-      {/* The FAB and the header action both open the same docked picker. */}
-      {!isKiosk && vehicleList.length > 0 && (
-        <AddWidgetButton onClick={() => setShowPicker(true)} isEditing={editMode} />
       )}
 
       {/* Kiosk Mode — portaled to document.body to escape all app chrome */}
