@@ -34,9 +34,8 @@ import {
  * printed or projected). Suppressing the *component* there is what created
  * the silent hole, so instead only the visual treatment changes:
  *
- *   - `standard` → the same fixed bottom-right `<AlertBanner>` as before,
- *     with identical copy, classes, `data-testid` and `role="status"` /
- *     `aria-live="polite"` semantics. Standard routes are visually unchanged.
+ *   - `standard` → a compact `<AlertBanner>` in the root's top notice stack,
+ *     with the same `role="status"` / `aria-live="polite"` semantics.
  *   - `report` / `kiosk` → a visually-hidden polite live region. No chrome in
  *     the print/projection surface, but the transition is still announced.
  *
@@ -109,7 +108,7 @@ export function OfflineBanner({ presentation }: OfflineBannerProps = {}) {
     <div
       data-testid="offline-banner"
       data-presentation-mode={mode}
-      className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-4 z-[9997] max-w-sm xl:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))]"
+      className="w-full"
     >
       <AlertBanner
         variant="warning"

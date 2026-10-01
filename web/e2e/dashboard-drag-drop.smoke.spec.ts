@@ -164,8 +164,8 @@ test('docked picker drops onto the grid, rejects duplicates, and adds-and-arrang
       .some((w) => w.widgetId === 'odometer-counter')
   })).toBe(true)
 
+  await expect.poll(async () => countOverlaps((await readLayouts(page))[dropBreakpoint])).toBe(0)
   const layouts = await readLayouts(page)
-  expect(countOverlaps(layouts[dropBreakpoint])).toBe(0)
   const addedId = await page.evaluate(() => {
     const dashboards = JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{
       id: string
@@ -373,6 +373,7 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
 })
 
 test('repairs oversized saved panels without undoing an explicit resize', async ({ page }) => {
+  test.setTimeout(180_000)
   await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
   const mockApi = await installApiMocks(page, 'populated')
   await page.goto('/', { waitUntil: 'domcontentloaded' })
@@ -429,6 +430,21 @@ test('repairs oversized saved panels without undoing an explicit resize', async 
   await waitForHarnessReady(reloaded, reloadedApi)
   expect((await readLayouts(reloaded)).md.find((item) => item.i === saved.bloatedId)?.h)
     .toBe(healed.md.find((item) => item.i === saved.bloatedId)?.h)
+  for (const width of [320, 390, 480, 481, 768, 996, 1024, 1200, 1440, 1920]) {
+    await reloaded.setViewportSize({ width, height: 900 })
+    await reloaded.reload({ waitUntil: 'domcontentloaded' })
+    await waitForHarnessReady(reloaded, reloadedApi)
+    const panel = reloaded.locator(`[data-widget-id="${saved.bloatedId}"] .widget-panel`)
+    await expect.poll(() => panel.evaluate((element) => element.getBoundingClientRect().height), {
+      message: `oversized saved panel should not return after resizing and refreshing at ${width}px`,
+    }).toBeLessThan(1300)
+    await expect.poll(() => panel.evaluate((element) => element.scrollHeight - element.clientHeight), {
+      message: `repaired widget content should fit at ${width}px`,
+    }).toBeLessThanOrEqual(4)
+    const layouts = await readLayouts(reloaded)
+    expect(layouts.md.find((item) => item.i === saved.deliberateId)).toMatchObject({ h: 25, userSized: true })
+    for (const items of Object.values(layouts)) expect(countOverlaps(items)).toBe(0)
+  }
   await reloaded.close()
   await restored.close()
 })

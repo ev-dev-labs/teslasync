@@ -14,7 +14,7 @@ import { render, screen, act } from '@testing-library/react'
  *   2. Going offline surfaces the banner with the right copy.
  *   3. The banner is a polite `role="status"` live region for assistive tech.
  *   4. The decorative wifi glyph is `aria-hidden` so screen readers skip it.
- *   5. The wrapper is a fixed, non-blocking bottom-right overlay.
+ *   5. The banner fits the application's fixed top notice stack.
  *   6. Reconnecting hides the banner again with no manual dismiss.
  *
  * jsdom reports `navigator.onLine === true` by default, so every test starts
@@ -118,13 +118,13 @@ describe('OfflineBanner', () => {
     expect(icon).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('positions the banner as a fixed, non-blocking overlay', () => {
+  it('fits inside the top notice stack without positioning a second overlay', () => {
     render(<OfflineBanner />)
     goOffline()
 
     const wrapper = screen.getByTestId('offline-banner')
-    expect(wrapper.className).toContain('fixed')
-    expect(wrapper.className).toContain('right-4')
+    expect(wrapper.className).toContain('w-full')
+    expect(wrapper.className).not.toContain('fixed')
   })
 
   it('hides itself again once connectivity is restored — no manual dismiss', () => {

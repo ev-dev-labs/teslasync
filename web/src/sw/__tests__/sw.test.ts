@@ -433,6 +433,28 @@ describe('offline navigation fallback', () => {
     expect(matchPrecache).toHaveBeenCalledWith('offline.html')
   })
 
+  it('uses the cached root app shell for an uncached route when navigation fails', async () => {
+    const root = new Response('<html>app</html>', {
+      status: 200, headers: { 'content-type': 'text/html' },
+    })
+    const cache = await cacheStorage.open(cacheName('navigations'))
+    await cache.put(`${ORIGIN}/`, root)
+    const handler = await catchHandler()
+    const response = await handler({ request: { destination: 'document' } })
+    expect(response).toBe(root)
+    const { matchPrecache } = await import('workbox-precaching')
+    expect(matchPrecache).not.toHaveBeenCalled()
+  })
+
+  it('never treats a cached non-HTML root as an offline app shell', async () => {
+    const cache = await cacheStorage.open(cacheName('navigations'))
+    await cache.put(`${ORIGIN}/`, new Response('not the app', { status: 200 }))
+    const { matchPrecache } = await import('workbox-precaching')
+    vi.mocked(matchPrecache).mockResolvedValueOnce(new Response('offline'))
+    const handler = await catchHandler()
+    expect(await (await handler({ request: { destination: 'document' } })).text()).toBe('offline')
+  })
+
   it('keeps network-error behaviour for non-document requests', async () => {
     const handler = await catchHandler()
     const response = await handler({ request: { destination: 'image' } })

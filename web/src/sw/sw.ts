@@ -118,6 +118,13 @@ registerRoute(
       cacheName: cacheName('navigations'),
       networkTimeoutSeconds: 3,
       plugins: [
+        {
+          cacheWillUpdate: async ({ response }) =>
+            response.status === 200 && !response.redirected
+              && response.headers.get('content-type')?.includes('text/html')
+              && new URL(response.url || self.location.href).origin === self.location.origin
+              ? response : null,
+        },
         new CacheableResponsePlugin({ statuses: [200] }),
         new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 7 }),
       ],
@@ -246,8 +253,11 @@ registerRoute(
 
 // ── Offline navigation fallback ──────────────────────────────────────────────
 // A cold offline launch (nothing cached yet) would otherwise end on the
-// browser's dead-end error page. When a navigation throws — network down
-// AND no cached entry — serve the precached offline shell instead.
+// browser's dead-end error page. A visited SPA route can also miss the
+// navigation cache when its exact URL differs from the cached root URL.
+// Reuse the root's runtime-cached shell in that case so the app can render
+// the requested route and its offline banner. Never precache index.html:
+// a network response, including a ForwardAuth redirect, still wins.
 //
 // ForwardAuth-safe by construction: this fires only when the strategy
 // THROWS (connectivity failure). HTTP responses — including the proxy's
@@ -257,6 +267,12 @@ registerRoute(
 // which the app already renders as its offline/error state).
 setCatchHandler(async ({ request }) => {
   if (request.destination === 'document') {
+    const navigations = await self.caches.open(cacheName('navigations'))
+    const root = await navigations.match(new URL('/', self.location.origin).href)
+    if (root?.status === 200 && !root.redirected
+      && root.headers.get('content-type')?.includes('text/html')) {
+      return root
+    }
     return (await matchPrecache('offline.html')) ?? Response.error()
   }
   return Response.error()

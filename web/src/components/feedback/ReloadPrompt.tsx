@@ -67,24 +67,14 @@ export default function ReloadPrompt() {
 
   return (
     <>
-      {/* Global, singular owner of the offline announcement — every route and
-          every presentation mode. Renders the visible chip in standard mode
-          and a screen-reader-only live region in report/kiosk. */}
-      <OfflineBanner />
-      {!online && (
-        // Positioning wrapper only — no role and no aria-label. An aria-label
-        // on a roleless <div> is ignored by assistive technology, and giving
-        // this element a role would create a second announcement competing
-        // with <OfflineBanner> above. The notice inside owns its own
-        // semantics as a NON-live note and states the offline condition in
-        // its visible text.
-        <div
-          data-testid="pwa-offline-disclosure"
-          className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top,0px))] z-[9990] mx-auto max-w-md lg:inset-x-auto lg:right-4 lg:w-[28rem]"
-        >
-          <CachedDataNotice announce={false} />
-        </div>
-      )}
+      <div className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top,0px))] z-[9997] mx-auto flex max-w-md flex-col gap-2 pointer-events-none [&>*]:pointer-events-auto">
+        <OfflineBanner />
+        {!online && (
+          <div data-testid="pwa-offline-disclosure">
+            <CachedDataNotice announce={false} />
+          </div>
+        )}
+      </div>
       <UpdatePrompt state={update} />
     </>
   )
