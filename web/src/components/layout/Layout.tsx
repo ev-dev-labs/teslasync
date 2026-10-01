@@ -1497,6 +1497,7 @@ export default function Layout() {
                 <LayoutBreadcrumbs className="min-w-0 text-sm" sections={groupedSidebarSections} collections={visibleCollections} />
               </div>
             )}
+            {presentation.mode === 'standard' && <InstallPrompt />}
             <RouteTransition>
               <Outlet />
             </RouteTransition>
@@ -1533,9 +1534,6 @@ export default function Layout() {
       {presentation.mode === 'standard' && (
         <CommandPaletteHost onOpen={() => setSidebarOpen(false)} />
       )}
-
-      {/* PWA Install Prompt */}
-      {presentation.mode === 'standard' && <InstallPrompt />}
 
       {/* Route-change / mutation progress bar —
           mounted ABOVE every banner so the slim 2 px strip at the very

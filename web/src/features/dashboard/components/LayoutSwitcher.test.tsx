@@ -225,6 +225,19 @@ describe('LayoutSwitcher', () => {
     expect(altItem).toHaveAttribute('aria-checked', 'false');
   });
 
+  it('keeps saved layouts and actions in the same viewport-limited scroll region', () => {
+    setup({ dashboards: Array.from({ length: 12 }, (_, index) => mkDash({ id: String(index), name: `Layout ${index}` })) });
+    openMenu();
+
+    const menu = screen.getByRole('menu', { name: 'Saved layouts' });
+    const savedList = screen.getByRole('menuitemradio', { name: 'Layout 0' }).parentElement;
+    expect(menu).toHaveClass('overflow-y-auto');
+    expect(menu.className).toContain('max-h-');
+    expect(savedList).not.toHaveClass('overflow-y-auto');
+    expect(menu).toContainElement(screen.getByRole('menuitemradio', { name: 'Layout 11' }));
+    expect(menu).toContainElement(screen.getByRole('menuitem', { name: 'Reset to default' }));
+  });
+
   it('switches to the clicked layout and closes the menu', () => {
     const { onSwitch } = setup({
       dashboards: [mkDash({ id: 'main', name: 'Main' }), mkDash({ id: 'alt', name: 'Alternate' })],

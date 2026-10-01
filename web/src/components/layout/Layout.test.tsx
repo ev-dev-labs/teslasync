@@ -269,7 +269,7 @@ vi.mock('@/lib/broadcast', () => ({
 }))
 
 // ── Child components: trivial stubs (some carry test ids / labels) ────
-vi.mock('../feedback/InstallPrompt', () => ({ default: () => null }))
+vi.mock('../feedback/InstallPrompt', () => ({ default: () => <div data-testid="install-prompt-stub" /> }))
 vi.mock('../feedback/OfflineBanner', () => ({ OfflineBanner: () => null }))
 vi.mock('../feedback/NewVersionBanner', () => ({ NewVersionBanner: () => null }))
 vi.mock('../feedback/TeslaReauthBanner', () => ({ TeslaReauthBanner: () => null }))
@@ -768,6 +768,18 @@ describe('Layout — grouped sidebar sections', () => {
 })
 
 describe('Layout — global page chrome', () => {
+  it('places the install affordance in the scrollable page flow, not over page content', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+    const viewport = container.querySelector('[data-role="page-viewport"]')
+    const prompt = screen.getByTestId('install-prompt-stub')
+
+    expect(main).toContainElement(prompt)
+    expect(viewport).toContainElement(prompt)
+    expect(prompt.nextElementSibling).not.toBeNull()
+    expect(container.querySelectorAll('[data-testid="install-prompt-stub"]')).toHaveLength(1)
+  })
+
   it('marks only drill fixture history as synthetic in standard mode', async () => {
     H.request.mockImplementation((url: unknown) =>
       url === '/vehicles'

@@ -274,7 +274,7 @@ export function LayoutSwitcher({
               {t('layout.discoveryHint', 'Switch, create, or edit layouts here')}
             </p>
           )}
-          <div className="max-h-72 overflow-y-auto">
+          <div>
             {visible.length === 0 ? (
               <p className="px-3 py-2 text-xs text-[var(--text-muted)]">
                 {t('layout.noneVisible', 'No layouts available for this vehicle.')}
