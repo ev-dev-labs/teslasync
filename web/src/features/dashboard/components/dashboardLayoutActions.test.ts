@@ -84,6 +84,8 @@ describe('dashboard layout actions', () => {
     const layout: RGLLayout[] = [{ i: 'a', x: 0, y: 0, w: 2, h: 2 }];
     const wider = applyWidgetArrangeAction(layout, 'a', DEF, 4, 'make-wider', false);
     expect(wider.layout[0]?.w).toBe(3);
+    expect(wider.layout[0]?.userSized).toBe(true);
+    expect(applyWidgetArrangeAction(wider.layout, 'a', DEF, 4, 'make-taller', false).layout[0]?.userSized).toBe(true);
 
     const mobile = widgetArrangeAvailability(layout, 'a', DEF, 1, true);
     expect(mobile['make-taller']).toBe(false);

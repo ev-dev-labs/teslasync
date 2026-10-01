@@ -37,6 +37,7 @@ export function layoutsEqual(a: RGLLayouts | undefined, b: RGLLayouts | undefine
         || (aItem.minH ?? null) !== (bItem.minH ?? null)
         || (aItem.maxW ?? null) !== (bItem.maxW ?? null)
         || (aItem.maxH ?? null) !== (bItem.maxH ?? null)
+        || (aItem.userSized ?? false) !== (bItem.userSized ?? false)
       ) {
         return false;
       }
@@ -119,10 +120,11 @@ function directionalNeighbour(
 }
 
 function compact(layout: readonly RGLLayout[], cols: number): RGLLayout[] {
-  return verticalCompactor.compact(
+  const manualSizes = new Map(layout.map((item) => [item.i, item.userSized]));
+  return (verticalCompactor.compact(
     layout.map((item) => ({ ...item })),
     cols,
-  ) as RGLLayout[];
+  ) as RGLLayout[]).map((item) => ({ ...item, userSized: manualSizes.get(item.i) }));
 }
 
 export function widgetArrangeAvailability(
@@ -211,6 +213,7 @@ export function applyWidgetArrangeAction(
     item.w = Math.max(minW, Math.min(maxW, requestedW));
     item.h = Math.max(minH, Math.min(maxH, requestedH));
     item.x = Math.min(item.x, Math.max(0, cols - item.w));
+    item.userSized = true;
   }
 
   const next = compact(current, cols);

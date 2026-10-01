@@ -69,7 +69,7 @@ If the SSE connection drops (network blip, proxy timeout, server restart), every
 | Above 1200 px         | Four-column responsive grid |
 | Print                  | Sidebar and chrome are stripped (see [Printing](/guide/printing)) |
 
-The grid responds to the **canvas width**, not the device's screen width, so opening or collapsing the sidebar can change the column count. Resizing a widget carries its dimensions to the other grid widths while respecting each widget's allowed sizes; the phone stack uses its content height instead of a fixed grid row height.
+The grid responds to the **canvas width**, not the device's screen width, so opening or collapsing the sidebar can change the column count. Resizing a widget carries its dimensions to the other grid widths while respecting each widget's allowed sizes; the phone stack uses its content height instead of a fixed grid row height. New widgets fit their content against a fixed reference size, rather than repeatedly stretching to fill an already enlarged panel. Oversized saved panels without an explicit resize are fitted back to their content on load (including older 9-row Vehicle Cards); deliberate resizes remain in place.
 
 ## Units, dates, currency
 

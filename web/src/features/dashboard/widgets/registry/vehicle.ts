@@ -12,7 +12,7 @@ export const VEHICLE_WIDGETS: WidgetDef[] = [
     description: 'Vehicle name, model, state, battery at a glance',
     icon: Car,
     category: 'vehicle',
-    defaultSize: { cols: 2, rows: 9 },
+    defaultSize: { cols: 2, rows: 6 },
     minSize: { cols: 2, rows: 4 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../VehicleHeroWidget')),
