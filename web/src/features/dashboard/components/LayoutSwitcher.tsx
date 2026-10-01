@@ -35,7 +35,7 @@ export interface LayoutSwitcherProps {
   /** Reorder by indices in the complete dashboards array, including hidden vehicle layouts. */
   onReorder?: (fromIndex: number, toIndex: number) => void;
   /** Open the template gallery to create a layout from a starter. */
-  onOpenTemplates?: () => void;
+  onOpenTemplates: (initialTemplateId?: string) => void;
   /** Open the settings modal for the active layout. */
   onOpenSettings?: (id: string) => void;
   className?: string;
@@ -200,14 +200,8 @@ export function LayoutSwitcher({
 
   const handleNewBlank = useCallback(() => {
     setOpen(false);
-    const name = window.prompt(
-      t('layout.newBlankPrompt', 'Name for the new layout:'),
-      t('layout.newLayoutDefault', 'New Layout'),
-    );
-    const trimmed = name?.trim();
-    if (!trimmed) return;
-    onCreate(trimmed);
-  }, [onCreate, t]);
+    onOpenTemplates('__blank__');
+  }, [onOpenTemplates]);
 
   const activeName = active?.name ?? t('layout.untitled', 'Untitled');
 
@@ -333,7 +327,6 @@ export function LayoutSwitcher({
             {t('layout.newBlank', 'New blank layout')}
           </Button>
 
-          {onOpenTemplates && (
             <Button
               type="button"
               variant="ghost"
@@ -348,7 +341,6 @@ export function LayoutSwitcher({
               <Icons.layoutTemplate className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
               {t('layout.newFromTemplate', 'New from template…')}
             </Button>
-          )}
 
           <div className="my-1 h-px bg-white/[0.06]" />
 

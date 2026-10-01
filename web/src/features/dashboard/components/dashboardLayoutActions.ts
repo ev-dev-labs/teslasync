@@ -1,6 +1,61 @@
 import { verticalCompactor } from 'react-grid-layout';
 
-import type { RGLLayout, WidgetDef } from '../widgets/types';
+import type { RGLLayout, RGLLayouts, WidgetDef } from '../widgets/types';
+
+/**
+ * Order-insensitive structural equality for responsive layouts: same
+ * breakpoints, same item ids, same geometry + constraints per item. Array
+ * order is ignored (compactors and reconcilers reorder freely) as are
+ * incidental fields (`moved`, `static`); only what the renderer consumes
+ * participates.
+ *
+ * Used as the persist-echo detector: when the parent's saved layouts match
+ * what the grid already holds, the update is our own write echoing back and
+ * must not be re-applied. Content comparison (instead of a persist counter)
+ * cannot desync — a counter credit consumed by the wrong update silently
+ * drops the next legitimate external change (auto-arrange, undo), freezing
+ * the screen while storage moves on.
+ */
+export function layoutsEqual(a: RGLLayouts | undefined, b: RGLLayouts | undefined): boolean {
+  const aBps = Object.keys(a ?? {});
+  const bBps = Object.keys(b ?? {});
+  if (aBps.length !== bBps.length) return false;
+  for (const bp of aBps) {
+    const aItems = (a as RGLLayouts)[bp] ?? [];
+    const bItems = (b as RGLLayouts)[bp] ?? [];
+    if (aItems.length !== bItems.length) return false;
+    const bById = new Map(bItems.map((item) => [item.i, item]));
+    for (const aItem of aItems) {
+      const bItem = bById.get(aItem.i);
+      if (!bItem) return false;
+      if (
+        aItem.x !== bItem.x
+        || aItem.y !== bItem.y
+        || aItem.w !== bItem.w
+        || aItem.h !== bItem.h
+        || (aItem.minW ?? null) !== (bItem.minW ?? null)
+        || (aItem.minH ?? null) !== (bItem.minH ?? null)
+        || (aItem.maxW ?? null) !== (bItem.maxW ?? null)
+        || (aItem.maxH ?? null) !== (bItem.maxH ?? null)
+      ) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * Rows needed for a widget box to fit `contentPx` pixels of content without
+ * an internal scrollbar. Inverts the RGL box equation
+ * `boxH = h * rowHeight + (h - 1) * marginY`, so any positive overflow grows
+ * by at least one row (rows are atomic). Used by auto-fit for newly added
+ * widgets; the caller clamps the result to the widget's maxH.
+ */
+export function rowsForHeight(contentPx: number, rowHeight: number, marginY: number): number {
+  if (!Number.isFinite(contentPx) || contentPx <= 0) return 1;
+  return Math.max(1, Math.ceil((contentPx + marginY) / (rowHeight + marginY)));
+}
 
 export type WidgetArrangeAction =
   | 'move-up'

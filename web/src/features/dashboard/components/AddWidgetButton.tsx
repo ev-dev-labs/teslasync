@@ -3,7 +3,7 @@ import { Button, Tooltip } from '@/components/ui';
 import { Icons } from '@/lib/icons';
 
 /**
- * Floating "+" button that opens the widget catalogue dialog from any
+ * Floating "+" button that opens the docked widget picker from any
  * dashboard view.
  *
  * Visibility:
@@ -15,11 +15,11 @@ import { Icons } from '@/lib/icons';
  *   (mobile, sitting above the BottomTabBar h-14). We position the FAB at
  *   `bottom-20` so it clears the StatusBar + BottomTabBar stack on mobile and
  *   leaves a comfortable gap on desktop. z-[56] places the button above the
- *   StatusBar but below the shared `<Modal>` (z-[60]) so the catalogue can
+ *   StatusBar but below the shared `<Modal>` (z-[60]) so dialogs can
  *   render on top.
  */
 export interface AddWidgetButtonProps {
-  /** Click handler — typically opens the widget catalogue dialog. */
+  /** Click handler — typically opens the docked widget picker. */
   onClick: () => void;
   /** When the dashboard is in edit mode, the FAB hides because the header
    *  already exposes an `Add Widget` action. */

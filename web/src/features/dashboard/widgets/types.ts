@@ -78,6 +78,20 @@ export interface WidgetInstance {
   config?: WidgetConfig;
 }
 
+/** Custom DataTransfer MIME for docked-picker → grid drags. A custom type
+ * (instead of text/plain) keeps text selections and file drags from ever
+ * registering as widget drops. Written by WidgetPicker, read by
+ * DashboardGrid's onDropDragOver/onDrop. */
+export const WIDGET_DND_MIME = 'application/x-teslasync-widget';
+
+/** Grid-cell placement for a dropped widget (active-breakpoint coords). */
+export interface DropPlacement {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 /** react-grid-layout Layout item (position + size in grid units) */
 export interface RGLLayout {
   i: string;

@@ -221,7 +221,13 @@ vi.mock('../components/DashboardGrid', () => ({
   ),
 }));
 vi.mock('../components/WidgetPicker', () => ({
-  WidgetPicker: (props: any) => (props.open ? <div data-testid="widget-picker" /> : null),
+  WidgetPicker: (props: any) => (props.open
+    ? <div data-testid="widget-picker">
+        <button type="button" data-testid="picker-add" onClick={() => props.onAddWidgets(['battery-gauge'])}>
+          add
+        </button>
+      </div>
+    : null),
 }));
 vi.mock('../components/WidgetSettingsModal', () => ({
   WidgetSettingsModal: (props: any) =>
@@ -259,16 +265,6 @@ vi.mock('../components/AddWidgetButton', () => ({
   AddWidgetButton: (props: any) => (
     <button type="button" data-testid="add-widget-fab" onClick={props.onClick} />
   ),
-}));
-vi.mock('../components/WidgetCatalogueDialog', () => ({
-  WidgetCatalogueDialog: (props: any) =>
-    props.open ? (
-      <div data-testid="widget-catalogue">
-        <button type="button" data-testid="cat-add" onClick={() => props.onAdd('battery-gauge')}>
-          add
-        </button>
-      </div>
-    ) : null,
 }));
 import DashboardPage from './DashboardPage';
 import { toUrlSafeBase64 } from '../hooks/validateImport';
@@ -559,10 +555,10 @@ describe('DashboardPage — widget settings flow', () => {
 });
 
 describe('DashboardPage — empty-grid guidance', () => {
-  it('wires the empty-state CTAs to the widget catalogue and template gallery', () => {
+  it('wires the empty-state CTAs to the docked picker and template gallery', () => {
     renderPage();
     fireEvent.click(screen.getByTestId('grid-add-widgets'));
-    expect(screen.getByTestId('widget-catalogue')).toBeInTheDocument();
+    expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('grid-browse-templates'));
     expect(screen.getByTestId('template-gallery')).toBeInTheDocument();
   });
@@ -658,7 +654,7 @@ describe('DashboardPage — customize hint', () => {
       });
       expect(screen.getByText(/You can customize this dashboard/i)).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Add widgets' }));
-      expect(screen.getByTestId('widget-catalogue')).toBeInTheDocument();
+      expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
       expect(localStorage.getItem(HINT_KEY)).toBe('1');
     } finally {
       vi.useRealTimers();
@@ -681,12 +677,12 @@ describe('DashboardPage — customize hint', () => {
   });
 });
 
-describe('DashboardPage — widget catalogue', () => {
-  it('adding from the catalogue calls addWidgets and marks onboarding complete', () => {
+describe('DashboardPage — widget picker', () => {
+  it('adding from the dock calls addWidgets and marks onboarding complete', () => {
     renderPage();
     fireEvent.click(screen.getByTestId('add-widget-fab'));
-    expect(screen.getByTestId('widget-catalogue')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('cat-add'));
+    expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('picker-add'));
     expect(h.layout.addWidgets).toHaveBeenCalledWith(['battery-gauge']);
     expect(h.markCompleted).toHaveBeenCalledTimes(1);
   });

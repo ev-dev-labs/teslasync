@@ -1,7 +1,7 @@
-import { Suspense, useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { Suspense, useState, useCallback, useMemo, useRef, useEffect, type DragEvent as ReactDragEvent } from 'react';
 import {
   ResponsiveGridLayout, useContainerWidth, verticalCompactor,
-  type Layout as RGLLayoutArray, type ResponsiveLayouts,
+  type Layout as RGLLayoutArray,
 } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -14,13 +14,19 @@ import { getWidgetDef } from '../widgets/registry';
 import { kioskPanelStyle } from '../lib/kioskAppearance';
 import {
   GRID_BREAKPOINTS, GRID_COLS, ROW_HEIGHT, GRID_MARGIN,
+  resolveBreakpointFromWidth,
+  type GridBreakpoint,
 } from '../hooks/useDashboardLayout';
-import type { SavedDashboard, WidgetDef, WidgetInstance, RGLLayout, RGLLayouts } from '../widgets/types';
+import type { SavedDashboard, WidgetDef, WidgetInstance, RGLLayout, RGLLayouts, DropPlacement } from '../widgets/types';
+import { WIDGET_DND_MIME } from '../widgets/types';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import {
   WidgetEditChrome,
 } from './WidgetEditChrome';
 import {
   applyWidgetArrangeAction,
+  layoutsEqual,
+  rowsForHeight,
   widgetArrangeAvailability,
   type WidgetArrangeAction,
   type WidgetArrangeAvailability,
@@ -46,6 +52,10 @@ interface DashboardGridProps {
   onAddWidgets?: () => void;
   /** Empty-state secondary CTA: open the starter-layout gallery. */
   onBrowseTemplates?: () => void;
+  /** Toolbox drop: add `widgetId` at the drop-cell placement. Present only
+   * when external drops are supported (desktop edit mode). */
+  onDropWidget?: (widgetId: string, placement: DropPlacement, bp: GridBreakpoint) => void;
+  getDraggedWidgetId?: () => string | null;
 }
 
 /* Stable empty fallbacks so a malformed dashboard (undefined widgets/layouts —
@@ -54,6 +64,9 @@ interface DashboardGridProps {
    the reference stays stable across renders (memo/effect deps don't churn). */
 const EMPTY_WIDGETS: WidgetInstance[] = [];
 const EMPTY_LAYOUTS: RGLLayouts = {};
+// Placeholder identity for toolbox drag-overs. Size is a fallback —
+// onDropDragOver overrides w/h per dragged widget every time.
+const DROPPING_ITEM = { i: '__dropping__', x: 0, y: 0, w: 1, h: 2 };
 
 /* ─── Fullscreen Overlay ─── */
 interface FullscreenOverlayProps {
@@ -109,6 +122,8 @@ export function DashboardGrid({
   kioskWidgetOpacity,
   onAddWidgets,
   onBrowseTemplates,
+  onDropWidget,
+  getDraggedWidgetId,
 }: DashboardGridProps) {
   const { t } = useTranslation();
   // Null-safety: a malformed dashboard (corrupt localStorage, partial API
@@ -125,23 +140,40 @@ export function DashboardGrid({
   const layoutRef = useRef<RGLLayouts>(dashboard.layouts ?? EMPTY_LAYOUTS);
   const interactingRef = useRef(false);
   const activeBreakpointRef = useRef<keyof typeof GRID_COLS>('lg');
+  // Latest saved layouts, for no-op persist detection (click-without-move
+  // must not write, toast, or consume an undo entry).
+  const savedLayoutsRef = useRef<RGLLayouts>(dashboard.layouts ?? EMPTY_LAYOUTS);
+  savedLayoutsRef.current = dashboard.layouts ?? EMPTY_LAYOUTS;
+  // Auto-fit eligibility: ids added during this session that the user has
+  // never explicitly sized. Mount-time ids are loaded, not added, so they
+  // never auto-fit (a reload must not undo a deliberate shrink).
+  const prevWidgetIdsRef = useRef<Set<string> | null>(null);
+  const prevDashboardIdRef = useRef(dashboard.id);
+  const autoFitIdsRef = useRef<Set<string>>(new Set());
+  const fitTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const fitObserversRef = useRef<MutationObserver[]>([]);
 
-  // Track persist cycles to avoid syncing our own changes back
-  const persistCountRef = useRef(0);
-  const syncedCountRef = useRef(0);
-
-  // Sync from parent state when not actively dragging/resizing
-  // and when the change didn't originate from our own persist.
+  // Sync from parent state. Echo detection is CONTENT-based: when the saved
+  // layouts match what the grid already holds, the update is our own persist
+  // echoing back and is skipped. A persist counter cannot do this job — the
+  // echo routinely arrives while `interacting` is still true, the early
+  // return consumes nothing, and the stale credit then eats the NEXT
+  // legitimate external update (auto-arrange, undo), freezing the screen
+  // while storage moves on. Content comparison cannot desync.
   // Covers: undo/redo, auto-arrange, add/remove widget, reset, import, dashboard switch.
   useEffect(() => {
-    if (interactingRef.current) return;
-    // Skip if this is our own persist echoing back
-    if (syncedCountRef.current < persistCountRef.current) {
-      syncedCountRef.current = persistCountRef.current;
+    const incoming = dashboard.layouts ?? EMPTY_LAYOUTS;
+    if (layoutsEqual(incoming, layoutRef.current)) {
+      // Echo (or a no-op update): align the ref without re-rendering.
+      if (layoutRef.current !== incoming) layoutRef.current = incoming;
       return;
     }
-    setLiveLayouts(dashboard.layouts ?? EMPTY_LAYOUTS);
-    layoutRef.current = dashboard.layouts ?? EMPTY_LAYOUTS;
+    // A gesture in flight owns the grid; its stop handler persists the final
+    // state, which supersedes this update. (Undo mid-drag is intentionally
+    // dropped — the gesture the user can see always wins.)
+    if (interactingRef.current) return;
+    layoutRef.current = incoming;
+    setLiveLayouts(incoming);
   }, [dashboard.layouts]);
 
   // react-grid-layout v2: hook provides containerRef + measured width.
@@ -165,59 +197,239 @@ export function DashboardGrid({
     handles: ['se', 'e', 's'] as const,
   }), [editMode]);
 
-  // Track layout changes — only update during active drag/resize.
-  // CRITICAL: layoutRef must also only update during interaction, otherwise
-  // RGL's initial mount compaction overwrites saved heights in the ref,
-  // and the next handleResizeStop persists the wrong values.
-  const handleLayoutChange = useCallback((_layout: RGLLayoutArray, allLayouts: ResponsiveLayouts) => {
-    const typed = allLayouts as RGLLayouts;
-    if (interactingRef.current) {
-      layoutRef.current = typed;
-      setLiveLayouts(typed);
-    }
+  const dropConfig = useMemo(() => ({
+    enabled: onDropWidget !== undefined,
+    defaultItem: { w: 1, h: 2 },
+  }), [onDropWidget]);
+
+  // NOTE: `onLayoutChange` is deliberately NOT passed to RGL. Layout data
+  // flows UNIDIRECTIONALLY (us → RGL): every layout we hand over is already
+  // reconciled + compacted, and every legitimate change (gestures via
+  // callback args, arrange buttons, auto-arrange, undo, add/remove) flows
+  // back through explicit channels below — never through RGL's emissions.
+  // RGL's `allLayouts` emissions are unusable as a source of truth: v2.2.4
+  // regenerates non-active breakpoints as x=0 stacks on re-renders, and
+  // emits w1h1 key-miss rebuilds (e.g. dashboard-switch transients) for the
+  // ACTIVE breakpoint too, flapping correct↔rebuild dozens of times per
+  // second. Adopting any of that poisoned `layoutRef`, corrupted storage on
+  // the next gesture, and sustained a render storm. RGL renders our truth;
+  // it has nothing to teach us.
+
+  // Brief "drop flash" on the just-dropped widget so the gesture lands with
+  // visible feedback. Skipped under reduced motion (the position change
+  // itself is the feedback there).
+  const { reduce: reduceMotion } = useMotionPreference();
+  const [droppedId, setDroppedId] = useState<string | null>(null);
+  const dropFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (dropFlashTimer.current) clearTimeout(dropFlashTimer.current);
   }, []);
+  const flashDropped = useCallback((id: string | undefined) => {
+    if (dropFlashTimer.current) clearTimeout(dropFlashTimer.current);
+    if (!id || reduceMotion) {
+      setDroppedId(null);
+      return;
+    }
+    setDroppedId(id);
+    dropFlashTimer.current = setTimeout(() => setDroppedId(null), 650);
+  }, [reduceMotion]);
+
+  // Persist a finished gesture. RGL passes the final compacted layout for
+  // the active breakpoint as the first callback arg — persisting THAT
+  // (instead of ref-sniffing across microtask/rAF hops) makes the write
+  // exact by construction. No-op gestures (click without move) are dropped
+  // before they can write, toast, or consume an undo entry.
+  const persistGesture = useCallback((finalLayout: RGLLayoutArray | undefined, droppedItemId: string | undefined) => {
+    setIsDragging(false);
+    interactingRef.current = false;
+    const bp = activeBreakpointRef.current;
+    const merged: RGLLayouts = finalLayout
+      ? { ...layoutRef.current, [bp]: finalLayout as RGLLayout[] }
+      : layoutRef.current;
+    layoutRef.current = merged;
+    setLiveLayouts(merged);
+    flashDropped(droppedItemId);
+    if (layoutsEqual(merged, savedLayoutsRef.current)) return;
+    onLayoutChange(merged, bp);
+  }, [flashDropped, onLayoutChange]);
 
   const handleDragStart = useCallback(() => {
     interactingRef.current = true;
     setIsDragging(true);
   }, []);
 
-  const handleDragStop = useCallback(() => {
-    setIsDragging(false);
-    persistCountRef.current++;
-    // Defer persist to microtask: RGL v2 fires onLayoutChange (which updates
-    // layoutRef) synchronously AFTER this callback returns, so we must wait.
-    queueMicrotask(() => { onLayoutChange(layoutRef.current, activeBreakpointRef.current); });
-    requestAnimationFrame(() => { interactingRef.current = false; });
-  }, [onLayoutChange]);
+  const handleDragStop = useCallback((layout: RGLLayoutArray, _oldItem: unknown, newItem: { i?: unknown } | null) => {
+    const id = typeof newItem?.i === 'string' ? newItem.i : undefined;
+    persistGesture(layout, id);
+  }, [persistGesture]);
 
   const handleResizeStart = useCallback(() => {
     interactingRef.current = true;
   }, []);
 
-  const handleResizeStop = useCallback(() => {
-    persistCountRef.current++;
-    // Defer persist to microtask: RGL v2 fires onLayoutChange (which updates
-    // layoutRef) synchronously AFTER this callback returns, so we must wait.
-    queueMicrotask(() => { onLayoutChange(layoutRef.current, activeBreakpointRef.current); });
-    requestAnimationFrame(() => { interactingRef.current = false; });
-  }, [onLayoutChange]);
+  const handleResizeStop = useCallback((layout: RGLLayoutArray, _oldItem: unknown, newItem: { i?: unknown } | null) => {
+    const id = typeof newItem?.i === 'string' ? newItem.i : undefined;
+    // An explicit user resize takes the widget out of auto-fit management —
+    // from here on its size is the user's choice, even if content overflows.
+    if (id !== undefined) autoFitIdsRef.current.delete(id);
+    persistGesture(layout, id);
+  }, [persistGesture]);
 
-  // Determine which breakpoint RGL is currently rendering for. Mirrors
-  // react-grid-layout's `getBreakpointFromWidth`: pick the largest
-  // breakpoint whose threshold is <= current container width. Falls back
-  // to xs (the smallest) when width is 0 / unknown.
-  const activeBreakpoint = useMemo(() => {
-    // Order from largest threshold to smallest so the first match wins.
-    const ordered = (Object.entries(GRID_BREAKPOINTS) as Array<[keyof typeof GRID_BREAKPOINTS, number]>)
-      .sort((a, b) => b[1] - a[1]);
-    for (const [bp, threshold] of ordered) {
-      if (width >= threshold) return bp;
-    }
-    return 'xs' as const;
-  }, [width]);
+  // ── Docked picker drops (WidgetPicker → grid) ───────────────────────────
+  //
+  // The picker writes our custom MIME on dragstart; anything else (text
+  // selections, files, cross-app drags) is rejected with `false` so no
+  // placeholder ever appears for it. Duplicates are rejected the same way.
+  // Sizes come from the registry default clamped to the active columns, so
+  // the placeholder previews the true footprint.
+  const handleDropDragOver = useCallback((event: ReactDragEvent) => {
+    // Browsers protect DataTransfer payloads during dragover; the same-page
+    // picker supplies the id until drop, when getData becomes readable.
+    const widgetId = event.dataTransfer?.getData(WIDGET_DND_MIME)
+      || (event.dataTransfer?.types?.includes(WIDGET_DND_MIME) ? getDraggedWidgetId?.() : null);
+    if (!widgetId || !onDropWidget) return false;
+    const def = getWidgetDef(widgetId);
+    if (!def || widgets.some((w) => w.widgetId === widgetId)) return false;
+    const cols = GRID_COLS[activeBreakpointRef.current];
+    return {
+      w: Math.min(def.defaultSize.cols, cols),
+      h: def.defaultSize.rows,
+    };
+  }, [getDraggedWidgetId, onDropWidget, widgets]);
+
+  const handleDrop = useCallback((_layout: RGLLayoutArray, item: { x?: unknown; y?: unknown; w?: unknown; h?: unknown } | undefined, event: Event) => {
+    const widgetId = (event as DragEvent).dataTransfer?.getData(WIDGET_DND_MIME) ?? '';
+    if (!widgetId || !item || !onDropWidget) return;
+    const def = getWidgetDef(widgetId);
+    if (!def || widgets.some((w) => w.widgetId === widgetId)) return;
+    const num = (value: unknown, fallback: number) =>
+      typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    onDropWidget(
+      widgetId,
+      {
+        x: num(item.x, 0),
+        y: num(item.y, 0),
+        w: num(item.w, def.defaultSize.cols),
+        h: num(item.h, def.defaultSize.rows),
+      },
+      activeBreakpointRef.current,
+    );
+  }, [onDropWidget, widgets]);
+
+  // Which breakpoint RGL is rendering. Seeded from — and always equal to —
+  // RGL's own `getBreakpointFromWidth` over the same `width` prop, via the
+  // shared `resolveBreakpointFromWidth` (strict `>`: at an exact threshold
+  // width `>=` would pick the larger breakpoint while RGL renders the
+  // smaller one). xs renders the flex-stack path instead of RGL.
+  const activeBreakpoint = useMemo(() => resolveBreakpointFromWidth(width), [width]);
   const isMobileStack = activeBreakpoint === 'xs';
   activeBreakpointRef.current = activeBreakpoint;
+
+  // ── Auto-fit newly added widgets to their content ──────────────────────
+  //
+  // A new widget must show all its data, not an internal scrollbar. After an
+  // add, each eligible panel is measured (scrollHeight vs clientHeight) and
+  // grown to fit, bounded by the widget's maxH. Fill-type widgets (maps,
+  // charts with h-full chains) report no overflow and keep default sizes —
+  // the measurement itself is the discriminator, no per-widget config.
+  //
+  // Triggers: MutationObserver per eligible panel (lazy chunks, data fetch,
+  // live updates) plus two settle passes (font/image loads don't mutate the
+  // DOM). ResizeObserver can't do this job — the panel box is grid-fixed, so
+  // content growth never resizes it. Only grows, never shrinks; user sizing
+  // (resize gesture, arrange size action) ends eligibility permanently.
+  const runAutoFitPass = useCallback(() => {
+    if (interactingRef.current || autoFitIdsRef.current.size === 0) return;
+    const root = containerRef.current;
+    if (!root) return;
+    const bp = activeBreakpointRef.current;
+    const marginY = compactMode ? 8 : GRID_MARGIN[1];
+    const current = layoutRef.current[bp] ?? [];
+    let grown: RGLLayout[] | null = null;
+    for (const id of autoFitIdsRef.current) {
+      const item = current.find((l) => l.i === id);
+      if (!item) continue;
+      // Widget ids are app-generated ([A-Za-z0-9-]) — safe to interpolate.
+      const panel = root.querySelector(`[data-widget-id="${id}"] > .widget-panel`);
+      if (!(panel instanceof HTMLElement)) continue;
+      const nestedOverflow = Array.from(panel.querySelectorAll<HTMLElement>('*')).reduce((largest, element) => {
+        const overflow = element.scrollHeight - element.clientHeight;
+        if (overflow <= 4) return largest;
+        const overflowY = getComputedStyle(element).overflowY;
+        return overflowY === 'auto' || overflowY === 'scroll'
+          ? Math.max(largest, overflow)
+          : largest;
+      }, 0);
+      const contentHeight = panel.clientHeight + Math.max(
+        panel.scrollHeight - panel.clientHeight,
+        nestedOverflow,
+      );
+      if (contentHeight <= panel.clientHeight + 4) continue;
+      const widget = widgets.find((w) => w.id === id);
+      const def = widget ? getWidgetDef(widget.widgetId) : undefined;
+      const maxH = item.maxH ?? def?.maxSize.rows ?? 20;
+      const hNew = Math.min(rowsForHeight(contentHeight, ROW_HEIGHT, marginY), maxH);
+      if (hNew <= item.h) continue;
+      grown ??= current.map((l) => ({ ...l }));
+      const target = grown.find((l) => l.i === id);
+      if (target) target.h = hNew;
+    }
+    if (!grown) return;
+    const merged: RGLLayouts = { ...layoutRef.current, [bp]: grown };
+    layoutRef.current = merged;
+    setLiveLayouts(merged);
+    onLayoutChange(merged, bp);
+  }, [compactMode, onLayoutChange, widgets]);
+
+  useEffect(() => {
+    if (prevDashboardIdRef.current !== dashboard.id) {
+      autoFitIdsRef.current.clear();
+      prevWidgetIdsRef.current = null;
+      prevDashboardIdRef.current = dashboard.id;
+    }
+    // Eligibility: ids present now but not on the previous run were added.
+    // The first run establishes the baseline (mount = loaded, not added).
+    const ids = new Set(widgets.map((w) => w.id));
+    if (prevWidgetIdsRef.current) {
+      for (const id of ids) {
+        if (!prevWidgetIdsRef.current.has(id)) autoFitIdsRef.current.add(id);
+      }
+      for (const id of [...autoFitIdsRef.current]) {
+        if (!ids.has(id)) autoFitIdsRef.current.delete(id);
+      }
+    }
+    prevWidgetIdsRef.current = ids;
+
+    const timers = fitTimersRef.current;
+    const observers = fitObserversRef.current;
+    const schedule = (ms: number) => {
+      timers.push(setTimeout(runAutoFitPass, ms));
+    };
+    if (
+      isMobileStack
+      || autoFitIdsRef.current.size === 0
+      || typeof MutationObserver === 'undefined'
+    ) {
+      return;
+    }
+    const root = containerRef.current;
+    if (root) {
+      for (const id of autoFitIdsRef.current) {
+        const panel = root.querySelector(`[data-widget-id="${id}"] > .widget-panel`);
+        if (!(panel instanceof HTMLElement)) continue;
+        const observer = new MutationObserver(() => schedule(60));
+        observer.observe(panel, { childList: true, subtree: true, characterData: true });
+        observers.push(observer);
+      }
+    }
+    // Settle passes: fonts/images shift scrollHeight without DOM mutations.
+    schedule(80);
+    schedule(800);
+    return () => {
+      for (const timer of timers.splice(0)) clearTimeout(timer);
+      for (const observer of observers.splice(0)) observer.disconnect();
+    };
+  }, [dashboard.id, widgets, isMobileStack, runAutoFitPass]);
 
   // Compute widget size from live layouts so widgets adapt during resize.
   // Reads from the *active* breakpoint's layout (not always lg) so widgets
@@ -276,14 +488,18 @@ export function DashboardGrid({
     );
     if (!result.changed) return false;
 
+    // Explicit size actions end auto-fit eligibility (moves don't — a moved
+    // widget still grows to fit unseen content).
+    if (action.startsWith('make-')) autoFitIdsRef.current.delete(instanceId);
+
     const nextLayouts = {
       ...layoutRef.current,
       [activeBreakpoint]: result.layout,
     };
+    // The parent's echo is recognized by content comparison,
+    // so no counter bookkeeping is needed here.
     layoutRef.current = nextLayouts;
     setLiveLayouts(nextLayouts);
-    persistCountRef.current += 1;
-    syncedCountRef.current = persistCountRef.current;
     onLayoutChange(nextLayouts, activeBreakpoint);
     return true;
   }, [activeBreakpoint, isMobileStack, liveLayouts, onLayoutChange, widgets]);
@@ -353,11 +569,13 @@ export function DashboardGrid({
     return (
       <div
         key={widget.id}
+        data-widget-id={widget.id}
         className={cn(
           'widget-container relative group',
           // Mobile: become a flex column so the GlassPanel + nested
           // `h-full` widget content resolve to the wrapper's min-height.
           mobile && 'flex flex-col min-h-[12rem]',
+          widget.id === droppedId && 'widget-just-dropped',
         )}
       >
         {/* Edit mode chrome provides both drag handles and discrete layout controls. */}
@@ -397,7 +615,10 @@ export function DashboardGrid({
 
         <GlassPanel
           className={cn(
-            'w-full overflow-y-auto rounded-xl',
+            // `widget-panel`: stable inner target for the edit-mode wobble.
+            // (RGL v2 merges `react-grid-item` onto the container root, so
+            // transform animations must live here, not on the item.)
+            'widget-panel w-full overflow-y-auto rounded-xl',
             mobile ? 'flex-1 min-h-0' : 'h-full',
             showWidgetBorders && 'border border-[var(--border-subtle)]',
             panelStyle && 'kiosk-panel',
@@ -428,7 +649,7 @@ export function DashboardGrid({
   }, [
     t, editMode, getWidgetSizeLive, dashboardVehicleId, panelStyle,
     showWidgetBorders, onRemoveWidget, onOpenSettings, arrangeWidget,
-    getArrangeAvailability,
+    getArrangeAvailability, droppedId,
   ]);
 
   return (
@@ -475,8 +696,11 @@ export function DashboardGrid({
           rowHeight={ROW_HEIGHT}
           dragConfig={dragConfig}
           resizeConfig={resizeConfig}
+          dropConfig={dropConfig}
+          droppingItem={DROPPING_ITEM}
+          onDrop={handleDrop}
+          onDropDragOver={handleDropDragOver}
           compactor={verticalCompactor}
-          onLayoutChange={handleLayoutChange}
           onDragStart={handleDragStart}
           onDragStop={handleDragStop}
           onResizeStart={handleResizeStart}

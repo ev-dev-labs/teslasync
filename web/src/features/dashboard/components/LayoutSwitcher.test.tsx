@@ -103,7 +103,6 @@ interface SetupOpts {
   withPin?: boolean;
   withRename?: boolean;
   withDelete?: boolean;
-  withTemplates?: boolean;
   withSettings?: boolean;
   vehicleId?: number | null;
   vehicles?: Vehicle[];
@@ -149,7 +148,7 @@ function setup(opts: SetupOpts = {}) {
       onRename={opts.withRename === false ? undefined : handlers.onRename}
       onDelete={opts.withDelete === false ? undefined : handlers.onDelete}
       onReorder={handlers.onReorder}
-      onOpenTemplates={opts.withTemplates === false ? undefined : handlers.onOpenTemplates}
+      onOpenTemplates={handlers.onOpenTemplates}
       onOpenSettings={opts.withSettings === false ? undefined : handlers.onOpenSettings}
     />,
   );
@@ -555,16 +554,14 @@ describe('LayoutSwitcher', () => {
     expect(screen.getByRole('menuitem', { name: 'Delete layout' })).toBeDisabled();
   });
 
-  it('creates a blank layout with the typed name', () => {
-    promptSpy.mockReturnValue('Fresh Board');
-    const { onCreate } = setup();
+  it('opens the named creation flow with blank selected', () => {
+    const { onCreate, onOpenTemplates } = setup();
 
     openMenu();
     fireEvent.click(screen.getByRole('menuitem', { name: 'New blank layout' }));
 
-    expect(promptSpy).toHaveBeenCalledWith('Name for the new layout:', 'New Layout');
-    expect(onCreate).toHaveBeenCalledTimes(1);
-    expect(onCreate).toHaveBeenCalledWith('Fresh Board');
+    expect(onOpenTemplates).toHaveBeenCalledWith('__blank__');
+    expect(onCreate).not.toHaveBeenCalled();
   });
 
   it('opens templates and settings from the menu', () => {
