@@ -433,15 +433,15 @@ describe('offline navigation fallback', () => {
     expect(matchPrecache).toHaveBeenCalledWith('offline.html')
   })
 
-  it('uses the cached root app shell for an uncached route when navigation fails', async () => {
-    const root = new Response('<html>app</html>', {
+  it('uses a previously visited app shell for an uncached route when navigation fails', async () => {
+    const shell = new Response('<html><div id="root"></div></html>', {
       status: 200, headers: { 'content-type': 'text/html' },
     })
     const cache = await cacheStorage.open(cacheName('navigations'))
-    await cache.put(`${ORIGIN}/`, root)
+    await cache.put(`${ORIGIN}/onboarding`, shell)
     const handler = await catchHandler()
     const response = await handler({ request: { destination: 'document' } })
-    expect(response).toBe(root)
+    expect(response).toBe(shell)
     const { matchPrecache } = await import('workbox-precaching')
     expect(matchPrecache).not.toHaveBeenCalled()
   })
@@ -455,6 +455,16 @@ describe('offline navigation fallback', () => {
     expect(await (await handler({ request: { destination: 'document' } })).text()).toBe('offline')
   })
 
+  it('never reuses a cached login document without the SPA root', async () => {
+    const cache = await cacheStorage.open(cacheName('navigations'))
+    await cache.put(`${ORIGIN}/login`, new Response('<html>Sign in</html>', {
+      status: 200, headers: { 'content-type': 'text/html' },
+    }))
+    const { matchPrecache } = await import('workbox-precaching')
+    vi.mocked(matchPrecache).mockResolvedValueOnce(new Response('offline'))
+    const handler = await catchHandler()
+    expect(await (await handler({ request: { destination: 'document' } })).text()).toBe('offline')
+  })
   it('keeps network-error behaviour for non-document requests', async () => {
     const handler = await catchHandler()
     const response = await handler({ request: { destination: 'image' } })

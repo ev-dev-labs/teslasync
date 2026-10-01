@@ -254,8 +254,8 @@ registerRoute(
 // ── Offline navigation fallback ──────────────────────────────────────────────
 // A cold offline launch (nothing cached yet) would otherwise end on the
 // browser's dead-end error page. A visited SPA route can also miss the
-// navigation cache when its exact URL differs from the cached root URL.
-// Reuse the root's runtime-cached shell in that case so the app can render
+// navigation cache when its exact URL differs from previously visited URLs.
+// Reuse a runtime-cached app shell in that case so the app can render
 // the requested route and its offline banner. Never precache index.html:
 // a network response, including a ForwardAuth redirect, still wins.
 //
@@ -268,10 +268,13 @@ registerRoute(
 setCatchHandler(async ({ request }) => {
   if (request.destination === 'document') {
     const navigations = await self.caches.open(cacheName('navigations'))
-    const root = await navigations.match(new URL('/', self.location.origin).href)
-    if (root?.status === 200 && !root.redirected
-      && root.headers.get('content-type')?.includes('text/html')) {
-      return root
+    for (const cachedRequest of (await navigations.keys()).reverse()) {
+      const shell = await navigations.match(cachedRequest)
+      if (shell?.status === 200 && !shell.redirected
+        && shell.headers.get('content-type')?.includes('text/html')
+        && (await shell.clone().text()).includes('<div id="root"></div>')) {
+        return shell
+      }
     }
     return (await matchPrecache('offline.html')) ?? Response.error()
   }
