@@ -423,7 +423,10 @@ test('repairs oversized saved panels without undoing an explicit resize', async 
   await restored.waitForTimeout(2500)
   expect((await readLayouts(restored)).md.find((item) => item.i === saved.bloatedId)?.h)
     .toBe(healed.md.find((item) => item.i === saved.bloatedId)?.h)
-  const reloaded = await page.context().newPage()
+  const context = page.context()
+  await restored.close()
+  await page.close()
+  let reloaded = await context.newPage()
   await seedBrowserState(reloaded, 'dark', '/', { preserveDashboardState: true })
   const reloadedApi = await installApiMocks(reloaded, 'populated')
   await reloaded.goto('/', { waitUntil: 'domcontentloaded' })
@@ -431,12 +434,16 @@ test('repairs oversized saved panels without undoing an explicit resize', async 
   expect((await readLayouts(reloaded)).md.find((item) => item.i === saved.bloatedId)?.h)
     .toBe(healed.md.find((item) => item.i === saved.bloatedId)?.h)
   for (const width of [320, 390, 480, 481, 768, 996, 1024, 1200, 1440, 1920]) {
+    await reloaded.close()
+    reloaded = await context.newPage()
     await reloaded.setViewportSize({ width, height: 900 })
-    await reloaded.reload({ waitUntil: 'domcontentloaded' })
-    await waitForHarnessReady(reloaded, reloadedApi)
+    await seedBrowserState(reloaded, 'dark', '/', { preserveDashboardState: true })
+    const viewportApi = await installApiMocks(reloaded, 'populated')
+    await reloaded.goto('/', { waitUntil: 'domcontentloaded' })
+    await waitForHarnessReady(reloaded, viewportApi)
     const panel = reloaded.locator(`[data-widget-id="${saved.bloatedId}"] .widget-panel`)
     await expect.poll(() => panel.evaluate((element) => element.getBoundingClientRect().height), {
-      message: `oversized saved panel should not return after resizing and refreshing at ${width}px`,
+      message: `oversized saved panel should not return after reopening at ${width}px`,
     }).toBeLessThan(1300)
     await expect.poll(() => panel.evaluate((element) => element.scrollHeight - element.clientHeight), {
       message: `repaired widget content should fit at ${width}px`,
@@ -446,7 +453,6 @@ test('repairs oversized saved panels without undoing an explicit resize', async 
     for (const items of Object.values(layouts)) expect(countOverlaps(items)).toBe(0)
   }
   await reloaded.close()
-  await restored.close()
 })
 
 test('repairs oversized layouts restored from the server and syncs the healed size', async ({ page }) => {
