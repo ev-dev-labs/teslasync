@@ -25,7 +25,7 @@ import {
 } from '@/components/ui';
 import {
   MetricBar, InlineMetric, AnimatedNumber, MetricCard, KVList,
-  LiveIndicator, DateTime, DataProvenanceBadge,
+  DateTime, DataProvenanceBadge,
 } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
 import {
@@ -406,7 +406,6 @@ export default function ChargingDetailPage() {
       query={sessionQuery}
       actions={
         <div data-print-hide className="flex flex-wrap items-center gap-2">
-          <LiveIndicator variant="compact" />
           {id && (
             <Button
               variant="ghost"

@@ -13,9 +13,11 @@ interface Tab {
 }
 
 /**
- * Top-5 most-trafficked routes per MOBILE_GUIDELINES.md. Mirrors the
- * navigation a Tesla owner reaches for from their phone:
- * Dashboard → Drives → Charging → Battery → Map.
+ * Top-5 most-trafficked routes per MOBILE_GUIDELINES.md, plus a More tab.
+ * Mirrors the navigation a Tesla owner reaches for from their phone:
+ * Dashboard → Drives → Charging → Battery → Map → More. More opens the
+ * Explore catalogue (search + per-section bands) so the ~200 pages outside
+ * the bar stay reachable without opening the full sidebar drawer.
  */
 const TABS: Tab[] = [
   { path: '/',         icon: navRouteIcons['/'],         i18nKey: 'nav.mobileHome',     fallback: 'Home' },
@@ -23,6 +25,7 @@ const TABS: Tab[] = [
   { path: '/charging', icon: navRouteIcons['/charging'], i18nKey: 'nav.mobileCharging', fallback: 'Charging' },
   { path: '/battery',  icon: navRouteIcons['/battery'],  i18nKey: 'nav.mobileBattery',  fallback: 'Battery' },
   { path: '/live',     icon: navRouteIcons['/live'],     i18nKey: 'nav.mobileMap',      fallback: 'Map' },
+  { path: '/explore',  icon: navRouteIcons['/explore'],  i18nKey: 'nav.mobileMore',     fallback: 'More' },
 ];
 
 /** Paths shown in the bottom tab bar — used to de-emphasize sidebar duplicates on mobile */

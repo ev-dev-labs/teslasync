@@ -105,11 +105,11 @@ export default function InstallPrompt() {
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={reduce ? false : { opacity: 0, y: 60 }}
+          initial={reduce ? false : { opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={reduce ? { opacity: 0 } : { opacity: 0, y: 60 }}
+          exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
           transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 30 }}
-          className="fixed inset-x-3 bottom-[calc(var(--shell-chrome-bottom)+0.5rem)] z-[9998] mx-auto max-w-md xl:inset-x-auto xl:right-4 xl:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] xl:w-[28rem]"
+          className="mb-4 max-w-md"
         >
           <div
             role="status"

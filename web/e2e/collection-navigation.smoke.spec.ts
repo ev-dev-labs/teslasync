@@ -79,8 +79,11 @@ for (const width of [390, 1440]) {
       await captureDeck(page, testInfo, 'deck-section')
       await nav.getByRole('link', { name: 'Drive DNA' }).dblclick()
       await expect(nav.getByRole('button', { name: 'Unpin Drive DNA' })).toBeVisible()
-      await expect(nav.getByRole('link', { name: 'Quick access: Drive DNA' })).toBeVisible()
-      await nav.getByRole('button', { name: 'Remove Drive DNA from quick access' }).click()
+      await expect(nav.getByRole('link', { name: 'Quick access: Drive DNA' })).toBeHidden()
+      await nav.getByRole('button', { name: 'Quick access pins' }).click()
+      // The current page remains in its canonical group, not duplicated as a quick pin.
+      await expect(nav.getByRole('link', { name: 'Quick access: Drive DNA' })).toHaveCount(0)
+      await nav.getByRole('button', { name: 'Unpin Drive DNA' }).click()
       await expect(nav.getByRole('link', { name: 'Quick access: Drive DNA' })).toHaveCount(0)
       const regen = nav.getByRole('link', { name: 'Regen Braking', exact: true })
       const pinRegen = nav.getByRole('button', { name: 'Pin Regen Braking to favorites' })

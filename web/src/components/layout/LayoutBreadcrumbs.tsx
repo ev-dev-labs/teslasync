@@ -15,7 +15,9 @@ import { sidebarBreadcrumbs, type BreadcrumbSection } from './sidebar/sidebarBre
  * resolves the full parent chain via `useBreadcrumbs`. `<Breadcrumbs>`
  * renders every registered route, including a one-item chain for top-level
  * pages. This component owns the complete top bar so routes that are not
- * sidebar entries still receive the same breadcrumb and quick-jump hint.
+ * sidebar entries still receive the same breadcrumb row. The command-palette
+ * shortcut hint lives on the `<CommandPaletteTrigger>` kbd badge instead of
+ * floating here.
  */
 interface LayoutBreadcrumbsProps {
   className?: string;
@@ -48,11 +50,6 @@ export function LayoutBreadcrumbs({
       )}
     >
       <Breadcrumbs items={items} className={className} />
-      {!workspace && (
-        <p className="hidden shrink-0 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-1)] px-2.5 py-1 text-xs text-[var(--text-muted)] shadow-e1 xl:block">
-          {t('nav.quickSearchHint', 'Ctrl+K to jump')}
-        </p>
-      )}
     </div>
   );
 }

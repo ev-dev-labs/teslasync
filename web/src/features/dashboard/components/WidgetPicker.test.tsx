@@ -1,11 +1,11 @@
 /**
  * WidgetPicker tests.
  *
- * WidgetPicker is the slide-in drawer for adding widgets to a dashboard. It is
+ * WidgetPicker is the in-flow dock for adding widgets to a dashboard. It is
  * a controlled component over the widget registry, so the
  * tests exercise its full behaviour contract rather than a smoke render:
  *
- *   - Visibility: renders nothing when closed, a labelled dialog when open.
+ *   - Visibility: renders nothing when closed, a labelled complementary panel when open.
  *   - Search: filters the flat list, shows a result-count header, an empty
  *     state for no matches, and matches by name/description/category.
  *   - Category pills: narrow the grouped view.
@@ -86,14 +86,15 @@ afterEach(() => {
 describe('WidgetPicker', () => {
   it('renders nothing when closed', () => {
     renderPicker({ open: false });
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('complementary')).toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
   it('renders only widgets in the labelled catalogue, not layout templates', () => {
     renderPicker();
 
-    expect(screen.getByRole('dialog', { name: 'Add Widget' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Add Widget' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Add Widget' })).toBeNull();
     expect(screen.getByRole('textbox', { name: /search widgets/i })).toBeInTheDocument();
 
     // "All" is the default-selected category filter.
@@ -125,7 +126,7 @@ describe('WidgetPicker', () => {
 
     expect(onAddWidgets).toHaveBeenCalledTimes(1);
     expect(onAddWidgets).toHaveBeenCalledWith(['battery-gauge']);
-    // A plain click adds without dismissing the drawer.
+    // A plain click adds without dismissing the dock.
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -181,7 +182,7 @@ describe('WidgetPicker', () => {
     ).toBeNull();
   });
 
-  it('Escape clears a non-empty search instead of closing the drawer', () => {
+  it('Escape clears a non-empty search instead of closing the dock', () => {
     const { onClose } = renderPicker();
     const input = screen.getByRole('textbox', { name: /search widgets/i }) as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'range' } });
@@ -193,7 +194,7 @@ describe('WidgetPicker', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('Escape on an already-empty search bubbles up to close the drawer', () => {
+  it('Escape on an already-empty search bubbles up to close the dock', () => {
     const { onClose } = renderPicker();
     const input = screen.getByRole('textbox', { name: /search widgets/i }) as HTMLInputElement;
     expect(input.value).toBe('');
@@ -228,7 +229,7 @@ describe('WidgetPicker', () => {
     expect(ids).not.toContain('range-estimate');
   });
 
-  it('Ctrl+Enter on a widget card adds it and closes the drawer', () => {
+  it('Ctrl+Enter on a widget card adds it and closes the dock', () => {
     const { onAddWidgets, onClose } = renderPicker();
     fireEvent.keyDown(widgetCard(BATTERY_GAUGE_DESC), { key: 'Enter', ctrlKey: true });
 
@@ -275,16 +276,24 @@ describe('WidgetPicker', () => {
     expect(screen.queryByText('Recently Added')).toBeNull();
   });
 
-  it('renders a hover-revealed footprint preview per addable card', () => {
+  it('keeps the footprint inline, without a hover preview', () => {
     renderPicker();
-    const preview = screen.getByTestId('widget-footprint-preview-range-estimate');
-    expect(preview).toHaveClass('hidden');
-    expect(preview).toHaveClass('group-hover:block');
-    expect(preview).toHaveClass('group-focus-within:block');
+    expect(widgetCard(BATTERY_GAUGE_DESC)).toHaveAttribute('draggable', 'true');
+    expect(screen.queryByTestId('widget-footprint-preview-range-estimate')).toBeNull();
   });
 
-  it('omits the footprint preview for already-added widgets', () => {
-    renderPicker({ activeWidgetIds: ['range-estimate'] });
-    expect(screen.queryByTestId('widget-footprint-preview-range-estimate')).toBeNull();
+  it('transfers the widget id on drag and rejects dragging an already-added card', () => {
+    const start = vi.fn();
+    const end = vi.fn();
+    const { rerender, onClose, onAddWidgets } = renderPicker({ onDragWidgetStart: start, onDragWidgetEnd: end });
+    const transfer = { setData: vi.fn(), effectAllowed: '' };
+    fireEvent.dragStart(widgetCard(BATTERY_GAUGE_DESC), { dataTransfer: transfer });
+    expect(transfer.setData).toHaveBeenCalledWith('application/x-teslasync-widget', 'battery-gauge');
+    expect(transfer.effectAllowed).toBe('copy');
+    expect(start).toHaveBeenCalledWith('battery-gauge');
+    fireEvent.dragEnd(widgetCard(BATTERY_GAUGE_DESC));
+    expect(end).toHaveBeenCalledTimes(1);
+    rerender(<WidgetPicker open onClose={onClose} onAddWidgets={onAddWidgets} activeWidgetIds={['battery-gauge']} />);
+    expect(widgetCard(BATTERY_GAUGE_DESC)).toHaveAttribute('draggable', 'false');
   });
 });

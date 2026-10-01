@@ -89,4 +89,29 @@ describe('EmptyState', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
+
+  it('renders a secondary CTA beside the primary and wires both handlers', () => {
+    const onPrimary = vi.fn();
+    const onSecondary = vi.fn();
+    renderInRouter(
+      <EmptyState
+        message="Nothing yet"
+        action={{ label: 'Primary path', onClick: onPrimary }}
+        secondaryAction={{ label: 'Other path', onClick: onSecondary }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /primary path/i }));
+    fireEvent.click(screen.getByRole('button', { name: /other path/i }));
+    expect(onPrimary).toHaveBeenCalledTimes(1);
+    expect(onSecondary).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a lone secondary CTA without requiring a primary', () => {
+    const onSecondary = vi.fn();
+    renderInRouter(
+      <EmptyState message="Nothing yet" secondaryAction={{ label: 'Other path', onClick: onSecondary }} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /other path/i }));
+    expect(onSecondary).toHaveBeenCalledTimes(1);
+  });
 });

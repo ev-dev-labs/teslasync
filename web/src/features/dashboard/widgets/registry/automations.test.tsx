@@ -25,7 +25,7 @@
  *
  * Network is never touched: the automation hooks are mocked and driven per test.
  * `@testing-library/user-event` is not installed in this repo (repo convention —
- * see LayoutManager.test / EditableText.test), so interactions use `fireEvent`.
+ * see EditableText.test), so interactions use `fireEvent`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';

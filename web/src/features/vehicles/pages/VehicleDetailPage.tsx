@@ -5,7 +5,7 @@ import { Activity, AlertCircle } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, PanelTitle, SectionTitle } from '@/components/ui'
-import { DataProvenanceBadge, LiveIndicator } from '@/components/data-display'
+import { DataProvenanceBadge } from '@/components/data-display'
 import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton, QueryError, EmptyState } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 
@@ -231,7 +231,6 @@ export default function VehicleDetailPage() {
             status={stateDataState.status}
             updatedAt={stateDataState.updatedAt}
           />
-          <LiveIndicator variant="compact" />
         </div>
       }
     >

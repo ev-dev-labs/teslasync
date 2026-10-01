@@ -64,6 +64,25 @@ export interface AtlasPanelProps {
   collections?: readonly SectionGroup[]
 }
 
+const QUICK_PINS_OPEN_KEY = 'teslasync-deck-quick-pins-open'
+const RECENT_OPEN_KEY = 'teslasync-deck-recent-open'
+
+function readExpanded(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function persistExpanded(key: string, expanded: boolean): void {
+  try {
+    window.localStorage.setItem(key, String(expanded))
+  } catch {
+    // Private browsing can disallow storage; expansion still works for this mount.
+  }
+}
+
 export function AtlasPanel({
   variant,
   collapsed = false,
@@ -239,9 +258,14 @@ export function AtlasPanel({
       .filter(group => group.entries.length > 0)
     : sectionGroups.map(group => ({ ...group, groupKey: group.entries[0].to }))
   const sectionPaths = new Set(sectionGroups.flatMap(group => group.entries.map(entry => entry.to)))
+  // The current page already renders highlighted in its group below, so it
+  // is excluded here — every destination shows exactly once per surface.
   const quickPins = openSection
-    ? safePinnedItems.filter(item => sectionPaths.has(item.to))
+    ? safePinnedItems.filter(item => sectionPaths.has(item.to) && !itemIsActive(item.to))
     : []
+  // Filtering forces pins open without overwriting the stored preference.
+  const [quickPinsOpen, setQuickPinsOpen] = useState(() => readExpanded(QUICK_PINS_OPEN_KEY))
+  const [recentOpen, setRecentOpen] = useState(() => readExpanded(RECENT_OPEN_KEY))
   const collapsibleGroupKeys = sectionGroups.filter(group => group.label).map(group => group.entries[0].to)
   const activeGroupKey = sectionGroups.find(group =>
     group.label && group.entries.some(entry => itemIsActive(entry.to)),
@@ -446,8 +470,41 @@ export function AtlasPanel({
               <div>
                 {compact
                   ? <div role="separator" aria-label={t('nav.recentlyUsed', 'Recently Used')} className="mx-2 my-2 border-t border-[var(--border-default)]" />
-                  : <NavSectionHeader label={t('nav.recentlyUsed', 'Recently Used')} />}
-                <div className="space-y-px">
+                  : (
+                    <NavSectionHeader
+                      label={t('nav.recentlyUsed', 'Recently Used')}
+                      action={(
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          aria-expanded={recentOpen}
+                          aria-controls={`${groupListId}-recent`}
+                          aria-label={recentOpen
+                            ? t('nav.deck.collapseRecent', 'Hide recently used')
+                            : t('nav.deck.expandRecent', 'Show recently used')}
+                          title={recentOpen
+                            ? t('nav.deck.collapseRecent', 'Hide recently used')
+                            : t('nav.deck.expandRecent', 'Show recently used')}
+                          onClick={() => {
+                            const next = !recentOpen
+                            setRecentOpen(next)
+                            persistExpanded(RECENT_OPEN_KEY, next)
+                          }}
+                          className="h-7 w-7 shrink-0 rounded-shape-sm p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                        >
+                          {recentOpen
+                            ? <Icons.expand className="h-4 w-4" aria-hidden />
+                            : <Icons.next className="h-4 w-4 rtl:rotate-180" aria-hidden />}
+                        </Button>
+                      )}
+                    />
+                  )}
+                <div
+                  id={`${groupListId}-recent`}
+                  hidden={!compact && !recentOpen}
+                  className="space-y-px"
+                >
                   {visibleRecent.map(item => (
                     <SidebarRow
                       key={`recent-${item.to}`}
@@ -511,46 +568,69 @@ export function AtlasPanel({
             {openSection && (!filtering || quickPins.length > 0) && (!compact || quickPins.length > 0) && (
               <div className="pb-3">
                 {!compact && (
-                  <div className="flex items-center justify-between gap-2 px-2 py-2">
-                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-                      <Icons.pin className="h-4 w-4 text-amber-500" aria-hidden />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-expanded={filtering || quickPinsOpen}
+                    aria-controls={`${groupListId}-quick-pins`}
+                    title={filtering || quickPinsOpen
+                      ? t('nav.deck.collapseQuickPins', 'Hide quick access pins')
+                      : t('nav.deck.expandQuickPins', 'Show quick access pins')}
+                    onClick={() => {
+                      const next = !quickPinsOpen
+                      setQuickPinsOpen(next)
+                      persistExpanded(QUICK_PINS_OPEN_KEY, next)
+                    }}
+                    className="min-h-11 w-full justify-start gap-2 rounded-shape-md px-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                  >
+                    {filtering || quickPinsOpen
+                      ? <Icons.expand className="h-4 w-4 shrink-0" aria-hidden />
+                      : <Icons.next className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden />}
+                    <Icons.pin className="h-4 w-4 text-amber-500" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate text-start text-xs font-semibold uppercase tracking-wide">
                       {t('nav.deck.quickAccessPins', 'Quick access pins')}
                     </span>
-                    <span className="text-2xs text-[var(--text-muted)]">
-                      {t('nav.deck.pinHint', 'Pin pages to save')}
+                    <span aria-hidden className="rounded-full bg-[var(--surface-3)] px-2 py-0.5 text-2xs tabular-nums text-[var(--text-secondary)]">
+                      {quickPins.length}
                     </span>
-                  </div>
+                  </Button>
                 )}
-                {quickPins.length === 0 && !compact && (
-                  <p className="px-2 py-2 text-xs text-[var(--text-muted)]">
-                    {t('nav.deck.noQuickPins', 'Pin a page below to keep it close.')}
-                  </p>
-                )}
-                <AnimatePresence initial={false}>
-                  {quickPins.map(item => (
-                    <motion.div
-                      key={item.to}
-                      initial={reduce ? false : { opacity: 0, y: -6, scale: 0.97 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={reduce ? undefined : { opacity: 0, y: -6, scale: 0.97 }}
-                      transition={{ duration: durationMs / 1000 }}
-                    >
-                      <SidebarRow
-                        to={item.to}
-                        label={navLabel(item)}
-                        ariaLabel={t('nav.deck.quickAccessLink', { page: navLabel(item), defaultValue: 'Quick access: {{page}}' })}
-                        icon={item.icon}
-                        active={false}
-                        onSelect={onItemSelect}
-                        compact={compact}
-                        onShowTip={showTip}
-                        onHideTip={hideTip}
-                        actionAlwaysVisible
-                        hoverAction={pinActionFor(item, navLabel(item), true)}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                <div
+                  id={`${groupListId}-quick-pins`}
+                  hidden={!compact && !filtering && !quickPinsOpen}
+                >
+                  {quickPins.length === 0 && !compact && (
+                    <p className="px-2 py-2 text-xs text-[var(--text-muted)]">
+                      {t('nav.deck.noQuickPins', 'Pin a page below to keep it close.')}
+                    </p>
+                  )}
+                  <AnimatePresence initial={false}>
+                    {quickPins.map(item => (
+                      <motion.div
+                        key={item.to}
+                        initial={reduce ? false : { opacity: 0, y: -6, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={reduce ? undefined : { opacity: 0, y: -6, scale: 0.97 }}
+                        transition={{ duration: durationMs / 1000 }}
+                      >
+                        <SidebarRow
+                          to={item.to}
+                          label={navLabel(item)}
+                          ariaLabel={t('nav.deck.quickAccessLink', { page: navLabel(item), defaultValue: 'Quick access: {{page}}' })}
+                          icon={item.icon}
+                          active={false}
+                          onSelect={onItemSelect}
+                          compact={compact}
+                          onShowTip={showTip}
+                          onHideTip={hideTip}
+                          actionAlwaysVisible
+                          hoverAction={pinActionFor(item, navLabel(item), true)}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
               </div>
             )}
             {filtering && visibleGroups.length === 0 && (

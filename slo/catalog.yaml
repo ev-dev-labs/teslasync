@@ -84,6 +84,16 @@ slos:
     owner: notifications
     tags: [http, ai, alerts]
 
+  - name: dashboard_widget_ai_availability
+    description: "Opt-in Helix personal dashboard widget proposals must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ai/dashboard/widgets/draft\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/ai/dashboard/widgets/draft\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, ai, dashboard]
+
   - name: api_availability
     description: "HTTP request success ratio across /api/v1/. Counts non-5xx responses as good events."
     sli:

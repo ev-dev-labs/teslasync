@@ -469,9 +469,10 @@ describe('DrivesListPage — populated (km)', () => {
     expect(within(brief).getByText('4 of 4 drives have measured energy and sufficient distance.'))
       .toBeInTheDocument();
     expect(within(brief).getByText('100%')).toBeInTheDocument();
-    expect(
-      within(brief).getByRole('button', { name: /Source: Drive history/ }),
-    ).toBeInTheDocument();
+    // Freshness lives in the page header; the brief keeps provenance only.
+    const header = document.querySelector('header') as HTMLElement;
+    expect(within(header).getByText('just now')).toBeInTheDocument();
+    expect(within(brief).queryByRole('button', { name: /Source: / })).toBeNull();
     expect(within(brief).getByRole('button', { name: 'Compare drives' })).toBeInTheDocument();
   });
 

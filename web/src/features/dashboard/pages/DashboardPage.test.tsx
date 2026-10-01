@@ -22,7 +22,7 @@
  *                   catalogue (fake-timer path).
  *  10. CATALOGUE  — adding from the catalogue calls addWidgets + marks onboarding.
  *  11. PALETTE    — the command-palette CustomEvent bridge (add/toggle/reset).
- *  12. KIOSK      — kiosk surface renders and the FAB is hidden.
+ *  12. KIOSK      — kiosk surface replaces the standard dashboard.
  *  13. URL IMPORT — a `#import=` share hash opens the import modal with the
  *                   decoded payload.
  *
@@ -66,6 +66,7 @@ const h = vi.hoisted(() => {
     getWidgetSize: vi.fn(() => ({ cols: 1, rows: 1 })),
     switchDashboard: vi.fn(),
     createDashboard: vi.fn(),
+    createDashboardFromWidgets: vi.fn(),
     renameDashboard: vi.fn(),
     deleteDashboard: vi.fn(),
     reorderDashboards: vi.fn(),
@@ -211,11 +212,23 @@ vi.mock('../components/DashboardGrid', () => ({
       <button type="button" data-testid="grid-open-settings" onClick={() => props.onOpenSettings('w-hero')}>
         open settings
       </button>
+      <button type="button" data-testid="grid-add-widgets" onClick={() => props.onAddWidgets?.()}>
+        add widgets
+      </button>
+      <button type="button" data-testid="grid-browse-templates" onClick={() => props.onBrowseTemplates?.()}>
+        browse templates
+      </button>
     </div>
   ),
 }));
 vi.mock('../components/WidgetPicker', () => ({
-  WidgetPicker: (props: any) => (props.open ? <div data-testid="widget-picker" /> : null),
+  WidgetPicker: (props: any) => (props.open
+    ? <div data-testid="widget-picker">
+        <button type="button" data-testid="picker-add" onClick={() => props.onAddWidgets(['battery-gauge'])}>
+          add
+        </button>
+      </div>
+    : null),
 }));
 vi.mock('../components/WidgetSettingsModal', () => ({
   WidgetSettingsModal: (props: any) =>
@@ -230,14 +243,15 @@ vi.mock('../components/WidgetSettingsModal', () => ({
       </div>
     ) : null,
 }));
-vi.mock('../components/LayoutManager', () => ({
-  LayoutManager: () => <div data-testid="layout-manager" />,
-}));
 vi.mock('../components/LayoutSwitcher', () => ({
   LayoutSwitcher: () => <div data-testid="layout-switcher" />,
 }));
 vi.mock('../components/TemplateGallery', () => ({
-  TemplateGallery: (props: any) => (props.open ? <div data-testid="template-gallery" /> : null),
+  TemplateGallery: (props: any) => (props.open
+    ? <div data-testid="template-gallery">
+        <button type="button" onClick={() => props.onApply('__helix__', 'Charging Desk', ['charge-status'])}>Create Helix layout</button>
+      </div>
+    : null),
 }));
 vi.mock('../components/ExportModal', () => ({
   ExportModal: (props: any) => (props.open ? <div data-testid="export-modal" /> : null),
@@ -251,21 +265,6 @@ vi.mock('../components/DashboardSettingsModal', () => ({
 }));
 vi.mock('../components/KioskSettingsModal', () => ({
   KioskSettingsModal: (props: any) => (props.open ? <div data-testid="kiosk-settings" /> : null),
-}));
-vi.mock('../components/AddWidgetButton', () => ({
-  AddWidgetButton: (props: any) => (
-    <button type="button" data-testid="add-widget-fab" onClick={props.onClick} />
-  ),
-}));
-vi.mock('../components/WidgetCatalogueDialog', () => ({
-  WidgetCatalogueDialog: (props: any) =>
-    props.open ? (
-      <div data-testid="widget-catalogue">
-        <button type="button" data-testid="cat-add" onClick={() => props.onAdd('battery-gauge')}>
-          add
-        </button>
-      </div>
-    ) : null,
 }));
 import DashboardPage from './DashboardPage';
 import { toUrlSafeBase64 } from '../hooks/validateImport';
@@ -398,16 +397,14 @@ describe('DashboardPage — shell', () => {
     h.layout.dashboards = [];
     renderPage();
     expect(screen.queryByTestId('layout-switcher')).toBeNull();
-    expect(screen.queryByTestId('layout-manager')).toBeNull();
   });
 
-  it('renders the layout switcher and manager when dashboards exist', () => {
+  it('renders the layout switcher when dashboards exist', () => {
     h.layout.dashboards = [
       { id: 'd1', name: 'Main', widgets: [], layouts: {}, createdAt: '', updatedAt: '' },
     ];
     renderPage();
     expect(screen.getByTestId('layout-switcher')).toBeInTheDocument();
-    expect(screen.getByTestId('layout-manager')).toBeInTheDocument();
   });
 });
 
@@ -557,6 +554,24 @@ describe('DashboardPage — widget settings flow', () => {
   });
 });
 
+describe('DashboardPage — empty-grid guidance', () => {
+  it('wires the empty-state CTAs to the docked picker and template gallery', () => {
+    renderPage();
+    fireEvent.click(screen.getByTestId('grid-add-widgets'));
+    expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('grid-browse-templates'));
+    expect(screen.getByTestId('template-gallery')).toBeInTheDocument();
+  });
+
+  it('creates the Helix-proposed widget set only after confirmation', () => {
+    renderPage();
+    fireEvent.click(screen.getByTestId('grid-browse-templates'));
+    expect(h.layout.createDashboardFromWidgets).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Create Helix layout' }));
+    expect(h.layout.createDashboardFromWidgets).toHaveBeenCalledWith('Charging Desk', ['charge-status']);
+  });
+});
+
 describe('DashboardPage — banners', () => {
   it('uses the shared safe error state without exposing backend details', () => {
     h.vehicles = makeQuery({ data: undefined, error: new Error('Boom'), isError: true });
@@ -647,7 +662,7 @@ describe('DashboardPage — customize hint', () => {
       });
       expect(screen.getByText(/You can customize this dashboard/i)).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Add widgets' }));
-      expect(screen.getByTestId('widget-catalogue')).toBeInTheDocument();
+      expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
       expect(localStorage.getItem(HINT_KEY)).toBe('1');
     } finally {
       vi.useRealTimers();
@@ -670,12 +685,13 @@ describe('DashboardPage — customize hint', () => {
   });
 });
 
-describe('DashboardPage — widget catalogue', () => {
-  it('adding from the catalogue calls addWidgets and marks onboarding complete', () => {
+describe('DashboardPage — widget picker', () => {
+  it('adding from the dock calls addWidgets and marks onboarding complete', () => {
+    h.layout.editMode = true;
     renderPage();
-    fireEvent.click(screen.getByTestId('add-widget-fab'));
-    expect(screen.getByTestId('widget-catalogue')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('cat-add'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Widget' }));
+    expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('picker-add'));
     expect(h.layout.addWidgets).toHaveBeenCalledWith(['battery-gauge']);
     expect(h.markCompleted).toHaveBeenCalledTimes(1);
   });
@@ -729,17 +745,16 @@ describe('DashboardPage — command palette bridge', () => {
 });
 
 describe('DashboardPage — kiosk mode', () => {
-  it('renders the kiosk surface and hides the add-widget FAB in kiosk mode', () => {
+  it('renders the kiosk surface in kiosk mode', () => {
     (h.kiosk as Record<string, unknown>).isKiosk = true;
     renderPage();
     expect(screen.getByTestId('kiosk-grid')).toBeInTheDocument();
-    expect(screen.queryByTestId('add-widget-fab')).toBeNull();
   });
 
-  it('shows the add-widget FAB when not in kiosk mode', () => {
+  it('shows the dashboard grid when not in kiosk mode', () => {
     (h.kiosk as Record<string, unknown>).isKiosk = false;
     renderPage();
-    expect(screen.getByTestId('add-widget-fab')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-grid')).toBeInTheDocument();
     expect(screen.queryByTestId('kiosk-grid')).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import type {
   LegacyDashboardLayout,
   RGLLayout,
   RGLLayouts,
+  DropPlacement,
 } from '../widgets/types';
 import { WIDGET_REGISTRY, getWidgetDef } from '../widgets/registry';
 import { useUndoRedo } from './useUndoRedo';
@@ -35,6 +36,29 @@ export const GRID_BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480 } as const
 export const GRID_COLS = { lg: 4, md: 3, sm: 2, xs: 1 } as const;
 export const ROW_HEIGHT = 80;
 export const GRID_MARGIN: [number, number] = [16, 16];
+
+export type GridBreakpoint = keyof typeof GRID_COLS;
+
+/**
+ * Mirror of react-grid-layout's `getBreakpointFromWidth` — the grid reads
+ * the active breakpoint from RGL's own `onBreakpointChange`, but this pure
+ * copy seeds the initial value (RGL only reports *changes*) and backs the
+ * mobile-stack switch. The comparison MUST stay a strict `>` over ascending
+ * thresholds: at an exact threshold width (768px iPad portrait, snapped
+ * 1200px windows) `>=` picks the larger breakpoint while RGL renders the
+ * smaller one, and every size/arrange/persist decision lands on the wrong
+ * layout. Covered by `resolveBreakpointFromWidth` unit tests.
+ */
+export function resolveBreakpointFromWidth(width: number): GridBreakpoint {
+  const sorted = (Object.entries(GRID_BREAKPOINTS) as Array<[GridBreakpoint, number]>)
+    .sort((a, b) => a[1] - b[1]);
+  let matching: GridBreakpoint = sorted[0]?.[0] ?? 'xs';
+  for (let i = 1; i < sorted.length; i++) {
+    const [name, threshold] = sorted[i];
+    if (width > threshold) matching = name;
+  }
+  return matching;
+}
 
 /* ─── Undo/Redo snapshot ─── */
 interface DashboardSnapshot {
@@ -137,7 +161,7 @@ function sanitizeLayouts(layouts: RGLLayouts): RGLLayouts {
  * across reloads forever and the dashboard accumulates blank vertical
  * space over the life of the user's saved layout.
  */
-function compactLayouts(layouts: RGLLayouts): RGLLayouts {
+export function compactLayouts(layouts: RGLLayouts): RGLLayouts {
   const result: RGLLayouts = {};
   for (const [bp, items] of Object.entries(layouts)) {
     const cols = GRID_COLS[bp as keyof typeof GRID_COLS];
@@ -151,6 +175,41 @@ function compactLayouts(layouts: RGLLayouts): RGLLayouts {
     result[bp] = verticalCompactor.compact(items as RGLLayout[], cols) as RGLLayout[];
   }
   return result;
+}
+
+export function arrangeLayouts(source: RGLLayouts, widgets: WidgetInstance[]): RGLLayouts {
+  const layouts = reconcileLayouts(source, widgets);
+  for (const [bp, cols] of Object.entries(GRID_COLS)) {
+    const byId = new Map(layouts[bp].map((item) => [item.i, item]));
+    const ordered = [...widgets].sort((a, b) => {
+      const pa = byId.get(a.id);
+      const pb = byId.get(b.id);
+      if (!pa || !pb) return 0;
+      return pa.y - pb.y || pa.x - pb.x;
+    });
+    const placed: RGLLayout[] = [];
+    for (const widget of ordered) {
+      const item = byId.get(widget.id)!;
+      let bestX = 0;
+      let bestY = Infinity;
+      for (let x = 0; x <= cols - item.w; x++) {
+        let y = 0;
+        for (const neighbor of [...placed].sort((a, b) => a.y - b.y)) {
+          if (x < neighbor.x + neighbor.w && x + item.w > neighbor.x
+            && y < neighbor.y + neighbor.h && y + item.h > neighbor.y) {
+            y = neighbor.y + neighbor.h;
+          }
+        }
+        if (y < bestY || (y === bestY && Math.abs(x - item.x) < Math.abs(bestX - item.x))) {
+          bestX = x;
+          bestY = y;
+        }
+      }
+      placed.push({ ...item, x: bestX, y: bestY });
+    }
+    layouts[bp] = placed;
+  }
+  return compactLayouts(layouts);
 }
 
 /** Ensure layout has valid items for all widgets and respects current constraints */
@@ -217,7 +276,10 @@ function makePreset(
     id,
     name,
     widgets,
-    layouts: buildDefaultLayouts(widgets),
+    // Compact the row-flow: pure flow leaves floaters (e.g. an item at y2
+    // with empty rows above it) that read as random blank holes. Compaction
+    // top-aligns every column; row-flow order is preserved.
+    layouts: compactLayouts(buildDefaultLayouts(widgets)),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     isDefault,
@@ -372,6 +434,16 @@ function migrateLegacy(legacy: LegacyDashboardLayout): SavedDashboard {
 const ROW_HEIGHT_VERSION_KEY = 'teslasync-row-height-version';
 const CURRENT_ROW_VERSION = 2; // v1=180px, v2=80px
 
+/** Persist the row-height stamp. Private-mode quota failures are swallowed —
+ *  worst case the migration re-checks next load (idempotent when stamped). */
+function stampRowHeightVersion(): void {
+  try {
+    localStorage.setItem(ROW_HEIGHT_VERSION_KEY, String(CURRENT_ROW_VERSION));
+  } catch {
+    /* ephemeral storage — migration simply re-runs next load */
+  }
+}
+
 function migrateRowHeight(dashboards: SavedDashboard[]): SavedDashboard[] {
   const savedVersion = parseInt(localStorage.getItem(ROW_HEIGHT_VERSION_KEY) ?? '1', 10);
   if (savedVersion >= CURRENT_ROW_VERSION) return dashboards;
@@ -394,7 +466,7 @@ function migrateRowHeight(dashboards: SavedDashboard[]): SavedDashboard[] {
     ) as RGLLayouts,
   }));
 
-  localStorage.setItem(ROW_HEIGHT_VERSION_KEY, String(CURRENT_ROW_VERSION));
+  stampRowHeightVersion();
   localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(migrated));
   return migrated;
 }
@@ -429,11 +501,18 @@ function loadDashboards(): SavedDashboard[] {
       const dashboards = [migrated];
       localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(dashboards));
       localStorage.removeItem(LEGACY_KEY);
+      stampRowHeightVersion();
       return dashboards;
     }
   } catch {
     // Fall through to default
   }
+  // Fresh (or corrupt) state builds v2-native layouts below — stamp the
+  // row-height version NOW. Without this, the first reload finds v2-native
+  // dashboards in storage with no stamp and "migrates" them ×2.25,
+  // irreversibly stretching every widget on every visit until stamped.
+  // (This was the reload-stretching bug: h2→h5, h4→h9, y scattered.)
+  stampRowHeightVersion();
   return [{ ...DEFAULT_DASHBOARD }];
 }
 
@@ -683,6 +762,67 @@ export function useDashboardLayout() {
     [addWidgets],
   );
 
+  const addWidgetAndArrange = useCallback(
+    (widgetId: string) => {
+      const current = activeDashRef.current;
+      if (current.widgets.some((widget) => widget.widgetId === widgetId) || !WIDGET_REGISTRY_IDS.has(widgetId)) return;
+      const widgets = [...current.widgets, { id: generateId(), widgetId }];
+      const layouts = arrangeLayouts(current.layouts, widgets);
+      pushSnapshot({ widgets, layouts });
+      updateActive((dashboard) => ({ ...dashboard, widgets, layouts }));
+    },
+    [pushSnapshot, updateActive],
+  );
+
+  /**
+   * Placement-aware add for toolbox drops. The widget lands at the drop cell
+   * on the source breakpoint (clamped to grid bounds + registry min/max);
+   * other breakpoints auto-place at the bottom as usual. The target column
+   * is reserved during compaction so existing items move out of the way
+   * instead of pushing the dropped widget to the bottom.
+   */
+  const addWidgetAt = useCallback(
+    (widgetId: string, placement: DropPlacement, sourceBreakpoint: keyof typeof GRID_COLS) => {
+      const current = activeDashRef.current;
+      if (
+        current.widgets.some((w) => w.widgetId === widgetId)
+        || !WIDGET_REGISTRY_IDS.has(widgetId)
+      ) {
+        return;
+      }
+      const def = getWidgetDef(widgetId);
+      const newWidget: WidgetInstance = { id: generateId(), widgetId };
+      const widgets = [...current.widgets, newWidget];
+      const layouts = reconcileLayouts(current.layouts, widgets);
+      const cols = GRID_COLS[sourceBreakpoint];
+      const minW = Math.min(def?.minSize.cols ?? 1, cols);
+      const minH = def?.minSize.rows ?? 1;
+      const maxW = Math.min(def?.maxSize.cols ?? cols, cols);
+      const maxH = def?.maxSize.rows ?? 20;
+      const w = clampMinMax(Math.round(placement.w) || 1, minW, maxW);
+      const h = clampMinMax(Math.round(placement.h) || 1, minH, maxH);
+      const positioned = verticalCompactor.compact(
+        layouts[sourceBreakpoint].map((item) => item.i === newWidget.id
+          ? {
+              ...item,
+              x: clampMinMax(Math.round(placement.x) || 0, 0, Math.max(0, cols - w)),
+              y: Math.max(Math.round(placement.y) || 0, 0),
+              w,
+              h,
+              static: true,
+            }
+          : item),
+        cols,
+      ) as RGLLayout[];
+      layouts[sourceBreakpoint] = positioned.map((item) => item.i === newWidget.id
+        ? { ...item, static: false }
+        : item);
+      pushSnapshot({ widgets, layouts });
+      updateActive((d) => ({ ...d, widgets, layouts }));
+    },
+    [updateActive, pushSnapshot],
+  );
+
   const removeWidget = useCallback(
     (instanceId: string) => {
       const current = activeDashRef.current;
@@ -739,6 +879,20 @@ export function useDashboardLayout() {
       return id;
     },
     [dashboards, persist, resetSnapshot],
+  );
+
+  const createDashboardFromWidgets = useCallback(
+    (name: string, widgetIds: string[]) => {
+      const ids = [...new Set(widgetIds)].filter((id) => WIDGET_REGISTRY_IDS.has(id));
+      if (ids.length === 0) return;
+      const widgets = ids.map((widgetId) => ({ id: generateId(), widgetId }));
+      return createDashboard(name, {
+        ...DEFAULT_DASHBOARD,
+        widgets,
+        layouts: arrangeLayouts({}, widgets),
+      });
+    },
+    [createDashboard],
   );
 
   const renameDashboard = useCallback(
@@ -1004,27 +1158,9 @@ export function useDashboardLayout() {
   /* ─── Auto arrange ─── */
   const autoArrange = useCallback(() => {
     const current = activeDashRef.current;
-    const layouts = reconcileLayouts(current.layouts, current.widgets);
-    for (const [bp, cols] of Object.entries(GRID_COLS)) {
-      const byId = new Map(layouts[bp].map((item) => [item.i, item]));
-      let x = 0;
-      let y = 0;
-      let rowHeight = 0;
-      layouts[bp] = current.widgets.map((widget) => {
-        const item = byId.get(widget.id)!;
-        if (x + item.w > cols) {
-          x = 0;
-          y += rowHeight;
-          rowHeight = 0;
-        }
-        const arranged = { ...item, x, y };
-        x += item.w;
-        rowHeight = Math.max(rowHeight, item.h);
-        return arranged;
-      });
-    }
-    pushSnapshot({ widgets: current.widgets, layouts });
-    updateActive((d) => ({ ...d, layouts }));
+    const compacted = arrangeLayouts(current.layouts, current.widgets);
+    pushSnapshot({ widgets: current.widgets, layouts: compacted });
+    updateActive((d) => ({ ...d, layouts: compacted }));
   }, [updateActive, pushSnapshot]);
 
   /** Get the current widget size from the lg layout (for passing to widgets) */
@@ -1105,6 +1241,7 @@ export function useDashboardLayout() {
     pinToVehicle,
     switchDashboard,
     createDashboard,
+    createDashboardFromWidgets,
     renameDashboard,
     deleteDashboard,
     reorderDashboards,
@@ -1122,6 +1259,8 @@ export function useDashboardLayout() {
     // Widget CRUD
     addWidget,
     addWidgets,
+    addWidgetAndArrange,
+    addWidgetAt,
     removeWidget,
     updateWidgetConfig,
     // Layout

@@ -415,18 +415,6 @@ function briefMetric(label: string): HTMLElement {
   return tile as HTMLElement;
 }
 
-/**
- * The brief's LIVE VEHICLE STATE freshness chip.
- *
- * The brief renders two chips side by side (live state + work orders), so an
- * unscoped "just now" assertion would match the wrong one. `DataFreshnessAuto`
- * names its source in the accessible label, which is the stable seam.
- */
-function liveStateFreshnessChip(): HTMLElement {
-  const posture = screen.getByTestId('fleet-operational-brief');
-  return within(posture).getByLabelText(/Source: Live vehicle state/);
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
@@ -478,12 +466,12 @@ describe('VehicleListPage — happy path', () => {
     )).toBeInTheDocument();
     expect(within(posture).getByText('Service attention')).toBeInTheDocument();
     expect(within(posture).getByText('1 open')).toBeInTheDocument();
-    expect(
-      within(posture).getByRole('button', { name: /Source: Live vehicle state/ }),
-    ).toBeInTheDocument();
-    expect(
-      within(posture).getByRole('button', { name: /Source: Fleet work orders/ }),
-    ).toBeInTheDocument();
+    // Freshness lives in the page header (single surface); the brief keeps
+    // provenance badges only, so per-source freshness chips must be absent here.
+    const header = document.querySelector('header') as HTMLElement;
+    expect(within(header).getByText('just now')).toBeInTheDocument();
+    expect(within(posture).queryByRole('button', { name: /Source: / })).toBeNull();
+    expect(within(posture).getByText('Historical')).toBeInTheDocument();
 
     // Every vehicle gets a card, each with its derived status badge.
     const grid = cardGrid();
@@ -573,8 +561,10 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     expect(bars[2]).not.toHaveAttribute('aria-valuenow');
     expect(within(grid).getByText('—')).toBeInTheDocument();
 
-    // Icon-only row actions + status glyphs carry accessible names.
-    expect(within(grid).getByLabelText('Remove Model 3 Alpha')).toBeInTheDocument();
+    // Icon-only row actions + status glyphs carry accessible names. Destructive
+    // actions sit behind the per-card menu instead of adjacent icon buttons.
+    expect(within(grid).getAllByRole('button', { name: /^Actions for / })).toHaveLength(3);
+    expect(within(grid).queryByLabelText('Remove Model 3 Alpha')).toBeNull();
     expect(within(grid).getByLabelText('Locked')).toBeInTheDocument();
     expect(within(grid).getByLabelText('Sentry mode on')).toBeInTheDocument();
     expect(within(grid).getAllByRole('link', { name: /^Open .+ details$/ })).toHaveLength(3);
@@ -584,7 +574,8 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     renderPage();
     const grid = cardGrid();
 
-    fireEvent.click(await within(grid).findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+    fireEvent.click(within(grid).getByRole('button', { name: 'Actions for Model 3 Alpha' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quick view Model 3 Alpha' }));
 
     const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
     expect(within(drawer).getByText('Vehicle preview')).toBeInTheDocument();
@@ -612,7 +603,8 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
   it('labels a verified preview as Live and shows its per-field values', async () => {
     renderPage();
     const grid = cardGrid();
-    fireEvent.click(await within(grid).findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+    fireEvent.click(within(grid).getByRole('button', { name: 'Actions for Model 3 Alpha' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quick view Model 3 Alpha' }));
 
     const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
     expect(within(drawer).getByText('Telemetry')).toBeInTheDocument();
@@ -629,7 +621,8 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     mockFleetStates.mockReturnValue(qr({ data: [stale, resolvedEntry(V2, S2), missingEntry(V3)] }));
     renderPage();
     const grid = cardGrid();
-    fireEvent.click(await within(grid).findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+    fireEvent.click(within(grid).getByRole('button', { name: 'Actions for Model 3 Alpha' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quick view Model 3 Alpha' }));
 
     const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
     // Status is Unknown, never the state embedded in the retained reading.
@@ -648,7 +641,8 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     mockFleetStates.mockReturnValue(qr({ data: [failedEntry(V1), resolvedEntry(V2, S2), missingEntry(V3)] }));
     renderPage();
     const grid = cardGrid();
-    fireEvent.click(await within(grid).findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+    fireEvent.click(within(grid).getByRole('button', { name: 'Actions for Model 3 Alpha' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quick view Model 3 Alpha' }));
 
     const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
     expect(within(drawer).getByText('Unreachable')).toBeInTheDocument();
@@ -678,8 +672,18 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
 
     const grid = cardGrid();
     expect(within(grid).getByText(/Unknown model/)).toBeInTheDocument();
-    // The VIN backs both the name link and the caption when display_name is blank.
-    expect(within(grid).getAllByText('VINBLANK000000007').length).toBeGreaterThanOrEqual(1);
+    // The masked VIN backs both the name link and the caption when
+    // display_name is blank; raw VINs never render by default.
+    expect(within(grid).queryByText('VINBLANK000000007')).toBeNull();
+    expect(within(grid).getAllByText('VIN••••••••••0007')).toHaveLength(2);
+    expect(within(grid).getByRole('button', { name: 'Actions for VIN••••••••••0007' }))
+      .toHaveAttribute('title', 'Actions for VIN••••••••••0007');
+    expect(within(grid).getByRole('link', { name: 'Open VIN••••••••••0007 details' }))
+      .toBeInTheDocument();
+    expect(within(grid).queryByTitle(/VINBLANK000000007/)).toBeNull();
+    // …but the caption reveals + copies on demand.
+    fireEvent.click(within(grid).getByRole('button', { name: 'Reveal value' }));
+    expect(within(grid).getByText('VINBLANK000000007')).toBeInTheDocument();
   });
 });
 
@@ -747,7 +751,9 @@ describe('VehicleListPage — delete flow', () => {
     renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
 
-    fireEvent.click(screen.getByLabelText('Remove Model 3 Alpha'));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for Model 3 Alpha' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Model 3 Alpha' }));
 
     const dialog = await screen.findByRole('dialog');
     expect(
@@ -762,7 +768,8 @@ describe('VehicleListPage — delete flow', () => {
     renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
 
-    fireEvent.click(screen.getByLabelText('Remove Model Y Beta'));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for Model Y Beta' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Model Y Beta' }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
@@ -1200,31 +1207,12 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(within(cardGrid()).getByText('Model 3 Alpha')).toBeInTheDocument();
   });
 
-  it('ages the OPERATIONAL BRIEF freshness chip from the observation too', () => {
-    // The header chip has its own guard above. The brief is a second, separate
-    // freshness surface, and it was the one an operator actually reads before
-    // dispatching — both must be fed the synthetic observation timestamp, not
-    // the wrapper batch's `dataUpdatedAt`, which advances on every 30 s poll
-    // even when every per-vehicle request failed.
-    const tenMinutesAgo = Date.now() - 10 * 60_000;
-    mockFleetStates.mockReturnValue(qr({
-      data: [retainedEntry(V1, S1, tenMinutesAgo), retainedEntry(V2, S2, tenMinutesAgo)],
-      dataUpdatedAt: Date.now(),
-      isError: false,
-    }));
-    renderPage();
-
-    // Scoped to the LIVE VEHICLE STATE chip: the brief also carries a work
-    // orders chip, which is legitimately "just now".
-    const chip = liveStateFreshnessChip();
-    expect(chip).toHaveTextContent(/10m ago/);
-    expect(chip).not.toHaveTextContent(/just now/);
-  });
-
-  it('reports the OLDEST observation, so one fresh car cannot mask a stale fleet', () => {
+  it('reports the OLDEST observation in the header chip, so one fresh car cannot mask a stale fleet', () => {
     // A summary is only as fresh as its stalest member. Reporting the newest
     // reading would let a single chatty vehicle certify a fleet whose other
-    // members have not been heard from in ten minutes.
+    // members have not been heard from in ten minutes. The brief-level chip
+    // this originally guarded was removed (freshness lives in the page
+    // header now), so the mixed fresh/stale case is asserted on the header.
     const tenMinutesAgo = Date.now() - 10 * 60_000;
     mockFleetStates.mockReturnValue(qr({
       data: [resolvedEntry(V1, S1, Date.now()), retainedEntry(V2, S2, tenMinutesAgo)],
@@ -1232,9 +1220,9 @@ describe('VehicleListPage — loading, error & empty states', () => {
     }));
     renderPage();
 
-    const chip = liveStateFreshnessChip();
-    expect(chip).toHaveTextContent(/10m ago/);
-    expect(chip).not.toHaveTextContent(/just now/);
+    const header = document.querySelector('header') as HTMLElement;
+    expect(within(header).getByText(/10m ago/)).toBeInTheDocument();
+    expect(within(header).queryByText('just now')).toBeNull();
   });
 
   it('describes a total outage as unresolved, never as a fleet of offline vehicles', () => {

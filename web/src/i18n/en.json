@@ -1,4 +1,11 @@
 {
+  "demoData": {
+    "title": "Sample data present",
+    "detail": "DRILL vehicles and their drive and charging history are synthetic, not live activity.",
+    "mobileSummary": "Not live",
+    "showDetails": "Details",
+    "hideDetails": "Less"
+  },
   "explore": {
     "subtitle": {
       "category": "{{matches}} features in the selected category"
@@ -4614,7 +4621,11 @@
       "allCaughtUp": "All caught up — nothing needs you right now.",
       "now": "Now",
       "upNext": "Up next",
-      "noFavorites": "Pin pages from any row and they will live here."
+      "noFavorites": "Pin pages from any row and they will live here.",
+      "expandQuickPins": "Show quick access pins",
+      "collapseQuickPins": "Hide quick access pins",
+      "expandRecent": "Show recently used",
+      "collapseRecent": "Hide recently used"
     },
     "collections": {
       "toggle": "{{group}}, {{count}} views",
@@ -4721,6 +4732,7 @@
     "mobileCharging": "Charging",
     "mobileBattery": "Battery",
     "mobileMap": "Map",
+    "mobileMore": "More",
     "currentPage": "Current page",
     "closeSidebar": "Close sidebar",
     "currentSection": "Current",
@@ -4753,7 +4765,6 @@
     "compactSettingsAccount": "Settings & Account",
     "browseAllFeatures": "Browse all features",
     "openSidebar": "Open sidebar",
-    "quickSearchHint": "Ctrl+K to jump",
     "minDelay": "min delay",
     "pageTitle": "Navigation & Route",
     "col": {
@@ -5936,39 +5947,11 @@
     "reset": "Reset",
     "kiosk": "Kiosk",
     "customize": "Customize",
-    "editHint": "Drag widgets or use Arrange for one-click and keyboard positioning. Resize from edges or the same menu.",
+    "arrangeDropHint": "Drag a widget here to add and auto-arrange, or drop it on the grid to choose its position.",
+    "arrangeDropActive": "Release to add and auto-arrange this widget.",
+    "closeWidgetPicker": "Close widget picker",
     "customizeHint": "You can customize this dashboard. Tap the + to add widgets.",
     "customizeHintCta": "Add widgets",
-    "catalogue": {
-      "title": "Widget catalogue",
-      "subtitle": "Pick a widget to add to your dashboard. {{added}} of {{total}} widgets are already on your layout.",
-      "searchPlaceholder": "Search widgets by name, description, or category…",
-      "searchLabel": "Search widgets",
-      "resultCount": "{{count}} of {{total}} widgets match",
-      "emptyTitle": "No widgets match your search",
-      "emptyBody": "Try a different keyword, or clear the search to browse all {{total}} widgets.",
-      "clearSearch": "Clear search",
-      "add": "Add",
-      "addLabel": "Add {{name}} widget",
-      "category": {
-        "vehicle": "Vehicle",
-        "battery": "Battery & Range",
-        "energy": "Energy",
-        "driving": "Driving",
-        "charging": "Charging",
-        "climate": "Climate",
-        "tires": "Tires",
-        "security": "Security",
-        "commands": "Commands",
-        "media": "Media",
-        "telemetry": "Telemetry",
-        "analytics": "Analytics",
-        "alerts": "Alerts",
-        "automations": "Automations",
-        "system": "System",
-        "maps": "Maps"
-      }
-    },
     "shortcuts": {
       "group": "Dashboard",
       "toggleEdit": "Toggle edit mode",
@@ -5999,12 +5982,23 @@
       "noneVisible": "No layouts available for this vehicle.",
       "editTitle": "Edit dashboard (E)",
       "editEnter": "Edit",
-      "editExit": "Done"
+      "editExit": "Done",
+      "rename": "Rename",
+      "renamePrompt": "New name for this layout:",
+      "delete": "Delete layout",
+      "deleteTitle": "Delete this layout?",
+      "deleteMessage": "This permanently removes \"{{name}}\" and its widget arrangement. This cannot be undone.",
+      "deleteConfirm": "Delete",
+      "newBlank": "New blank layout",
+      "newBlankPrompt": "Name for the new layout:",
+      "newFromTemplate": "New from template…",
+      "discoveryHint": "Switch, create, or edit layouts here",
+      "moveEarlier": "Move earlier",
+      "moveLater": "Move later",
+      "layoutSettings": "Layout settings"
     },
     "printSnapshot": "Print snapshot",
     "layoutActions": "Actions for {{name}}",
-    "moveLayoutEarlier": "Move earlier",
-    "moveLayoutLater": "Move later",
     "layoutMovedEarlier": "{{name}} moved earlier",
     "layoutMovedLater": "{{name}} moved later",
     "grid": {
@@ -6034,7 +6028,9 @@
       "exitFullscreen": "Exit Fullscreen",
       "widgetFailed": "{{name}} failed to load",
       "emptyTitle": "No widgets yet",
-      "emptyMessage": "Add widgets to start building your dashboard."
+      "emptyMessage": "Add widgets to start building your dashboard.",
+      "addWidgets": "Add widgets",
+      "browseTemplates": "Browse starter layouts"
     }
   },
   "charging": {
@@ -13493,7 +13489,8 @@
     "drive": "drive",
     "charged": "charged",
     "title": "Recent Activity",
-    "viewAll": "View all",
+    "viewAll": "Open full inbox",
+    "viewAllSeverity": "See all {{severity}} unread",
     "empty": "No activity yet. Start driving!",
     "myActivity": {
       "title": "My Activity",
@@ -13687,9 +13684,29 @@
   },
   "templates": {
     "widgetCount": "{{count}} widgets",
-    "apply": "Create layout with these widgets",
-    "detail": "Template Preview",
     "title": "Create a layout",
+    "intro": "Choose a starting point, preview its widgets, and give your workspace a name. Nothing on your current layout will be replaced.",
+    "startingPoint": "Choose a starting point",
+    "searchLabel": "Search layout starters",
+    "search": "Search by purpose or widget",
+    "preview": "Layout preview",
+    "create": "Create layout",
+    "createHint": "You can rearrange and resize every widget after creation.",
+    "helixTitle": "Create with Helix",
+    "helixDescription": "Describe your dashboard. Helix will pick real widgets and arrange them for every screen size. Review the preview before creating it.",
+    "helixPromptLabel": "Describe your dashboard",
+    "helixPlaceholder": "Show charging costs, battery health, and upcoming maintenance",
+    "helixWorking": "Choosing widgets…",
+    "helixDraft": "Draft layout",
+    "helixError": "Helix could not create a valid layout. Check your AI settings and try again.",
+    "helixPreview": "Helix selected these widgets and packed them into a responsive layout.",
+    "layoutName": "Layout name",
+    "nameRequired": "Enter a name for the layout.",
+    "customDescription": "A ready-to-customize dashboard layout.",
+    "presetHint": "Starts with these widgets. Customize the arrangement anytime.",
+    "blankHint": "Your new layout starts empty. Add widgets from the docked picker.",
+    "noResults": "No starters match this search.",
+    "clearSearch": "Clear search",
     "blank": "Blank Dashboard",
     "blankDescription": "Start from scratch and add widgets manually",
     "default": { "name": "Default", "desc": "Balanced overview of vehicle status, battery, climate, and recent drives" },
@@ -13739,6 +13756,7 @@
     "wakeUp": "Wake Up"
   },
   "widgets": {
+    "gridFootprint": "{{cols}}×{{rows}} grid",
     "addedAnnouncement": "{{name}} added to dashboard",
     "addedBatchAnnouncement": "{{count}} widgets added to dashboard",
     "addedCount_one": "{{count}} widget added",
@@ -16559,7 +16577,15 @@
       "emptyMessage": "No unread notifications right now.",
       "untitled": "Notification",
       "markAllRead": "Mark all read",
-      "viewAll": "View all"
+      "viewAll": "View all",
+      "filterLabel": "Filter latest notifications by severity",
+      "filterCountLabel": "{{label}}, {{count}} in latest {{previewCount}}",
+      "previewScope": "Preview: {{count}} of {{total}} unread",
+      "filterAll": "All",
+      "filterCritical": "Critical",
+      "filterWarning": "Warning",
+      "filterInfo": "Info",
+      "emptyFiltered": "No matches in this preview. Open the inbox for older notifications."
     },
     "view": {
       "label": "View",
@@ -19961,6 +19987,9 @@
     "viewDetails": "View details",
     "openDetail": "Open {{name}} details",
     "removeAria": "Remove {{name}}",
+    "remove": "Remove",
+    "cardActions": "Actions for {{name}}",
+    "vinLabel": "Vehicle identification number",
     "locked": "Locked",
     "sentryOn": "Sentry mode on",
     "noLiveData": "No live data",

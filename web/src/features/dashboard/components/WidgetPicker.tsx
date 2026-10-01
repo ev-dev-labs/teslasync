@@ -8,27 +8,12 @@ import {
   type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Clock, Search } from 'lucide-react';
+import { Check, Clock, Search, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Drawer, Badge, Button as UiButton, Input as UiInput } from '@/components/ui';
+import { Badge, Button as UiButton, Input as UiInput, Text } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
 import { WIDGET_REGISTRY } from '../widgets/registry';
-import type { SavedDashboard, WidgetCategory, WidgetDef } from '../widgets/types';
-import { MiniGridPreview } from './MiniGridPreview';
-
-/** Single-widget dashboard so MiniGridPreview can render a footprint chip. */
-function previewDashboardFor(w: WidgetDef): SavedDashboard {
-  return {
-    id: `preview-${w.id}`,
-    name: w.name,
-    widgets: [{ id: 'preview-tile', widgetId: w.id }],
-    layouts: {
-      lg: [{ i: 'preview-tile', x: 0, y: 0, w: w.defaultSize.cols, h: w.defaultSize.rows }],
-    },
-    createdAt: '',
-    updatedAt: '',
-  };
-}
+import { WIDGET_DND_MIME, type WidgetCategory, type WidgetDef } from '../widgets/types';
 
 const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   vehicle: 'Vehicle',
@@ -96,6 +81,8 @@ interface WidgetPickerProps {
   onClose: () => void;
   onAddWidgets: (widgetIds: string[]) => void;
   activeWidgetIds: string[];
+  onDragWidgetStart?: (widgetId: string) => void;
+  onDragWidgetEnd?: () => void;
 }
 
 export function WidgetPicker({
@@ -103,6 +90,8 @@ export function WidgetPicker({
   onClose,
   onAddWidgets,
   activeWidgetIds,
+  onDragWidgetStart,
+  onDragWidgetEnd,
 }: WidgetPickerProps) {
   const { t } = useTranslation('dashboard');
   const [search, setSearch] = useState('');
@@ -113,7 +102,7 @@ export function WidgetPicker({
   const inputRef = useRef<HTMLInputElement>(null);
   const widgetButtonRefs = useRef(new Map<string, HTMLButtonElement>());
 
-  // Reset search and auto-focus when drawer opens
+  // Reset search and auto-focus when the dock opens
   useEffect(() => {
     if (open) {
       setSearch('');
@@ -121,7 +110,7 @@ export function WidgetPicker({
       setAddedThisSessionIds([]);
       setAnnouncement('');
       setRecentlyAddedIds(loadRecentlyAdded());
-      // Small delay to let the drawer animate in before focusing
+      // Small delay to let the dock animate in before focusing
       const timer = setTimeout(() => inputRef.current?.focus(), 100);
       return () => clearTimeout(timer);
     }
@@ -129,25 +118,27 @@ export function WidgetPicker({
     setAnnouncement('');
   }, [open]);
 
-  // The Drawer dismisses on Escape via a native keydown listener on an ancestor
-  // element, which runs before React's delegated synthetic handler. To let
-  // Escape clear a non-empty search *before* it can close the whole picker,
-  // intercept the key at the input itself (target phase) and stop it from
-  // bubbling up to the Drawer. An empty search still bubbles through and closes
-  // the drawer, preserving the expected escape-to-dismiss behaviour.
+  // Escape clears search first, then closes the dock on the next press.
+  // The input's native listener stops propagation before the window listener.
   useEffect(() => {
     if (!open) return;
     const input = inputRef.current;
-    if (!input) return;
     const handleNativeEscape = (e: HTMLElementEventMap['keydown']) => {
-      if (e.key === 'Escape' && input.value) {
+      if (e.key === 'Escape' && input?.value) {
         e.stopPropagation();
         setSearch('');
       }
     };
-    input.addEventListener('keydown', handleNativeEscape);
-    return () => input.removeEventListener('keydown', handleNativeEscape);
-  }, [open]);
+    const handleClose = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    input?.addEventListener('keydown', handleNativeEscape);
+    window.addEventListener('keydown', handleClose);
+    return () => {
+      input?.removeEventListener('keydown', handleNativeEscape);
+      window.removeEventListener('keydown', handleClose);
+    };
+  }, [open, onClose]);
 
   const query = search.trim().toLowerCase();
 
@@ -296,7 +287,7 @@ export function WidgetPicker({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
       // Escape-to-clear is handled by the native listener above so it can
-      // pre-empt the Drawer's own Escape-to-close. Here we only handle Enter:
+      // pre-empt the dock's Escape-to-close. Here we only handle Enter:
       // when a search resolves to a single addable widget, Enter adds it.
       if (e.key === 'Enter' && query) {
         const addable = filteredWidgets.filter((w) => !activeWidgetIdSet.has(w.id));
@@ -330,6 +321,13 @@ export function WidgetPicker({
           else widgetButtonRefs.current.delete(w.id);
         }}
         disabled={isAdded}
+        draggable={!isAdded}
+        onDragStart={(event) => {
+          event.dataTransfer.setData(WIDGET_DND_MIME, w.id);
+          event.dataTransfer.effectAllowed = 'copy';
+          onDragWidgetStart?.(w.id);
+        }}
+        onDragEnd={onDragWidgetEnd}
         onClick={() => handleAdd(w)}
         onKeyDown={(event) => handleWidgetKeyDown(event, w)}
         className={cn(
@@ -337,18 +335,9 @@ export function WidgetPicker({
           'bg-white/[0.03] border-white/[0.06]',
           isAdded
             ? 'opacity-40 cursor-not-allowed'
-            : 'hover:bg-white/[0.06] hover:border-white/[0.12] cursor-pointer',
+            : 'hover:bg-white/[0.06] hover:border-white/[0.12] cursor-grab active:cursor-grabbing',
         )}
       >
-        {!isAdded && (
-          <div
-            aria-hidden="true"
-            data-testid={`widget-footprint-preview-${w.id}`}
-            className="pointer-events-none absolute right-3 top-3 hidden w-28 group-hover:block group-focus-within:block"
-          >
-            <MiniGridPreview dashboard={previewDashboardFor(w)} />
-          </div>
-        )}
         <div className="flex items-start gap-3">
           <div className="rounded-lg p-2 bg-white/[0.04] shrink-0">
             <w.icon className="h-4 w-4 text-[var(--theme-primary)]" />
@@ -364,7 +353,10 @@ export function WidgetPicker({
               {highlightMatch(w.description, query)}
             </p>
             <p className="text-2xs text-[var(--text-muted)] mt-1">
-              {w.defaultSize.cols}×{w.defaultSize.rows} grid
+              {t('widgets.gridFootprint', '{{cols}}×{{rows}} grid', {
+                cols: w.defaultSize.cols,
+                rows: w.defaultSize.rows,
+              })}
               {query && (
                 <span className="ml-2 text-[var(--text-muted)]">
                   {CATEGORY_LABELS[w.category]}
@@ -382,48 +374,44 @@ export function WidgetPicker({
     ? t('widgets.addedCount_one', '{{count}} widget added', { count: addedThisSessionCount })
     : t('widgets.addedCount_other', '{{count}} widgets added', { count: addedThisSessionCount });
 
+  if (!open) return null;
   return (
-    <Drawer
-      open={open}
-      onClose={onClose}
-      title={t('dashboard.addWidget', 'Add Widget')}
-      description={t(
-        'widgets.pickerDescription',
-        'Choose the operational signals and workflows that belong on this dashboard.',
-      )}
-      size="lg"
-      footer={addedThisSessionCount > 0 ? (
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
-            <Check className="h-4 w-4 text-emerald-400" aria-hidden="true" />
-            <span>{addedCountText}</span>
-          </div>
-          <UiButton size="sm" onClick={onClose}>
-            {t('dashboard.done', 'Done')}
-          </UiButton>
-        </div>
-      ) : undefined}
+    <section
+      role="complementary"
+      aria-label={t('dashboard.addWidget', 'Add Widget')}
+      data-testid="widget-picker-dock"
+      className="widget-picker-dock flex min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] max-h-[60dvh] xl:sticky xl:top-4 xl:h-[calc(100dvh-8rem)] xl:max-h-none xl:w-[340px]"
     >
+      <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--border-default)] px-4 py-3">
+        <div className="min-w-0">
+          <Text as="h2" variant="bodySm" className="font-semibold">{t('dashboard.addWidget', 'Add Widget')}</Text>
+          <Text as="p" variant="caption">
+            {t('widgets.pickerDescription', 'Choose the operational signals and workflows that belong on this dashboard.')}
+          </Text>
+        </div>
+        <UiButton type="button" variant="ghost" size="sm" onClick={onClose} aria-label={t('dashboard.closeWidgetPicker', 'Close widget picker')} className="h-9 w-9 shrink-0 p-0">
+          <X className="h-4 w-4" aria-hidden="true" />
+        </UiButton>
+      </div>
       <VisuallyHidden as="div" liveRegion>
         {announcement}
       </VisuallyHidden>
-      <div className="space-y-4">
-        {/* Search input — sticky at top */}
-        <div className="sticky top-0 z-10 pb-3">
-          <UiInput
-            ref={inputRef}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={handleKeyDown}
-            aria-label={t('widgets.searchLabel', 'Search widgets')}
-            placeholder={t('widgets.search', 'Search widgets... (e.g. battery, chart, map)')}
-            icon={<Search className="h-4 w-4" />}
-            className="w-full"
-          />
-          <span className="text-2xs text-[var(--text-muted)] mt-1 block">
-            {filteredWidgets.length} {t('widgets.available', 'widgets available')}
-          </span>
-        </div>
+      <div className="shrink-0 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3">
+        <UiInput
+          ref={inputRef}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-label={t('widgets.searchLabel', 'Search widgets')}
+          placeholder={t('widgets.search', 'Search widgets... (e.g. battery, chart, map)')}
+          icon={<Search className="h-4 w-4" />}
+          className="w-full"
+        />
+        <span className="mt-1 block text-2xs text-[var(--text-muted)]">
+          {filteredWidgets.length} {t('widgets.available', 'widgets available')}
+        </span>
+      </div>
+      <div data-testid="widget-picker-list" className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
 
         {/* Categories are filters, not document tabs: pressed state communicates
             the active scope without implying a separate tabpanel relationship. */}
@@ -432,7 +420,7 @@ export function WidgetPicker({
           role="group"
           aria-label={t('widgets.categoryFilter', 'Filter by category')}
         >
-          <UiButton
+                  <UiButton
             type="button"
             variant={categoryFilter === 'all' ? 'primary' : 'outline'}
             size="sm"
@@ -441,7 +429,7 @@ export function WidgetPicker({
             className="rounded-shape-sm px-3 text-xs"
           >
             {t('widgets.allCategories', 'All')}
-          </UiButton>
+                  </UiButton>
           {availableCategories.map((cat) => (
             <UiButton
               key={cat}
@@ -534,6 +522,15 @@ export function WidgetPicker({
           })
         )}
       </div>
-    </Drawer>
+      {addedThisSessionCount > 0 && (
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--border-default)] px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+            <Check className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+            <span>{addedCountText}</span>
+          </div>
+          <UiButton size="sm" onClick={onClose}>{t('dashboard.done', 'Done')}</UiButton>
+        </div>
+      )}
+    </section>
   );
 }

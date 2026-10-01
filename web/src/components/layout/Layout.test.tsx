@@ -269,7 +269,7 @@ vi.mock('@/lib/broadcast', () => ({
 }))
 
 // ── Child components: trivial stubs (some carry test ids / labels) ────
-vi.mock('../feedback/InstallPrompt', () => ({ default: () => null }))
+vi.mock('../feedback/InstallPrompt', () => ({ default: () => <div data-testid="install-prompt-stub" /> }))
 vi.mock('../feedback/OfflineBanner', () => ({ OfflineBanner: () => null }))
 vi.mock('../feedback/NewVersionBanner', () => ({ NewVersionBanner: () => null }))
 vi.mock('../feedback/TeslaReauthBanner', () => ({ TeslaReauthBanner: () => null }))
@@ -644,10 +644,11 @@ describe('Layout — unified sidebar wiring', () => {
     expect(sections.map((s) => s.title)).toContain('Security')
   })
 
-  it('passes pinned and recent items through for quick access + recents', () => {
+  it('passes pinned and recent items through for quick access + recents', async () => {
     localStorage.setItem('teslasync-pinned-nav-paths', JSON.stringify(['/drives']))
     // defaultPins skips the helper's empty-pin seeding so the seed survives.
     renderLayout('/trips', { defaultPins: true })
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
 
     const { pinnedItems, recentItems } = unifiedProps()
     expect(pinnedItems.map((i) => i.to)).toContain('/drives')
@@ -767,6 +768,34 @@ describe('Layout — grouped sidebar sections', () => {
 })
 
 describe('Layout — global page chrome', () => {
+  it('places the install affordance in the scrollable page flow, not over page content', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+    const viewport = container.querySelector('[data-role="page-viewport"]')
+    const prompt = screen.getByTestId('install-prompt-stub')
+
+    expect(main).toContainElement(prompt)
+    expect(viewport).toContainElement(prompt)
+    expect(prompt.nextElementSibling).not.toBeNull()
+    expect(container.querySelectorAll('[data-testid="install-prompt-stub"]')).toHaveLength(1)
+  })
+
+  it('marks only drill fixture history as synthetic in standard mode', async () => {
+    H.request.mockImplementation((url: unknown) =>
+      url === '/vehicles'
+        ? Promise.resolve([{ id: 219, vin: 'DRILL000000000001' }])
+        : H.defaultReq(url),
+    )
+    renderLayout('/drives')
+    expect(await screen.findByTestId('demo-data-notice')).toHaveTextContent('not live activity')
+  })
+
+  it('does not show a sample-data notice for ordinary vehicles', async () => {
+    renderLayout('/drives')
+    await waitFor(() => expect(H.request).toHaveBeenCalledWith('/vehicles', expect.anything()))
+    expect(screen.queryByTestId('demo-data-notice')).not.toBeInTheDocument()
+  })
+
   it('mounts the persistent workspace command header with compact breadcrumbs', () => {
     renderLayout('/notifications/archived')
     const workspaceHeader = document.querySelector('[data-role="workspace-header"]')

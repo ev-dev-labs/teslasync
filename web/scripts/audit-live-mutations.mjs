@@ -37,6 +37,7 @@ const LIVE_ONLY_MUTATIONS = {
     'useUpdateAutomationFull',
   ],
   'hooks/useCharging.ts': ['useApplySchedule', 'useBulkDeleteCharging', 'useAutopilotRun'],
+  'hooks/useDashboard.ts': ['useDraftDashboardWidgets'],
   'hooks/useDataRepair.ts': [
     'useApplyDriveRepair',
     'useApplyChargingRepair',

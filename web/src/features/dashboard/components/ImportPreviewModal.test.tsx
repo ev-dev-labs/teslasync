@@ -50,7 +50,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 // ── Fixtures — `battery-gauge` and `vehicle-hero` are canonical registry ids
-//    (see WidgetCatalogueDialog tests), `not-a-real-widget` never is. ──
+//    (see WidgetPicker tests), `not-a-real-widget` never is. ──
 const VALID_DASHBOARD = {
   name: 'My Fleet Dashboard',
   widgets: [

@@ -2,10 +2,11 @@
  * BottomTabBar behaviour tests.
  *
  * BottomTabBar is the mobile-only (`< lg`) bottom navigation for the five
- * most-trafficked routes (Dashboard / Drives / Charging / Battery / Map). It
- * renders one <PrefetchLink> per tab inside a navigation landmark, computes an
- * active state from the current pathname, and exposes the tab paths as the
- * `BOTTOM_TAB_PATHS` set so the sidebar can de-emphasise duplicates on mobile.
+ * most-trafficked routes (Dashboard / Drives / Charging / Battery / Map) plus
+ * a More tab into the Explore catalogue. It renders one <PrefetchLink> per tab
+ * inside a navigation landmark, computes an active state from the current
+ * pathname, and exposes the tab paths as the `BOTTOM_TAB_PATHS` set so the
+ * sidebar can de-emphasise duplicates on mobile.
  *
  * These tests exercise multiple facets rather than a smoke render:
  *   1. The navigation landmark + its translated accessible label.
@@ -64,6 +65,7 @@ const TABS = [
   { path: '/charging', label: 'Charging', key: 'nav.mobileCharging' },
   { path: '/battery', label: 'Battery', key: 'nav.mobileBattery' },
   { path: '/live', label: 'Map', key: 'nav.mobileMap' },
+  { path: '/explore', label: 'More', key: 'nav.mobileMore' },
 ] as const
 
 function renderBar(pathname = '/') {
@@ -151,6 +153,13 @@ describe('BottomTabBar', () => {
       'aria-current',
       'page',
     )
+  })
+
+  it('lights the More tab on the Explore catalogue route', () => {
+    renderBar('/explore')
+    const more = screen.getByRole('link', { name: 'More' })
+    expect(more).toHaveAttribute('href', '/explore')
+    expect(more).toHaveAttribute('aria-current', 'page')
   })
 
   it('lights a tab on a nested child route (startsWith path + "/")', () => {
@@ -265,7 +274,7 @@ describe('BOTTOM_TAB_PATHS', () => {
     }
   })
 
-  it('is the exact set of the five bottom-tab destinations', () => {
+  it('is the exact set of the bottom-tab destinations', () => {
     expect(BOTTOM_TAB_PATHS).toBeInstanceOf(Set)
     expect(BOTTOM_TAB_PATHS.size).toBe(TABS.length)
     for (const tab of TABS) {

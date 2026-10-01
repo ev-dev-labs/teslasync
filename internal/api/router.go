@@ -5102,6 +5102,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			NLSqlPlayground:                      aiNLSqlPlaygroundHandler,
 			NLGrafanaPanel:                       aiNLGrafanaPanelHandler,
 			NLDashboardComposer:                  aiNLDashboardComposerHandler,
+			WidgetDashboardComposer:              http.HandlerFunc(aiNLDashboardComposerHandler.ServeWidgetDraftHTTP),
 			TripPostcardShareCardImageGeneration: aiTripPostcardShareCardImageGenerationHandler,
 			VehiclePaintPreview:                  aiVehiclePaintPreviewHandler,
 		})

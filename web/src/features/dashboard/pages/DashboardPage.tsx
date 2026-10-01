@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -36,16 +36,13 @@ import { cn } from '@/lib/cn';
 import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
-import { LayoutManager } from '../components/LayoutManager';
 import { LayoutSwitcher } from '../components/LayoutSwitcher';
 import { TemplateGallery } from '../components/TemplateGallery';
 import { ExportModal } from '../components/ExportModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { DashboardSettingsModal } from '../components/DashboardSettingsModal';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
-import { AddWidgetButton } from '../components/AddWidgetButton';
-import { WidgetCatalogueDialog } from '../components/WidgetCatalogueDialog';
-import { useDashboardLayout } from '../hooks/useDashboardLayout';
+import { DASHBOARD_PRESETS, useDashboardLayout, type GridBreakpoint } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { useKioskMode } from '../hooks/useKioskMode';
 import { fromUrlSafeBase64 } from '../hooks/validateImport';
@@ -56,7 +53,7 @@ import {
   DASHBOARD_PRESET_REQUESTED_EVENT,
   consumePendingDashboardPreset,
 } from '@/lib/dashboardPresets';
-import type { WidgetConfig, SavedDashboard } from '../widgets/types';
+import { WIDGET_DND_MIME, type WidgetConfig, type SavedDashboard, type DropPlacement } from '../widgets/types';
 
 import { Icons } from '@/lib/icons';
 
@@ -243,11 +240,11 @@ export default function DashboardPage() {
   const {
     dashboards, activeDashboard, activeId,
     editMode, setEditMode,
-    addWidgets, removeWidget, updateWidgetConfig,
+    addWidgets, addWidgetAndArrange, addWidgetAt, removeWidget, updateWidgetConfig,
     updateLayouts, autoArrange, getWidgetSize,
-    switchDashboard, createDashboard, renameDashboard, deleteDashboard,
-    reorderDashboards, duplicateDashboard, updateDashboardSettings, updateDashboardIcon,
-    applyPreset, applyRolePreset, resetToDefault, exportDashboard, importDashboardFromData,
+    switchDashboard, createDashboard, createDashboardFromWidgets, renameDashboard, deleteDashboard,
+    duplicateDashboard, reorderDashboards, updateDashboardSettings, updateDashboardIcon,
+    applyRolePreset, resetToDefault, exportDashboard, importDashboardFromData,
     canUndo, canRedo, undoCount, undo, redo,
     dirty, pinToVehicle,
   } = useDashboardLayout();
@@ -289,7 +286,15 @@ export default function DashboardPage() {
     return () => window.removeEventListener(DASHBOARD_PRESET_REQUESTED_EVENT, adoptPending);
   }, []);
   const [showPicker, setShowPicker] = useState(false);
+  const draggedWidgetIdRef = useRef<string | null>(null);
+  const getDraggedWidgetId = useCallback(() => draggedWidgetIdRef.current, []);
+  const [arrangeDropActive, setArrangeDropActive] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [initialTemplateId, setInitialTemplateId] = useState<string | undefined>();
+  const openTemplates = (id?: string) => {
+    setInitialTemplateId(id);
+    setShowTemplates(true);
+  };
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importJson, setImportJson] = useState<string | null>(null);
@@ -309,7 +314,6 @@ export default function DashboardPage() {
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
 
   /* ——— Widget-add discovery ——— */
-  const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [hintDismissed, setHintDismissed] = useState<boolean>(() => {
     try {
       return window.localStorage.getItem(CUSTOMIZE_HINT_DISMISSED_KEY) === '1';
@@ -338,11 +342,31 @@ export default function DashboardPage() {
       /* quota or disabled storage */
     }
   };
-  const handleCatalogueAdd = (widgetId: string) => {
-    addWidgets([widgetId]);
+  const handlePickerAdd = (widgetIds: string[]) => {
+    addWidgets(widgetIds);
     markCustomizeDashboardCompleted();
     // Also drop the soft hint immediately so it doesn't re-appear once the
     // 5s timer wins after the user already engaged.
+    dismissHint();
+  };
+
+  const handleArrangeDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setArrangeDropActive(false);
+    const widgetId = event.dataTransfer.getData(WIDGET_DND_MIME);
+    if (!widgetId || !getWidgetDef(widgetId) || activeDashboard.widgets.some((widget) => widget.widgetId === widgetId)) return;
+    addWidgetAndArrange(widgetId);
+    markCustomizeDashboardCompleted();
+    dismissHint();
+  };
+
+  const handleDropWidget = (
+    widgetId: string,
+    placement: DropPlacement,
+    bp: GridBreakpoint,
+  ) => {
+    addWidgetAt(widgetId, placement, bp);
+    markCustomizeDashboardCompleted();
     dismissHint();
   };
 
@@ -459,11 +483,15 @@ export default function DashboardPage() {
   }, [editMode, setEditMode, handleResetRequest]);
 
   /* ——— Template gallery handler ——— */
-  const handleApplyTemplate = (presetId: string) => {
-    if (presetId === '__blank__') {
-      createDashboard(t('dashboard.newDashboard', 'New Dashboard'));
+  const handleApplyTemplate = (presetId: string, name: string, widgetIds?: string[]) => {
+    if (presetId === '__helix__' && widgetIds) {
+      createDashboardFromWidgets(name, widgetIds);
+    } else if (presetId === '__blank__') {
+      createDashboard(name);
     } else {
-      applyPreset(presetId);
+      const preset = DASHBOARD_PRESETS.find((candidate) => candidate.id === presetId);
+      if (!preset) return;
+      createDashboard(name, preset);
     }
     setShowTemplates(false);
   };
@@ -517,10 +545,6 @@ export default function DashboardPage() {
             <Icons.add className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
-            <Icons.layoutTemplate className="h-3.5 w-3.5 me-1" />
-            {t('dashboard.newLayout', 'New Layout')}
-          </Button>
           <Button variant="ghost" size="sm" onClick={autoArrange}
             aria-label={t('dashboard.autoArrange', 'Auto Arrange')}>
             <Icons.layoutGrid className="h-3.5 w-3.5 sm:me-1" />
@@ -545,10 +569,6 @@ export default function DashboardPage() {
           >
             <Icons.refresh className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden="true" />
             <span>{t('dashboard.refreshShort', 'Refresh')}</span>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)}>
-            <Icons.layoutTemplate className="h-4 w-4" aria-hidden="true" />
-            <span>{t('dashboard.newLayout', 'New Layout')}</span>
           </Button>
           {vehicleList.length > 0 && (
             <>
@@ -587,7 +607,8 @@ export default function DashboardPage() {
       query={vehiclesQuery}
       error={!authLoading && auth?.authenticated !== false ? vehiclesError : null}
     >
-      <div className="space-y-6">
+      <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start">
+      <div className="min-w-0 flex-1 space-y-6">
         {/* Transient banner cluster — first-run theme prompt, live-pipe
             stale warning, customize hint, load error, and Tesla auth
             warning. Each child self-hides when its condition is inactive. */}
@@ -616,7 +637,7 @@ export default function DashboardPage() {
                     variant="primary"
                     size="sm"
                     onClick={() => {
-                      setCatalogueOpen(true);
+                      setShowPicker(true);
                       dismissHint();
                     }}
                   >
@@ -670,18 +691,12 @@ export default function DashboardPage() {
                 onDuplicate={duplicateDashboard}
                 onReset={resetToDefault}
                 onPinToVehicle={pinToVehicle}
-              />
-              <LayoutManager
-                dashboards={dashboards}
-                activeId={activeId}
-                onSwitch={switchDashboard}
-                onCreate={createDashboard}
+                onToggleEdit={() => setEditMode((value) => !value)}
                 onRename={renameDashboard}
                 onDelete={deleteDashboard}
                 onReorder={reorderDashboards}
-                onDuplicate={duplicateDashboard}
+                onOpenTemplates={openTemplates}
                 onOpenSettings={(id) => setShowDashSettings(id)}
-                onOpenTemplates={() => setShowTemplates(true)}
               />
             </section>
           </FadeIn>
@@ -697,13 +712,30 @@ export default function DashboardPage() {
               aria-label={t('dashboard.widgetsRegion', 'Dashboard widgets')}
               className="space-y-4"
             >
-              {editMode && (
-                <div className="rounded-xl border border-dashed border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3 text-center">
+              {(editMode || showPicker) && (
+                <div
+                  data-testid="dashboard-arrange-drop"
+                  onDragOver={(event) => {
+                    if (!event.dataTransfer.types.includes(WIDGET_DND_MIME)) return;
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'copy';
+                    setArrangeDropActive(true);
+                  }}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node)) setArrangeDropActive(false);
+                  }}
+                  onDrop={handleArrangeDrop}
+                  className={cn(
+                    'rounded-xl border border-dashed px-4 py-3 text-center transition-colors',
+                    arrangeDropActive
+                      ? 'border-[var(--theme-primary)] bg-[var(--control-bg-hover)]'
+                      : 'border-[var(--border-subtle)] bg-[var(--control-bg)]',
+                  )}
+                >
                   <Text as="p" size="sm" color="secondary">
-                    {t(
-                      'dashboard.editHint',
-                      'Drag widgets or use Arrange for one-click and keyboard positioning. Resize from edges or the same menu.',
-                    )}
+                    {arrangeDropActive
+                      ? t('dashboard.arrangeDropActive', 'Release to add and auto-arrange this widget.')
+                      : t('dashboard.arrangeDropHint', 'Drag a widget here to add and auto-arrange, or drop it on the grid to choose its position.')}
                   </Text>
                 </div>
               )}
@@ -719,6 +751,10 @@ export default function DashboardPage() {
                   dashboardVehicleId={dashboardVehicleId}
                   compactMode={activeDashboard.settings?.compactMode}
                   showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
+                  onDropWidget={handleDropWidget}
+                  getDraggedWidgetId={getDraggedWidgetId}
+                  onAddWidgets={() => setShowPicker(true)}
+                  onBrowseTemplates={() => openTemplates()}
                 />
               </div>
             </section>
@@ -733,20 +769,22 @@ export default function DashboardPage() {
           </FadeIn>
         )}
       </div>
-
-      {/* Widget Picker Drawer */}
       <WidgetPicker
         open={showPicker}
-        onClose={() => setShowPicker(false)}
-        onAddWidgets={addWidgets}
+        onClose={() => { setShowPicker(false); setArrangeDropActive(false); }}
+        onAddWidgets={handlePickerAdd}
         activeWidgetIds={activeDashboard.widgets.map((w) => w.widgetId)}
+        onDragWidgetStart={(widgetId) => { draggedWidgetIdRef.current = widgetId; }}
+        onDragWidgetEnd={() => { draggedWidgetIdRef.current = null; setArrangeDropActive(false); }}
       />
+      </div>
 
       {/* Template Gallery Modal */}
       <TemplateGallery
         open={showTemplates}
         onClose={() => setShowTemplates(false)}
         onApply={handleApplyTemplate}
+        initialTemplateId={initialTemplateId}
       />
 
       {/* Widget Settings Modal */}
@@ -798,19 +836,6 @@ export default function DashboardPage() {
           onChangeIcon={(icon) => updateDashboardIcon(showDashSettings, icon)}
         />
       )}
-
-      {/* Discoverable add-widget surface. The FAB is
-          hidden in kiosk mode and edit mode; the catalogue is the lightweight
-          alternative to the full WidgetPicker drawer. */}
-      {!isKiosk && vehicleList.length > 0 && (
-        <AddWidgetButton onClick={() => setCatalogueOpen(true)} isEditing={editMode} />
-      )}
-      <WidgetCatalogueDialog
-        open={catalogueOpen}
-        onClose={() => setCatalogueOpen(false)}
-        onAdd={handleCatalogueAdd}
-        activeWidgetIds={activeDashboard.widgets.map((w) => w.widgetId)}
-      />
 
       {/* Kiosk Mode — portaled to document.body to escape all app chrome */}
       {isKiosk && createPortal(

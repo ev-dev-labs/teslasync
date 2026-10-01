@@ -22,7 +22,6 @@ import {
   DataProvenanceBadge,
   MetricCard,
   MetricBar,
-  LiveIndicator,
   OperationalBrief,
   type OperationalTone,
 } from '@/components/data-display';
@@ -221,12 +220,6 @@ export default function BatteryHealthPage() {
     return <NoVehicleSelected pageTitle={t('battery.title', 'Battery Health')} />;
   }
 
-  const pageContextActions = (
-    <>
-      <LiveIndicator variant="compact" />
-    </>
-  );
-
   /* ── Empty / error ─────────────────────────────────────────────── */
   if (!health) {
     return (
@@ -234,7 +227,6 @@ export default function BatteryHealthPage() {
         title={t('battery.title', 'Battery Health')}
         subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
         error={healthLoading ? null : healthError as Error | null}
-        contextActions={pageContextActions}
       >
         <LiveStaleDataBanner />
         <FadeIn>
@@ -462,7 +454,6 @@ export default function BatteryHealthPage() {
     <PageContainer
       title={t('battery.title', 'Battery Health')}
       subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
-      contextActions={pageContextActions}
     >
       <LiveStaleDataBanner />
 

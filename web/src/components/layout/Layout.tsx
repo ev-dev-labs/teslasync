@@ -45,7 +45,7 @@ import { suggestSidebarPages } from './sidebar/sidebarSuggest'
 import { SIDEBAR_ROUTE_ICONS } from './sidebar/sidebarIcons'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
-import { RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
+import { DemoDataNotice, RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
 import {
   Button,
   CommandPaletteTrigger,
@@ -1460,6 +1460,7 @@ export default function Layout() {
             <TimeMachineBanner />
             <ServiceStatusBanner />
             <RuntimeHealthBanner />
+            <DemoDataNotice vehicles={vehicles ?? []} />
           </>
         )}
         <main
@@ -1496,6 +1497,7 @@ export default function Layout() {
                 <LayoutBreadcrumbs className="min-w-0 text-sm" sections={groupedSidebarSections} collections={visibleCollections} />
               </div>
             )}
+            {presentation.mode === 'standard' && <InstallPrompt />}
             <RouteTransition>
               <Outlet />
             </RouteTransition>
@@ -1532,9 +1534,6 @@ export default function Layout() {
       {presentation.mode === 'standard' && (
         <CommandPaletteHost onOpen={() => setSidebarOpen(false)} />
       )}
-
-      {/* PWA Install Prompt */}
-      {presentation.mode === 'standard' && <InstallPrompt />}
 
       {/* Route-change / mutation progress bar —
           mounted ABOVE every banner so the slim 2 px strip at the very

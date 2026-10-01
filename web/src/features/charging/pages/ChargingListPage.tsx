@@ -28,7 +28,7 @@ import { ListExportMenu } from '@/components/forms/ListExportMenu';
 import {
   SavedViewMenu,
   KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
-  BulkActionsToolbar, DataFreshnessAuto, DataProvenanceBadge, OperationalBrief, type BulkAction,
+  BulkActionsToolbar, DataProvenanceBadge, OperationalBrief, type BulkAction,
   EntityPreviewDrawer, type OperationalAttention,
 } from '@/components/data-display';
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
@@ -854,18 +854,10 @@ export default function ChargingListPage() {
                 status={vehicleStateDataState.status}
                 updatedAt={vehicleStateDataState.updatedAt}
               />
-              <DataFreshnessAuto
-                query={vehicleStateQuery}
-                source={t('operations.charging.liveStateSource', 'Live vehicle state')}
-              />
               <DataProvenanceBadge
                 provenance={chargingState.provenance}
                 status={chargingState.status}
                 updatedAt={chargingState.updatedAt}
-              />
-              <DataFreshnessAuto
-                query={chargingQuery}
-                source={t('operations.charging.sessionsSource', 'Charging sessions')}
               />
             </div>
           }

@@ -7,6 +7,7 @@ export const navRouteIcons = {
   '/charging': Icons.batteryCharging,
   '/battery': Icons.heartPulse,
   '/live': Icons.radar,
+  '/explore': Icons.search,
   '/analytics': Icons.analytics,
   '/climate': Icons.climate,
   '/climate-control': Icons.climate,

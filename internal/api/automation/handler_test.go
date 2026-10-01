@@ -419,12 +419,13 @@ func TestEvaluateTestConditions_VariableCheckUnknown(t *testing.T) {
 
 func TestEvaluateTestConditions_MultipleConditions(t *testing.T) {
 	h := &AutomationHandler{}
+	april := time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC)
 	a := testAutomationFullWithConditions(
 		`{"type":"time_window","start_time":"00:00","end_time":"23:59","timezone":"UTC"}`,
 		`{"type":"state_check","field":"state","operator":"eq","value":"online"}`,
 		`{"type":"seasonal","start_month":3,"end_month":9}`,
 	)
-	results := h.evaluateTestConditions(a, time.Now().UTC())
+	results := h.evaluateTestConditions(a, april)
 	if len(results) != 3 {
 		t.Fatalf("expected 3 results, got %d", len(results))
 	}

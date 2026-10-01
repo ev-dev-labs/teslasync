@@ -18,14 +18,20 @@
  *   - Save-As: the create path forwards the TRIMMED typed name to onCreate; the
  *     duplicate path forwards the typed name to onDuplicate (regression for the
  *     dropped-name bug); cancel / whitespace is a no-op.
+ *   - Rename: forwards the trimmed name to onRename; cancel / whitespace /
+ *     unchanged is a no-op.
+ *   - Delete: routes through the promise-based confirm — accepted calls
+ *     onDelete, declined does not; the default layout's item is disabled.
+ *   - New blank / new from template / settings: creation and settings entries
+ *     forward to their handlers.
  *   - Reset: routes through the promise-based confirm — accepted calls onReset,
  *     declined does not.
  *   - Pin toggle: pin / unpin / disabled-when-no-vehicle.
  *   - pinnedLabel resolves the vehicle the ACTIVE layout is pinned to (not the
  *     currently-selected one) and falls back to `#id` (regression for the
  *     wrong-vehicle bug).
- *   - a11y: icon-only reset button has an accessible name; Escape / outside
- *     click close the menu; the edit toggle reflects state via aria-pressed.
+ *   - a11y: every command lives in the menu (no duplicate inline buttons);
+ *     Escape / outside click close the menu; the edit entry reflects state.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -95,6 +101,9 @@ interface SetupOpts {
   withDuplicate?: boolean;
   withToggleEdit?: boolean;
   withPin?: boolean;
+  withRename?: boolean;
+  withDelete?: boolean;
+  withSettings?: boolean;
   vehicleId?: number | null;
   vehicles?: Vehicle[];
 }
@@ -117,6 +126,11 @@ function setup(opts: SetupOpts = {}) {
     onReset: vi.fn(),
     onToggleEdit: vi.fn(),
     onPinToVehicle: vi.fn(),
+    onRename: vi.fn(),
+    onDelete: vi.fn(),
+    onReorder: vi.fn(),
+    onOpenTemplates: vi.fn(),
+    onOpenSettings: vi.fn(),
   };
 
   const utils = render(
@@ -131,6 +145,11 @@ function setup(opts: SetupOpts = {}) {
       onReset={handlers.onReset}
       onToggleEdit={opts.withToggleEdit === false ? undefined : handlers.onToggleEdit}
       onPinToVehicle={opts.withPin === false ? undefined : handlers.onPinToVehicle}
+      onRename={opts.withRename === false ? undefined : handlers.onRename}
+      onDelete={opts.withDelete === false ? undefined : handlers.onDelete}
+      onReorder={handlers.onReorder}
+      onOpenTemplates={handlers.onOpenTemplates}
+      onOpenSettings={opts.withSettings === false ? undefined : handlers.onOpenSettings}
     />,
   );
 
@@ -170,6 +189,7 @@ describe('LayoutSwitcher', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'false');
     expect(within(btn).getByText('Layout')).toBeInTheDocument();
     expect(within(btn).getByText('Main')).toBeInTheDocument();
+    expect(btn).toHaveAttribute('title', 'Switch, create, or edit layouts here');
     // Dirty ⇒ the "modified" badge is present.
     expect(screen.getByText('modified')).toBeInTheDocument();
     // Menu is not mounted until opened.
@@ -188,6 +208,11 @@ describe('LayoutSwitcher', () => {
     });
 
     openMenu();
+    expect(screen.getByText('Switch, create, or edit layouts here')).toBeInTheDocument();
+    const entries = screen.getAllByRole('menuitem');
+    expect(entries.findIndex(item => item.textContent?.includes('New from template'))).toBeLessThan(
+      entries.findIndex(item => item.textContent?.includes('Edit dashboard')),
+    );
 
     const menu = screen.getByRole('menu', { name: 'Saved layouts' });
     expect(menu).toBeInTheDocument();
@@ -197,6 +222,19 @@ describe('LayoutSwitcher', () => {
     const altItem = screen.getByRole('menuitemradio', { name: 'Alternate' });
     expect(mainItem).toHaveAttribute('aria-checked', 'true');
     expect(altItem).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('keeps saved layouts and actions in the same viewport-limited scroll region', () => {
+    setup({ dashboards: Array.from({ length: 12 }, (_, index) => mkDash({ id: String(index), name: `Layout ${index}` })) });
+    openMenu();
+
+    const menu = screen.getByRole('menu', { name: 'Saved layouts' });
+    const savedList = screen.getByRole('menuitemradio', { name: 'Layout 0' }).parentElement;
+    expect(menu).toHaveClass('overflow-y-auto');
+    expect(menu.className).toContain('max-h-');
+    expect(savedList).not.toHaveClass('overflow-y-auto');
+    expect(menu).toContainElement(screen.getByRole('menuitemradio', { name: 'Layout 11' }));
+    expect(menu).toContainElement(screen.getByRole('menuitem', { name: 'Reset to default' }));
   });
 
   it('switches to the clicked layout and closes the menu', () => {
@@ -232,6 +270,35 @@ describe('LayoutSwitcher', () => {
     expect(screen.queryByRole('menuitemradio', { name: 'Pinned B' })).not.toBeInTheDocument();
   });
 
+  it('reorders across hidden vehicle layouts using indices from the full array', () => {
+    const { onReorder } = setup({
+      dashboards: [
+        mkDash({ id: 'g', name: 'Global' }),
+        mkDash({ id: 'hidden', name: 'Other vehicle', vehicleId: 2 }),
+        mkDash({ id: 'local', name: 'Local vehicle', vehicleId: 1 }),
+      ],
+      activeId: 'g',
+      vehicleId: 1,
+    });
+
+    openMenu();
+    expect(screen.getByRole('menuitem', { name: 'Move earlier' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move later' }));
+    expect(onReorder).toHaveBeenCalledWith(0, 2);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('disables moving the final visible layout later', () => {
+    const { onReorder } = setup({
+      dashboards: [mkDash(), mkDash({ id: 'alt', name: 'Alternate' })],
+      activeId: 'alt',
+    });
+    openMenu();
+    expect(screen.getByRole('menuitem', { name: 'Move later' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move earlier' }));
+    expect(onReorder).toHaveBeenCalledWith(1, 0);
+  });
+
   it('shows the empty-scope message when no layouts are visible for the vehicle', () => {
     setup({
       dashboards: [mkDash({ id: 'a', name: 'Pinned A', vehicleId: 1 })],
@@ -254,7 +321,8 @@ describe('LayoutSwitcher', () => {
       withDuplicate: false,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save as new layout' }));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Save as new layout' }));
 
     expect(promptSpy).toHaveBeenCalledWith('Name for the new layout:', 'Main (Copy)');
     expect(onCreate).toHaveBeenCalledTimes(1);
@@ -269,7 +337,8 @@ describe('LayoutSwitcher', () => {
       activeId: 'main',
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save as new layout' }));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Save as new layout' }));
 
     expect(onDuplicate).toHaveBeenCalledTimes(1);
     expect(onDuplicate).toHaveBeenCalledWith('main', 'My Custom Name');
@@ -281,11 +350,13 @@ describe('LayoutSwitcher', () => {
 
     // Cancelled prompt (null).
     promptSpy.mockReturnValue(null);
-    fireEvent.click(screen.getByRole('button', { name: 'Save as new layout' }));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Save as new layout' }));
 
     // Whitespace-only name trims to empty.
     promptSpy.mockReturnValue('   ');
-    fireEvent.click(screen.getByRole('button', { name: 'Save as new layout' }));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Save as new layout' }));
 
     expect(promptSpy).toHaveBeenCalledTimes(2);
     expect(onCreate).not.toHaveBeenCalled();
@@ -296,7 +367,8 @@ describe('LayoutSwitcher', () => {
     confirmResolvesTo = true;
     const { onReset } = setup();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reset to default' }));
 
     await waitFor(() => expect(onReset).toHaveBeenCalledTimes(1));
     expect(confirmSpy).toHaveBeenCalledTimes(1);
@@ -309,7 +381,8 @@ describe('LayoutSwitcher', () => {
     confirmResolvesTo = false;
     const { onReset } = setup();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reset to default' }));
 
     await waitFor(() => expect(confirmSpy).toHaveBeenCalledTimes(1));
     expect(onReset).not.toHaveBeenCalled();
@@ -386,37 +459,138 @@ describe('LayoutSwitcher', () => {
     expect(within(trigger()).getByText('#7')).toBeInTheDocument();
   });
 
-  it('reflects edit state through the toggle button and forwards clicks', () => {
-    const { onToggleEdit, rerender, dashboards, activeId } = setup({ editMode: false });
+  it('reflects edit state through the menu entry and forwards clicks', () => {
+    const { onToggleEdit } = setup({ editMode: false });
 
-    const editBtn = screen.getByRole('button', { name: 'Edit dashboard' });
-    expect(editBtn).toHaveAttribute('aria-pressed', 'false');
-    fireEvent.click(editBtn);
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit dashboard' }));
     expect(onToggleEdit).toHaveBeenCalledTimes(1);
-
-    rerender(
-      <LayoutSwitcher
-        dashboards={dashboards}
-        activeId={activeId}
-        editMode
-        onSwitch={vi.fn()}
-        onCreate={vi.fn()}
-        onReset={vi.fn()}
-        onToggleEdit={onToggleEdit}
-      />,
-    );
-    const exitBtn = screen.getByRole('button', { name: 'Exit edit mode' });
-    expect(exitBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('gives the icon-only reset button an accessible name and closes the menu on Escape / outside click', () => {
+  it('labels the edit entry as exit while in edit mode', () => {
+    setup({ editMode: true });
+
+    openMenu();
+    expect(screen.getByRole('menuitem', { name: 'Exit edit mode' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Edit dashboard' })).not.toBeInTheDocument();
+  });
+
+  it('renames the active layout with the trimmed typed name', () => {
+    promptSpy.mockReturnValue('  Road Trips  ');
+    const { onRename } = setup({
+      dashboards: [mkDash({ id: 'main', name: 'Main' })],
+      activeId: 'main',
+    });
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
+
+    expect(promptSpy).toHaveBeenCalledWith('New name for this layout:', 'Main');
+    expect(onRename).toHaveBeenCalledTimes(1);
+    expect(onRename).toHaveBeenCalledWith('main', 'Road Trips');
+  });
+
+  it('treats a cancelled, blank, or unchanged rename as a no-op', () => {
+    const { onRename } = setup({
+      dashboards: [mkDash({ id: 'main', name: 'Main' })],
+      activeId: 'main',
+    });
+
+    promptSpy.mockReturnValue(null);
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
+
+    promptSpy.mockReturnValue('   ');
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
+
+    promptSpy.mockReturnValue('Main');
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
+
+    expect(promptSpy).toHaveBeenCalledTimes(3);
+    expect(onRename).not.toHaveBeenCalled();
+  });
+
+  it('deletes the active layout when the confirm dialog is accepted', async () => {
+    confirmResolvesTo = true;
+    const { onDelete } = setup({
+      dashboards: [mkDash({ id: 'main', name: 'Main' }), mkDash({ id: 'alt', name: 'Alternate' })],
+      activeId: 'alt',
+    });
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete layout' }));
+
+    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
+    expect(onDelete).toHaveBeenCalledWith('alt');
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ variant: 'danger', title: 'Delete this layout?' }),
+    );
+  });
+
+  it('does NOT delete when the confirm dialog is declined', async () => {
+    confirmResolvesTo = false;
+    const { onDelete } = setup({
+      dashboards: [mkDash({ id: 'main', name: 'Main' }), mkDash({ id: 'alt', name: 'Alternate' })],
+      activeId: 'alt',
+    });
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete layout' }));
+
+    await waitFor(() => expect(confirmSpy).toHaveBeenCalledTimes(1));
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('disables delete for the default layout', () => {
+    setup({
+      dashboards: [mkDash({ id: 'main', name: 'Main', isDefault: true })],
+      activeId: 'main',
+    });
+
+    openMenu();
+    expect(screen.getByRole('menuitem', { name: 'Delete layout' })).toBeDisabled();
+  });
+
+  it('opens the named creation flow with blank selected', () => {
+    const { onCreate, onOpenTemplates } = setup();
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New blank layout' }));
+
+    expect(onOpenTemplates).toHaveBeenCalledWith('__blank__');
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('opens templates and settings from the menu', () => {
+    const { onOpenTemplates, onOpenSettings } = setup({
+      dashboards: [mkDash({ id: 'main', name: 'Main' })],
+      activeId: 'main',
+    });
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New from template…' }));
+    expect(onOpenTemplates).toHaveBeenCalledTimes(1);
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Layout settings' }));
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+    expect(onOpenSettings).toHaveBeenCalledWith('main');
+  });
+
+  it('keeps every command in the menu and closes it on Escape / outside click', () => {
     setup();
 
-    // Icon-only reset control still exposes a name for assistive tech.
-    expect(screen.getByRole('button', { name: 'Reset to default' })).toBeInTheDocument();
+    // No duplicate inline Edit / Save-as / Reset buttons beside the trigger.
+    expect(screen.queryByRole('button', { name: 'Save as new layout' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset to default' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit dashboard' })).not.toBeInTheDocument();
 
     openMenu();
     expect(screen.getByRole('menu')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Reset to default' })).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 

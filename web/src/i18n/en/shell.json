@@ -306,6 +306,13 @@
       "last7": "Last 7 days"
     }
   },
+  "demoData": {
+    "title": "Sample data present",
+    "detail": "DRILL vehicles and their drive and charging history are synthetic, not live activity.",
+    "mobileSummary": "Not live",
+    "showDetails": "Details",
+    "hideDetails": "Less"
+  },
   "draft": {
     "recovery": {
       "close": "Close",
@@ -533,7 +540,11 @@
       "allCaughtUp": "All caught up — nothing needs you right now.",
       "now": "Now",
       "upNext": "Up next",
-      "noFavorites": "Pin pages from any row and they will live here."
+      "noFavorites": "Pin pages from any row and they will live here.",
+      "expandQuickPins": "Show quick access pins",
+      "collapseQuickPins": "Hide quick access pins",
+      "expandRecent": "Show recently used",
+      "collapseRecent": "Hide recently used"
     },
     "collections": {
       "toggle": "{{group}}, {{count}} views",
@@ -640,6 +651,7 @@
     "mobileCharging": "Charging",
     "mobileBattery": "Battery",
     "mobileMap": "Map",
+    "mobileMore": "More",
     "currentPage": "Current page",
     "closeSidebar": "Close sidebar",
     "currentSection": "Current",
@@ -672,7 +684,6 @@
     "compactSettingsAccount": "Settings & Account",
     "browseAllFeatures": "Browse all features",
     "openSidebar": "Open sidebar",
-    "quickSearchHint": "Ctrl+K to jump",
     "minDelay": "min delay",
     "pageTitle": "Navigation & Route",
     "col": {
@@ -1013,16 +1024,8 @@
   },
   "notifications": {
     "bellPopover": {
-      "allRead": "All caught up",
-      "emptyMessage": "No unread notifications right now.",
-      "emptyTitle": "You're all caught up",
-      "error": "Could not load notifications",
       "loading": "Loading…",
-      "markAllRead": "Mark all read",
-      "title": "Notifications",
-      "unreadCount": "{{count}} unread",
-      "untitled": "Notification",
-      "viewAll": "View all"
+      "title": "Notifications"
     }
   },
   "operationalMode": {

@@ -18,7 +18,6 @@ import {
 import {
   StatCard,
   MetricBar,
-  DataFreshnessAuto,
   DataProvenanceBadge,
   OperationalBrief,
   type OperationalAttention,
@@ -656,13 +655,6 @@ export default function TeslaChargingSessionsPage() {
               provenance={sessionsDataState.provenance}
               status={sessionsDataState.status}
               updatedAt={sessionsDataState.updatedAt}
-            />
-            <DataFreshnessAuto
-              query={sessionsQuery}
-              source={t(
-                'operations.charging.fleetNarrative.source',
-                'Tesla Fleet Charging sessions',
-              )}
             />
           </div>
         }

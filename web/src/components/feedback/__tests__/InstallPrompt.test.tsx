@@ -136,6 +136,8 @@ describe('InstallPrompt', () => {
     const banner = screen.getByTestId('install-prompt')
     expect(banner).toHaveAttribute('role', 'status')
     expect(banner).toHaveAttribute('aria-live', 'polite')
+    expect(banner.parentElement).toHaveClass('mb-4', 'max-w-md')
+    expect(banner.parentElement).not.toHaveClass('fixed')
     // The handler must cancel the browser's default mini-infobar.
     expect(preventDefault).toHaveBeenCalledTimes(1)
     expect(screen.getByText('Install TeslaSync')).toBeInTheDocument()

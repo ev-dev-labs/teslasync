@@ -13,6 +13,10 @@ interface EmptyStateProps {
   action?: { label: string; onClick: () => void };
   /** Navigation action — preferred when the CTA just goes somewhere. Takes priority over `action`. */
   actionTo?: { label: string; to: string };
+  /** Optional second CTA rendered beside the primary (e.g. an alternative path). */
+  secondaryAction?: { label: string; onClick: () => void };
+  /** Navigation form of the secondary CTA. Takes priority over `secondaryAction`. */
+  secondaryActionTo?: { label: string; to: string };
   className?: string;
 }
 
@@ -29,8 +33,12 @@ export function EmptyState({
   description,
   action,
   actionTo,
+  secondaryAction,
+  secondaryActionTo,
   className,
 }: EmptyStateProps) {
+  const hasPrimary = actionTo != null || action != null;
+  const hasSecondary = secondaryActionTo != null || secondaryAction != null;
   return (
     <div
       role="status"
@@ -58,15 +66,28 @@ export function EmptyState({
           {description}
         </Text>
       )}
-      {actionTo ? (
-        <Link to={actionTo.to} className={linkButtonClasses}>
-          {actionTo.label}
-        </Link>
-      ) : action ? (
-        <CtaButton onClick={action.onClick} variant="secondary" size="md">
-          {action.label}
-        </CtaButton>
-      ) : null}
+      {(hasPrimary || hasSecondary) && (
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {actionTo ? (
+            <Link to={actionTo.to} className={linkButtonClasses}>
+              {actionTo.label}
+            </Link>
+          ) : action ? (
+            <CtaButton onClick={action.onClick} variant="secondary" size="md">
+              {action.label}
+            </CtaButton>
+          ) : null}
+          {secondaryActionTo ? (
+            <Link to={secondaryActionTo.to} className={linkButtonClasses}>
+              {secondaryActionTo.label}
+            </Link>
+          ) : secondaryAction ? (
+            <CtaButton onClick={secondaryAction.onClick} variant="ghost" size="md">
+              {secondaryAction.label}
+            </CtaButton>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

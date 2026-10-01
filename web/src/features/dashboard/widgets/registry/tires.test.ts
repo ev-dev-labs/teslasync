@@ -5,7 +5,7 @@
  * descriptors that the dashboard consumes at three points, each guarding an
  * invariant TypeScript alone cannot express:
  *
- *   1. The widget picker (`WidgetPicker` / `WidgetCatalogueDialog`) groups the
+ *   1. The docked widget picker (`WidgetPicker`) groups the
  *      catalogue by `category`, renders `name`/`description`, and prints
  *      `defaultSize` as an "N×M grid" chip. A stray category, blank label, or
  *      nonsense size is a user-visible defect.

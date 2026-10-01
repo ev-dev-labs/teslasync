@@ -85,6 +85,9 @@ func TestNLDashboardComposerAIOffManualComposerWorks(t *testing.T) {
 			r.Post("/power/dashboard/draft", g.Wrap("nl-dashboard-composer", func(w http.ResponseWriter, _ *http.Request) {
 				http.Error(w, "GUARD_BYPASSED — handler should not have been called in off mode", http.StatusInternalServerError)
 			}))
+			r.Post("/dashboard/widgets/draft", g.Wrap("nl-dashboard-composer", func(w http.ResponseWriter, _ *http.Request) {
+				http.Error(w, "GUARD_BYPASSED", http.StatusInternalServerError)
+			}))
 		})
 
 		// Baseline /power/dashboards backplane — NOT guarded by the
@@ -110,6 +113,12 @@ func TestNLDashboardComposerAIOffManualComposerWorks(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("AI route status = %d, want 404 in off mode (body=%q)", rec.Code, rec.Body.String())
+	}
+	recWidgets := httptest.NewRecorder()
+	reqWidgets := httptest.NewRequest(http.MethodPost, "/api/v1/ai/dashboard/widgets/draft", bytes.NewReader(body))
+	router.ServeHTTP(recWidgets, reqWidgets)
+	if recWidgets.Code != http.StatusNotFound || strings.Contains(recWidgets.Body.String(), "GUARD_BYPASSED") {
+		t.Fatalf("widget draft off-mode status = %d, body=%q", recWidgets.Code, recWidgets.Body.String())
 	}
 	if strings.Contains(rec.Body.String(), "GUARD_BYPASSED") {
 		t.Fatalf("AI route guard was bypassed in off mode: body=%q", rec.Body.String())

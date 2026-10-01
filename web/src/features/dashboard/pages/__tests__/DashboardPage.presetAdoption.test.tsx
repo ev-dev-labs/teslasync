@@ -130,7 +130,7 @@ vi.mock('../../components/DashboardGrid', () => ({
 }))
 vi.mock('../../components/WidgetPicker', () => ({ WidgetPicker: () => null }))
 vi.mock('../../components/WidgetSettingsModal', () => ({ WidgetSettingsModal: () => null }))
-vi.mock('../../components/LayoutManager', () => ({ LayoutManager: () => null }))
+
 vi.mock('../../components/LayoutSwitcher', () => ({ LayoutSwitcher: () => null }))
 vi.mock('../../components/TemplateGallery', () => ({ TemplateGallery: () => null }))
 vi.mock('../../components/ExportModal', () => ({ ExportModal: () => null }))
@@ -139,10 +139,6 @@ vi.mock('../../components/DashboardSettingsModal', () => ({
   DashboardSettingsModal: () => null,
 }))
 vi.mock('../../components/KioskSettingsModal', () => ({ KioskSettingsModal: () => null }))
-vi.mock('../../components/AddWidgetButton', () => ({ AddWidgetButton: () => null }))
-vi.mock('../../components/WidgetCatalogueDialog', () => ({
-  WidgetCatalogueDialog: () => null,
-}))
 vi.mock('../../components/FleetOperationsBrief', () => ({
   FleetOperationsBrief: () => null,
 }))

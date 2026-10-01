@@ -457,12 +457,11 @@ describe('ChargingListPage — happy path', () => {
     ).toBeInTheDocument();
     expect(within(briefMetric('Potential interruptions')).getByText('1')).toBeInTheDocument();
     expect(within(briefMetric('Charger reliability')).getByText('83% clear')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Source: Live vehicle state/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Source: Charging sessions/ }),
-    ).toBeInTheDocument();
+    // Freshness lives in the page header; the brief keeps provenance only.
+    const header = document.querySelector('header') as HTMLElement;
+    expect(within(header).getByText('just now')).toBeInTheDocument();
+    const brief = screen.getByTestId('charging-operational-brief');
+    expect(within(brief).queryByRole('button', { name: /Source: / })).toBeNull();
     expect(mockVehicleState).toHaveBeenCalledWith(1);
   });
 

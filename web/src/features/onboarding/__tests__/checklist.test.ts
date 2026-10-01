@@ -209,7 +209,7 @@ describe('useChecklistTasks', () => {
   })
 
   it('marks customize-dashboard complete when the dashboard customization flag is set', () => {
-    // The flag is flipped by the WidgetCatalogueDialog when
+    // The flag is flipped by the WidgetPicker when
     // the user adds their first widget; the task ticks over on the next
     // render of the checklist.
     expect(isCustomizeDashboardCompleted()).toBe(false)

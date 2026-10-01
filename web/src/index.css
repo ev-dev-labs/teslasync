@@ -1145,20 +1145,26 @@ html[data-status-bar='off'] {
 .react-grid-item {
   overflow: visible !important;
 }
-.react-grid-item > .widget-container {
-  overflow: hidden;
-  height: 100%;
-  border-radius: 0.75rem;
-}
+/* NOTE: react-grid-layout v2 does NOT wrap children — GridItem cloneElements
+   the child and merges `react-grid-item` onto the child's OWN root, so the
+   item div itself carries `.widget-container` (see renderWidgetBody). There
+   is no nested `.react-grid-item > .widget-container` element: selectors must
+   target the same element (`.react-grid-item.widget-container`) or an inner
+   node (`.widget-panel`). The item keeps `overflow: visible` so drag
+   feedback and handles are not clipped; the GlassPanel owns the rounded
+   content boundary. */
 
 /* Smooth transitions for widgets settling after drag/resize */
 .react-grid-item:not(.react-draggable-dragging):not(.resizing) {
   transition: transform 200ms ease, width 200ms ease, height 200ms ease;
 }
 
-/* Kill transitions on ALL siblings during active drag for snappy rearrangement */
-.dragging-active .react-grid-item {
-  transition: none !important;
+/* Siblings glide quickly during an active drag so the rearrangement is felt
+   rather than teleported (Grafana-style). The dragged item itself is
+   excluded — it must track the cursor exactly (box-shadow-only transition
+   below). Kept short (120ms) so items never lag far behind the pointer. */
+.dragging-active .react-grid-item:not(.react-draggable-dragging) {
+  transition: transform 120ms ease-out, width 120ms ease-out, height 120ms ease-out !important;
 }
 
 /* Dragged widget lifts off the grid with shadow + scale */
@@ -1182,84 +1188,119 @@ html[data-status-bar='off'] {
     0 0 20px rgba(var(--theme-primary-rgb), 0.1);
 }
 
+/* Touch: the drag toolbar and resize handles must claim the gesture —
+   without `touch-action: none` the browser scrolls the page instead of
+   dragging/resizing, so touch grids would feel dead. Taps still click
+   through (a tap has no movement for DraggableCore to claim), and the
+   toolbar only exists in edit mode, so view-mode scrolling is untouched. */
+.widget-drag-handle,
+.react-grid-item > .react-resizable-handle {
+  touch-action: none;
+}
+
 /* Resize handles — must be above widget chrome (z-10) and GlassPanel */
 .react-grid-item > .react-resizable-handle {
   z-index: 30 !important;
   position: absolute !important;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
   background: none !important;
 }
-.react-grid-item:hover > .react-resizable-handle {
-  opacity: 0.6;
+.edit-mode .react-grid-item > .react-resizable-handle {
+  opacity: 0.8;
 }
-.react-resizable-handle::after {
-  border-color: var(--theme-primary) !important;
+.edit-mode .react-grid-item:hover > .react-resizable-handle,
+.edit-mode .react-grid-item.resizing > .react-resizable-handle {
+  opacity: 1;
+}
+.react-grid-item > .react-resizable-handle::after {
+  border: none !important;
+  transform: none !important;
 }
 
-/* South-east handle (corner) */
+/* Resize controls sit inside the panel edge: no stray diagonal strokes or
+   document overflow from the library's rotated default corner indicators. */
 .react-grid-item > .react-resizable-handle-se {
-  bottom: 0;
-  right: 0;
+  bottom: 3px !important;
+  right: 3px !important;
   cursor: se-resize !important;
-  width: 20px !important;
-  height: 20px !important;
+  width: 30px !important;
+  height: 30px !important;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .react-grid-item > .react-resizable-handle-se::after {
   content: "" !important;
   position: absolute !important;
-  right: 3px !important;
-  bottom: 3px !important;
-  width: 8px !important;
-  height: 8px !important;
-  border-right: 2px solid var(--theme-primary) !important;
-  border-bottom: 2px solid var(--theme-primary) !important;
-  border-top: none !important;
-  border-left: none !important;
+  right: 7px !important;
+  bottom: 7px !important;
+  width: 14px !important;
+  height: 14px !important;
+  background: radial-gradient(circle, var(--text-secondary) 1.1px, transparent 1.6px) 0 0 / 6px 6px !important;
 }
 
-/* South handle (bottom edge for vertical resize) */
+/* RGL's stylesheet loads after this file, so its rotated s/e transforms
+   need explicit overrides even though these handles have their own shape. */
 .react-grid-item > .react-resizable-handle-s {
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 4px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin-left: 0 !important;
   cursor: s-resize !important;
-  width: 40px !important;
-  height: 10px !important;
+  width: 44px !important;
+  height: 20px !important;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-2) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .react-grid-item > .react-resizable-handle-s::after {
   content: "" !important;
   position: absolute !important;
   left: 50% !important;
-  bottom: 2px !important;
+  bottom: 7px !important;
   transform: translateX(-50%) !important;
-  width: 24px !important;
+  width: 20px !important;
   height: 3px !important;
-  border-radius: 2px !important;
-  background: var(--theme-primary) !important;
+  border-radius: 999px !important;
+  background: var(--text-secondary) !important;
   border: none !important;
 }
 
-/* East handle (right edge for horizontal resize) */
 .react-grid-item > .react-resizable-handle-e {
-  right: -4px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 4px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin-top: 0 !important;
   cursor: e-resize !important;
-  width: 10px !important;
-  height: 40px !important;
+  width: 20px !important;
+  height: 44px !important;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-2) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .react-grid-item > .react-resizable-handle-e::after {
   content: "" !important;
   position: absolute !important;
   top: 50% !important;
-  right: 2px !important;
+  right: 7px !important;
   transform: translateY(-50%) !important;
   width: 3px !important;
-  height: 24px !important;
-  border-radius: 2px !important;
-  background: var(--theme-primary) !important;
+  height: 20px !important;
+  border-radius: 999px !important;
+  background: var(--text-secondary) !important;
   border: none !important;
+}
+.react-grid-item > .react-resizable-handle:hover,
+.react-grid-item.resizing > .react-resizable-handle {
+  border-color: var(--theme-primary);
+}
+.react-grid-item > .react-resizable-handle:hover::after,
+.react-grid-item.resizing > .react-resizable-handle::after {
+  background-color: var(--theme-primary) !important;
 }
 
 /* Drop zone placeholder — clearly visible themed dashed outline */
@@ -1271,6 +1312,26 @@ html[data-status-bar='off'] {
   transition: all 150ms ease !important;
 }
 
+/* External-drop footprint: RGL renders the dropping item as an empty div
+   and stock CSS hides it (`visibility: hidden`), so users would only see
+   siblings parting with no idea where the widget lands. Show the same
+   dashed footprint instead — the div carries the drop x/y/w/h geometry. */
+.react-grid-item.dropping {
+  visibility: visible !important;
+  background: rgba(var(--theme-primary-rgb), 0.08) !important;
+  border: 2px dashed rgba(var(--theme-primary-rgb), 0.4) !important;
+  border-radius: 0.75rem !important;
+  opacity: 1 !important;
+}
+
+@keyframes widget-picker-dock-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.widget-picker-dock {
+  animation: widget-picker-dock-in 180ms ease-out both;
+}
+
 /* ─── Edit mode visual cues ─── */
 @keyframes widget-wobble {
   0%, 100% { transform: rotate(0deg); }
@@ -1278,20 +1339,41 @@ html[data-status-bar='off'] {
   75% { transform: rotate(0.3deg); }
 }
 
-.edit-mode .react-grid-item > .widget-container {
+/* The wobble animates `transform`, so it must live on the INNER panel —
+   animating the item itself would override RGL's inline translate and
+   teleport widgets to the origin. */
+.edit-mode .react-grid-item > .widget-panel {
   animation: widget-wobble 2s ease-in-out infinite;
 }
-.edit-mode .react-grid-item:nth-child(odd) > .widget-container {
+.edit-mode .react-grid-item:nth-child(odd) > .widget-panel {
   animation-delay: 0.5s;
 }
-.edit-mode .react-grid-item:nth-child(3n) > .widget-container {
+.edit-mode .react-grid-item:nth-child(3n) > .widget-panel {
   animation-delay: 1s;
 }
 
 /* Stop wobble on actively dragged/resized widgets */
-.edit-mode .react-grid-item.react-draggable-dragging > .widget-container,
-.edit-mode .react-grid-item.resizing > .widget-container {
+.edit-mode .react-grid-item.react-draggable-dragging > .widget-panel,
+.edit-mode .react-grid-item.resizing > .widget-panel {
   animation: none;
+}
+
+/* Brief ring pulse on the just-dropped widget so the gesture lands with
+   visible feedback. `box-shadow` is safe to animate on the item itself
+   (unlike `transform`, it never fights RGL's inline positioning), and it
+   composes with the panel wobble running underneath. 650ms matches the
+   `dropFlashTimer` in DashboardGrid. Skipped under reduced motion by the
+   global rule below (and in JS via useMotionPreference). */
+@keyframes widget-drop-flash {
+  0% {
+    box-shadow: 0 0 0 3px rgba(var(--theme-primary-rgb), 0.55), 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--theme-primary-rgb), 0);
+  }
+}
+.edit-mode .react-grid-item.widget-container.widget-just-dropped {
+  animation: widget-drop-flash 650ms ease-out 1;
 }
 
 /* ─── Reduced motion (WCAG 2.3.3) ────────────────────────────────────────────
@@ -1316,7 +1398,7 @@ html[data-status-bar='off'] {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .edit-mode .react-grid-item > .widget-container {
+  .edit-mode .react-grid-item > .widget-panel {
     animation: none !important;
   }
 
