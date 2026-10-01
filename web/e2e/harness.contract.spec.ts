@@ -159,8 +159,14 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
   }
   const workflow = load(readFileSync(
     resolve(process.cwd(), '..', '.github', 'workflows', 'frontend-quality.yml'), 'utf8',
-  )) as { jobs: Record<string, { needs?: string; steps: WorkflowStep[] }> };
+  )) as { jobs: Record<string, {
+    needs?: string;
+    steps: WorkflowStep[];
+    strategy?: { matrix?: { shard?: number[] } };
+  }> };
   const build = workflow.jobs['browser-build'];
+  const visualShards = workflow.jobs['visual-tests'].strategy?.matrix?.shard ?? [];
+  expect(visualShards).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   const buildSteps = Object.values(workflow.jobs).flatMap(job =>
     job.steps.filter(step => step.run?.includes('npm run e2e:build')));
   expect(buildSteps).toHaveLength(1);
@@ -172,7 +178,7 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
   for (const [id, command] of [
     ['chromium-tests', 'npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }}'],
     ['cross-browser', 'npm run e2e -- --project=${{ matrix.browser }}-smoke'],
-    ['visual-tests', 'npm run e2e:visual -- --shard=${{ matrix.shard }}/4 --workers=2'],
+    ['visual-tests', `npm run e2e:visual -- --shard=\${{ matrix.shard }}/${visualShards.length} --workers=2`],
   ]) {
     const job = workflow.jobs[id];
     expect(job.needs).toBe('browser-build');
