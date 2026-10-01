@@ -158,3 +158,57 @@ describe('navigateToReauth — identity transition', () => {
     expect(broadcastMock).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('resilientFetch — network failures are not expired sessions', () => {
+  it('does not sign out when both the API request and its auth probe cannot connect', async () => {
+    const { resilientFetch, getConnectionStatus } = await loadResilience()
+    const networkError = new TypeError('Failed to fetch')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(networkError)
+
+    await expect(resilientFetch('/vehicles', { retries: 0 })).rejects.toBe(networkError)
+    expect(fetchMock).toHaveBeenCalledTimes(navigator.onLine ? 2 : 1)
+    expect(assignSpy).not.toHaveBeenCalled()
+    expect(purgeMock).not.toHaveBeenCalled()
+    expect(getConnectionStatus()).toBe('offline')
+    fetchMock.mockRestore()
+  })
+
+  it('redirects to reauthenticate only when the probe detects an auth response', async () => {
+    const { resilientFetch } = await loadResilience()
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+
+    await expect(resilientFetch('/vehicles', { retries: 0 }))
+      .rejects.toMatchObject({ status: 401 })
+    expect(assignSpy).toHaveBeenCalledTimes(1)
+    expect(purgeMock).toHaveBeenCalledTimes(1)
+    fetchMock.mockRestore()
+  })
+
+  it('does not sign out when the auth probe reaches a failing server', async () => {
+    const { resilientFetch } = await loadResilience()
+    const networkError = new TypeError('Failed to fetch')
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(networkError)
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+
+    await expect(resilientFetch('/vehicles', { retries: 0 })).rejects.toBe(networkError)
+    expect(assignSpy).not.toHaveBeenCalled()
+    fetchMock.mockRestore()
+  })
+
+  it('still recognizes an identity-provider redirect from the manual probe', async () => {
+    const { resilientFetch } = await loadResilience()
+    const redirect = new Response(null)
+    Object.defineProperty(redirect, 'type', { value: 'opaqueredirect' })
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(redirect)
+
+    await expect(resilientFetch('/vehicles', { retries: 0 }))
+      .rejects.toMatchObject({ status: 401 })
+    expect(assignSpy).toHaveBeenCalledTimes(1)
+    fetchMock.mockRestore()
+  })
+})
