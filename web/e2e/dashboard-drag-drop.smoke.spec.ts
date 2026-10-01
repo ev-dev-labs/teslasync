@@ -294,10 +294,10 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
       if (!panel || !content) return Number.POSITIVE_INFINITY
       return Math.max(panel.scrollHeight - panel.clientHeight, content.scrollHeight - content.clientHeight)
     }), { message: `widget must fit without an inner scrollbar at ${width}px` }).toBeLessThanOrEqual(4)
-    expect(await widget.evaluate((element) => {
+    await expect.poll(() => widget.evaluate((element) => {
       const rect = element.getBoundingClientRect()
       return rect.left >= -1 && rect.right <= window.innerWidth + 1
-    }), `widget extends beyond the ${width}px viewport`).toBe(true)
+    }), { message: `widget extends beyond the ${width}px viewport` }).toBe(true)
     // Edit-mode resize handles intentionally extend 4px past the last grid column.
     await expect.poll(
       async () => page.locator('[data-tour="dashboard-grid"]').evaluate(
@@ -339,8 +339,10 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
     }), {
       message: `${label} should not need a scrollbar on initial add`,
     }).toBeLessThanOrEqual(4)
-    expect(await panel.evaluate((element) => element.getBoundingClientRect().height))
-      .toBeGreaterThanOrEqual(minRows * 80)
+    await expect.poll(
+      () => panel.evaluate((element) => element.getBoundingClientRect().height),
+      { message: `${label} should settle at its saved minimum height` },
+    ).toBeGreaterThanOrEqual(minRows * 80)
   }
   const previousHeight = (await readLayouts(page)).md.find((item) => item.i === instanceId)?.h ?? 0
   await widget.locator('.overflow-auto').evaluate((content) => {
