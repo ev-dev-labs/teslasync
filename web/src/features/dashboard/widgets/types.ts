@@ -107,6 +107,8 @@ export interface RGLLayout {
   isDraggable?: boolean;
   isResizable?: boolean;
   moved?: boolean;
+  /** An explicit resize must not be undone by automatic content fitting. */
+  userSized?: boolean;
 }
 
 /** react-grid-layout Layouts — keyed by breakpoint string */

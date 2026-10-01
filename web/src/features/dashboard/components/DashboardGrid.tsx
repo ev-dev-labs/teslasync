@@ -244,7 +244,10 @@ export function DashboardGrid({
     interactingRef.current = false;
     const bp = activeBreakpointRef.current;
     const merged: RGLLayouts = finalLayout
-      ? { ...layoutRef.current, [bp]: finalLayout as RGLLayout[] }
+      ? { ...layoutRef.current, [bp]: (finalLayout as RGLLayout[]).map((item) => ({
+          ...item,
+          userSized: item.userSized || layoutRef.current[bp]?.find((saved) => saved.i === item.i)?.userSized,
+        })) }
       : layoutRef.current;
     layoutRef.current = merged;
     setLiveLayouts(merged);
@@ -271,8 +274,17 @@ export function DashboardGrid({
     const id = typeof newItem?.i === 'string' ? newItem.i : undefined;
     // An explicit user resize takes the widget out of auto-fit management —
     // from here on its size is the user's choice, even if content overflows.
-    if (id !== undefined) autoFitIdsRef.current.delete(id);
-    persistGesture(layout, id);
+    const bp = activeBreakpointRef.current;
+    const before = savedLayoutsRef.current[bp]?.find((item) => item.i === id);
+    const after = layout.find((item) => item.i === id);
+    if (id !== undefined && before && after && (before.w !== after.w || before.h !== after.h)) {
+      autoFitIdsRef.current.delete(id);
+      const marked = layout.map((item) => item.i === id ? { ...item, userSized: true } : item);
+      layoutRef.current = { ...layoutRef.current, [bp]: marked };
+      persistGesture(marked, id);
+    } else {
+      persistGesture(layout, id);
+    }
   }, [persistGesture]);
 
   // ── Docked picker drops (WidgetPicker → grid) ───────────────────────────
@@ -327,31 +339,39 @@ export function DashboardGrid({
 
   // ── Auto-fit newly added widgets to their content ──────────────────────
   //
-  // A new widget must show all its data, not an internal scrollbar. After an
-  // add, each eligible panel is measured (scrollHeight vs clientHeight) and
-  // grown to fit, bounded by the widget's maxH. Fill-type widgets (maps,
-  // charts with h-full chains) report no overflow and keep default sizes —
-  // the measurement itself is the discriminator, no per-widget config.
+  // Fit against the widget's default-sized box rather than its live box.
+  // Measuring h-full descendants inside a growing box feeds their stretched
+  // height back into the next fit pass until the panel reaches maxH.
   //
   // Triggers: MutationObserver per eligible panel (lazy chunks, data fetch,
   // live updates) plus two settle passes (font/image loads don't mutate the
   // DOM). ResizeObserver can't do this job — the panel box is grid-fixed, so
-  // content growth never resizes it. Only grows, never shrinks; user sizing
-  // (resize gesture, arrange size action) ends eligibility permanently.
+  // content growth never resizes it. Repair oversized saved layouts too,
+  // unless the user explicitly sized them.
   const runAutoFitPass = useCallback(() => {
-    if (interactingRef.current || autoFitIdsRef.current.size === 0) return;
+    if (interactingRef.current) return;
     const root = containerRef.current;
     if (!root) return;
     const bp = activeBreakpointRef.current;
     const marginY = compactMode ? 8 : GRID_MARGIN[1];
     const current = layoutRef.current[bp] ?? [];
-    let grown: RGLLayout[] | null = null;
-    for (const id of autoFitIdsRef.current) {
+    let fitted: RGLLayout[] | null = null;
+    for (const widget of widgets) {
+      const id = widget.id;
       const item = current.find((l) => l.i === id);
-      if (!item) continue;
+      if (!item || item.userSized) continue;
+      const def = getWidgetDef(widget.widgetId);
+      if (!def) continue;
+      const newlyAdded = autoFitIdsRef.current.has(id);
+      if (!newlyAdded && item.h < Math.max(8, def.defaultSize.rows + 3)) continue;
       // Widget ids are app-generated ([A-Za-z0-9-]) — safe to interpolate.
       const panel = root.querySelector(`[data-widget-id="${id}"] > .widget-panel`);
       if (!(panel instanceof HTMLElement)) continue;
+      if (panel.clientWidth === 0) continue;
+      const baselineRows = Math.max(item.minH ?? def.minSize.rows, def.defaultSize.rows);
+      const baselineHeight = baselineRows * ROW_HEIGHT + (baselineRows - 1) * marginY;
+      const priorHeight = panel.style.height;
+      panel.style.height = `${baselineHeight}px`;
       const nestedOverflow = Array.from(panel.querySelectorAll<HTMLElement>('*')).reduce((largest, element) => {
         const overflow = element.scrollHeight - element.clientHeight;
         if (overflow <= 4) return largest;
@@ -364,18 +384,17 @@ export function DashboardGrid({
         panel.scrollHeight - panel.clientHeight,
         nestedOverflow,
       );
-      if (contentHeight <= panel.clientHeight + 4) continue;
-      const widget = widgets.find((w) => w.id === id);
-      const def = widget ? getWidgetDef(widget.widgetId) : undefined;
-      const maxH = item.maxH ?? def?.maxSize.rows ?? 20;
-      const hNew = Math.min(rowsForHeight(contentHeight, ROW_HEIGHT, marginY), maxH);
-      if (hNew <= item.h) continue;
-      grown ??= current.map((l) => ({ ...l }));
-      const target = grown.find((l) => l.i === id);
+      panel.style.height = priorHeight;
+      if (contentHeight <= 0) continue;
+      const maxH = item.maxH ?? def.maxSize.rows;
+      const hNew = Math.max(baselineRows, Math.min(rowsForHeight(contentHeight, ROW_HEIGHT, marginY), maxH));
+      if (hNew === item.h || (!newlyAdded && hNew >= item.h - 1)) continue;
+      fitted ??= current.map((l) => ({ ...l }));
+      const target = fitted.find((l) => l.i === id);
       if (target) target.h = hNew;
     }
-    if (!grown) return;
-    const merged: RGLLayouts = { ...layoutRef.current, [bp]: grown };
+    if (!fitted) return;
+    const merged: RGLLayouts = { ...layoutRef.current, [bp]: fitted };
     layoutRef.current = merged;
     setLiveLayouts(merged);
     onLayoutChange(merged, bp);
@@ -400,21 +419,29 @@ export function DashboardGrid({
     }
     prevWidgetIdsRef.current = ids;
 
+    const candidates = widgets.filter((widget) => {
+      const item = layoutRef.current[activeBreakpoint]?.find((entry) => entry.i === widget.id);
+      const def = getWidgetDef(widget.widgetId);
+      if (!item || item.userSized || !def) return false;
+      if (item.h >= Math.max(8, def.defaultSize.rows + 3)) {
+        autoFitIdsRef.current.add(widget.id);
+      }
+      return autoFitIdsRef.current.has(widget.id);
+    });
+    if (candidates.length === 0) return;
     const timers = fitTimersRef.current;
     const observers = fitObserversRef.current;
     const schedule = (ms: number) => {
       timers.push(setTimeout(runAutoFitPass, ms));
     };
     if (
-      isMobileStack
-      || autoFitIdsRef.current.size === 0
-      || typeof MutationObserver === 'undefined'
+      isMobileStack || typeof MutationObserver === 'undefined'
     ) {
       return;
     }
     const root = containerRef.current;
     if (root) {
-      for (const id of autoFitIdsRef.current) {
+      for (const { id } of candidates) {
         const panel = root.querySelector(`[data-widget-id="${id}"] > .widget-panel`);
         if (!(panel instanceof HTMLElement)) continue;
         const observer = new MutationObserver(() => schedule(60));
@@ -429,7 +456,7 @@ export function DashboardGrid({
       for (const timer of timers.splice(0)) clearTimeout(timer);
       for (const observer of observers.splice(0)) observer.disconnect();
     };
-  }, [dashboard.id, widgets, isMobileStack, runAutoFitPass]);
+  }, [activeBreakpoint, dashboard.id, widgets, isMobileStack, runAutoFitPass]);
 
   // Compute widget size from live layouts so widgets adapt during resize.
   // Reads from the *active* breakpoint's layout (not always lg) so widgets

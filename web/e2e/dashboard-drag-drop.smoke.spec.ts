@@ -164,8 +164,8 @@ test('docked picker drops onto the grid, rejects duplicates, and adds-and-arrang
       .some((w) => w.widgetId === 'odometer-counter')
   })).toBe(true)
 
+  await expect.poll(async () => countOverlaps((await readLayouts(page))[dropBreakpoint])).toBe(0)
   const layouts = await readLayouts(page)
-  expect(countOverlaps(layouts[dropBreakpoint])).toBe(0)
   const addedId = await page.evaluate(() => {
     const dashboards = JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{
       id: string
@@ -256,6 +256,12 @@ test('resize affordances are contained grips and a real resize persists', async 
   await expect.poll(async () => JSON.stringify(await readLayouts(page))).not.toBe(JSON.stringify(before))
   const after = await readLayouts(page)
   expect(countOverlaps(after.md)).toBe(0)
+  const resizedId = before.md.find((item) => {
+    const next = after.md.find((candidate) => candidate.i === item.i)
+    return next && (item.w !== next.w || item.h !== next.h)
+  })?.i
+  expect(resizedId).toBeDefined()
+  expect(after.md.find((item) => item.i === resizedId)).toMatchObject({ userSized: true })
 })
 
 test('new widgets fit their content across desktop, tablet, and phone widths', async ({ page }) => {
@@ -278,6 +284,7 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
     const active = localStorage.getItem('teslasync-active-dashboard')
     return dashboards.find((d) => d.id === active)?.widgets.find((w) => w.widgetId === 'vehicle-hero-card')?.id
   })
+
   expect(instanceId).toBeTruthy()
   const widget = page.locator(`[data-widget-id="${instanceId}"]`)
   await expect(widget).toBeVisible()
@@ -358,4 +365,131 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
     (content) => content.scrollHeight - content.clientHeight,
   )).toBeLessThanOrEqual(4)
   await widget.locator('[data-autofit-probe]').evaluate((probe) => probe.remove())
+  await expect.poll(async () =>
+    (await readLayouts(page)).md.find((item) => item.i === instanceId)?.h ?? 0,
+  ).toBe(previousHeight)
+  await page.waitForTimeout(1200)
+  expect((await readLayouts(page)).md.find((item) => item.i === instanceId)?.h).toBe(previousHeight)
+})
+
+test('repairs oversized saved panels without undoing an explicit resize', async ({ page }) => {
+  test.setTimeout(180_000)
+  await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
+  const mockApi = await installApiMocks(page, 'populated')
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await waitForHarnessReady(page, mockApi)
+  await createCommuter(page)
+  const saved = await page.evaluate(() => {
+    const dashboards = JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{
+      id: string
+      widgets: Array<{ id: string; widgetId: string }>
+      layouts: Record<string, LayoutItem[]>
+    }>
+    const active = dashboards.find((dash) => dash.id === localStorage.getItem('teslasync-active-dashboard'))!
+    const bloated = active.widgets.find((widget) => widget.widgetId === 'battery-gauge')!
+    const deliberate = active.widgets.find((widget) => widget.widgetId === 'charge-status')!
+    for (const items of Object.values(active.layouts)) {
+      for (const item of items) {
+        if (item.i === bloated.id) item.h = 30
+        if (item.i === deliberate.id) Object.assign(item, { h: 25, userSized: true })
+      }
+    }
+    localStorage.setItem('teslasync-dashboards', JSON.stringify(dashboards))
+    return { bloatedId: bloated.id, deliberateId: deliberate.id }
+  })
+
+  const restored = await page.context().newPage()
+  expect((await readLayouts(page)).md.find((item) => item.i === saved.deliberateId)?.h).toBe(25)
+  await seedBrowserState(restored, 'dark', '/', { preserveDashboardState: true })
+  await restored.addInitScript(() => {
+    (window as Window & { initialDashboardLayouts?: string }).initialDashboardLayouts =
+      localStorage.getItem('teslasync-dashboards') ?? ''
+  })
+  const restoredApi = await installApiMocks(restored, 'populated')
+  await restored.goto('/', { waitUntil: 'domcontentloaded' })
+  await waitForHarnessReady(restored, restoredApi)
+  expect(await restored.evaluate((id) => {
+    const raw = (window as Window & { initialDashboardLayouts?: string }).initialDashboardLayouts ?? '[]'
+    const dashboards = JSON.parse(raw) as Array<{ id: string; layouts: Record<string, LayoutItem[]> }>
+    return dashboards.find((dash) => dash.id === localStorage.getItem('teslasync-active-dashboard'))
+      ?.layouts.md.find((item) => item.i === id)
+  }, saved.deliberateId)).toMatchObject({ h: 25, userSized: true })
+  await expect.poll(async () =>
+    (await readLayouts(restored)).md.find((item) => item.i === saved.bloatedId)?.h ?? 30,
+  ).toBeLessThan(15)
+  expect((await readLayouts(restored)).md.find((item) => item.i === saved.deliberateId)).toMatchObject({ h: 25, userSized: true })
+  const healed = await readLayouts(restored)
+  expect(countOverlaps(healed.md)).toBe(0)
+  await restored.waitForTimeout(2500)
+  expect((await readLayouts(restored)).md.find((item) => item.i === saved.bloatedId)?.h)
+    .toBe(healed.md.find((item) => item.i === saved.bloatedId)?.h)
+  const reloaded = await page.context().newPage()
+  await seedBrowserState(reloaded, 'dark', '/', { preserveDashboardState: true })
+  const reloadedApi = await installApiMocks(reloaded, 'populated')
+  await reloaded.goto('/', { waitUntil: 'domcontentloaded' })
+  await waitForHarnessReady(reloaded, reloadedApi)
+  expect((await readLayouts(reloaded)).md.find((item) => item.i === saved.bloatedId)?.h)
+    .toBe(healed.md.find((item) => item.i === saved.bloatedId)?.h)
+  for (const width of [320, 390, 480, 481, 768, 996, 1024, 1200, 1440, 1920]) {
+    await reloaded.setViewportSize({ width, height: 900 })
+    await reloaded.reload({ waitUntil: 'domcontentloaded' })
+    await waitForHarnessReady(reloaded, reloadedApi)
+    const panel = reloaded.locator(`[data-widget-id="${saved.bloatedId}"] .widget-panel`)
+    await expect.poll(() => panel.evaluate((element) => element.getBoundingClientRect().height), {
+      message: `oversized saved panel should not return after resizing and refreshing at ${width}px`,
+    }).toBeLessThan(1300)
+    await expect.poll(() => panel.evaluate((element) => element.scrollHeight - element.clientHeight), {
+      message: `repaired widget content should fit at ${width}px`,
+    }).toBeLessThanOrEqual(4)
+    const layouts = await readLayouts(reloaded)
+    expect(layouts.md.find((item) => item.i === saved.deliberateId)).toMatchObject({ h: 25, userSized: true })
+    for (const items of Object.values(layouts)) expect(countOverlaps(items)).toBe(0)
+  }
+  await reloaded.close()
+  await restored.close()
+})
+
+test('repairs oversized layouts restored from the server and syncs the healed size', async ({ page }) => {
+  await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
+  const mockApi = await installApiMocks(page, 'populated')
+  const serverDashboard = {
+    id: 'from-server', name: 'From server',
+    widgets: [
+      { id: 'server-nav', widgetId: 'quick-nav' },
+      { id: 'server-charge', widgetId: 'charge-status' },
+      { id: 'server-hero', widgetId: 'vehicle-hero' },
+    ],
+    layouts: Object.fromEntries(['lg', 'md', 'sm', 'xs'].map((bp) => [
+      bp, [
+        { i: 'server-nav', x: 0, y: 0, w: bp === 'xs' ? 1 : 2, h: 30 },
+        { i: 'server-charge', x: 0, y: 30, w: bp === 'xs' ? 1 : 2, h: 2 },
+        { i: 'server-hero', x: 0, y: 32, w: bp === 'xs' ? 1 : 2, h: 9 },
+      ],
+    ])),
+    createdAt: '2026-10-01T12:00:00Z',
+    updatedAt: '2026-10-01T12:00:00Z',
+  }
+  const saves: Array<{ dashboards: Array<typeof serverDashboard> }> = []
+  await page.route('**/api/v1/settings/dashboard-layouts', async (route) => {
+    if (route.request().method() === 'PUT') {
+      saves.push(route.request().postDataJSON())
+      await route.fulfill({ status: 200, json: { dashboards: saves.at(-1)?.dashboards, active_id: serverDashboard.id } })
+      return
+    }
+    await route.fulfill({ status: 200, json: { dashboards: [serverDashboard], active_id: serverDashboard.id } })
+  })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await waitForHarnessReady(page, mockApi)
+  await expect.poll(async () =>
+    (await readLayouts(page)).md.find((item) => item.i === 'server-nav')?.h ?? 30,
+  ).toBeLessThan(10)
+  await expect.poll(() => saves.at(-1)?.dashboards[0]?.layouts.md.find((item) => item.i === 'server-nav')?.h ?? 30)
+    .toBeLessThan(10)
+  await expect.poll(async () =>
+    (await readLayouts(page)).md.find((item) => item.i === 'server-hero')?.h ?? 9,
+  ).toBeLessThanOrEqual(8)
+  await expect.poll(() => page.locator('[data-widget-id="server-hero"] .widget-panel').evaluate((panel) =>
+    panel.scrollHeight - panel.clientHeight,
+  )).toBeLessThanOrEqual(4)
+  expect(countOverlaps((await readLayouts(page)).md)).toBe(0)
 })

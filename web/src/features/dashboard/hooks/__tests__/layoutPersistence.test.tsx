@@ -62,6 +62,14 @@ beforeEach(() => {
 });
 
 describe('useDashboardLayout — row-height migration stamp', () => {
+  it('preserves an explicit user-sized item when restoring and compacting saved layouts', () => {
+    const saved = craftedDashboard();
+    saved.layouts.md[0] = { ...saved.layouts.md[0], h: 25, userSized: true };
+    seedDashboard(saved, '2');
+    const { result } = renderHook(() => useDashboardLayout());
+    expect(result.current.activeDashboard.layouts.md.find((item) => item.i === 'w-a'))
+      .toMatchObject({ h: 25, userSized: true });
+  });
   it('stamps the current version on a fresh load (no stored dashboards)', () => {
     renderHook(() => useDashboardLayout());
     expect(window.localStorage.getItem(ROW_VERSION_KEY)).toBe('2');

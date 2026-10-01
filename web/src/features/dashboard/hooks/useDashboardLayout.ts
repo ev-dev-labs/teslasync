@@ -172,7 +172,9 @@ export function compactLayouts(layouts: RGLLayouts): RGLLayouts {
     // verticalCompactor.compact returns a fresh array with each item's `y`
     // squashed up against the floor + previously placed items in its column
     // range. It also sets `moved: false` on each item it processed.
-    result[bp] = verticalCompactor.compact(items as RGLLayout[], cols) as RGLLayout[];
+    const manualSizes = new Map(items.map((item) => [item.i, item.userSized]));
+    result[bp] = (verticalCompactor.compact(items as RGLLayout[], cols) as RGLLayout[])
+      .map((item) => ({ ...item, userSized: manualSizes.get(item.i) }));
   }
   return result;
 }
@@ -720,6 +722,7 @@ export function useDashboardLayout() {
                     ? other.w
                     : Math.max(1, Math.round(item.w * cols / GRID_COLS[sourceBreakpoint])),
                   h: item.h,
+                  userSized: item.userSized,
                 }
               : other);
           }
@@ -814,9 +817,10 @@ export function useDashboardLayout() {
           : item),
         cols,
       ) as RGLLayout[];
+      const manualSizes = new Map(layouts[sourceBreakpoint].map((item) => [item.i, item.userSized]));
       layouts[sourceBreakpoint] = positioned.map((item) => item.i === newWidget.id
         ? { ...item, static: false }
-        : item);
+        : { ...item, userSized: manualSizes.get(item.i) });
       pushSnapshot({ widgets, layouts });
       updateActive((d) => ({ ...d, widgets, layouts }));
     },

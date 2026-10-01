@@ -163,6 +163,7 @@ beforeEach(() => {
   } catch {
     /* test mocked the module and stripped the hook — fine */
   }
+  if (navigator.onLine) window.dispatchEvent(new Event('online'))
 })
 
 // Polyfill IntersectionObserver for jsdom (used by framer-motion's useInView)

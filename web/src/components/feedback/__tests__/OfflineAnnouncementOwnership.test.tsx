@@ -174,15 +174,16 @@ describe('standard route inside Layout', () => {
     expect(announcers[0]).not.toHaveAttribute('role', 'alert')
   })
 
-  it('keeps the visible banner unchanged on a standard route', () => {
+  it('shows a small top notice on a standard route', () => {
     setRoute('/drives')
     render(<ReloadPrompt />)
     goOffline()
 
     const banner = screen.getByTestId('offline-banner')
-    expect(banner.className).toContain('fixed')
-    expect(banner.className).toContain('right-4')
-    expect(banner.className).toContain('z-[9997]')
+    expect(banner.parentElement?.className).toContain('fixed')
+    expect(banner.parentElement?.className).toContain('top-[')
+    expect(banner.parentElement?.className).toContain('z-[9997]')
+    expect(banner.nextElementSibling).toHaveAttribute('data-testid', 'pwa-offline-disclosure')
     expect(screen.getByText("You're offline")).toBeInTheDocument()
   })
 

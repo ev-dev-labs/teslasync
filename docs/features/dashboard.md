@@ -59,6 +59,8 @@ When a `vehicle.state.changed` event arrives, the relevant TanStack Query keys a
 
 If the SSE connection drops (network blip, proxy timeout, server restart), every subscriber transparently flips to adaptive polling. The widgets don't know the difference. You'll see a small connection indicator in the system-health strip turn yellow ("Polling"), then back to green when the stream recovers.
 
+If the browser or API goes offline, the dashboard stays visible with a small notice at the top when its app shell is cached. A failed connectivity check no longer signs you out as though your session expired. The service worker can reuse a previously visited app page for another dashboard URL; a first visit without any cached shell still shows the standalone offline page until the server is reachable again. Cached data is marked separately so it is not mistaken for live telemetry.
+
 ## How layout adapts
 
 | Available canvas width | Behaviour |
@@ -69,7 +71,7 @@ If the SSE connection drops (network blip, proxy timeout, server restart), every
 | Above 1200 px         | Four-column responsive grid |
 | Print                  | Sidebar and chrome are stripped (see [Printing](/guide/printing)) |
 
-The grid responds to the **canvas width**, not the device's screen width, so opening or collapsing the sidebar can change the column count. Resizing a widget carries its dimensions to the other grid widths while respecting each widget's allowed sizes; the phone stack uses its content height instead of a fixed grid row height.
+The grid responds to the **canvas width**, not the device's screen width, so opening or collapsing the sidebar can change the column count. Resizing a widget carries its dimensions to the other grid widths while respecting each widget's allowed sizes; the phone stack uses its content height instead of a fixed grid row height. New widgets fit their content against a fixed reference size, rather than repeatedly stretching to fill an already enlarged panel. Oversized saved panels without an explicit resize are fitted back to their content on load (including older 9-row Vehicle Cards); deliberate resizes remain in place.
 
 ## Units, dates, currency
 

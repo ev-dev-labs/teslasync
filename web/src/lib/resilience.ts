@@ -883,18 +883,26 @@ async function _doFetch<T>(
       // Skip the probe entirely if the caller has cancelled — the probe
       // would be wasted work and could trigger the auth-expired flow on a
       // page the user has already left.
-      if (err instanceof TypeError && !userSignal?.aborted) {
+      if (err instanceof TypeError && !userSignal?.aborted && navigator.onLine) {
+        let probeUnreachable = false
         try {
-          const probe = await fetch(`${getApiBase()}/api/v1/system/version`, { method: 'HEAD' })
-          if (!probe.ok || (probe.headers.get('content-type') ?? '').includes('text/html')) {
+          const probe = await fetch(`${getApiBase()}/api/v1/system/version`, {
+            method: 'HEAD',
+            redirect: 'manual',
+          })
+          if (probe.status === 401 || probe.status === 403 || probe.type === 'opaqueredirect'
+            || (probe.headers.get('content-type') ?? '').includes('text/html')) {
             handleAuthExpired()
             throw new ApiError('Authentication session expired', 401)
           }
         } catch (probeErr) {
           if (probeErr instanceof ApiError) throw probeErr
-          handleAuthExpired()
-          throw new ApiError('Authentication session expired', 401)
+          probeUnreachable = true
         }
+        // A failed probe is not evidence of expired credentials. Keep cached
+        // content and surface the offline notice even if navigator.onLine
+        // still reports a connection to a network without this server.
+        if (probeUnreachable) setStatus('offline')
       }
 
       // DOMException may not extend Error in
