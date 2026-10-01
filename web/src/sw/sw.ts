@@ -268,7 +268,7 @@ registerRoute(
 setCatchHandler(async ({ request }) => {
   if (request.destination === 'document') {
     const navigations = await self.caches.open(cacheName('navigations'))
-    for (const cachedRequest of (await navigations.keys()).reverse()) {
+    for (const cachedRequest of [...await navigations.keys()].reverse()) {
       const shell = await navigations.match(cachedRequest)
       if (shell?.status === 200 && !shell.redirected
         && shell.headers.get('content-type')?.includes('text/html')
