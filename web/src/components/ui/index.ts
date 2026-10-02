@@ -26,6 +26,7 @@ export { TabNav, type TabNavProps, type TabNavItem } from './TabNav';
 export { Accordion } from './Accordion';
 export { Pagination } from './Pagination';
 export { DataTable, useSortToggle, useTableSelection, useTableExpansion, type Column, type PaginationConfig } from './DataTable';
+export { DataTableValueFilter, type TableFilterValue } from './DataTableValueFilter';
 export { Table, type TableProps } from './Table';
 export { DataTableColumnsMenu } from './DataTableColumnsMenu';
 export { DataTableBulkBar } from './DataTableBulkBar';
@@ -87,3 +88,5 @@ export {
   type HeadingLevel,
   type TextProps,
 } from './Typography';
+export { buildTableFilterValues, compactTableValueSelection, matchesTableValueSelection, parseTableValueSelections, selectedTableValueKeys, tableValueKey } from './tableValueFilters';
+export type { TableRawValue, TableValueSelection, TableValueSelections } from './tableValueFilters';

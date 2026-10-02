@@ -14,6 +14,17 @@ function wrap(ui: ReactNode) {
 }
 
 describe('UsageCard', () => {
+  it('preserves supplied band and top-list label casing', () => {
+    wrap(
+      <UsageCard
+        bands={[{ label: 'Tesla API', value: '12' }]}
+        topLists={[{ key: 'units', title: 'Energy (kWh)', items: [{ key: 'home', label: 'Home', value: '5' }] }]}
+      />,
+    )
+    expect(screen.getByText('Tesla API')).not.toHaveClass('uppercase', 'capitalize')
+    expect(screen.getByText('Energy (kWh)')).not.toHaveClass('uppercase', 'capitalize')
+  })
+
   it('renders the empty state when no sections are provided', () => {
     wrap(<UsageCard emptyMessage="Nothing here yet." />)
     expect(screen.getByText('Nothing here yet.')).toBeInTheDocument()

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
-import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Download, GripVertical } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, AlertTriangle, Download, GripVertical } from 'lucide-react'
 import { Pagination } from './Pagination'
 import { Button } from './Button'
 import { Checkbox } from './Checkbox'
@@ -11,6 +11,13 @@ import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
 import { useOptionalToast } from '../feedback/Toast'
 import { DataTableColumnMenu } from './DataTableColumnMenu'
 import { DataTableBulkBar } from './DataTableBulkBar'
+import { DataTableHeaderFilter } from './DataTableHeaderFilter'
+import { DataTableValueFilter } from './DataTableValueFilter'
+import {
+  buildTableFilterValues, compactTableValueSelection, matchesTableValueSelection,
+  selectedTableValueKeys, type TableRawValue, type TableValueSelections,
+} from './tableValueFilters'
+import { Text } from './Typography'
 import { DataTableResizer } from './DataTableResizer'
 import { useContextMenu, type ContextMenuItem } from './ContextMenu'
 import { VisuallyHidden } from '../a11y/VisuallyHidden'
@@ -132,6 +139,15 @@ export interface Column<T> {
   key: string
   header: string
   render: (row: T) => ReactNode
+  /** Optional column-scoped filter opened by the header's filter icon. */
+  filter?: ReactNode
+  filterActive?: boolean
+  onFilterClear?: () => void
+  /** Canonical raw value, independent of display units. Opts the column into enabled value filters. */
+  filterValue?: (row: T) => TableRawValue
+  filterValueLabel?: (value: TableRawValue, row: T) => string
+  /** Subtle divider before this column, retained when reordered. */
+  groupStart?: boolean
   sortable?: boolean
   className?: string
   // Column display options:
@@ -160,6 +176,10 @@ export interface PaginationConfig {
 interface DataTableProps<T> {
   columns: Column<T>[]
   data: T[]
+  /** Local loaded-row filters only. Never enable automatically for server pagination. */
+  enableValueFilters?: boolean
+  /** Loaded candidates independent of caller-owned search/conditions. */
+  filterData?: T[]
   keyExtractor: (row: T) => RowKey
   sortKey?: string
   sortDir?: 'asc' | 'desc'
@@ -252,6 +272,12 @@ interface DataTableProps<T> {
    * them apart.
    */
   caption?: string
+  /** Page-owned controls placed beside the column menu in the table toolbar. */
+  toolbarActions?: ReactNode
+  /** Page-owned heading placed on the left of the same toolbar. */
+  toolbarHeading?: ReactNode
+  /** Disable when the page owns a separate selection/action toolbar. */
+  showSelectionSummary?: boolean
   /** Called whenever the selection changes. */
   onSelectionChange?: (keys: RowKey[]) => void
   /** Renders above the header when `selectedKeys.length > 0`. The selected
@@ -281,7 +307,7 @@ interface DataTableProps<T> {
   // RESIZE
   /** Allow users to drag column right edges to resize. Persists per-column
    *  widths in localStorage[`teslasync.table.${tableId}.widths`]. Requires
-   *  `tableId`. */
+   *  `tableId`. Enabled by default when tableId is present; pass false to opt out. */
   resizable?: boolean
 
   // COLUMN VISIBILITY
@@ -297,12 +323,14 @@ interface DataTableProps<T> {
   // ── Column reorder + visibility ───────────────────────────────────────
   /** Render the combined Columns popover (visibility checklist). Persists
    *  in localStorage[`teslasync.table.${tableId}.columns`]. Requires
-   *  `tableId`. Equivalent to (and replaces) `showColumnsMenu`. */
+   *  `tableId`. Enabled by default for persistent tables unless this prop or
+   *  its legacy alias explicitly opts out. Equivalent to showColumnsMenu. */
   columnVisibility?: boolean
   /** Allow drag-to-reorder column headers and surface ↑/↓ keyboard
    *  fallback in the column menu. Persists in
    *  localStorage[`teslasync.table.${tableId}.columns`]. Requires
-   *  `tableId`. Implies `columnVisibility` (the same popover hosts both). */
+   *  `tableId`. Enabled by default for persistent tables; pass false to opt out.
+   *  Shares the same popover as visibility, without overriding its opt-out. */
   columnReorder?: boolean
 
   // ── Per-table CSV export ───────────────────────────────────────────────
@@ -393,6 +421,8 @@ function alignClass(align?: 'left' | 'center' | 'right'): string {
 export function DataTable<T>({
   columns,
   data,
+  enableValueFilters = false,
+  filterData,
   keyExtractor,
   sortKey,
   sortDir,
@@ -417,10 +447,10 @@ export function DataTable<T>({
   expandedKeys,
   onExpandedChange,
   renderExpanded,
-  resizable = false,
-  showColumnsMenu = false,
-  columnVisibility = false,
-  columnReorder = false,
+  resizable = Boolean(tableId),
+  showColumnsMenu,
+  columnVisibility,
+  columnReorder = Boolean(tableId),
   exportable = false,
   exportFilename,
   exportRow,
@@ -429,9 +459,26 @@ export function DataTable<T>({
   rowHeight,
   overscan,
   rowContextMenu,
+  toolbarActions,
+  toolbarHeading,
+  showSelectionSummary = true,
 }: DataTableProps<T>) {
   const toast = useOptionalToast()
   const { t } = useTranslation()
+  const [valueSelections, setValueSelections] = useState<TableValueSelections>({})
+  const valueColumns = useMemo(() => enableValueFilters
+    ? columns.filter(column => column.filterValue != null) : [], [columns, enableValueFilters])
+  const candidateRows = filterData ?? data
+  const valueOptions = useMemo(() => new Map(valueColumns.map(column => [
+    column.key,
+    buildTableFilterValues(candidateRows, row => column.filterValue?.(row) ?? null,
+      (value, row) => column.filterValueLabel?.(value, row)
+        ?? (value == null ? '—' : extractRenderedText(column.render(row)) ?? String(value))),
+  ])), [valueColumns, candidateRows])
+  const filteredData = useMemo(() => valueColumns.length === 0 ? data : data.filter(row => valueColumns.every(column =>
+    matchesTableValueSelection(column.filterValue?.(row) ?? null, valueSelections[column.key]),
+  )), [data, valueColumns, valueSelections])
+  const hasValueFilters = valueColumns.some(column => valueSelections[column.key] != null)
   // Shared context menu host. We call this once per
   // table render so the imperative `openMenu` reference stays stable
   // across row renders.
@@ -497,7 +544,7 @@ export function DataTable<T>({
   }, [pageSizeOptions, pageSizeStorageKey])
 
   // Reset to page 1 when data length changes (e.g. filters applied).
-  useEffect(() => { setPage(1) }, [data.length])
+  useEffect(() => { setPage(1) }, [data.length, valueSelections, enableValueFilters])
 
   // ── Column layout (order + hidden, persisted by tableId) ───────────────
   // The legacy `visibleKeys` state is unified with a
@@ -599,7 +646,7 @@ export function DataTable<T>({
   const selectionSet = useMemo(() => new Set(selection), [selection])
   const lastClickedKey = useRef<RowKey | null>(null)
 
-  const allRowKeys = useMemo(() => data.map(keyExtractor), [data, keyExtractor])
+  const allRowKeys = useMemo(() => filteredData.map(keyExtractor), [filteredData, keyExtractor])
   const allSelected = isSelectable && allRowKeys.length > 0 && allRowKeys.every(k => selectionSet.has(k))
   const someSelected = isSelectable && allRowKeys.some(k => selectionSet.has(k)) && !allSelected
 
@@ -649,9 +696,16 @@ export function DataTable<T>({
   )
 
   const toggleAll = useCallback(() => {
+    if (hasValueFilters) {
+      const matchingKeys = new Set(allRowKeys)
+      setSelection(allSelected
+        ? selection.filter(key => !matchingKeys.has(key))
+        : Array.from(new Set([...selection, ...allRowKeys])))
+      return
+    }
     if (allSelected) setSelection([])
     else setSelection(allRowKeys)
-  }, [allSelected, allRowKeys, setSelection])
+  }, [hasValueFilters, selection, allSelected, allRowKeys, setSelection])
 
   const clearSelection = useCallback(() => setSelection([]), [setSelection])
 
@@ -687,8 +741,8 @@ export function DataTable<T>({
 
   // ── Pagination slice ───────────────────────────────────────────────────
   const paginatedData = paginationEnabled
-    ? data.slice((page - 1) * pageSize, page * pageSize)
-    : data
+    ? filteredData.slice((page - 1) * pageSize, page * pageSize)
+    : filteredData
 
   // ── Selected rows for bulk actions slot ────────────────────────────────
   const selectedRows = useMemo(
@@ -702,7 +756,7 @@ export function DataTable<T>({
     if (exporting) return
     setExporting(true)
     try {
-      const sourceRows: T[] = exportAll ? await exportAll() : data
+      const sourceRows: T[] = exportAll ? await exportAll() : filteredData
       const filenameBase = exportFilename ?? defaultExportFilename(tableId ?? name ?? 'table')
       const csvCols: CsvColumn<T>[] = visibleColumns.map((col) => ({
         key: col.key,
@@ -740,7 +794,7 @@ export function DataTable<T>({
     } finally {
       setExporting(false)
     }
-  }, [exporting, exportAll, data, exportFilename, tableId, name, visibleColumns, exportRow, t, toast])
+  }, [exporting, exportAll, filteredData, exportFilename, tableId, name, visibleColumns, exportRow, t, toast])
 
   // Total visible column count for colSpan calcs (incl. selection / expand).
   const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
@@ -907,6 +961,7 @@ export function DataTable<T>({
         aria-selected={isSelectable ? selected : undefined}
         onContextMenu={handleRowContextMenu}
         onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return
           if (e.key === ' ' && isSelectable) {
             e.preventDefault()
             toggleRow(rowKey, e)
@@ -918,18 +973,20 @@ export function DataTable<T>({
         tabIndex={isSelectable || expandable ? 0 : undefined}
       >
         {isSelectable && (
-          <td className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}>
+          <td className="w-12 min-w-12 p-0 text-center align-middle">
             {selectable === 'multi' ? (
-              <Checkbox
-                checked={selected}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggleRow(rowKey, e)
-                }}
-                onKeyDown={(e) => e.stopPropagation()}
-                onChange={() => { /* handled in onClick to retain shift selection */ }}
-                aria-label={selectionLabel}
-              />
+              <div className="flex justify-center">
+                <Checkbox
+                  checked={selected}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleRow(rowKey, e)
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onChange={() => { /* handled in onClick to retain shift selection */ }}
+                  aria-label={selectionLabel}
+                />
+              </div>
             ) : (
               <input
                 type="radio"
@@ -974,8 +1031,11 @@ export function DataTable<T>({
         {visibleColumns.map(col => (
           <td
             key={col.key}
+            data-column-key={col.key}
             className={cn(
               cellPaddingClass,
+              col.align === 'right' && 'tabular-nums',
+              col.groupStart && tableTokens.groupStart,
               colHiddenClass(col.key),
               alignClass(col.align),
               col.className,
@@ -1012,6 +1072,7 @@ export function DataTable<T>({
     : undefined
 
   const wrapperClass = cn(
+    'max-w-full overscroll-x-contain',
     effectiveStickyHeader || effectiveMaxHeight != null
       ? tableTokens.scrollContainer
       : 'overflow-x-auto rounded-panel border border-[var(--border-default)]',
@@ -1034,7 +1095,9 @@ export function DataTable<T>({
   // `columnVisibility`. When EITHER is true (or `columnReorder` is true,
   // since reorder always implies the menu), we surface the new combined
   // `<DataTableColumnMenu>` popover.
-  const visibilityRequested = showColumnsMenu || columnVisibility
+  const visibilityRequested = showColumnsMenu === undefined && columnVisibility === undefined
+    ? Boolean(tableId)
+    : Boolean(showColumnsMenu || columnVisibility)
   const reorderRequested = columnReorder
   const showColumnMenu = (visibilityRequested || reorderRequested) && Boolean(tableId)
   const headerReorderEnabled = reorderRequested && Boolean(tableId)
@@ -1096,7 +1159,9 @@ export function DataTable<T>({
       const targetIndex = currentOrder.indexOf(targetKey)
       if (targetIndex < 0) return
       const nextOrder = moveColumn(currentOrder, sourceKey, targetIndex)
-      persistLayout({ order: nextOrder, hidden: base.hidden.slice() })
+      const visible = new Set(applyColumnLayout(columns, base).map((column) => column.key))
+      const hidden = columns.filter((column) => !visible.has(column.key)).map((column) => column.key)
+      persistLayout({ order: nextOrder, hidden })
     },
     [headerReorderEnabled, layout, columns, persistLayout],
   )
@@ -1106,37 +1171,41 @@ export function DataTable<T>({
     setDragOverKey(null)
   }, [])
 
+  const hasSelectionSummary = showSelectionSummary && isSelectable && selectedRows.length > 0
   const showToolbar =
+    Boolean(toolbarActions || toolbarHeading) ||
     showColumnMenu ||
-    (isSelectable && selectedRows.length > 0) ||
+    hasSelectionSummary ||
     exportable
 
   return (
-    <div className="space-y-2">
+    <div className={tableTokens.frame}>
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex-1 min-w-0">
-            {isSelectable && selectedRows.length > 0 && (
+        <div className={tableTokens.toolbar}>
+          {(toolbarHeading || hasSelectionSummary) && <div className="min-w-0 flex-1 basis-48">
+            {toolbarHeading}
+            {hasSelectionSummary && (
               <DataTableBulkBar count={selectedRows.length} onClear={clearSelection}>
                 {bulkActions?.(selectedRows)}
               </DataTableBulkBar>
             )}
-          </div>
-          <div className="flex items-center gap-2">
+          </div>}
+          <div className="ml-auto flex max-w-full flex-wrap items-center gap-2">
+            {toolbarActions}
             {exportable && (
               <Button
                 type="button"
                 onClick={handleExportCsv}
-                disabled={exporting || data.length === 0}
+                disabled={exporting || (exportAll ? data.length : filteredData.length) === 0}
                 loading={exporting}
                 variant="ghost"
                 size="sm"
                 aria-label={t('table.export.csv', 'Download CSV')}
                 className={cn(
                   '!h-8 gap-1.5 rounded-md px-2 py-1 text-xs',
-                  'border border-white/[0.08] bg-white/[0.03]',
-                  'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
+                  'border border-[var(--border-subtle)] bg-[var(--control-bg)]',
+                  'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]',
                 )}
                 icon={<Download className="h-3.5 w-3.5" aria-hidden="true" />}
               >
@@ -1161,6 +1230,13 @@ export function DataTable<T>({
         </div>
       )}
 
+      {hasValueFilters && (
+        <Text as="p" size="xs" color="muted" role="status">
+          {t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
+            filtered: filteredData.length, loaded: candidateRows.length,
+          })}
+        </Text>
+      )}
       <div ref={scrollContainerRef} className={wrapperClass} style={wrapperStyle}>
         <table className={tableTokens.wrapper} aria-label={accessibleTableName}>
           {/* A11Y: a `<caption>` is the only table-native accessible name,
@@ -1176,19 +1252,21 @@ export function DataTable<T>({
               {isSelectable && (
                 <th
                   scope="col"
-                  className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}
+                  className="w-12 min-w-12 p-0 text-center align-middle"
                 >
                   {selectable === 'multi' ? (
-                    <Checkbox
-                      checked={allSelected}
-                      indeterminate={someSelected}
-                      onChange={toggleAll}
-                      aria-label={
-                        allSelected
-                          ? t('table.selection.deselectAll', 'Deselect all rows')
-                          : t('table.selection.selectAll', 'Select all rows')
-                      }
-                    />
+                    <div className="flex justify-center">
+                      <Checkbox
+                        checked={allSelected}
+                        indeterminate={someSelected}
+                        onChange={toggleAll}
+                        aria-label={
+                          allSelected
+                            ? t('table.selection.deselectAll', 'Deselect all rows')
+                            : t('table.selection.selectAll', 'Select all rows')
+                        }
+                      />
+                    </div>
                   ) : null}
                 </th>
               )}
@@ -1207,6 +1285,7 @@ export function DataTable<T>({
                   <th
                     key={col.key}
                     scope="col"
+                    aria-label={col.header || undefined}
                     draggable={headerReorderEnabled || undefined}
                     onDragStart={headerReorderEnabled ? (e) => handleHeaderDragStart(col.key, e) : undefined}
                     onDragOver={headerReorderEnabled ? (e) => handleHeaderDragOver(col.key, e) : undefined}
@@ -1219,6 +1298,9 @@ export function DataTable<T>({
                       headCellPaddingClass,
                       colHiddenClass(col.key),
                       alignClass(col.align),
+                      'whitespace-nowrap font-semibold',
+                      col.groupStart && tableTokens.groupStart,
+                      col.sortable && sortKey === col.key && 'text-[var(--text-primary)]',
                       resizable && 'relative group/th',
                       headerReorderEnabled && 'relative cursor-grab active:cursor-grabbing',
                       isDragOverTarget && 'bg-cyan-500/10 outline outline-1 outline-cyan-400/40',
@@ -1226,7 +1308,7 @@ export function DataTable<T>({
                     )}
                     style={w != null ? { width: w, minWidth: w } : undefined}
                     aria-sort={
-                      col.sortable
+                      col.sortable && (onSort || sortKey === col.key)
                         ? sortKey === col.key
                           ? sortDir === 'asc'
                             ? 'ascending'
@@ -1240,17 +1322,17 @@ export function DataTable<T>({
                         : undefined
                     }
                   >
-                    <span className="inline-flex items-center gap-1">
+                    <div className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
                       {headerReorderEnabled && (
                         <span
                           aria-hidden="true"
                           data-testid={`datatable-column-grip-${col.key}`}
-                          className="inline-flex h-4 w-3 items-center justify-center text-[var(--text-muted)]/60 hover:text-[var(--text-muted)]"
+                          className="absolute left-0.5 inline-flex h-4 w-3 items-center justify-center text-[var(--text-muted)] opacity-0 group-hover/th:opacity-60"
                         >
                           <GripVertical className="h-3 w-3" />
                         </span>
                       )}
-                      {col.sortable ? (
+                      {col.sortable && onSort ? (
                         <button
                           type="button"
                           onClick={() => onSort?.(col.key)}
@@ -1266,13 +1348,46 @@ export function DataTable<T>({
                               ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
                               : <ChevronDown className="h-3 w-3" aria-hidden="true" />
                           )}
+                          {sortKey !== col.key && <ArrowUpDown className="h-3 w-3 opacity-50" aria-hidden="true" />}
                         </button>
                       ) : (
                         <span className="inline-flex items-center gap-1">
                           {col.header}
                         </span>
                       )}
-                    </span>
+                    {(col.filter || valueOptions.has(col.key)) && (
+                      <DataTableHeaderFilter label={col.header}
+                        active={col.filterActive || (enableValueFilters && valueSelections[col.key] != null)}
+                        onClear={valueOptions.has(col.key) ? () => {
+                          setValueSelections(previous => {
+                            const next = { ...previous }
+                            delete next[col.key]
+                            return next
+                          })
+                          col.onFilterClear?.()
+                        } : col.onFilterClear}>
+                        {valueOptions.has(col.key) ? (
+                          <DataTableValueFilter
+                            options={valueOptions.get(col.key) ?? []}
+                            selected={selectedTableValueKeys(valueSelections[col.key],
+                              (valueOptions.get(col.key) ?? []).flatMap(option => option.keys ?? [option.value]))}
+                            onChange={values => {
+                              setPage(1)
+                              setValueSelections(previous => {
+                                const next = { ...previous }
+                                if (values == null) delete next[col.key]
+                                else next[col.key] = compactTableValueSelection(values,
+                                  (valueOptions.get(col.key) ?? []).flatMap(option => option.keys ?? [option.value]))
+                                return next
+                              })
+                            }}
+                            condition={col.filter}
+                            conditionActive={col.filterActive}
+                          />
+                        ) : col.filter}
+                      </DataTableHeaderFilter>
+                    )}
+                    </div>
                     {resizable && tableId && (
                       <DataTableResizer
                         columnKey={col.key}
@@ -1291,7 +1406,7 @@ export function DataTable<T>({
           </thead>
           <tbody className={tableTokens.body}>
             <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}`} fallback={bodyFallback}>
-              {data.length === 0 ? (
+              {filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={totalCols} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
                     {emptyMessage}
@@ -1322,11 +1437,11 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
-      {paginationEnabled && data.length > 0 && (
+      {paginationEnabled && filteredData.length > 0 && (
         <Pagination
           page={page}
           pageSize={pageSize}
-          total={data.length}
+          total={filteredData.length}
           onPageChange={setPage}
           onPageSizeChange={handlePageSizeChange}
           pageSizeOptions={pageSizeOptions}

@@ -1,5 +1,6 @@
 import { forwardRef, type TableHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
+import { tableTokens } from '@/lib/tokens';
 
 export type TableProps = TableHTMLAttributes<HTMLTableElement>;
 
@@ -9,14 +10,20 @@ export type TableProps = TableHTMLAttributes<HTMLTableElement>;
  */
 export const Table = forwardRef<HTMLTableElement, TableProps>(
   ({ className, ...props }, ref) => (
-    <table
-      ref={ref}
-      className={cn(
-        'w-full border-collapse text-left text-[var(--text-primary)]',
-        className,
-      )}
-      {...props}
-    />
+    <div className={tableTokens.frame}>
+      <div className={cn(tableTokens.scrollContainer, 'min-w-0 max-w-full overflow-x-auto overscroll-x-contain')}>
+        <table
+          ref={ref}
+          className={cn(
+            tableTokens.wrapper,
+            tableTokens.semantic,
+            'text-left',
+            className,
+          )}
+          {...props}
+        />
+      </div>
+    </div>
   ),
 );
 

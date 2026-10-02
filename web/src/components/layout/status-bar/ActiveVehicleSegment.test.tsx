@@ -222,8 +222,7 @@ describe('ActiveVehicleSegment — single-vehicle chip', () => {
 
     const chip = screen.getByLabelText('Active vehicle: Model 3')
     expect(chip.textContent).not.toMatch(/NaN/)
-    // Non-finite values collapse to a safe zero rather than a broken string.
-    expect(chip.textContent).toContain(`0% ${DOT} 0 km`)
+    expect(chip.textContent).toContain(`—% ${DOT} — km`)
     expect(screen.getByTestId('tooltip-content').textContent).not.toMatch(/NaN/)
   })
 

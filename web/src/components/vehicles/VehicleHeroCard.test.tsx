@@ -27,9 +27,7 @@
  *   - `toStatus` uses an own-property check, so an inherited object key such as
  *     `constructor` fails closed to `offline` instead of leaking through the
  *     old `in`-operator branch;
- *   - null-safe battery (`?? 0`) → a null `battery_level` renders a zeroed,
- *     red gauge instead of a NaN arc;
- *   - null-safe power (`?? 0`) → "0.00" instead of "NaN";
+ *   - missing readings stay unknown, without fabricated zero gauges;
  *   - blank firmware falls back to an em dash;
  *   - a role="status" placeholder replaces the previously-hidden gauges/stats
  *     when there is no live vehicle state.
@@ -48,12 +46,12 @@ type State = NonNullable<VehicleHeroCardProps['vehicleState']>;
 // factories are hoisted above the imports, so the handle must be created via
 // `vi.hoisted` to be referenceable inside the factory.
 const h = vi.hoisted(() => ({
-  units: { distance: 'km' as 'km' | 'mi', temperature: '°C' as '°C' | '°F' },
+  units: { distance: 'km' as 'km' | 'mi', temperature: '°C' as '°C' | '°F', power: 'kW' as 'W' | 'kW' },
 }));
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
-    unitPrefs: { distance: h.units.distance, temperature: h.units.temperature },
+    unitPrefs: { distance: h.units.distance, temperature: h.units.temperature, power: h.units.power },
   }),
 }));
 
@@ -82,7 +80,7 @@ vi.mock('react-i18next', () => ({
 // gauge scaling and battery tone threshold are directly assertable.
 vi.mock('@/components/charts/LinearGauge', () => ({
   LinearGauge: (p: {
-    value: number;
+    value: number | null | undefined;
     max: number;
     label: string;
     unit?: string;
@@ -123,7 +121,7 @@ function makeState(over: Partial<State> = {}): State {
     is_locked: true,
     sentry_mode: false,
     software_version: '2024.44.25',
-    power: 42,
+    power: 42_000,
     state: 'online',
     ...over,
   };
@@ -156,6 +154,7 @@ function gauge(label: string): HTMLElement {
 beforeEach(() => {
   h.units.distance = 'km';
   h.units.temperature = '°C';
+  h.units.power = 'kW';
 });
 
 describe('VehicleHeroCard — identity & header', () => {
@@ -278,10 +277,24 @@ describe('VehicleHeroCard — detail stat cards', () => {
   });
 
   it('renders the firmware and power values through fmtNumber', () => {
-    renderCard({ vehicleState: makeState({ software_version: '2024.44.25', power: 42 }) });
+    renderCard({ vehicleState: makeState({ software_version: '2024.44.25', power: 42_000 }) });
     expect(screen.getByText('2024.44.25')).toBeInTheDocument();
     expect(screen.getByText('42.00')).toBeInTheDocument(); // precision 2
     expect(screen.getByText('kW')).toBeInTheDocument();
+  });
+
+  it('preserves negative regeneration while converting SI watts to kilowatts', () => {
+    renderCard({ vehicleState: makeState({ power: -4_200 }) });
+    expect(screen.getByText('-4.20')).toBeInTheDocument();
+    expect(screen.getByText('kW')).toBeInTheDocument();
+  });
+
+  it('uses the configured watts display preference without scaling the reading', () => {
+    h.units.power = 'W';
+    renderCard({ vehicleState: makeState({ power: 4_200 }) });
+    expect(screen.getByText('4,200.00')).toBeInTheDocument();
+    expect(screen.getByText('W')).toBeInTheDocument();
+    expect(screen.queryByText('kW')).not.toBeInTheDocument();
   });
 });
 
@@ -322,7 +335,7 @@ describe('VehicleHeroCard — navigation actions', () => {
       'href',
       '/vehicles/7/commands',
     );
-    expect(screen.getByRole('link', { name: 'Live Map' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Live map' })).toHaveAttribute(
       'href',
       '/vehicles/7/map',
     );
@@ -330,17 +343,49 @@ describe('VehicleHeroCard — navigation actions', () => {
 });
 
 describe('VehicleHeroCard — null safety (regression guards)', () => {
-  it('renders a zeroed, danger-toned battery gauge (no NaN) when battery_level is null', () => {
-    renderCard({ vehicleState: makeState({ battery_level: null as unknown as number }) });
+  it('keeps a missing battery unknown rather than presenting an empty battery', () => {
+    renderCard({ vehicleState: makeState({ battery_level: null }) });
     const battery = gauge('Battery');
-    expect(battery).toHaveAttribute('data-value', '0');
-    expect(battery).toHaveAttribute('data-tone', 'danger');
+    expect(battery).toHaveAttribute('data-value', 'null');
+    expect(battery).toHaveAttribute('data-tone', 'undefined');
     expect(battery.getAttribute('data-value')).not.toContain('NaN');
   });
 
-  it('renders "0.00" kW when power is null', () => {
-    renderCard({ vehicleState: makeState({ power: null as unknown as number }) });
+  it('keeps missing power unknown rather than inventing zero power', () => {
+    renderCard({ vehicleState: makeState({ power: null }) });
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+  });
+
+  it('keeps missing range and temperatures unknown in Fahrenheit as well as Celsius', () => {
+    h.units.temperature = '°F';
+    renderCard({ vehicleState: makeState({ rated_range: undefined, inside_temp: null, outside_temp: NaN }) });
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      expect(gauge(label)).toHaveAttribute('data-value', 'null');
+    }
+    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.queryByText('32')).not.toBeInTheDocument();
+  });
+
+  it('does not infer an unlocked vehicle or disabled Sentry from missing flags', () => {
+    renderCard({ vehicleState: makeState({ is_locked: null, sentry_mode: undefined }) });
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Off')).not.toBeInTheDocument();
+  });
+
+  it('preserves genuine zero readings and false security flags', () => {
+    renderCard({ vehicleState: makeState({
+      battery_level: 0, rated_range: 0, inside_temp: 0, outside_temp: 0,
+      odometer: 0, power: 0, is_locked: false, sentry_mode: false,
+    }) });
+    for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
+      expect(gauge(label)).toHaveAttribute('data-value', '0');
+    }
     expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('Unlocked')).toBeInTheDocument();
+    expect(screen.getByText('Off')).toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
   });
 
   it('falls back to an em dash when the firmware string is blank', () => {

@@ -174,6 +174,11 @@ describe('ChartContainer accessibility contract', () => {
     // The table lives inside the figcaption — query by role.
     const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
+    expect(table).toHaveAccessibleName('Daily kWh — data table');
+    expect(table.closest('figcaption')).toHaveAttribute(
+      'id',
+      screen.getByRole('figure', { name: 'Daily kWh' }).getAttribute('aria-describedby'),
+    );
 
     // Two column headers in document order.
     const headers = within(table).getAllByRole('columnheader');

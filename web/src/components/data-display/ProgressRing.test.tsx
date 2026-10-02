@@ -53,6 +53,11 @@ function attrNum(el: Element | null, name: string): number {
 }
 
 describe('ProgressRing — structure', () => {
+  it('preserves unit casing in the center sub-label', () => {
+    render(<ProgressRing value={50} centerLabel="50" centerSubLabel="kWh" />);
+    expect(screen.getByText('kWh')).not.toHaveClass('uppercase', 'capitalize');
+  });
+
   it('renders a track circle and a round-capped progress arc', () => {
     const { container } = render(<ProgressRing value={50} />);
 

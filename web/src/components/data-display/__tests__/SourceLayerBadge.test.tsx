@@ -22,14 +22,15 @@ describe('SourceLayerBadge', () => {
     expect(screen.getByTestId('source-layer-badge').className).toContain('text-blue-200');
   });
 
-  it('renders LOG label when source="log"', () => {
+  it('renders an authored Log label when source="log"', () => {
     render(<SourceLayerBadge source="log" />);
-    expect(screen.getByText('LOG')).toBeInTheDocument();
+    expect(screen.getByText('Log')).toBeInTheDocument();
+    expect(screen.getByTestId('source-layer-badge')).not.toHaveClass('uppercase', 'capitalize');
   });
 
-  it('renders a STALE warning when source="stale"', () => {
+  it('renders an authored Stale warning when source="stale"', () => {
     render(<SourceLayerBadge source="stale" />);
-    expect(screen.getByText('STALE')).toBeInTheDocument();
+    expect(screen.getByText('Stale')).toBeInTheDocument();
     expect(screen.getByTestId('source-layer-badge').className).toContain('text-amber-200');
   });
 

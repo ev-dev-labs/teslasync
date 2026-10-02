@@ -14,6 +14,27 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('OperationalBrief', () => {
+  it('consolidates compact metrics without hiding their explanations', () => {
+    render(
+      <OperationalBrief
+        compact
+        eyebrow="Driving posture"
+        title="Activity in context"
+        description="Measured drive evidence."
+        statusLabel="On track"
+        metrics={[
+          { key: 'distance', label: 'Distance', value: '64 mi', detail: 'Total distance in your display unit.', tone: 'success' },
+          { key: 'efficiency', label: 'Energy intensity', value: '297 Wh/mi', detail: 'Both drives include measured energy.', tone: 'info' },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('list')).toHaveClass('md:grid-cols-3', 'min-[1920px]:grid-cols-6');
+    expect(screen.getByText('Total distance in your display unit.')).toBeVisible();
+    expect(screen.getByText('Both drives include measured energy.')).toBeVisible();
+    expect(screen.getByText('64 mi')).toHaveClass('text-emerald-700', 'dark:text-emerald-300');
+    expect(screen.getByText('Driving posture')).not.toHaveClass('uppercase', 'capitalize');
+  });
+
   it('renders decision context, evidence, and workflow actions', () => {
     const onOpen = vi.fn();
 

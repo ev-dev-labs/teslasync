@@ -7,10 +7,13 @@
  * `web/src/components/ui/__tests__/DataTable.test.tsx`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { useState } from 'react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import '@/i18n'
 import { DataTable, type Column } from './DataTable'
 import { ToastProvider } from '../feedback/Toast'
+import { Button } from './Button'
+import { downloadRowsAsCSV } from '@/lib/csvExport'
 
 interface Row {
   id: number
@@ -40,7 +43,195 @@ beforeEach(() => {
   window.localStorage.clear()
 })
 
+describe('DataTable — reusable value filters', () => {
+  const columns: Column<Row>[] = [
+    { key: 'name', header: 'Name', render: row => <span>{row.name}</span>, filterValue: row => row.name },
+    { key: 'status', header: 'Status', render: row => <span>{row.status}</span>, filterValue: row => row.status, groupStart: true },
+  ]
+
+  it('labels raw null as unknown rather than extracting a renderer-coerced zero', () => {
+    const rows = [{ id: 1, value: null }, { id: 2, value: 0 }]
+    render(<DataTable data={rows} keyExtractor={row => row.id} enableValueFilters
+      columns={[{ key: 'value', header: 'Reading', filterValue: row => row.value,
+        render: row => <span>{row.value ?? 0}</span> }]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Reading filter' }))
+    expect(screen.getByRole('checkbox', { name: '—' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: '0' })).toBeChecked()
+    fireEvent.click(screen.getByRole('checkbox', { name: '0' }))
+    expect(screen.getByText('1 matching / 2 loaded rows')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: '—' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: '0' })).not.toBeChecked()
+  })
+
+  it('does not silently enable loaded-row filters by default', () => {
+    render(<DataTable columns={columns} data={ROWS} keyExtractor={row => row.id} />)
+    expect(screen.queryByRole('button', { name: 'Status filter' })).toBeNull()
+  })
+
+  it('filters all loaded rows before pagination and retains an editable header for zero matches', () => {
+    render(<DataTable columns={columns} data={ROWS} keyExtractor={row => row.id}
+      enableValueFilters pagination={{ defaultPageSize: 1, pageSizeOptions: [1, 2] }} emptyMessage="Nothing matches" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    const filter = screen.getByRole('dialog', { name: 'Status filter' })
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'ok' }))
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).toBeNull()
+    expect(screen.getByText('1 matching / 3 loaded rows')).toBeInTheDocument()
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'fail' }))
+    expect(screen.getByText('Nothing matches')).toBeInTheDocument()
+    expect(screen.getByText('0 matching / 3 loaded rows')).toBeInTheDocument()
+    fireEvent.click(within(filter).getByRole('button', { name: 'Clear' }))
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    expect(screen.queryByText(/matching \/ 3 loaded rows/)).toBeNull()
+  })
+
+  it('uses independently loaded candidates and keeps legacy conditions in an accordion', () => {
+    render(<DataTable columns={[{ ...columns[1], filter: <span>Minimum confidence</span>, filterActive: true }]}
+      data={ROWS.slice(0, 1)} filterData={ROWS} keyExtractor={row => row.id} enableValueFilters />)
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    expect(screen.getByRole('checkbox', { name: 'fail' }).closest('label')).toHaveTextContent('1')
+    expect(screen.getByRole('button', { name: /Conditions/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Minimum confidence')).toBeVisible()
+  })
+
+  it('limits select-all to filtered loaded rows without rewriting controlled hidden selections', () => {
+    const onSelectionChange = vi.fn()
+    render(<DataTable columns={columns} data={ROWS} keyExtractor={row => row.id} enableValueFilters
+      selectable="multi" selectedKeys={[1]} onSelectionChange={onSelectionChange} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'ok' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(onSelectionChange).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }))
+    expect(onSelectionChange).toHaveBeenCalledWith([1, 2])
+  })
+
+  it('does not turn nested control key presses into row-selection shortcuts', () => {
+    const onSelectionChange = vi.fn()
+    render(<DataTable columns={[{ key: 'name', header: 'Name', render: row => <a href="#preview">{row.name}</a> }]}
+      data={ROWS} keyExtractor={row => row.id} selectable="multi" onSelectionChange={onSelectionChange} />)
+    fireEvent.keyDown(screen.getByRole('link', { name: 'Alpha' }), { key: ' ' })
+    expect(onSelectionChange).not.toHaveBeenCalled()
+    fireEvent.keyDown(screen.getByRole('link', { name: 'Alpha' }).closest('tr')!, { key: ' ' })
+    expect(onSelectionChange).toHaveBeenCalledWith([1])
+  })
+
+  it('retains canonical selections when formatted units change and combines columns', () => {
+    const formatted = (unit: string): Column<Row>[] => [
+      { ...columns[0], filterValue: row => row.id, filterValueLabel: value => `${value} ${unit}` },
+      columns[1],
+    ]
+    const { rerender } = render(<DataTable columns={formatted('m')} data={ROWS} keyExtractor={row => row.id} enableValueFilters />)
+    fireEvent.click(screen.getByRole('button', { name: 'Name filter' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: '1 m' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    rerender(<DataTable columns={formatted('ft')} data={ROWS} keyExtractor={row => row.id} enableValueFilters />)
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    expect(screen.queryByText('Bravo')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Name filter' }))
+    expect(screen.getByRole('checkbox', { name: '1 ft' })).toBeChecked()
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'ok' }))
+    expect(screen.queryByText('Alpha')).toBeNull()
+    expect(screen.getByText('0 matching / 3 loaded rows')).toBeInTheDocument()
+  })
+
+  it('shares neutral framing, group dividers, numeric alignment, and selection markers without a visible machine heading', () => {
+    const { container } = render(<DataTable tableId="machine:opaque" columns={[
+      ...columns, { key: 'id', header: 'ID', align: 'right', render: row => row.id },
+    ]} data={ROWS} keyExtractor={row => row.id} selectable="multi" selectedKeys={[2]} />)
+    expect(container.firstElementChild).toHaveClass('min-w-0', 'max-w-full', 'rounded-xl')
+    expect(container.querySelector('th[data-column-key=status]')).toHaveClass('border-l')
+    expect(container.querySelector('td[data-column-key=status]')).toHaveClass('border-l')
+    expect(container.querySelector('td[data-column-key=id]')).toHaveClass('text-right', 'tabular-nums')
+    expect(container.querySelector('tr[aria-selected=true]')).toHaveClass('!bg-[var(--control-bg)]')
+    expect(screen.queryByRole('heading', { name: 'machine:opaque' })).toBeNull()
+  })
+})
+
+describe('DataTable — responsive toolbar ownership', () => {
+  it('preserves selection without duplicating a page-owned selection summary', () => {
+    const onSelectionChange = vi.fn()
+    render(
+      <DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+        selectable="multi" selectedKeys={[1]} onSelectionChange={onSelectionChange}
+        toolbarHeading={<span>Evidence</span>} showSelectionSummary={false} />,
+    )
+    expect(screen.getByText('Evidence')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Bulk actions' })).toBeNull()
+    expect(screen.getAllByRole('checkbox')[1]).toBeChecked()
+    fireEvent.click(screen.getAllByRole('checkbox')[1])
+    expect(onSelectionChange).toHaveBeenCalledWith([])
+  })
+
+  it('keeps the existing selection summary by default', () => {
+    render(
+      <DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+        selectable="multi" selectedKeys={[1]} />,
+    )
+    expect(screen.getByRole('region', { name: 'Bulk actions' })).toBeInTheDocument()
+  })
+})
+
 describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)', () => {
+  it('defaults persistent tables to one unified resize/reorder/visibility toolbar without inventing sorting', () => {
+    const { container } = render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      tableId="pro-defaults" toolbarHeading={<span>Evidence</span>} toolbarActions={<Button>Page export</Button>} />)
+    expect(screen.getAllByRole('button', { name: /reorder or hide columns/i })).toHaveLength(1)
+    expect(screen.getAllByRole('separator')).toHaveLength(3)
+    expect(container.querySelector('th[data-column-key=name]')).toHaveAttribute('draggable', 'true')
+    expect(screen.queryByRole('button', { name: 'Name' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
+    expect(screen.getByRole('checkbox', { name: /show or hide name/i })).toBeChecked()
+  })
+
+  it('preserves complete explicit opt-outs and mobile column structure', () => {
+    const { container } = render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      tableId="fixed-axis" resizable={false} columnReorder={false} columnVisibility={false} mobileColumns={['name']} />)
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.queryByRole('separator')).toBeNull()
+    expect(container.querySelector('th[data-column-key=id]')).toHaveClass('hidden', 'md:table-cell')
+    expect(container.querySelector('th[data-column-key=name]')).not.toHaveAttribute('draggable')
+  })
+
+  it('honors a legacy visibility opt-out independently of reorder and resize', () => {
+    render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      tableId="legacy-opt-out" showColumnsMenu={false} columnReorder={false} resizable={false} />)
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('does not add persistent controls without an identifier or no-op sorting without a handler', () => {
+    const { container } = render(<DataTable columns={[{ ...REORDER_COLS[1], sortable: true }]}
+      data={ROWS} keyExtractor={row => row.id} />)
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.queryByRole('separator')).toBeNull()
+    expect(container.querySelector('th')).not.toHaveAttribute('aria-sort')
+  })
+
+  it('keeps new optional columns hidden when reordering an existing saved layout', () => {
+    window.localStorage.setItem('teslasync.table.reorder-upgrade.columns', JSON.stringify({
+      order: ['id', 'name', 'status'], hidden: [],
+    }))
+    const columns: Column<Row>[] = [
+      ...REORDER_COLS,
+      { key: 'detail', header: 'Detail', defaultVisible: false, render: row => row.status },
+    ]
+    const { container } = render(
+      <DataTable columns={columns} data={ROWS} keyExtractor={row => row.id} tableId="reorder-upgrade" columnReorder />,
+    )
+    expect(getHeaderOrder(container)).toEqual(['id', 'name', 'status'])
+    const source = container.querySelector('thead th[data-column-key="id"]')!
+    const target = container.querySelector('thead th[data-column-key="status"]')!
+    fireEvent.dragStart(source)
+    fireEvent.dragOver(target)
+    fireEvent.drop(target)
+    expect(getHeaderOrder(container)).toEqual(['name', 'status', 'id'])
+    expect(JSON.parse(window.localStorage.getItem('teslasync.table.reorder-upgrade.columns')!).hidden)
+      .toEqual(['detail'])
+  })
+
   it('reorders columns via drag-and-drop and persists the new layout', () => {
     const { container } = render(
       <DataTable
@@ -99,7 +290,7 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
         columnVisibility
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: /show or hide columns/i }))
+    fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
     const nameCheckbox = screen.getByRole('checkbox', { name: /show or hide name/i })
     expect(nameCheckbox).toBeChecked()
     fireEvent.click(nameCheckbox)
@@ -207,7 +398,7 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
         columnVisibility
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: /show or hide columns/i }))
+    fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
     fireEvent.click(screen.getByRole('checkbox', { name: /show or hide status/i }))
     const legacy = JSON.parse(window.localStorage.getItem('teslasync.table.reorder-8.visible')!)
     expect(legacy).toEqual(['id', 'name'])
@@ -360,6 +551,88 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
     if (!blob) throw new Error(`no blob stashed for ${last.url}`)
     return await blob.text()
   }
+
+  const filterColumns: Column<Row>[] = REORDER_COLS.map(column => column.key === 'status'
+    ? { ...column, filterValue: row => row.status }
+    : column)
+
+  function excludeFailedRows() {
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'fail' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+  }
+
+  it('exports matching loaded rows across all internal pages in incoming sort order', async () => {
+    const sorted = [...ROWS].reverse()
+    render(<DataTable columns={filterColumns} data={sorted} keyExtractor={row => row.id}
+      enableValueFilters exportable exportFilename="matching"
+      exportRow={row => ({ id: row.id, name: row.name.toUpperCase(), status: row.status })}
+      pagination={{ defaultPageSize: 1, pageSizeOptions: [1] }} />)
+    excludeFailedRows()
+    expect(screen.getByText('Charlie')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
+    await waitFor(() => expect(downloads).toHaveLength(1))
+    expect(await latestCsv()).toBe('ID,Name,Status\r\n3,CHARLIE,ok\r\n1,ALPHA,ok')
+  })
+
+  it('retains hidden selected rows for explicit bulk exports, independently of ordinary CSV', async () => {
+    const onSelectionChange = vi.fn()
+    render(<DataTable columns={filterColumns} data={ROWS} keyExtractor={row => row.id}
+      enableValueFilters exportable selectable="multi" selectedKeys={[1, 2]} onSelectionChange={onSelectionChange}
+      pagination={{ defaultPageSize: 1, pageSizeOptions: [1] }}
+      bulkActions={selected => <Button onClick={() => downloadRowsAsCSV('selected', selected, REORDER_COLS)}>
+        Export selected
+      </Button>} />)
+    excludeFailedRows()
+    expect(onSelectionChange).not.toHaveBeenCalled()
+    expect(screen.getByRole('region', { name: 'Bulk actions' })).toHaveTextContent('2 selected')
+    fireEvent.click(screen.getByRole('button', { name: 'Export selected' }))
+    expect(await latestCsv()).toBe('ID,Name,Status\r\n1,Alpha,ok\r\n2,Bravo,fail')
+    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
+    await waitFor(() => expect(downloads).toHaveLength(2))
+    expect(await latestCsv()).toBe('ID,Name,Status\r\n1,Alpha,ok\r\n3,Charlie,ok')
+  })
+
+  it('preserves caller-owned full export callbacks rather than applying loaded-row filters to their result', async () => {
+    const serverRow: Row = { id: 99, name: 'Server row', status: 'fail' }
+    const exportAll = vi.fn(async () => [serverRow])
+    render(<DataTable columns={filterColumns} data={ROWS} keyExtractor={row => row.id}
+      enableValueFilters exportable exportAll={exportAll} />)
+    excludeFailedRows()
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'ok' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.getByText('0 matching / 3 loaded rows')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /download csv/i })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
+    await waitFor(() => expect(downloads).toHaveLength(1))
+    expect(exportAll).toHaveBeenCalledOnce()
+    expect(await latestCsv()).toBe('ID,Name,Status\r\n99,Server row,fail')
+  })
+
+  it('disables ordinary CSV when no loaded rows match an internal value filter', () => {
+    render(<DataTable columns={filterColumns} data={ROWS} keyExtractor={row => row.id}
+      enableValueFilters exportable />)
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }))
+    expect(screen.getByRole('button', { name: /download csv/i })).toBeDisabled()
+  })
+
+  it('select-all adds and removes matching loaded keys without dropping hidden selections', () => {
+    function SelectedTable() {
+      const [selected, setSelected] = useState<Array<string | number>>([2])
+      return <DataTable columns={filterColumns} data={ROWS} keyExtractor={row => row.id}
+        enableValueFilters selectable="multi" selectedKeys={selected} onSelectionChange={setSelected}
+        bulkActions={rows => <span>Selected IDs: {rows.map(row => row.id).join(',')}</span>} />
+    }
+    render(<SelectedTable />)
+    excludeFailedRows()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }))
+    expect(screen.getByText('Selected IDs: 1,2,3')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Deselect all rows' }))
+    expect(screen.getByText('Selected IDs: 2')).toBeInTheDocument()
+  })
 
   it('renders the "Download CSV" button when `exportable` is set', () => {
     render(

@@ -507,7 +507,7 @@ describe('navSections (data export)', () => {
 
   it('exposes the Action Center decision inbox from Home', () => {
     const actionCenter = navSections[0].items.find((i) => i.to === '/action-center')
-    expect(actionCenter?.label).toBe('Action Center')
+    expect(actionCenter?.label).toBe('Action center')
     expect(navSearchKeywords['/action-center']).toContain('decision inbox')
   })
 
@@ -516,7 +516,7 @@ describe('navSections (data export)', () => {
     const management = vehiclesSection?.items.find(
       (item) => item.to === '/vehicle-management',
     )
-    expect(management?.label).toBe('Vehicle Management')
+    expect(management?.label).toBe('Vehicle management')
     expect(navSearchKeywords['/vehicle-management']).toContain('enterprise roles')
   })
 
@@ -704,7 +704,7 @@ describe('Layout — grouped sidebar sections', () => {
       '/share-card', '/analytics/carbon', '/benchmarks/privacy',
     ])
     expect(reports?.items.slice(0, 3).map(item => item.label)).toEqual([
-      'Fleet Insights', 'Driving Efficiency', 'Costs',
+      'Fleet insights', 'Driving efficiency', 'Costs',
     ])
     // Flat rows key off the real location, not the group primary.
     expect(props.pathname).toBe('/analytics')
@@ -720,7 +720,7 @@ describe('Layout — grouped sidebar sections', () => {
       '/system-status', '/db-health', '/anomaly-detection',
       '/signals', '/admin/flags', '/admin/vehicle-cost', '/signal-correlation',
     ])
-    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry Troubleshooting')
+    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry troubleshooting')
     expect(props.pathname).toBe('/admin/ingest-xray')
     expect(navSections.find(section => section.title === 'Diagnostics')?.items).toHaveLength(33)
     expect(DIAGNOSTIC_GROUPS.every(group => group.pages.every(page =>
@@ -745,9 +745,9 @@ describe('Layout — grouped sidebar sections', () => {
       'Automation',
       'Notifications',
       'Security',
-      'Advanced Intelligence',
-      'Ownership Intelligence',
-      'Tesla Physics',
+      'Advanced intelligence',
+      'Ownership intelligence',
+      'Tesla physics',
       'Data',
       'Diagnostics',
       'Account',

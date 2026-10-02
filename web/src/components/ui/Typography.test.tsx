@@ -105,6 +105,16 @@ describe('Heading', () => {
 })
 
 describe('Text', () => {
+  it.each([
+    ['Label', Label],
+    ['MetricLabel', MetricLabel],
+    ['Caption', Caption],
+  ] as const)('%s preserves supplied brand, acronym, and unit casing', (_name, Component) => {
+    render(<Component>Tesla API · kWh</Component>)
+    const label = screen.getByText('Tesla API · kWh')
+    expect(label).not.toHaveClass('uppercase', 'capitalize', 'lowercase')
+  })
+
   it('renders a <span> with its children by default (no classes)', () => {
     const { container } = render(<Text>hello</Text>)
     const el = container.firstElementChild as HTMLElement

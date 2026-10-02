@@ -181,7 +181,7 @@ export function SessionExpiringModal() {
 
         {drafts.length > 0 && (
           <div className="rounded-lg border border-amber-300/20 bg-amber-300/[0.04] p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-300">
+            <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-amber-300">
               <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
               {t('session.expiring.unsavedTitle', 'Unsaved drafts')}
             </div>

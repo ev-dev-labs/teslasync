@@ -101,6 +101,20 @@ beforeEach(() => {
 })
 
 describe('JobProgressDrawer', () => {
+  it('preserves format acronyms without forcing the casing of other format values', async () => {
+    localStorage.setItem(STORAGE_KEY, 'open')
+    mockedRequest.mockResolvedValue([
+      makeJob({ id: 'csv', format: 'csv' }),
+      makeJob({ id: 'json', format: 'json' }),
+      makeJob({ id: 'other', format: 'Custom format' }),
+    ])
+    renderDrawer()
+
+    for (const format of ['CSV', 'JSON', 'Custom format']) {
+      expect(await screen.findByText(format)).not.toHaveClass('uppercase', 'capitalize')
+    }
+  })
+
   it('hits the correct endpoint and renders nothing once an empty list settles', async () => {
     mockedRequest.mockResolvedValue([])
     const { container } = renderDrawer()

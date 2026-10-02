@@ -46,24 +46,24 @@ import type { ReactElement } from 'react';
 import '@/i18n';
 
 import type { VersionInfo, UpdateCheckResult } from '@/api/types';
-import type { UseChangelogResult } from '@/hooks/useChangelog';
+import type { UseChangelogStatusResult } from '@/hooks/useChangelogStatus';
 
 // ── Mocks (hoisted by vitest above the imports below) ─────────────────
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
 }));
 
-vi.mock('@/hooks/useChangelog', () => ({
-  useChangelog: vi.fn(),
+vi.mock('@/hooks/useChangelogStatus', () => ({
+  useChangelogStatus: vi.fn(),
   openChangelogModal: vi.fn(),
 }));
 
 import { request } from '@/api/client';
-import { useChangelog, openChangelogModal } from '@/hooks/useChangelog';
+import { useChangelogStatus, openChangelogModal } from '@/hooks/useChangelogStatus';
 import { VersionSegment } from './VersionSegment';
 
 const mockRequest = request as unknown as Mock;
-const mockUseChangelog = useChangelog as unknown as Mock;
+const mockUseChangelog = vi.mocked(useChangelogStatus);
 const mockOpenChangelog = openChangelogModal as unknown as Mock;
 
 // The same Vite `define` that injects these build constants into the
@@ -102,30 +102,19 @@ function makeUpdateCheck(
 }
 
 function makeChangelog(
-  overrides: Partial<UseChangelogResult> = {},
-): UseChangelogResult {
+  overrides: Partial<UseChangelogStatusResult> = {},
+): UseChangelogStatusResult {
   return {
-    entries: [],
     latestVersion: '2.3.4',
     seenVersion: '2.3.4',
     hasUnseen: false,
-    newEntries: [],
+    unseenCount: 0,
     markSeen: vi.fn(),
     stampShown: vi.fn(),
     canAutoShow: false,
     hasCompletedOnboarding: true,
     ...overrides,
   };
-}
-
-// `newEntries` is only read for its `.length` (the "{{count}} new release(s)"
-// interpolation), so shape-cast N stand-in entries.
-function entriesOfLength(n: number): UseChangelogResult['newEntries'] {
-  return Array.from({ length: n }, (_, i) => ({
-    version: `9.9.${i}`,
-    date: '2024-01-01',
-    title: `Release ${i}`,
-  })) as unknown as UseChangelogResult['newEntries'];
 }
 
 // Route the mocked request() by URL so BOTH queries resolve deterministically.
@@ -247,7 +236,7 @@ describe('VersionSegment — trigger chip', () => {
   it('iconOnly hides the visible version text + dots but keeps the accessible name', async () => {
     wireRequests({ update: makeUpdateCheck({ update_available: true }) });
     mockUseChangelog.mockReturnValue(
-      makeChangelog({ hasUnseen: true, newEntries: entriesOfLength(2) }),
+      makeChangelog({ hasUnseen: true, unseenCount: 2 }),
     );
 
     renderSegment(<VersionSegment iconOnly />);
@@ -286,7 +275,7 @@ describe('VersionSegment — update + unseen indicators', () => {
 
   it('surfaces unseen-changelog and shows a cyan dot when no update is pending', async () => {
     mockUseChangelog.mockReturnValue(
-      makeChangelog({ hasUnseen: true, newEntries: entriesOfLength(3) }),
+      makeChangelog({ hasUnseen: true, unseenCount: 3 }),
     );
 
     const trigger = await findResolvedTrigger();
@@ -300,7 +289,7 @@ describe('VersionSegment — update + unseen indicators', () => {
       update: makeUpdateCheck({ update_available: true, latest: '3.0.0' }),
     });
     mockUseChangelog.mockReturnValue(
-      makeChangelog({ hasUnseen: true, newEntries: entriesOfLength(1) }),
+      makeChangelog({ hasUnseen: true, unseenCount: 1 }),
     );
 
     const trigger = await findResolvedTrigger();
@@ -327,7 +316,7 @@ describe('VersionSegment — update + unseen indicators', () => {
 describe('VersionSegment — tooltip', () => {
   it('renders a role="tooltip" carrying version, uptime, and the unseen hint', async () => {
     mockUseChangelog.mockReturnValue(
-      makeChangelog({ hasUnseen: true, newEntries: entriesOfLength(3) }),
+      makeChangelog({ hasUnseen: true, unseenCount: 3 }),
     );
 
     renderSegment();

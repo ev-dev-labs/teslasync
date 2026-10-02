@@ -24,7 +24,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { Tooltip, type TooltipProps } from './Tooltip';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -169,7 +169,7 @@ describe('Tooltip — multiline', () => {
     expect(cls).not.toContain('whitespace-normal');
   });
 
-  it('wraps with a max width when multiline is set', () => {
+  it('uses a readable width bounded by the viewport when multiline is set', () => {
     render(
       <Tooltip content="A much longer help body that should wrap" multiline>
         <button>T</button>
@@ -177,7 +177,34 @@ describe('Tooltip — multiline', () => {
     );
     const cls = screen.getByRole('tooltip').className;
     expect(cls).toContain('whitespace-normal');
-    expect(cls).toContain('max-w-[260px]');
+    expect(cls).toContain('w-80');
+    expect(cls).toContain('max-w-[calc(100vw-1.5rem)]');
+    expect(cls).toContain('leading-relaxed');
+  });
+
+  it.each(['hover', 'focus'])('keeps a wide tooltip inside the viewport on %s', (interaction) => {
+    render(
+      <Tooltip content="Long help text" side="bottom" multiline>
+        <button>Info</button>
+      </Tooltip>,
+    );
+    const tip = screen.getByRole('tooltip');
+    const trigger = screen.getByRole('button', { name: 'Info' });
+    const wrapper = trigger.parentElement!;
+    const width = vi.spyOn(tip, 'offsetWidth', 'get').mockReturnValue(320);
+    const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);
+    const bounds = vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(
+      new DOMRect(340, 40, 36, 36),
+    );
+    try {
+      if (interaction === 'hover') fireEvent.mouseEnter(wrapper);
+      else fireEvent.focus(trigger);
+      expect(tip.style.translate).toBe('-140px 0');
+    } finally {
+      width.mockRestore();
+      viewport.mockRestore();
+      bounds.mockRestore();
+    }
   });
 });
 

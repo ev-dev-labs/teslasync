@@ -240,7 +240,7 @@ function DrawerSection({
 }) {
   return (
     <div>
-      <p className="px-2 pb-1 pt-1 text-2xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+      <p className="px-2 pb-1 pt-1 text-2xs font-semibold tracking-wider text-[var(--text-muted)]">
         {label}
       </p>
       {jobs.length === 0 ? (
@@ -274,8 +274,8 @@ function JobRow({ job }: { job: ExportJobSummary }) {
           <span className="font-medium text-[var(--text-primary)] truncate">
             {typeLabel}
           </span>
-          <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
-            {job.format}
+          <span className="text-2xs tracking-wider text-[var(--text-muted)]">
+            {job.format === 'csv' ? 'CSV' : job.format === 'json' ? 'JSON' : job.format}
           </span>
         </div>
         <div className="text-2xs text-[var(--text-muted)] truncate">

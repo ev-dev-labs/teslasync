@@ -30,7 +30,7 @@ export interface SourceLayerBadgeProps {
   className?: string;
 }
 
-const STYLE: Record<string, { tint: string; label: string; descKey: string; descFallback: string }> = {
+const STYLE: Record<string, { tint: string; label: string; labelKey?: string; descKey: string; descFallback: string }> = {
   l1: {
     tint: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30',
     label: 'L1',
@@ -45,13 +45,15 @@ const STYLE: Record<string, { tint: string; label: string; descKey: string; desc
   },
   log: {
     tint: 'bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border-strong)]',
-    label: 'LOG',
+    label: 'Log',
+    labelKey: 'sourceLayer.log.label',
     descKey: 'sourceLayer.log.desc',
     descFallback: 'Replayed from signal_log (durable history).',
   },
   stale: {
     tint: 'bg-amber-500/15 text-amber-200 border border-amber-500/30',
-    label: 'STALE',
+    label: 'Stale',
+    labelKey: 'sourceLayer.stale.label',
     descKey: 'sourceLayer.stale.desc',
     descFallback: 'Redis-backed value older than the 2-minute freshness window.',
   },
@@ -87,14 +89,14 @@ export function SourceLayerBadge({ source, ageMs, showLabel, className }: Source
         data-testid="source-layer-badge"
         data-source={key}
         className={cn(
-          'inline-flex items-center justify-center rounded px-1.5 py-px font-mono uppercase',
+          'inline-flex items-center justify-center rounded px-1.5 py-px font-mono',
           'text-2xs tracking-wider leading-none',
           showLabel ? 'min-w-[2.5rem]' : 'min-w-[1.5rem]',
           style.tint,
           className,
         )}
       >
-        {style.label}
+        {style.labelKey ? t(style.labelKey, style.label) : style.label}
       </span>
     </Tooltip>
   );

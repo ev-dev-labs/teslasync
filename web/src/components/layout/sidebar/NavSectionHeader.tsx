@@ -15,7 +15,7 @@ export interface NavSectionHeaderProps {
  * Sidebar section header — a quiet, label-weight title used to group nav items.
  *
  * Visual rules:
- *   - 10px font, weight 600, uppercase, 0.14em tracking
+ *   - 10px font, weight 600, localized sentence case, 0.14em tracking
  *   - text color: text-[var(--text-muted)]
  *   - padding: px-3 py-1, no extra mb-* (the parent container handles vertical
  *     rhythm via space-y-* / its own margins)
@@ -28,7 +28,7 @@ export function NavSectionHeader({ label, action, id, className }: NavSectionHea
     <div className={cn('flex items-center justify-between gap-2 px-3 py-1', className)}>
       <p
         id={id}
-        className="text-2xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
+        className="text-2xs font-semibold tracking-[0.14em] text-[var(--text-muted)]"
       >
         {label}
       </p>

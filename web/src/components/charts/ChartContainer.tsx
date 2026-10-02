@@ -15,7 +15,7 @@ import { ChartSkeleton } from '@/components/feedback/ChartSkeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { QueryError } from '@/components/feedback/QueryError';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
-import { Button, FullscreenButton, Heading, Text } from '@/components/ui';
+import { Button, FullscreenButton, Heading, Table, Text } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
@@ -738,7 +738,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             </p>
           )}
           {hasFallbackTable ? (
-            <table
+            <Table
               className={cn(
                 'w-full border-collapse text-xs',
                 'forced-colors:text-[CanvasText]',
@@ -791,7 +791,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           ) : !ariaDescription ? (
             // Neither a structured table nor a long description — fall
             // back to the bare summary so SR users still hear something

@@ -1,13 +1,14 @@
 import { forwardRef, useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
 import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { useA11ySummary } from '@/hooks/useA11ySummary';
-import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
+import { fmtNumber, getGlobalPrecision, isFiniteNumber } from '@/lib/numberFormat';
 import { resolveGaugeColor, type GaugeTone } from '@/lib/tokens';
 
 export interface LinearGaugeProps {
-  value: number;
+  value: number | null | undefined;
   max: number;
   /**
    * Start of the scale. Defaults to 0 (a plain 0→max magnitude bar).
@@ -87,9 +88,6 @@ export interface LinearGaugeProps {
   className?: string;
 }
 
-/** Coerce a possibly non-finite / nullish runtime value to a finite number. */
-const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
-
 /**
  * A reading drawn against a scale you can actually see.
  *
@@ -117,26 +115,23 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
   ) {
     const generatedId = useId();
     const summaryId = `${generatedId}-summary`;
+    const { t } = useTranslation();
     const { describeGauge } = useA11ySummary();
     // Semantic tone wins over the raw colour escape hatch (see
     // `resolveGaugeColor`), and an unspecified gauge falls back to the theme
     // primary rather than a hardcoded blue.
     const fillColor = resolveGaugeColor(tone, color);
-    // Null-safety: callers routinely forward optional API values (e.g.
-    // `state.battery_level`) that can be undefined / null / NaN at runtime
-    // despite the `number` type. Sanitising here keeps the fill geometry finite
-    // — an unguarded NaN value, a NaN `max`, or a zero `max` (0 / 0) would
-    // otherwise produce `width: NaN%` and blank the track.
+    const hasReading = isFiniteNumber(value);
     const safeMax = Number.isFinite(max) && max > 0 ? max : 0;
     // A `min` at or above the top of the scale would invert the range, so it
     // falls back to 0 (the default 0→max behaviour) rather than producing a
     // negative span and a bar that grows the wrong way.
     const safeMin = Number.isFinite(min) && min < safeMax ? min : 0;
     const span = safeMax - safeMin;
-    const clamped = Math.max(safeMin, Math.min(toFinite(value), safeMax));
+    const clamped = Math.max(safeMin, Math.min(hasReading ? value : 0, safeMax));
     const ratio = span > 0 ? (clamped - safeMin) / span : 0;
     const d = decimals ?? (Number.isInteger(clamped) ? 0 : getGlobalPrecision());
-    const display = fmtNumber(clamped, d);
+    const display = hasReading ? fmtNumber(clamped, d) : '—';
 
     // A percentage scale needs no caption: the reader already knows a full
     // track is "all of it". Percent-ness is a property of the UNIT, not of the
@@ -168,21 +163,23 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
     // the spoken summary can never disagree with the printed numbers.
     const summary = describeGauge({
       label: ariaLabel || label,
-      value: unitSuffix ? `${display}${unitSuffix}` : display,
+      value: hasReading
+        ? unitSuffix ? `${display}${unitSuffix}` : display
+        : t('common.unknown', 'Unknown'),
       min: showScale ? `${fmtNumber(safeMin, 0)}${unitSuffix}` : null,
       max: showScale ? `${fmtNumber(safeMax, 0)}${unitSuffix}` : null,
-      status,
+      status: hasReading ? status : undefined,
     });
 
     return (
       <div
         ref={ref}
-        role="meter"
+        role={hasReading ? 'meter' : 'group'}
         aria-label={ariaLabel || label || undefined}
-        aria-valuenow={clamped}
-        aria-valuemin={safeMin}
-        aria-valuemax={safeMax}
-        aria-valuetext={unit ? `${display}${unit}` : display}
+        aria-valuenow={hasReading ? clamped : undefined}
+        aria-valuemin={hasReading ? safeMin : undefined}
+        aria-valuemax={hasReading ? safeMax : undefined}
+        aria-valuetext={hasReading ? unit ? `${display}${unit}` : display : undefined}
         aria-describedby={summary ? summaryId : undefined}
         className={cn('flex w-full min-w-0 flex-col gap-1.5', className)}
       >
@@ -206,10 +203,12 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
         </div>
 
         <div className={cn('relative w-full overflow-hidden rounded-full bg-[var(--surface-2)]', trackHeight)}>
-          <div
-            className="h-full rounded-full transition-[width] duration-slow ease-out"
-            style={{ width: `${ratio * 100}%`, backgroundColor: fillColor }}
-          />
+          {hasReading && (
+            <div
+              className="h-full rounded-full transition-[width] duration-slow ease-out"
+              style={{ width: `${ratio * 100}%`, backgroundColor: fillColor }}
+            />
+          )}
           {markerRatio !== null && (
             <span
               data-testid="gauge-marker"
@@ -220,7 +219,7 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
           )}
         </div>
 
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
           <Text as="span" size="xs" weight="medium" color="muted" className="min-w-0 truncate">
             {label}
           </Text>

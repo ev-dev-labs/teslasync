@@ -155,3 +155,5 @@ export {
   useRangeLabel,
 } from './format';
 export type { DateTimeVariant, DurationVariant } from './format';
+export { GridMetricIndicator } from './GridMetricIndicator';
+export type { GridMetricBand, GridMetricKind } from './GridMetricIndicator';

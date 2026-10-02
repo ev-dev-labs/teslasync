@@ -228,6 +228,55 @@ describe('Modal — close affordances', () => {
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
   });
+
+  it('Escape still closes after a successful form replaces its focused control', () => {
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <Modal open onClose={onClose} title="Share">
+        <button key="generate" type="button">Generate link</button>
+      </Modal>,
+    );
+    screen.getByRole('button', { name: 'Generate link' }).focus();
+    rerender(
+      <Modal open onClose={onClose} title="Share">
+        <button key="copy" type="button">Copy link</button>
+      </Modal>,
+    );
+    expect(document.activeElement).toBe(document.body);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])('recovers the Tab trap after replacing focused content (reverse=%s)', (reverse) => {
+    const { rerender } = render(
+      <Modal open onClose={vi.fn()} title="Share">
+        <button key="generate" type="button">Generate link</button>
+      </Modal>,
+    );
+    screen.getByRole('button', { name: 'Generate link' }).focus();
+    rerender(
+      <Modal open onClose={vi.fn()} title="Share">
+        <button key="copy" type="button">Copy link</button>
+      </Modal>,
+    );
+    expect(document.activeElement).toBe(document.body);
+    fireEvent.keyDown(document.body, { key: 'Tab', shiftKey: reverse });
+    expect(screen.getByRole('button', { name: reverse ? 'Copy link' : 'Close' })).toHaveFocus();
+  });
+
+  it('lost-focus Escape closes only the topmost dialog', () => {
+    const parentClose = vi.fn();
+    const childClose = vi.fn();
+    render(
+      <>
+        <Modal open onClose={parentClose} title="Parent">Parent content</Modal>
+        <Modal open onClose={childClose} title="Child">Child content</Modal>
+      </>,
+    );
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(childClose).toHaveBeenCalledTimes(1);
+    expect(parentClose).not.toHaveBeenCalled();
+  });
 });
 
 describe('Modal — focus management', () => {

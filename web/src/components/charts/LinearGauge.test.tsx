@@ -10,8 +10,7 @@
  *     scale still states its range while a 0–100 % one does not;
  *   - offset (interval) scales measure from `min`, so a converted temperature
  *     draws the same bar in °C and °F;
- *   - non-finite / nullish runtime values degrade to a finite empty bar rather
- *     than `width: NaN%`.
+ *   - missing readings remain unknown, distinct from a measured zero.
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
@@ -125,18 +124,40 @@ describe('LinearGauge — offset scales (min prop)', () => {
 });
 
 describe('LinearGauge — robustness against non-finite runtime values', () => {
-  it('renders an empty track (not NaN) for an undefined value', () => {
+  it('renders unknown rather than a zero meter for an undefined value', () => {
     const { container } = render(
-      <LinearGauge value={undefined as unknown as number} max={100} label="X" />,
+      <LinearGauge value={undefined} max={100} label="X" />,
     );
-    expect(fillPct(container)).toBe('0%');
+    expect(fill(container)).toBeNull();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'X' })).toHaveAccessibleDescription(/unknown/i);
+    expect(screen.getByText('—')).toBeInTheDocument();
     expect(container.textContent).not.toContain('NaN');
   });
 
-  it('renders an empty track (not NaN) for a NaN value', () => {
+  it('renders unknown rather than a zero meter for a NaN value', () => {
     const { container } = render(<LinearGauge value={NaN} max={100} label="X" />);
-    expect(fillPct(container)).toBe('0%');
+    expect(fill(container)).toBeNull();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(container.textContent).not.toContain('NaN');
+  });
+
+  it.each([null, Infinity, -Infinity])('keeps %s unknown without numeric ARIA values', (value) => {
+    const { container } = render(<LinearGauge value={value} min={32} max={122} label="Temperature" unit="°F" />);
+    const unknown = screen.getByRole('group', { name: 'Temperature' });
+    expect(unknown).not.toHaveAttribute('aria-valuenow');
+    expect(unknown).not.toHaveAttribute('aria-valuemin');
+    expect(unknown).not.toHaveAttribute('aria-valuemax');
+    expect(unknown).toHaveAccessibleDescription(/unknown/i);
+    expect(fill(container)).toBeNull();
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('keeps a genuine zero as a measured value', () => {
+    const { container } = render(<LinearGauge value={0} max={100} label="Battery" unit="%" />);
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(fillPct(container)).toBe('0%');
   });
 
   it('survives a zero max without dividing by zero', () => {

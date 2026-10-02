@@ -150,12 +150,62 @@ function openMenu() {
 }
 
 describe('SavedViewMenu — trigger + popover', () => {
+  it('keeps saved-view controls accessible with an icon-only trigger', () => {
+    hooks.query.data = [makeView()];
+    const onApply = vi.fn();
+    renderMenu({ iconOnly: true, currentQuery: 'sort=recent', onApply });
+    const trigger = screen.getByRole('button', { name: 'Saved views: Recent' });
+    expect(trigger).toHaveAttribute('aria-describedby');
+    expect(trigger).not.toHaveTextContent('Recent');
+    expect(trigger).toHaveClass('bg-transparent');
+    expect(trigger).not.toHaveClass('border-[var(--control-border)]', 'bg-[var(--theme-primary)]');
+    fireEvent.click(trigger);
+    const menu = screen.getByRole('menu', { name: 'Saved views' });
+    expect(menu).toBeInTheDocument();
+    fireEvent.click(within(menu).getByRole('button', { name: 'Recent' }));
+    expect(onApply).toHaveBeenCalledWith('sort=recent');
+  });
+
   it('renders a closed trigger with menu semantics and no applied badge', () => {
     renderMenu();
     const trigger = screen.getByRole('button', { name: 'Saved views' });
     expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveAttribute('aria-describedby', screen.getByRole('tooltip').id);
+    expect(trigger.textContent).toBe('');
+    expect(trigger.querySelector('svg')).toBeInTheDocument();
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Saved views');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('retains the explicit labeled trigger when iconOnly is false', () => {
+    renderMenu({ iconOnly: false });
+    expect(screen.getByRole('button', { name: 'Saved views' })).toHaveTextContent('Saved views');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('shares focus treatment and exposes row actions without hover on touch screens', () => {
+    hooks.query.data = [makeView()];
+    renderMenu();
+    const menu = openMenu();
+    for (const name of ['Set as default', 'Pin', 'Rename view', 'Delete']) {
+      const action = within(menu).getByRole('button', { name, exact: true });
+      expect(action).toHaveAttribute('type', 'button');
+      expect(action).toHaveClass('focus-visible:ring-2', 'opacity-100', '[@media(hover:none)]:opacity-100');
+      expect(action).not.toHaveClass('opacity-0');
+    }
+  });
+
+  it('retains shared focus treatment for every manage-dialog action', () => {
+    hooks.query.data = [makeView()];
+    renderMenu();
+    const menu = openMenu();
+    fireEvent.click(within(menu).getByRole('button', { name: 'Manage views' }));
+    const dialog = screen.getByRole('dialog', { name: 'Manage views' });
+    for (const name of ['Set as default', 'Pin', 'Rename view', 'Delete']) {
+      expect(within(dialog).getByRole('button', { name, exact: true }))
+        .toHaveClass('focus-visible:ring-2');
+    }
   });
 
   it('opens on click and closes on Escape', () => {
@@ -172,7 +222,7 @@ describe('SavedViewMenu — trigger + popover', () => {
     renderMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Saved views' }));
     expect(screen.getByRole('menu')).toBeInTheDocument();
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });
@@ -241,8 +291,8 @@ describe('SavedViewMenu — applying + clearing', () => {
   it('renders the applied badge and clears the view on dismiss', () => {
     hooks.query.data = [makeView({ id: 15, name: 'Active One', query: 'q=1' })];
     const { onApply } = renderMenu({ currentQuery: 'q=1' });
-    // The trigger collapses to the active view name when the query matches.
-    expect(screen.getByRole('button', { name: 'Active One' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Saved views: Active One' })).toBeInTheDocument();
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Saved views: Active One');
     fireEvent.click(screen.getByRole('button', { name: 'Clear applied view' }));
     expect(onApply).toHaveBeenCalledWith('');
     expect(announced.some((m) => m.includes('Saved view cleared'))).toBe(true);

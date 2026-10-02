@@ -2,9 +2,11 @@ import {
   Children,
   cloneElement,
   isValidElement,
+  useCallback,
   useEffect,
   useId,
   useRef,
+  useState,
   type ReactElement,
   type ReactNode,
 } from 'react';
@@ -137,6 +139,26 @@ const sideClasses = {
  */
 export function Tooltip({ content, side = 'top', multiline, children }: TooltipProps) {
   const tooltipId = useId();
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
+  const [horizontalOffset, setHorizontalOffset] = useState(0);
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const tooltip = tooltipRef.current;
+    if (!trigger || !tooltip) return;
+    const width = tooltip.offsetWidth;
+    const viewportWidth = document.documentElement.clientWidth;
+    if (!width || !viewportWidth) return;
+    const bounds = trigger.getBoundingClientRect();
+    const desiredLeft = side === 'left'
+      ? bounds.left - width - 8
+      : side === 'right'
+        ? bounds.right + 8
+        : bounds.left + bounds.width / 2 - width / 2;
+    const left = Math.max(12, Math.min(desiredLeft, viewportWidth - width - 12));
+    setHorizontalOffset(left - desiredLeft);
+  }, [side]);
 
   // Stable per-mount fingerprint for the dev-time warn so we don't
   // de-duplicate across distinct callsites that happen to share the same
@@ -177,14 +199,23 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
       : children;
 
   return (
-    <span className="relative inline-flex group/tip">
+    <span
+      ref={triggerRef}
+      className="relative inline-flex group/tip"
+      onMouseEnter={updatePosition}
+      onFocus={updatePosition}
+    >
       {enrichedChild}
       <span
         id={tooltipId}
+        ref={tooltipRef}
         role="tooltip"
+        style={horizontalOffset ? { translate: `${horizontalOffset}px 0` } : undefined}
         className={cn(
           'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
-          multiline ? 'whitespace-normal max-w-[260px]' : 'whitespace-nowrap',
+          multiline
+            ? 'w-80 max-w-[calc(100vw-1.5rem)] whitespace-normal break-words px-4 py-3 text-sm font-normal leading-relaxed'
+            : 'whitespace-nowrap',
           'bg-gray-900 text-[var(--text-inverse)] shadow-lg dark:bg-gray-100',
           // Forced-colors mode suppresses
           // box-shadow and remaps the bg-gray to Canvas, so the tooltip

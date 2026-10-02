@@ -8,7 +8,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { Button } from '@/components/ui';
 
 /**
- * `<DataFreshness>` — query-result-driven freshness chip.
+ * `<DataFreshness>` — query-result-driven freshness indicator.
  *
  * Renders a tiny status dot + icon + relative time string ("3m ago",
  * "updating…", "error") that surfaces the health of a data fetch. Designed
@@ -210,10 +210,10 @@ export function DataFreshness({
     ? t('freshness.refreshState', 'Refresh data · {{state}}', { state: accessibleState })
     : t('a11y.dataFreshness', 'Data freshness: {{state}}', { state: accessibleState });
   const rootClassName = cn(
-    'inline-flex items-center leading-none transition-colors',
+    'inline-flex items-center border-0 bg-transparent leading-none transition-colors',
     compact
       ? 'gap-0.5 text-2xs'
-      : 'gap-1.5 rounded-pill border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-1.5 text-xs',
+      : 'gap-1.5 py-1.5 text-xs',
     cfg.color,
     onRefresh && !isFetching && 'cursor-pointer hover:text-[var(--text-secondary)]',
   );
@@ -264,8 +264,8 @@ export function DataFreshness({
         size="sm"
         className={cn(
           rootClassName,
-          compact ? '!h-auto !min-h-0 !p-0' : '!h-auto !rounded-pill',
-          'disabled:!bg-[var(--surface-2)] disabled:!opacity-100',
+          compact ? '!h-auto !min-h-0 !p-0' : '!h-auto !px-0 !py-1.5',
+          'hover:!bg-transparent disabled:!bg-transparent disabled:!opacity-100',
         )}
         onClick={handleClick}
         disabled={isFetching}

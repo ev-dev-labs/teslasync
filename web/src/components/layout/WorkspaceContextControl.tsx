@@ -275,7 +275,7 @@ export function WorkspaceContextControl({
         <div className="space-y-4 px-5 py-4">
           <div className="space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <Caption className="font-semibold uppercase tracking-wide">
+              <Caption className="font-semibold tracking-wide">
                 {t('workspace.analysis.range', 'Date range')}
               </Caption>
               <Caption className="rounded-full border border-[var(--border-default)] px-2 py-1 text-[var(--text-secondary)]">
@@ -419,7 +419,7 @@ export function WorkspaceContextControl({
           </div>
 
           <div className="space-y-2 border-t border-[var(--border-default)] pt-4">
-            <Caption className="block font-semibold uppercase tracking-wide">
+            <Caption className="block font-semibold tracking-wide">
               {t('workspace.analysis.density', 'Display density')}
             </Caption>
             <div role="group" aria-label={t('workspace.analysis.density', 'Display density')} className="grid grid-cols-3 gap-2">
@@ -443,7 +443,7 @@ export function WorkspaceContextControl({
                     <span className={cn('h-1 rounded-full bg-[var(--theme-primary)]', option === 'spacious' ? 'w-1/2' : 'w-4/5')} />
                     <span className={cn('h-1 rounded-full bg-[var(--border-strong)]', option === 'compact' ? 'w-3/5' : 'w-2/5')} />
                   </span>
-                  {t(`density.${option}`, option.charAt(0).toUpperCase() + option.slice(1))}
+                  {t(`density.${option}`, { comfortable: 'Comfortable', compact: 'Compact', spacious: 'Spacious' }[option])}
                 </Button>
               ))}
             </div>

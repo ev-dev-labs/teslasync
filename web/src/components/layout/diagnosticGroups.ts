@@ -14,7 +14,7 @@ const page = (to: string, label: string) => ({
 export const DIAGNOSTIC_GROUPS = [
   {
     primary: '/system-status',
-    label: 'System Health',
+    label: 'System health',
     labelKey: 'nav.diagnosticGroups.systemHealth',
     pages: [
       page('/system-status', 'System Status'),
@@ -25,7 +25,7 @@ export const DIAGNOSTIC_GROUPS = [
   },
   {
     primary: '/db-health',
-    label: 'Database & Data Health',
+    label: 'Database & data health',
     labelKey: 'nav.diagnosticGroups.dataHealth',
     pages: [
       page('/db-health', 'Database Health'),
@@ -37,7 +37,7 @@ export const DIAGNOSTIC_GROUPS = [
   },
   {
     primary: '/signals',
-    label: 'Telemetry Troubleshooting',
+    label: 'Telemetry troubleshooting',
     labelKey: 'nav.diagnosticGroups.telemetry',
     pages: [
       page('/signals', 'Live Signals'),
@@ -52,7 +52,7 @@ export const DIAGNOSTIC_GROUPS = [
   },
   {
     primary: '/signal-correlation',
-    label: 'Signal Analysis',
+    label: 'Signal analysis',
     labelKey: 'nav.diagnosticGroups.signalAnalysis',
     pages: [
       page('/signal-correlation', 'Signal Correlation'),
@@ -65,7 +65,7 @@ export const DIAGNOSTIC_GROUPS = [
   },
   {
     primary: '/anomaly-detection',
-    label: 'Vehicle Diagnostics',
+    label: 'Vehicle diagnostics',
     labelKey: 'nav.diagnosticGroups.vehicle',
     pages: [
       page('/anomaly-detection', 'Anomaly Detection'),
@@ -75,7 +75,7 @@ export const DIAGNOSTIC_GROUPS = [
   },
   {
     primary: '/admin/vehicle-cost',
-    label: 'Vehicle Costs',
+    label: 'Vehicle costs',
     labelKey: 'nav.diagnosticGroups.vehicleCost',
     includeSingleton: true,
     pages: [

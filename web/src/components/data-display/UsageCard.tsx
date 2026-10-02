@@ -268,7 +268,7 @@ function BandsSection({ bands }: { bands: UsageCardBand[] }) {
         const intent = b.intent ?? 'normal'
         return (
           <div key={i} className={'rounded-lg p-3 ' + intentBandRing[intent]}>
-            <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--text-muted)]">
+            <div className="flex items-center gap-1.5 text-xs tracking-wider text-[var(--text-muted)]">
               {b.icon ? <span className="inline-flex h-3.5 w-3.5">{b.icon}</span> : null}
               {b.label}
             </div>
@@ -308,7 +308,7 @@ function TopListsSection({ topLists }: { topLists: UsageCardTopList[] }) {
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       {topLists.map((tl) => (
         <div key={tl.key} className="rounded-lg bg-white/[0.03] p-3">
-          <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--text-muted)]">
+          <div className="flex items-center gap-1.5 text-xs tracking-wider text-[var(--text-muted)]">
             {tl.icon ? <span className="inline-flex h-3.5 w-3.5">{tl.icon}</span> : null}
             {tl.title}
           </div>

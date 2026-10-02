@@ -33,6 +33,8 @@ interface MetricCardProps {
   className?: string
   /** Allow longer metric labels to wrap to two lines on narrow cards. */
   wrapLabel?: boolean
+  /** Dense overview band with complete, wrapping labels and values. */
+  compact?: boolean
   /**
    * Optional contextual help. When provided, a small "?" tooltip is
    * rendered next to the label. Accepts the full `HelpTooltipProps` so
@@ -42,7 +44,7 @@ interface MetricCardProps {
 }
 
 /** Compact metric display card with icon, value, label, and optional trend. */
-export function MetricCard({ label, value, icon, color = 'cyan', change, delta, subtitle, className, help, wrapLabel = false }: MetricCardProps) {
+export function MetricCard({ label, value, icon, color = 'cyan', change, delta, subtitle, className, help, wrapLabel = false, compact = false }: MetricCardProps) {
   const { t } = useTranslation()
   // Fall back to cyan if a caller passes an unregistered colour (e.g. a
   // value driven from API data) so `c.bg`/`c.ring` never throw on undefined.
@@ -53,10 +55,15 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
     <Card
       padding="none"
       data-role="metric-card"
-      className={cn('min-h-28 p-5', className)}
+      className={cn(
+        compact
+          ? 'min-h-0 rounded-none border-0 bg-[var(--surface-1)] p-3 shadow-none'
+          : 'min-h-28 p-5',
+        className,
+      )}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
+        <div className={cn('min-w-0 flex-1', compact && 'xl:flex xl:items-center xl:justify-between xl:gap-3')}>
           <Text
             as="p"
             size="sm"
@@ -65,10 +72,10 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
             data-role="metric-label"
             className={cn(
               'flex items-start gap-1.5 leading-snug',
-              wrapLabel ? 'min-h-10' : 'truncate',
+              compact ? 'leading-snug' : wrapLabel ? 'min-h-10' : 'truncate',
             )}
           >
-            <span className={wrapLabel ? 'line-clamp-2' : 'truncate'}>{label}</span>
+            <span className={compact ? 'break-words' : wrapLabel ? 'line-clamp-2' : 'truncate'}>{label}</span>
             {help && (
               <HelpTooltip
                 size="xs"
@@ -83,7 +90,7 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
             weight="semibold"
             color="primary"
             data-role="metric-value"
-            className="mt-3 leading-tight tracking-[-0.025em] tabular-nums"
+            className={cn('leading-tight tracking-[-0.025em] tabular-nums', compact ? 'mt-1 break-words text-xl xl:mt-0 xl:text-right' : 'mt-3')}
           >
             {value}
           </Text>

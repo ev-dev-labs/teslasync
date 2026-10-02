@@ -110,7 +110,7 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
               )}
               {centerSubLabel != null && (
                 <span
-                  className="mt-0.5 uppercase tracking-wide text-[var(--text-muted)] text-[length:var(--ring-sub-size)]"
+                  className="mt-0.5 tracking-wide text-[var(--text-muted)] text-[length:var(--ring-sub-size)]"
                   style={{ '--ring-sub-size': `${subSize}px` } as CSSProperties}
                 >
                   {centerSubLabel}

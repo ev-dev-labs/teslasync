@@ -182,12 +182,32 @@ describe('TeslaCarViz — battery readout hardening', () => {
     expect(readout(container)).toBe('73%')
   })
 
-  it('renders 0% instead of NaN% for a non-finite battery level', () => {
+  it('keeps a non-finite battery level unknown', () => {
     const { container } = render(
       <TeslaCarViz {...makeProps({ batteryLevel: Number.NaN })} />,
     )
-    expect(readout(container)).toBe('0%')
+    expect(readout(container)).toBe('—')
     expect(readout(container)).not.toContain('NaN')
+  })
+
+  it('does not infer battery, lock or charging status from absent readings', () => {
+    render(<TeslaCarViz {...makeProps({
+      batteryLevel: null, isLocked: null, isCharging: null,
+      isClimateOn: null, sentryMode: null, speed: null,
+    })} />)
+    expect(screen.getByRole('img')).toHaveAccessibleName('Battery —')
+    expect(screen.queryByText('0%')).not.toBeInTheDocument()
+    expect(screen.queryByText('Locked')).not.toBeInTheDocument()
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument()
+    expect(screen.queryByText('Not Charging')).not.toBeInTheDocument()
+  })
+
+  it('preserves observed zero percent and explicit unlocked/not-charging flags', () => {
+    render(<TeslaCarViz {...makeProps({ batteryLevel: 0, isLocked: false, isCharging: false })} />)
+    expect(screen.getByRole('img')).toHaveAccessibleName('Battery 0%, Unlocked')
+    expect(screen.getByText('0%')).toBeInTheDocument()
+    expect(screen.getByText('Unlocked')).toBeInTheDocument()
+    expect(screen.getByText('Not Charging')).toBeInTheDocument()
   })
 
   it('clamps out-of-range battery levels into [0, 100]', () => {
