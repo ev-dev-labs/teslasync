@@ -60,7 +60,7 @@ test('independent validation and Docker builds start together; final gate checks
 test('browser shards reuse one build and retain isolated performance and Windows baselines', () => {
   const shards = browser.jobs['chromium-tests'].strategy.matrix.include;
   assert.deepEqual(shards.filter(shard => shard.suite === 'quality').map(shard => shard.shard),
-    ['1/4', '2/4', '3/4', '4/4']);
+    Array.from({ length: 16 }, (_, i) => `${i + 1}/16`));
   for (const suite of ['a11y', 'performance']) {
     assert.deepEqual(shards.filter(shard => shard.suite === suite).map(shard => shard.shard), ['1/1']);
   }
@@ -72,7 +72,8 @@ test('browser shards reuse one build and retain isolated performance and Windows
     assert.equal(job.steps.find(step => step.env?.E2E_REUSE_BUILD)?.env.E2E_REUSE_BUILD, '1');
   }
   assert.equal(browser.jobs['visual-tests']['runs-on'], 'windows-latest');
-  assert.deepEqual(browser.jobs['visual-tests'].strategy.matrix.shard, [1, 2, 3, 4]);
+  assert.deepEqual(browser.jobs['visual-tests'].strategy.matrix.shard,
+    Array.from({ length: 10 }, (_, i) => i + 1));
   assert.equal(Object.values(browser.jobs).filter(job => commands(job).includes('npm run e2e:build')).length, 1);
 });
 

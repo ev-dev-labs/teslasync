@@ -23,6 +23,17 @@ const runNpm = (args, options = {}) =>
     stdio: 'inherit',
   });
 
+const runNpmWithPreview = (args, options = {}) =>
+  new Promise((resolveResult, rejectResult) => {
+    const child = spawn(process.execPath, [npmCli, ...args], {
+      cwd: process.cwd(),
+      env: { ...process.env, ...options.env },
+      stdio: 'inherit',
+    });
+    child.once('error', rejectResult);
+    child.once('exit', (code) => resolveResult(code ?? 1));
+  });
+
 if (process.env.E2E_BASE_URL) {
   const result = runNpm(['run', targetScript, '--', ...forwardedArgs], {
     env: { E2E_SKIP_WEBSERVER: '1' },
@@ -82,13 +93,12 @@ try {
   }
   if (!ready) throw new Error(`Vite preview was not ready within 120s at ${baseURL}`);
 
-  const result = runNpm(['run', targetScript, '--', ...forwardedArgs], {
+  exitCode = await runNpmWithPreview(['run', targetScript, '--', ...forwardedArgs], {
     env: {
       E2E_BASE_URL: baseURL,
       E2E_SKIP_WEBSERVER: '1',
     },
   });
-  exitCode = result.status ?? 1;
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
 } finally {

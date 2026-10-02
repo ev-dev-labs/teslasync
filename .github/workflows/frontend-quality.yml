@@ -99,10 +99,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {name: responsive-1, suite: quality, shard: '1/4'}
-          - {name: responsive-2, suite: quality, shard: '2/4'}
-          - {name: responsive-3, suite: quality, shard: '3/4'}
-          - {name: responsive-4, suite: quality, shard: '4/4'}
+          - {name: responsive-1, suite: quality, shard: '1/16'}
+          - {name: responsive-2, suite: quality, shard: '2/16'}
+          - {name: responsive-3, suite: quality, shard: '3/16'}
+          - {name: responsive-4, suite: quality, shard: '4/16'}
+          - {name: responsive-5, suite: quality, shard: '5/16'}
+          - {name: responsive-6, suite: quality, shard: '6/16'}
+          - {name: responsive-7, suite: quality, shard: '7/16'}
+          - {name: responsive-8, suite: quality, shard: '8/16'}
+          - {name: responsive-9, suite: quality, shard: '9/16'}
+          - {name: responsive-10, suite: quality, shard: '10/16'}
+          - {name: responsive-11, suite: quality, shard: '11/16'}
+          - {name: responsive-12, suite: quality, shard: '12/16'}
+          - {name: responsive-13, suite: quality, shard: '13/16'}
+          - {name: responsive-14, suite: quality, shard: '14/16'}
+          - {name: responsive-15, suite: quality, shard: '15/16'}
+          - {name: responsive-16, suite: quality, shard: '16/16'}
           - {name: accessibility, suite: a11y, shard: '1/1'}
           - {name: performance, suite: performance, shard: '1/1'}
     steps:
@@ -187,13 +199,13 @@ jobs:
             web/playwright-report/
 
   visual-tests:
-    name: Windows visual snapshots (${{ matrix.shard }}/4)
+    name: Windows visual snapshots (${{ matrix.shard }}/10)
     runs-on: windows-latest
     needs: browser-build
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
@@ -211,7 +223,7 @@ jobs:
         env:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
-        run: npm run e2e:visual -- --shard=${{ matrix.shard }}/4 --workers=2
+        run: npm run e2e:visual -- --shard=${{ matrix.shard }}/10 --workers=2
       - name: Upload visual diffs
         if: always()
         uses: actions/upload-artifact@v7.0.1
