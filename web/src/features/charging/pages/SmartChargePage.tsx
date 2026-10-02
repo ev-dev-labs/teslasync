@@ -105,7 +105,7 @@ function ScheduleFact({ label, value }: { label: string; value: string }) {
 
 export default function SmartChargePage() {
   const { t } = useTranslation();
-  usePageTitle(t('chargePlanner.title', 'Smart Charge'));
+  usePageTitle(t('chargePlanner.title', 'Smart charge'));
   const { formatTime, formatDateTime: formatDate } = useDateFormat();
   const { formatCurrency } = useFormatting();
 
@@ -249,6 +249,8 @@ export default function SmartChargePage() {
     () => [
       {
         key: 'created_at',
+        filterValue: (p) => p.created_at ?? null,
+        filterValueLabel: (_, p) => formatDate(p.created_at),
         header: t('chargePlanner.date', 'Date'),
         sortable: true,
         render: (p) => <Text variant="bodySm">{formatDate(p.created_at)}</Text>,
@@ -264,12 +266,15 @@ export default function SmartChargePage() {
       },
       {
         key: 'rate_plan',
+        filterValue: (p) => p.rate_plan ?? null,
         header: t('chargePlanner.plan', 'Plan'),
         sortable: true,
         render: (p) => <Text variant="bodySm">{p.rate_plan ?? '—'}</Text>,
       },
       {
         key: 'estimated_cost',
+        filterValue: (p) => p.estimated_cost ?? null,
+        filterValueLabel: (_, p) => p.estimated_cost != null ? formatCurrency(p.estimated_cost) : '—',
         header: t('chargePlanner.cost', 'Cost'),
         align: 'right',
         sortable: true,
@@ -281,6 +286,8 @@ export default function SmartChargePage() {
       },
       {
         key: 'savings',
+        filterValue: (p) => p.savings ?? null,
+        filterValueLabel: (_, p) => p.savings != null && p.savings > 0 ? formatCurrency(p.savings) : '—',
         header: t('chargePlanner.savedAmount', 'Saved'),
         align: 'right',
         sortable: true,
@@ -301,6 +308,7 @@ export default function SmartChargePage() {
       },
       {
         key: 'status',
+        filterValue: (p) => p.status ?? null,
         header: t('chargePlanner.status', 'Status'),
         sortable: true,
         render: (p) => (
@@ -315,7 +323,7 @@ export default function SmartChargePage() {
 
   return (
     <PageContainer
-      title={t('chargePlanner.title', 'Smart Charge')}
+      title={t('chargePlanner.title', 'Smart charge')}
       subtitle={t('chargePlanner.subtitle', 'Optimize charging schedule for the cheapest TOU rates')}
       query={plansQuery}
     >
@@ -339,14 +347,14 @@ export default function SmartChargePage() {
             className="grid grid-cols-2 gap-4 lg:grid-cols-4"
           >
             <MetricCard
-              label={t('chargePlanner.chargeNowCost', 'Charge Now')}
+              label={t('chargePlanner.chargeNowCost', 'Charge now')}
               value={comparison ? formatCurrency(comparison.charge_now_cost ?? 0) : '—'}
               icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
               color="red"
               subtitle={t('chargePlanner.currentRate', 'At current rates')}
             />
             <MetricCard
-              label={t('chargePlanner.optimizedCost', 'Optimized Cost')}
+              label={t('chargePlanner.optimizedCost', 'Optimized cost')}
               value={comparison ? formatCurrency(comparison.optimized_cost ?? 0) : '—'}
               icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
               color="green"
@@ -368,7 +376,7 @@ export default function SmartChargePage() {
               }
             />
             <MetricCard
-              label={t('chargePlanner.energyNeeded', 'Energy Needed')}
+              label={t('chargePlanner.energyNeeded', 'Energy needed')}
               value={result ? `${fmtNumber(result.kwh_needed ?? 0, 1)} kWh` : '—'}
               icon={<Zap className="h-5 w-5" aria-hidden="true" />}
               color="amber"
@@ -395,7 +403,7 @@ export default function SmartChargePage() {
             <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
               <PanelTitle className="mb-4 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('chargePlanner.settings', 'Charge Settings')}
+                {t('chargePlanner.settings', 'Charge settings')}
               </PanelTitle>
 
               <div className="space-y-4">
@@ -411,7 +419,7 @@ export default function SmartChargePage() {
                 )}
                 <Select
                   id="smart-charge-rate-plan"
-                  label={t('chargePlanner.ratePlan', 'Rate Plan')}
+                  label={t('chargePlanner.ratePlan', 'Rate plan')}
                   options={ratePlanSelectOptions}
                   value={ratePlanId}
                   onChange={(e) => setRatePlanId(e.target.value)}
@@ -429,7 +437,7 @@ export default function SmartChargePage() {
                 />
 
                 <Input
-                  label={t('chargePlanner.departBy', 'Depart By')}
+                  label={t('chargePlanner.departBy', 'Depart by')}
                   type="datetime-local"
                   value={departBy}
                   error={departByError || undefined}
@@ -441,7 +449,7 @@ export default function SmartChargePage() {
 
                 <Input
                   id="smart-charge-max-amps"
-                  label={t('chargePlanner.maxAmps', 'Max Amps')}
+                  label={t('chargePlanner.maxAmps', 'Max amps')}
                   type="number"
                   min={8}
                   max={80}
@@ -454,7 +462,7 @@ export default function SmartChargePage() {
                 />
 
                 <UnitInput
-                  label={t('chargePlanner.batteryCapacity', 'Battery Capacity')}
+                  label={t('chargePlanner.batteryCapacity', 'Battery capacity')}
                   unit="energy"
                   value={batteryCapacity}
                   error={capacityError || undefined}
@@ -471,7 +479,7 @@ export default function SmartChargePage() {
                   icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}
                   className="w-full gap-2"
                 >
-                  {t('chargePlanner.optimize', 'Find Cheapest Window')}
+                  {t('chargePlanner.optimize', 'Find cheapest window')}
                 </Button>
 
                 {optimizeMutation.isError && <ErrorText>{optimizeErrorMsg}</ErrorText>}
@@ -487,7 +495,7 @@ export default function SmartChargePage() {
             <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('chargePlanner.rateTimeline', '24-Hour Rate Timeline')}
+                {t('chargePlanner.rateTimeline', '24-hour rate timeline')}
               </PanelTitle>
 
               {optimizeMutation.isPending ? (
@@ -527,13 +535,13 @@ export default function SmartChargePage() {
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <PanelTitle className="flex items-center gap-2">
                   <CalendarClock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                  {t('chargePlanner.schedule', 'Recommended Schedule')}
+                  {t('chargePlanner.schedule', 'Recommended schedule')}
                 </PanelTitle>
                 {result &&
                   (applied ? (
                     <Badge variant="success" size="md" className="gap-1">
                       <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                      {t('chargePlanner.applied', 'Schedule Applied!')}
+                      {t('chargePlanner.applied', 'Schedule applied!')}
                     </Badge>
                   ) : (
                     <Button
@@ -543,7 +551,7 @@ export default function SmartChargePage() {
                       icon={<Zap className="h-4 w-4" aria-hidden="true" />}
                       className="gap-2"
                     >
-                      {t('chargePlanner.applySchedule', 'Apply Schedule')}
+                      {t('chargePlanner.applySchedule', 'Apply schedule')}
                     </Button>
                   ))}
               </div>
@@ -576,11 +584,11 @@ export default function SmartChargePage() {
                       value={`${result.target_soc ?? 0}%`}
                     />
                     <ScheduleFact
-                      label={t('chargePlanner.startTime', 'Start Time')}
+                      label={t('chargePlanner.startTime', 'Start time')}
                       value={formatTime(result.schedule.start_time)}
                     />
                     <ScheduleFact
-                      label={t('chargePlanner.endTime', 'End Time')}
+                      label={t('chargePlanner.endTime', 'End time')}
                       value={formatTime(result.schedule.end_time)}
                     />
                   </div>
@@ -592,7 +600,7 @@ export default function SmartChargePage() {
             <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('chargePlanner.alternatives', 'Alternative Windows')}
+                {t('chargePlanner.alternatives', 'Alternative windows')}
               </PanelTitle>
 
               {optimizeMutation.isPending ? (
@@ -637,7 +645,7 @@ export default function SmartChargePage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('chargePlanner.history', 'Plan History')}
+              {t('chargePlanner.history', 'Plan history')}
             </PanelTitle>
 
             {plansLoading && historyItems.length === 0 ? (
@@ -646,6 +654,7 @@ export default function SmartChargePage() {
               <QueryError error={plansErrorObj} onRetry={() => refetchPlans()} />
             ) : (
               <DataTable
+                enableValueFilters
                 tableId="charging:smart-charge-history"
                 columns={historyColumns}
                 mobileColumns={['created_at', 'savings', 'status']}

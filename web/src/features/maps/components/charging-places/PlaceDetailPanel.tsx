@@ -251,8 +251,8 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
       <Tabs
         className="mb-4"
         tabs={[
-          { key: 'pricing', label: t('chargingPlaces.detail.pricingTab', 'Rates & Pricing') },
-          { key: 'activity', label: t('chargingPlaces.detail.activityTab', 'Charging Activity') },
+          { key: 'pricing', label: t('chargingPlaces.detail.pricingTab', 'Rates & pricing') },
+          { key: 'activity', label: t('chargingPlaces.detail.activityTab', 'Charging activity') },
         ]}
         activeTab={tab}
         onChange={(k) => setTab(k as DetailTab)}

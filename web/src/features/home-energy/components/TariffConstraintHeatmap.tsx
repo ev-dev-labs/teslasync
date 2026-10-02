@@ -94,7 +94,7 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
 
   return (
     <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3">{t('homeEnergy.heatmap.title', 'Tariff & Constraint Heatmap')}</PanelTitle>
+      <PanelTitle className="mb-3">{t('homeEnergy.heatmap.title', 'Tariff & constraint heatmap')}</PanelTitle>
       {slots.length === 0 ? (
         <Caption>{t('homeEnergy.heatmap.empty', 'No plan slots to display yet.')}</Caption>
       ) : (

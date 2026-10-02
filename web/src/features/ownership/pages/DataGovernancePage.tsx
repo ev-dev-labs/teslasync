@@ -39,7 +39,7 @@ export default function DataGovernancePage() {
     enabled: true,
   });
 
-  usePageTitle(t('ownership.governance.navTitle', 'Data Retention Governance'));
+  usePageTitle(t('ownership.governance.navTitle', 'Data retention governance'));
 
   const overviewQuery = useGovernanceOverview();
   const runsQuery = useRetentionRuns(50, 0);
@@ -124,6 +124,8 @@ export default function DataGovernancePage() {
     {
       key: 'dataset',
       header: t('ownership.governance.inventory.dataset', 'Dataset'),
+      filterValue: (row) => row.dataset,
+      filterValueLabel: (_value, row) => row.label,
       render: (row) => (
         <div>
           <div className="flex items-center gap-2">
@@ -150,17 +152,26 @@ export default function DataGovernancePage() {
     {
       key: 'rows',
       header: t('ownership.governance.inventory.rows', 'Rows'),
+      align: 'right',
+      filterValue: (row) => row.row_count,
+      filterValueLabel: (_value, row) => fmtNumber(row.row_count, 0),
       render: (row) => <span className="tabular-nums">{fmtNumber(row.row_count, 0)}</span>,
       sortable: true,
     },
     {
       key: 'bytes',
       header: t('ownership.governance.inventory.bytes', 'On disk'),
+      align: 'right',
+      filterValue: (row) => row.total_bytes,
+      filterValueLabel: (_value, row) => formatBytes(row.total_bytes),
       render: (row) => <span className="tabular-nums">{formatBytes(row.total_bytes)}</span>,
       sortable: true,
     },
     {
       key: 'perRow',
+      align: 'right',
+      filterValue: (row) => row.bytes_per_row,
+      filterValueLabel: (_value, row) => row.bytes_per_row != null ? fmtNumber(row.bytes_per_row, 0) : '—',
       header: t('ownership.governance.inventory.perRow', 'Bytes / row'),
       render: (row) =>
         row.bytes_per_row != null ? (
@@ -172,6 +183,7 @@ export default function DataGovernancePage() {
     {
       key: 'span',
       header: t('ownership.governance.inventory.span', 'History span'),
+      align: 'right',
       render: (row) => (
         <div>
           <Text as="p" variant="caption">
@@ -189,6 +201,7 @@ export default function DataGovernancePage() {
     {
       key: 'dataset',
       header: t('ownership.governance.policy.dataset', 'Dataset'),
+      filterValue: (row) => row.dataset,
       render: (row) => (
         <div className="flex items-center gap-2">
           <Text as="span" variant="label">
@@ -209,17 +222,26 @@ export default function DataGovernancePage() {
     },
     {
       key: 'retention',
+      align: 'right',
+      filterValue: (row) => row.retention_s,
+      filterValueLabel: (_value, row) => formatSpan(row.retention_s),
       header: t('ownership.governance.policy.retention', 'Retention'),
       render: (row) => formatSpan(row.retention_s),
       sortable: true,
     },
     {
       key: 'downsample',
+      align: 'right',
+      filterValue: (row) => row.downsample_after_s,
+      filterValueLabel: (_value, row) => row.downsample_after_s != null ? formatSpan(row.downsample_after_s) : '—',
       header: t('ownership.governance.policy.downsample', 'Downsample after'),
       render: (row) => (row.downsample_after_s != null ? formatSpan(row.downsample_after_s) : '—'),
     },
     {
       key: 'bucket',
+      align: 'right',
+      filterValue: (row) => row.downsample_bucket_s,
+      filterValueLabel: (_value, row) => row.downsample_bucket_s != null ? formatSpan(row.downsample_bucket_s) : '—',
       header: t('ownership.governance.policy.bucket', 'Bucket'),
       render: (row) => (row.downsample_bucket_s != null ? formatSpan(row.downsample_bucket_s) : '—'),
     },
@@ -279,6 +301,7 @@ export default function DataGovernancePage() {
     {
       key: 'expiring',
       header: t('ownership.governance.impact.expiring', 'Rows expiring'),
+      align: 'right',
       render: (row) => (
         <div>
           <span className="tabular-nums">{fmtNumber(row.rows_expiring, 0)}</span>
@@ -294,11 +317,13 @@ export default function DataGovernancePage() {
     {
       key: 'downsampling',
       header: t('ownership.governance.impact.downsampling', 'Rows downsampled'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{fmtNumber(row.rows_downsampling, 0)}</span>,
     },
     {
       key: 'reclaim',
       header: t('ownership.governance.impact.reclaim', 'Reclaimable'),
+      align: 'right',
       render: (row) => (
         <div>
           <span className="tabular-nums text-emerald-300">{formatBytes(row.bytes_reclaimable)}</span>
@@ -312,6 +337,7 @@ export default function DataGovernancePage() {
     {
       key: 'fidelity',
       header: t('ownership.governance.impact.fidelity', 'Fidelity lost'),
+      align: 'right',
       render: (row) => (
         <span
           className={`tabular-nums ${row.fidelity_loss_pct > 25 ? 'text-rose-300' : row.fidelity_loss_pct > 5 ? 'text-amber-300' : ''}`}
@@ -389,30 +415,33 @@ export default function DataGovernancePage() {
     {
       key: 'expiring',
       header: t('ownership.governance.run.expiring', 'Expiring'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{fmtNumber(row.rows_expiring, 0)}</span>,
     },
     {
       key: 'bytes',
       header: t('ownership.governance.run.bytes', 'Reclaimable'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{formatBytes(row.bytes_reclaimable)}</span>,
     },
     {
       key: 'fidelity',
       header: t('ownership.governance.run.fidelity', 'Fidelity lost'),
+      align: 'right',
       render: (row) => formatPct(row.fidelity_loss_pct),
     },
   ];
 
   return (
     <PageContainer
-      title={t('ownership.governance.title', 'Data Retention & Lifecycle Governance')}
+      title={t('ownership.governance.title', 'Data retention & lifecycle governance')}
       subtitle={t(
         'ownership.governance.subtitle',
         'See exactly what every table costs you on disk, model a retention policy, and quantify the analytical fidelity you would trade away — before anything is deleted.',
       )}
       loading={overviewQuery.isLoading}
       error={overviewQuery.error as Error | null}
-      actions={
+      primaryAction={
         <Button
           variant="primary"
           size="sm"
@@ -491,6 +520,7 @@ export default function DataGovernancePage() {
         >
           <DataTable
             columns={inventoryColumns}
+            enableValueFilters
             mobileColumns={['dataset', 'bytes', 'span']}
             data={inventory}
             keyExtractor={(row) => row.dataset}
@@ -592,6 +622,7 @@ export default function DataGovernancePage() {
 
           <DataTable
             columns={policyColumns}
+            enableValueFilters
             mobileColumns={['dataset', 'retention', 'downsample']}
             data={policies}
             keyExtractor={(row) => row.id}

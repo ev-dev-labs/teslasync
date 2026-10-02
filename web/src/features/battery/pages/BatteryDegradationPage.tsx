@@ -105,7 +105,7 @@ function ageLabel(
 
 export default function BatteryDegradationPage() {
   const { t } = useTranslation();
-  usePageTitle(t('battery.degradation.title', 'Battery Degradation'));
+  usePageTitle(t('battery.degradation.title', 'Battery degradation'));
 
   /* Vehicle selector: header picker is the source of truth. */
   const { vehicleId: activeId } = useSelectedVehicle();
@@ -180,18 +180,26 @@ export default function BatteryDegradationPage() {
     () => [
       {
         key: 'date',
+        filterValue: (row) => row.date ?? null,
+        filterValueLabel: (_, row) => formatDate(row.date),
         header: t('battery.degradation.date', 'Date'),
         render: (row: DegradationEntry) => formatDate(row.date),
         sortable: true,
       },
       {
         key: 'odometer_m',
+        align: 'right',
+        filterValue: (row) => row.odometer_m ?? null,
+        filterValueLabel: (_, row) => `${fmtNumber(fromMeters(row.odometer_m))} ${unitPrefs.distance}`,
         header: t('battery.degradation.odometer', 'Odometer'),
         render: (row: DegradationEntry) => `${fmtNumber(fromMeters(row.odometer_m))} ${unitPrefs.distance}`,
         sortable: true,
       },
       {
         key: 'soh_pct',
+        align: 'right',
+        filterValue: (row) => row.soh_pct ?? null,
+        filterValueLabel: (_, row) => `${fmtNumber(row.soh_pct)}%`,
         header: t('battery.degradation.sohPct', 'SOH %'),
         render: (row: DegradationEntry) => (
           <Badge
@@ -210,6 +218,9 @@ export default function BatteryDegradationPage() {
       },
       {
         key: 'capacity_wh',
+        align: 'right',
+        filterValue: (row) => row.capacity_wh ?? null,
+        filterValueLabel: (_, row) => formatEnergy(row.capacity_wh, { precision: 1 }),
         header: t('battery.degradation.capacity', 'Capacity'),
         render: (row: DegradationEntry) =>
           formatEnergy(row.capacity_wh, { precision: 1 }),
@@ -217,6 +228,9 @@ export default function BatteryDegradationPage() {
       },
       {
         key: 'range_m',
+        align: 'right',
+        filterValue: (row) => row.range_m ?? null,
+        filterValueLabel: (_, row) => `${fmtNumber(fromMeters(row.range_m))} ${unitPrefs.distance}`,
         header: t('battery.degradation.range', 'Range'),
         render: (row: DegradationEntry) => `${fmtNumber(fromMeters(row.range_m))} ${unitPrefs.distance}`,
         sortable: true,
@@ -229,9 +243,9 @@ export default function BatteryDegradationPage() {
 
   return (
     <PageContainer
-      title={t('battery.degradation.title', 'Battery Degradation')}
+      title={t('battery.degradation.title', 'Battery degradation')}
       subtitle={t('battery.degradation.subtitle', 'Health trends, degradation predictions, and charging habit impact')}
-      actions={
+      metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           {/* Battery health analytics derive from a daily cagg; force amber after 24h. */}
           <DataFreshnessAuto query={healthQuery} forceStaleAfterMs={24 * 60 * 60 * 1000} />
@@ -263,7 +277,7 @@ export default function BatteryDegradationPage() {
                     }}
                   />
                   <MetricCard
-                    label={t('battery.degradation.estimatedCapacity', 'Estimated Capacity')}
+                    label={t('battery.degradation.estimatedCapacity', 'Estimated capacity')}
                     value={formatEnergy(data?.estimated_capacity_wh ?? 0, { precision: 1 })}
                     icon={<Zap className="h-4 w-4" />}
                     color="cyan"
@@ -274,7 +288,7 @@ export default function BatteryDegradationPage() {
                     }}
                   />
                   <MetricCard
-                    label={t('battery.degradation.rate', 'Degradation Rate')}
+                    label={t('battery.degradation.rate', 'Degradation rate')}
                     value={`${fmtNumber(data?.degradation_rate_pct_per_year ?? 0)}%/yr`}
                     icon={<TrendingDown className="h-4 w-4" />}
                     color="purple"
@@ -285,7 +299,7 @@ export default function BatteryDegradationPage() {
                     }}
                   />
                   <MetricCard
-                    label={t('battery.degradation.batteryAge', 'Battery Age')}
+                    label={t('battery.degradation.batteryAge', 'Battery age')}
                     value={data ? ageLabel(data.battery_age_months, t) : '—'}
                     icon={<Calendar className="h-4 w-4" />}
                   />
@@ -299,14 +313,14 @@ export default function BatteryDegradationPage() {
       {/* ── 2 · Hero: Health gauge + Trend & Projection ──── */}
       <FadeIn delay={0.05}>
         <section
-          aria-label={t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+          aria-label={t('battery.degradation.trendTitle', 'Health trend & projection')}
           className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3"
         >
           {/* Health gauge */}
           <GlassPanel className="flex flex-col p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Battery className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('battery.degradation.healthTitle', 'Battery Health')}
+              {t('battery.degradation.healthTitle', 'Battery health')}
             </PanelTitle>
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-2">
               {healthQuery.error ? (
@@ -341,14 +355,14 @@ export default function BatteryDegradationPage() {
           {healthQuery.error ? (
             <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
               <PanelTitle className="mb-3">
-                {t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+                {t('battery.degradation.trendTitle', 'Health trend & projection')}
               </PanelTitle>
               <QueryError error={healthQuery.error} />
             </GlassPanel>
           ) : (
             /* chart-a11y:no-table composed projection chart with confidence band; SR users get summary metrics in the cards above */
             <ChartContainer
-              title={t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+              title={t('battery.degradation.trendTitle', 'Health trend & projection')}
               ariaLabel={t('battery.degradation.trendTitle.aria', 'Battery health trend and 95% confidence projection chart')}
               height={300}
               className="xl:col-span-2"
@@ -375,7 +389,7 @@ export default function BatteryDegradationPage() {
                       y={80}
                       stroke="#f59e0b"
                       strokeDasharray="6 4"
-                      label={{ value: t('battery.degradation.warranty', '80% Warranty'), fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
+                      label={{ value: t('battery.degradation.warranty', '80% warranty'), fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
                     />
                     <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="6 4" />
                     {renderAnnotationLines(chartAnnotations, (ts) => ts)}
@@ -396,14 +410,14 @@ export default function BatteryDegradationPage() {
                       stackId="ci"
                       stroke="none"
                       fill="url(#ciBand)"
-                      name={t('battery.degradation.confidence', '95% Confidence')}
+                      name={t('battery.degradation.confidence', '95% confidence')}
                       connectNulls={false}
                       hide={trendHidden.isHidden('confidence_band')}
                     />
                     <Line
                       {...AREA_DEFAULTS}
                       dataKey="health"
-                      name={t('battery.degradation.actualHealth', 'Actual Health %')}
+                      name={t('battery.degradation.actualHealth', 'Actual health %')}
                       stroke="#10b981"
                       strokeWidth={2.5}
                       dot={{ fill: '#10b981', r: 3 }}
@@ -464,7 +478,7 @@ export default function BatteryDegradationPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                   <MetricCard
-                    label={t('battery.degradation.rate', 'Degradation Rate')}
+                    label={t('battery.degradation.rate', 'Degradation rate')}
                     value={`${fmtNumber(Math.abs(data.prediction.slope_per_year))}%/yr`}
                     color="red"
                     help={{
@@ -474,7 +488,7 @@ export default function BatteryDegradationPage() {
                     }}
                   />
                   <MetricCard
-                    label={t('battery.degradation.stress', 'Stress Level')}
+                    label={t('battery.degradation.stress', 'Stress level')}
                     value={stressLevel}
                     color={
                       stressLevel === 'Low' ? 'green' :
@@ -482,7 +496,7 @@ export default function BatteryDegradationPage() {
                     }
                   />
                   <MetricCard
-                    label={t('battery.degradation.totalCycles', 'Total Cycles')}
+                    label={t('battery.degradation.totalCycles', 'Total cycles')}
                     value={fmtNumber(data.total_cycles)}
                     color="cyan"
                     help={{
@@ -492,7 +506,7 @@ export default function BatteryDegradationPage() {
                     }}
                   />
                   <MetricCard
-                    label={t('battery.degradation.avgDoD', 'Avg Depth of Discharge')}
+                    label={t('battery.degradation.avgDoD', 'Avg depth of discharge')}
                     value={`${fmtNumber(data.avg_depth_of_discharge_pct)}%`}
                     color="purple"
                     help={{
@@ -515,7 +529,7 @@ export default function BatteryDegradationPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Zap className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('battery.degradation.chargingImpact', 'Charging Habits Impact')}
+              {t('battery.degradation.chargingImpact', 'Charging habits impact')}
             </PanelTitle>
             {healthQuery.isLoading ? (
               <Skeleton height={120} />
@@ -553,7 +567,7 @@ export default function BatteryDegradationPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Battery className="h-4 w-4 text-indigo-300" aria-hidden="true" />
-              {t('battery.degradation.rangeLoss', 'Range Loss Over Time')}
+              {t('battery.degradation.rangeLoss', 'Range loss over time')}
             </PanelTitle>
             {healthQuery.isLoading ? (
               <Skeleton height={240} />
@@ -561,7 +575,7 @@ export default function BatteryDegradationPage() {
               <QueryError error={healthQuery.error} />
             ) : rangeData.length > 0 ? (
               <EmbeddedChart
-                title={t('battery.degradation.rangeLoss', 'Range Loss Over Time')}
+                title={t('battery.degradation.rangeLoss', 'Range loss over time')}
                 ariaLabel={t(
                   'battery.degradation.rangeLossAria',
                   'Original and current estimated driving range over time',
@@ -569,8 +583,8 @@ export default function BatteryDegradationPage() {
                 data={rangeData}
                 dataColumns={[
                   { key: 'date', label: t('battery.degradation.date', 'Date') },
-                  { key: 'original', label: t('battery.degradation.originalRange', 'Original Range') },
-                  { key: 'current', label: t('battery.degradation.currentRange', 'Current Range') },
+                  { key: 'original', label: t('battery.degradation.originalRange', 'Original range') },
+                  { key: 'current', label: t('battery.degradation.currentRange', 'Current range') },
                 ]}
                 chartKey="battery-degradation-range-loss"
                 fluid={false}
@@ -590,7 +604,7 @@ export default function BatteryDegradationPage() {
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="original"
-                      name={t('battery.degradation.originalRange', 'Original Range')}
+                      name={t('battery.degradation.originalRange', 'Original range')}
                       stroke={CHART_COLORS[0]}
                       fill="url(#origRange)"
                       hide={hiddenSeries?.isHidden('original')}
@@ -598,7 +612,7 @@ export default function BatteryDegradationPage() {
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="current"
-                      name={t('battery.degradation.currentRange', 'Current Range')}
+                      name={t('battery.degradation.currentRange', 'Current range')}
                       stroke={CHART_COLORS[2]}
                       fill="url(#curRange)"
                       hide={hiddenSeries?.isHidden('current')}
@@ -619,7 +633,7 @@ export default function BatteryDegradationPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Shield className="h-4 w-4 text-amber-300" aria-hidden="true" />
-              {t('battery.degradation.riskFactors', 'Risk Factors')}
+              {t('battery.degradation.riskFactors', 'Risk factors')}
             </PanelTitle>
             {healthQuery.isLoading ? (
               <Skeleton height={200} />
@@ -634,7 +648,7 @@ export default function BatteryDegradationPage() {
                       <div className="mb-3 flex items-center justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-2">
                           <Icon className={cn('h-4 w-4 shrink-0', riskScoreColor(rf.score))} aria-hidden="true" />
-                          <Text variant="bodySm" className="truncate capitalize">
+                          <Text variant="bodySm" className="truncate">
                             {t(`battery.degradation.risk.${rf.name}`, rf.name.replace(/_/g, ' '))}
                           </Text>
                         </div>
@@ -698,7 +712,7 @@ export default function BatteryDegradationPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Shield className="h-4 w-4 text-amber-300" aria-hidden="true" />
-              {t('battery.degradation.healthFactors', 'Battery Health Factors')}
+              {t('battery.degradation.healthFactors', 'Battery health factors')}
             </PanelTitle>
             {healthQuery.isLoading ? (
               <Skeleton height={140} />
@@ -709,18 +723,18 @@ export default function BatteryDegradationPage() {
                 {/* Charge habits */}
                 <GlassPanel className="p-4">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <Text variant="bodySm" className="font-medium">{t('battery.degradation.chargeHabits', 'Charge Habits')}</Text>
+                    <Text variant="bodySm" className="font-medium">{t('battery.degradation.chargeHabits', 'Charge habits')}</Text>
                     <Badge variant={scoreVariant(data?.charge_habits_score ?? 0)} size="sm">
                       {fmtNumber(data?.charge_habits_score ?? 0)}/100
                     </Badge>
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between gap-2">
-                      <Caption>{t('battery.degradation.fastCharge', 'Fast Charge')}</Caption>
+                      <Caption>{t('battery.degradation.fastCharge', 'Fast charge')}</Caption>
                       <Caption className="font-medium">{fmtNumber(data?.fast_charge_pct ?? 0)}%</Caption>
                     </div>
                     <div className="flex justify-between gap-2">
-                      <Caption>{t('battery.degradation.fullCharge', 'Full Charge')}</Caption>
+                      <Caption>{t('battery.degradation.fullCharge', 'Full charge')}</Caption>
                       <Caption className="font-medium">{fmtNumber(data?.full_charge_pct ?? 0)}%</Caption>
                     </div>
                   </div>
@@ -729,7 +743,7 @@ export default function BatteryDegradationPage() {
                 {/* Temperature exposure */}
                 <GlassPanel className="p-4">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <Text variant="bodySm" className="font-medium">{t('battery.degradation.tempExposure', 'Temperature Exposure')}</Text>
+                    <Text variant="bodySm" className="font-medium">{t('battery.degradation.tempExposure', 'Temperature exposure')}</Text>
                     <Badge variant={scoreVariant(data?.temp_exposure_score ?? 0)} size="sm">
                       {fmtNumber(data?.temp_exposure_score ?? 0)}/100
                     </Badge>
@@ -743,7 +757,7 @@ export default function BatteryDegradationPage() {
                 {/* Cycle depth */}
                 <GlassPanel className="p-4">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <Text variant="bodySm" className="font-medium">{t('battery.degradation.cycleDepth', 'Cycle Depth')}</Text>
+                    <Text variant="bodySm" className="font-medium">{t('battery.degradation.cycleDepth', 'Cycle depth')}</Text>
                     <Badge variant={scoreVariant(cycleDepthScore)} size="sm">
                       {fmtNumber(cycleDepthScore)}/100
                     </Badge>
@@ -768,7 +782,7 @@ export default function BatteryDegradationPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-4 flex items-center gap-2">
             <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('battery.degradation.history', 'Degradation History')}
+            {t('battery.degradation.history', 'Degradation history')}
           </PanelTitle>
           {healthQuery.isLoading ? (
             <Skeleton height={240} />
@@ -776,6 +790,7 @@ export default function BatteryDegradationPage() {
             <QueryError error={healthQuery.error} />
           ) : (data?.history?.length ?? 0) > 0 ? (
             <DataTable
+              enableValueFilters
               tableId="battery:degradation-history"
               columns={columns}
               mobileColumns={['date', 'soh_pct']}

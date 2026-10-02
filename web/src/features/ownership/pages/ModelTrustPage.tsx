@@ -102,7 +102,7 @@ export default function ModelTrustPage() {
   });
   const [outcomeDraft, setOutcomeDraft] = useState({ observed_value: 0 });
 
-  usePageTitle(t('ownership.trust.navTitle', 'Prediction Accuracy Lab'));
+  usePageTitle(t('ownership.trust.navTitle', 'Prediction accuracy lab'));
 
   const calibrationHidden = useHiddenSeries('model-trust-calibration');
 
@@ -186,6 +186,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'predicted',
+      align: 'right',
       header: t('ownership.trust.pred.predicted', 'Predicted'),
       render: (row) => (
         <div>
@@ -200,6 +201,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'observed',
+      align: 'right',
       header: t('ownership.trust.pred.observed', 'Observed'),
       render: (row) =>
         row.observed_value != null ? (
@@ -210,6 +212,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'error',
+      align: 'right',
       header: t('ownership.trust.pred.error', 'Error'),
       render: (row) =>
         row.abs_error_pct != null ? (
@@ -225,6 +228,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'interval',
+      align: 'right',
       header: t('ownership.trust.pred.interval', 'In interval'),
       render: (row) =>
         row.in_interval == null ? (
@@ -239,6 +243,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'horizon',
+      align: 'right',
       header: t('ownership.trust.pred.horizon', 'Horizon'),
       render: (row) => formatSpan(row.horizon_s),
     },
@@ -305,6 +310,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'samples',
+      align: 'right',
       header: t('ownership.trust.card.samples', 'Scored / pending'),
       render: (row) => (
         <span className="tabular-nums">
@@ -314,18 +320,21 @@ export default function ModelTrustPage() {
     },
     {
       key: 'mape',
+      align: 'right',
       header: t('ownership.trust.card.mape', 'MAPE'),
       render: (row) => (row.mean_abs_pct_error != null ? formatPct(row.mean_abs_pct_error) : '—'),
       sortable: true,
     },
     {
       key: 'median',
+      align: 'right',
       header: t('ownership.trust.card.median', 'Median APE'),
       render: (row) =>
         row.median_abs_pct_error != null ? formatPct(row.median_abs_pct_error) : '—',
     },
     {
       key: 'bias',
+      align: 'right',
       header: t('ownership.trust.card.bias', 'Bias'),
       render: (row) =>
         row.bias != null ? (
@@ -340,12 +349,14 @@ export default function ModelTrustPage() {
     },
     {
       key: 'rmse',
+      align: 'right',
       header: t('ownership.trust.card.rmse', 'RMSE'),
       render: (row) =>
         row.root_mean_square_error != null ? fmtNumber(row.root_mean_square_error, 3) : '—',
     },
     {
       key: 'coverage',
+      align: 'right',
       header: t('ownership.trust.card.coverage', 'Interval coverage'),
       render: (row) =>
         row.interval_coverage_pct != null ? (
@@ -360,6 +371,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'skill',
+      align: 'right',
       header: t('ownership.trust.card.skill', 'Skill vs naive'),
       render: (row) =>
         row.skill_vs_naive_pct != null ? (
@@ -374,6 +386,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'drift',
+      align: 'right',
       header: t('ownership.trust.card.drift', 'Drift'),
       render: (row) => (
         <div className="flex items-center gap-1">
@@ -409,14 +422,14 @@ export default function ModelTrustPage() {
 
   return (
     <PageContainer
-      title={t('ownership.trust.title', 'Prediction Accuracy & Model Trust Lab')}
+      title={t('ownership.trust.title', 'Prediction accuracy & model trust lab')}
       subtitle={t(
         'ownership.trust.subtitle',
         'Every forecast this platform makes is written down, then scored against what actually happened. Bias, calibration, skill against a naive baseline, and drift over time decide whether a model earns your trust.',
       )}
       loading={trustQuery.isLoading}
       error={trustQuery.error as Error | null}
-      actions={
+      contextActions={
         <div className="flex items-center gap-2">
           <Select
             aria-label={t('ownership.window.label', 'Analysis window')}

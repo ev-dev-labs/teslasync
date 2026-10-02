@@ -97,7 +97,7 @@ const GAUGE_MAX = 5;
 
 export default function VampireDrainPage() {
   const { t } = useTranslation();
-  usePageTitle(t('vampireDrain.title', 'Vampire Drain'));
+  usePageTitle(t('vampireDrain.title', 'Vampire drain'));
 
   const { formatTemperature } = useUnits();
   const { vehicleId } = useSelectedVehicle();
@@ -168,18 +168,18 @@ export default function VampireDrainPage() {
 
   const columns: Column<VampireDrainEvent>[] = useMemo(() => [
     { key: 'started_at', header: t('vampireDrain.columns.started', 'Started'), sortable: true, render: (r) => formatDateTime(r.started_at) },
-    { key: 'duration_hours', header: t('vampireDrain.columns.duration', 'Duration'), sortable: true, render: (r) => `${fmtNumber(r.duration_hours, 1)}h` },
-    { key: 'start_battery_pct', header: t('vampireDrain.columns.startPct', 'Start %'), sortable: true, render: (r) => `${fmtNumber(r.start_battery_pct, 0)}%` },
-    { key: 'end_battery_pct', header: t('vampireDrain.columns.endPct', 'End %'), sortable: true, render: (r) => `${fmtNumber(r.end_battery_pct, 0)}%` },
+    { key: 'duration_hours', align: 'right', header: t('vampireDrain.columns.duration', 'Duration'), sortable: true, render: (r) => `${fmtNumber(r.duration_hours, 1)}h` },
+    { key: 'start_battery_pct', align: 'right', header: t('vampireDrain.columns.startPct', 'Start %'), sortable: true, render: (r) => `${fmtNumber(r.start_battery_pct, 0)}%` },
+    { key: 'end_battery_pct', align: 'right', header: t('vampireDrain.columns.endPct', 'End %'), sortable: true, render: (r) => `${fmtNumber(r.end_battery_pct, 0)}%` },
     {
       key: 'drain_pct', header: t('vampireDrain.columns.loss', 'Loss %'), sortable: true, render: (r) => (
         <Badge variant={r.drain_pct > 5 ? 'danger' : r.drain_pct > 2 ? 'warning' : 'success'}>
           {fmtNumber(r.drain_pct, 1)}%
         </Badge>
-      ),
+      ), align: 'right',
     },
-    { key: 'drain_pct_per_day', header: t('vampireDrain.columns.rate', 'Rate %/day'), sortable: true, render: (r) => fmtNumber(r.drain_pct_per_day, 2) },
-    { key: 'ambient_temp_c_avg', header: t('vampireDrain.columns.temp', 'Ambient'), sortable: true, render: (r) => formatTemperature(r.ambient_temp_c_avg) },
+    { key: 'drain_pct_per_day', align: 'right', header: t('vampireDrain.columns.rate', 'Rate %/day'), sortable: true, render: (r) => fmtNumber(r.drain_pct_per_day, 2) },
+    { key: 'ambient_temp_c_avg', align: 'right', header: t('vampireDrain.columns.temp', 'Ambient'), sortable: true, render: (r) => formatTemperature(r.ambient_temp_c_avg) },
   ], [t, formatTemperature]);
 
   const tips = useMemo(() => [
@@ -205,9 +205,9 @@ export default function VampireDrainPage() {
 
   return (
     <PageContainer
-      title={t('vampireDrain.title', 'Vampire Drain')}
+      title={t('vampireDrain.title', 'Vampire drain')}
       subtitle={t('vampireDrain.subtitle', 'Analyze phantom energy loss while your vehicle is parked')}
-      actions={actions}
+      secondaryActions={actions}
       query={[statsQuery, eventsQuery]}
       dataSources={dataSources}
     >
@@ -247,28 +247,28 @@ export default function VampireDrainPage() {
           ) : (
             <>
               <MetricCard
-                label={t('vampireDrain.kpi.avg', 'Avg Drain / day')}
+                label={t('vampireDrain.kpi.avg', 'Avg drain / day')}
                 value={pct(stats?.avg_drain_pct_per_day)}
                 icon={<Zap className="h-4 w-4" aria-hidden="true" />}
                 color="purple"
                 help={{ i18nKey: 'vampireDrain.help.avg', defaultValue: 'Mean battery loss per day while parked and not charging across the sample window.' }}
               />
               <MetricCard
-                label={t('vampireDrain.kpi.median', 'Median Drain / day')}
+                label={t('vampireDrain.kpi.median', 'Median drain / day')}
                 value={pct(stats?.median_drain_pct_per_day)}
                 icon={<Activity className="h-4 w-4" aria-hidden="true" />}
                 color="cyan"
                 help={{ i18nKey: 'vampireDrain.help.median', defaultValue: 'Typical (50th percentile) daily battery loss — robust to one-off outliers.' }}
               />
               <MetricCard
-                label={t('vampireDrain.kpi.p95', 'P95 Drain / day')}
+                label={t('vampireDrain.kpi.p95', 'P95 drain / day')}
                 value={pct(stats?.p95_drain_pct_per_day)}
                 icon={<TrendingDown className="h-4 w-4" aria-hidden="true" />}
                 color="red"
                 help={{ i18nKey: 'vampireDrain.help.p95', defaultValue: 'Worst-case (95th percentile) daily battery loss observed in the window.' }}
               />
               <MetricCard
-                label={t('vampireDrain.kpi.observed', 'Observed Hours')}
+                label={t('vampireDrain.kpi.observed', 'Observed hours')}
                 value={fmtNumber(stats?.total_observed_hours, 1)}
                 subtitle={t('vampireDrain.kpi.sessions', '{{count}} sessions', { count: stats?.event_count ?? 0 })}
                 icon={<Clock className="h-4 w-4" aria-hidden="true" />}
@@ -297,7 +297,7 @@ export default function VampireDrainPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <TrendingDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('vampireDrain.trend.title', 'Drain Rate Trend')}
+              {t('vampireDrain.trend.title', 'Drain rate trend')}
             </PanelTitle>
             {!enabled ? (
               <EmptyState
@@ -318,14 +318,14 @@ export default function VampireDrainPage() {
               />
             ) : (
               <EmbeddedChart
-                title={t('vampireDrain.trend.title', 'Drain Rate Trend')}
+                title={t('vampireDrain.trend.title', 'Drain rate trend')}
                 ariaLabel={t('vampireDrain.trend.aria', 'Daily vampire drain rate over parked sessions')}
                 data={trend}
                 dataColumns={[
                   { key: 'date', label: t('vampireDrain.date', 'Date'), format: (value) => formatDate(String(value ?? '')) },
                   {
                     key: 'rate',
-                    label: t('vampireDrain.trend.series', 'Drain Rate (%/day)'),
+                    label: t('vampireDrain.trend.series', 'Drain rate (%/day)'),
                     format: (value) => fmtNumber(Number(value ?? 0)),
                   },
                 ]}
@@ -339,7 +339,7 @@ export default function VampireDrainPage() {
                     <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
                     <YAxis tick={axisTick} unit="%" width={48} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Line {...AREA_DEFAULTS} dataKey="rate" name={t('vampireDrain.trend.series', 'Drain Rate (%/day)')} stroke={CHART_COLORS[0]} />
+                    <Line {...AREA_DEFAULTS} dataKey="rate" name={t('vampireDrain.trend.series', 'Drain rate (%/day)')} stroke={CHART_COLORS[0]} />
                   </LineChart>
                 </ResponsiveContainer>
               </EmbeddedChart>
@@ -349,7 +349,7 @@ export default function VampireDrainPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('vampireDrain.gauge.title', 'Drain Rate')}
+              {t('vampireDrain.gauge.title', 'Drain rate')}
             </PanelTitle>
             {!enabled ? (
               <EmptyState
@@ -381,11 +381,11 @@ export default function VampireDrainPage() {
                 />
                 <div className="w-full space-y-1">
                   <div className="flex items-center justify-between">
-                    <Text variant="bodySm">{t('vampireDrain.kpi.median', 'Median Drain / day')}</Text>
+                    <Text variant="bodySm">{t('vampireDrain.kpi.median', 'Median drain / day')}</Text>
                     <Text variant="bodySm" className="tabular-nums text-[var(--text-primary)]">{pct(stats?.median_drain_pct_per_day)}</Text>
                   </div>
                   <div className="flex items-center justify-between">
-                    <Text variant="bodySm">{t('vampireDrain.kpi.p95', 'P95 Drain / day')}</Text>
+                    <Text variant="bodySm">{t('vampireDrain.kpi.p95', 'P95 drain / day')}</Text>
                     <Text variant="bodySm" className="tabular-nums text-[var(--text-primary)]">{pct(stats?.p95_drain_pct_per_day)}</Text>
                   </div>
                 </div>
@@ -405,7 +405,7 @@ export default function VampireDrainPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BatteryWarning className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('vampireDrain.daily.title', 'Daily Drain While Parked')}
+              {t('vampireDrain.daily.title', 'Daily drain while parked')}
             </PanelTitle>
             {!enabled ? (
               <EmptyState
@@ -426,19 +426,19 @@ export default function VampireDrainPage() {
               />
             ) : (
               <EmbeddedChart
-                title={t('vampireDrain.daily.title', 'Daily Drain While Parked')}
+                title={t('vampireDrain.daily.title', 'Daily drain while parked')}
                 ariaLabel={t('vampireDrain.daily.aria', 'Daily battery loss and parked hours')}
                 data={daily}
                 dataColumns={[
                   { key: 'date', label: t('vampireDrain.date', 'Date'), format: (value) => formatDayKey(String(value ?? '')) },
                   {
                     key: 'drain_pct',
-                    label: t('vampireDrain.daily.loss', 'Battery Loss %'),
+                    label: t('vampireDrain.daily.loss', 'Battery loss %'),
                     format: (value) => fmtNumber(Number(value ?? 0)),
                   },
                   {
                     key: 'hours',
-                    label: t('vampireDrain.daily.parked', 'Parked Hours'),
+                    label: t('vampireDrain.daily.parked', 'Parked hours'),
                     format: (value) => fmtNumber(Number(value ?? 0)),
                   },
                 ]}
@@ -455,8 +455,8 @@ export default function VampireDrainPage() {
                       <YAxis yAxisId="right" orientation="right" tick={axisTick} unit="h" width={44} />
                       <Tooltip content={<ChartTooltip />} />
                       <ChartLegend />
-                      <Bar yAxisId="left" dataKey="drain_pct" name={t('vampireDrain.daily.loss', 'Battery Loss %')} fill={CHART_COLORS[5]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drain_pct')} />
-                      <Bar yAxisId="right" dataKey="hours" name={t('vampireDrain.daily.parked', 'Parked Hours')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('hours')} />
+                      <Bar yAxisId="left" dataKey="drain_pct" name={t('vampireDrain.daily.loss', 'Battery loss %')} fill={CHART_COLORS[5]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drain_pct')} />
+                      <Bar yAxisId="right" dataKey="hours" name={t('vampireDrain.daily.parked', 'Parked hours')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('hours')} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -467,7 +467,7 @@ export default function VampireDrainPage() {
           <GlassPanel glow="green" className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Lightbulb className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('vampireDrain.tips.title', 'Tips to Reduce Vampire Drain')}
+              {t('vampireDrain.tips.title', 'Tips to reduce vampire drain')}
             </PanelTitle>
             <ul className="space-y-3">
               {tips.map((tip, i) => (
@@ -487,7 +487,7 @@ export default function VampireDrainPage() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <PanelTitle className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('vampireDrain.sessions.title', 'Drain Sessions')}
+              {t('vampireDrain.sessions.title', 'Drain sessions')}
             </PanelTitle>
             <Badge variant="neutral">
               {t('vampireDrain.sessions.count', '{{count}} sessions', { count: events.length })}

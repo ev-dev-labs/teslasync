@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { Geofence } from '@/api/types';
@@ -66,4 +66,16 @@ it('does not allow alerts on places awaiting review', async () => {
   expect(await screen.findByRole('switch', { name: 'Alert on entry: Home' })).toBeDisabled();
   expect(screen.getByRole('switch', { name: 'Alert on exit: Home' })).toBeDisabled();
   expect(screen.getByText('Review this place before enabling its notifications.')).toBeInTheDocument();
+});
+
+it('uses the shared entry-value checklist without changing the place alert settings', async () => {
+  vi.mocked(request).mockResolvedValue([place, { ...place, id: 8, name: 'Depot', alert_on_entry: true }]);
+  renderPanel();
+  fireEvent.click(await screen.findByRole('button', { name: 'Filter On entry' }));
+  const dialog = screen.getByRole('dialog', { name: 'Filter On entry' });
+  fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Disabled' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+  expect(screen.queryByRole('switch', { name: 'Alert on entry: Home' })).not.toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: 'Alert on entry: Depot' })).toBeChecked();
+  expect(vi.mocked(request).mock.calls.every(([, options]) => !options?.method)).toBe(true);
 });

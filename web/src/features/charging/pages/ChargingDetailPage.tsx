@@ -401,10 +401,10 @@ export default function ChargingDetailPage() {
   return (
     <PageContainer
       title={`${t('charging.detail.title', 'Charge Session')} #${session.id}`}
-      subtitle={subtitle}
+      metadataActions={<Text variant="bodySm" className="max-w-full [overflow-wrap:anywhere]">{subtitle}</Text>}
       breadcrumbLabels={breadcrumbLabels}
       query={sessionQuery}
-      actions={
+      overflowActions={
         <div data-print-hide className="flex flex-wrap items-center gap-2">
           {id && (
             <Button

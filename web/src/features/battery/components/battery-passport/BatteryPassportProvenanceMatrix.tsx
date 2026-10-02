@@ -335,6 +335,9 @@ export function BatteryPassportProvenanceMatrix({
         <BatteryPassportSectionBody state={state}>
           <DataTable
             tableId="battery:passport-provenance"
+            resizable={false}
+            columnReorder={false}
+            columnVisibility={false}
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.field}

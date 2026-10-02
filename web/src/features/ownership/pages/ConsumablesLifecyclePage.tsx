@@ -101,7 +101,7 @@ export default function ConsumablesLifecyclePage() {
     note: '',
   });
 
-  usePageTitle(t('ownership.consumables.navTitle', 'Consumables Lifecycle'));
+  usePageTitle(t('ownership.consumables.navTitle', 'Consumables lifecycle'));
 
   const reportQuery = useConsumablesReport(vehicleId);
   const itemsQuery = useConsumableItems(vehicleId);
@@ -198,6 +198,7 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'observed',
+      align: 'right',
       header: t('ownership.consumables.stress.observed', 'Your vehicle'),
       render: (row) => (
         <span className="tabular-nums">
@@ -207,6 +208,7 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'baseline',
+      align: 'right',
       header: t('ownership.consumables.stress.baseline', 'Reference'),
       render: (row) => (
         <span className="tabular-nums">
@@ -216,6 +218,7 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'multiplier',
+      align: 'right',
       header: t('ownership.consumables.stress.multiplier', 'Wear multiplier'),
       render: (row) => (
         <span
@@ -232,6 +235,8 @@ export default function ConsumablesLifecyclePage() {
     {
       key: 'label',
       header: t('ownership.consumables.item.label', 'Part'),
+      filterValue: (row) => row.id,
+      filterValueLabel: (_value, row) => row.label,
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -246,6 +251,8 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'installed',
+      filterValue: (row) => row.installed_at,
+      filterValueLabel: (_value, row) => formatDateTime(row.installed_at),
       header: t('ownership.consumables.item.installed', 'Installed'),
       render: (row) => (
         <div>
@@ -261,6 +268,7 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'rated',
+      align: 'right',
       header: t('ownership.consumables.item.rated', 'Rated life'),
       render: (row) => (
         <div>
@@ -275,6 +283,9 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'cost',
+      align: 'right',
+      filterValue: (row) => `${row.currency}:${row.cost_minor}`,
+      filterValueLabel: (_value, row) => formatCurrencyMinor(row.cost_minor, row.currency, units.unitPrefs.locale),
       header: t('ownership.consumables.item.cost', 'Cost'),
       render: (row) => (
         <span className="tabular-nums">
@@ -284,6 +295,10 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'retired',
+      filterValue: (row) => row.retired_at,
+      filterValueLabel: (_value, row) => row.retired_at
+        ? formatDateTime(row.retired_at)
+        : t('ownership.consumables.item.inService', 'in service'),
       header: t('ownership.consumables.item.retired', 'Retired'),
       render: (row) =>
         row.retired_at ? (
@@ -444,7 +459,7 @@ export default function ConsumablesLifecyclePage() {
 
   return (
     <PageContainer
-      title={t('ownership.consumables.title', 'Consumables & Wear-Parts Lifecycle')}
+      title={t('ownership.consumables.title', 'Consumables & wear-parts lifecycle')}
       subtitle={t(
         'ownership.consumables.subtitle',
         'Rated life assumes an average car. Yours is not average — this projects each part against your measured speed profile, regen share, power draw and climate, then tells you which limit will actually retire it.',
@@ -750,6 +765,7 @@ export default function ConsumablesLifecyclePage() {
 
           <DataTable
             columns={itemColumns}
+            enableValueFilters
             mobileColumns={['label', 'installed', 'retired']}
             data={items}
             keyExtractor={(row) => row.id}

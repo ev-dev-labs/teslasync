@@ -35,11 +35,11 @@ export function PowerwallTrajectoryChart({ slots, powerwall }: PowerwallTrajecto
   if (!powerwall) {
     return (
       <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-3">{t('homeEnergy.powerwall.title', 'Powerwall Trajectory')}</PanelTitle>
+        <PanelTitle className="mb-3">{t('homeEnergy.powerwall.title', 'Powerwall trajectory')}</PanelTitle>
         {/* no-action: the enable toggle lives in the Scenario & Assumptions panel above this chart. */}
         <EmptyState
           icon={<BatteryCharging className="h-8 w-8" />}
-          message={t('homeEnergy.powerwall.none', 'No home battery is modeled in this scenario. Enable it under Scenario & Assumptions.')}
+          message={t('homeEnergy.powerwall.none', 'No home battery is modeled in this scenario. Enable it under scenario & assumptions.')}
         />
       </GlassPanel>
     );
@@ -51,7 +51,7 @@ export function PowerwallTrajectoryChart({ slots, powerwall }: PowerwallTrajecto
     // chart-a11y:no-table dense 15-minute-slot SoC trace — the KPI summary reports the
     // aggregate battery energy figures in tabular form already.
     <ChartContainer
-      title={t('homeEnergy.powerwall.title', 'Powerwall Trajectory')}
+      title={t('homeEnergy.powerwall.title', 'Powerwall trajectory')}
       subtitle={t('homeEnergy.powerwall.subtitle', 'Projected state of charge, with the backup reserve floor')}
       ariaLabel={t('homeEnergy.powerwall.aria', 'Powerwall state of charge over time, with reserve floor reference line')}
       empty={rows.length === 0}

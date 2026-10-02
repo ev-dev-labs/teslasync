@@ -1,7 +1,7 @@
 import { UsersRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, InlineCallout, Skeleton } from '@/components/feedback';
-import { Badge, Button, GlassPanel } from '@/components/ui';
+import { Table, Badge, Button, GlassPanel } from '@/components/ui';
 import type { BenchmarkRelease } from '@/api/hooks/useBenchmarks';
 
 interface CohortEligibilityPanelProps {
@@ -79,36 +79,36 @@ export function CohortEligibilityPanel({
         />
       ) : release ? (
         <div className="space-y-3">
-          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-[var(--text-muted)]">
+          <Table aria-label={t('benchmarks.cohort.title', 'Cohort eligibility')}><tbody>
+            <tr>
+              <th scope="row" className="text-[var(--text-muted)]">
                 {t('benchmarks.cohort.model', 'Model family')}
-              </dt>
-              <dd className="font-medium text-[var(--text-primary)]">
+              </th>
+              <td className="font-medium text-[var(--text-primary)]">
                 {modelFamily}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--text-muted)]">
+              </td>
+            </tr>
+            <tr>
+              <th scope="row" className="text-[var(--text-muted)]">
                 {t('benchmarks.cohort.year', 'Model-year bucket')}
-              </dt>
-              <dd className="font-medium text-[var(--text-primary)]">
+              </th>
+              <td className="font-medium text-[var(--text-primary)] text-right">
                 {release.model_year_bucket > 0
                   ? `${release.model_year_bucket}–${release.model_year_bucket + 4}`
                   : t('benchmarks.cohort.unknownYear', 'Unknown')}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--text-muted)]">
+              </td>
+            </tr>
+            <tr>
+              <th scope="row" className="text-[var(--text-muted)]">
                 {t('benchmarks.cohort.minimum', 'Release threshold')}
-              </dt>
-              <dd className="font-medium text-[var(--text-primary)]">
+              </th>
+              <td className="font-medium text-[var(--text-primary)]">
                 {t('benchmarks.cohort.minimumValue', 'At least {{count}} vehicles', {
                   count: release.minimum_cohort_size,
                 })}
-              </dd>
-            </div>
-          </dl>
+              </td>
+            </tr>
+          </tbody></Table>
           {release.suppressed ? (
             <InlineCallout variant="warning">
               {t(

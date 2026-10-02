@@ -21,6 +21,7 @@ import { distanceAddedM } from './charging-curve/helpers';
 import {
   durationMinutes,
   avgPowerW,
+  batteryFriendlyScore,
   costPerKwh,
   getChargerCategory,
   type ChargerCategory,
@@ -67,7 +68,7 @@ export function ChargingSessionCard({
   const cat = getChargerCategory(session.charger_type);
   const chargerLabels: Record<ChargerCategory, string> = {
     supercharger: t('chargerTypes.supercharger', 'Supercharger'),
-    dc: t('chargerTypes.dc', 'DC Fast'),
+    dc: t('chargerTypes.dc', 'DC fast'),
     home: t('chargerTypes.home', 'Home / AC'),
     unknown: t('chargerTypes.unknown', 'Charger'),
   };
@@ -85,28 +86,14 @@ export function ChargingSessionCard({
   const addedM = distanceAddedM(session);
   const rangeAddedDisplay = addedM != null ? toDistanceDisplay(addedM) : null;
   const energyKwh = (session.total_energy_added_wh ?? 0) / 1000;
-  const isFree = session.cost_decimal == null || session.cost_decimal === 0;
+  const isFree = session.cost_decimal === 0;
 
   const showCheckbox = typeof onToggleSelect === 'function';
 
   // Battery-friendly score for the leading badge — derived per session
   // so each row's badge reflects whether the charge stayed in the
   // healthy 30→80 % sweet spot.
-  const sessionScore = useMemo(() => {
-    const start = session.start_soc_pct;
-    const end = session.end_soc_pct;
-    if (start == null || end == null) return null;
-    let s = 50;
-    if (start <= 30) s += 30;
-    else if (start <= 50) s += 15;
-    else if (start <= 70) s += 0;
-    else s -= 10;
-    if (end <= 80) s += 20;
-    else if (end <= 90) s += 0;
-    else if (end < 100) s -= 10;
-    else s -= 25;
-    return Math.max(0, Math.min(100, s));
-  }, [session.start_soc_pct, session.end_soc_pct]);
+  const sessionScore = useMemo(() => batteryFriendlyScore([session]), [session]);
 
   const checkbox = showCheckbox ? (
     <Checkbox
@@ -218,7 +205,7 @@ export function ChargingSessionCard({
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="h-9 w-9 p-0"
+                className="h-11 w-11 p-0"
                 aria-label={t('quickView', 'Quick view charging session')}
                 title={t('quickView', 'Quick view charging session')}
                 onClick={() => onPreview(session)}

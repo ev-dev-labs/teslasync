@@ -13,7 +13,7 @@
  *   4. Clicking "Manage" invokes `onSelect` with the exact place.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -92,6 +92,7 @@ function renderTable(props: Partial<Parameters<typeof PlacesTable>[0]> = {}) {
 
 beforeEach(() => {
   cleanup();
+  localStorage.clear();
 });
 
 describe('PlacesTable — loading/error/empty', () => {
@@ -136,6 +137,30 @@ describe('PlacesTable — loading/error/empty', () => {
 });
 
 describe('PlacesTable — rows', () => {
+  it('filters the complete directory before client pagination', () => {
+    renderTable({
+      places: Array.from({ length: 30 }, (_, index) =>
+        makePlace({ id: index + 1, name: `Place ${index + 1}`, category: index === 29 ? 'work' : 'home' }),
+      ),
+    });
+    const header = screen.getByRole('columnheader', { name: /Category/ });
+    fireEvent.click(within(header).getByRole('button', { name: /Filter/ }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Home' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(screen.getByText('Place 30')).toBeInTheDocument();
+    expect(screen.queryByText('Place 1')).toBeNull();
+  });
+
+  it('keeps candidates from the complete directory when local search narrows displayed rows', () => {
+    const home = makePlace();
+    const office = makePlace({ id: 2, name: 'Office', category: 'work' });
+    renderTable({ places: [home], filterData: [home, office] });
+    fireEvent.click(within(screen.getByRole('columnheader', { name: /Place/ })).getByRole('button', { name: /Filter/ }));
+    expect(within(screen.getByRole('dialog')).getByRole('checkbox', { name: 'Office' })).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /Office/ })).toBeNull();
+  });
+
   it('renders name, origin, category, and Manage for a manual place with no rate', () => {
     renderTable({ places: [makePlace()] });
 

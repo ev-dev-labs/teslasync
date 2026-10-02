@@ -195,12 +195,14 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'monthly',
+      align: 'right',
       header: t('ownership.subscription.row.monthly', 'Monthly cost'),
       render: (row) => <span className="tabular-nums">{money(row.monthly_cost_minor)}</span>,
       sortable: true,
     },
     {
       key: 'spend',
+      align: 'right',
       header: t('ownership.subscription.row.spend', 'Spent to date'),
       render: (row) => (
         <div>
@@ -215,6 +217,7 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'usage',
+      align: 'right',
       header: t('ownership.subscription.row.usage', 'Measured usage'),
       render: (row) => (
         <div>
@@ -233,11 +236,13 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'value',
+      align: 'right',
       header: t('ownership.subscription.row.value', 'Realised value'),
       render: (row) => <span className="tabular-nums">{money(row.realised_value_minor)}</span>,
     },
     {
       key: 'net',
+      align: 'right',
       header: t('ownership.subscription.row.net', 'Net'),
       render: (row) => (
         <span
@@ -250,6 +255,7 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'roi',
+      align: 'right',
       header: t('ownership.subscription.row.roi', 'ROI'),
       render: (row) =>
         row.roi_pct != null ? (
@@ -265,6 +271,7 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'breakEven',
+      align: 'right',
       header: t('ownership.subscription.row.breakEven', 'Break-even usage'),
       render: (row) => (
         <div>
@@ -298,6 +305,8 @@ export default function SubscriptionROIPage() {
     {
       key: 'name',
       header: t('ownership.subscription.list.name', 'Subscription'),
+      filterValue: (row) => row.id,
+      filterValueLabel: (_value, row) => row.name,
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -311,6 +320,9 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'price',
+      align: 'right',
+      filterValue: (row) => `${row.currency}:${row.price_minor}`,
+      filterValueLabel: (_value, row) => formatCurrencyMinor(row.price_minor, row.currency, units.unitPrefs.locale),
       header: t('ownership.subscription.list.price', 'Price'),
       render: (row) => (
         <span className="tabular-nums">
@@ -321,6 +333,8 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'metric',
+      filterValue: (row) => row.usage_metric,
+      filterValueLabel: (_value, row) => row.usage_metric.replace(/_/g, ' '),
       header: t('ownership.subscription.list.metric', 'Value metric'),
       render: (row) => (
         <Badge variant={row.usage_metric === 'none' ? 'neutral' : 'info'}>
@@ -330,6 +344,13 @@ export default function SubscriptionROIPage() {
     },
     {
       key: 'benchmark',
+      align: 'right',
+      filterValue: (row) => `${row.currency}:${row.benchmark_minor_per_unit}`,
+      filterValueLabel: (_value, row) => formatCurrencyMinor(
+        Math.round(row.benchmark_minor_per_unit * 100) / 100,
+        row.currency,
+        units.unitPrefs.locale,
+      ),
       header: t('ownership.subscription.list.benchmark', 'Benchmark rate'),
       render: (row) => (
         <span className="tabular-nums">
@@ -372,14 +393,14 @@ export default function SubscriptionROIPage() {
 
   return (
     <PageContainer
-      title={t('ownership.subscription.title', 'Subscription & Feature ROI')}
+      title={t('ownership.subscription.title', 'Subscription & feature ROI')}
       subtitle={t(
         'ownership.subscription.subtitle',
         'Price every recurring charge against the usage it actually delivered, express the break-even in units you can act on, and see exactly how much cancelling the weak ones would return.',
       )}
       loading={roiQuery.isLoading}
       error={roiQuery.error as Error | null}
-      actions={
+      contextActions={
         <div className="flex items-center gap-2">
           <Select
             aria-label={t('ownership.window.label', 'Analysis window')}
@@ -664,6 +685,7 @@ export default function SubscriptionROIPage() {
 
           <DataTable
             columns={subscriptionColumns}
+            enableValueFilters
             mobileColumns={['name', 'price', 'period']}
             data={subscriptions}
             keyExtractor={(row) => row.id}

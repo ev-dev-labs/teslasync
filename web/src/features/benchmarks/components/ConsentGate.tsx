@@ -76,4 +76,3 @@ export function ConsentGate({
     </GlassPanel>
   );
 }
-

@@ -68,6 +68,8 @@ export function PackCapacityDirectory({
       },
       {
         key: 'window',
+        filterValue: (row) => row.observation.socDeltaPct ?? null,
+        filterValueLabel: (_, row) => `${packCapacityNumber(row.observation.socDeltaPct, locale, 1)}pp`,
         header: t('packCapacity.directory.window', 'SoC gain'),
         align: 'right',
         visibleOnMobile: true,
@@ -84,6 +86,8 @@ export function PackCapacityDirectory({
       },
       {
         key: 'energy',
+        filterValue: (row) => row.observation.energyAddedWh ?? null,
+        filterValueLabel: (_, row) => formatEnergy(row.observation.energyAddedWh, { precision: 2 }),
         header: t('packCapacity.directory.energy', 'Energy added'),
         align: 'right',
         render: (row) => (
@@ -96,6 +100,9 @@ export function PackCapacityDirectory({
       },
       {
         key: 'raw',
+        groupStart: true,
+        filterValue: (row) => row.observation.capacityWh ?? null,
+        filterValueLabel: (_, row) => formatEnergy(row.observation.capacityWh, { precision: 2 }),
         header: t('packCapacity.directory.raw', 'Raw capacity'),
         align: 'right',
         visibleOnMobile: true,
@@ -109,6 +116,8 @@ export function PackCapacityDirectory({
       },
       {
         key: 'filtered',
+        filterValue: (row) => row.state.capacityWh ?? null,
+        filterValueLabel: (_, row) => formatEnergy(row.state.capacityWh, { precision: 2 }),
         header: t('packCapacity.directory.filtered', 'Filtered'),
         align: 'right',
         render: (row) => (
@@ -119,6 +128,8 @@ export function PackCapacityDirectory({
       },
       {
         key: 'sigma',
+        filterValue: (row) => row.state.sigmaWh ?? null,
+        filterValueLabel: (_, row) => formatEnergy(row.state.sigmaWh, { precision: 2 }),
         header: t('packCapacity.directory.sigma', 'Posterior sigma'),
         align: 'right',
         render: (row) => (
@@ -156,6 +167,7 @@ export function PackCapacityDirectory({
       },
       {
         key: 'location',
+        filterValue: (row) => row.observation.locationLabel ?? null,
         header: t('packCapacity.directory.location', 'Location'),
         render: (row) => (
           <Text variant="bodySm">
@@ -169,7 +181,7 @@ export function PackCapacityDirectory({
 
   return (
     <section data-testid="pack-capacity-directory">
-      <GlassPanel className="p-4 sm:p-5">
+      <GlassPanel className="min-w-0 p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <ListTree
             className="h-4 w-4 text-cyan-300"
@@ -188,6 +200,7 @@ export function PackCapacityDirectory({
         </Text>
         <PackCapacitySectionBody result={result} state={state}>
           <DataTable
+            enableValueFilters
             tableId="battery:pack-capacity-directory"
             columns={columns}
             data={rows}

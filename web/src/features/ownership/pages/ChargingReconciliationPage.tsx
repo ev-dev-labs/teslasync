@@ -69,7 +69,7 @@ export default function ChargingReconciliationPage() {
   });
   const [dispute, setDispute] = useState({ claimed_minor: 0, note: '', reasons: [] as string[] });
 
-  usePageTitle(t('ownership.reconcile.title', 'Charging Invoice Reconciliation'));
+  usePageTitle(t('ownership.reconcile.title', 'Charging invoice reconciliation'));
 
   const invoicesQuery = useChargingInvoices(vehicleId, 50, 0);
   const reportQuery = useReconciliationReport(activeInvoice);
@@ -163,6 +163,7 @@ export default function ChargingReconciliationPage() {
     {
       key: 'total',
       header: t('ownership.reconcile.invoice.total', 'Billed'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {formatCurrencyMinor(row.billed_total_minor, row.currency, units.unitPrefs.locale)}
@@ -173,6 +174,7 @@ export default function ChargingReconciliationPage() {
     {
       key: 'lines',
       header: t('ownership.reconcile.invoice.lines', 'Lines'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{fmtNumber(row.line_count, 0)}</span>,
     },
     {
@@ -210,6 +212,8 @@ export default function ChargingReconciliationPage() {
     {
       key: 'ref',
       header: t('ownership.reconcile.line.ref', 'Line'),
+      filterValue: (row) => row.line.id,
+      filterValueLabel: (_value, row) => row.line.line_ref || t('ownership.reconcile.line.unnamed', 'Unnamed line'),
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -223,6 +227,7 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'match',
+      filterValue: (row) => row.match_state,
       header: t('ownership.reconcile.line.match', 'Match'),
       render: (row) => (
         <div className="flex items-center gap-2">
@@ -236,6 +241,9 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'billedEnergy',
+      align: 'right',
+      filterValue: (row) => row.line.billed_energy_wh,
+      filterValueLabel: (_value, row) => units.formatEnergy(row.line.billed_energy_wh),
       header: t('ownership.reconcile.line.billedEnergy', 'Billed energy'),
       render: (row) => (
         <span className="tabular-nums">{units.formatEnergy(row.line.billed_energy_wh)}</span>
@@ -243,6 +251,9 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'measuredEnergy',
+      align: 'right',
+      filterValue: (row) => row.measured_energy_wh,
+      filterValueLabel: (_value, row) => row.measured_energy_wh != null ? units.formatEnergy(row.measured_energy_wh) : '—',
       header: t('ownership.reconcile.line.measuredEnergy', 'Measured energy'),
       render: (row) =>
         row.measured_energy_wh != null ? (
@@ -253,6 +264,9 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'energyDelta',
+      align: 'right',
+      filterValue: (row) => row.energy_delta_pct,
+      filterValueLabel: (_value, row) => row.energy_delta_pct != null ? formatPct(row.energy_delta_pct) : '—',
       header: t('ownership.reconcile.line.energyDelta', 'Energy Δ'),
       render: (row) =>
         row.energy_delta_pct != null ? (
@@ -267,22 +281,34 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'timeDelta',
+      align: 'right',
+      filterValue: (row) => row.time_delta_s,
+      filterValueLabel: (_value, row) => row.time_delta_s != null ? formatSpan(row.time_delta_s) : '—',
       header: t('ownership.reconcile.line.timeDelta', 'Time Δ'),
       render: (row) => (row.time_delta_s != null ? formatSpan(row.time_delta_s) : '—'),
     },
     {
       key: 'billed',
       header: t('ownership.reconcile.line.billed', 'Billed'),
+      align: 'right',
+      filterValue: (row) => row.line.billed_total_minor,
+      filterValueLabel: (_value, row) => money(row.line.billed_total_minor),
       render: (row) => <span className="tabular-nums">{money(row.line.billed_total_minor)}</span>,
     },
     {
       key: 'expected',
       header: t('ownership.reconcile.line.expected', 'Expected'),
+      align: 'right',
+      filterValue: (row) => row.expected_cost_minor,
+      filterValueLabel: (_value, row) => money(row.expected_cost_minor),
       render: (row) => <span className="tabular-nums">{money(row.expected_cost_minor)}</span>,
     },
     {
       key: 'variance',
       header: t('ownership.reconcile.line.variance', 'Variance'),
+      align: 'right',
+      filterValue: (row) => row.variance_minor,
+      filterValueLabel: (_value, row) => money(row.variance_minor),
       render: (row) => (
         <span
           className={`tabular-nums ${row.variance_minor > 0 ? 'text-rose-300' : row.variance_minor < 0 ? 'text-emerald-300' : ''}`}
@@ -321,11 +347,13 @@ export default function ChargingReconciliationPage() {
     {
       key: 'lines',
       header: t('ownership.reconcile.bucket.lines', 'Lines'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{fmtNumber(row.line_count, 0)}</span>,
     },
     {
       key: 'amount',
       header: t('ownership.reconcile.bucket.amount', 'Amount'),
+      align: 'right',
       render: (row) => (
         <span className={`tabular-nums ${row.amount_minor > 0 ? 'text-rose-300' : ''}`}>
           {money(row.amount_minor)}
@@ -336,6 +364,7 @@ export default function ChargingReconciliationPage() {
     {
       key: 'share',
       header: t('ownership.reconcile.bucket.share', 'Share of variance'),
+      align: 'right',
       render: (row) => (
         <div className="min-w-[7rem]">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
@@ -369,6 +398,8 @@ export default function ChargingReconciliationPage() {
   const uninvoicedColumns: Column<UninvoicedSession>[] = [
     {
       key: 'session',
+      filterValue: (row) => row.session_id,
+      filterValueLabel: (_value, row) => `#${row.session_id}`,
       header: t('ownership.reconcile.uninvoiced.session', 'Session'),
       render: (row) => (
         <div>
@@ -383,12 +414,16 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'location',
+      filterValue: (row) => row.location || null,
       header: t('ownership.reconcile.uninvoiced.location', 'Location'),
       render: (row) => row.location || '—',
     },
     {
       key: 'energy',
       header: t('ownership.reconcile.uninvoiced.energy', 'Measured energy'),
+      align: 'right',
+      filterValue: (row) => row.energy_wh,
+      filterValueLabel: (_value, row) => units.formatEnergy(row.energy_wh),
       render: (row) => <span className="tabular-nums">{units.formatEnergy(row.energy_wh)}</span>,
       sortable: true,
     },
@@ -405,7 +440,7 @@ export default function ChargingReconciliationPage() {
 
   return (
     <PageContainer
-      title={t('ownership.reconcile.title', 'Charging Invoice Reconciliation')}
+      title={t('ownership.reconcile.title', 'Charging invoice reconciliation')}
       subtitle={t(
         'ownership.reconcile.subtitle',
         'Match every billed line against the session your car actually recorded, attribute the variance to a cause, and assemble a dispute packet you can send to the provider.',
@@ -736,6 +771,7 @@ export default function ChargingReconciliationPage() {
         >
           <DataTable
             columns={lineColumns}
+            enableValueFilters
             mobileColumns={['ref', 'match', 'variance']}
             data={lines}
             keyExtractor={(row) => row.line.id || row.line.line_ref}
@@ -811,6 +847,7 @@ export default function ChargingReconciliationPage() {
         >
           <DataTable
             columns={uninvoicedColumns}
+            enableValueFilters
             mobileColumns={['session', 'location', 'energy']}
             data={uninvoiced}
             keyExtractor={(row) => row.session_id}

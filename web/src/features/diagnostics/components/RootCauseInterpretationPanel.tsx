@@ -42,7 +42,7 @@ export function RootCauseInterpretationPanel({
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <ShieldAlert className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('rootCauseIntelligence.interpretation.title', 'Interpretation & Limits')}
+        {t('rootCauseIntelligence.interpretation.title', 'Interpretation & limits')}
       </PanelTitle>
       {isError ? (
         <QueryError error={error} onRetry={onRetry} />

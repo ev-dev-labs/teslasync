@@ -226,14 +226,14 @@ describe('AnomalyDashboardPage', () => {
 
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Anomaly Detection' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Anomaly detection' })).toBeInTheDocument();
     expect(
       screen.getByText('Automatic health monitoring and signal anomaly detection'),
     ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'AI insights' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Anomaly overview' })).toBeInTheDocument();
-    expect(document.title).toContain('Anomaly Detection');
+    expect(document.title).toContain('Anomaly detection');
     // useAnomalies(null) is disabled — the network seam is never touched.
     expect(mockedRequest).not.toHaveBeenCalled();
   });
@@ -253,7 +253,7 @@ describe('AnomalyDashboardPage', () => {
 
     // KPI band never blanks — it renders its labels even with nothing scoped.
     const kpi = screen.getByRole('region', { name: 'Summary metrics' });
-    expect(within(kpi).getByText('Signals Monitored')).toBeInTheDocument();
+    expect(within(kpi).getByText('Signals monitored')).toBeInTheDocument();
 
     // `selectedId ?? undefined` is threaded to both AI cards.
     expect(screen.getByTestId('ai-explanations')).toHaveAttribute('data-vehicle-id', 'undefined');
@@ -284,7 +284,7 @@ describe('AnomalyDashboardPage', () => {
     // header freshness chip.
     const kpi = screen.getByRole('region', { name: 'Summary metrics' });
     expect(await within(kpi).findByText('42')).toBeInTheDocument(); // signals_monitored
-    expect(within(kpi).getByText('Signals Monitored')).toBeInTheDocument();
+    expect(within(kpi).getByText('Signals monitored')).toBeInTheDocument();
     expect(within(kpi).getByText('5')).toBeInTheDocument(); // anomalies_last_7d
     expect(within(kpi).getByText('3')).toBeInTheDocument(); // 3 health categories
 

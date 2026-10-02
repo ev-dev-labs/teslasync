@@ -219,7 +219,7 @@ export function BatteryPassportMasthead({
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-cyan-300">
                   <Award className="h-4 w-4" aria-hidden="true" />
-                  <Caption className="uppercase tracking-wide">
+                  <Caption>
                     {t(
                       'batteryPassport.masthead.eyebrow',
                       'Battery evidence certificate',

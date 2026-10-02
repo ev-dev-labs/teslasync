@@ -326,7 +326,7 @@ describe('TeslaChargingSessionsPage', () => {
     renderPage()
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Fleet Charging Sessions' }),
+      await screen.findByRole('heading', { level: 1, name: 'Fleet charging sessions' }),
     ).toBeInTheDocument()
 
     const brief = screen.getByTestId('charging-operational-brief')
@@ -344,17 +344,17 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getByText('$99.50')).toBeInTheDocument()
     expect(screen.getByText('$0.234')).toBeInTheDocument()
     expect(screen.getByText('250')).toBeInTheDocument()
-    expect(screen.getAllByText('Total Sessions').length).toBeGreaterThan(1)
-    expect(screen.getByText('Peak Power')).toBeInTheDocument()
+    expect(screen.getAllByText('Total sessions').length).toBeGreaterThan(1)
+    expect(screen.getByText('Peak power')).toBeInTheDocument()
 
     // Every section panel is present — nothing stubbed out.
-    expect(screen.getByText('Monthly Charging Cost')).toBeInTheDocument()
-    expect(screen.getByText('Energy by Charger Type')).toBeInTheDocument()
-    expect(screen.getByText('Session Locations')).toBeInTheDocument()
-    expect(screen.getByText('Top Locations by Cost')).toBeInTheDocument()
-    expect(screen.getByText('Charging Sessions')).toBeInTheDocument()
+    expect(screen.getByText('Monthly charging cost')).toBeInTheDocument()
+    expect(screen.getByText('Energy by charger type')).toBeInTheDocument()
+    expect(screen.getByText('Session locations')).toBeInTheDocument()
+    expect(screen.getByText('Top locations by cost')).toBeInTheDocument()
+    expect(screen.getByText('Charging sessions')).toBeInTheDocument()
 
-    // Charger-type breakdown resolves both families (labels are uppercased).
+    // Charger-type breakdown preserves the reported labels.
     expect(screen.getAllByText('SUPERCHARGER').length).toBeGreaterThan(0)
     expect(screen.getAllByText('DESTINATION').length).toBeGreaterThan(0)
 
@@ -368,6 +368,15 @@ describe('TeslaChargingSessionsPage', () => {
     // The sessions table rendered (header present, not the empty state).
     expect(screen.getByText('Peak (kW)')).toBeInTheDocument()
     expect(screen.queryByText(/No fleet charging sessions yet/)).toBeNull()
+  })
+
+  it('preserves mixed-case charger labels in the breakdown', async () => {
+    install({ sessions: [makeSession({ charger_type: 'DC fast / CCS' })] })
+    renderPage()
+
+    const bar = await screen.findByRole('progressbar', { name: 'DC fast / CCS' })
+    expect(within(bar).getByText('DC fast / CCS')).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar', { name: 'DC FAST / CCS' })).not.toBeInTheDocument()
   })
 
   it('shows loading affordances while the sessions query is in flight', async () => {

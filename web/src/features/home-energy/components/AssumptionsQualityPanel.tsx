@@ -31,7 +31,7 @@ export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergy
 
   return (
     <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3">{t('homeEnergy.quality.title', 'Assumptions & Forecast Quality')}</PanelTitle>
+      <PanelTitle className="mb-3">{t('homeEnergy.quality.title', 'Assumptions & forecast quality')}</PanelTitle>
 
       <Grid cols={{ default: 1, sm: 2 }} gap={4} className="mb-4">
         <div className="rounded-lg border border-[var(--border-subtle)] p-3">

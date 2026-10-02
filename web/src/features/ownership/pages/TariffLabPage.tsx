@@ -100,7 +100,7 @@ export default function TariffLabPage() {
     rates: [newRate()],
   });
 
-  usePageTitle(t('ownership.tariff.title', 'Utility Tariff Arbitrage Lab'));
+  usePageTitle(t('ownership.tariff.title', 'Utility tariff arbitrage lab'));
 
   const tariffQuery = useTariffs(100, 0);
   const create = useCreateTariff();
@@ -215,11 +215,13 @@ export default function TariffLabPage() {
     },
     {
       key: 'bands',
+      align: 'right',
       header: t('ownership.tariff.plan.bands', 'Price bands'),
       render: (row) => <span className="tabular-nums">{(row.rates ?? []).length}</span>,
     },
     {
       key: 'standing',
+      align: 'right',
       header: t('ownership.tariff.plan.standing', 'Standing charge'),
       render: (row) => (
         <span className="tabular-nums">
@@ -234,6 +236,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'demand',
+      align: 'right',
       header: t('ownership.tariff.plan.demand', 'Demand charge'),
       render: (row) => (
         <span className="tabular-nums">
@@ -277,6 +280,7 @@ export default function TariffLabPage() {
   const resultColumns: Column<TariffSimulationResult>[] = [
     {
       key: 'rank',
+      align: 'right',
       header: t('ownership.tariff.result.rank', 'Rank'),
       render: (row) => (
         <span className={`tabular-nums ${row.rank === 1 ? 'text-emerald-300' : ''}`}>
@@ -301,12 +305,14 @@ export default function TariffLabPage() {
     },
     {
       key: 'annual',
+      align: 'right',
       header: t('ownership.tariff.result.annual', 'Annualised cost'),
       render: (row) => <span className="tabular-nums">{money(row.annual_cost_minor)}</span>,
       sortable: true,
     },
     {
       key: 'delta',
+      align: 'right',
       header: t('ownership.tariff.result.delta', 'vs current'),
       render: (row) => (
         <span
@@ -319,6 +325,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'effective',
+      align: 'right',
       header: t('ownership.tariff.result.effective', 'Effective price'),
       render: (row) => (
         <span className="tabular-nums">
@@ -333,6 +340,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'shift',
+      align: 'right',
       header: t('ownership.tariff.result.shift', 'Load-shift upside'),
       render: (row) => (
         <span className="tabular-nums text-emerald-300">
@@ -342,6 +350,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'breakeven',
+      align: 'right',
       header: t('ownership.tariff.result.breakEven', 'Break-even'),
       render: (row) =>
         row.break_even_days != null
@@ -350,6 +359,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'peak',
+      align: 'right',
       header: t('ownership.tariff.result.peak', 'Peak demand'),
       render: (row) =>
         row.peak_demand_w != null ? units.formatPower(row.peak_demand_w) : '—',
@@ -370,7 +380,7 @@ export default function TariffLabPage() {
 
   return (
     <PageContainer
-      title={t('ownership.tariff.title', 'Utility Tariff Arbitrage Lab')}
+      title={t('ownership.tariff.title', 'Utility tariff arbitrage lab')}
       subtitle={t(
         'ownership.tariff.subtitle',
         'Replay your real measured charging load against every rate plan you can author — flat, time-of-use, tiered, real-time, and demand — then rank them on annualised cost.',

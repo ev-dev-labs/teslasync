@@ -432,7 +432,13 @@ describe('ChargingDetailPage — populated DC session', () => {
   it('renders the header status chips and the session title', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Charge Session #42', level: 1 })).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: 'Charge Session #42', level: 1 });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    const header = heading.closest('header');
+    if (!header) throw new Error('Charging session header is missing');
+    const identity = within(header).getByText(/My Model 3/);
+    expect(identity).toBeVisible();
+    expect(identity.closest('[data-action-group="metadata"]')).not.toBeNull();
     const summary = screen.getByRole('region', { name: 'Session summary' });
     // DC chip + live charging-state chip + charger-type chip + place chip.
     expect(within(summary).getAllByText('DC').length).toBeGreaterThanOrEqual(1);
@@ -733,7 +739,9 @@ describe('ChargingDetailPage — share dialog wiring', () => {
     renderWithId();
 
     expect(screen.queryByRole('dialog', { name: 'Share session' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    const share = screen.getByRole('button', { name: 'Share' });
+    expect(share.closest('[data-action-group="overflow"]')).not.toBeNull();
+    fireEvent.click(share);
 
     const dialog = screen.getByRole('dialog', { name: 'Share session' });
     expect(dialog).toHaveAttribute('data-session-id', '42');

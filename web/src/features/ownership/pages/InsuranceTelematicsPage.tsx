@@ -73,7 +73,7 @@ export default function InsuranceTelematicsPage() {
   const [form, setForm] = useState<PolicyForm>(EMPTY_POLICY);
   const [formOpen, setFormOpen] = useState(false);
 
-  usePageTitle(t('ownership.insurance.title', 'Insurance Telematics Studio'));
+  usePageTitle(t('ownership.insurance.title', 'Insurance telematics studio'));
 
   const { data, isLoading, error } = useInsuranceRiskProfile(vehicleId, windowDays);
   const upsert = useUpsertInsurancePolicy();
@@ -153,6 +153,7 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'observed',
+      align: 'right',
       header: t('ownership.insurance.factor.observed', 'Observed'),
       render: (row) => (
         <span className="tabular-nums">
@@ -163,11 +164,13 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'baseline',
+      align: 'right',
       header: t('ownership.insurance.factor.baseline', 'Baseline'),
       render: (row) => <span className="tabular-nums">{fmtNumber(row.baseline_rate, 3)}</span>,
     },
     {
       key: 'score',
+      align: 'right',
       header: t('ownership.insurance.factor.score', 'Score'),
       render: (row) => (
         <span
@@ -180,11 +183,13 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'weight',
+      align: 'right',
       header: t('ownership.insurance.factor.weight', 'Weight'),
       render: (row) => <span className="tabular-nums">{formatPct(row.weight * 100, 0)}</span>,
     },
     {
       key: 'contribution',
+      align: 'right',
       header: t('ownership.insurance.factor.contribution', 'Contribution'),
       render: (row) => (
         <div className="min-w-[7rem]">
@@ -214,6 +219,7 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'samples',
+      align: 'right',
       header: t('ownership.insurance.factor.samples', 'Samples'),
       render: (row) => <span className="tabular-nums">{fmtNumber(row.sample_count, 0)}</span>,
     },
@@ -222,6 +228,7 @@ export default function InsuranceTelematicsPage() {
   const leverColumns: Column<RiskLever>[] = [
     {
       key: 'rank',
+      align: 'right',
       header: t('ownership.insurance.lever.rank', 'Rank'),
       render: (row) => <span className="tabular-nums">#{row.payoff_rank}</span>,
     },
@@ -232,11 +239,13 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'target',
+      align: 'right',
       header: t('ownership.insurance.lever.target', 'Target reduction'),
       render: (row) => <span className="tabular-nums">{formatPct(row.target_reduction_pct)}</span>,
     },
     {
       key: 'delta',
+      align: 'right',
       header: t('ownership.insurance.lever.delta', 'Risk score delta'),
       render: (row) => (
         <span className="tabular-nums text-emerald-300">
@@ -246,6 +255,7 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'save',
+      align: 'right',
       header: t('ownership.insurance.lever.save', 'Projected saving'),
       render: (row) => (
         <span className="tabular-nums">{money(row.projected_premium_save_minor)}</span>
@@ -259,6 +269,7 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'effort',
+      align: 'right',
       header: t('ownership.insurance.lever.effort', 'Effort'),
       render: (row) =>
         row.effort_hours_per_week != null
@@ -269,6 +280,7 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'confidence',
+      align: 'right',
       header: t('ownership.insurance.lever.confidence', 'Confidence'),
       render: (row) => <span className="tabular-nums">{formatPct(row.confidence)}</span>,
     },
@@ -276,14 +288,14 @@ export default function InsuranceTelematicsPage() {
 
   return (
     <PageContainer
-      title={t('ownership.insurance.title', 'Insurance Telematics Studio')}
+      title={t('ownership.insurance.title', 'Insurance telematics studio')}
       subtitle={t(
         'ownership.insurance.subtitle',
         'Actuarial frequency × severity underwriting built from your own measured driving, with a premium simulation and ranked improvement levers.',
       )}
       loading={isLoading}
       error={error as Error | null}
-      actions={
+      contextActions={
         <div className="flex flex-wrap items-center gap-2">
           <Select
             aria-label={t('ownership.window.label', 'Analysis window')}

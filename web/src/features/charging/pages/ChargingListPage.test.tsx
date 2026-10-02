@@ -63,6 +63,16 @@ vi.mock('react-i18next', () => ({
 // imperial (mi) display-conversion branches. Hoisted so the settings mock
 // factory can close over it.
 const unitState = vi.hoisted(() => ({ length: 'km' as 'km' | 'mi' }));
+const mediaState = vi.hoisted(() => ({ desktop: false }));
+
+vi.mock('@/hooks/useMediaQuery', async (importActual) => {
+  const actual = await importActual<typeof import('@/hooks/useMediaQuery')>();
+  return {
+    ...actual,
+    useMediaQuery: (query: string) => query === '(min-width: 1024px)'
+      ? mediaState.desktop : actual.useMediaQuery(query),
+  };
+});
 
 // File-level useSettings mock (overrides the global test-setup stub) so
 // `useUnits`/`useFormatting` see a stable shape while `unit_of_length` flips.
@@ -372,6 +382,7 @@ function briefMetric(label: string): HTMLElement {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  mediaState.desktop = false;
   unitState.length = 'km';
   captured.toDistanceDisplay = null;
   captured.distanceUnit = '';
@@ -397,10 +408,104 @@ describe('formatHour', () => {
 
 /* ─────────────────────────────── Component tests ─────────────────────────── */
 
+describe('ChargingListPage — responsive evidence adoption', () => {
+  it('renders the real desktop evidence table before charging insights without duplicating session cards', async () => {
+    mediaState.desktop = true;
+    renderPage();
+    const table = await screen.findByRole('table', { name: 'All charging sessions' });
+    const insights = screen.getByRole('region', { name: 'Charging insights' });
+    expect(table.compareDocumentPosition(insights) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(table.compareDocumentPosition(screen.getByTestId('charging-operational-brief')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByTestId('session-card-1')).not.toBeInTheDocument();
+    expect(table.querySelector('th[data-column-key="energy"]')).toBeInTheDocument();
+    expect(table.querySelector('th[data-column-key="batteryEnd"]')).toBeInTheDocument();
+    expect(screen.getByText(/cover up to 500 loaded sessions/)).toBeInTheDocument();
+    expect(screen.getByTestId('charging-export')).toBeInTheDocument();
+  });
+
+  it('keeps the grid and reset action available when desktop search matches no sessions', async () => {
+    mediaState.desktop = true;
+    renderPage(['/charging?from=2000-01-01&to=2100-01-01&q=nonexistent-charge-location']);
+    expect(await screen.findByRole('table', { name: 'All charging sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
+  });
+
+  it('does not describe unknown battery state as zero-percent departure readiness', () => {
+    mockVehicleState.mockReturnValue(qr({ data: { state: { ...LIVE_STATE, battery_level: null } } }));
+    renderPage();
+    const readiness = briefMetric('Departure readiness');
+    expect(within(readiness).getByText('—')).toBeInTheDocument();
+    expect(within(readiness).queryByText('0%')).not.toBeInTheDocument();
+  });
+
+  it('excludes unknown-cost sessions from the free collection', async () => {
+    mockSessions.mockReturnValue(qr({
+      data: [
+        makeSession({ id: 10, cost_decimal: null }),
+        makeSession({ id: 11, cost_decimal: 0 }),
+      ],
+    }));
+    renderPage(['/charging?from=2000-01-01&to=2100-01-01&coll=free']);
+    expect(await screen.findByTestId('session-card-11')).toBeInTheDocument();
+    expect(screen.queryByTestId('session-card-10')).not.toBeInTheDocument();
+  });
+
+  it('does not describe unknown charging posture as not charging', () => {
+    mockVehicleState.mockReturnValue(qr({ data: { state: { ...LIVE_STATE, is_charging: null } } }));
+    renderPage();
+    const posture = briefMetric('Current posture');
+    expect(within(posture).getByText('Unavailable')).toBeInTheDocument();
+    expect(within(posture).queryByText('Not charging')).not.toBeInTheDocument();
+  });
+
+  it('filters the entire loaded window from column headers before pagination', async () => {
+    mediaState.desktop = true;
+    mockSessions.mockReturnValue(qr({
+      data: Array.from({ length: 63 }, (_, index) => makeSession({
+        id: index + 1, start_place: index === 0 ? 'Remote charger' : 'Home',
+        started_at: new Date(Date.UTC(2024, 5, 15, 8, index)).toISOString(),
+      })),
+    }));
+    renderPage();
+    const table = await screen.findByRole('table', { name: 'All charging sessions' });
+    expect(table.querySelector('a[href="/charging/1"]')).not.toBeInTheDocument();
+    fireEvent.click(within(table).getByRole('button', { name: 'Charge location filter' }));
+    const filter = await screen.findByRole('dialog', { name: 'Charge location filter' });
+    expect(within(filter).getByRole('checkbox', { name: 'Remote charger' })).toBeInTheDocument();
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'Home' }));
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(table.querySelector('a[href="/charging/1"]')).toBeInTheDocument());
+    expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(within(table).getByRole('button', { name: 'Charge location filter' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps unknown-cost filters distinct from free and offers recovery on mobile', async () => {
+    mockSessions.mockReturnValue(qr({ data: [
+      makeSession({ id: 10, cost_decimal: null }),
+      makeSession({ id: 11, cost_decimal: 0 }),
+    ] }));
+    const values = encodeURIComponent(JSON.stringify({ cost: ['null'] }));
+    renderPage([`/charging?from=2000-01-01&to=2100-01-01&grid_values=${values}`]);
+    expect(await screen.findByTestId('session-card-10')).toBeInTheDocument();
+    expect(screen.queryByTestId('session-card-11')).not.toBeInTheDocument();
+    expect(screen.getByText(/Column value filters are active/)).toBeInTheDocument();
+  });
+
+  it('reports invalid saved value filters explicitly and resets them', async () => {
+    mediaState.desktop = true;
+    renderPage(['/charging?from=2000-01-01&to=2100-01-01&grid_values=broken']);
+    expect(await screen.findByText('This saved value filter is invalid. Clear it to reset.')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'All charging sessions' }).querySelector('a[href^="/charging/"]')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /This saved value filter is invalid/ }));
+    await waitFor(() => expect(screen.queryByText('This saved value filter is invalid. Clear it to reset.')).not.toBeInTheDocument());
+    expect(screen.getByRole('table', { name: 'All charging sessions' }).querySelectorAll('tbody tr')).toHaveLength(SESSIONS.length);
+  });
+});
+
 describe('ChargingListPage — date window', () => {
   it('fetches sessions with vehicle-timezone RFC3339 instants, not UTC date-only days', async () => {
     renderPage();
-    await screen.findByRole('heading', { level: 1, name: 'Charging Sessions' });
+    await screen.findByRole('heading', { level: 1, name: 'Charging sessions' });
     expect(mockSessions).toHaveBeenCalled();
     const opts = mockSessions.mock.calls.at(-1)?.[1] as {
       start?: string;
@@ -418,12 +523,12 @@ describe('ChargingListPage — happy path', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Charging Sessions' }),
+      await screen.findByRole('heading', { level: 1, name: 'Charging sessions' }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Live readiness, cost exposure, charger behavior, and charging history'),
     ).toBeInTheDocument();
-    expect(document.title).toContain('Charging Sessions');
+    expect(document.title).toContain('Charging sessions');
 
     // Overview KPI band (unique MetricCard labels).
     expect(screen.getByText('Energy (kWh)')).toBeInTheDocument();
@@ -582,8 +687,8 @@ describe('ChargingListPage — non-happy states', () => {
     expect(screen.getByText(/Battery-start patterns, charger comparisons/)).toBeInTheDocument();
     expect(screen.getByText('No charging sessions yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
-    // Analytical content stays withheld, but the insights section explains its prerequisite.
-    expect(screen.queryByTestId('charging-trend-chart')).not.toBeInTheDocument();
+    // Keep the trend shell available so the empty chart explains its missing data.
+    expect(screen.getByTestId('charging-trend-chart')).toBeInTheDocument();
     expect(screen.queryByTestId('session-card-1')).not.toBeInTheDocument();
   });
 
@@ -648,7 +753,7 @@ describe('ChargingListPage — non-happy states', () => {
       screen.getByText('Add a vehicle to your fleet to see data on this page.'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Charging Sessions' }),
+      screen.getByRole('heading', { level: 1, name: 'Charging sessions' }),
     ).toBeInTheDocument();
     // The data scaffolding must not render on the null-vehicle guard path.
     expect(screen.queryByText('Energy (kWh)')).not.toBeInTheDocument();

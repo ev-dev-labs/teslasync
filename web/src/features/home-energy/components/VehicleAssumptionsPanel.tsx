@@ -25,7 +25,7 @@ export function VehicleAssumptionsPanel({ vehicleInputs, assumptions }: VehicleA
 
   return (
     <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3">{t('homeEnergy.vehicle.title', 'Vehicle Assumptions')}</PanelTitle>
+      <PanelTitle className="mb-3">{t('homeEnergy.vehicle.title', 'Vehicle assumptions')}</PanelTitle>
       {vehicleInputs.length === 0 ? (
         <EmptyState
           icon={<CarFront className="h-8 w-8" />}

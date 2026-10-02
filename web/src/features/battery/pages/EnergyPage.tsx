@@ -113,14 +113,14 @@ function CostComparisonCard({
       </div>
       <div className="mb-3 flex items-center gap-4">
         <div className="min-w-0">
-          <MetricLabel>{t('energy.cost.evCost', 'EV Cost')}</MetricLabel>
+          <MetricLabel>{t('energy.cost.evCost', 'EV cost')}</MetricLabel>
           <Text as="p" size="lg" weight="bold" className="mt-0.5 text-cyan-300">
             {evCost != null ? <Currency value={evCost} /> : '—'}
           </Text>
         </div>
         <ArrowRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
         <div className="min-w-0">
-          <MetricLabel>{t('energy.cost.gasEquivalent', 'Gas Equivalent')}</MetricLabel>
+          <MetricLabel>{t('energy.cost.gasEquivalent', 'Gas equivalent')}</MetricLabel>
           <Text as="p" size="lg" weight="bold" color="secondary" className="mt-0.5">
             {gasCost != null ? <Currency value={gasCost} /> : '—'}
           </Text>
@@ -650,7 +650,7 @@ export default function EnergyPage() {
     });
     const chargerLabels: Record<string, string> = {
       Supercharger: t('energy.chargerType.supercharger', 'Supercharger'),
-      'DC Fast': t('energy.chargerType.dcFast', 'DC Fast'),
+      'DC Fast': t('energy.chargerType.dcFast', 'DC fast'),
       'Home/AC': t('energy.chargerType.homeAc', 'Home/AC'),
     };
     return Object.entries(types).map(([name, data]) => ({
@@ -674,6 +674,7 @@ export default function EnergyPage() {
     },
     {
       key: 'energy',
+      align: 'right',
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
         <Text weight="medium" className="text-cyan-300">
@@ -683,6 +684,8 @@ export default function EnergyPage() {
     },
     {
       key: 'battery',
+      align: 'right',
+      className: 'whitespace-nowrap',
       header: t('energy.table.battery', 'Battery'),
       render: (s) => (
         <>
@@ -694,6 +697,7 @@ export default function EnergyPage() {
     },
     {
       key: 'power',
+      align: 'right',
       header: t('energy.table.power', 'Power'),
       render: (s) => <>{s.peak_power_w != null ? `${fmtNumber(convertPowerFromSI(s.peak_power_w, 'kW'))} kW` : '—'}</>,
     },
@@ -711,11 +715,13 @@ export default function EnergyPage() {
     },
     {
       key: 'cost',
+      align: 'right',
       header: t('energy.table.cost', 'Cost'),
       render: (s) => <>{typeof s.cost_decimal === 'number' ? formatCurrency(s.cost_decimal) : '—'}</>,
     },
     {
       key: 'perKwh',
+      align: 'right',
       header: t('energy.table.perKwh', '$/kWh'),
       render: (s) => (
         <Text color="muted">
@@ -747,7 +753,7 @@ export default function EnergyPage() {
     },
     {
       key: 'totalDistance',
-      label: t('energy.metric.totalDistance', 'Total Distance'),
+      label: t('energy.metric.totalDistance', 'Total distance'),
       value: statsQuery.isError
         ? '—'
         : `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`,
@@ -763,13 +769,13 @@ export default function EnergyPage() {
     },
     {
       key: 'monthlyEst',
-      label: t('energy.metric.monthlyEst', 'Monthly Est.'),
+      label: t('energy.metric.monthlyEst', 'Monthly est.'),
       value: monthlyProjectedCost != null ? formatCurrency(monthlyProjectedCost) : '—',
       icon: <CalendarDays className="h-4 w-4" />, color: 'amber',
     },
     {
       key: 'yearlyEst',
-      label: t('energy.metric.yearlyEst', 'Yearly Est.'),
+      label: t('energy.metric.yearlyEst', 'Yearly est.'),
       value: yearlyProjectedCost != null ? formatCurrency(yearlyProjectedCost) : '—',
       icon: <TrendingUp className="h-4 w-4" />, color: 'red',
     },
@@ -929,7 +935,7 @@ export default function EnergyPage() {
   /* ── Render ───────────────────────────────────────────────────── */
   return (
     <PageContainer
-      title={t('energy.pageTitle', 'Energy Intelligence')}
+      title={t('energy.pageTitle', 'Energy intelligence')}
       subtitle={t('energy.pageSubtitle', 'Deep cost analytics, efficiency trends, savings projections, and consumption patterns')}
       overflowActions={
         <SavedViewMenu
@@ -1173,7 +1179,7 @@ export default function EnergyPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('energy.hero.title', 'Efficiency & Cost Overview')}
+              {t('energy.hero.title', 'Efficiency & cost overview')}
             </PanelTitle>
             {hasNoEnergyData ? (
               <EmptyState /* no-action: surfaces when no energy data exists yet — user must drive/charge to populate */
@@ -1184,7 +1190,7 @@ export default function EnergyPage() {
               <div className="grid grid-cols-2 items-center gap-4 sm:grid-cols-4 sm:gap-6">
                 <MetricTile
                   value={toEnergyDisplay(scopedDriveEnergyWh)}
-                  label={t('energy.gauge.energyUsed', 'Energy Used')}
+                  label={t('energy.gauge.energyUsed', 'Energy used')}
                   unit={energyUnit}
                   accentClass="text-cyan-300"
                 />
@@ -1200,13 +1206,13 @@ export default function EnergyPage() {
                 />
                 <MetricTile
                   value={co2Saved}
-                  label={t('energy.gauge.co2Saved', 'CO₂ Saved')}
+                  label={t('energy.gauge.co2Saved', 'CO₂ saved')}
                   unit="kg"
                   accentClass="text-purple-300"
                 />
                 <MetricTile
                   value={observedCost}
-                  label={t('energy.gauge.totalCost', 'Total Cost')}
+                  label={t('energy.gauge.totalCost', 'Total cost')}
                   unit={observedCost != null ? currencySymbol : undefined}
                   accentClass="text-amber-300"
                 />
@@ -1217,11 +1223,11 @@ export default function EnergyPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('energy.lifetime.title', 'Lifetime Metrics')}
+              {t('energy.lifetime.title', 'Lifetime metrics')}
             </PanelTitle>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
               <LifetimeStat
-                label={t('energy.lifetime.energyUsed', 'Lifetime Energy Used')}
+                label={t('energy.lifetime.energyUsed', 'Lifetime energy used')}
                 value={liveCharging?.lifetime_energy_used != null ? fmtNumber(liveCharging.lifetime_energy_used) : '—'}
                 unit={liveCharging?.lifetime_energy_used != null ? 'kWh' : undefined}
                 desc={t('energy.lifetime.energyUsedDesc', 'Total energy consumed since vehicle delivery')}
@@ -1256,7 +1262,7 @@ export default function EnergyPage() {
             icon={<Fuel className="h-4 w-4" />}
           />
           <CostComparisonCard
-            label={t('energy.cost.projectedAnnual', 'Projected Annual')}
+            label={t('energy.cost.projectedAnnual', 'Projected annual')}
             evCost={yearlyProjectedCost}
             gasCost={gasEquivalent != null ? (gasEquivalent / periodDays) * 365 : null}
             icon={<Leaf className="h-4 w-4" />}
@@ -1277,7 +1283,7 @@ export default function EnergyPage() {
           >
             {/* chart-a11y:no-table dual-axis composed chart with brush; SR users can use Download CSV via the chart export menu */}
             <ChartContainer
-              title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')}
+              title={t('energy.chart.energyCostDaily', 'Energy & cost daily')}
               ariaLabel={t('energy.chart.energyCostDailyAria', 'Daily drive consumption and recorded charging cost chart')}
               exportable
               exportFilename="energy-cost-daily"
@@ -1380,7 +1386,7 @@ export default function EnergyPage() {
 
             {/* chart-a11y:no-table efficiency + distance two-area trend; same daily breakdown is exportable as CSV via the chart menu */}
             <ChartContainer
-              title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')}
+              title={t('energy.chart.efficiencyTrend', 'Efficiency trend')}
               ariaLabel={t('energy.chart.efficiencyTrendAria', 'Daily efficiency and distance area chart')}
               exportable
               exportFilename="efficiency-trend"
@@ -1461,7 +1467,7 @@ export default function EnergyPage() {
         >
           {/* chart-a11y:no-table aggregated time-of-day buckets bar chart; CSV download available */}
           <ChartContainer
-            title={t('energy.chart.chargingByTime', 'Charging by Time of Day')}
+            title={t('energy.chart.chargingByTime', 'Charging by time of day')}
             ariaLabel={t('energy.chart.chargingByTimeAria', 'Charging energy and session count by time of day bar chart')}
             exportable
             exportFilename="charging-by-time"
@@ -1535,7 +1541,7 @@ export default function EnergyPage() {
 
           {/* chart-a11y:no-table charger-type pie-chart aggregation; CSV download available */}
           <ChartContainer
-            title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')}
+            title={t('energy.chart.chargerBreakdown', 'Charger type breakdown')}
             ariaLabel={t('energy.chart.chargerBreakdownAria', 'Charger type share pie chart')}
             exportable
             exportFilename="charger-breakdown"
@@ -1621,7 +1627,7 @@ export default function EnergyPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-300" aria-hidden="true" />
-            {t('energy.sessions.title', 'Recent Charging Sessions')}
+            {t('energy.sessions.title', 'Recent charging sessions')}
           </PanelTitle>
           {sessionsQuery.isLoading ? (
             <Skeleton className="h-64 rounded-xl" />

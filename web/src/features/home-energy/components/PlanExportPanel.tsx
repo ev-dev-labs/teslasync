@@ -20,7 +20,7 @@ export function PlanExportPanel({ input, result }: PlanExportPanelProps) {
 
   return (
     <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-2">{t('homeEnergy.export.title', 'Export Plan')}</PanelTitle>
+      <PanelTitle className="mb-2">{t('homeEnergy.export.title', 'Export plan')}</PanelTitle>
       <Caption className="mb-3 block">
         {t(
           'homeEnergy.export.description',

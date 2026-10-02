@@ -33,11 +33,11 @@ export function ChargingSummaryPanel({ summary, isLoading, error, onRetry }: Cha
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Coins className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-        {t('chargingPlaces.summary.title', 'Charging Summary')}
+        {t('chargingPlaces.summary.title', 'Charging summary')}
       </PanelTitle>
 
       {error ? (
-        <QueryError error={error} onRetry={onRetry} resourceName={t('chargingPlaces.summary.title', 'Charging Summary')} />
+        <QueryError error={error} onRetry={onRetry} resourceName={t('chargingPlaces.summary.title', 'Charging summary')} />
       ) : isLoading ? (
         <Skeleton className="h-24 w-full" />
       ) : rows.length === 0 ? (

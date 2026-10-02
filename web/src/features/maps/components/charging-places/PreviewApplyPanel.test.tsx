@@ -129,7 +129,7 @@ describe('PreviewApplyPanel — no rate selected', () => {
 
     expect(
       screen.getByText(
-        'Choose Preview sessions on a rate to see affected charging sessions and estimated cost.',
+        'Choose preview sessions on a rate to see affected charging sessions and estimated cost.',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText('Matched')).not.toBeInTheDocument();
@@ -150,7 +150,7 @@ describe('PreviewApplyPanel — preview metrics', () => {
     expect(screen.getByText('$7.20')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'This preview is read-only. It shows matching historical sessions and estimated cost; nothing changes until you choose Apply.',
+        'This preview is read-only. It shows matching historical sessions and estimated cost; nothing changes until you choose apply.',
       ),
     ).toBeInTheDocument();
   });
@@ -212,7 +212,7 @@ describe('PreviewApplyPanel — apply gating', () => {
     mockedPreview.mockReturnValue(makePreviewQuery({ data: makePreview({ eligible_sessions: 0 }) }));
     renderPanel({ geofenceId: 7, rate });
 
-    expect(screen.getByRole('button', { name: 'Assign Sessions' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Assign sessions' })).toBeEnabled();
     expect(
       screen.getByText(/All matched costs are protected/),
     ).toBeInTheDocument();

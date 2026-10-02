@@ -46,7 +46,7 @@ export function EnergyFlowChart({ slots }: EnergyFlowChartProps) {
     // chart-a11y:no-table dense 15-minute-slot schedule (up to hundreds of rows) — the KPI summary
     // and per-vehicle readiness panels already surface the aggregate figures in tabular form.
     <ChartContainer
-      title={t('homeEnergy.flow.title', 'Energy Flow Schedule')}
+      title={t('homeEnergy.flow.title', 'Energy flow schedule')}
       subtitle={t('homeEnergy.flow.subtitle', 'Solar, household load, vehicle charging, battery, and grid — per 15-minute slot')}
       ariaLabel={t('homeEnergy.flow.aria', 'Multi-series chart of solar generation, household load, vehicle charging, battery, and grid power across the planning horizon')}
       chartKey="home-energy-flow-schedule"

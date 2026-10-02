@@ -305,10 +305,12 @@ function renderPage() {
   );
 }
 
-/** The page's Refresh/Add cluster — scoped so the freshness-chip's own
- * "Refresh" affordance (a sibling `role="button"` span) is never matched. */
 function actionsCluster(): HTMLElement {
-  return screen.getByRole('button', { name: 'Add Channel' }).parentElement as HTMLElement;
+  const cluster = screen.getByRole('button', { name: 'Add channel' })
+    .closest('[data-role="page-actions"]')
+    ?.querySelector<HTMLElement>('[data-action-group="secondary"]');
+  if (!cluster) throw new Error('Channel header secondary actions are missing');
+  return cluster;
 }
 
 beforeEach(() => {
@@ -401,7 +403,7 @@ describe('ChannelsPage — create/edit modal', () => {
 
   it('opens the modal in create mode from the header Add action', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add channel' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByTestId('modal-mode')).toHaveTextContent('add');
   });
@@ -422,7 +424,7 @@ describe('ChannelsPage — create/edit modal', () => {
 
   it('dismisses the modal when the child calls onClose', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add channel' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'modal-close' }));
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -430,7 +432,7 @@ describe('ChannelsPage — create/edit modal', () => {
 
   it('dismisses the modal when the child calls onSaved', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'modal-save' }));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -443,7 +445,7 @@ describe('ChannelsPage — create/edit modal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'modal-close' }));
     expect(screen.queryByRole('dialog')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add channel' }));
     expect(screen.getByTestId('modal-mode')).toHaveTextContent('add');
   });
 });
@@ -464,6 +466,14 @@ describe('ChannelsPage — header actions & a11y', () => {
 
   it('labels the add-channel action', () => {
     renderPage();
-    expect(screen.getByRole('button', { name: 'Add Channel' })).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 1, name: 'Notification channels' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading).toHaveAttribute('tabindex', '-1');
+    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
+    expect(screen.getByRole('button', { name: 'Add channel' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
+    expect(within(actionsCluster()).getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More info: Notification channels' }))
+      .toHaveAttribute('aria-describedby');
   });
 });

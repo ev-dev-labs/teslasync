@@ -26,7 +26,7 @@
  *      cells or a crash. Guards the `?? '—'` hardening in the column renderers.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -153,7 +153,7 @@ describe('AuditLogPage — data states', () => {
     const { container } = renderPage();
 
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
-    expect(screen.getByRole('heading', { name: 'Recent Activity' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
     // No table has mounted yet — skeletons stand in for it.
     expect(screen.queryByRole('table')).toBeNull();
   });
@@ -177,6 +177,24 @@ describe('AuditLogPage — data states', () => {
     expect(screen.getByRole('button', { name: 'Download CSV' })).toBeInTheDocument();
 
     // The hook hits the un-prefixed path (request() adds /api/v1).
+    expect(mockedRequest).toHaveBeenCalledWith('/system/audit', expect.anything());
+  });
+
+  it('keeps checklists disabled when a bounded audit response spans client pages', async () => {
+    const entries: AuditLogEntry[] = Array.from({ length: 63 }, (_, index) => ({
+      ...AUDIT[0],
+      id: String(index + 1),
+      action: index === 62 ? 'audit.last.loaded.action' : 'audit.update',
+    }));
+    mockedRequest.mockResolvedValue(entries);
+    renderPage();
+
+    const table = await screen.findByRole('table');
+    expect(within(table).getAllByRole('row')).toHaveLength(51);
+    expect(screen.queryByText('audit.last.loaded.action')).not.toBeInTheDocument();
+    const actionHeader = within(table).getByRole('columnheader', { name: 'Action' });
+    expect(within(actionHeader).queryByRole('button', { name: /filter/i }))
+      .not.toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledWith('/system/audit', expect.anything());
   });
 
@@ -260,6 +278,6 @@ describe('AuditLogPage — null safety', () => {
     // Four cells (time, action, resource, details) each collapse to "—".
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
     // The page did not crash — its heading is still present.
-    expect(screen.getByRole('heading', { name: 'Recent Activity' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
   });
 });

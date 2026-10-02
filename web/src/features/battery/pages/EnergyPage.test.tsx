@@ -339,7 +339,7 @@ describe('EnergyPage', () => {
     renderPage()
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Energy Intelligence' }),
+      await screen.findByRole('heading', { level: 1, name: 'Energy intelligence' }),
     ).toBeInTheDocument()
 
     // KPI band derived at the SI→display boundary: 200_000 m → "200 km",
@@ -367,7 +367,7 @@ describe('EnergyPage', () => {
     // Recent-sessions table renders real rows with per-type badges. 'CCS' is
     // the raw type echoed only in the table; 'Supercharger' also appears in the
     // charger-breakdown legend.
-    expect(screen.getByText('Recent Charging Sessions')).toBeInTheDocument()
+    expect(screen.getByText('Recent charging sessions')).toBeInTheDocument()
     expect(screen.getByText('CCS')).toBeInTheDocument()
     expect(screen.getAllByText('Supercharger').length).toBeGreaterThan(0)
   })
@@ -416,8 +416,8 @@ describe('EnergyPage', () => {
     // enabled and the page short-circuits to its dedicated skeleton.
     expect(await screen.findByTestId('energy-page-skeleton')).toBeInTheDocument()
     // The real dashboard chrome is withheld during loading.
-    expect(screen.queryByRole('heading', { level: 1, name: 'Energy Intelligence' })).toBeNull()
-    expect(screen.queryByText('Recent Charging Sessions')).toBeNull()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Energy intelligence' })).toBeNull()
+    expect(screen.queryByText('Recent charging sessions')).toBeNull()
   })
 
   it('surfaces a retryable error banner and still degrades gracefully when stats fail', async () => {
@@ -468,7 +468,7 @@ describe('EnergyPage', () => {
     expect(await screen.findByTestId('energy-partial-data')).toHaveTextContent(
       'Unavailable sources: idle-drain history.',
     )
-    expect(screen.getByText('Recent Charging Sessions')).toBeInTheDocument()
+    expect(screen.getByText('Recent charging sessions')).toBeInTheDocument()
     expect(screen.getByText('CCS')).toBeInTheDocument()
     expect(screen.getByText('Not measured')).toBeInTheDocument()
   })
@@ -495,16 +495,16 @@ describe('EnergyPage', () => {
 
     // Charger buckets resolve to all three human-readable family labels once the
     // sessions query settles (this also anchors the section assertions below).
-    expect(await screen.findByText('DC Fast')).toBeInTheDocument()
+    expect(await screen.findByText('DC fast')).toBeInTheDocument()
     expect(screen.getByText('Home/AC')).toBeInTheDocument()
 
     // All four chart panels + hero + lifetime are present — nothing stubbed out.
-    expect(screen.getByText('Energy & Cost Daily')).toBeInTheDocument()
-    expect(screen.getByText('Efficiency Trend')).toBeInTheDocument()
-    expect(screen.getByText('Charging by Time of Day')).toBeInTheDocument()
-    expect(screen.getByText('Charger Type Breakdown')).toBeInTheDocument()
-    expect(screen.getByText('Efficiency & Cost Overview')).toBeInTheDocument()
-    expect(screen.getByText('Lifetime Metrics')).toBeInTheDocument()
+    expect(screen.getByText('Energy & cost daily')).toBeInTheDocument()
+    expect(screen.getByText('Efficiency trend')).toBeInTheDocument()
+    expect(screen.getByText('Charging by time of day')).toBeInTheDocument()
+    expect(screen.getByText('Charger type breakdown')).toBeInTheDocument()
+    expect(screen.getByText('Efficiency & cost overview')).toBeInTheDocument()
+    expect(screen.getByText('Lifetime metrics')).toBeInTheDocument()
 
     // Landmark regions expose their accessible names for screen-reader nav.
     expect(screen.getByRole('region', { name: 'Energy overview' })).toBeInTheDocument()

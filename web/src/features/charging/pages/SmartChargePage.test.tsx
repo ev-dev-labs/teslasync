@@ -353,10 +353,10 @@ describe('SmartChargePage — before an optimization runs', () => {
   it('shows the labelled cost-comparison region with em-dash placeholders', () => {
     renderPage();
     const kpi = screen.getByRole('region', { name: 'Cost comparison' });
-    expect(within(kpi).getByText('Charge Now')).toBeInTheDocument();
-    expect(within(kpi).getByText('Optimized Cost')).toBeInTheDocument();
+    expect(within(kpi).getByText('Charge now')).toBeInTheDocument();
+    expect(within(kpi).getByText('Optimized cost')).toBeInTheDocument();
     expect(within(kpi).getByText('Savings')).toBeInTheDocument();
-    expect(within(kpi).getByText('Energy Needed')).toBeInTheDocument();
+    expect(within(kpi).getByText('Energy needed')).toBeInTheDocument();
     // All four metric values render the placeholder, never a blank tile.
     expect(within(kpi).getAllByText('—')).toHaveLength(4);
   });
@@ -457,7 +457,7 @@ describe('SmartChargePage — optimize interaction', () => {
 
   it('seeds the Depart By field with a local (non-UTC) 07:30 wall-clock value', () => {
     renderPage();
-    const departInput = screen.getByLabelText('Depart By') as HTMLInputElement;
+    const departInput = screen.getByLabelText('Depart by') as HTMLInputElement;
     expect(departInput.value).toMatch(/T07:30$/);
   });
 
@@ -507,7 +507,7 @@ describe('SmartChargePage — optimize interaction', () => {
     mockOptimize.mockReturnValue(optimizeState({ mutate }));
     renderPage();
 
-    fireEvent.change(screen.getByLabelText('Depart By'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '' } });
     fireEvent.click(optimizeButton());
 
     // Invalid Date.toISOString() used to throw an uncaught RangeError here.
@@ -538,7 +538,7 @@ describe('SmartChargePage — optimize interaction', () => {
     renderPage();
 
     // UnitInput commits to the parent on blur/Enter, not on every keystroke.
-    const capacity = screen.getByLabelText('Battery Capacity');
+    const capacity = screen.getByLabelText('Battery capacity');
     fireEvent.change(capacity, { target: { value: '' } });
     fireEvent.blur(capacity);
     fireEvent.click(optimizeButton());
@@ -586,8 +586,8 @@ describe('SmartChargePage — after a successful optimization', () => {
     optimizeToResult();
     expect(screen.getAllByText('Current SOC').length).toBeGreaterThan(0);
     expect(screen.getAllByText('35%').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Start Time').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('End Time').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Start time').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('End time').length).toBeGreaterThan(0);
     expect(screen.getAllByText('SUPER_OFF_PEAK').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$4.10').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$4.80').length).toBeGreaterThan(0);
@@ -607,7 +607,7 @@ describe('SmartChargePage — after a successful optimization', () => {
 
     expect(applyMutate).toHaveBeenCalledTimes(1);
     expect(applyMutate.mock.calls[0][0]).toEqual({ plan_id: 555 });
-    expect(screen.getByText('Schedule Applied!')).toBeInTheDocument();
+    expect(screen.getByText('Schedule applied!')).toBeInTheDocument();
   });
 
   it('shows the apply error copy when applying fails', () => {

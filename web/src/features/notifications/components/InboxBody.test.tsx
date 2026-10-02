@@ -42,6 +42,7 @@ import {
   fireEvent,
   waitFor,
   within,
+  act,
   type RenderResult,
 } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -122,8 +123,10 @@ import { ContextMenuRoot } from '@/components/ui';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import { SHARED_RANGE_STORAGE_KEY } from '@/hooks/useRangeState';
-import type { NotificationLog, NotificationLogGroup, AlertRule, Vehicle } from '@/api/types';
+import type { NotificationLog, NotificationLogGroup, AlertRule, Vehicle, AlertDetail } from '@/api/types';
 import { InboxBody } from './InboxBody';
+import { notificationKeys } from '@/api/hooks/useNotifications';
+import { NotificationReportPanel } from './NotificationReportPanel';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 const mockedExportAsCSV = vi.mocked(exportAsCSV);
@@ -191,11 +194,14 @@ interface Handlers {
   groups?: () => Promise<unknown>;
   members?: () => Promise<unknown>;
   total?: number;
+  report?: () => Promise<unknown>;
+  detail?: (path: string, method?: string) => Promise<AlertDetail>;
 }
 
 function installRequest(h: Handlers = {}) {
   mockedRequest.mockImplementation((path: string, options?: { method?: string }) => {
     const method = options?.method;
+    if (path.startsWith('/alerts/') && h.detail) return h.detail(path, method);
     if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
       if (path.includes('mark-read')) return Promise.resolve({ updated: 1 });
       if (path.includes('unarchive')) return Promise.resolve({ updated: 1 });
@@ -203,6 +209,7 @@ function installRequest(h: Handlers = {}) {
       if (path.startsWith('/notifications/logs')) return Promise.resolve({ deleted: 1 });
       return Promise.resolve({});
     }
+    if (path.startsWith('/notifications/report')) return (h.report ?? (() => Promise.reject(new Error('Report unavailable'))))();
     if (path.includes('count_only=true')) return Promise.resolve({ total: h.total ?? 2 });
     if (path.includes('group_key=')) return (h.members ?? (() => Promise.resolve([])))();
     if (path.includes('grouped=true')) return (h.groups ?? (() => Promise.resolve([])))();
@@ -233,23 +240,25 @@ function bodyOf(call: unknown[]): Record<string, unknown> {
 
 /* ── Render harness ───────────────────────────────────── */
 
-function renderInbox(opts: { archived?: boolean; route?: string } = {}): RenderResult {
+function renderInbox(opts: { archived?: boolean; route?: string; report?: boolean } = {}): RenderResult & { client: QueryClient } {
   const { archived = false, route = '/notifications/inbox' } = opts;
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
-  return render(
+  const result = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
         <SelectedVehicleProvider>
           <ToastProvider>
             <InboxBody archived={archived} vehicles={VEHICLES} rules={RULES} />
+            {opts.report && <NotificationReportPanel fromInstant="2026-01-01T00:00:00Z" toExclusive="2026-02-01T00:00:00Z" timezone="UTC" />}
             <ContextMenuRoot />
           </ToastProvider>
         </SelectedVehicleProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...result, client };
 }
 
 beforeEach(() => {
@@ -322,7 +331,8 @@ describe('InboxBody — flat view', () => {
     expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full first line');
     expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full second line');
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
-    fireEvent.change(screen.getByLabelText('Source'), { target: { value: 'rule' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Source filter' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Source' }), { target: { value: 'rule' } });
     await waitFor(() => {
       expect(flatCalls().some(([path]) => String(path).includes('source=rule'))).toBe(true);
       expect(callsFor((path) => path.includes('count_only=true') && path.includes('source=rule')).length).toBeGreaterThan(0);
@@ -372,7 +382,7 @@ describe('InboxBody — flat view', () => {
     renderInbox();
 
     expect(await screen.findByText('Weekly digest sent to Slack')).toBeInTheDocument();
-    expect(screen.getByText('Digest FSD Weekly')).toHaveAttribute('title', 'digest.fsd.weekly');
+    expect(screen.getByText('Digest FSD weekly')).toHaveAttribute('title', 'digest.fsd.weekly');
     expect(screen.getByRole('checkbox', { name: 'Select Weekly digest sent to Slack' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Open notification: Weekly digest sent to Slack' }));
     expect(await screen.findByRole('dialog')).toHaveTextContent('Your weekly driving summary');
@@ -729,12 +739,292 @@ describe('InboxBody — row context menu', () => {
     const rowEl = (await screen.findByText('Context row')).closest('tr');
     expect(rowEl).not.toBeNull();
     fireEvent.contextMenu(rowEl as Element);
-
     const menu = await screen.findByTestId('context-menu');
     expect(within(menu).getByText('Mark as read')).toBeInTheDocument();
     expect(within(menu).getByText('Delete')).toBeInTheDocument();
   });
+});
 
+describe('InboxBody — redesigned evidence contracts', () => {
+      it.each([
+        { archived: false, label: 'Archive', path: '/notifications/archive' },
+        { archived: true, label: 'Restore', path: '/notifications/unarchive' },
+      ])('preserves bulk $label for the selected server-page rows', async ({ archived, label, path }) => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ id: 47, title: 'Bulk evidence' })]) });
+        renderInbox({ archived, route: archived ? '/notifications/archived' : '/notifications/inbox' });
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Bulk evidence' }));
+        fireEvent.click(screen.getByRole('button', { name: label }));
+        await waitFor(() => expect(callsFor((url, method) => url === path && method === 'POST')).toHaveLength(1));
+        expect(bodyOf(callsFor((url, method) => url === path && method === 'POST')[0])).toEqual({ ids: [47] });
+        await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Select Bulk evidence' })).not.toBeChecked());
+      });
+
+      it('retains confirmation-gated bulk delete', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ id: 48, title: 'Bulk delete evidence' })]) });
+        renderInbox();
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Bulk delete evidence' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+        expect(deleteCalls()).toHaveLength(0);
+        const dialog = await screen.findByRole('dialog');
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+        await waitFor(() => expect(deleteCalls()).toHaveLength(1));
+        expect(bodyOf(deleteCalls()[0])).toEqual({ ids: [48] });
+      });
+
+      it('retains rule inspection, server acknowledgement/reopen and view-context affordances', async () => {
+        let acknowledged = false;
+        const detail = (): AlertDetail => ({
+          id: 49, vehicle_id: 1, type: 'Battery Low', severity: 'warn',
+          title: 'Rule evidence', message: 'Full rule message', is_read: true,
+          created_at: NOW_ISO, rule_id: 10, rule_signal: 'BatteryLevel',
+          acknowledged_at: acknowledged ? NOW_ISO : null, events: [],
+        });
+        installRequest({
+          logs: () => Promise.resolve([makeLog({ id: 49, title: 'Rule evidence' })]),
+          detail: (path, method) => {
+            if (method === 'POST') acknowledged = path.endsWith('/acknowledge');
+            return Promise.resolve(detail());
+          },
+        });
+        renderInbox();
+        fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Rule evidence' }));
+        const dialog = await screen.findByRole('dialog');
+        expect(dialog).toHaveTextContent('Full rule message');
+        fireEvent.click(await within(dialog).findByRole('button', { name: 'Acknowledge alert' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/alerts/49/acknowledge' && method === 'POST')).toHaveLength(1));
+        expect(acknowledged).toBe(true);
+        // The shared drawer deliberately closes after its primary action.
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        fireEvent.click(screen.getByRole('button', { name: 'Open notification: Rule evidence' }));
+        await screen.findByRole('button', { name: 'Reopen alert' });
+        // Query refresh can remount the flattened motion drawer between await and click.
+        fireEvent.click(screen.getByRole('button', { name: 'Reopen alert' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/alerts/49/reopen' && method === 'POST')).toHaveLength(1));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+        expect(within(screen.getByRole('region', { name: 'Notification details' })).getByRole('button', { name: 'View context' })).toBeInTheDocument();
+      });
+
+      it('retains cached rows and selection after a failed refresh, but reports initial failures locally', async () => {
+        let failed = false;
+        installRequest({ logs: () => failed ? Promise.reject(new Error('Refresh offline')) : Promise.resolve([makeLog({ id: 42, title: 'Retained evidence' })]) });
+        const { client } = renderInbox();
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Retained evidence' }));
+        failed = true;
+        await act(async () => { await client.refetchQueries({ queryKey: notificationKeys.logs }); });
+        expect(screen.getByRole('table', { name: 'Inbox' })).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: 'Deselect Retained evidence' })).toBeChecked();
+        expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+        expect(screen.queryByText('Could not load notifications')).not.toBeInTheDocument();
+      });
+
+      it('sends server-owned search, severity, vehicle, rule, source and read conditions to both rows and count', async () => {
+        renderInbox({ route: '/notifications/inbox?q=pressure&severity=warn&vehicle_id=1&rule_id=10&source=rule&read=unread&from=2026-01-01&to=2026-01-30' });
+        await waitFor(() => expect(flatCalls().length).toBeGreaterThan(0));
+        const requests = [flatCalls()[0], callsFor(path => path.includes('count_only=true'))[0]];
+        for (const call of requests) {
+          const params = new URL(String(call[0]), 'http://teslasync.local').searchParams;
+          for (const [key, value] of Object.entries({ q: 'pressure', severity: 'warn', vehicle_id: '1', rule_id: '10', source: 'rule', read: 'false' })) {
+            expect(params.get(key)).toBe(value);
+          }
+          expect(params.has('from')).toBe(true);
+          expect(params.has('to_exclusive')).toBe(true);
+        }
+        fireEvent.click(screen.getByRole('button', { name: 'Read state filter' }));
+        expect(screen.getByLabelText('Filter by read state')).toHaveValue('unread');
+        fireEvent.change(screen.getByLabelText('Filter by read state'), { target: { value: 'read' } });
+        await waitFor(() => expect(flatCalls().some(([path]) => new URL(String(path), 'http://teslasync.local').searchParams.get('read') === 'true')).toBe(true));
+      });
+
+      it('offers persistent keyboard resize, reorder and visibility without exhaustive page-local value filters', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ title: 'Configurable evidence' })]) });
+        renderInbox();
+        await screen.findByText('Configurable evidence');
+        expect(screen.getByRole('columnheader', { name: 'Received' })).toHaveClass('hidden', 'md:table-cell');
+        expect(screen.getByRole('columnheader', { name: /Notification/ })).not.toHaveClass('hidden');
+        expect(screen.getByRole('button', { name: 'Expand row' })).toHaveAttribute('aria-expanded', 'false');
+        const resize = screen.getByRole('separator', { name: 'Resize column Notification' });
+        fireEvent.keyDown(resize, { key: 'ArrowRight' });
+        expect(localStorage.getItem('teslasync.table.notifications:inbox.widths')).toContain('"title":308');
+        fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
+        fireEvent.click(screen.getByRole('button', { name: /move.*Notification.*up/i }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Message' }));
+        expect(localStorage.getItem('teslasync.table.notifications:inbox.columns')).toContain('"message"');
+        fireEvent.keyDown(document, { key: 'Escape' });
+        expect(screen.queryByRole('columnheader', { name: 'Message' })).not.toBeInTheDocument();
+        expect(screen.queryByText('Select all values')).not.toBeInTheDocument();
+      });
+
+      it('exposes full metadata and every row action in a touch/keyboard expansion, with unknown distinct from zero', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({
+          id: 43, title: 'Failed delivery', alert_id: null, channel_id: 2, status: 'failed',
+          severity: undefined, latency_ms: 0, sent_at: null, scheduled_at: NOW_ISO,
+          error: 'Connection refused', event_type: 'system.mqtt.outage',
+        })]) });
+        renderInbox();
+        await screen.findByText('Failed delivery');
+        fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+        const details = screen.getByRole('region', { name: 'Notification details' });
+        expect(within(details).getByText('0.00 ms')).toBeInTheDocument();
+        expect(within(details).getByText('Connection refused')).toBeInTheDocument();
+        expect(within(details).getByText('system.mqtt.outage')).toBeInTheDocument();
+        expect(within(details).getByText('Sent').nextElementSibling).toHaveTextContent('—');
+        expect(within(details).getByText('Severity').nextElementSibling).toHaveTextContent('—');
+        for (const name of ['Mark as read', 'Archive', 'Delete']) {
+          expect(within(details).getByRole('button', { name })).toBeInTheDocument();
+        }
+        fireEvent.click(within(details).getByRole('button', { name: 'Archive' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/notifications/archive' && method === 'POST')).toHaveLength(1));
+      });
+
+      it('restores archived evidence and marks a read row unread through expanded actions', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ id: 44, title: 'Archived evidence', archived_at: NOW_ISO, read_at: NOW_ISO })]) });
+        renderInbox({ archived: true, route: '/notifications/archived' });
+        await screen.findByText('Archived evidence');
+        fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+        const details = screen.getByRole('region', { name: 'Notification details' });
+        fireEvent.click(within(details).getByRole('button', { name: 'Mark as unread' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/notifications/mark-unread' && method === 'POST')).toHaveLength(1));
+        fireEvent.click(within(details).getByRole('button', { name: 'Restore' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/notifications/unarchive' && method === 'POST')).toHaveLength(1));
+      });
+
+      it('does not turn missing delivery latency into zero in full inspection', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ title: 'Unknown latency', alert_id: null, latency_ms: undefined })]) });
+        renderInbox();
+        fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Unknown latency' }));
+        const dialog = screen.getByRole('dialog', { name: 'Unknown latency' });
+        expect(within(dialog).getByText('Delivery latency').nextElementSibling).toHaveTextContent('—');
+        expect(within(dialog).queryByText('0.00 ms')).not.toBeInTheDocument();
+        await waitFor(() => expect(markReadPosts()).toHaveLength(1));
+      });
+
+      it('keeps notification evidence usable when the independent period report fails', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ title: 'Independent evidence' })]) });
+        renderInbox({ report: true });
+        expect(await screen.findByText('Independent evidence')).toBeInTheDocument();
+        expect(await screen.findByRole('alert')).toHaveTextContent("Can't reach server");
+        expect(screen.getByRole('table', { name: 'Inbox' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Open notification: Independent evidence' })).toBeEnabled();
+      });
+});
+
+describe('InboxBody — controlled column-header filters', () => {
+      it.each([false, true])('keeps server-owned filters in headers and resets pagination (archived=%s)', async archived => {
+        installRequest({ total: 120, logs: () => Promise.resolve([makeLog({ title: 'Header evidence' })]) });
+        renderInbox({
+          archived,
+          route: `/notifications/${archived ? 'archived' : 'inbox'}?from=2026-01-01&to=2026-01-30&read=unread`,
+        });
+        await screen.findByText('Header evidence');
+        expect(screen.queryByRole('combobox', { name: 'Source' })).not.toBeInTheDocument();
+        expect(screen.queryByPlaceholderText('Search messages…')).not.toBeInTheDocument();
+        const initialParams = new URL(String(flatCalls()[0][0]), 'http://teslasync.local').searchParams;
+
+        const assertQueries = async (expected: Record<string, string | null>) => {
+          await waitFor(() => {
+            for (const call of [flatCalls().at(-1), callsFor(path => path.includes('count_only=true')).at(-1)]) {
+              expect(call).toBeDefined();
+              const params = new URL(String(call![0]), 'http://teslasync.local').searchParams;
+              for (const [key, value] of Object.entries(expected)) expect(params.get(key)).toBe(value);
+              expect(params.get('from')).toBe(initialParams.get('from'));
+              expect(params.get('to_exclusive')).toBe(initialParams.get('to_exclusive'));
+              expect(params.get('archived')).toBe(String(archived));
+              expect(params.get('read')).toBe('false');
+            }
+          });
+        };
+        fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+        await waitFor(() => expect(String(flatCalls().at(-1)?.[0])).toContain('offset=50'));
+        fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+        fireEvent.click(within(screen.getByRole('dialog', { name: 'Severity filter' })).getByRole('button', { name: 'Warn' }));
+        await assertQueries({ severity: 'warn' });
+        expect(new URL(String(flatCalls().at(-1)?.[0]), 'http://teslasync.local').searchParams.get('offset')).toBe('0');
+        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Source filter' }));
+        const sourceDialog = screen.getByRole('dialog', { name: 'Source filter' });
+        fireEvent.change(within(sourceDialog).getByRole('combobox', { name: 'Vehicle' }), { target: { value: '1' } });
+        await assertQueries({ severity: 'warn', vehicle_id: '1' });
+        fireEvent.change(within(sourceDialog).getByRole('combobox', { name: 'Rule' }), { target: { value: '10' } });
+        await assertQueries({ severity: 'warn', vehicle_id: '1', rule_id: '10' });
+        fireEvent.change(within(sourceDialog).getByRole('combobox', { name: 'Source' }), { target: { value: 'rule' } });
+        await assertQueries({ severity: 'warn', vehicle_id: '1', rule_id: '10', source: 'rule' });
+        fireEvent.click(within(sourceDialog).getByRole('button', { name: 'Done' }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Notification filter' }));
+        fireEvent.change(screen.getByPlaceholderText('Search messages…'), { target: { value: 'battery' } });
+        await assertQueries({ severity: 'warn', vehicle_id: '1', rule_id: '10', source: 'rule', q: 'battery' });
+        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+        await assertQueries({ severity: null, vehicle_id: '1', rule_id: '10', source: 'rule', q: 'battery' });
+        expect(screen.queryByText('Select all values')).not.toBeInTheDocument();
+      });
+
+      it('keeps all filters and reset available from the visible mobile Notification header', async () => {
+        const originalMatchMedia = window.matchMedia;
+        window.matchMedia = vi.fn(query => ({
+          matches: query === '(max-width: 767px)',
+          media: query,
+          onchange: null,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }));
+        try {
+          installRequest({ logs: () => Promise.resolve([]) });
+          renderInbox({
+            archived: true,
+            route: '/notifications/archived?severity=critical&vehicle_id=1&rule_id=10&source=rule&q=pressure&read=unread&from=2026-01-01&to=2026-01-30',
+          });
+          await screen.findByText('No archived notifications');
+          const table = screen.getByRole('table', { name: 'Archived' });
+          expect(table.parentElement).toHaveClass('min-w-0', 'w-full', 'max-w-full');
+          expect(table.parentElement?.parentElement?.parentElement).toHaveClass('min-w-0', 'w-full', 'max-w-full');
+          const initialParams = new URL(String(flatCalls()[0][0]), 'http://teslasync.local').searchParams;
+          fireEvent.click(screen.getByRole('button', { name: 'Notification filter' }));
+          const dialog = screen.getByRole('dialog', { name: 'Notification filter' });
+          expect(within(dialog).getByRole('button', { name: 'Critical' })).toHaveAttribute('aria-pressed', 'true');
+          expect(within(dialog).getByRole('combobox', { name: 'Vehicle' })).toHaveValue('1');
+          expect(within(dialog).getByRole('combobox', { name: 'Rule' })).toHaveValue('10');
+          expect(within(dialog).getByRole('combobox', { name: 'Source' })).toHaveValue('rule');
+          for (const name of ['Vehicle', 'Rule', 'Source']) {
+            expect(within(dialog).getByRole('combobox', { name }).parentElement?.parentElement)
+              .toHaveClass('min-w-0', 'w-full', 'max-w-full');
+          }
+          expect(within(dialog).getByLabelText('Filter by read state')).toHaveValue('unread');
+          expect(within(dialog).getByPlaceholderText('Search messages…')).toHaveValue('pressure');
+          fireEvent.click(within(dialog).getByRole('button', { name: 'Clear all' }));
+          await waitFor(() => {
+            for (const call of [flatCalls().at(-1), callsFor(path => path.includes('count_only=true')).at(-1)]) {
+              const params = new URL(String(call![0]), 'http://teslasync.local').searchParams;
+              for (const key of ['severity', 'vehicle_id', 'rule_id', 'source', 'q', 'read']) expect(params.has(key)).toBe(false);
+              expect(params.get('archived')).toBe('true');
+              expect(params.get('from')).toBe(initialParams.get('from'));
+              expect(params.get('to_exclusive')).toBe(initialParams.get('to_exclusive'));
+            }
+          });
+        } finally {
+          window.matchMedia = originalMatchMedia;
+        }
+      });
+
+      it('preserves usable header filters during initial request failure', async () => {
+        installRequest({ logs: () => Promise.reject(new Error('Offline evidence')) });
+        renderInbox({ route: '/notifications/inbox?severity=warn' });
+        await screen.findByText('Could not load notifications');
+        fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+        expect(screen.getByRole('button', { name: 'Warn' })).toHaveAttribute('aria-pressed', 'true');
+        fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+        await waitFor(() => expect(new URL(String(flatCalls().at(-1)?.[0]), 'http://teslasync.local').searchParams.has('severity')).toBe(false));
+      });
+});
+
+describe('InboxBody — single-row confirmations', () => {
   it('confirm-gates the single-row delete from the context menu', async () => {
     installRequest({
       logs: () => Promise.resolve([makeLog({ id: 1, title: 'Context row', read_at: null })]),

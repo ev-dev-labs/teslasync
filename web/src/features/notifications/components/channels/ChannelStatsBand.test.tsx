@@ -84,10 +84,10 @@ describe('ChannelStatsBand — loaded', () => {
   it('renders all four KPI cards with their English labels', () => {
     render(<ChannelStatsBand stats={FULL} isLoading={false} />);
 
-    expect(screen.getByText('Total Sent')).toBeInTheDocument();
+    expect(screen.getByText('Total sent')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.getByText('Pending')).toBeInTheDocument();
-    expect(screen.getByText('Active Channels')).toBeInTheDocument();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
   });
 
   it('renders the sent / failed / pending counts and the enabled/total ratio', () => {
@@ -123,7 +123,7 @@ describe('ChannelStatsBand — loading', () => {
     expect(region).toHaveAttribute('aria-label', 'Loading notification statistics');
     // Four skeleton cells, and none of the metric labels leak through.
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4);
-    expect(screen.queryByText('Total Sent')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total sent')).not.toBeInTheDocument();
   });
 
   it('keeps cached cards up during a background refetch (isLoading + stats)', () => {
@@ -131,7 +131,7 @@ describe('ChannelStatsBand — loading', () => {
     // the cards on screen instead of flashing back to the skeleton.
     render(<ChannelStatsBand stats={FULL} isLoading />);
 
-    expect(screen.getByText('Total Sent')).toBeInTheDocument();
+    expect(screen.getByText('Total sent')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
@@ -149,7 +149,7 @@ describe('ChannelStatsBand — error', () => {
     );
 
     // No zeroed cards ("Total Sent 0, Failed 0…") that would read as healthy.
-    expect(screen.queryByText('Total Sent')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total sent')).not.toBeInTheDocument();
     expect(screen.queryByText('Failed')).not.toBeInTheDocument();
     const retry = screen.getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
@@ -159,7 +159,7 @@ describe('ChannelStatsBand — error', () => {
   it('keeps cached stats up when a background refetch errors', () => {
     render(<ChannelStatsBand stats={FULL} isLoading={false} error={new Error('stats down')} />);
 
-    expect(screen.getByText('Total Sent')).toBeInTheDocument();
+    expect(screen.getByText('Total sent')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
@@ -174,7 +174,7 @@ describe('ChannelStatsBand — null safety', () => {
     expect(screen.getAllByText('0')).toHaveLength(3);
     // …plus the degraded ratio, and the labels still render.
     expect(screen.getByText('0/0')).toBeInTheDocument();
-    expect(screen.getByText('Active Channels')).toBeInTheDocument();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
   });
 
   it('falls back to 0 for individually-missing numeric fields', () => {

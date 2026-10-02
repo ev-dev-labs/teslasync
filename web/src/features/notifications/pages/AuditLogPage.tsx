@@ -11,12 +11,10 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, AlertTriangle } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { PanelTitle } from '@/components/ui';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { PageContainer } from '@/components/layout';
+import { DataTable, GlassPanel, PanelTitle, type Column } from '@/components/ui';
+import { Skeleton } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import {
   SearchInput,
   FilterBar,
@@ -31,7 +29,7 @@ import type { AuditLogEntry } from '@/types/admin';
 
 export default function AuditLogPage() {
   const { t } = useTranslation();
-  usePageTitle(t('audit.title', 'Audit Log'));
+  usePageTitle(t('audit.title', 'Audit log'));
   const { data: auditLogs, isLoading, error } = useAuditLogs();
 
   const [search, setSearch] = useState('');
@@ -82,14 +80,14 @@ export default function AuditLogPage() {
 
   return (
     <PageContainer
-      title={t('audit.title', 'Audit Log')}
+      title={t('audit.title', 'Audit log')}
       subtitle={t('audit.subtitle', 'Recent system-level changes recorded by the audit subsystem')}
     >
       <FadeIn>
         <GlassPanel className="p-6">
           <PanelTitle className="mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-neon-cyan" aria-hidden="true" />
-            {t('audit.recentActivity', 'Recent Activity')}
+            {t('audit.recentActivity', 'Recent activity')}
           </PanelTitle>
 
           {isLoading ? (

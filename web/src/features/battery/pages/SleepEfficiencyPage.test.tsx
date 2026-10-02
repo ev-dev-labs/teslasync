@@ -301,6 +301,15 @@ afterEach(() => {
 });
 
 describe('SleepEfficiencyPage persistent workspace', () => {
+  it('keeps the scientific matrix columns fixed', () => {
+    renderPage();
+    const matrix = screen.getByTestId('sleep-efficiency-availability-matrix');
+    expect(within(matrix).getAllByRole('columnheader')).toHaveLength(3);
+    expect(within(matrix).queryByRole('button', { name: /columns/i })).not.toBeInTheDocument();
+    expect(within(matrix).queryAllByLabelText(/^Resize column/)).toHaveLength(0);
+    expect(matrix.querySelector('[draggable="true"]')).toBeNull();
+  });
+
   it('mounts all 14 section shells', () => {
     renderPage();
     for (const testId of SECTION_TEST_IDS) {

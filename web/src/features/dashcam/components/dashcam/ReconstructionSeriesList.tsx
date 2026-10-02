@@ -38,7 +38,7 @@ export function ReconstructionSeriesList({ series }: ReconstructionSeriesListPro
             </div>
             {first && last && (
               <p className="mt-1 text-xs text-[var(--text-muted)]">
-                {t('dashcam.reconstruction.firstLast', 'First: {{first}} at t={{firstAt}}s · Last: {{last}} at t={{lastAt}}s', {
+                {t('dashcam.reconstruction.firstLast', 'First: {{first}} at t={{firstAt}}s · last: {{last}} at t={{lastAt}}s', {
                   first: String(first.value ?? '—'),
                   firstAt: first.atSeconds.toFixed(1),
                   last: String(last.value ?? '—'),

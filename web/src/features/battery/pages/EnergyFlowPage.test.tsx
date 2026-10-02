@@ -355,15 +355,15 @@ describe('buildEfficiencyChartData', () => {
 describe('EnergyFlowPage — shell & KPI band', () => {
   it('renders the page title + subtitle and sets the document title', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Energy Flow' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Energy flow' })).toBeInTheDocument();
     expect(screen.getByText('Power distribution and energy analysis')).toBeInTheDocument();
-    expect(document.title).toContain('Energy Flow');
+    expect(document.title).toContain('Energy flow');
   });
 
   it('renders every KPI card with km-converted values', () => {
     renderPage();
     const kpi = kpiRegion();
-    expect(within(kpi).getByText('Total Energy')).toBeInTheDocument();
+    expect(within(kpi).getByText('Total energy')).toBeInTheDocument();
     expect(within(kpi).getByText('42.00 kWh')).toBeInTheDocument();
     expect(within(kpi).getByText('55.50 kWh')).toBeInTheDocument();
     expect(within(kpi).getByText('123.00 km')).toBeInTheDocument();
@@ -406,7 +406,7 @@ describe('EnergyFlowPage — live energy flow', () => {
   it('renders the flow diagram, SOC gauge and charge badge on the happy path', () => {
     renderPage();
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Energy Flow Diagram' }),
+      screen.getByRole('heading', { level: 3, name: 'Energy flow diagram' }),
     ).toBeInTheDocument();
     // "Charging" renders twice: the static flow-connector label AND the live
     // charge-state badge (proves the badge branch fired, not just the label).
@@ -418,9 +418,9 @@ describe('EnergyFlowPage — live energy flow', () => {
 
   it('renders the live-power breakdown rows', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 3, name: 'Live Power' })).toBeInTheDocument();
-    expect(screen.getByText('DC Power')).toBeInTheDocument();
-    expect(screen.getByText('AC Power')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Live power' })).toBeInTheDocument();
+    expect(screen.getByText('DC power')).toBeInTheDocument();
+    expect(screen.getByText('AC power')).toBeInTheDocument();
     expect(screen.getByText('HVAC')).toBeInTheDocument();
     expect(screen.getByText('Accessories')).toBeInTheDocument();
     // DC leg = 11 kW (also the aggregate connector); AC leg = 0 kW.
@@ -452,7 +452,7 @@ describe('EnergyFlowPage — historical sections', () => {
   it('renders the daily-usage chart section (no empty placeholder) on the happy path', () => {
     renderPage();
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Daily Energy Usage' }),
+      screen.getByRole('heading', { level: 3, name: 'Daily energy usage' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('No daily energy data available.')).not.toBeInTheDocument();
   });
@@ -468,7 +468,7 @@ describe('EnergyFlowPage — historical sections', () => {
   it('renders the efficiency-metrics panel with a unit-aware rating badge', () => {
     renderPage();
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Efficiency Metrics' }),
+      screen.getByRole('heading', { level: 3, name: 'Efficiency metrics' }),
     ).toBeInTheDocument();
     // avg 160 Wh/km → "good" bucket.
     expect(screen.getByText('Good')).toBeInTheDocument();

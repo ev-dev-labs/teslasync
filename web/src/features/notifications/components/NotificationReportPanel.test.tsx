@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { NotificationReport } from '@/api/types';
 
@@ -53,6 +53,15 @@ beforeEach(() => {
 });
 
 describe('NotificationReportPanel', () => {
+  it('keeps every breakdown row in the shared evidence table engine', () => {
+    renderPanel();
+    expect(screen.getAllByRole('table')).toHaveLength(5);
+    const sources = screen.getByRole('table', { name: 'Trigger sources' });
+    expect(within(sources).getAllByRole('row')).toHaveLength(report.by_source.length + 1);
+    expect(within(sources).getByRole('cell', { name: 'System' })).toBeInTheDocument();
+    expect(within(sources).getByRole('cell', { name: '2' })).toHaveClass('text-right', 'tabular-nums');
+  });
+
   it('separates triggered events from multi-channel deliveries and shows each breakdown', () => {
     renderPanel();
     expect(useReport).toHaveBeenCalledWith('2026-01-01T08:00:00Z', '2026-01-31T08:00:00Z', 'America/Los_Angeles');
@@ -66,8 +75,8 @@ describe('NotificationReportPanel', () => {
     expect(screen.getByText('Deliveries without a linked trigger')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByText('Alert')).toBeInTheDocument();
-    expect(screen.getByText('System Mqtt Outage')).toBeInTheDocument();
-    expect(screen.getByText('Delivery outcomes')).toBeInTheDocument();
+    expect(screen.getByText('System MQTT outage')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delivery outcomes' })).toBeInTheDocument();
     expect(screen.getByText('Daily activity')).toBeInTheDocument();
   });
 
@@ -124,5 +133,18 @@ describe('NotificationReportPanel', () => {
     renderPanel();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('retains the complete cached report when a background refresh fails', () => {
+    useReport.mockReturnValue({
+      data: report, dataUpdatedAt: Date.now(), isLoading: false, isError: true,
+      error: new Error('refresh offline'), refetch: vi.fn(),
+    } as ReturnType<typeof useNotificationReport>);
+    renderPanel();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(5);
+    expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
+    expect(screen.getByText('System MQTT outage')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 });

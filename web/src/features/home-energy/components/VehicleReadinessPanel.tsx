@@ -18,7 +18,7 @@ export function VehicleReadinessPanel({ vehicles }: VehicleReadinessPanelProps) 
 
   return (
     <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3">{t('homeEnergy.readiness.title', 'Per-Vehicle Readiness')}</PanelTitle>
+      <PanelTitle className="mb-3">{t('homeEnergy.readiness.title', 'Per-vehicle readiness')}</PanelTitle>
       {vehicles.length === 0 ? (
         <EmptyState
           icon={<CarFront className="h-8 w-8" />}

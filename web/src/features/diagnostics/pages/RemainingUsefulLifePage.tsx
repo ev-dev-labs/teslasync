@@ -61,7 +61,7 @@ const COMPONENT_ICON: Record<string, LucideIcon> = {
 
 export default function RemainingUsefulLifePage() {
   const { t } = useTranslation();
-  usePageTitle(t('rul.title', 'Remaining Useful Life'));
+  usePageTitle(t('rul.title', 'Remaining useful life'));
 
   const { vehicleId } = useSelectedVehicle();
   const noVehicle = vehicleId === null;
@@ -134,7 +134,7 @@ export default function RemainingUsefulLifePage() {
 
   return (
     <PageContainer
-      title={t('rul.title', 'Remaining Useful Life')}
+      title={t('rul.title', 'Remaining useful life')}
       subtitle={t('rul.subtitle', 'Predictive end-of-life forecasts for your wear components')}
       query={boardQuery}
     >
@@ -144,7 +144,7 @@ export default function RemainingUsefulLifePage() {
           <div className="flex items-start gap-3">
             <CalendarClock className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />
             <div className="min-w-0">
-              <Text as="p" variant="label">{t('rul.nextService.title', 'Next Service Due')}</Text>
+              <Text as="p" variant="label">{t('rul.nextService.title', 'Next service due')}</Text>
               {noVehicle ? (
                 <Text as="p" variant="body">{selectVehicleMsg}</Text>
               ) : boardLoading && !board ? (
@@ -174,7 +174,7 @@ export default function RemainingUsefulLifePage() {
         <section aria-label={t('rul.board.title', 'Component health')}>
           <PanelTitle className="mb-3 flex items-center gap-2">
             <HeartPulse className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-            {t('rul.board.title', 'Component Health')}
+            {t('rul.board.title', 'Component health')}
           </PanelTitle>
 
           {noVehicle ? (
@@ -279,7 +279,7 @@ export default function RemainingUsefulLifePage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-1 flex items-center gap-2">
             <TrendingDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('rul.forecast.title', 'Health Forecast')}
+            {t('rul.forecast.title', 'Health forecast')}
             {detail ? <span className={cn('text-sm font-normal', activeMeta.text)}>· {detail.label}</span> : null}
           </PanelTitle>
           <Text as="p" variant="caption" className="mb-3">
@@ -311,7 +311,7 @@ export default function RemainingUsefulLifePage() {
                 {/* chart-legend-audit:skip confidence band is inseparable from projected health line */}
                 {/* chart-a11y:no-table projected health line + confidence band area — composite trace not tabular */}
                 <EmbeddedChart
-                  title={t('rul.forecast.title', 'Health Forecast')}
+                  title={t('rul.forecast.title', 'Health forecast')}
                   ariaLabel={t('rul.forecast.aria', 'Area chart of projected component health declining to its end-of-life threshold, with a shaded confidence band')}
                   fluid
                 >

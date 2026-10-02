@@ -349,7 +349,7 @@ describe('PlaceDetailPanel — tabs', () => {
   it('switches to the Charging Activity tab, showing summary/activity panels', () => {
     render(<PlaceDetailPanel place={makePlace({ id: 11 })} onClose={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Charging Activity' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Charging activity' }));
 
     expect(screen.getByTestId('stub-summary')).toBeInTheDocument();
     expect(screen.getByTestId('stub-activity')).toHaveTextContent('geofenceId=11');

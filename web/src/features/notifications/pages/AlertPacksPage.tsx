@@ -7,7 +7,7 @@ import AlertPacksPanel from '../components/packs/AlertPacksPanel'
 export default function AlertPacksPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const title = t('alertPacks.title', 'Alert Packs')
+  const title = t('alertPacks.title', 'Alert packs')
   usePageTitle(title)
 
   return (

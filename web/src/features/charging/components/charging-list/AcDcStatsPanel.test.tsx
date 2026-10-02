@@ -93,7 +93,7 @@ describe('AcDcStatsPanel — energy split bar', () => {
   it('exposes an accessible split summary, both percentage chips, and MWh-scaled totals', () => {
     const { container } = render(<AcDcStatsPanel breakdown={mixedBreakdown()} />);
 
-    expect(screen.getByText('Charging Stats by Type')).toBeInTheDocument();
+    expect(screen.getByText('Charging stats by type')).toBeInTheDocument();
 
     // The bar is a single labelled image for AT: "30% AC, 70% DC".
     expect(
@@ -122,8 +122,8 @@ describe('AcDcStatsPanel — per-type stats table', () => {
     expect(table).toBeInTheDocument();
 
     // Both charge types surface as rows.
-    expect(within(table).getByText('AC Charging')).toBeInTheDocument();
-    expect(within(table).getByText('DC Charging')).toBeInTheDocument();
+    expect(within(table).getByText('AC charging')).toBeInTheDocument();
+    expect(within(table).getByText('DC charging')).toBeInTheDocument();
 
     // Per-type cost + $/kWh flow through the real <Currency> ('$' from settings).
     expect(within(table).getByText('$12.00')).toBeInTheDocument(); // AC cost
@@ -148,7 +148,7 @@ describe('AcDcStatsPanel — per-type stats table', () => {
     render(<AcDcStatsPanel breakdown={breakdown} />);
 
     expect(screen.getByText('No AC/DC charging data')).toBeInTheDocument();
-    expect(screen.queryByText('AC Charging')).toBeNull();
+    expect(screen.queryByText('AC charging')).toBeNull();
   });
 });
 
@@ -193,8 +193,8 @@ describe('AcDcStatsPanel — regression + null safety', () => {
     expect(screen.queryByRole('img')).toBeNull();
     // The table still lists the non-empty AC bucket at "0.00 kWh".
     const table = screen.getByRole('table');
-    expect(within(table).getByText('AC Charging')).toBeInTheDocument();
-    expect(within(table).queryByText('DC Charging')).toBeNull();
+    expect(within(table).getByText('AC charging')).toBeInTheDocument();
+    expect(within(table).queryByText('DC charging')).toBeNull();
     expect(within(table).getAllByText('0.00 kWh').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -224,6 +224,6 @@ describe('AcDcStatsPanel — regression + null safety', () => {
     expect(screen.queryByText(/^DC .*%$/)).toBeNull();
     expect(container.textContent).not.toContain('NaN');
     // DC still appears as a (zero-energy) row in the table.
-    expect(within(screen.getByRole('table')).getByText('DC Charging')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('DC charging')).toBeInTheDocument();
   });
 });

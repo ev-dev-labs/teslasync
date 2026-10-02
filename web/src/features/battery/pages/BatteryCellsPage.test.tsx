@@ -277,7 +277,7 @@ describe('BatteryCellsPage', () => {
 
     // KPI band — space-before-unit strings are unique to the KPI cards.
     expect(screen.getByText('3.9025 V')).toBeInTheDocument(); // avg voltage
-    expect(screen.getByText('Cell Voltage Heatmap').closest('section')).toHaveClass('items-start');
+    expect(screen.getByText('Cell voltage heatmap').closest('section')).toHaveClass('items-start');
     expect(screen.getByText('#3 3.8500 V')).toBeInTheDocument(); // min cell → cell 3
     expect(screen.getByText('#4 3.9500 V')).toBeInTheDocument(); // max cell → cell 4
     expect(screen.getByText('12.5 mV')).toBeInTheDocument(); // imbalance
@@ -291,9 +291,9 @@ describe('BatteryCellsPage', () => {
 
     // Health-recommendation insights (imbalance 12.5 → warning, temp
     // spread 8 → critical, 2 significant-deviation cells → critical).
-    expect(screen.getByText('Voltage Spread Increasing')).toBeInTheDocument();
-    expect(screen.getByText('High Temperature Spread')).toBeInTheDocument();
-    expect(screen.getByText('Critical Cells Detected')).toBeInTheDocument();
+    expect(screen.getByText('Voltage spread increasing')).toBeInTheDocument();
+    expect(screen.getByText('High temperature spread')).toBeInTheDocument();
+    expect(screen.getByText('Critical cells detected')).toBeInTheDocument();
     expect(screen.getByText(/2 cell\(s\) show significant deviation/)).toBeInTheDocument();
 
     // Cell-details table — 4-decimal voltage + signed delta + status label.
@@ -305,15 +305,15 @@ describe('BatteryCellsPage', () => {
 
     // Every section panel/title is present (no hidden sections).
     for (const title of [
-      'Cell Voltage Heatmap',
-      'Voltage Distribution',
-      'Cell Voltage Bar Chart',
-      'Cell Voltage Over Time',
-      'Imbalance Trend',
-      'Voltage Spread Trend',
-      'Cell Details',
-      'Temperature Summary',
-      'Health Recommendations',
+      'Cell voltage heatmap',
+      'Voltage distribution',
+      'Cell voltage bar chart',
+      'Cell voltage over time',
+      'Imbalance trend',
+      'Voltage spread trend',
+      'Cell details',
+      'Temperature summary',
+      'Health recommendations',
     ]) {
       expect(screen.getByText(title)).toBeInTheDocument();
     }
@@ -383,7 +383,7 @@ describe('BatteryCellsPage', () => {
     expect(screen.getByText(/No vehicle selected/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Set up TeslaSync/i })).toBeInTheDocument();
     // The data scaffolding must NOT render behind the guard.
-    expect(screen.queryByText('Cell Voltage Heatmap')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cell voltage heatmap')).not.toBeInTheDocument();
     expect(screen.queryByText('3.9025 V')).not.toBeInTheDocument();
   });
 

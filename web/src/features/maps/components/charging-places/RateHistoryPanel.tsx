@@ -71,7 +71,7 @@ export function RateHistoryPanel({
         'The previous rate will continue through this cancelled schedule. Effective rate history cannot be deleted.',
       ),
       variant: 'danger',
-      confirmLabel: t('chargingPlaces.rateHistory.cancel', 'Cancel Rate'),
+      confirmLabel: t('chargingPlaces.rateHistory.cancel', 'Cancel rate'),
     });
     if (ok) onDelete(rate);
   };
@@ -80,13 +80,16 @@ export function RateHistoryPanel({
     () => [
       {
         key: 'effective_from',
-        header: t('chargingPlaces.rateHistory.effectiveFrom', 'Effective From'),
+        header: t('chargingPlaces.rateHistory.effectiveFrom', 'Effective from'),
         sortable: true,
         render: (r) => <TimeStamp value={r.effective_from} format="absolute" />,
       },
       {
         key: 'rate_per_wh',
         header: t('chargingPlaces.rateHistory.rate', 'Rate / kWh'),
+        align: 'right',
+        filterValue: (r) => r.rate_per_wh == null ? null : `${r.currency}:${r.rate_per_wh}`,
+        filterValueLabel: (_value, r) => formatRatePerWh(r.rate_per_wh, r.currency, locale) || '—',
         sortable: true,
         render: (r) => (
           <Text variant="body" className="tabular-nums">
@@ -97,6 +100,7 @@ export function RateHistoryPanel({
       {
         key: 'currency',
         header: t('chargingPlaces.rateHistory.currency', 'Currency'),
+        filterValue: (r) => r.currency ?? null,
         sortable: false,
         render: (r) => (
           <Badge variant="neutral" size="sm">
@@ -106,7 +110,7 @@ export function RateHistoryPanel({
       },
       {
         key: 'effective_to',
-        header: t('chargingPlaces.rateHistory.effectiveTo', 'Effective To'),
+        header: t('chargingPlaces.rateHistory.effectiveTo', 'Effective to'),
         sortable: false,
         render: (r) =>
           isRateActiveAt(r) ? (
@@ -157,7 +161,7 @@ export function RateHistoryPanel({
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('chargingPlaces.rateHistory.title', 'Rate History')}
+        {t('chargingPlaces.rateHistory.title', 'Rate history')}
       </PanelTitle>
       <Text as="p" size="sm" color="muted" className="mb-3">
         {t(
@@ -167,7 +171,7 @@ export function RateHistoryPanel({
       </Text>
 
       {error ? (
-        <QueryError error={error} onRetry={onRetry} resourceName={t('chargingPlaces.rateHistory.title', 'Rate History')} />
+        <QueryError error={error} onRetry={onRetry} resourceName={t('chargingPlaces.rateHistory.title', 'Rate history')} />
       ) : isLoading && rows.length === 0 ? (
         <Skeleton className="h-40 w-full" />
       ) : rows.length === 0 ? (
@@ -183,6 +187,7 @@ export function RateHistoryPanel({
       ) : (
         <DataTable
           tableId="maps:charging-place-rate-history"
+          enableValueFilters
           columns={columns}
           mobileColumns={['effective_from', 'rate_per_wh', 'effective_to']}
           data={sortedRows}

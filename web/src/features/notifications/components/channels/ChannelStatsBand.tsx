@@ -56,7 +56,7 @@ export function ChannelStatsBand({ stats, isLoading, error, onRetry }: ChannelSt
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       <MetricCard
-        label={t('notifications.stats.sent', 'Total Sent')}
+        label={t('notifications.stats.sent', 'Total sent')}
         value={stats?.sent ?? 0}
         icon={<CheckCircle className="h-4 w-4" aria-hidden="true" />}
         color="green"
@@ -74,7 +74,7 @@ export function ChannelStatsBand({ stats, isLoading, error, onRetry }: ChannelSt
         color="amber"
       />
       <MetricCard
-        label={t('notifications.stats.activeChannels', 'Active Channels')}
+        label={t('notifications.stats.activeChannels', 'Active channels')}
         value={`${enabled}/${total}`}
         icon={<Bell className="h-4 w-4" aria-hidden="true" />}
         color="cyan"

@@ -29,7 +29,7 @@ export function ClipCatalogList({ clips, totalCount, selectedClipId, onSelect, o
       <EmptyState
         icon={<Video className="h-8 w-8" />}
         title={t('dashcam.catalog.emptyTitle', 'No clips imported yet')}
-        message={t('dashcam.catalog.emptyMessage', 'Import Sentry/Dashcam clips above to build a local, searchable catalog.')}
+        message={t('dashcam.catalog.emptyMessage', 'Import Sentry/dashcam clips above to build a local, searchable catalog.')}
       />
     );
   }

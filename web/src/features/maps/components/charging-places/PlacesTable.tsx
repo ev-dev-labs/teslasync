@@ -25,6 +25,7 @@ import type { Geofence, GeofenceRate } from '@/api/types';
 
 export interface PlacesTableProps {
   places?: Geofence[];
+  filterData?: Geofence[];
   currentRates?: GeofenceRate[];
   isLoading: boolean;
   error?: unknown;
@@ -41,6 +42,7 @@ export interface PlacesTableProps {
 
 export function PlacesTable({
   places,
+  filterData,
   currentRates,
   isLoading,
   error,
@@ -92,6 +94,8 @@ export function PlacesTable({
       {
         key: 'name',
         header: t('chargingPlaces.table.name', 'Place'),
+        filterValue: (place) => place.id,
+        filterValueLabel: (_value, place) => place.name || t('chargingPlaces.unnamed', 'Unnamed place'),
         sortable: true,
         render: (place) => (
           <div className="flex min-w-0 items-start gap-2">
@@ -134,6 +138,13 @@ export function PlacesTable({
       {
         key: 'category',
         header: t('chargingPlaces.table.category', 'Category'),
+        filterValue: (place) => place.category ?? null,
+        filterValueLabel: (_value, place) => {
+          const category = place.category as GeofenceCategoryValue | null | undefined;
+          return category
+            ? t(GEOFENCE_CATEGORY_LABELS[category].key, GEOFENCE_CATEGORY_LABELS[category].fallback)
+            : t('chargingPlaces.category.unset', 'Uncategorized');
+        },
         sortable: true,
         render: (place) => {
           const category = place.category as GeofenceCategoryValue | null | undefined;
@@ -152,10 +163,14 @@ export function PlacesTable({
       {
         key: 'purpose',
         header: t('geofences.visits.purpose', 'Purpose'),
+        filterValue: (place) => place.is_charging_location ?? null,
+        filterValueLabel: (_value, place) => place.is_charging_location == null ? '—' : place.is_charging_location
+          ? t('geofences.visits.chargingShort', 'Charging')
+          : t('geofences.visits.otherShort', 'Other place'),
         sortable: false,
         render: (place) => (
           <Badge variant={place.is_charging_location ? 'success' : 'neutral'} size="sm">
-            {place.is_charging_location
+            {place.is_charging_location == null ? '—' : place.is_charging_location
               ? t('geofences.visits.chargingShort', 'Charging')
               : t('geofences.visits.otherShort', 'Other place')}
           </Badge>
@@ -163,22 +178,30 @@ export function PlacesTable({
       },
       {
         key: 'radius',
+        groupStart: true,
         header: t('chargingPlaces.table.zone', 'Zone'),
+        align: 'right',
+        filterValue: (place) => place.radius ?? null,
+        filterValueLabel: (_value, place) => place.radius == null ? '—' : `${fmtNumber(place.radius)} ${t('common.units.meterShort', 'm')}`,
         sortable: true,
         render: (place) => (
-          <Text size="sm" color="secondary" className="flex items-center gap-1 tabular-nums">
+          <Text size="sm" color="secondary" className="flex items-center justify-end gap-1 tabular-nums">
             <Ruler className="h-3.5 w-3.5" aria-hidden="true" />
-            {fmtNumber(place.radius ?? 0)} {t('common.units.meterShort', 'm')}
+            {place.radius == null ? '—' : `${fmtNumber(place.radius)} ${t('common.units.meterShort', 'm')}`}
           </Text>
         ),
       },
       {
         key: 'review',
         header: t('geofences.visits.reviewStatus', 'Review'),
+        filterValue: (place) => place.needs_review ?? null,
+        filterValueLabel: (_value, place) => place.needs_review == null ? '—' : place.needs_review
+          ? t('chargingPlaces.detail.needsReviewBadge', 'Needs review')
+          : t('geofences.visits.reviewed', 'Reviewed'),
         sortable: false,
         render: (place) => (
-          <Badge variant={place.needs_review ? 'warning' : 'success'} size="sm">
-            {place.needs_review
+          <Badge variant={place.needs_review == null ? 'neutral' : place.needs_review ? 'warning' : 'success'} size="sm">
+            {place.needs_review == null ? '—' : place.needs_review
               ? t('chargingPlaces.detail.needsReviewBadge', 'Needs review')
               : t('geofences.visits.reviewed', 'Reviewed')}
           </Badge>
@@ -186,7 +209,17 @@ export function PlacesTable({
       },
       {
         key: 'rate',
+        groupStart: true,
         header: t('chargingPlaces.table.rate', 'Rate / kWh'),
+        align: 'right',
+        filterValue: (place) => {
+          const rate = rateByGeofenceId.get(place.id);
+          return rate ? `${rate.currency}:${rate.rate_per_wh}` : null;
+        },
+        filterValueLabel: (_value, place) => {
+          const rate = rateByGeofenceId.get(place.id);
+          return rate ? formatRatePerWh(rate.rate_per_wh, rate.currency, locale) || '—' : t('chargingPlaces.noRate', 'Not set');
+        },
         sortable: true,
         render: (place) => {
           const rate = rateByGeofenceId.get(place.id);
@@ -199,7 +232,7 @@ export function PlacesTable({
           }
           return (
             <div>
-              <Text variant="body" className="flex items-center gap-1.5 tabular-nums">
+              <Text variant="body" className="flex items-center justify-end gap-1.5 tabular-nums">
                 <Zap className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
                 {formatRatePerWh(rate.rate_per_wh, rate.currency, locale) || '—'}
               </Text>
@@ -256,7 +289,7 @@ export function PlacesTable({
       <QueryError
         error={error}
         onRetry={onRetry}
-        resourceName={t('chargingPlaces.table.title', 'Place Directory')}
+        resourceName={t('chargingPlaces.table.title', 'Place directory')}
       />
     );
   }
@@ -286,13 +319,15 @@ export function PlacesTable({
     <div>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('chargingPlaces.table.title', 'Place Directory')}
+        {t('chargingPlaces.table.title', 'Place directory')}
         <Badge variant="neutral" size="sm">
           {rows.length}
         </Badge>
       </PanelTitle>
       <DataTable
         tableId="maps:places-zones"
+        enableValueFilters
+        filterData={filterData ?? rows}
         columns={columns}
         data={sortedRows}
         keyExtractor={(place) => place.id}

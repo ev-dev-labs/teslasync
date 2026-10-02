@@ -123,7 +123,7 @@ export function ChargingPlacesWorkspace({
         <div>
           <PanelTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-300" aria-hidden="true" />
-            {t('chargingPlaces.workspace.unifiedTitle', 'Places & Charging Zones')}
+            {t('chargingPlaces.workspace.unifiedTitle', 'Places & charging zones')}
           </PanelTitle>
           <Caption className="mt-1">
             {t(
@@ -149,7 +149,7 @@ export function ChargingPlacesWorkspace({
               icon={<Plus className="h-4 w-4" aria-hidden="true" />}
               onClick={onAdd}
             >
-              {t('chargingPlaces.workspace.addPlace', 'Add Place')}
+              {t('chargingPlaces.workspace.addPlace', 'Add place')}
             </Button>
           )}
         </div>
@@ -197,6 +197,7 @@ export function ChargingPlacesWorkspace({
 
         <PlacesTable
           places={visiblePlaces}
+          filterData={placesQuery.data}
           currentRates={currentRatesQuery.data}
           isLoading={placesQuery.isLoading}
           error={placesQuery.error}

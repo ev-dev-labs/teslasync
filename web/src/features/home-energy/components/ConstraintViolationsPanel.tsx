@@ -47,7 +47,7 @@ export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPa
   return (
     <GlassPanel className="p-4 sm:p-5">
       <div className="mb-3 flex items-center justify-between">
-        <PanelTitle>{t('homeEnergy.violations.title', 'Constraint Violations')}</PanelTitle>
+        <PanelTitle>{t('homeEnergy.violations.title', 'Constraint violations')}</PanelTitle>
         <Badge variant={errors.length > 0 ? 'danger' : warnings.length > 0 ? 'warning' : 'success'} size="sm">
           {errors.length > 0
             ? t('homeEnergy.violations.errorsCount', '{{count}} error(s)', { count: errors.length })

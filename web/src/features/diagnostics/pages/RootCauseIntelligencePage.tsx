@@ -47,7 +47,7 @@ const QUALITY_COLOR: Record<EvidenceQualityBand, 'green' | 'cyan' | 'amber' | 'r
  */
 export default function RootCauseIntelligencePage() {
   const { t } = useTranslation();
-  usePageTitle(t('rootCauseIntelligence.title', 'Root-Cause Intelligence'));
+  usePageTitle(t('rootCauseIntelligence.title', 'Root-cause intelligence'));
 
   const { vehicleId } = useSelectedVehicle();
   const workspace = useRootCauseWorkspace(vehicleId);
@@ -58,7 +58,7 @@ export default function RootCauseIntelligencePage() {
   }, [workspace.signalsQuery, workspace.evidenceBundle]);
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('rootCauseIntelligence.title', 'Root-Cause Intelligence')} />;
+    return <NoVehicleSelected pageTitle={t('rootCauseIntelligence.title', 'Root-cause intelligence')} />;
   }
 
   const { analysis } = workspace;
@@ -77,7 +77,7 @@ export default function RootCauseIntelligencePage() {
 
   return (
     <PageContainer
-      title={t('rootCauseIntelligence.title', 'Root-Cause Intelligence')}
+      title={t('rootCauseIntelligence.title', 'Root-cause intelligence')}
       subtitle={t(
         'rootCauseIntelligence.subtitle',
         "Evidence-ranked hypotheses about which telemetry signals moved alongside a chosen signal's biggest shift \u2014 a statistical association, never a diagnosis or proof of causation.",
@@ -113,7 +113,7 @@ export default function RootCauseIntelligencePage() {
           ) : (
             <>
               <MetricCard
-                label={t('rootCauseIntelligence.kpis.quality', 'Evidence Quality')}
+                label={t('rootCauseIntelligence.kpis.quality', 'Evidence quality')}
                 value={workspace.hasChosenSignal ? qualityLabel : '—'}
                 subtitle={t('rootCauseIntelligence.kpis.qualitySubtitle', 'Overall score {{n}} of 1.00', {
                   n: fmtNumber(analysis.quality.overallScore, 2),
@@ -126,7 +126,7 @@ export default function RootCauseIntelligencePage() {
                 }}
               />
               <MetricCard
-                label={t('rootCauseIntelligence.kpis.effect', 'Focal Shift Effect Size')}
+                label={t('rootCauseIntelligence.kpis.effect', 'Focal shift effect size')}
                 value={analysis.focalShift != null ? fmtNumber(analysis.focalShift.effectSize, 2) : '—'}
                 subtitle={
                   analysis.focalShift != null
@@ -140,7 +140,7 @@ export default function RootCauseIntelligencePage() {
                 color="purple"
               />
               <MetricCard
-                label={t('rootCauseIntelligence.kpis.hypotheses', 'Ranked Hypotheses')}
+                label={t('rootCauseIntelligence.kpis.hypotheses', 'Ranked hypotheses')}
                 value={analysis.hypotheses.length}
                 subtitle={t('rootCauseIntelligence.kpis.hypothesesSubtitle', '{{n}} candidates considered', {
                   n: analysis.relatedCandidates.length,
@@ -149,7 +149,7 @@ export default function RootCauseIntelligencePage() {
                 color="blue"
               />
               <MetricCard
-                label={t('rootCauseIntelligence.kpis.samples', 'Focal Samples')}
+                label={t('rootCauseIntelligence.kpis.samples', 'Focal samples')}
                 value={analysis.quality.focalSampleCount}
                 subtitle={t('rootCauseIntelligence.kpis.samplesSubtitle', '{{h}}h window', { h: workspace.windowHours })}
                 icon={<Activity className="h-5 w-5" />}

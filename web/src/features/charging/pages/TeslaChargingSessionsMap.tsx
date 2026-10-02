@@ -85,7 +85,7 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
         const cost =
           s.total_cost != null ? `<p>${formatCurrency(s.total_cost, 2)}</p>` : '';
         const charger = s.charger_type
-          ? `<p style="text-transform:uppercase">${escapeHtml(String(s.charger_type))}</p>`
+          ? `<p>${escapeHtml(String(s.charger_type))}</p>`
           : '';
         return {
           id: s.session_id,

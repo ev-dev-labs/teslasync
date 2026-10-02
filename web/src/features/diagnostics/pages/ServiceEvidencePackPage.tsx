@@ -67,7 +67,7 @@ function downloadPack(doc: ServiceEvidencePackDocument): void {
  */
 export default function ServiceEvidencePackPage() {
   const { t } = useTranslation();
-  usePageTitle(t('serviceEvidencePack.title', 'Service Evidence Pack'));
+  usePageTitle(t('serviceEvidencePack.title', 'Service evidence pack'));
 
   const { vehicleId, vehicle } = useSelectedVehicle();
   const workspace = useRootCauseWorkspace(vehicleId);
@@ -130,7 +130,7 @@ export default function ServiceEvidencePackPage() {
   }, [pack]);
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('serviceEvidencePack.title', 'Service Evidence Pack')} />;
+    return <NoVehicleSelected pageTitle={t('serviceEvidencePack.title', 'Service evidence pack')} />;
   }
 
   const isLoading = workspace.signalsQuery.isLoading || (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading);
@@ -164,7 +164,7 @@ export default function ServiceEvidencePackPage() {
 
   return (
     <PageContainer
-      title={t('serviceEvidencePack.title', 'Service Evidence Pack')}
+      title={t('serviceEvidencePack.title', 'Service evidence pack')}
       subtitle={t(
         'serviceEvidencePack.subtitle',
         'A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.',
@@ -200,28 +200,28 @@ export default function ServiceEvidencePackPage() {
           ) : (
             <>
               <MetricCard
-                label={t('rootCauseIntelligence.kpis.quality', 'Evidence Quality')}
+                label={t('rootCauseIntelligence.kpis.quality', 'Evidence quality')}
                 value={workspace.hasChosenSignal ? qualityLabel : '—'}
                 subtitle={t('serviceEvidencePack.kpis.qualitySubtitle', 'Drives the export gate below')}
                 icon={<ShieldCheck className="h-5 w-5" />}
                 color={workspace.hasChosenSignal ? QUALITY_COLOR[liveCore.quality.band] : 'cyan'}
               />
               <MetricCard
-                label={t('serviceEvidencePack.kpis.signals', 'Signals in Pack')}
+                label={t('serviceEvidencePack.kpis.signals', 'Signals in pack')}
                 value={liveCore.signalEvidence.length}
                 subtitle={t('serviceEvidencePack.kpis.signalsSubtitle', '{{n}} corroborating', { n: corroborating })}
                 icon={<ClipboardList className="h-5 w-5" />}
                 color="blue"
               />
               <MetricCard
-                label={t('serviceEvidencePack.kpis.hypotheses', 'Ranked Hypotheses')}
+                label={t('serviceEvidencePack.kpis.hypotheses', 'Ranked hypotheses')}
                 value={liveCore.hypotheses.length}
                 subtitle={t('serviceEvidencePack.kpis.hypothesesSubtitle', 'Evidence-ranked, not diagnostic')}
                 icon={<ListOrdered className="h-5 w-5" />}
                 color="purple"
               />
               <MetricCard
-                label={t('serviceEvidencePack.kpis.status', 'Pack Status')}
+                label={t('serviceEvidencePack.kpis.status', 'Pack status')}
                 value={packStatusLabel}
                 subtitle={packStatusSubtitle}
                 icon={<PackageCheck className="h-5 w-5" />}

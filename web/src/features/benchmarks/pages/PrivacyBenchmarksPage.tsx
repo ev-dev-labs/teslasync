@@ -26,7 +26,7 @@ import {
 
 export default function PrivacyBenchmarksPage() {
   const { t } = useTranslation();
-  usePageTitle(t('benchmarks.title', 'Privacy-Preserving Benchmarks'));
+  usePageTitle(t('benchmarks.title', 'Privacy-preserving benchmarks'));
   const { vehicleId } = useSelectedVehicle();
   const [acknowledged, setAcknowledged] = useState(false);
   const statusQuery = useBenchmarkPrivacyStatus(vehicleId);
@@ -55,7 +55,7 @@ export default function PrivacyBenchmarksPage() {
 
   return (
     <PageContainer
-      title={t('benchmarks.title', 'Privacy-Preserving Benchmarks')}
+      title={t('benchmarks.title', 'Privacy-preserving benchmarks')}
       subtitle={t(
         'benchmarks.subtitle',
         'Compare bounded local metrics with coarse, opt-in cohorts using differential privacy.',

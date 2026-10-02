@@ -201,7 +201,7 @@ export default function PowerFlowDashboardPage() {
     <PageContainer
       title={t('powerFlow.title', 'Power Flow')}
       subtitle={t('powerFlow.subtitle', 'Real-time power flow from your Tesla Energy system')}
-      actions={actions}
+      secondaryActions={actions}
       query={[liveQuery, historyQuery]}
       dataSources={dataSources}
     >

@@ -134,7 +134,7 @@ export function ReconstructionTimeline({
 
           {incidentItems.length > 0 ? (
             <div className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              <h4 className="text-xs font-semibold tracking-wide text-[var(--text-muted)]">
                 {t('dashcam.reconstruction.incidentSequence', 'Incident sequence (statistical)')}
               </h4>
               <Timeline items={incidentItems} />

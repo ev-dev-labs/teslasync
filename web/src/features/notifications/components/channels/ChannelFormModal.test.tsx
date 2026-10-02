@@ -170,7 +170,7 @@ describe('ChannelFormModal — create mode', () => {
   it('renders the 7-provider radiogroup with Discord preselected and no test button', () => {
     renderModal();
 
-    expect(screen.getByRole('heading', { name: 'Add Channel' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add channel' })).toBeInTheDocument();
 
     const radios = screen.getAllByRole('radio');
     expect(radios).toHaveLength(7);
@@ -179,10 +179,10 @@ describe('ChannelFormModal — create mode', () => {
 
     // Discord's single credential field is shown; email-only fields are not.
     expect(screen.getByLabelText('Webhook URL')).toBeInTheDocument();
-    expect(screen.queryByLabelText('SMTP Host')).toBeNull();
+    expect(screen.queryByLabelText('SMTP host')).toBeNull();
 
     // Test Connection only exists when editing an existing channel.
-    expect(screen.queryByRole('button', { name: 'Test Connection' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Test connection' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument();
   });
 
@@ -195,9 +195,9 @@ describe('ChannelFormModal — create mode', () => {
     expect(screen.getByRole('radio', { name: 'Discord' })).toHaveAttribute('aria-checked', 'false');
 
     // Email credential fields appear; the Discord webhook field is gone.
-    expect(screen.getByLabelText('SMTP Host')).toBeInTheDocument();
-    expect(screen.getByLabelText('SMTP Port')).toBeInTheDocument();
-    expect(screen.getByLabelText('From Address')).toBeInTheDocument();
+    expect(screen.getByLabelText('SMTP host')).toBeInTheDocument();
+    expect(screen.getByLabelText('SMTP port')).toBeInTheDocument();
+    expect(screen.getByLabelText('From address')).toBeInTheDocument();
     expect(screen.queryByLabelText('Webhook URL')).toBeNull();
 
     // Placeholder tracks the selected provider label.
@@ -207,7 +207,7 @@ describe('ChannelFormModal — create mode', () => {
   it('creates a signed webhook from Add Channel without unsupported template fields', () => {
     renderModal();
     fireEvent.click(screen.getByRole('radio', { name: 'Webhook' }));
-    setValue('Channel Name', 'Automation hook');
+    setValue('Channel name', 'Automation hook');
     setValue('URL', 'https://receiver.example.test/events');
     setValue('Signing secret', 'sample-secret');
     fireEvent.change(screen.getByLabelText('HTTP method'), { target: { value: 'PUT' } });
@@ -240,7 +240,7 @@ describe('ChannelFormModal — create mode', () => {
     };
     renderModal({ channel: webhook });
     expect(screen.getByText('Leave the signing secret blank to keep the existing secret.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Test Connection' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
     expect(h.webhookTestMutate).toHaveBeenCalledWith({ id: 44 }, expect.anything());
     expect(h.testMutate).not.toHaveBeenCalled();
     submitForm();
@@ -272,7 +272,7 @@ describe('ChannelFormModal — create mode', () => {
   it('builds a discord payload without an id and calls onSaved on success', () => {
     const { onSaved } = renderModal();
 
-    setValue('Channel Name', 'My Bot');
+    setValue('Channel name', 'My Bot');
     setValue('Webhook URL', 'https://discord.com/api/webhooks/xyz');
     submitForm();
 
@@ -294,7 +294,7 @@ describe('ChannelFormModal — create mode', () => {
   it('includes the disabled toggle state in the built payload', () => {
     renderModal();
 
-    setValue('Channel Name', 'Muted');
+    setValue('Channel name', 'Muted');
     setValue('Webhook URL', 'https://discord.com/api/webhooks/q');
 
     const toggle = screen.getByRole('switch');
@@ -316,7 +316,7 @@ describe('ChannelFormModal — create mode', () => {
     });
     const { onSaved } = renderModal();
 
-    setValue('Channel Name', 'Doomed');
+    setValue('Channel name', 'Doomed');
     submitForm();
 
     expect(screen.getByRole('alert')).toHaveTextContent('Boom');
@@ -342,7 +342,7 @@ describe('ChannelFormModal — create mode', () => {
 
   it('requires confirmation before cancelling an edited channel draft', async () => {
     const { onClose } = renderModal();
-    setValue('Channel Name', 'Unsaved channel');
+    setValue('Channel name', 'Unsaved channel');
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     const confirm = await screen.findByRole('dialog', { name: 'Unsaved changes' });
@@ -357,9 +357,9 @@ describe('ChannelFormModal — edit mode', () => {
   it('hides the picker, prefills fields, and relabels the primary action', () => {
     renderModal({ channel: discordChannel });
 
-    expect(screen.getByRole('heading', { name: 'Edit Channel' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit channel' })).toBeInTheDocument();
     expect(screen.queryByRole('radiogroup')).toBeNull();
-    expect(screen.getByLabelText('Channel Name')).toHaveValue('Ops Discord');
+    expect(screen.getByLabelText('Channel name')).toHaveValue('Ops Discord');
     expect(screen.getByLabelText('Webhook URL')).toHaveValue('https://discord.com/api/webhooks/abc');
     expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument();
   });
@@ -367,7 +367,7 @@ describe('ChannelFormModal — edit mode', () => {
   it('sends a test, shows the success status panel, and fires a success toast', () => {
     renderModal({ channel: discordChannel });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Test Connection' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
 
     expect(h.testMutate).toHaveBeenCalledWith(7, expect.anything());
     expect(screen.getByRole('status')).toHaveTextContent('Test notification sent successfully!');
@@ -380,7 +380,7 @@ describe('ChannelFormModal — edit mode', () => {
     });
     renderModal({ channel: discordChannel });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Test Connection' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
 
     expect(screen.getByRole('status')).toHaveTextContent('Invalid webhook');
     expect(h.toastError).toHaveBeenCalledWith('Test failed', 'Invalid webhook');
@@ -392,7 +392,7 @@ describe('ChannelFormModal — edit mode', () => {
     });
     renderModal({ channel: discordChannel });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Test Connection' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
 
     expect(screen.getByRole('status')).toHaveTextContent('Test failed');
     expect(h.toastError).toHaveBeenCalledWith('Test failed');

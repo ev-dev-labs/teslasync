@@ -28,7 +28,7 @@ import {
  */
 export default function DashcamIntelligencePage() {
   const { t } = useTranslation();
-  usePageTitle(t('dashcam.page.title', 'Dashcam & Sentry Intelligence'));
+  usePageTitle(t('dashcam.page.title', 'Dashcam & Sentry intelligence'));
 
   const { vehicleId } = useSelectedVehicle();
   const { persistent, fallbackReason } = useDashcamDb();
@@ -45,7 +45,7 @@ export default function DashcamIntelligencePage() {
 
   return (
     <PageContainer
-      title={t('dashcam.page.title', 'Dashcam & Sentry Intelligence')}
+      title={t('dashcam.page.title', 'Dashcam & Sentry intelligence')}
       subtitle={t(
         'dashcam.page.subtitle',
         'Local-only clip catalog, privacy redaction, and telemetry-synchronized incident reconstruction. Nothing leaves this browser.',

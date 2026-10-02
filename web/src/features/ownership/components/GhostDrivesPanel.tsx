@@ -53,6 +53,7 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
     },
     {
       key: 'score',
+      align: 'right',
       header: t('ownership.ghost.col.score', 'Ghost score'),
       render: (row) => (
         <div className="flex min-w-[7rem] items-center gap-2">
@@ -69,6 +70,7 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
     },
     {
       key: 'trip',
+      align: 'right',
       header: t('ownership.ghost.col.trip', 'Trip'),
       render: (row) => (
         <div>
@@ -81,6 +83,7 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
     },
     {
       key: 'deviation',
+      align: 'right',
       header: t('ownership.ghost.col.deviation', 'Deviation'),
       render: (row) => (
         <div>
@@ -123,7 +126,7 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
       title={t('ownership.ghost.title', 'Ghost-driver alerts')}
       description={t(
         'ownership.ghost.subtitle',
-        'Recent drives that match no named driver and behave unlike the rest. Confirm who was driving — or investigate.',
+        'Recent drives that match no named driver and behave unlike the rest. confirm who was driving — or investigate.',
       )}
       actions={
         ghosts.length > 0 ? (

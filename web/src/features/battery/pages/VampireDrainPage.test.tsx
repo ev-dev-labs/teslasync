@@ -280,7 +280,7 @@ describe('VampireDrainPage', () => {
     renderPage()
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Vampire Drain' }),
+      await screen.findByRole('heading', { level: 1, name: 'Vampire drain' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('Analyze phantom energy loss while your vehicle is parked'),
@@ -300,11 +300,11 @@ describe('VampireDrainPage', () => {
     expect(screen.getByText('Avg %/day')).toBeInTheDocument()
 
     // Every panel is present — nothing stubbed out.
-    expect(screen.getByText('Drain Rate Trend')).toBeInTheDocument()
-    expect(screen.getByText('Daily Drain While Parked')).toBeInTheDocument()
-    expect(screen.getByText('Tips to Reduce Vampire Drain')).toBeInTheDocument()
+    expect(screen.getByText('Drain rate trend')).toBeInTheDocument()
+    expect(screen.getByText('Daily drain while parked')).toBeInTheDocument()
+    expect(screen.getByText('Tips to reduce vampire drain')).toBeInTheDocument()
     expect(screen.getByText(/Disable Sentry Mode/)).toBeInTheDocument()
-    expect(screen.getByText('Drain Sessions')).toBeInTheDocument()
+    expect(screen.getByText('Drain sessions')).toBeInTheDocument()
   })
 
   it('renders the sessions table with per-row values, badges, and SI→°C ambient formatting', async () => {
@@ -382,10 +382,10 @@ describe('VampireDrainPage', () => {
       expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4),
     )
     // The KPI cards / gauge value are withheld — no half-populated dashboard.
-    expect(screen.queryByText('Avg Drain / day')).toBeNull()
+    expect(screen.queryByText('Avg drain / day')).toBeNull()
     expect(screen.queryByText('72.5')).toBeNull()
     // Panel chrome still renders so the layout doesn't collapse.
-    expect(screen.getByText('Drain Rate Trend')).toBeInTheDocument()
+    expect(screen.getByText('Drain rate trend')).toBeInTheDocument()
   })
 
   it('surfaces a retryable error in the KPI band + gauge while events still render, and Retry refetches', async () => {
@@ -412,7 +412,7 @@ describe('VampireDrainPage', () => {
     renderPage()
 
     // The KPI band still renders, but the percentile cards read "—", not "0.00%".
-    expect(await screen.findByText('Observed Hours')).toBeInTheDocument()
+    expect(await screen.findByText('Observed hours')).toBeInTheDocument()
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3)
     // Both the observed subtitle and the table badge fold to zero sessions.
     expect(screen.getAllByText('0 sessions').length).toBeGreaterThanOrEqual(2)

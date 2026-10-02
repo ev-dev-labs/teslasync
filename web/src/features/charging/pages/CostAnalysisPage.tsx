@@ -95,7 +95,7 @@ export default function CostAnalysisPage() {
     <PageContainer
       title={t('costAnalysis.title', 'Cost Analysis')}
       subtitle={t('costAnalysis.subtitle', 'Electricity cost trends, gas savings, and charging economics')}
-      actions={actions}
+      overflowActions={actions}
       query={sessionsQuery}
     >
       {/* 1 — KPI band */}

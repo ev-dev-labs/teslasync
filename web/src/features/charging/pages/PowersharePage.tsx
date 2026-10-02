@@ -119,7 +119,7 @@ export default function PowersharePage() {
     <PageContainer
       title={title}
       subtitle={subtitle}
-      actions={actions}
+      secondaryActions={actions}
       query={[statusQ, typeQ, stopQ, hoursQ, powerQ]}
     >
       {/* 1 — KPI band */}

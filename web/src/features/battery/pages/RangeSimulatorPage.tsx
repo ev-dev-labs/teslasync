@@ -4,7 +4,6 @@ import { Dices, BatteryMedium, Gauge, ShieldCheck } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Slider, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -76,7 +75,6 @@ export default function RangeSimulatorPage() {
       title={t('rangeSim.title', 'Range Simulator')}
       subtitle={t('rangeSim.subtitle', 'Monte Carlo trip odds from your own driving history')}
       query={drivesQuery}
-      actions={<VehicleSelect />}
     >
       {/* 1 — KPI band */}
       <FadeIn>

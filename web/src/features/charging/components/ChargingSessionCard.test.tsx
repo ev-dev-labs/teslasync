@@ -190,11 +190,16 @@ describe('ChargingSessionCard — primary line + badges', () => {
 
   it('shows the "Free" badge only when the charge added energy at no cost', () => {
     renderCard({
-      session: makeSession({ charger_type: null, cost_decimal: null, total_energy_added_wh: 12_000 }),
+      session: makeSession({ charger_type: null, cost_decimal: 0, total_energy_added_wh: 12_000 }),
     });
 
     expect(screen.getByText('Home / AC')).toBeInTheDocument();
     expect(screen.getByText('Free')).toBeInTheDocument();
+  });
+
+  it('does not mark an unknown cost as free', () => {
+    renderCard({ session: makeSession({ cost_decimal: null, total_energy_added_wh: 12_000 }) });
+    expect(screen.queryByText('Free')).not.toBeInTheDocument();
   });
 
   it('hides the energy + free badges when no energy was added', () => {
@@ -257,7 +262,7 @@ describe('ChargingSessionCard — metric chips', () => {
       distanceUnit: 'km',
     });
 
-    expect(screen.getByText('DC Fast')).toBeInTheDocument();
+    expect(screen.getByText('DC fast')).toBeInTheDocument();
     expect(screen.getByText('$12.50')).toBeInTheDocument();
     // cost / (40 kWh) = $0.31/kWh, shown parenthesised.
     expect(container.textContent).toContain('($0.31/kWh)');

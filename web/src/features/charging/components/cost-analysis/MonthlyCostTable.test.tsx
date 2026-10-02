@@ -79,7 +79,7 @@ const MAR: MonthlyBucket = {
 /** Intentionally unsorted so the default month-desc sort has to reorder them. */
 const DATA: MonthlyBucket[] = [FEB, JAN, MAR];
 
-const HEADERS = ['Month', 'Sessions', 'Energy', 'Cost', 'Avg $/kWh', 'Gas Equiv', 'Savings'];
+const HEADERS = ['Month', 'Sessions', 'Energy', 'Cost', 'Avg $/kWh', 'Gas equiv', 'Savings'];
 
 function renderTable(props: Partial<Props> = {}) {
   return render(

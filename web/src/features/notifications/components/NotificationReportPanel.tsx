@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bar, BarChart, CartesianGrid, ChartContainer, ChartLegend, ChartTooltip, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { useNotificationReport } from '@/api/hooks/useNotifications';
+import { useDataState } from '@/hooks/useDataState';
 import type { NotificationReport } from '@/api/types';
 import { fmtInt } from '@/lib/numberFormat';
 import { notificationEventTypeFallback } from '@/lib/notificationEventType';
@@ -14,6 +15,7 @@ type Breakdown = NotificationReport['by_source'];
 export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: { fromInstant: string; toExclusive: string; timezone: string }) {
   const { t } = useTranslation();
   const query = useNotificationReport(fromInstant, toExclusive, timezone);
+  const state = useDataState(query, { provenance: 'historical' });
   const report = query.data;
   const daily = report?.daily;
   const resolution = (daily?.length ?? 0) > 3650 ? 4 : (daily?.length ?? 0) > 730 ? 7 : 10;
@@ -45,6 +47,18 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
     { key: 'channel', title: t('notifications.report.channels', 'Delivery channels'), rows: report?.by_channel ?? [] },
     { key: 'status', title: t('notifications.report.statuses', 'Delivery outcomes'), rows: report?.by_status ?? [] },
   ];
+  const reportColumns = useMemo<Column<Breakdown[number]>[]>(() => [
+    {
+      key: 'label', header: t('notifications.report.category', 'Category'),
+      defaultWidth: 200, minWidth: 100,
+      render: (row) => <span title={row.key} className="min-w-0 break-all text-[var(--text-secondary)]">{t(`notifications.report.values.${row.key}`, notificationEventTypeFallback(row.key))}</span>,
+    },
+    {
+      key: 'count', header: t('notifications.report.count', 'Count'),
+      defaultWidth: 85, minWidth: 65, align: 'right',
+      render: (row) => fmtInt(row.count),
+    },
+  ], [t]);
 
   return (
     <section aria-label={t('notifications.report.title', 'Notification activity')} className="space-y-4">
@@ -68,8 +82,9 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
           </div>
         </>
       )}
-      {query.isError && <GlassPanel className="p-5"><QueryError error={query.error} onRetry={() => { void query.refetch(); }} /></GlassPanel>}
-      {report && !query.isError && (
+      {state.fatalError && <GlassPanel className="p-5"><QueryError error={state.fatalError} onRetry={() => { void query.refetch(); }} /></GlassPanel>}
+      <StaleRefreshWarning state={state} label={t('notifications.report.title', 'Notification activity')} />
+      {report && (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <MetricCard label={t('notifications.report.triggered', 'Triggers recorded')} value={fmtInt(report.triggered)} />
@@ -116,16 +131,20 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
                 {group.rows.length === 0 ? (
                   <EmptyState message={t('notifications.report.noActivity', 'No activity in this period')} actionTo={{ label: t('notifications.report.inbox', 'Open inbox'), to: '/notifications/inbox' }} />
                 ) : (
-                  <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto">
-                    {group.rows.map(row => (
-                      <li key={row.key} className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] py-1 text-sm">
-                        <span className="min-w-0 break-all text-[var(--text-secondary)]">
-                          <span title={row.key}>{t(`notifications.report.values.${row.key}`, notificationEventTypeFallback(row.key))}</span>
-                        </span>
-                        <span className="shrink-0 font-medium text-[var(--text-primary)]">{fmtInt(row.count)}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-3 min-w-0">
+                    <DataTable
+                      name={group.title}
+                      tableId={`notifications:report:${group.key}`}
+                      data={group.rows}
+                      keyExtractor={(row) => row.key}
+                      columns={reportColumns}
+                      density="compact"
+                      resizable
+                      columnReorder
+                      stickyHeader
+                      maxHeight={256}
+                    />
+                  </div>
                 )}
               </GlassPanel>
             ))}

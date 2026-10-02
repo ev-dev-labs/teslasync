@@ -56,7 +56,7 @@ export function RootCauseHypothesisList({
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('rootCauseIntelligence.hypotheses.title', 'Ranked Hypotheses')}
+        {t('rootCauseIntelligence.hypotheses.title', 'Ranked hypotheses')}
         <HelpTooltip
           size="sm"
           i18nKey="help.rootCauseIntelligence.hypotheses"

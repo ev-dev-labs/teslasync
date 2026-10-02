@@ -252,7 +252,7 @@ function renderPage() {
 
 const TREND_IMG = 'Battery health trend and 95% confidence projection chart';
 const kpiRegion = () => screen.getByRole('region', { name: 'Battery health summary' });
-const heroRegion = () => screen.getByRole('region', { name: 'Health Trend & Projection' });
+const heroRegion = () => screen.getByRole('region', { name: 'Health trend & projection' });
 
 /** Value <p> that immediately follows a MetricCard's label. */
 function metricValue(region: HTMLElement, label: string): string {
@@ -275,7 +275,7 @@ describe('BatteryDegradationPage — loading', () => {
     mockHealth.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Battery Degradation', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Battery degradation', level: 1 })).toBeInTheDocument();
     // "Current SOH" labels the KPI tile AND the gauge — both sit behind skeletons.
     expect(screen.queryByText('Current SOH')).toBeNull();
     // The gauge verdict badge is withheld while its skeleton stands in.
@@ -293,10 +293,10 @@ describe('BatteryDegradationPage — populated (km)', () => {
     const kpi = kpiRegion();
 
     expect(metricValue(kpi, 'Current SOH')).toBe('91.00%');
-    expect(metricValue(kpi, 'Estimated Capacity')).toBe('72.5 kWh');
-    expect(metricValue(kpi, 'Degradation Rate')).toBe('2.10%/yr');
+    expect(metricValue(kpi, 'Estimated capacity')).toBe('72.5 kWh');
+    expect(metricValue(kpi, 'Degradation rate')).toBe('2.10%/yr');
     // battery_age_months 30 → 2 years, 6 months.
-    expect(metricValue(kpi, 'Battery Age')).toBe('2y 6m');
+    expect(metricValue(kpi, 'Battery age')).toBe('2y 6m');
   });
 
   it('renders the SOH gauge verdict and the projection chart surface', () => {
@@ -314,7 +314,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
     // years_to_80_pct 5.3 → "~5.30 years", plus the predicted date.
     expect(screen.getByText(/in approximately/)).toBeInTheDocument();
     expect(screen.getByText(/2029-06-01/)).toBeInTheDocument();
-    expect(screen.getByText('Total Cycles').closest('p')?.nextElementSibling?.textContent).toBe('412.00');
+    expect(screen.getByText('Total cycles').closest('p')?.nextElementSibling?.textContent).toBe('412.00');
 
     // 40 fast + 60 slow → 40% fast charges; 5 deep discharges; Medium stress.
     expect(screen.getByText(/40% fast charges/)).toBeInTheDocument();
@@ -333,7 +333,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
     expect(screen.getByText('Charge to 80% for daily use')).toBeInTheDocument();
 
     // Health factors: charge-habits (82), temperature (70), cycle-depth (60).
-    expect(screen.getByText('Charge Habits').closest('div')?.querySelector('span')?.textContent).toBeTruthy();
+    expect(screen.getByText('Charge habits').closest('div')?.querySelector('span')?.textContent).toBeTruthy();
     expect(screen.getByText('82.00/100')).toBeInTheDocument();
     expect(screen.getByText('70.00/100')).toBeInTheDocument();
     expect(screen.getByText('60.00/100')).toBeInTheDocument();
@@ -374,7 +374,7 @@ describe('BatteryDegradationPage — SOH verdict + battery-age branches', () => 
   ])('formats a %s-month pack age as "%s"', (months, label) => {
     mockHealth.mockReturnValue(makeQuery({ data: { ...HEALTH, battery_age_months: months } }));
     renderPage();
-    expect(metricValue(kpiRegion(), 'Battery Age')).toBe(label);
+    expect(metricValue(kpiRegion(), 'Battery age')).toBe(label);
   });
 
   it('guards a non-finite pack age (undefined → "0 months", never "NaN")', () => {
@@ -383,7 +383,7 @@ describe('BatteryDegradationPage — SOH verdict + battery-age branches', () => 
       makeQuery({ data: { ...HEALTH, battery_age_months: undefined as any } }),
     );
     renderPage();
-    expect(metricValue(kpiRegion(), 'Battery Age')).toBe('0 months');
+    expect(metricValue(kpiRegion(), 'Battery age')).toBe('0 months');
   });
 });
 
@@ -478,7 +478,7 @@ describe('BatteryDegradationPage — a11y + interaction', () => {
     renderPage();
 
     expect(screen.getByRole('region', { name: 'Battery health summary' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Health Trend & Projection' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Health trend & projection' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: TREND_IMG })).toBeInTheDocument();
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();

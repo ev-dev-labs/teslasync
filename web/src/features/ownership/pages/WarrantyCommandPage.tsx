@@ -123,7 +123,7 @@ export default function WarrantyCommandPage() {
     evidence_note: '',
   });
 
-  usePageTitle(t('ownership.warranty.navTitle', 'Warranty Command'));
+  usePageTitle(t('ownership.warranty.navTitle', 'Warranty command'));
 
   const overviewQuery = useWarrantyOverview(vehicleId);
   const warrantiesQuery = useWarranties(vehicleId);
@@ -257,6 +257,8 @@ export default function WarrantyCommandPage() {
     {
       key: 'title',
       header: t('ownership.warranty.claim.title', 'Claim'),
+      filterValue: (row) => row.id,
+      filterValueLabel: (_value, row) => `${row.title} · ${row.warrantyLabel}`,
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -271,10 +273,13 @@ export default function WarrantyCommandPage() {
     {
       key: 'status',
       header: t('ownership.warranty.claim.status', 'Status'),
+      filterValue: (row) => row.status,
       render: (row) => <VerdictBadge value={row.status} />,
     },
     {
       key: 'opened',
+      filterValue: (row) => row.opened_at,
+      filterValueLabel: (_value, row) => formatDateTime(row.opened_at),
       header: t('ownership.warranty.claim.opened', 'Opened'),
       render: (row) => (
         <Text as="span" variant="caption">
@@ -286,6 +291,9 @@ export default function WarrantyCommandPage() {
     {
       key: 'amount',
       header: t('ownership.warranty.claim.amount', 'Amount'),
+      align: 'right',
+      filterValue: (row) => row.amount_minor,
+      filterValueLabel: (_value, row) => formatCurrencyMinor(row.amount_minor, currency, units.unitPrefs.locale),
       render: (row) => (
         <span className="tabular-nums">
           {formatCurrencyMinor(row.amount_minor, currency, units.unitPrefs.locale)}
@@ -307,6 +315,8 @@ export default function WarrantyCommandPage() {
     {
       key: 'label',
       header: t('ownership.warranty.row.label', 'Coverage'),
+      filterValue: (row) => row.id,
+      filterValueLabel: (_value, row) => `${row.label} · ${row.provider}`,
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -320,6 +330,8 @@ export default function WarrantyCommandPage() {
     },
     {
       key: 'start',
+      filterValue: (row) => row.start_at,
+      filterValueLabel: (_value, row) => formatDateTime(row.start_at),
       header: t('ownership.warranty.row.start', 'Starts'),
       render: (row) => (
         <div>
@@ -334,6 +346,7 @@ export default function WarrantyCommandPage() {
     },
     {
       key: 'term',
+      align: 'right',
       header: t('ownership.warranty.row.term', 'Term'),
       render: (row) => (
         <div>
@@ -348,12 +361,18 @@ export default function WarrantyCommandPage() {
     },
     {
       key: 'floor',
+      align: 'right',
+      filterValue: (row) => row.capacity_floor_pct,
+      filterValueLabel: (_value, row) => row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct, 0) : '—',
       header: t('ownership.warranty.row.floor', 'Capacity floor'),
       render: (row) =>
         row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct, 0) : '—',
     },
     {
       key: 'deductible',
+      align: 'right',
+      filterValue: (row) => `${row.currency}:${row.deductible_minor}`,
+      filterValueLabel: (_value, row) => formatCurrencyMinor(row.deductible_minor, row.currency, units.unitPrefs.locale),
       header: t('ownership.warranty.row.deductible', 'Deductible'),
       render: (row) => (
         <span className="tabular-nums">
@@ -508,7 +527,7 @@ export default function WarrantyCommandPage() {
 
   return (
     <PageContainer
-      title={t('ownership.warranty.title', 'Warranty Coverage & Claim Readiness')}
+      title={t('ownership.warranty.title', 'Warranty coverage & claim readiness')}
       subtitle={t(
         'ownership.warranty.subtitle',
         'Track which limit actually ends each coverage — calendar or odometer — at your real measured pace, and know before you call whether your evidence would survive a claim review.',
@@ -750,6 +769,7 @@ export default function WarrantyCommandPage() {
 
           <DataTable
             columns={warrantyColumns}
+            enableValueFilters
             mobileColumns={['label', 'start', 'term']}
             data={warranties}
             keyExtractor={(row) => row.id}
@@ -831,6 +851,7 @@ export default function WarrantyCommandPage() {
 
           <DataTable
             columns={claimColumns}
+            enableValueFilters
             mobileColumns={['title', 'status', 'opened']}
             data={allClaims}
             keyExtractor={(row) => row.id}

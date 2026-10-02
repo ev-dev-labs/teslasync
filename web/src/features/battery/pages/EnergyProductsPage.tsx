@@ -407,7 +407,7 @@ export default function EnergyProductsPage() {
       title={t('energy.products.title', 'Energy Products')}
       subtitle={t('energy.products.subtitle', 'Powerwalls, Solar Panels & Wall Connectors discovered from Tesla')}
       query={sitesQuery}
-      actions={
+      primaryAction={
         <Button
           onClick={() => refreshMutation.mutate()}
           loading={refreshMutation.isPending}

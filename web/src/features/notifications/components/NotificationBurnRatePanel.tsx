@@ -56,9 +56,9 @@ export function NotificationBurnRatePanel() {
   );
 
   return (
-    <section id="burn-rate" aria-label={t('notificationBurnRate.title', 'Notification Burn Rate')} className="min-w-0 space-y-5 scroll-mt-24">
+    <section id="burn-rate" aria-label={t('notificationBurnRate.title', 'Notification burn rate')} className="min-w-0 space-y-5 scroll-mt-24">
       <div className="max-w-3xl">
-        <SectionTitle>{t('notificationBurnRate.title', 'Notification Burn Rate')}</SectionTitle>
+        <SectionTitle>{t('notificationBurnRate.title', 'Notification burn rate')}</SectionTitle>
         <Text as="p" color="secondary">
           {t('notificationBurnRate.subtitle', 'Track all recorded notification delivery attempts against a 99% SLO with short and long error-budget windows')}
         </Text>
@@ -79,7 +79,7 @@ export function NotificationBurnRatePanel() {
           ) : (
             <>
               <MetricCard
-                label={t('notificationBurnRate.kpis.delivery', '24h Delivery SLO')}
+                label={t('notificationBurnRate.kpis.delivery', '24h delivery SLO')}
                 value={summary.longWindow.deliveryRate != null
                   ? fmtPercent(summary.longWindow.deliveryRate * 100, 2)
                   : '—'}
@@ -88,7 +88,7 @@ export function NotificationBurnRatePanel() {
                 color={(summary.longWindow.deliveryRate ?? 1) >= summary.objective ? 'green' : 'red'}
               />
               <MetricCard
-                label={t('notificationBurnRate.kpis.shortBurn', '1h Burn Rate')}
+                label={t('notificationBurnRate.kpis.shortBurn', '1h burn rate')}
                 value={summary.shortWindow.burnRate != null
                   ? t('notificationBurnRate.kpis.multiplier', '{{value}}×', {
                       value: fmtNumber(summary.shortWindow.burnRate, 2),
@@ -101,7 +101,7 @@ export function NotificationBurnRatePanel() {
                 color={(summary.shortWindow.burnRate ?? 0) > 1 ? 'amber' : 'cyan'}
               />
               <MetricCard
-                label={t('notificationBurnRate.kpis.longBurn', '24h Burn Rate')}
+                label={t('notificationBurnRate.kpis.longBurn', '24h burn rate')}
                 value={summary.longWindow.burnRate != null
                   ? t('notificationBurnRate.kpis.multiplier', '{{value}}×', {
                       value: fmtNumber(summary.longWindow.burnRate, 2),
@@ -115,7 +115,7 @@ export function NotificationBurnRatePanel() {
                 color={(summary.longWindow.burnRate ?? 0) > 1 ? 'red' : 'blue'}
               />
               <MetricCard
-                label={t('notificationBurnRate.kpis.status', 'Budget Status')}
+                label={t('notificationBurnRate.kpis.status', 'Budget status')}
                 value={statusLabel}
                 subtitle={t('notificationBurnRate.kpis.deferred', '{{count}} deferred by DND', {
                   count: summary.deferredDnd,
@@ -139,7 +139,7 @@ export function NotificationBurnRatePanel() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('notificationBurnRate.timeline.title', 'Delivery Outcomes by Hour')}
+            title={t('notificationBurnRate.timeline.title', 'Delivery outcomes by hour')}
             subtitle={t(
               'notificationBurnRate.timeline.subtitle',
               'Deferred quiet-hours notifications remain visible but never consume delivery error budget',
@@ -203,7 +203,7 @@ export function NotificationBurnRatePanel() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <BellRing className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('notificationBurnRate.severity.title', 'Severity Breakdown')}
+            {t('notificationBurnRate.severity.title', 'Severity breakdown')}
           </PanelTitle>
           {isLoading ? (
             <Skeleton height={96} />
@@ -223,7 +223,7 @@ export function NotificationBurnRatePanel() {
                   className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:p-4"
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <Text variant="body" className="min-w-0 break-words font-medium capitalize">
+                    <Text variant="body" className="min-w-0 break-words font-medium">
                       {severity.severity}
                     </Text>
                     <Badge

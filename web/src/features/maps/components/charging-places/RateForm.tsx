@@ -144,7 +144,7 @@ export function RateForm({ geofenceId, currentRate, firstSessionAt }: RateFormPr
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Plus className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-        {t('chargingPlaces.rateForm.title', 'Add a Rate')}
+        {t('chargingPlaces.rateForm.title', 'Add a rate')}
       </PanelTitle>
 
       {formError && (
@@ -198,7 +198,7 @@ export function RateForm({ geofenceId, currentRate, firstSessionAt }: RateFormPr
           loading={createRate.isPending}
           disabled={rateMicro == null}
         >
-          {t('chargingPlaces.rateForm.submit', 'Save Rate')}
+          {t('chargingPlaces.rateForm.submit', 'Save rate')}
         </Button>
       </div>
     </GlassPanel>

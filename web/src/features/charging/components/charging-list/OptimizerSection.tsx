@@ -41,7 +41,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
         <FadeIn delay={0.24}>
           <GlassPanel className="p-6">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-              <Calendar className="h-4 w-4 text-neon-cyan" aria-hidden="true" />
+              <Calendar className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('charging.optimizer.habits', 'Charging Habits')}
             </h3>
             <div className="space-y-3">
@@ -88,7 +88,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
         <FadeIn delay={0.26}>
           <GlassPanel className="p-6">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-              <DollarSign className="h-4 w-4 text-neon-green" aria-hidden="true" />
+              <DollarSign className="h-4 w-4 text-emerald-300" aria-hidden="true" />
               {t('charging.optimizer.costAnalysis', 'Cost Analysis')}
             </h3>
             <div className="space-y-3">
@@ -136,7 +136,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
       <FadeIn delay={0.28}>
         <GlassPanel className="p-6">
           <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-            <Lightbulb className="h-4 w-4 text-neon-amber" aria-hidden="true" />
+            <Lightbulb className="h-4 w-4 text-amber-300" aria-hidden="true" />
             {t('charging.optimizer.recommendations', 'Optimization Recommendations')}
           </h3>
           {(optimizer.recommendations ?? []).length > 0 ? (
@@ -158,15 +158,15 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-semibold text-[var(--text-primary)]">{rec.title}</span>
-                      <span className={cn('text-2xs px-1.5 py-0.5 rounded-full uppercase tracking-wider font-medium',
+                      <span className={cn('text-2xs px-1.5 py-0.5 rounded-full font-medium',
                         rec.priority === 'high' ? 'bg-red-500/20 text-red-400' :
-                        rec.priority === 'medium' ? 'bg-neon-amber/20 text-neon-amber' :
-                        'bg-neon-green/20 text-neon-green',
+                        rec.priority === 'medium' ? 'bg-neon-amber/20 text-amber-300' :
+                        'bg-neon-green/20 text-emerald-300',
                       )}>
                         {rec.priority}
                       </span>
                       {rec.estimated_savings != null && rec.estimated_savings > 0 && (
-                        <span className="text-2xs px-1.5 py-0.5 rounded-full bg-neon-green/20 text-neon-green font-medium">
+                        <span className="text-2xs px-1.5 py-0.5 rounded-full bg-neon-green/20 text-emerald-300 font-medium">
                           ~${fmtNumber(rec.estimated_savings, 0)}/mo
                         </span>
                       )}

@@ -441,18 +441,22 @@ describe('AlertRulesPage — header actions & a11y', () => {
 
   it('refetches when the icon-only refresh control is activated', () => {
     renderPage();
-    // The page header renders its own icon-only "Refresh" alongside the
-    // PageContainer freshness chip's refresh. Scope to the actions cluster (the
-    // refresh + studio buttons share a parent) so we target the page control.
     const studio = screen.getByRole('button', { name: 'Create rule' });
-    const actions = studio.parentElement as HTMLElement;
+    const actions = studio.closest('[data-role="page-actions"]')
+      ?.querySelector<HTMLElement>('[data-action-group="secondary"]');
+    if (!actions) throw new Error('Alert-rule header secondary actions are missing');
     fireEvent.click(within(actions).getByRole('button', { name: 'Refresh' }));
     expect(H.refetch).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to the studio from the header CTA', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Create rule' }));
+    const createRule = screen.getByRole('button', { name: 'Create rule' });
+    expect(createRule.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
+    const heading = screen.getByRole('heading', { level: 1, name: 'Alert rules' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
+    fireEvent.click(createRule);
     expect(H.navigate).toHaveBeenCalledWith('/notifications/studio');
   });
 

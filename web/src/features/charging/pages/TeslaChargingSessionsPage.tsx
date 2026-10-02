@@ -123,7 +123,7 @@ export default function TeslaChargingSessionsPage() {
   const { settings, locale } = useSettings();
   const { formatCurrency } = useFormatting();
   const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
-  usePageTitle(t('tesla_sessions.title', 'Fleet Charging Sessions'));
+  usePageTitle(t('tesla_sessions.title', 'Fleet charging sessions'));
 
   const { isLoading: vehiclesLoading } = useVehicles();
   const {
@@ -167,7 +167,7 @@ export default function TeslaChargingSessionsPage() {
   const vehicleOptions = useMemo(() => {
     const opts = [{
       value: ALL_VEHICLES_VIN,
-      label: t('tesla_sessions.allVehicles', 'All Vehicles'),
+      label: t('tesla_sessions.allVehicles', 'All vehicles'),
     }];
     for (const v of vehicles) {
       opts.push({ value: v.vin, label: `${v.display_name} (${v.vin.slice(-6)})` });
@@ -407,11 +407,13 @@ export default function TeslaChargingSessionsPage() {
   };
 
   const selectedVehicleLabel = vehicleOptions.find((option) => option.value === selectedVin)?.label
-    ?? t('tesla_sessions.allVehicles', 'All Vehicles');
+    ?? t('tesla_sessions.allVehicles', 'All vehicles');
 
   const columns: Column<TeslaChargingSession>[] = useMemo(() => [
     {
       key: 'date',
+      filterValue: (row) => row.charge_start_datetime ?? null,
+      filterValueLabel: (_, row) => formatDateTime(row.charge_start_datetime),
       header: t('tesla_sessions.col.date', 'Date'),
       render: (row) => (
         <Text variant="body">{formatDateTime(row.charge_start_datetime)}</Text>
@@ -421,6 +423,7 @@ export default function TeslaChargingSessionsPage() {
     },
     {
       key: 'location',
+      filterValue: (row) => row.site_location_name || null,
       header: t('tesla_sessions.col.location', 'Location'),
       render: (row) => (
         <div className="flex items-center gap-1.5">
@@ -434,6 +437,8 @@ export default function TeslaChargingSessionsPage() {
     },
     {
       key: 'vin',
+      filterValue: (row) => row.vin || null,
+      filterValueLabel: (_, row) => row.vin ? `…${row.vin.slice(-6)}` : '—',
       header: t('tesla_sessions.col.vin', 'VIN'),
       render: (row) => (
         <Text size="sm" color="secondary" mono>
@@ -444,6 +449,9 @@ export default function TeslaChargingSessionsPage() {
     },
     {
       key: 'energy',
+      align: 'right',
+      filterValue: (row) => row.total_energy_added_wh ?? null,
+      filterValueLabel: (_, row) => row.total_energy_added_wh != null ? fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh'), 1) : '—',
       header: t('tesla_sessions.col.energy', 'Energy (kWh)'),
       render: (row) => (
         <Text size="sm" weight="medium" className="text-cyan-300">
@@ -455,6 +463,7 @@ export default function TeslaChargingSessionsPage() {
     },
     {
       key: 'peakPower',
+      align: 'right',
       header: t('tesla_sessions.col.peakPower', 'Peak (kW)'),
       render: (row) => (
         <Text size="sm" className="text-amber-300">
@@ -465,6 +474,9 @@ export default function TeslaChargingSessionsPage() {
     },
     {
       key: 'duration',
+      align: 'right',
+      filterValue: (row) => row.charge_duration_s ?? null,
+      filterValueLabel: (_, row) => formatDurationSeconds(row.charge_duration_s),
       header: t('tesla_sessions.col.duration', 'Duration'),
       render: (row) => (
         <Text variant="body">
@@ -474,6 +486,9 @@ export default function TeslaChargingSessionsPage() {
     },
     {
       key: 'cost',
+      align: 'right',
+      filterValue: (row) => row.total_cost == null ? null : `${row.currency_code ?? userCurrency}:${row.total_cost}`,
+      filterValueLabel: (_, row) => row.total_cost != null ? formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true }) : '—',
       header: t('tesla_sessions.col.cost_decimal', 'Cost'),
       render: (row) => (
         <Text size="sm" weight="medium" className="text-emerald-300">
@@ -487,6 +502,7 @@ export default function TeslaChargingSessionsPage() {
     },
     {
       key: 'rate',
+      align: 'right',
       header: t('tesla_sessions.col.rate', 'Rate/kWh'),
       render: (row) => (
         <Text size="sm" color="secondary">
@@ -499,9 +515,10 @@ export default function TeslaChargingSessionsPage() {
     },
     {
       key: 'type',
+      filterValue: (row) => row.charger_type ?? null,
       header: t('tesla_sessions.col.type', 'Type'),
       render: (row) => (
-        <Text size="xs" color="secondary" className="uppercase tracking-wide">
+        <Text size="xs" color="secondary">
           {row.charger_type ?? '—'}
         </Text>
       ),
@@ -605,7 +622,7 @@ export default function TeslaChargingSessionsPage() {
 
   return (
     <PageContainer
-      title={t('tesla_sessions.title', 'Fleet Charging Sessions')}
+      title={t('tesla_sessions.title', 'Fleet charging sessions')}
       subtitle={t('tesla_sessions.subtitle', 'Detailed charging session data from Tesla (business accounts only)')}
       query={sessionsQuery}
       contextActions={contextActions}
@@ -661,14 +678,14 @@ export default function TeslaChargingSessionsPage() {
         metrics={[
           {
             key: 'sessions',
-            label: t('tesla_sessions.stats.sessions', 'Total Sessions'),
+            label: t('tesla_sessions.stats.sessions', 'Total sessions'),
             value: isLoading || error ? '—' : fmtInt(sessions.length),
             detail: t('operations.charging.sessionsDetail', 'Sessions matching the active vehicle and date scope.'),
             tone: 'info',
           },
           {
             key: 'energy',
-            label: t('tesla_sessions.stats.energy', 'Total Energy'),
+            label: t('tesla_sessions.stats.energy', 'Total energy'),
             value: isLoading || error
               ? '—'
               : formatEnergy(operationalTotals.totalWh, { precision: 1 }),
@@ -677,7 +694,7 @@ export default function TeslaChargingSessionsPage() {
           },
           {
             key: 'cost',
-            label: t('tesla_sessions.stats.cost_decimal', 'Total Cost'),
+            label: t('tesla_sessions.stats.cost_decimal', 'Total cost'),
             value: isLoading || error || sessions.length === 0
               ? '—'
               : formatCurrency(operationalTotals.totalCost, 2),
@@ -737,31 +754,31 @@ export default function TeslaChargingSessionsPage() {
           className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
         >
           <StatCard
-            label={t('tesla_sessions.stats.sessions', 'Total Sessions')}
+            label={t('tesla_sessions.stats.sessions', 'Total sessions')}
             value={fmtInt(summary.total_sessions)}
             icon={<Zap className="h-5 w-5 text-cyan-300" aria-hidden="true" />}
             loading={isLoading}
           />
           <StatCard
-            label={t('tesla_sessions.stats.energy', 'Total Energy')}
+            label={t('tesla_sessions.stats.energy', 'Total energy')}
             value={summary.total_wh != null ? formatEnergy(summary.total_wh, { precision: 1 }) : '—'}
             icon={<Gauge className="h-5 w-5 text-amber-300" aria-hidden="true" />}
             loading={isLoading}
           />
           <StatCard
-            label={t('tesla_sessions.stats.cost_decimal', 'Total Cost')}
+            label={t('tesla_sessions.stats.cost_decimal', 'Total cost')}
             value={summary.total_cost != null ? formatCurrency(summary.total_cost, 2) : '—'}
             icon={<DollarSign className="h-5 w-5 text-emerald-300" aria-hidden="true" />}
             loading={isLoading}
           />
           <StatCard
-            label={t('tesla_sessions.stats.avgCost', 'Avg Cost/kWh')}
+            label={t('tesla_sessions.stats.avgCost', 'Avg cost/kWh')}
             value={summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh, 3) : '—'}
             icon={<TrendingUp className="h-5 w-5 text-purple-300" aria-hidden="true" />}
             loading={isLoading}
           />
           <StatCard
-            label={t('tesla_sessions.stats.peakPower', 'Peak Power')}
+            label={t('tesla_sessions.stats.peakPower', 'Peak power')}
             value={summary.peak_power_kw != null ? fmtNumber(summary.peak_power_kw, 0) : '—'}
             unit="kW"
             icon={<Clock className="h-5 w-5 text-orange-300" aria-hidden="true" />}
@@ -785,7 +802,7 @@ export default function TeslaChargingSessionsPage() {
         >
           <div className="xl:col-span-2">
             <ChartContainer
-              title={t('tesla_sessions.monthlyCost', 'Monthly Charging Cost')}
+              title={t('tesla_sessions.monthlyCost', 'Monthly charging cost')}
               ariaLabel={t('tesla_sessions.monthlyCost.aria', 'Monthly Tesla charging cost bar chart')}
               data={monthlyData.map((m) => ({ month: m.month, total: m.total }))}
               dataColumns={[
@@ -825,7 +842,7 @@ export default function TeslaChargingSessionsPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Plug className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tesla_sessions.chargerType', 'Energy by Charger Type')}
+              {t('tesla_sessions.chargerType', 'Energy by charger type')}
             </PanelTitle>
             {isLoading ? (
               <ListSkeleton
@@ -838,7 +855,7 @@ export default function TeslaChargingSessionsPage() {
                 {chargerTypeBreakdown.map((c, i) => (
                   <MetricBar
                     key={c.key}
-                    label={c.key.toUpperCase()}
+                    label={c.key}
                     value={c.energyWh}
                     max={maxChargerEnergy || 1}
                     color={CHART_COLORS[i % CHART_COLORS.length]}
@@ -865,7 +882,7 @@ export default function TeslaChargingSessionsPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tesla_sessions.map', 'Session Locations')}
+              {t('tesla_sessions.map', 'Session locations')}
             </PanelTitle>
             {isLoading ? (
               <ChartSkeleton
@@ -896,7 +913,7 @@ export default function TeslaChargingSessionsPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Building2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tesla_sessions.topLocations', 'Top Locations by Cost')}
+              {t('tesla_sessions.topLocations', 'Top locations by cost')}
             </PanelTitle>
             {isLoading ? (
               <ListSkeleton
@@ -932,12 +949,13 @@ export default function TeslaChargingSessionsPage() {
         <section aria-label={t('tesla_sessions.tableSection', 'Charging sessions table')}>
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3">
-              {t('tesla_sessions.table', 'Charging Sessions')}
+              {t('tesla_sessions.table', 'Charging sessions')}
             </PanelTitle>
             {isLoading ? (
               <TableSkeleton rows={7} cols={5} />
             ) : sessions.length > 0 ? (
               <DataTable
+                enableValueFilters
                 columns={columns}
                 data={sortedSessions}
                 keyExtractor={(row) => row.session_id}

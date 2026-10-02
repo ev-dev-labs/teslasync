@@ -31,7 +31,7 @@ import {
 
 export default function WholeHomeEnergyPage() {
   const { t } = useTranslation();
-  usePageTitle(t('homeEnergy.page.title', 'Whole-Home Energy Orchestrator'));
+  usePageTitle(t('homeEnergy.page.title', 'Whole-home energy orchestrator'));
 
   const {
     isLoading,
@@ -50,7 +50,7 @@ export default function WholeHomeEnergyPage() {
 
   return (
     <PageContainer
-      title={t('homeEnergy.page.title', 'Whole-Home Energy Orchestrator')}
+      title={t('homeEnergy.page.title', 'Whole-home energy orchestrator')}
       subtitle={t(
         'homeEnergy.page.subtitle',
         'A local, deterministic recommendation across vehicles, solar, battery, and tariffs — never an autonomous command',

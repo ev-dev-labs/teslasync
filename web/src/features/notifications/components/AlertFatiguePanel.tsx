@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BellRing, BellOff, EyeOff, Waves } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, SectionTitle, Text, Badge, HelpTooltip } from '@/components/ui';
+import { GlassPanel, PanelTitle, SectionTitle, Table, Text, Badge, HelpTooltip } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -78,9 +78,9 @@ export function AlertFatiguePanel() {
   const isError = logsQuery.isError;
 
   return (
-    <section id="fatigue" aria-label={t('alertFatigue.title', 'Alert Fatigue')} className="min-w-0 space-y-5 scroll-mt-24">
+    <section id="fatigue" aria-label={t('alertFatigue.title', 'Alert fatigue')} className="min-w-0 space-y-5 scroll-mt-24">
       <div className="max-w-3xl">
-        <SectionTitle>{t('alertFatigue.title', 'Alert Fatigue')}</SectionTitle>
+        <SectionTitle>{t('alertFatigue.title', 'Alert fatigue')}</SectionTitle>
         <Text as="p" color="secondary">
           {t('alertFatigue.subtitle', 'Which of your notification rules have stopped being useful — scored on volume, burstiness and how often you actually read them')}
         </Text>
@@ -102,7 +102,7 @@ export function AlertFatiguePanel() {
           ) : (
             <>
               <MetricCard
-                label={t('alertFatigue.fatiguing', 'Fatiguing Rules')}
+                label={t('alertFatigue.fatiguing', 'Fatiguing rules')}
                 value={summary.fatiguingCount}
                 subtitle={t('alertFatigue.ofTotal', 'of {{n}} rules', {
                   n: summary.groups.length,
@@ -116,7 +116,7 @@ export function AlertFatiguePanel() {
                 }}
               />
               <MetricCard
-                label={t('alertFatigue.perDay', 'Notifications per Day')}
+                label={t('alertFatigue.perDay', 'Notifications per day')}
                 value={Math.round(summary.overallPerDay * 10) / 10}
                 subtitle={t('alertFatigue.overDays', 'across {{n}} days', {
                   n: summary.analyzedDays,
@@ -125,7 +125,7 @@ export function AlertFatiguePanel() {
                 color="cyan"
               />
               <MetricCard
-                label={t('alertFatigue.ignored', 'Never Read')}
+                label={t('alertFatigue.ignored', 'Never read')}
                 value={
                   summary.overallIgnoredRate != null
                     ? `${Math.round(summary.overallIgnoredRate * 100)}%`
@@ -136,7 +136,7 @@ export function AlertFatiguePanel() {
                 color={(summary.overallIgnoredRate ?? 0) > 0.6 ? 'amber' : 'purple'}
               />
               <MetricCard
-                label={t('alertFatigue.burst', 'Arrived in Bursts')}
+                label={t('alertFatigue.burst', 'Arrived in bursts')}
                 value={`${Math.round(summary.overallBurstRate * 100)}%`}
                 subtitle={t('alertFatigue.burstHint', 'firings that piled onto another')}
                 icon={<Waves className="h-5 w-5" />}
@@ -161,7 +161,7 @@ export function AlertFatiguePanel() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('alertFatigue.chart', 'Noise Score by Rule')}
+            title={t('alertFatigue.chart', 'Noise score by rule')}
             subtitle={t(
               'alertFatigue.chartHint',
               'Anything past the line is firing more than it is earning',
@@ -228,7 +228,7 @@ export function AlertFatiguePanel() {
       {/* 3 — When they fire */}
       <FadeIn delay={0.2}>
         <ChartContainer
-          title={t('alertFatigue.hours', 'When Notifications Arrive')}
+          title={t('alertFatigue.hours', 'When notifications arrive')}
           subtitle={t(
             'alertFatigue.hoursHint',
             'Firings by hour of day across every rule — the small hours are what really cost goodwill',
@@ -274,7 +274,7 @@ export function AlertFatiguePanel() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <BellOff className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('alertFatigue.detail', 'Rule Breakdown')}
+            {t('alertFatigue.detail', 'Rule breakdown')}
             <HelpTooltip
               size="sm"
               i18nKey="help.alertFatigue.detail"
@@ -307,43 +307,53 @@ export function AlertFatiguePanel() {
                       </Badge>
                     ) : null}
                   </div>
-                  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-2 gap-y-1 sm:grid-cols-4 sm:gap-x-4">
-                    <Text variant="caption">
-                      {t('alertFatigue.firings', 'Firings')}
-                    </Text>
-                    <Text variant="bodySm">
-                      {t('alertFatigue.firingsValue', '{{n}} · {{perDay}}/day', {
-                        n: g.total,
-                        perDay: Math.round(g.perDay * 10) / 10,
-                      })}
-                    </Text>
-                    <Text variant="caption">
-                      {t('alertFatigue.burstRate', 'In bursts')}
-                    </Text>
-                    <Text variant="bodySm">
-                      {t('alertFatigue.burstValue', '{{pct}}% · max {{max}}', {
-                        pct: Math.round(g.burstRate * 100),
-                        max: g.maxBurst,
-                      })}
-                    </Text>
-                    <Text variant="caption">
-                      {t('alertFatigue.ignoredRate', 'Never read')}
-                    </Text>
-                    <Text variant="bodySm">
-                      {g.ignoredRate != null
-                        ? `${Math.round(g.ignoredRate * 100)}%`
-                        : t('alertFatigue.untracked', 'Not tracked')}
-                    </Text>
-                    <Text variant="caption">
-                      {t('alertFatigue.delivery', 'Delivery')}
-                    </Text>
-                    <Text variant="bodySm">
-                      {t('alertFatigue.deliveryValue', '{{ok}} sent · {{bad}} failed', {
-                        ok: g.delivered,
-                        bad: g.failed,
-                      })}
-                    </Text>
-                  </div>
+                  <Table aria-label={g.title}>
+                    <tbody>
+                      <tr>
+                        <th scope="row"><Text variant="caption">{t('alertFatigue.firings', 'Firings')}</Text></th>
+                        <td className="text-right tabular-nums">
+                          <Text variant="bodySm">
+                            {t('alertFatigue.firingsValue', '{{n}} · {{perDay}}/day', {
+                              n: g.total,
+                              perDay: Math.round(g.perDay * 10) / 10,
+                            })}
+                          </Text>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th scope="row"><Text variant="caption">{t('alertFatigue.burstRate', 'In bursts')}</Text></th>
+                        <td className="text-right tabular-nums">
+                          <Text variant="bodySm">
+                            {t('alertFatigue.burstValue', '{{pct}}% · max {{max}}', {
+                              pct: Math.round(g.burstRate * 100),
+                              max: g.maxBurst,
+                            })}
+                          </Text>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th scope="row"><Text variant="caption">{t('alertFatigue.ignoredRate', 'Never read')}</Text></th>
+                        <td className="text-right tabular-nums">
+                          <Text variant="bodySm">
+                            {g.ignoredRate != null
+                              ? `${Math.round(g.ignoredRate * 100)}%`
+                              : t('alertFatigue.untracked', 'Not tracked')}
+                          </Text>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th scope="row"><Text variant="caption">{t('alertFatigue.delivery', 'Delivery')}</Text></th>
+                        <td className="text-right tabular-nums">
+                          <Text variant="bodySm">
+                            {t('alertFatigue.deliveryValue', '{{ok}} sent · {{bad}} failed', {
+                              ok: g.delivered,
+                              bad: g.failed,
+                            })}
+                          </Text>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </Table>
                 </li>
               ))}
             </ul>

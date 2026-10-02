@@ -209,7 +209,7 @@ describe('AlertStudioPage navigation protection', () => {
       renderPage('/notifications/rules', rule);
       expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Battery warning');
       expect(screen.getByLabelText('Rule delivery channels')).toHaveValue('none');
-      fireEvent.click(screen.getByRole('button', { name: 'Update Rule' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Update rule' }));
       await waitFor(() => expect(onEditorSaved).toHaveBeenCalledTimes(1));
       expect(recordedSavePayloads[0]).toMatchObject({ id: 42, kind: 'signal', channel_ids: [] });
     });
@@ -225,7 +225,7 @@ describe('AlertStudioPage navigation protection', () => {
       renderPage('/notifications/rules', rule);
       expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Charging cost');
       expect(screen.getByLabelText('Rule delivery channels')).toHaveValue('inherit');
-      expect(screen.getByRole('button', { name: 'Update Rule' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Update rule' })).toBeInTheDocument();
     });
 
     it('edits a system-service outage rule without converting it to a signal rule', async () => {
@@ -239,7 +239,7 @@ describe('AlertStudioPage navigation protection', () => {
       expect(screen.getByLabelText('Service')).toHaveValue('mqtt');
       expect(screen.queryByLabelText('Vehicles')).not.toBeInTheDocument();
       fireEvent.change(screen.getByLabelText('When'), { target: { value: 'recovery' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Update Rule' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Update rule' }));
       await waitFor(() => expect(onEditorSaved).toHaveBeenCalledTimes(1));
       expect(recordedSavePayloads[0]).toMatchObject({
         id: 46, kind: 'system_component', component_name: 'mqtt',
@@ -257,7 +257,7 @@ describe('AlertStudioPage navigation protection', () => {
       renderPage('/notifications/rules', rule);
       expect(screen.getByLabelText('Place')).toHaveValue('7');
       fireEvent.change(screen.getByLabelText('When'), { target: { value: 'exit' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Update Rule' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Update rule' }));
       await waitFor(() => expect(onEditorSaved).toHaveBeenCalledTimes(1));
       expect(recordedSavePayloads[0]).toMatchObject({
         id: 47, kind: 'place', place_id: 7, transition: 'exit',
@@ -274,7 +274,7 @@ describe('AlertStudioPage navigation protection', () => {
       } as AlertRule;
       renderPage('/notifications/rules', rule);
       expect(screen.getByLabelText('Rule delivery channels')).toHaveValue('inherit');
-      expect(screen.getByRole('button', { name: 'Update Rule' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Update rule' })).toBeInTheDocument();
     });
 
     it('fails closed rather than overwriting an unsupported future kind as a signal', () => {
@@ -286,7 +286,7 @@ describe('AlertStudioPage navigation protection', () => {
       } as unknown as AlertRule;
       renderPage('/notifications/rules', rule);
       expect(screen.getByText(/This rule type cannot be edited/)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Update Rule' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Update rule' })).toBeDisabled();
       expect(recordedSavePayloads).toHaveLength(0);
     });
   });
@@ -313,9 +313,9 @@ describe('AlertStudioPage navigation protection', () => {
     fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Broker unavailable' } });
     fireEvent.click(screen.getByRole('tab', { name: 'System service' }));
     expect(screen.queryByLabelText('Vehicles')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create Rule' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create rule' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Service'), { target: { value: 'mqtt' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create Rule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create rule' }));
     await waitFor(() => expect(recordedSavePayloads).toHaveLength(1));
     expect(recordedSavePayloads[0]).toMatchObject({
       kind: 'system_component', component_name: 'mqtt', transition: 'outage',
@@ -324,9 +324,9 @@ describe('AlertStudioPage navigation protection', () => {
 
     fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: 'Arrived home' } });
     fireEvent.click(screen.getByRole('tab', { name: 'Place event' }));
-    expect(screen.getByRole('button', { name: 'Create Rule' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create rule' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Place'), { target: { value: '7' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create Rule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create rule' }));
     await waitFor(() => expect(recordedSavePayloads).toHaveLength(2));
     expect(recordedSavePayloads[1]).toMatchObject({
       kind: 'place', place_id: 7, transition: 'enter',
@@ -400,7 +400,7 @@ describe('AlertStudioPage navigation protection', () => {
     renderPage('/notifications/studio?rule=42');
     await waitFor(() => expect(screen.getByTestId('current-location'))
       .toHaveTextContent('/notifications/rules?rule=42'));
-    expect(screen.queryByRole('button', { name: 'Update Rule' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Update rule' })).not.toBeInTheDocument();
   });
 
   it('does not pass untrusted rule IDs through the redirect', async () => {
@@ -436,7 +436,7 @@ describe('AlertStudioPage — canonical signal units', () => {
       target: { value: 'BatteryLevel' },
     });
 
-    const input = screen.getByLabelText(/^Numeric Value/);
+    const input = screen.getByLabelText(/^Numeric value/);
     expect(input).toHaveAttribute('aria-describedby');
     expect(screen.getByText('Canonical input: percent from 0 to 100.')).toBeInTheDocument();
   });
@@ -473,7 +473,7 @@ describe('AlertStudioPage — multi-vehicle picker integration (Phase-49 / Slice
     fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } });
     fireEvent.change(document.getElementById('alert-trigger-mode') as HTMLSelectElement, { target: { value: 'once' } });
     fireEvent.change(screen.getByLabelText('Rule delivery channels'), { target: { value: 'none' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create Rule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create rule' }));
     await waitFor(() => expect(recordedSavePayloads[0]?.channel_ids).toEqual([]));
   });
 

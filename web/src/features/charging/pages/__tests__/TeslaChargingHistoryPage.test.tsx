@@ -332,10 +332,10 @@ describe('TeslaChargingHistoryPage — happy path', () => {
   it('renders the page shell, every section, and all panel headings', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Tesla Charging History' }),
+      screen.getByRole('heading', { level: 1, name: 'Tesla charging history' }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Supercharger & DC fast charging billing records from Tesla'),
@@ -345,19 +345,19 @@ describe('TeslaChargingHistoryPage — happy path', () => {
     expect(
       screen.getByRole('region', { name: 'Charging summary metrics' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Monthly Spending')).toBeInTheDocument();
-    expect(screen.getByText('Top Locations')).toBeInTheDocument();
-    expect(screen.getByText('Charging Sessions')).toBeInTheDocument();
+    expect(screen.getByText('Monthly spending')).toBeInTheDocument();
+    expect(screen.getByText('Top locations')).toBeInTheDocument();
+    expect(screen.getByText('Charging sessions')).toBeInTheDocument();
   });
 
   it('fills the wide-screen space below spending with sessions alongside Price Radar', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Charging Sessions');
+    await screen.findByText('Charging sessions');
 
-    const spending = screen.getByText('Monthly Spending').closest('[class*="2xl:col-span-2"]');
-    const sessions = screen.getByText('Charging Sessions').closest('[class*="2xl:col-span-2"]');
-    const locations = screen.getByText('Top Locations').closest('[class*="2xl:col-start-3"]');
+    const spending = screen.getByText('Monthly spending').closest('[class*="2xl:col-span-2"]');
+    const sessions = screen.getByText('Charging sessions').closest('[class*="2xl:col-span-2"]');
+    const locations = screen.getByText('Top locations').closest('[class*="2xl:col-start-3"]');
     expect(spending).toHaveClass('2xl:col-span-2');
     expect(sessions).toHaveClass('2xl:row-start-2');
     expect(locations).toHaveClass('2xl:row-start-1');
@@ -368,21 +368,21 @@ describe('TeslaChargingHistoryPage — happy path', () => {
   it('derives the KPI band from the server summary + entry list', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
-    expect(kpiValue('Total Sessions')).toBe('3');
-    expect(kpiValue('Total Energy')).toMatch(/^115(?:\.0+)?\s*kWh$/);
-    expect(kpiValue('Total Spend')).toBe('$30.00');
-    expect(kpiValue('Avg Cost/kWh')).toBe('$0.260');
+    expect(kpiValue('Total sessions')).toBe('3');
+    expect(kpiValue('Total energy')).toMatch(/^115(?:\.0+)?\s*kWh$/);
+    expect(kpiValue('Total spend')).toBe('$30.00');
+    expect(kpiValue('Avg cost/kWh')).toBe('$0.260');
     // Total Duration + Sites Visited are derived client-side from the entries.
-    expect(kpiValue('Total Duration')).toBe('1h 30m');
-    expect(kpiValue('Sites Visited')).toBe('2');
+    expect(kpiValue('Total duration')).toBe('1h 30m');
+    expect(kpiValue('Sites visited')).toBe('2');
   });
 
   it('renders the top-locations panel ranked by spend with formatted currency + counts', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
     expect(screen.getByText('Supercharger - Fremont')).toBeInTheDocument();
     expect(screen.getByText('Supercharger - Gilroy')).toBeInTheDocument();
@@ -394,7 +394,7 @@ describe('TeslaChargingHistoryPage — happy path', () => {
   it('shows the monthly-spending chart (not its empty state) when data exists', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
     expect(
       screen.getByRole('img', { name: 'Monthly Tesla charging spending bar chart' }),
@@ -415,10 +415,10 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
       expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
     );
     // Panel chrome stays mounted — only the bodies are skeletons.
-    expect(screen.getByText('Monthly Spending')).toBeInTheDocument();
-    expect(screen.getByText('Charging Sessions')).toBeInTheDocument();
+    expect(screen.getByText('Monthly spending')).toBeInTheDocument();
+    expect(screen.getByText('Charging sessions')).toBeInTheDocument();
     // KPI values are replaced by skeletons, so no metric label leaks.
-    expect(screen.queryByText('Total Sessions')).toBeNull();
+    expect(screen.queryByText('Total sessions')).toBeNull();
   });
 
   it('renders per-section QueryError with a Retry that refetches the feed', async () => {
@@ -443,7 +443,7 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
       },
     });
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
     expect(
       screen.getByText('No spending data yet. Click "Refresh from Tesla" to sync.'),
@@ -455,8 +455,8 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
       ),
     ).toBeInTheDocument();
     // KPIs still render guarded zeros / em-dashes, never NaN.
-    expect(kpiValue('Total Sessions')).toBe('0');
-    expect(kpiValue('Total Energy')).toBe('—');
+    expect(kpiValue('Total sessions')).toBe('0');
+    expect(kpiValue('Total energy')).toBe('—');
   });
 });
 
@@ -465,7 +465,7 @@ describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
   it('requests the globally selected VIN with no /api/v1 prefix or camelCase params', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
     const calls = historyCalls();
     expect(calls.length).toBeGreaterThan(0);
@@ -479,7 +479,7 @@ describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
   it('re-scopes the feed when a different vehicle is selected', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
     expect(historyCalls()).toContain(
       '/tesla/charging/history?vin=5YJ3E1EA1KF000001',
@@ -497,7 +497,7 @@ describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
   it('POSTs to the refresh endpoint when "Refresh from Tesla" is pressed', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
     expect(refreshCalls().length).toBe(0);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh from Tesla' }));
@@ -508,7 +508,7 @@ describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
   it('filters the sessions table to an empty state when the search matches nothing', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
     const search = screen.getByPlaceholderText('Search by location…');
     fireEvent.change(search, { target: { value: 'no-such-location-zzz' } });
@@ -524,10 +524,13 @@ describe('TeslaChargingHistoryPage — accessibility', () => {
   it('labels the vehicle selector and the spending chart region for assistive tech', async () => {
     installRequest();
     renderPage();
-    await screen.findByText('Total Sessions');
+    await screen.findByText('Total sessions');
 
     const select = screen.getByRole('combobox', { name: 'Select vehicle' });
     expect(select).toHaveAttribute('aria-label', 'Select vehicle');
+    expect(select.closest('[data-action-group="context"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh from Tesla' })
+      .closest('[data-action-group="primary"]')).not.toBeNull();
 
     const chart = screen.getByRole('img', { name: 'Monthly Tesla charging spending bar chart' });
     expect(chart).toBeInTheDocument();

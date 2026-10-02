@@ -306,7 +306,7 @@ describe('CostAnalysisPage', () => {
     expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
     expect(screen.getAllByText('Cost by Charger Type').length).toBeGreaterThan(0)
     expect(screen.getByText('Gas vs Electric Savings Calculator')).toBeInTheDocument()
-    expect(screen.getByText('Monthly Cost Breakdown')).toBeInTheDocument()
+    expect(screen.getByText('Monthly cost breakdown')).toBeInTheDocument()
     expect(screen.getByText('Electricity Rate Analysis (Time-of-Use)')).toBeInTheDocument()
     expect(screen.getAllByText('Cost Forecast').length).toBeGreaterThan(0)
     expect(screen.getByText('Lifetime Summary')).toBeInTheDocument()

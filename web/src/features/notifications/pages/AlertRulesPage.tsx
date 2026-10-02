@@ -335,6 +335,8 @@ export default function AlertRulesPage() {
       {
         key: 'name',
         header: t('alertRules.col.name', 'Name'),
+        filterValue: (r) => r.id,
+        filterValueLabel: (_value, r) => r.name,
         sortable: true,
         render: (r) => (
           <EditableText
@@ -370,6 +372,8 @@ export default function AlertRulesPage() {
       {
         key: 'kind',
         header: t('alertRules.col.type', 'Type'),
+        filterValue: (r) => r.kind ?? null,
+        filterValueLabel: (_value, r) => r.kind ? kindLabels[r.kind] : '—',
         render: (r) => (
           <Badge variant="neutral" size="sm">
             {kindLabels[r.kind ?? 'signal']}
@@ -379,6 +383,11 @@ export default function AlertRulesPage() {
       {
         key: 'signal_name',
         header: t('alertRules.col.signal', 'Subject'),
+        filterValue: (r) => r.kind === 'computed_metric' ? r.metric_id ? `metric:${r.metric_id}` : null
+          : r.kind === 'system_component' ? r.component_name ? `system:${r.component_name}:${r.transition ?? ''}` : null
+          : r.kind === 'place' ? r.place_id != null ? `place:${r.place_id}:${r.transition ?? ''}` : null
+          : r.signal_name ? `signal:${r.signal_name}` : null,
+        filterValueLabel: (_value, r) => subjectOf(r),
         sortable: true,
         render: (r) => (
           <Text as="span" color="secondary">
@@ -389,12 +398,19 @@ export default function AlertRulesPage() {
       {
         key: 'severity',
         header: t('alertRules.col.severity', 'Severity'),
+        filterValue: (r) => r.severity ?? null,
+        filterValueLabel: (_value, r) => r.severity ? t(`severity.${r.severity}`, r.severity) : '—',
         sortable: true,
         render: (r) => <SeverityBadge severity={r.severity} size="sm" />,
       },
       {
         key: 'scope',
         header: t('alertRules.col.scope', 'Scope'),
+        filterValue: (r) => r.all_vehicles ? 'all_vehicles'
+          : r.vehicle_ids?.length ? [...r.vehicle_ids].sort((a, b) => a - b).join(',') : null,
+        filterValueLabel: (_value, r) => r.all_vehicles
+          ? t('alertRules.scope.all', 'All vehicles')
+          : r.vehicle_ids?.length ? t('alertRules.scope.count', '{{count}} vehicles', { count: r.vehicle_ids.length }) : '—',
         render: (r) => {
           const count = r.vehicle_ids?.length ?? 0;
           const label = r.all_vehicles
@@ -412,6 +428,11 @@ export default function AlertRulesPage() {
       {
         key: 'status',
         header: t('alertRules.col.status', 'Status'),
+        filterValue: (r) => isSnoozed(r, Date.now()) ? 'snoozed' : r.enabled == null ? null : r.enabled ? 'enabled' : 'disabled',
+        filterValueLabel: (_value, r) => isSnoozed(r, Date.now())
+          ? t('alertRules.status.snoozed', 'Snoozed')
+          : r.enabled == null ? '—' : r.enabled ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
+        groupStart: true,
         sortable: true,
         render: (r) => (
           <span className="inline-flex items-center gap-1.5">
@@ -437,24 +458,24 @@ export default function AlertRulesPage() {
   );
 
   /* ─── Header actions ─── */
-  const actions = (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => refetch()}
-        aria-label={t('common.refresh', 'Refresh')}
-        icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
-      />
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => navigate('/notifications/studio')}
-        icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
-      >
-        {t('alertRules.openStudio', 'Create rule')}
-      </Button>
-    </div>
+  const secondaryActions = (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => refetch()}
+      aria-label={t('common.refresh', 'Refresh')}
+      icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
+    />
+  );
+  const primaryAction = (
+    <Button
+      variant="primary"
+      size="sm"
+      onClick={() => navigate('/notifications/studio')}
+      icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
+    >
+      {t('alertRules.openStudio', 'Create rule')}
+    </Button>
   );
 
   if (editIdParam !== null) {
@@ -465,7 +486,7 @@ export default function AlertRulesPage() {
         title={editingRule
           ? t('alertRules.editNamed', 'Edit {{name}}', { name: editingRule.name })
           : t('alertRules.editTitle', 'Edit notification rule')}
-        actions={
+        secondaryActions={
           <Button variant="secondary" onClick={() => setSearchParams({}, { replace: true })}>
             {t('alertRules.backToRules', 'Back to rules')}
           </Button>
@@ -496,9 +517,10 @@ export default function AlertRulesPage() {
       title={t('alertRules.title', 'Alert rules')}
       subtitle={t(
         'alertRules.subtitle',
-        'Manage and edit notification rules. Create new rules in Studio.',
+        'Manage and edit notification rules. Create new rules in studio.',
       )}
-      actions={actions}
+      secondaryActions={secondaryActions}
+      primaryAction={primaryAction}
       query={rulesQuery}
     >
       <EditConflictBanner
@@ -736,7 +758,7 @@ export default function AlertRulesPage() {
               title={t('alertRules.empty.title', 'No alert rules yet')}
               message={t(
                 'alertRules.empty.body',
-                'Create your first notification rule in Studio.',
+                'Create your first notification rule in studio.',
               )}
               actionTo={{
                 label: t('alertRules.empty.cta', 'Create rule'),
@@ -748,6 +770,7 @@ export default function AlertRulesPage() {
               tableId="notifications:alert-rules"
               columns={columns}
               data={sortedRules}
+              enableValueFilters
               keyExtractor={(r) => r.id}
               selectable="multi"
               selectedKeys={selectedKeys}

@@ -31,18 +31,21 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
       },
       {
         key: 'sessions',
+        align: 'right',
         header: t('costAnalysis.table.sessions', 'Sessions'),
         sortable: true,
         render: (row) => fmtInt(row.sessions),
       },
       {
         key: 'energy',
+        align: 'right',
         header: t('costAnalysis.table.energy', 'Energy'),
         sortable: true,
         render: (row) => fmtWithUnit(row.energy, 'kWh', 1),
       },
       {
         key: 'cost',
+        align: 'right',
         header: t('costAnalysis.table.cost', 'Cost'),
         sortable: true,
         render: (row) => (
@@ -51,13 +54,15 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
       },
       {
         key: 'avgCostPerKwh',
+        align: 'right',
         header: t('costAnalysis.table.avgRate', 'Avg $/kWh'),
         sortable: true,
         render: (row) => <Currency value={row.avgCostPerKwh} precision={3} />,
       },
       {
         key: 'gasEquiv',
-        header: t('costAnalysis.table.gasEquiv', 'Gas Equiv'),
+        align: 'right',
+        header: t('costAnalysis.table.gasEquiv', 'Gas equiv'),
         sortable: true,
         render: (row) => (
           <Currency value={row.gasEquiv} className="text-rose-300" />
@@ -65,6 +70,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
       },
       {
         key: 'savings',
+        align: 'right',
         header: t('costAnalysis.table.savings', 'Savings'),
         sortable: true,
         render: (row) => (
@@ -105,7 +111,7 @@ export function MonthlyCostTable({ data, isLoading, error, onRetry }: MonthlyCos
 
   return (
     <CostSection
-      title={t('costAnalysis.table.title', 'Monthly Cost Breakdown')}
+      title={t('costAnalysis.table.title', 'Monthly cost breakdown')}
       icon={<BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
       isLoading={isLoading}
       error={error}

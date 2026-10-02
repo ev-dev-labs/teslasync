@@ -306,7 +306,7 @@ function SectionState({
 
 export default function EnergyFlowPage() {
   const { t } = useTranslation();
-  usePageTitle(t('energyFlow.title', 'Energy Flow'));
+  usePageTitle(t('energyFlow.title', 'Energy flow'));
 
   const { vehicleId } = useSelectedVehicle();
   const { formatDistance, formatEnergy, unitPrefs } = useUnits();
@@ -410,7 +410,7 @@ export default function EnergyFlowPage() {
     rating === 'excellent' ? t('energyFlow.efficiency.excellent', 'Excellent')
       : rating === 'good' ? t('energyFlow.efficiency.good', 'Good')
         : rating === 'high' ? t('energyFlow.efficiency.high', 'High')
-          : t('energyFlow.efficiency.noData', 'No Data');
+          : t('energyFlow.efficiency.noData', 'No data');
 
   /* ─── Table ─── */
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle('date', 'desc');
@@ -429,12 +429,17 @@ export default function EnergyFlowPage() {
     () => [
       {
         key: 'date',
+        filterValue: (row) => row.date ?? null,
+        filterValueLabel: (_, row) => formatDateShort(row.date),
         header: t('energyFlow.table.date', 'Date'),
         sortable: true,
         render: (row) => <Text variant="bodySm">{formatDateShort(row.date)}</Text>,
       },
       {
         key: 'energy_wh',
+        align: 'right',
+        filterValue: (row) => row.energy_wh ?? null,
+        filterValueLabel: (value, row) => value == null ? '—' : formatEnergy(row.energy_wh ?? 0),
         header: t('energyFlow.table.energy', 'Energy'),
         sortable: true,
         render: (row) => (
@@ -445,6 +450,9 @@ export default function EnergyFlowPage() {
       },
       {
         key: 'distance_m',
+        align: 'right',
+        filterValue: (row) => row.distance_m ?? null,
+        filterValueLabel: (value, row) => value == null ? '—' : formatDistance(row.distance_m ?? 0),
         header: `${t('energyFlow.table.distance', 'Distance')} (${distanceUnit})`,
         sortable: true,
         render: (row) => (
@@ -453,6 +461,9 @@ export default function EnergyFlowPage() {
       },
       {
         key: 'efficiency_wh_per_m',
+        align: 'right',
+        filterValue: (row) => row.efficiency_wh_per_m ?? null,
+        filterValueLabel: (value, row) => value == null ? '—' : fmtNumber(scaleEfficiency(row.efficiency_wh_per_m, distanceUnit), 0),
         header: efficiencyUnit,
         sortable: true,
         render: (row) => (
@@ -474,7 +485,7 @@ export default function EnergyFlowPage() {
 
   return (
     <PageContainer
-      title={t('energyFlow.title', 'Energy Flow')}
+      title={t('energyFlow.title', 'Energy flow')}
       subtitle={t('energyFlow.subtitle', 'Power distribution and energy analysis')}
       query={[statsQuery, flowQuery]}
       dataSources={dataSources}
@@ -486,13 +497,13 @@ export default function EnergyFlowPage() {
           className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
         >
           <MetricCard
-            label={t('energyFlow.kpi.totalEnergy', 'Total Energy')}
+            label={t('energyFlow.kpi.totalEnergy', 'Total energy')}
             value={stats ? formatEnergy(stats.total_energy_used_wh ?? 0) : DASH}
             icon={<Zap className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
-            label={t('energyFlow.kpi.totalCharged', 'Total Charged')}
+            label={t('energyFlow.kpi.totalCharged', 'Total charged')}
             value={stats ? formatEnergy(stats.total_energy_charged_wh ?? 0) : DASH}
             icon={<Plug className="h-4 w-4" />}
             color="green"
@@ -512,7 +523,7 @@ export default function EnergyFlowPage() {
             subtitle={efficiencyUnit}
           />
           <MetricCard
-            label={t('energyFlow.kpi.co2Saved', 'CO₂ Saved')}
+            label={t('energyFlow.kpi.co2Saved', 'CO₂ saved')}
             value={stats ? fmtNumber(stats.co2_saved_kg ?? 0, 1) : DASH}
             icon={<Leaf className="h-4 w-4" />}
             color="green"
@@ -536,7 +547,7 @@ export default function EnergyFlowPage() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <PanelTitle className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('energyFlow.diagram.title', 'Energy Flow Diagram')}
+                {t('energyFlow.diagram.title', 'Energy flow diagram')}
               </PanelTitle>
               {chargeState ? (
                 <Badge variant={chargeState === 'Charging' ? 'success' : 'neutral'} size="sm">
@@ -610,7 +621,7 @@ export default function EnergyFlowPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('energyFlow.livePower.title', 'Live Power')}
+              {t('energyFlow.livePower.title', 'Live power')}
             </PanelTitle>
 
             <SectionState
@@ -626,13 +637,13 @@ export default function EnergyFlowPage() {
               <div className="space-y-2">
                 <LivePowerRow
                   icon={<Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-                  label={t('energyFlow.livePower.dc', 'DC Power')}
+                  label={t('energyFlow.livePower.dc', 'DC power')}
                   value={`${fmtNumber(flow?.dc_charging_power ?? 0, 1)} ${t('energyFlow.units.kw', 'kW')}`}
                   valueClass="text-cyan-300"
                 />
                 <LivePowerRow
                   icon={<Activity className="h-4 w-4 text-indigo-300" aria-hidden="true" />}
-                  label={t('energyFlow.livePower.ac', 'AC Power')}
+                  label={t('energyFlow.livePower.ac', 'AC power')}
                   value={`${fmtNumber(flow?.ac_charging_power ?? 0, 1)} ${t('energyFlow.units.kw', 'kW')}`}
                   valueClass="text-indigo-300"
                 />
@@ -660,7 +671,7 @@ export default function EnergyFlowPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('energyFlow.usage.title', 'Daily Energy Usage')}
+              {t('energyFlow.usage.title', 'Daily energy usage')}
             </PanelTitle>
             <SectionState
               noVehicle={noVehicle}
@@ -672,7 +683,7 @@ export default function EnergyFlowPage() {
               onRetry={() => refetchStats()}
             >
               <EmbeddedChart
-                title={t('energyFlow.usage.title', 'Daily Energy Usage')}
+                title={t('energyFlow.usage.title', 'Daily energy usage')}
                 ariaLabel={t('energyFlow.usage.aria', 'Daily energy usage over time')}
                 data={dailyEnergyTableData}
                 dataColumns={[
@@ -713,7 +724,7 @@ export default function EnergyFlowPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('energyFlow.metrics.title', 'Efficiency Metrics')}
+              {t('energyFlow.metrics.title', 'Efficiency metrics')}
             </PanelTitle>
             <SectionState
               noVehicle={noVehicle}
@@ -733,13 +744,13 @@ export default function EnergyFlowPage() {
                   badge={<Badge variant={effVariant} size="sm">{effLabel}</Badge>}
                 />
                 <EfficiencyStat
-                  label={t('energyFlow.kpi.co2Saved', 'CO₂ Saved')}
+                  label={t('energyFlow.kpi.co2Saved', 'CO₂ saved')}
                   value={fmtNumber(stats?.co2_saved_kg ?? 0, 1)}
                   valueClass="text-emerald-300"
                   badge={<Badge variant="success" size="sm">{t('energyFlow.units.kgCo2', 'kg CO₂')}</Badge>}
                 />
                 <EfficiencyStat
-                  label={t('energyFlow.metrics.avgPerDay', 'Avg Energy/Day')}
+                  label={t('energyFlow.metrics.avgPerDay', 'Avg energy/day')}
                   value={formatEnergy(avgEnergyPerDay)}
                   valueClass="text-amber-300"
                   badge={<Badge variant="info" size="sm">{t('energyFlow.metrics.perDay', 'per day')}</Badge>}
@@ -756,7 +767,7 @@ export default function EnergyFlowPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('energyFlow.distance.title', 'Daily Distance')}
+              {t('energyFlow.distance.title', 'Daily distance')}
             </PanelTitle>
             <SectionState
               noVehicle={noVehicle}
@@ -768,7 +779,7 @@ export default function EnergyFlowPage() {
               onRetry={() => refetchStats()}
             >
               <EmbeddedChart
-                title={t('energyFlow.distance.title', 'Daily Distance')}
+                title={t('energyFlow.distance.title', 'Daily distance')}
                 ariaLabel={t('energyFlow.distance.aria', 'Daily driving distance over time')}
                 data={dailyDistanceTableData}
                 dataColumns={[
@@ -804,7 +815,7 @@ export default function EnergyFlowPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-amber-300" aria-hidden="true" />
-              {t('energyFlow.dailyEfficiency.title', 'Daily Efficiency')}
+              {t('energyFlow.dailyEfficiency.title', 'Daily efficiency')}
             </PanelTitle>
             <SectionState
               noVehicle={noVehicle}
@@ -816,7 +827,7 @@ export default function EnergyFlowPage() {
               onRetry={() => refetchStats()}
             >
               <EmbeddedChart
-                title={t('energyFlow.dailyEfficiency.title', 'Daily Efficiency')}
+                title={t('energyFlow.dailyEfficiency.title', 'Daily efficiency')}
                 ariaLabel={t('energyFlow.dailyEfficiency.aria', 'Daily driving efficiency over time')}
                 data={dailyEfficiencyTableData}
                 dataColumns={[
@@ -856,7 +867,7 @@ export default function EnergyFlowPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-purple-300" aria-hidden="true" />
-            {t('energyFlow.history.title', 'Daily Energy History')}
+            {t('energyFlow.history.title', 'Daily energy history')}
           </PanelTitle>
           <SectionState
             noVehicle={noVehicle}
@@ -869,6 +880,7 @@ export default function EnergyFlowPage() {
             skeletonHeight={280}
           >
             <DataTable
+              enableValueFilters
               tableId="battery:energy-flow-history"
               columns={historyColumns}
               mobileColumns={['date', 'energy_wh', 'efficiency_wh_per_m']}

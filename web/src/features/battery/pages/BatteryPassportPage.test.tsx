@@ -313,6 +313,15 @@ afterEach(() => {
 });
 
 describe('BatteryPassportPage', () => {
+  it('keeps the scientific matrix columns fixed', () => {
+    renderPage();
+    const matrix = screen.getByTestId('battery-passport-provenance-matrix');
+    expect(within(matrix).getAllByRole('columnheader')).toHaveLength(4);
+    expect(within(matrix).queryByRole('button', { name: /columns/i })).not.toBeInTheDocument();
+    expect(within(matrix).queryAllByLabelText(/^Resize column/)).toHaveLength(0);
+    expect(matrix.querySelector('[draggable="true"]')).toBeNull();
+  });
+
   it('renders fourteen persistent sections and exactly two canonical hook calls', () => {
     renderPage();
 

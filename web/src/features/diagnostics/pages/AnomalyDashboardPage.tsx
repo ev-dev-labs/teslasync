@@ -26,7 +26,7 @@ import { AnomalyTimelineCard, SystemHealthCard } from '../components/anomaly-das
 
 export default function AnomalyDashboardPage() {
   const { t } = useTranslation();
-  usePageTitle(t('anomaly.title', 'Anomaly Detection'));
+  usePageTitle(t('anomaly.title', 'Anomaly detection'));
 
   const { vehicleId: selectedId } = useSelectedVehicle();
   const activeIdStr = selectedId != null ? String(selectedId) : null;
@@ -70,7 +70,7 @@ export default function AnomalyDashboardPage() {
 
   return (
     <PageContainer
-      title={t('anomaly.title', 'Anomaly Detection')}
+      title={t('anomaly.title', 'Anomaly detection')}
       subtitle={t('anomaly.subtitle', 'Automatic health monitoring and signal anomaly detection')}
       query={anomaliesQuery}
     >
@@ -82,7 +82,7 @@ export default function AnomalyDashboardPage() {
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               <MetricCard
-                label={t('anomaly.monitored', 'Signals Monitored')}
+                label={t('anomaly.monitored', 'Signals monitored')}
                 value={data?.signals_monitored ?? 0}
                 icon={<Activity className="h-5 w-5" />}
                 color="cyan"
@@ -100,7 +100,7 @@ export default function AnomalyDashboardPage() {
                 color="red"
               />
               <MetricCard
-                label={t('anomaly.categories', 'Health Categories')}
+                label={t('anomaly.categories', 'Health categories')}
                 value={healthEntries.length}
                 icon={<HeartPulse className="h-5 w-5" />}
                 color="green"
@@ -135,7 +135,7 @@ export default function AnomalyDashboardPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('anomaly.frequency', 'Most Frequent Anomalies')}
+              {t('anomaly.frequency', 'Most frequent anomalies')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={300} />
@@ -149,7 +149,7 @@ export default function AnomalyDashboardPage() {
             ) : (
               <div className="h-72 sm:h-80">
                 <EmbeddedChart
-                  title={t('anomaly.frequency', 'Most Frequent Anomalies')}
+                  title={t('anomaly.frequency', 'Most frequent anomalies')}
                   ariaLabel={t('anomaly.frequencyAria', 'Bar chart of the most frequently anomalous signals')}
                   data={signalFrequency}
                   dataColumns={signalFrequencyColumns}
@@ -173,7 +173,7 @@ export default function AnomalyDashboardPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('anomaly.healthSummary', 'System Health')}
+              {t('anomaly.healthSummary', 'System health')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={220} />
@@ -200,7 +200,7 @@ export default function AnomalyDashboardPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
-            {t('anomaly.timeline', 'Anomaly Timeline')}
+            {t('anomaly.timeline', 'Anomaly timeline')}
           </PanelTitle>
           {isLoading ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">

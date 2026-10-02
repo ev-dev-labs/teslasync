@@ -564,7 +564,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
   const unsupportedKind = rule?.kind != null
     && rule.kind !== 'signal' && rule.kind !== 'computed_metric'
     && rule.kind !== 'system_component' && rule.kind !== 'place'
-  const pageTitle = t('notifications.alertStudio.title', 'Alert Studio')
+  const pageTitle = t('notifications.alertStudio.title', 'Alert studio')
   const pageSubtitle = t('notifications.alertStudio.subtitle', 'Create rules for vehicle signals, computed metrics, system health, and places')
 
   const { data: channels, isLoading: channelsLoading, error: channelsError } = useNotificationChannels()
@@ -1060,7 +1060,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
   }, [allChannelIds])
 
   const handleTest = useCallback(() => {
-    const message = editor.message.trim() || t('notifications.alertStudio.test.defaultMessage', 'Test notification from Alert Studio')
+    const message = editor.message.trim() || t('notifications.alertStudio.test.defaultMessage', 'Test notification from alert studio')
     const target = buildTestTarget(testChannelIds, allChannelIds)
     // Thread the per-rule template + title
     // toggle through the Test endpoint so the user previews exactly
@@ -1103,7 +1103,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <UiInput
             id="alert-value-min"
-            label={t('notifications.alertStudio.editor.minValueLabel', 'Minimum Value')}
+            label={t('notifications.alertStudio.editor.minValueLabel', 'Minimum value')}
             type="number"
             step="any"
             className="w-full"
@@ -1114,7 +1114,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
           />
           <UiInput
             id="alert-value-max"
-            label={t('notifications.alertStudio.editor.maxValueLabel', 'Maximum Value')}
+            label={t('notifications.alertStudio.editor.maxValueLabel', 'Maximum value')}
             type="number"
             step="any"
             className="w-full"
@@ -1131,7 +1131,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
       return (
         <UiInput
           id="alert-value-text"
-          label={t('notifications.alertStudio.editor.textValueLabel', 'Text Value')}
+          label={t('notifications.alertStudio.editor.textValueLabel', 'Text value')}
           className="w-full"
           placeholder={t('notifications.alertStudio.editor.textValuePlaceholder', 'Value to compare')}
           value={editor.value_text}
@@ -1145,7 +1145,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
       return (
         <UiSelect
           id="alert-value-bool"
-          label={t('notifications.alertStudio.editor.booleanValueLabel', 'Boolean Value')}
+          label={t('notifications.alertStudio.editor.booleanValueLabel', 'Boolean value')}
           className="w-full"
           value={String(editor.value_bool)}
           onChange={e => setEditor(s => ({ ...s, value_bool: e.target.value === 'true' }))}
@@ -1168,7 +1168,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
     return (
       <UiInput
         id="alert-value-num"
-        label={t('notifications.alertStudio.editor.numericValueLabel', 'Numeric Value')}
+        label={t('notifications.alertStudio.editor.numericValueLabel', 'Numeric value')}
         type="number"
         step="any"
         className="w-full"
@@ -1196,7 +1196,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
           <GlassPanel className="p-4 sm:p-5">
             <div className="mb-4">
               <PanelTitle>
-                {t('notifications.alertStudio.templates.header', 'Rule Templates - {{count}} pre-built rules', { count: ruleTemplates.length })}
+                {t('notifications.alertStudio.templates.header', 'Rule templates - {{count}} pre-built rules', { count: ruleTemplates.length })}
               </PanelTitle>
             </div>
             <div className="mb-4">
@@ -1297,8 +1297,8 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
             <div className="mb-4 flex items-center gap-2">
               <Icons.pencil className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               <PanelTitle>{rule
-                ? t('notifications.alertStudio.editor.editTitle', 'Edit Rule')
-                : t('notifications.alertStudio.editor.newTitle', 'New Rule')}</PanelTitle>
+                ? t('notifications.alertStudio.editor.editTitle', 'Edit rule')
+                : t('notifications.alertStudio.editor.newTitle', 'New rule')}</PanelTitle>
             </div>
 
             {hasDraft && (
@@ -1526,7 +1526,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
               {editor.kind === 'signal' && (
                 <GlassPanel className="p-3">
                   <Text as="p" variant="label" className="mb-1">
-                    {t('notifications.alertStudio.editor.allowedOperatorsLabel', 'Allowed Operators')}
+                    {t('notifications.alertStudio.editor.allowedOperatorsLabel', 'Allowed operators')}
                   </Text>
                   <Text size="xs" color="primary">
                     {editor.signal_name.trim()
@@ -1540,7 +1540,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
             {editor.kind === 'signal' && (
               <div className="mb-4">
                 <Text as="p" variant="label" className="mb-2">
-                  {t('notifications.alertStudio.editor.typedValueLabel', 'Typed Value')}
+                  {t('notifications.alertStudio.editor.typedValueLabel', 'Typed value')}
                 </Text>
                 {renderValueEditor()}
               </div>
@@ -1563,7 +1563,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
               </div>
               <div data-testid="alert-behavior-block">
                 <label className={fieldLabelRowCls} htmlFor="alert-trigger-mode">
-                  {t('notifications.alertStudio.editor.alertBehaviorLabel', 'Alert Behavior')}
+                  {t('notifications.alertStudio.editor.alertBehaviorLabel', 'Alert behavior')}
                 </label>
                 <UiSelect
                   id="alert-trigger-mode"
@@ -1862,7 +1862,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
 
             <div className="mb-4">
               <Text as="p" variant="label" className="mb-2">
-                {t('notifications.alertStudio.channels.testTargetLabel', 'Test Delivery Target')}
+                {t('notifications.alertStudio.channels.testTargetLabel', 'Test delivery target')}
               </Text>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -1921,7 +1921,7 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
                     <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                       icon={<Icons.notificationsMuted className="h-8 w-8 text-[var(--text-muted)]" />}
                       title={t('notifications.alertStudio.channels.emptyTitle', 'No external channels configured')}
-                      message={t('notifications.alertStudio.channels.emptyDescription', 'Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.')}
+                      message={t('notifications.alertStudio.channels.emptyDescription', 'Browser toasts and alert history are always enabled. Configure channels from notifications to fan out alerts.')}
                     />
                   )}
                 </GlassPanel>
@@ -1940,8 +1940,8 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
                 {saveRuleMut.isPending
                   ? t('notifications.alertStudio.actions.saving', 'Saving...')
                   : rule
-                    ? t('notifications.alertStudio.actions.updateRule', 'Update Rule')
-                    : t('notifications.alertStudio.actions.createRule', 'Create Rule')}
+                    ? t('notifications.alertStudio.actions.updateRule', 'Update rule')
+                    : t('notifications.alertStudio.actions.createRule', 'Create rule')}
               </UiButton>
 
               <UiButton
@@ -1975,15 +1975,15 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
     <PageContainer
       title={pageTitle}
       subtitle={pageSubtitle}
-      actions={
-        <>
-          <UiButton variant="ghost" size="sm" icon={<Icons.sparkles className="h-3.5 w-3.5 text-amber-300" />} onClick={() => setShowTemplates(!showTemplates)}>
-            {t('notifications.alertStudio.actions.templates', 'Templates')}
-          </UiButton>
-          <UiButton variant="primary" size="sm" icon={<Icons.add className="h-3.5 w-3.5" />} onClick={handleNewRule}>
-            {t('notifications.alertStudio.actions.newRule', 'New Rule')}
-          </UiButton>
-        </>
+      secondaryActions={
+        <UiButton variant="ghost" size="sm" icon={<Icons.sparkles className="h-3.5 w-3.5 text-amber-300" />} onClick={() => setShowTemplates(!showTemplates)}>
+          {t('notifications.alertStudio.actions.templates', 'Templates')}
+        </UiButton>
+      }
+      primaryAction={
+        <UiButton variant="primary" size="sm" icon={<Icons.add className="h-3.5 w-3.5" />} onClick={handleNewRule}>
+          {t('notifications.alertStudio.actions.newRule', 'New rule')}
+        </UiButton>
       }
     >{content}</PageContainer>
   )

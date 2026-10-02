@@ -459,7 +459,7 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
               htmlFor={textareaId}
               className={typography.role.metricLabel}
             >
-              {label ?? t('notifications.alertStudio.editor.messageTemplateLabel', 'Message Template')}
+              {label ?? t('notifications.alertStudio.editor.messageTemplateLabel', 'Message template')}
             </label>
             <span className={cn(typography.size['2xs'], typography.color.muted, 'normal-case tracking-normal')}>
               {t('notifications.alertStudio.editor.messageTemplateHint', 'Type {{ to insert a placeholder')}
@@ -692,7 +692,7 @@ function PresetGalleryModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={t('notifications.alertStudio.editor.presetModalTitle', 'Message Presets')}
+      title={t('notifications.alertStudio.editor.presetModalTitle', 'Message presets')}
       size="lg"
     >
       <div className="space-y-3">
@@ -710,7 +710,7 @@ function PresetGalleryModal({
               size="sm"
               className={cn(
                 typography.size['2xs'],
-                'h-auto rounded-full border px-2 py-0.5 uppercase tracking-wider font-normal',
+                'h-auto rounded-full border px-2 py-0.5 tracking-wider font-normal',
                 activeTag == null
                   ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300'
                   : 'border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
@@ -727,7 +727,7 @@ function PresetGalleryModal({
                 size="sm"
                 className={cn(
                   typography.size['2xs'],
-                  'h-auto rounded-full border px-2 py-0.5 uppercase tracking-wider font-normal',
+                  'h-auto rounded-full border px-2 py-0.5 tracking-wider font-normal',
                   activeTag === tag
                     ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300'
                     : 'border-[var(--glass-border)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',

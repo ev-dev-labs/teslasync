@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BellRing, Gauge, Hourglass, Rabbit, TimerReset } from 'lucide-react';
 
@@ -10,7 +10,7 @@ import {
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { Badge, GlassPanel, PanelTitle, SectionTitle, Text } from '@/components/ui';
+import { Badge, DataTable, GlassPanel, PanelTitle, SectionTitle, Table, Text, type Column } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
@@ -24,9 +24,44 @@ export function NotificationLatencyPanel() {
     () => analyzeNotificationLatency(logsQuery.data ?? []),
     [logsQuery.data],
   );
-  const latencyLabel = (value: number | null) => value == null
+  const latencyLabel = useCallback((value: number | null) => value == null
     ? '—'
-    : t('notificationLatency.units.ms', '{{value}} ms', { value: fmtNumber(value, 0) });
+    : t('notificationLatency.units.ms', '{{value}} ms', { value: fmtNumber(value, 0) }), [t]);
+  const slowestColumns = useMemo<Column<(typeof summary.slowest)[number]>[]>(() => [
+    {
+      key: 'notification',
+      header: t('notifications.inbox.columns.title', 'Notification'),
+      render: record => (
+        <div className="min-w-0">
+          <Text as="p" variant="bodySm" className="break-words font-medium">{record.title}</Text>
+          <Text as="p" variant="caption" className="break-words">
+            {t('notificationLatency.slowest.meta', '{{severity}} · {{status}} · {{date}}', {
+              severity: record.severity,
+              status: record.status,
+              date: formatDateTime(record.createdAt),
+            })}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      key: 'source',
+      header: t('notifications.inbox.columns.source', 'Source'),
+      render: record => (
+        <Badge variant={record.source === 'measured' ? 'info' : 'neutral'} size="sm">
+          {record.source === 'measured'
+            ? t('notificationLatency.slowest.measured', 'Measured')
+            : t('notificationLatency.slowest.derived', 'Derived')}
+        </Badge>
+      ),
+    },
+    {
+      key: 'latency',
+      header: t('notificationLatency.title', 'Notification latency'),
+      align: 'right',
+      render: record => <Text variant="body" mono className="font-medium">{latencyLabel(record.latencyMs)}</Text>,
+    },
+  ], [latencyLabel, t]);
   const histogramData = useMemo(
     () => summary.histogram.map((bin) => ({
       range: bin.upperMs == null
@@ -45,9 +80,9 @@ export function NotificationLatencyPanel() {
   const isError = logsQuery.isError;
 
   return (
-    <section id="latency" aria-label={t('notificationLatency.title', 'Notification Latency')} className="min-w-0 space-y-5 scroll-mt-24">
+    <section id="latency" aria-label={t('notificationLatency.title', 'Notification latency')} className="min-w-0 space-y-5 scroll-mt-24">
       <div className="max-w-3xl">
-        <SectionTitle>{t('notificationLatency.title', 'Notification Latency')}</SectionTitle>
+        <SectionTitle>{t('notificationLatency.title', 'Notification latency')}</SectionTitle>
         <Text as="p" color="secondary">
           {t('notificationLatency.subtitle', 'Measure all recorded delivery attempts using recorded latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records')}
         </Text>
@@ -68,7 +103,7 @@ export function NotificationLatencyPanel() {
           ) : (
             <>
               <MetricCard
-                label={t('notificationLatency.kpis.p50', 'p50 Latency')}
+                label={t('notificationLatency.kpis.p50', 'p50 latency')}
                 value={latencyLabel(summary.p50Ms)}
                 subtitle={t('notificationLatency.kpis.trimmed', 'trimmed mean {{value}}', {
                   value: latencyLabel(summary.trimmedMeanMs),
@@ -77,7 +112,7 @@ export function NotificationLatencyPanel() {
                 color="cyan"
               />
               <MetricCard
-                label={t('notificationLatency.kpis.p95', 'p95 Latency')}
+                label={t('notificationLatency.kpis.p95', 'p95 latency')}
                 value={latencyLabel(summary.p95Ms)}
                 subtitle={t('notificationLatency.kpis.samples', '{{count}} measured deliveries', {
                   count: summary.count,
@@ -86,7 +121,7 @@ export function NotificationLatencyPanel() {
                 color="blue"
               />
               <MetricCard
-                label={t('notificationLatency.kpis.p99', 'p99 Latency')}
+                label={t('notificationLatency.kpis.p99', 'p99 latency')}
                 value={latencyLabel(summary.p99Ms)}
                 subtitle={t('notificationLatency.kpis.tail', '{{value}} slower than 4 seconds', {
                   value: summary.tailShare != null
@@ -115,7 +150,7 @@ export function NotificationLatencyPanel() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('notificationLatency.histogram.title', 'Latency Distribution')}
+            title={t('notificationLatency.histogram.title', 'Latency distribution')}
             subtitle={t(
               'notificationLatency.histogram.subtitle',
               'Apdex bands are anchored to the documented 1-second satisfied threshold',
@@ -157,7 +192,7 @@ export function NotificationLatencyPanel() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <BellRing className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('notificationLatency.cohorts.title', 'Severity and Status Cohorts')}
+            {t('notificationLatency.cohorts.title', 'Severity and status cohorts')}
           </PanelTitle>
           {isLoading ? (
             <Skeleton height={96} />
@@ -184,27 +219,28 @@ export function NotificationLatencyPanel() {
               ].map((group) => (
                 <div key={group.title}>
                   <Text as="p" variant="body" className="mb-2 font-medium">{group.title}</Text>
-                  <div className="space-y-2">
-                    {group.rows.map((cohort) => (
-                      <div
-                        key={cohort.key}
-                        className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-                      >
-                        <div className="min-w-0 break-words">
-                          <Text as="p" variant="bodySm" className="font-medium capitalize">
-                            {cohort.key.replace('_', ' ')}
-                          </Text>
-                          <Text as="p" variant="caption">
-                            {t('notificationLatency.cohorts.samples', '{{count}} samples · {{tail}} tail', {
-                              count: cohort.count,
-                              tail: fmtPercent(cohort.tailShare * 100, 1),
-                            })}
-                          </Text>
-                        </div>
-                        <Text variant="bodySm" mono>{latencyLabel(cohort.p95Ms)}</Text>
-                      </div>
-                    ))}
-                  </div>
+                  <Table aria-label={group.title}>
+                    <tbody>
+                      {group.rows.map((cohort) => (
+                        <tr key={cohort.key}>
+                          <th scope="row" className="min-w-0 break-words">
+                            <Text as="p" variant="bodySm" className="font-medium">
+                              {cohort.key.replace('_', ' ')}
+                            </Text>
+                            <Text as="p" variant="caption">
+                              {t('notificationLatency.cohorts.samples', '{{count}} samples · {{tail}} tail', {
+                                count: cohort.count,
+                                tail: fmtPercent(cohort.tailShare * 100, 1),
+                              })}
+                            </Text>
+                          </th>
+                          <td className="text-right tabular-nums">
+                            <Text variant="bodySm" mono>{latencyLabel(cohort.p95Ms)}</Text>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
                 </div>
               ))}
             </div>
@@ -216,7 +252,7 @@ export function NotificationLatencyPanel() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Hourglass className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('notificationLatency.slowest.title', 'Slowest Delivery Records')}
+            {t('notificationLatency.slowest.title', 'Slowest delivery records')}
           </PanelTitle>
           {isLoading ? (
             <Skeleton height={180} />
@@ -226,35 +262,14 @@ export function NotificationLatencyPanel() {
               message={t('notificationLatency.slowest.empty', 'No slow delivery records are available.')}
             />
           ) : (
-            <div className="space-y-2">
-              {summary.slowest.map((record) => (
-                <div
-                  key={record.id}
-                  className="grid min-w-0 gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
-                >
-                  <div className="min-w-0">
-                    <Text as="p" variant="bodySm" className="break-words font-medium">{record.title}</Text>
-                    <Text as="p" variant="caption" className="break-words">
-                      {t('notificationLatency.slowest.meta', '{{severity}} · {{status}} · {{date}}', {
-                        severity: record.severity,
-                        status: record.status,
-                        date: formatDateTime(record.createdAt),
-                      })}
-                    </Text>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <Badge variant={record.source === 'measured' ? 'info' : 'neutral'} size="sm">
-                      {record.source === 'measured'
-                        ? t('notificationLatency.slowest.measured', 'Measured')
-                        : t('notificationLatency.slowest.derived', 'Derived')}
-                    </Badge>
-                    <Text variant="body" mono className="font-medium">
-                      {latencyLabel(record.latencyMs)}
-                    </Text>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <DataTable
+              tableId="notifications:slow-deliveries"
+              caption={t('notificationLatency.slowest.title', 'Slowest delivery records')}
+              columns={slowestColumns}
+              data={summary.slowest}
+              keyExtractor={record => record.id}
+              rowLabel={record => record.title}
+            />
           )}
         </GlassPanel>
       </FadeIn>

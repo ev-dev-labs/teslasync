@@ -143,6 +143,22 @@ beforeEach(() => {
 });
 
 describe('ChargingReconciliationPage — confirm-gated delete', () => {
+  it('does not advertise checklist filters over the first server invoice page', () => {
+    mockInvoices.mockReturnValue(makeQuery({
+      items: [makeInvoice()],
+      total: 500,
+      limit: 50,
+      offset: 0,
+    }));
+    renderPage();
+
+    const row = screen.getByText('INV-001').closest('tr');
+    const table = row?.closest('table');
+    expect(table).not.toBeNull();
+    expect(within(table!).queryByRole('button', { name: /^Filter / })).not.toBeInTheDocument();
+    expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0);
+  });
+
   it('opens a danger confirm naming the invoice instead of deleting on click', () => {
     const mutate = vi.fn();
     mockRemove.mockReturnValue(makeMutation({ mutate }));

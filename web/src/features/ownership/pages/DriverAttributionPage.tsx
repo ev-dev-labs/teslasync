@@ -91,7 +91,7 @@ export default function DriverAttributionPage() {
   });
   const [assignDraft, setAssignDraft] = useState({ drive_id: 0, driver_profile_id: 0 });
 
-  usePageTitle(t('ownership.driver.navTitle', 'Driver Fingerprinting'));
+  usePageTitle(t('ownership.driver.navTitle', 'Driver fingerprinting'));
 
   const driverAttrHidden = useHiddenSeries('driver-attribution-chart');
 
@@ -184,6 +184,7 @@ export default function DriverAttributionPage() {
     {
       key: 'drives',
       header: t('ownership.driver.cluster.drives', 'Drives'),
+      align: 'right',
       render: (row) => (
         <div>
           <span className="tabular-nums">{fmtNumber(row.drive_count, 0)}</span>
@@ -197,12 +198,14 @@ export default function DriverAttributionPage() {
     {
       key: 'distance',
       header: t('ownership.driver.cluster.distance', 'Distance'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{units.formatDistance(row.distance_m)}</span>,
       sortable: true,
     },
     {
       key: 'efficiency',
       header: t('ownership.driver.cluster.efficiency', 'Efficiency'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {formatEfficiencyFromSI(row.efficiency_wh_per_m, units.unitPrefs)}
@@ -212,6 +215,7 @@ export default function DriverAttributionPage() {
     {
       key: 'speed',
       header: t('ownership.driver.cluster.speed', 'Avg speed'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {row.avg_speed_mps != null ? units.formatSpeed(row.avg_speed_mps) : '—'}
@@ -221,6 +225,7 @@ export default function DriverAttributionPage() {
     {
       key: 'regen',
       header: t('ownership.driver.cluster.regen', 'Regen share'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {row.regen_share_pct != null ? formatPct(row.regen_share_pct) : '—'}
@@ -230,11 +235,13 @@ export default function DriverAttributionPage() {
     {
       key: 'night',
       header: t('ownership.driver.cluster.night', 'Night share'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{formatPct(row.night_share_pct, 0)}</span>,
     },
     {
       key: 'aggression',
       header: t('ownership.driver.cluster.aggression', 'Aggression'),
+      align: 'right',
       render: (row) => (
         <div className="min-w-[6rem]">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
@@ -253,6 +260,7 @@ export default function DriverAttributionPage() {
     {
       key: 'cost',
       header: t('ownership.driver.cluster.cost', 'Energy cost share'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {formatCurrencyMinor(row.cost_share_minor, currency, units.unitPrefs.locale)}
@@ -262,6 +270,7 @@ export default function DriverAttributionPage() {
     {
       key: 'cohesion',
       header: t('ownership.driver.cluster.cohesion', 'Cohesion'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">{fmtNumber(row.cohesion, 2)}</span>
       ),
@@ -306,6 +315,7 @@ export default function DriverAttributionPage() {
     {
       key: 'confidence',
       header: t('ownership.driver.fp.confidence', 'Confidence'),
+      align: 'right',
       render: (row) => (
         <span
           className={`tabular-nums ${row.confidence_pct >= 75 ? 'text-emerald-300' : row.confidence_pct >= 50 ? 'text-amber-300' : 'text-rose-300'}`}
@@ -318,17 +328,20 @@ export default function DriverAttributionPage() {
     {
       key: 'distance',
       header: t('ownership.driver.fp.distance', 'Distance'),
+      align: 'right',
       render: (row) => <span className="tabular-nums">{units.formatDistance(row.distance_m)}</span>,
       sortable: true,
     },
     {
       key: 'duration',
       header: t('ownership.driver.fp.duration', 'Duration'),
+      align: 'right',
       render: (row) => formatSpan(row.duration_s),
     },
     {
       key: 'margin',
       header: t('ownership.driver.fp.margin', 'Separation margin'),
+      align: 'right',
       render: (row) =>
         row.distance_to_next_centroid != null ? (
           <span className="tabular-nums">
@@ -380,6 +393,8 @@ export default function DriverAttributionPage() {
     {
       key: 'name',
       header: t('ownership.driver.profile.name', 'Driver'),
+      filterValue: (row) => row.id,
+      filterValueLabel: (_value, row) => row.name,
       render: (row) => (
         <div className="flex items-center gap-2">
           <span
@@ -397,6 +412,8 @@ export default function DriverAttributionPage() {
     },
     {
       key: 'created',
+      filterValue: (row) => row.created_at,
+      filterValueLabel: (_value, row) => formatDateTime(row.created_at),
       header: t('ownership.driver.profile.created', 'Created'),
       render: (row) => (
         <Text as="span" variant="caption">
@@ -423,14 +440,14 @@ export default function DriverAttributionPage() {
 
   return (
     <PageContainer
-      title={t('ownership.driver.title', 'Driver Fingerprinting & Attribution')}
+      title={t('ownership.driver.title', 'Driver fingerprinting & attribution')}
       subtitle={t(
         'ownership.driver.subtitle',
         'Group drives by how they were driven — speed discipline, power draw, regen use and departure hour — then attach a name once and let every future drive inherit it.',
       )}
       loading={reportQuery.isLoading}
       error={reportQuery.error as Error | null}
-      actions={
+      contextActions={
         <div className="flex items-center gap-2">
           <Select
             aria-label={t('ownership.window.label', 'Analysis window')}
@@ -664,6 +681,7 @@ export default function DriverAttributionPage() {
 
           <DataTable
             columns={profileColumns}
+            enableValueFilters
             mobileColumns={['name', 'created']}
             data={profiles}
             keyExtractor={(row) => row.id}

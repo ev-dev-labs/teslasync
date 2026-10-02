@@ -215,6 +215,17 @@ describe('InboxPage — page shell & composition', () => {
     );
     expect(screen.getByTestId('notification-report').getAttribute('data-timezone')).toBeTruthy();
   });
+
+  it('places evidence before the complete secondary report, without tabs or hidden analytics', () => {
+    renderPage();
+    const evidence = screen.getByTestId('inbox-body');
+    const report = screen.getByTestId('notification-report');
+    expect(evidence.compareDocumentPosition(report) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // FadeIn starts at opacity zero in jsdom; assert no disclosure or hidden attribute.
+    expect(report).toBeInTheDocument();
+    expect(report.closest('[hidden], details')).toBeNull();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
 });
 
 describe('InboxPage — summary KPI derivation (happy path)', () => {

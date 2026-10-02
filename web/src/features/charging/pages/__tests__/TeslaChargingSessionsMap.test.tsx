@@ -222,7 +222,8 @@ describe('TeslaChargingSessionsMap', () => {
     expect(point.popupHtml).toContain('53.5 kWh');
     expect(point.popupHtml).toContain('$12.50');
     expect(point.popupHtml).toContain('v3');
-    expect(point.popupHtml).toContain('text-transform:uppercase');
+    expect(point.popupHtml).toContain('<p>v3</p>');
+    expect(point.popupHtml).not.toContain('text-transform:uppercase');
 
     expect(point.ariaLabel).toBe('Supercharger SF charging session');
   });

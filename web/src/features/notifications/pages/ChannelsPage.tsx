@@ -54,30 +54,28 @@ export default function ChannelsPage() {
   const closeForm = () => { setShowForm(false); setEditingChannel(null); };
   const handleRefresh = () => { channelsQuery.refetch(); statsQuery.refetch(); };
 
-  const actions = (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        onClick={handleRefresh}
-        aria-label={t('common.refresh', 'Refresh')}
-      >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
-      </Button>
-      <Button
-        variant="primary"
-        icon={<Plus className="h-4 w-4" aria-hidden="true" />}
-        onClick={openAdd}
-      >
-        {t('notifications.channels.add', 'Add Channel')}
-      </Button>
-    </div>
-  );
-
   return (
     <PageContainer
       title={t('notifications.channels.title', 'Notification channels')}
       subtitle={t('notifications.channels.subtitle', 'Where to send notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a custom webhook.')}
-      actions={actions}
+      secondaryActions={
+        <Button
+          variant="ghost"
+          onClick={handleRefresh}
+          aria-label={t('common.refresh', 'Refresh')}
+        >
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      }
+      primaryAction={
+        <Button
+          variant="primary"
+          icon={<Plus className="h-4 w-4" aria-hidden="true" />}
+          onClick={openAdd}
+        >
+          {t('notifications.channels.add', 'Add channel')}
+        </Button>
+      }
       query={[channelsQuery, statsQuery]}
       dataSources={dataSources}
       copyLink

@@ -42,7 +42,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
   return (
     <GlassPanel className="p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <PanelTitle>{t('homeEnergy.scenario.title', 'Scenario & Assumptions')}</PanelTitle>
+        <PanelTitle>{t('homeEnergy.scenario.title', 'Scenario & assumptions')}</PanelTitle>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={onRefreshNow}>
             {t('homeEnergy.scenario.refreshNow', 'Recompute from now')}
@@ -58,7 +58,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
 
       <Grid cols={{ default: 1, md: 2, xl: 4 }} gap={5}>
         <div className="space-y-4">
-          <Caption>{t('homeEnergy.scenario.horizonGroup', 'Planning Horizon')}</Caption>
+          <Caption>{t('homeEnergy.scenario.horizonGroup', 'Planning horizon')}</Caption>
           <Slider
             label={t('homeEnergy.scenario.horizonHours', 'Horizon')}
             min={6}
@@ -129,7 +129,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
         </div>
 
         <div className="space-y-4">
-          <Caption>{t('homeEnergy.scenario.gridGroup', 'Grid / Panel Limits (editable assumption)')}</Caption>
+          <Caption>{t('homeEnergy.scenario.gridGroup', 'Grid / panel limits (editable assumption)')}</Caption>
           <Slider
             label={t('homeEnergy.scenario.maxImport', 'Max grid import')}
             min={1_000}
@@ -152,7 +152,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Caption>{t('homeEnergy.scenario.powerwallGroup', 'Home Battery (editable assumption)')}</Caption>
+            <Caption>{t('homeEnergy.scenario.powerwallGroup', 'Home battery (editable assumption)')}</Caption>
             <Toggle
               label={t('homeEnergy.scenario.powerwallEnabled', 'Present')}
               size="sm"

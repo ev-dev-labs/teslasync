@@ -64,11 +64,13 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
       },
       {
         key: 'energy_wh',
+        align: 'right',
         header: t('chargingPlaces.activity.energy', 'Energy'),
         render: (r) => <Text size="sm" className="tabular-nums">{r.energy_wh != null ? formatEnergy(r.energy_wh) : '—'}</Text>,
       },
       {
         key: 'cost_decimal',
+        align: 'right',
         header: t('chargingPlaces.activity.cost', 'Cost'),
         render: (r) => (
           <Text size="sm" className="tabular-nums">
@@ -100,11 +102,11 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('chargingPlaces.activity.title', 'Charging Activity')}
+        {t('chargingPlaces.activity.title', 'Charging activity')}
       </PanelTitle>
 
       {isError ? (
-        <QueryError error={error} onRetry={() => void refetch()} resourceName={t('chargingPlaces.activity.title', 'Charging Activity')} />
+        <QueryError error={error} onRetry={() => void refetch()} resourceName={t('chargingPlaces.activity.title', 'Charging activity')} />
       ) : isLoading && rows.length === 0 ? (
         <Skeleton className="h-48 w-full" />
       ) : rows.length === 0 && offset === 0 ? (

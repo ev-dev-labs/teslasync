@@ -83,6 +83,17 @@ function cardValue(label: string): string {
 }
 
 describe('InboxSummary — loading & error states', () => {
+  it('retains compact metrics after a failed cached refresh', () => {
+    renderSummary(makeQuery({
+      data: [makeLog({ severity: 'critical' })],
+      isError: true,
+      error: new Error('Refresh failed'),
+    }));
+    expect(cardValue('Recent notifications')).toBe('1');
+    expect(cardValue('Critical')).toBe('1');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
   it('renders a six-card skeleton grid inside the labelled region on first load', () => {
     renderSummary(makeQuery({ isLoading: true, isPending: true, isFetching: true }));
 

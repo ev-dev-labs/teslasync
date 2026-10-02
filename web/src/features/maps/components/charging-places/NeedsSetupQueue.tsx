@@ -30,7 +30,7 @@ export function NeedsSetupQueue({ places, isLoading, error, onRetry, onReview }:
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-amber-300" aria-hidden="true" />
-        {t('chargingPlaces.needsSetup.title', 'Needs Setup')}
+        {t('chargingPlaces.needsSetup.title', 'Needs setup')}
         {rows.length > 0 && (
           <Badge variant="warning" size="sm">
             {rows.length}
@@ -42,7 +42,7 @@ export function NeedsSetupQueue({ places, isLoading, error, onRetry, onReview }:
         <QueryError
           error={error}
           onRetry={onRetry}
-          resourceName={t('chargingPlaces.needsSetup.title', 'Needs Setup')}
+          resourceName={t('chargingPlaces.needsSetup.title', 'Needs setup')}
         />
       ) : isLoading ? (
         <Skeleton className="h-24 w-full" />
@@ -54,7 +54,7 @@ export function NeedsSetupQueue({ places, isLoading, error, onRetry, onReview }:
           )}
         </InlineCallout>
       ) : (
-        <ul className="flex flex-col gap-2" aria-label={t('chargingPlaces.needsSetup.title', 'Needs Setup')}>
+        <ul className="flex flex-col gap-2" aria-label={t('chargingPlaces.needsSetup.title', 'Needs setup')}>
           {rows.map((place) => (
             <li
               key={place.id}

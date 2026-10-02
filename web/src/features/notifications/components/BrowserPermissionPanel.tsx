@@ -55,7 +55,7 @@ export function BrowserPermissionPanel({
             <Bell className="h-5 w-5" aria-hidden="true" />
           </IconBox>
           <div className="min-w-0">
-            <PanelTitle>{t('browserNotifications.title', 'Browser Notifications')}</PanelTitle>
+            <PanelTitle>{t('browserNotifications.title', 'Browser notifications')}</PanelTitle>
             <Text variant="caption" as="p">
               {t(
                 'browserNotifications.subtitle',
@@ -81,7 +81,7 @@ export function BrowserPermissionPanel({
                   icon={<Bell className="h-4 w-4" aria-hidden="true" />}
                   onClick={handleEnable}
                 >
-                  {t('browserNotifications.enable', 'Enable Browser Notifications')}
+                  {t('browserNotifications.enable', 'Enable browser notifications')}
                 </Button>
               )}
               {permission === 'default' && permissionError && (

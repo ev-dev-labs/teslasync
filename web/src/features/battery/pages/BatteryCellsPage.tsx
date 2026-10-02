@@ -147,8 +147,8 @@ function CellHeatmap({ cells, avg, label }: { cells: CellReading[]; avg: number;
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
         <HeatLegend className="bg-emerald-500" label={t('battery.cells.legend.nominal', 'Nominal')} />
-        <HeatLegend className="bg-amber-500" label={t('battery.cells.legend.slight', 'Slight Deviation')} />
-        <HeatLegend className="bg-rose-500" label={t('battery.cells.legend.significant', 'Significant Deviation')} />
+        <HeatLegend className="bg-amber-500" label={t('battery.cells.legend.slight', 'Slight deviation')} />
+        <HeatLegend className="bg-rose-500" label={t('battery.cells.legend.significant', 'Significant deviation')} />
       </div>
     </div>
   );
@@ -175,7 +175,7 @@ function SummaryStat({ label, value, valueClassName }: {
 
 export default function BatteryCellsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('battery.cells.title', 'Battery Cells'));
+  usePageTitle(t('battery.cells.title', 'Battery cells'));
 
   const { formatTemperature, unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
@@ -224,21 +224,21 @@ export default function BatteryCellsPage() {
     if (imb > 15) {
       items.push({
         icon: <Zap className="h-4 w-4" aria-hidden="true" />,
-        title: t('battery.cells.insight.highSpread', 'High Voltage Spread'),
+        title: t('battery.cells.insight.highSpread', 'High voltage spread'),
         description: t('battery.cells.insight.highSpreadDesc', 'Cell imbalance is significant. Consider a full charge to 100% to allow BMS balancing, then discharge to 90%.'),
         status: 'critical',
       });
     } else if (imb > 5) {
       items.push({
         icon: <Zap className="h-4 w-4" aria-hidden="true" />,
-        title: t('battery.cells.insight.watchSpread', 'Voltage Spread Increasing'),
+        title: t('battery.cells.insight.watchSpread', 'Voltage spread increasing'),
         description: t('battery.cells.insight.watchSpreadDesc', 'Cell balance is slightly off. Periodic full charges can help the BMS equalize cells.'),
         status: 'warning',
       });
     } else {
       items.push({
         icon: <CheckCircle className="h-4 w-4" aria-hidden="true" />,
-        title: t('battery.cells.insight.balanced', 'Cells Well Balanced'),
+        title: t('battery.cells.insight.balanced', 'Cells well balanced'),
         description: t('battery.cells.insight.balancedDesc', 'Voltage spread is within healthy range. Battery cells are operating normally.'),
         status: 'good',
       });
@@ -248,21 +248,21 @@ export default function BatteryCellsPage() {
     if (tempSpread > 5) {
       items.push({
         icon: <Thermometer className="h-4 w-4" aria-hidden="true" />,
-        title: t('battery.cells.insight.highTemp', 'High Temperature Spread'),
+        title: t('battery.cells.insight.highTemp', 'High temperature spread'),
         description: t('battery.cells.insight.highTempDesc', 'Avoid fast charging in extreme temperatures. Allow the battery to precondition before supercharging.'),
         status: 'critical',
       });
     } else if (tempSpread > 3) {
       items.push({
         icon: <Thermometer className="h-4 w-4" aria-hidden="true" />,
-        title: t('battery.cells.insight.watchTemp', 'Module Temperature Variation'),
+        title: t('battery.cells.insight.watchTemp', 'Module temperature variation'),
         description: t('battery.cells.insight.watchTempDesc', 'Some temperature variation is normal. Monitor during fast charging sessions.'),
         status: 'warning',
       });
     } else {
       items.push({
         icon: <Thermometer className="h-4 w-4" aria-hidden="true" />,
-        title: t('battery.cells.insight.goodTemp', 'Thermal Balance Good'),
+        title: t('battery.cells.insight.goodTemp', 'Thermal balance good'),
         description: t('battery.cells.insight.goodTempDesc', 'Module temperatures are consistent. Thermal management system is performing well.'),
         status: 'good',
       });
@@ -272,14 +272,14 @@ export default function BatteryCellsPage() {
     if (criticalCells > 0) {
       items.push({
         icon: <AlertTriangle className="h-4 w-4" aria-hidden="true" />,
-        title: t('battery.cells.insight.criticalCells', 'Critical Cells Detected'),
+        title: t('battery.cells.insight.criticalCells', 'Critical cells detected'),
         description: t('battery.cells.insight.criticalCellsDesc', { count: criticalCells, defaultValue: '{{count}} cell(s) show significant deviation. Consider scheduling a service appointment.' }),
         status: 'critical',
       });
     } else {
       items.push({
         icon: <Shield className="h-4 w-4" aria-hidden="true" />,
-        title: t('battery.cells.insight.healthy', 'All Cells Healthy'),
+        title: t('battery.cells.insight.healthy', 'All cells healthy'),
         description: t('battery.cells.insight.healthyDesc', 'No critical cells detected. Continue current charging habits for long-term health.'),
         status: 'good',
       });
@@ -293,8 +293,8 @@ export default function BatteryCellsPage() {
   const statusLabel = useCallback((s: CellStatus) => {
     switch (s) {
       case 'normal':               return t('battery.cells.status.normal', 'Normal');
-      case 'slight_deviation':     return t('battery.cells.status.slight', 'Slight Deviation');
-      case 'significant_deviation':return t('battery.cells.status.significant', 'Significant Deviation');
+      case 'slight_deviation':     return t('battery.cells.status.slight', 'Slight deviation');
+      case 'significant_deviation':return t('battery.cells.status.significant', 'Significant deviation');
       default:                     return t('battery.cells.status.unknown', 'Unknown');
     }
   }, [t]);
@@ -312,12 +312,17 @@ export default function BatteryCellsPage() {
   const columns: Column<CellReading>[] = useMemo(() => [
     {
       key: 'cell_number',
+      align: 'right',
+      filterValue: (r) => r.cell_number ?? null,
       header: t('battery.cells.table.cell', 'Cell #'),
       sortable: true,
       render: (r) => <span className={cn(typography.family.mono, typography.weight.semibold)}>{r.cell_number}</span>,
     },
     {
       key: 'voltage',
+      align: 'right',
+      filterValue: (r) => r.voltage ?? null,
+      filterValueLabel: (value, r) => value == null ? '—' : fmtNumber(r.voltage ?? 0, 4),
       header: t('battery.cells.table.voltage', 'Voltage (V)'),
       sortable: true,
       render: (r) => (
@@ -328,6 +333,9 @@ export default function BatteryCellsPage() {
     },
     {
       key: 'delta_from_avg',
+      align: 'right',
+      filterValue: (r) => r.delta_from_avg ?? null,
+      filterValueLabel: (value, r) => value == null ? '—' : `${(r.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber(r.delta_from_avg ?? 0, 1)}`,
       header: t('battery.cells.table.delta', 'Delta (mV)'),
       sortable: true,
       render: (r) => {
@@ -341,6 +349,8 @@ export default function BatteryCellsPage() {
     },
     {
       key: 'status',
+      filterValue: (r) => r.status ?? null,
+      filterValueLabel: (_, r) => statusLabel(r.status),
       header: t('battery.cells.table.status', 'Status'),
       sortable: true,
       render: (r) => (
@@ -355,14 +365,14 @@ export default function BatteryCellsPage() {
   /* ── Guards ─── */
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('battery.cells.title', 'Battery Cells')} />;
+    return <NoVehicleSelected pageTitle={t('battery.cells.title', 'Battery cells')} />;
   }
 
   /* ── Render ─── */
 
   return (
     <PageContainer
-      title={t('battery.cells.title', 'Battery Cells')}
+      title={t('battery.cells.title', 'Battery cells')}
       subtitle={t('battery.cells.subtitle', 'Individual cell voltage monitoring and analysis')}
       query={batteryQuery}
     >
@@ -374,25 +384,25 @@ export default function BatteryCellsPage() {
           ) : (
             <>
               <MetricCard
-                label={t('battery.cells.kpi.totalCells', 'Total Cells')}
+                label={t('battery.cells.kpi.totalCells', 'Total cells')}
                 value={fmtNumber(data?.total_cells ?? 0, 0)}
                 icon={<Grid3x3 className="h-4 w-4" />}
                 color="cyan"
               />
               <MetricCard
-                label={t('battery.cells.kpi.avgVoltage', 'Avg Voltage')}
+                label={t('battery.cells.kpi.avgVoltage', 'Avg voltage')}
                 value={`${fmtNumber(avgVoltage, 4)} V`}
                 icon={<Battery className="h-4 w-4" />}
                 color="green"
               />
               <MetricCard
-                label={t('battery.cells.kpi.minCell', 'Min Cell')}
+                label={t('battery.cells.kpi.minCell', 'Min cell')}
                 value={minCell ? `#${minCell.cell_number} ${fmtNumber(minCell.voltage ?? 0, 4)} V` : '—'}
                 icon={<ArrowDownRight className="h-4 w-4" />}
                 color="amber"
               />
               <MetricCard
-                label={t('battery.cells.kpi.maxCell', 'Max Cell')}
+                label={t('battery.cells.kpi.maxCell', 'Max cell')}
                 value={maxCell ? `#${maxCell.cell_number} ${fmtNumber(maxCell.voltage ?? 0, 4)} V` : '—'}
                 icon={<ArrowUpRight className="h-4 w-4" />}
                 color="purple"
@@ -404,7 +414,7 @@ export default function BatteryCellsPage() {
                 color={(data?.imbalance_mv ?? 0) > 15 ? 'red' : (data?.imbalance_mv ?? 0) > 5 ? 'amber' : 'green'}
               />
               <MetricCard
-                label={t('battery.cells.kpi.packVoltage', 'Pack Voltage')}
+                label={t('battery.cells.kpi.packVoltage', 'Pack voltage')}
                 value={`${fmtNumber(data?.pack_voltage ?? 0, 1)} V`}
                 icon={<Cpu className="h-4 w-4" />}
                 color="cyan"
@@ -421,7 +431,7 @@ export default function BatteryCellsPage() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <PanelTitle className="flex items-center gap-2">
                 <Grid3x3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('battery.cells.heatmap.title', 'Cell Voltage Heatmap')}
+                {t('battery.cells.heatmap.title', 'Cell voltage heatmap')}
               </PanelTitle>
               <Button
                 variant="ghost"
@@ -430,7 +440,7 @@ export default function BatteryCellsPage() {
                 onClick={() => setShowHeatmap((v) => !v)}
                 aria-label={showHeatmap ? t('battery.cells.view.bar', 'Switch to bar view') : t('battery.cells.view.grid', 'Switch to grid view')}
               >
-                {showHeatmap ? t('battery.cells.view.barLabel', 'Bar View') : t('battery.cells.view.gridLabel', 'Grid View')}
+                {showHeatmap ? t('battery.cells.view.barLabel', 'Bar view') : t('battery.cells.view.gridLabel', 'Grid view')}
               </Button>
             </div>
             {isLoading ? (
@@ -452,7 +462,7 @@ export default function BatteryCellsPage() {
               />
             ) : (
               <EmbeddedChart
-                title={t('battery.cells.heatmap.title', 'Cell Voltage Heatmap')}
+                title={t('battery.cells.heatmap.title', 'Cell voltage heatmap')}
                 ariaLabel={t(
                   'battery.cells.barView.aria',
                   'Voltage reading for each battery cell',
@@ -487,7 +497,7 @@ export default function BatteryCellsPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('battery.cells.distribution.title', 'Voltage Distribution')}
+              {t('battery.cells.distribution.title', 'Voltage distribution')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={240} />
@@ -502,7 +512,7 @@ export default function BatteryCellsPage() {
               />
             ) : (
               <EmbeddedChart
-                title={t('battery.cells.distribution.title', 'Voltage Distribution')}
+                title={t('battery.cells.distribution.title', 'Voltage distribution')}
                 ariaLabel={t(
                   'battery.cells.distribution.aria',
                   'Distribution of battery cells by voltage range',
@@ -510,7 +520,7 @@ export default function BatteryCellsPage() {
                 data={histogram}
                 dataColumns={[
                   { key: 'bucket', label: t('battery.cells.distribution.range', 'Voltage range') },
-                  { key: 'count', label: t('battery.cells.distribution.count', 'Cell Count') },
+                  { key: 'count', label: t('battery.cells.distribution.count', 'Cell count') },
                 ]}
                 fluid={false}
                 mobileHeight={224}
@@ -522,7 +532,7 @@ export default function BatteryCellsPage() {
                     <XAxis dataKey="bucket" tick={axisTickSm} angle={-35} textAnchor="end" height={60} />
                     <YAxis tick={axisTickSm} allowDecimals={false} width={32} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="count" name={t('battery.cells.distribution.count', 'Cell Count')} fill={CHART_COLORS[2]} radius={[3, 3, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="count" name={t('battery.cells.distribution.count', 'Cell count')} fill={CHART_COLORS[2]} radius={[3, 3, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </EmbeddedChart>
@@ -536,7 +546,7 @@ export default function BatteryCellsPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('battery.cells.bar.title', 'Cell Voltage Bar Chart')}
+            {t('battery.cells.bar.title', 'Cell voltage bar chart')}
           </PanelTitle>
           {isLoading ? (
             <Skeleton height={280} />
@@ -551,7 +561,7 @@ export default function BatteryCellsPage() {
             />
           ) : (
             <EmbeddedChart
-              title={t('battery.cells.bar.title', 'Cell Voltage Bar Chart')}
+              title={t('battery.cells.bar.title', 'Cell voltage bar chart')}
               ariaLabel={t(
                 'battery.cells.bar.aria',
                 'Battery cell voltage readings with pack minimum, average, and maximum references',
@@ -599,7 +609,7 @@ export default function BatteryCellsPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('battery.cells.overTime.title', 'Cell Voltage Over Time')}
+              {t('battery.cells.overTime.title', 'Cell voltage over time')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={280} />
@@ -614,7 +624,7 @@ export default function BatteryCellsPage() {
               />
             ) : (
               <EmbeddedChart
-                title={t('battery.cells.overTime.title', 'Cell Voltage Over Time')}
+                title={t('battery.cells.overTime.title', 'Cell voltage over time')}
                 ariaLabel={t(
                   'battery.cells.overTime.aria',
                   'Minimum, average, and maximum battery cell voltage over time',
@@ -627,9 +637,9 @@ export default function BatteryCellsPage() {
                 }))}
                 dataColumns={[
                   { key: 'timestamp', label: t('battery.cells.time', 'Time') },
-                  { key: 'min_voltage', label: t('battery.cells.overTime.min', 'Min Voltage') },
-                  { key: 'avg_voltage', label: t('battery.cells.overTime.avg', 'Avg Voltage') },
-                  { key: 'max_voltage', label: t('battery.cells.overTime.max', 'Max Voltage') },
+                  { key: 'min_voltage', label: t('battery.cells.overTime.min', 'Min voltage') },
+                  { key: 'avg_voltage', label: t('battery.cells.overTime.avg', 'Avg voltage') },
+                  { key: 'max_voltage', label: t('battery.cells.overTime.max', 'Max voltage') },
                 ]}
                 chartKey="battery-cells-voltage-history"
                 fluid={false}
@@ -649,9 +659,9 @@ export default function BatteryCellsPage() {
                     />
                     <Tooltip content={<ChartTooltip />} labelFormatter={(v: string) => formatDateTime(v)} />
                       <ChartLegend />
-                      <Line {...AREA_DEFAULTS} dataKey="min_voltage" name={t('battery.cells.overTime.min', 'Min Voltage')} stroke={CHART_COLORS[5]} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('min_voltage')} />
-                      <Line {...AREA_DEFAULTS} dataKey="avg_voltage" name={t('battery.cells.overTime.avg', 'Avg Voltage')} stroke={CHART_COLORS[0]} hide={hiddenSeries?.isHidden('avg_voltage')} />
-                      <Line {...AREA_DEFAULTS} dataKey="max_voltage" name={t('battery.cells.overTime.max', 'Max Voltage')} stroke={CHART_COLORS[1]} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('max_voltage')} />
+                      <Line {...AREA_DEFAULTS} dataKey="min_voltage" name={t('battery.cells.overTime.min', 'Min voltage')} stroke={CHART_COLORS[5]} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('min_voltage')} />
+                      <Line {...AREA_DEFAULTS} dataKey="avg_voltage" name={t('battery.cells.overTime.avg', 'Avg voltage')} stroke={CHART_COLORS[0]} hide={hiddenSeries?.isHidden('avg_voltage')} />
+                      <Line {...AREA_DEFAULTS} dataKey="max_voltage" name={t('battery.cells.overTime.max', 'Max voltage')} stroke={CHART_COLORS[1]} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('max_voltage')} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -662,7 +672,7 @@ export default function BatteryCellsPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('battery.cells.imbalance.title', 'Imbalance Trend')}
+              {t('battery.cells.imbalance.title', 'Imbalance trend')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={280} />
@@ -677,7 +687,7 @@ export default function BatteryCellsPage() {
               />
             ) : (
               <EmbeddedChart
-                title={t('battery.cells.imbalance.title', 'Imbalance Trend')}
+                title={t('battery.cells.imbalance.title', 'Imbalance trend')}
                 ariaLabel={t(
                   'battery.cells.imbalance.aria',
                   'Battery cell voltage imbalance over time with nominal and warning thresholds',
@@ -712,7 +722,7 @@ export default function BatteryCellsPage() {
       <FadeIn delay={0.2}>
         {/* chart-a11y:no-table dense per-sample voltage trace; SR users get the latest spread via the cell summary above */}
         <ChartContainer
-          title={t('battery.cells.chart.spreadTrend', 'Voltage Spread Trend')}
+          title={t('battery.cells.chart.spreadTrend', 'Voltage spread trend')}
           ariaLabel={t('battery.cells.chart.spreadTrend.aria', 'Battery cell voltage spread trend area chart over time')}
           annotations={{ vehicleId, scope: 'battery', chartId: 'battery-cells-spread-trend' }}
         >
@@ -738,7 +748,7 @@ export default function BatteryCellsPage() {
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="spreadRaw"
-                      name={t('battery.cells.chart.voltageSpread', 'Voltage Spread (mV)')}
+                      name={t('battery.cells.chart.voltageSpread', 'Voltage spread (mV)')}
                       stroke="#a855f7"
                       fill="url(#spreadGrad)"
                     />
@@ -764,7 +774,7 @@ export default function BatteryCellsPage() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <PanelTitle className="flex items-center gap-2">
               <Battery className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('battery.cells.details.title', 'Cell Details')}
+              {t('battery.cells.details.title', 'Cell details')}
             </PanelTitle>
             {cells.length > 0 && (
               <Badge variant="neutral" size="sm">
@@ -785,6 +795,7 @@ export default function BatteryCellsPage() {
             />
           ) : (
             <DataTable
+              enableValueFilters
               tableId="battery:cells"
               columns={columns}
               mobileColumns={['cell_number', 'voltage', 'status']}
@@ -806,7 +817,7 @@ export default function BatteryCellsPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />
-              {t('battery.cells.temp.title', 'Temperature Summary')}
+              {t('battery.cells.temp.title', 'Temperature summary')}
             </PanelTitle>
             {isLoading ? (
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -817,25 +828,25 @@ export default function BatteryCellsPage() {
             ) : data ? (
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <MetricCard
-                  label={t('battery.cells.temp.avg', 'Avg Temperature')}
+                  label={t('battery.cells.temp.avg', 'Avg temperature')}
                   value={formatTemperature(data.avg_temperature, { precision: 1 })}
                   icon={<Thermometer className="h-5 w-5" />}
                   color="green"
                 />
                 <MetricCard
-                  label={t('battery.cells.temp.min', 'Min Temperature')}
+                  label={t('battery.cells.temp.min', 'Min temperature')}
                   value={formatTemperature(data.min_temperature, { precision: 1 })}
                   icon={<ArrowDownRight className="h-5 w-5" />}
                   color="cyan"
                 />
                 <MetricCard
-                  label={t('battery.cells.temp.max', 'Max Temperature')}
+                  label={t('battery.cells.temp.max', 'Max temperature')}
                   value={formatTemperature(data.max_temperature, { precision: 1 })}
                   icon={<ArrowUpRight className="h-5 w-5" />}
                   color="amber"
                 />
                 <MetricCard
-                  label={t('battery.cells.temp.spread', 'Temp Spread')}
+                  label={t('battery.cells.temp.spread', 'Temp spread')}
                   value={`${fmtNumber(tempUnit === '°F' ? (data.temp_spread ?? 0) * 1.8 : (data.temp_spread ?? 0), 1)}${tempUnit}`}
                   icon={<Activity className="h-5 w-5" />}
                   color={(data.temp_spread ?? 0) > 5 ? 'red' : (data.temp_spread ?? 0) > 3 ? 'amber' : 'green'}
@@ -855,7 +866,7 @@ export default function BatteryCellsPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Shield className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('battery.cells.recommendations', 'Health Recommendations')}
+              {t('battery.cells.recommendations', 'Health recommendations')}
             </PanelTitle>
             {isLoading ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -894,31 +905,31 @@ export default function BatteryCellsPage() {
       <FadeIn delay={0.35}>
         <section aria-label={t('battery.cells.summary', 'At a glance')} className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 xl:grid-cols-6">
           <SummaryStat
-            label={t('battery.cells.stat.totalCells', 'Total Cells')}
+            label={t('battery.cells.stat.totalCells', 'Total cells')}
             value={data?.total_cells ?? 0}
             valueClassName="text-cyan-300"
           />
           <SummaryStat
-            label={t('battery.cells.stat.packVoltage', 'Pack Voltage')}
+            label={t('battery.cells.stat.packVoltage', 'Pack voltage')}
             value={<>{fmtNumber(data?.pack_voltage ?? 0, 1)}<span className={typography.size.sm}>V</span></>}
             valueClassName="text-emerald-300"
           />
           <SummaryStat
-            label={t('battery.cells.stat.avgVoltage', 'Avg Cell V')}
+            label={t('battery.cells.stat.avgVoltage', 'Avg cell V')}
             value={<>{fmtNumber(avgVoltage, 4)}<span className={typography.size.sm}>V</span></>}
           />
           <SummaryStat
-            label={t('battery.cells.stat.voltageSpread', 'V Spread')}
+            label={t('battery.cells.stat.voltageSpread', 'V spread')}
             value={<>{fmtNumber(data?.imbalance_mv ?? 0, 1)}<span className={typography.size.sm}>mV</span></>}
             valueClassName={(data?.imbalance_mv ?? 0) > 15 ? 'text-rose-300' : (data?.imbalance_mv ?? 0) > 5 ? 'text-amber-300' : 'text-emerald-300'}
           />
           <SummaryStat
-            label={t('battery.cells.stat.tempSpread', 'Temp Spread')}
+            label={t('battery.cells.stat.tempSpread', 'Temp spread')}
             value={<>{fmtNumber(tempUnit === '°F' ? (data?.temp_spread ?? 0) * 1.8 : (data?.temp_spread ?? 0), 1)}<span className={typography.size.sm}>{tempUnit}</span></>}
             valueClassName={(data?.temp_spread ?? 0) > 5 ? 'text-rose-300' : (data?.temp_spread ?? 0) > 3 ? 'text-amber-300' : 'text-emerald-300'}
           />
           <SummaryStat
-            label={t('battery.cells.stat.normalCells', 'Normal Cells')}
+            label={t('battery.cells.stat.normalCells', 'Normal cells')}
             value={<>{cells.filter((c) => c.status === 'normal').length}<span className={typography.size.sm}>/{data?.total_cells ?? 0}</span></>}
             valueClassName="text-emerald-300"
           />

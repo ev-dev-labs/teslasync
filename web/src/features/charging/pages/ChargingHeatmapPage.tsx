@@ -105,7 +105,7 @@ export default function ChargingHeatmapPage() {
     <PageContainer
       title={t('charging.heatmap.title', 'Charging Patterns')}
       subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
-      actions={actions}
+      secondaryActions={actions}
       query={query}
     >
       {/* ── KPI band ── */}

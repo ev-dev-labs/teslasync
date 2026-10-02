@@ -139,7 +139,7 @@ export default function ChargeAdvisorPage() {
         'chargeAdvisor.subtitle',
         'Historical-use evidence for planning the next complete local day.',
       )}
-      actions={(
+      contextActions={(
         <div className="flex flex-wrap items-end gap-2">
           <Select
             id="charge-advisor-reserve-floor"

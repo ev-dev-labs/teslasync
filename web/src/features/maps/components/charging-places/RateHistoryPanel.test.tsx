@@ -177,7 +177,7 @@ describe('RateHistoryPanel — delete flow', () => {
     expect(onDelete).not.toHaveBeenCalled();
 
     const dialog = screen.getByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel Rate' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel rate' }));
 
     await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
     expect(onDelete).toHaveBeenCalledWith(rate);

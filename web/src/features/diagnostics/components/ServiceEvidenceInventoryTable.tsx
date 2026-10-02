@@ -78,7 +78,7 @@ export function ServiceEvidenceInventoryTable({
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <ClipboardList className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('serviceEvidencePack.inventory.title', 'Evidence Inventory')}
+        {t('serviceEvidencePack.inventory.title', 'Evidence inventory')}
       </PanelTitle>
       {isError ? (
         <QueryError error={error} onRetry={onRetry} />
