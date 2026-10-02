@@ -45,7 +45,7 @@ export default function ActionCenterPage() {
   const query = useActionCenter(filter);
   const actionCenterState = useDataState(query, { provenance: 'inferred' });
   const applyAction = useApplyActionCenterAction();
-  usePageTitle(t('actionCenter.page.title', 'Action Center'));
+  usePageTitle(t('actionCenter.page.title', 'Action center'));
 
   useEffect(() => {
     setFilter((current) =>
@@ -184,7 +184,7 @@ export default function ActionCenterPage() {
 
   return (
     <PageContainer
-      title={t('actionCenter.page.title', 'Action Center')}
+      title={t('actionCenter.page.title', 'Action center')}
       subtitle={t(
         'actionCenter.page.subtitle',
         'A prioritized decision inbox built from existing TeslaSync evidence—not another analytics dashboard.',

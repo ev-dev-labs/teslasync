@@ -109,7 +109,7 @@ function renderBreakdown(overrides: Partial<RenderProps> = {}) {
 
 /** The stat card wrapping a given human label ('Live · L1', 'Stale', …). */
 function cardByLabel(label: string): HTMLElement {
-  const el = screen.getByText(label).closest('div.rounded-lg');
+  const el = screen.getAllByText(label).map((element) => element.closest('div.rounded-lg')).find(Boolean);
   if (!el) throw new Error(`no card container for label "${label}"`);
   return el as HTMLElement;
 }
@@ -162,7 +162,7 @@ describe('LiveSignalSourceBreakdown', () => {
     );
     // The panel heading is always present so the section is never a blank img.
     expect(
-      screen.getByRole('heading', { name: 'Source Layers' }),
+      screen.getByRole('heading', { name: 'Source layers' }),
     ).toBeInTheDocument();
   });
 
@@ -271,7 +271,7 @@ describe('LiveSignalSourceBreakdown', () => {
     expect(screen.queryAllByTestId('source-layer-badge')).toHaveLength(0);
     // …but the panel is never blank: its heading survives.
     expect(
-      screen.getByRole('heading', { name: 'Source Layers' }),
+      screen.getByRole('heading', { name: 'Source layers' }),
     ).toBeInTheDocument();
   });
 
@@ -282,7 +282,7 @@ describe('LiveSignalSourceBreakdown', () => {
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.queryAllByTestId('source-layer-badge')).toHaveLength(0);
     expect(
-      screen.getByRole('heading', { name: 'Source Layers' }),
+      screen.getByRole('heading', { name: 'Source layers' }),
     ).toBeInTheDocument();
   });
 
@@ -310,7 +310,7 @@ describe('LiveSignalSourceBreakdown', () => {
     // No breakdown, but the panel title still anchors the section.
     expect(screen.queryByRole('img')).toBeNull();
     expect(
-      screen.getByRole('heading', { name: 'Source Layers' }),
+      screen.getByRole('heading', { name: 'Source layers' }),
     ).toBeInTheDocument();
   });
 });

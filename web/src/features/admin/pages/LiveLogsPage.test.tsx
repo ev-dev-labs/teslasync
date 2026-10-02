@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { useSyncExternalStore, type ReactNode } from 'react';
@@ -342,6 +342,15 @@ describe('LiveLogsPage', () => {
       expect(screen.getByText(/hello world/)).toBeInTheDocument();
     });
     expect(screen.getByText(/second event/)).toBeInTheDocument();
+    expect(within(screen.getByRole('row', { name: /hello world/ })).getByText('Info')).toBeInTheDocument();
+    expect(within(screen.getByRole('row', { name: /second event/ })).getByText('Warn')).toBeInTheDocument();
+    expect(screen.queryByText('INFO')).not.toBeInTheDocument();
+    expect(screen.queryByText('WARN')).not.toBeInTheDocument();
+    const levelHeader = screen.getByRole('columnheader', { name: /^Level\b/ });
+    fireEvent.click(within(levelHeader).getByRole('button', { name: /^Filter / }));
+    const menu = screen.getByRole('dialog', { name: /^Filter / });
+    expect(within(menu).getByRole('checkbox', { name: 'Info' })).toBeInTheDocument();
+    expect(within(menu).getByRole('checkbox', { name: 'Warn' })).toBeInTheDocument();
 
     await act(async () => {
       await stream.close();

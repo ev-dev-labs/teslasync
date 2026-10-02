@@ -51,7 +51,7 @@ export function ByteSizeConverterTool() {
     <ToolCard
       icon={HardDrive}
       color="cyan"
-      title={t('devtools.utils.byteSize', 'Byte Size')}
+      title={t('devtools.utils.byteSize', 'Byte size')}
       description={t('devtools.utils.byteSizeDesc', 'Convert a value between B, KB, MB, GB, and TB.')}
     >
       <div className="space-y-3">

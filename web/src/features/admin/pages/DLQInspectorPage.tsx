@@ -42,7 +42,7 @@ import {
 
 export default function DLQInspectorPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.dlq.pageTitle', 'DLQ Inspector'));
+  usePageTitle(t('admin.dlq.pageTitle', 'DLQ inspector'));
 
   // Selected DLQ summary row drives both the drawer and the scoped
   // audit fetch. Keeping it in page state (rather than a route param)
@@ -99,7 +99,7 @@ export default function DLQInspectorPage() {
 
   return (
     <PageContainer
-      title={t('admin.dlq.pageTitle', 'DLQ Inspector')}
+      title={t('admin.dlq.pageTitle', 'DLQ inspector')}
       subtitle={t(
         'admin.dlq.subtitle',
         'Dead-letter queue — inspect failed ingests and replay them back to their source topic.',

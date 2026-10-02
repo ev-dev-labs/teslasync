@@ -315,7 +315,7 @@ export default function FeedbackQueuePage() {
     <PageContainer
       title={t('feedback.queue.title', 'Feedback queue')}
       subtitle={t('feedback.queue.subtitle', 'Triage user-submitted bug reports and feature requests')}
-      actions={actions}
+      secondaryActions={actions}
     >
       {/* 1 — KPI band: whole-queue counts, reflows 2 → 3 → 6 columns */}
       <FadeIn>
@@ -430,6 +430,7 @@ export default function FeedbackQueuePage() {
             <>
               <DataTable<FeedbackEntry>
                 tableId="admin:feedback"
+                enableValueFilters={false}
                 columns={columns}
                 mobileColumns={['title', 'status', 'created_at']}
                 data={items}

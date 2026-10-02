@@ -46,7 +46,7 @@ import {
 
 export default function SecurityAccessPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.security.title', 'Security & Access'));
+  usePageTitle(t('admin.security.title', 'Security & access'));
 
   /* ---- Vehicle selection (persisted across pages) ---- */
   const { vehicleId } = useSelectedVehicle();
@@ -136,8 +136,8 @@ export default function SecurityAccessPage() {
 
   return (
     <PageContainer
-      title={t('admin.security.title', 'Security & Access')}
-      subtitle={t('admin.security.subtitle', 'Lock status, sentry mode, doors, and windows')}
+      title={t('admin.security.title', 'Security & access')}
+      subtitle={t('admin.security.subtitle', 'Lock status, sentry mode, doors, and Windows')}
       query={[vehiclesQuery, latestQuery, historyQuery]}
       dataSources={dataSources}
     >

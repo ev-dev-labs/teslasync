@@ -215,7 +215,7 @@ describe('IngestXRayPage', () => {
     // The toolbar renders the vehicle picker + a disabled refresh control.
     expect(screen.getByLabelText('Vehicle')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Refresh ingest X-Ray' }),
+      screen.getByRole('button', { name: 'Refresh ingest x-ray' }),
     ).toBeDisabled();
 
     // The four numeric KPIs (samples / fields / peak / avg) read em-dash so a
@@ -285,7 +285,7 @@ describe('IngestXRayPage', () => {
 
     const callsBefore = xrayFn.mock.calls.length;
     fireEvent.click(
-      screen.getByRole('button', { name: 'Refresh ingest X-Ray' }),
+      screen.getByRole('button', { name: 'Refresh ingest x-ray' }),
     );
 
     // The refresh triggered at least one more X-Ray request (attempt + retry).
@@ -332,7 +332,7 @@ describe('IngestXRayPage', () => {
     renderPage();
 
     const refreshBtn = screen.getByRole('button', {
-      name: 'Refresh ingest X-Ray',
+      name: 'Refresh ingest x-ray',
     });
     expect(refreshBtn).toBeDisabled();
 

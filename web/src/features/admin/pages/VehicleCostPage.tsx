@@ -49,7 +49,7 @@ const EMPTY_VEHICLES: VehicleCostRow[] = [];
 
 export default function VehicleCostPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.vehicleCost.pageTitle', 'Vehicle Ingest Cost'));
+  usePageTitle(t('admin.vehicleCost.pageTitle', 'Vehicle ingest cost'));
 
   const [windowDays, setWindowDays] = useState<number>(30);
   const since = useMemo(
@@ -97,12 +97,12 @@ export default function VehicleCostPage() {
 
   return (
     <PageContainer
-      title={t('admin.vehicleCost.pageTitle', 'Vehicle Ingest Cost')}
+      title={t('admin.vehicleCost.pageTitle', 'Vehicle ingest cost')}
       subtitle={t(
         'admin.vehicleCost.subtitle',
         'Per-vehicle telemetry cost over the selected window. Use this to spot vehicles whose ingest volume is disproportionate to the fleet baseline.',
       )}
-      actions={actions}
+      contextActions={actions}
       query={query}
     >
       <div className="space-y-6">

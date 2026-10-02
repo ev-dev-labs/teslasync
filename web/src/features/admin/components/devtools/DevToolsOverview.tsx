@@ -52,7 +52,7 @@ export function DevToolsOverview({ errorVinCount, vehicleCount, loading = false,
       className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5"
     >
       <MetricCard
-        label={t('devtools.overview.telemetryErrors', 'Telemetry Errors')}
+        label={t('devtools.overview.telemetryErrors', 'Telemetry errors')}
         value={liveUnknown ? placeholder : errors}
         subtitle={t('devtools.overview.affectedVins', 'affected VINs')}
         icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
@@ -66,21 +66,21 @@ export function DevToolsOverview({ errorVinCount, vehicleCount, loading = false,
         color="cyan"
       />
       <MetricCard
-        label={t('devtools.overview.fleetEndpoints', 'Fleet API Endpoints')}
+        label={t('devtools.overview.fleetEndpoints', 'Fleet API endpoints')}
         value={TESLA_ENDPOINTS.length}
         subtitle={t('devtools.overview.documented', 'documented')}
         icon={<Network className="h-5 w-5" aria-hidden="true" />}
         color="blue"
       />
       <MetricCard
-        label={t('devtools.overview.telemetrySignals', 'Telemetry Signals')}
+        label={t('devtools.overview.telemetrySignals', 'Telemetry signals')}
         value={TELEMETRY_SIGNAL_COUNT}
         subtitle={t('devtools.overview.streamedFields', 'streamed fields')}
         icon={<Radio className="h-5 w-5" aria-hidden="true" />}
         color="purple"
       />
       <MetricCard
-        label={t('devtools.overview.referenceDocs', 'Reference Docs')}
+        label={t('devtools.overview.referenceDocs', 'Reference docs')}
         value={REFERENCE_LINKS.length}
         subtitle={t('devtools.overview.externalLinks', 'external links')}
         icon={<BookOpen className="h-5 w-5" aria-hidden="true" />}

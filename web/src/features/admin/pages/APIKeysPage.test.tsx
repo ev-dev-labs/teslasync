@@ -180,14 +180,14 @@ describe('APIKeysPage', () => {
     expect(screen.getByText('Roadster')).toBeInTheDocument();
 
     // KPI band reflects the single-pass summary.
-    expect(kpiCardText('Total Keys')).toContain('3');
+    expect(kpiCardText('Total keys')).toContain('3');
     expect(kpiCardText('Active')).toContain('2');
-    expect(kpiCardText('Admin Access')).toContain('1');
+    expect(kpiCardText('Admin access')).toContain('1');
 
     // Header count caption + supporting panels.
     expect(screen.getByText('3 total')).toBeInTheDocument();
-    expect(screen.getByText('Access Levels')).toBeInTheDocument();
-    expect(screen.getByText('About API Keys')).toBeInTheDocument();
+    expect(screen.getByText('Access levels')).toBeInTheDocument();
+    expect(screen.getByText('About API keys')).toBeInTheDocument();
 
     // The expired key surfaces both a KPI "Expired" label AND an inline badge.
     expect(screen.getAllByText('Expired').length).toBeGreaterThanOrEqual(2);
@@ -201,7 +201,7 @@ describe('APIKeysPage', () => {
     renderPage();
 
     await screen.findByText('No API keys');
-    const createButton = screen.getByRole('button', { name: 'Create Key' });
+    const createButton = screen.getByRole('button', { name: 'Create key' });
     const noticeTitle = screen.getByText('API key management is read-only');
 
     expect(createButton).toBeDisabled();
@@ -225,7 +225,7 @@ describe('APIKeysPage', () => {
     ).toBeInTheDocument();
 
     // Empty is real data — the KPI legitimately reads 0 (not the em-dash).
-    expect(kpiCardText('Total Keys')).toContain('0');
+    expect(kpiCardText('Total keys')).toContain('0');
     expect(screen.queryByText('Falcon')).not.toBeInTheDocument();
   });
 
@@ -241,8 +241,8 @@ describe('APIKeysPage', () => {
 
     // Regression guard: the KPI band must not lie with "0" on a failed load.
     expect(screen.getAllByText('—')).toHaveLength(4);
-    expect(kpiCardText('Total Keys')).toContain('—');
-    expect(kpiCardText('Total Keys')).not.toContain('0');
+    expect(kpiCardText('Total keys')).toContain('—');
+    expect(kpiCardText('Total keys')).not.toContain('0');
   });
 
   it('renders skeletons while the query is pending', async () => {
@@ -253,7 +253,7 @@ describe('APIKeysPage', () => {
 
     // Loading branch: skeletons render, real KPI values do not yet.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Total Keys')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total keys')).not.toBeInTheDocument();
     expect(screen.queryByText('No API keys')).not.toBeInTheDocument();
 
     // Flush the query so React Query teardown is clean.
@@ -268,10 +268,12 @@ describe('APIKeysPage', () => {
     await screen.findByText('No API keys');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create Key' }));
+    const create = screen.getByRole('button', { name: 'Create key' });
+    expect(create.closest('[data-action-group="primary"]')).not.toBeNull();
+    fireEvent.click(create);
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('New API Key')).toBeInTheDocument();
+    expect(within(dialog).getByText('New API key')).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() =>
@@ -284,7 +286,7 @@ describe('APIKeysPage', () => {
     renderPage();
 
     await screen.findByText('No API keys');
-    fireEvent.click(screen.getByRole('button', { name: 'Create Key' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create key' }));
 
     const dialog = await screen.findByRole('dialog');
     // Whitespace around the name must be trimmed before it hits the API.
@@ -294,7 +296,7 @@ describe('APIKeysPage', () => {
     fireEvent.change(within(dialog).getByLabelText('Permissions'), {
       target: { value: 'admin' },
     });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate Key' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate key' }));
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -308,8 +310,8 @@ describe('APIKeysPage', () => {
     );
 
     // Phase 2 of the dialog: the one-time secret reveal replaces the form.
-    expect(await screen.findByText('API Key Created')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Generate Key' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'API key created' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate key' })).not.toBeInTheDocument();
   });
 
   it('revokes an active key via POST /api-keys/:id/revoke', async () => {

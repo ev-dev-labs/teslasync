@@ -48,7 +48,7 @@ import {
 
 export default function IngestXRayPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.xray.pageTitle', 'Ingest X-Ray'));
+  usePageTitle(t('admin.xray.pageTitle', 'Ingest x-ray'));
 
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const [windowSel, setWindowSel] = useState<IngestXRayWindow>('1h');
@@ -94,7 +94,7 @@ export default function IngestXRayPage() {
         variant="ghost"
         onClick={refetch}
         disabled={noVehicle || xray.isFetching}
-        aria-label={t('admin.xray.actions.refresh', 'Refresh ingest X-Ray')}
+        aria-label={t('admin.xray.actions.refresh', 'Refresh ingest x-ray')}
       >
         <RefreshCw className="h-4 w-4" aria-hidden="true" />
       </Button>
@@ -103,12 +103,12 @@ export default function IngestXRayPage() {
 
   return (
     <PageContainer
-      title={t('admin.xray.pageTitle', 'Ingest X-Ray')}
+      title={t('admin.xray.pageTitle', 'Ingest x-ray')}
       subtitle={t(
         'admin.xray.subtitle',
         'Per-vehicle telemetry sample counts — pick a vehicle to inspect what the ingest pipeline is receiving.',
       )}
-      actions={actions}
+      contextActions={actions}
       query={xray}
     >
       {noVehicle && (

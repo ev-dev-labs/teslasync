@@ -24,7 +24,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
-import { PanelTitle, Caption, Code, Text } from '@/components/ui/Typography';
+import { PanelTitle, Caption, Code, Text } from '@/components/ui';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
@@ -106,7 +106,7 @@ function cacheColor(ratio: number): string {
 
 export default function SlowQueriesPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.slowQueries.pageTitle', 'Slow Queries'));
+  usePageTitle(t('admin.slowQueries.pageTitle', 'Slow queries'));
 
   const [orderBy, setOrderBy] = useState<SlowQueryOrderBy>('mean_time');
   const [limit, setLimit] = useState<number>(25);
@@ -181,6 +181,7 @@ export default function SlowQueriesPage() {
     () => [
       {
         key: 'fingerprint',
+        filterValue: (r) => r.fingerprint || null,
         header: t('admin.slowQueries.colFingerprint', 'Query fingerprint'),
         render: (r) => (
           <Code className="block max-w-md truncate" title={r.fingerprint}>
@@ -190,30 +191,41 @@ export default function SlowQueriesPage() {
       },
       {
         key: 'calls',
+        filterValue: (r) => r.calls ?? null,
+        filterValueLabel: (_value, r) => fmtNumber(r.calls),
         header: t('admin.slowQueries.colCalls', 'Calls'),
         align: 'right',
         render: (r) => <span className="tabular-nums">{fmtNumber(r.calls)}</span>,
       },
       {
         key: 'mean_time_ms',
+        filterValue: (r) => r.mean_time_ms ?? null,
+        filterValueLabel: (_value, r) => fmtNumber(r.mean_time_ms, 2),
+        groupStart: true,
         header: t('admin.slowQueries.colMean', 'Mean (ms)'),
         align: 'right',
         render: (r) => <span className="tabular-nums">{fmtNumber(r.mean_time_ms, 2)}</span>,
       },
       {
         key: 'max_time_ms',
+        filterValue: (r) => r.max_time_ms ?? null,
+        filterValueLabel: (_value, r) => fmtNumber(r.max_time_ms, 2),
         header: t('admin.slowQueries.colMax', 'Max (ms)'),
         align: 'right',
         render: (r) => <span className="tabular-nums">{fmtNumber(r.max_time_ms, 2)}</span>,
       },
       {
         key: 'total_time_ms',
+        filterValue: (r) => r.total_time_ms ?? null,
+        filterValueLabel: (_value, r) => fmtNumber(r.total_time_ms, 0),
         header: t('admin.slowQueries.colTotal', 'Total (ms)'),
         align: 'right',
         render: (r) => <span className="tabular-nums">{fmtNumber(r.total_time_ms, 0)}</span>,
       },
       {
         key: 'rows_returned',
+        filterValue: (r) => r.rows_returned ?? null,
+        filterValueLabel: (_value, r) => fmtNumber(r.rows_returned),
         header: t('admin.slowQueries.colRows', 'Rows'),
         align: 'right',
         render: (r) => <span className="tabular-nums">{fmtNumber(r.rows_returned)}</span>,
@@ -258,12 +270,12 @@ export default function SlowQueriesPage() {
 
   return (
     <PageContainer
-      title={t('admin.slowQueries.pageTitle', 'Slow Queries')}
+      title={t('admin.slowQueries.pageTitle', 'Slow queries')}
       subtitle={t(
         'admin.slowQueries.subtitle',
         'Top queries from pg_stat_statements. Sort by mean time to surface the slowest individual calls, or total time to surface the costliest in aggregate.',
       )}
-      actions={actions}
+      contextActions={actions}
       query={query}
     >
       {subsystemMissing && (
@@ -290,7 +302,7 @@ export default function SlowQueriesPage() {
               <QueryError
                 error={query.error}
                 onRetry={retry}
-                resourceName={t('admin.slowQueries.pageTitle', 'Slow Queries')}
+                resourceName={t('admin.slowQueries.pageTitle', 'Slow queries')}
               />
             </div>
           ) : (
@@ -466,6 +478,7 @@ export default function SlowQueriesPage() {
                   columns={columns}
                   mobileColumns={['fingerprint', 'mean_time_ms', 'calls']}
                   data={rows}
+                  enableValueFilters
                   keyExtractor={(r) => r.query_id}
                   emptyMessage={t('admin.slowQueries.emptyTable', 'No slow queries')}
                   pagination

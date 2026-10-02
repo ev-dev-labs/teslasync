@@ -91,7 +91,7 @@ export default function SystemPage() {
         'system.page.subtitle',
         'Operator dashboard for the throttles and budgets that bound this TeslaSync deployment.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={[rateLimit, queue]}
       dataSources={dataSources}
     >

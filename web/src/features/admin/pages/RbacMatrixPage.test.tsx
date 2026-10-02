@@ -156,6 +156,13 @@ describe('RbacMatrixPage', () => {
     expect(screen.getByTestId('rbac-col-admin')).toBeInTheDocument()
     expect(screen.getByTestId('rbac-row-fleet.read')).toBeInTheDocument()
     expect(screen.getByTestId('rbac-row-admin.audit')).toBeInTheDocument()
+    for (const category of ['fleet', 'admin']) {
+      const header = screen.getByTestId(`rbac-category-row-${category}`)
+      expect(header).toHaveAttribute('scope', 'rowgroup')
+      expect(header.closest('tbody')).toContainElement(
+        screen.getByTestId(`rbac-row-${category === 'fleet' ? 'fleet.read' : 'admin.audit'}`),
+      )
+    }
 
     // Read-only allow / deny markers.
     expect(screen.getByTestId('rbac-cell-admin-fleet.read')).toHaveTextContent('✓')

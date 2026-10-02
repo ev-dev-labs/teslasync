@@ -102,6 +102,7 @@ export function FlagsTable({
     () => [
       {
         key: 'key',
+        filterValue: (row) => row.key ?? null,
         header: t('admin.flags.cols.key', 'Flag key'),
         sortable: true,
         visibleOnMobile: true,
@@ -162,6 +163,8 @@ export function FlagsTable({
       name="feature-flags"
       columns={columns}
       data={sorted}
+      enableValueFilters
+      filterData={rows ?? []}
       keyExtractor={keyExtractor}
       sortKey={sortKey}
       sortDir={sortDir}

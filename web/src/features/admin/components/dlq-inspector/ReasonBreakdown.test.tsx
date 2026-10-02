@@ -274,7 +274,7 @@ describe('ReasonBreakdown — accessibility', () => {
 
     renderRB({ rows });
 
-    const list = screen.getByRole('list', { name: /failure reasons breakdown/i });
+    const list = screen.getByRole('list', { name: /Failure reasons breakdown/i });
     expect(list).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });

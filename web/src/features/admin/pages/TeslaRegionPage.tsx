@@ -74,7 +74,7 @@ export default function TeslaRegionPage() {
     <PageContainer
       title={title}
       subtitle={t('region.subtitle', 'Tesla account region and Fleet API endpoint')}
-      actions={actions}
+      secondaryActions={actions}
       query={regionQuery}
     >
       <FadeIn>

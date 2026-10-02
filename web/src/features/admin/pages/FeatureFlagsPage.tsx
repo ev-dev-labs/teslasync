@@ -55,7 +55,7 @@ import {
 
 export default function FeatureFlagsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.flags.pageTitle', 'Feature Flags'));
+  usePageTitle(t('admin.flags.pageTitle', 'Feature flags'));
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<FeatureFlagEntry | null>(null);
@@ -116,12 +116,12 @@ export default function FeatureFlagsPage() {
 
   return (
     <PageContainer
-      title={t('admin.flags.pageTitle', 'Feature Flags')}
+      title={t('admin.flags.pageTitle', 'Feature flags')}
       subtitle={t(
         'admin.flags.subtitle',
         'Typed feature-flag registry — all changes are sudo-gated and logged.',
       )}
-      actions={
+      primaryAction={
         <Button
           variant="primary"
           icon={<Plus className="h-4 w-4" />}

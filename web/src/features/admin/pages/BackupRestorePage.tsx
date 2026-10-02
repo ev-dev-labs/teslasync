@@ -168,15 +168,15 @@ const PROVIDER_FIELDS: Record<string, { key: string; label: string; type?: strin
   s3: [
     { key: 'bucket', label: 'Bucket', required: true, placeholder: 'my-backup-bucket' },
     { key: 'region', label: 'Region', required: true, placeholder: 'us-east-1' },
-    { key: 'access_key', label: 'Access Key', required: true },
-    { key: 'secret_key', label: 'Secret Key', required: true, type: 'password' },
+    { key: 'access_key', label: 'Access key', required: true },
+    { key: 'secret_key', label: 'Secret key', required: true, type: 'password' },
     { key: 'endpoint', label: 'Endpoint (optional)', placeholder: 'https://s3.amazonaws.com' },
     { key: 'prefix', label: 'Prefix (optional)', placeholder: 'backups/' },
   ],
   azure: [
-    { key: 'account_name', label: 'Account Name', required: true },
-    { key: 'account_key', label: 'Account Key', required: true, type: 'password' },
-    { key: 'container_name', label: 'Container Name', required: true },
+    { key: 'account_name', label: 'Account name', required: true },
+    { key: 'account_key', label: 'Account key', required: true, type: 'password' },
+    { key: 'container_name', label: 'Container name', required: true },
     { key: 'prefix', label: 'Prefix (optional)', placeholder: 'backups/' },
   ],
   gcs: [
@@ -194,7 +194,7 @@ export default function BackupRestorePage() {
   const { t } = useTranslation();
   const toast = useToast();
   const qc = useQueryClient();
-  usePageTitle(t('backup.title', 'Backup & Restore'));
+  usePageTitle(t('backup.title', 'Backup & restore'));
 
   /* ---- state ---- */
   const [modalOpen, setModalOpen] = useState(false);
@@ -439,6 +439,7 @@ export default function BackupRestorePage() {
   const configColumns: Column<BackupConfig>[] = [
     {
       key: 'name',
+      filterValue: (row) => row.name ?? null,
       header: t('backup.name', 'Name'),
       render: (row) => (
         <div className="flex items-center gap-2">
@@ -451,6 +452,8 @@ export default function BackupRestorePage() {
     },
     {
       key: 'backup_type',
+      filterValue: (row) => row.backup_type ?? null,
+      filterValueLabel: (_value, row) => row.backup_type === 'full' ? t('backup.full', 'Full') : t('backup.incremental', 'Incremental'),
       header: t('backup.type', 'Type'),
       render: (row) => (
         <Badge variant={row.backup_type === 'full' ? 'info' : 'warning'} size="sm">
@@ -460,6 +463,8 @@ export default function BackupRestorePage() {
     },
     {
       key: 'provider',
+      filterValue: (row) => row.provider ?? null,
+      filterValueLabel: (_value, row) => providerLabel(row.provider),
       header: t('backup.provider', 'Provider'),
       render: (row) => {
         const ProvIcon = PROVIDER_ICON[row.provider] ?? Icons.cloud;
@@ -473,6 +478,8 @@ export default function BackupRestorePage() {
     },
     {
       key: 'frequency',
+      filterValue: (row) => row.frequency_days ?? null,
+      align: 'right',
       header: t('backup.frequency', 'Frequency'),
       render: (row) => (
         <Text size="sm" color="secondary">
@@ -537,6 +544,7 @@ export default function BackupRestorePage() {
   const runColumns: Column<BackupRun>[] = [
     {
       key: 'created_at',
+      filterValue: (row) => row.created_at ?? null,
       header: t('backup.time', 'Time'),
       sortable: true,
       render: (row) => (
@@ -545,7 +553,9 @@ export default function BackupRestorePage() {
     },
     {
       key: 'run_type',
-      header: t('backup.runType', 'Run Type'),
+      filterValue: (row) => row.run_type ?? null,
+      filterValueLabel: (_value, row) => t(`backup.runType.${row.run_type}`, row.run_type),
+      header: t('backup.runType', 'Run type'),
       render: (row) => (
         <Badge
           variant={({ backup: 'info', restore: 'success', quick: 'warning' } as Record<string, 'info' | 'success' | 'warning'>)[row.run_type] ?? 'neutral'}
@@ -557,6 +567,7 @@ export default function BackupRestorePage() {
     },
     {
       key: 'status',
+      filterValue: (row) => row.status ?? null,
       header: t('backup.status', 'Status'),
       sortable: true,
       render: (row) => {
@@ -572,6 +583,8 @@ export default function BackupRestorePage() {
     },
     {
       key: 'provider',
+      filterValue: (row) => row.provider ?? null,
+      filterValueLabel: (_value, row) => providerLabel(row.provider),
       header: t('backup.provider', 'Provider'),
       render: (row) => (
         <Badge variant={PROVIDER_BADGE_VARIANT[row.provider] ?? 'neutral'} size="sm">
@@ -581,6 +594,7 @@ export default function BackupRestorePage() {
     },
     {
       key: 'file_name',
+      filterValue: (row) => row.file_name ?? null,
       header: t('backup.file', 'File'),
       render: (row) => (
         <Text mono size="xs" color="secondary" className="block max-w-[200px] truncate">
@@ -590,6 +604,10 @@ export default function BackupRestorePage() {
     },
     {
       key: 'file_size',
+      filterValue: (row) => row.file_size ?? null,
+      filterValueLabel: (_value, row) => row.file_size == null ? '—' : formatBytes(row.file_size),
+      align: 'right',
+      groupStart: true,
       header: t('backup.size', 'Size'),
       sortable: true,
       render: (row) => (
@@ -598,6 +616,9 @@ export default function BackupRestorePage() {
     },
     {
       key: 'record_count',
+      filterValue: (row) => row.record_count ?? null,
+      filterValueLabel: (_value, row) => fmtInt(row.record_count),
+      align: 'right',
       header: t('backup.records', 'Records'),
       render: (row) => (
         <Text mono size="sm" color="secondary" className="tabular-nums">
@@ -607,6 +628,9 @@ export default function BackupRestorePage() {
     },
     {
       key: 'duration',
+      filterValue: (row) => row.duration_ms ?? null,
+      filterValueLabel: (_value, row) => formatDurationMsCompact(row.duration_ms),
+      align: 'right',
       header: t('backup.duration', 'Duration'),
       render: (row) => (
         <Text size="sm" color="muted" className="tabular-nums">
@@ -650,9 +674,12 @@ export default function BackupRestorePage() {
 
   /* ---- preview table columns ---- */
   const previewColumns: Column<{ name: string; rows: number }>[] = [
-    { key: 'name', header: t('backup.table', 'Table'), render: (row) => <Text mono weight="medium" color="primary">{row.name}</Text> },
+    { key: 'name', filterValue: (row) => row.name ?? null, header: t('backup.table', 'Hypertable'), render: (row) => <Text mono weight="medium" color="primary">{row.name}</Text> },
     {
       key: 'rows',
+      filterValue: (row) => row.rows ?? null,
+      filterValueLabel: (_value, row) => fmtInt(row.rows),
+      align: 'right',
       header: t('backup.rows', 'Rows'),
       render: (row) => <Text color="secondary" className="tabular-nums">{fmtInt(row.rows)}</Text>,
     },
@@ -665,11 +692,11 @@ export default function BackupRestorePage() {
   /* ---- render ---- */
   return (
     <PageContainer
-      title={t('backup.title', 'Backup & Restore')}
+      title={t('backup.title', 'Backup & restore')}
       subtitle={t('backup.subtitle', 'Manage automated backups and restore points')}
       query={[configsQuery, runsQuery]}
       dataSources={dataSources}
-      actions={
+      secondaryActions={
         <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
@@ -678,7 +705,7 @@ export default function BackupRestorePage() {
             onClick={() => quickBackupMutation.mutate()}
             loading={quickBackupMutation.isPending}
           >
-            {t('backup.quickBackup', 'Quick Backup')}
+            {t('backup.quickBackup', 'Quick backup')}
           </Button>
           <Button
             variant="primary"
@@ -686,7 +713,7 @@ export default function BackupRestorePage() {
             icon={<Icons.add className="h-4 w-4" />}
             onClick={openCreate}
           >
-            {t('backup.newConfig', 'New Config')}
+            {t('backup.newConfig', 'New config')}
           </Button>
         </div>
       }
@@ -702,31 +729,31 @@ export default function BackupRestorePage() {
           ) : (
             <>
               <MetricCard
-                label={t('backup.totalConfigs', 'Total Configs')}
+                label={t('backup.totalConfigs', 'Total configs')}
                 value={fmtInt(configs.length)}
                 icon={<Icons.database className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
-                label={t('backup.totalBackups', 'Total Backups')}
+                label={t('backup.totalBackups', 'Total backups')}
                 value={fmtInt(stats.totalBackups)}
                 icon={<Icons.archive className="h-5 w-5" />}
                 color="green"
               />
               <MetricCard
-                label={t('backup.successRate', 'Success Rate')}
+                label={t('backup.successRate', 'Success rate')}
                 value={stats.totalBackups > 0 ? fmtPercent(stats.successRate, 0) : '—'}
                 icon={<Icons.successFilled className="h-5 w-5" />}
                 color="green"
               />
               <MetricCard
-                label={t('backup.failedRuns', 'Failed Runs')}
+                label={t('backup.failedRuns', 'Failed runs')}
                 value={fmtInt(stats.failedCount)}
                 icon={<Icons.error className="h-5 w-5" />}
                 color={stats.failedCount > 0 ? 'red' : 'cyan'}
               />
               <MetricCard
-                label={t('backup.lastBackup', 'Last Backup')}
+                label={t('backup.lastBackup', 'Last backup')}
                 value={
                   stats.lastBackup
                     ? formatRelative(stats.lastBackup.completed_at ?? stats.lastBackup.created_at)
@@ -736,7 +763,7 @@ export default function BackupRestorePage() {
                 color="purple"
               />
               <MetricCard
-                label={t('backup.totalSize', 'Total Size')}
+                label={t('backup.totalSize', 'Total size')}
                 value={formatBytes(stats.totalSize)}
                 icon={<Icons.hardDrive className="h-5 w-5" />}
                 color="blue"
@@ -752,10 +779,10 @@ export default function BackupRestorePage() {
         className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
       >
         {/* Backup configurations — hero, spans two of three columns on wide */}
-        <FadeIn delay={0.1} className="h-full xl:col-span-2">
-          <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
+        <FadeIn delay={0.1} className="h-full min-w-0 xl:col-span-2">
+          <GlassPanel className="flex h-full min-w-0 flex-col p-4 sm:p-5">
             <div className="mb-4 flex items-center gap-2">
-              <SectionTitle>{t('backup.configurations', 'Backup Configurations')}</SectionTitle>
+              <SectionTitle>{t('backup.configurations', 'Backup configurations')}</SectionTitle>
               {!loadingConfigs && !configsError && (
                 <Badge variant="neutral" size="sm">{fmtInt(configs.length)}</Badge>
               )}
@@ -769,7 +796,7 @@ export default function BackupRestorePage() {
                 icon={<Icons.database className="h-10 w-10 text-[var(--text-muted)]" />}
                 title={t('backup.noConfigs', 'No backup configurations')}
                 message={t('backup.noConfigsMessage', 'Create a backup configuration to start protecting your data.')}
-                action={{ label: t('backup.newConfig', 'New Config'), onClick: openCreate }}
+                action={{ label: t('backup.newConfig', 'New config'), onClick: openCreate }}
               />
             ) : (
               <DataTable<BackupConfig>
@@ -777,6 +804,7 @@ export default function BackupRestorePage() {
                 columns={configColumns}
                 mobileColumns={['name', 'provider', 'schedule']}
                 data={configs}
+                enableValueFilters
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('backup.noConfigs', 'No backup configurations')}
                 compact
@@ -789,7 +817,7 @@ export default function BackupRestorePage() {
         {/* Reliability & storage — success rate, per-provider footprint, recent errors */}
         <FadeIn delay={0.15} className="h-full xl:col-span-1">
           <GlassPanel className="flex h-full flex-col gap-5 p-4 sm:p-5">
-            <SectionTitle>{t('backup.reliability', 'Reliability & Storage')}</SectionTitle>
+            <SectionTitle>{t('backup.reliability', 'Reliability & storage')}</SectionTitle>
             {loadingRuns ? (
               <Skeleton height={260} />
             ) : runsError ? (
@@ -806,7 +834,7 @@ export default function BackupRestorePage() {
                 {/* Success rate */}
                 <div>
                   <div className="mb-2 flex items-baseline justify-between gap-2">
-                    <PanelTitle>{t('backup.successRate', 'Success Rate')}</PanelTitle>
+                    <PanelTitle>{t('backup.successRate', 'Success rate')}</PanelTitle>
                     <Text as="span" size="2xl" weight="bold" color="primary" className="tabular-nums">
                       {stats.totalBackups > 0 ? fmtPercent(stats.successRate, 0) : '—'}
                     </Text>
@@ -822,7 +850,7 @@ export default function BackupRestorePage() {
 
                 {/* Storage by provider */}
                 <div className="space-y-3">
-                  <PanelTitle>{t('backup.storageByProvider', 'Storage by Provider')}</PanelTitle>
+                  <PanelTitle>{t('backup.storageByProvider', 'Storage by provider')}</PanelTitle>
                   {providerBreakdown.length === 0 ? (
                     <Text as="p" variant="caption">{t('backup.noStorage', 'No stored backups yet.')}</Text>
                   ) : (
@@ -843,7 +871,7 @@ export default function BackupRestorePage() {
 
                 {/* Recent errors */}
                 <div className="space-y-2">
-                  <PanelTitle>{t('backup.recentErrors', 'Recent Errors')}</PanelTitle>
+                  <PanelTitle>{t('backup.recentErrors', 'Recent errors')}</PanelTitle>
                   {failedRuns.length === 0 ? (
                     <InlineCallout variant="success" icon={<Icons.successFilled />}>
                       {t('backup.noErrors', 'No recent backup failures.')}
@@ -872,7 +900,7 @@ export default function BackupRestorePage() {
         <GlassPanel className="p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <SectionTitle>{t('backup.history', 'Backup History')}</SectionTitle>
+              <SectionTitle>{t('backup.history', 'Backup history')}</SectionTitle>
               {!loadingRuns && !runsError && (
                 <Badge variant="neutral" size="sm">{fmtInt(runs.length)}</Badge>
               )}
@@ -895,7 +923,7 @@ export default function BackupRestorePage() {
               icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
               title={t('backup.noRuns', 'No backup runs yet')}
               message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
-              action={{ label: t('backup.quickBackup', 'Quick Backup'), onClick: () => quickBackupMutation.mutate() }}
+              action={{ label: t('backup.quickBackup', 'Quick backup'), onClick: () => quickBackupMutation.mutate() }}
             />
           ) : (
             <DataTable<BackupRun>
@@ -903,6 +931,7 @@ export default function BackupRestorePage() {
               columns={runColumns}
               mobileColumns={['file_name', 'status', 'created_at']}
               data={runs}
+              enableValueFilters
               keyExtractor={(r) => r.id}
               emptyMessage={t('backup.noRuns', 'No backup runs yet')}
               compact
@@ -926,7 +955,7 @@ export default function BackupRestorePage() {
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={editingConfig ? t('backup.editConfig', 'Edit Configuration') : t('backup.newConfig', 'New Configuration')}
+        title={editingConfig ? t('backup.editConfig', 'Edit configuration') : t('backup.newConfig', 'New configuration')}
         size="lg"
       >
         <div className="flex flex-col gap-5 p-1">
@@ -945,7 +974,7 @@ export default function BackupRestorePage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select
-              label={t('backup.backupType', 'Backup Type')}
+              label={t('backup.backupType', 'Backup type')}
               options={backupTypeOptions}
               value={form.backup_type}
               onChange={(e) => setField('backup_type', e.target.value)}
@@ -969,7 +998,7 @@ export default function BackupRestorePage() {
               onChange={(e) => setField('frequency_days', Math.max(1, Number(e.target.value)))}
             />
             <Input
-              label={t('backup.maxRetention', 'Max Retention')}
+              label={t('backup.maxRetention', 'Max retention')}
               type="number"
               value={String(form.max_retention)}
               onChange={(e) => setField('max_retention', Math.max(1, Number(e.target.value)))}
@@ -978,7 +1007,7 @@ export default function BackupRestorePage() {
 
           {/* dynamic provider fields */}
           <div className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4">
-            <Label className="mb-3 block">{t('backup.providerSettings', 'Provider Settings')}</Label>
+            <Label className="mb-3 block">{t('backup.providerSettings', 'Provider settings')}</Label>
             <div className="grid gap-3">
               {(PROVIDER_FIELDS[form.provider] ?? []).map((field) => {
                 const fieldLabel = t(`backup.field.${field.key}`, field.label) + (field.required ? ' *' : '');
@@ -1030,7 +1059,7 @@ export default function BackupRestorePage() {
               loading={createMutation.isPending || updateMutation.isPending}
               disabled={!form.name.trim()}
             >
-              {editingConfig ? t('backup.saveChanges', 'Save Changes') : t('backup.create', 'Create')}
+              {editingConfig ? t('backup.saveChanges', 'Save changes') : t('backup.create', 'Create')}
             </Button>
           </div>
         </div>
@@ -1039,7 +1068,7 @@ export default function BackupRestorePage() {
       {/* ── Delete confirm dialog ──────────────────────────────────── */}
       <ConfirmDialog
         open={!!deleteTarget}
-        title={t('backup.deleteConfig', 'Delete Configuration')}
+        title={t('backup.deleteConfig', 'Delete configuration')}
         message={t('backup.deleteConfigMessage', 'Are you sure you want to delete "{{name}}"? This cannot be undone.', {
           name: deleteTarget?.name,
         })}
@@ -1057,7 +1086,7 @@ export default function BackupRestorePage() {
           setPreviewOpen(false);
           setPreviewData(null);
         }}
-        title={t('backup.restorePreview', 'Restore Preview')}
+        title={t('backup.restorePreview', 'Restore preview')}
         size="md"
       >
         {previewData ? (
@@ -1086,6 +1115,7 @@ export default function BackupRestorePage() {
                   tableId="admin:backup-preview-tables"
                   columns={previewColumns}
                   data={previewTables}
+                  enableValueFilters
                   keyExtractor={(r) => r.name}
                   compact
                   pagination

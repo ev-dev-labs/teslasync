@@ -100,7 +100,7 @@ function bodyRowNames(): string[] {
 
 function getFilterInput(): HTMLInputElement {
   return screen.getByRole('textbox', {
-    name: /filter signals/i,
+    name: /Filter signals/i,
   }) as HTMLInputElement;
 }
 

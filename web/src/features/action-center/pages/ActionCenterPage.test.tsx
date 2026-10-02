@@ -76,7 +76,7 @@ const recommendation: ActionCenterRecommendation = {
   priority: 'high',
   severity: 'warning',
   rank: { score: 450, basis: ['priority high +300', 'confidence 0.80 +80'] },
-  confidence: { score: 0.8, label: 'high', basis: ['Direct persisted alert'] },
+  confidence: { score: 0.8, label: 'High', basis: ['Direct persisted alert'] },
   evidence: [{
     id: 'log:1',
     kind: 'active_alert',
@@ -173,7 +173,7 @@ beforeEach(() => {
 describe('ActionCenterPage', () => {
   it('renders prioritized evidence, confidence, impact transparency, and provider status', () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Action Center' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Action center' })).toBeInTheDocument();
     expect(useActionCenterMock).toHaveBeenCalledWith(
       expect.objectContaining({ state: 'open', limit: 50, offset: 0 }),
     );
@@ -201,7 +201,7 @@ describe('ActionCenterPage', () => {
     }));
     renderPage();
     expect(screen.getByLabelText('Loading recommendations')).toBeInTheDocument();
-    expect(screen.getByLabelText('Action Center summary')).toBeInTheDocument();
+    expect(screen.getByLabelText('Action center summary')).toBeInTheDocument();
     expect(screen.getByText('Source coverage')).toBeInTheDocument();
   });
 
@@ -231,7 +231,7 @@ describe('ActionCenterPage', () => {
       screen.getByRole('button', { name: /acknowledge/i }),
     ).toBeDisabled();
     expect(
-      screen.getByRole('button', { name: /open source/i }),
+      screen.getByRole('button', { name: /Open source/i }),
     ).not.toBeDisabled();
   });
 

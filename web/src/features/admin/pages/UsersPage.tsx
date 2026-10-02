@@ -93,7 +93,7 @@ export default function UsersPage() {
         'impersonation.users.subtitle',
         'Active subjects you can impersonate for support. Sessions are limited to 15 minutes and recorded in the audit log.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={open ? status : candidates}
     >
       {/* 1 — KPI band */}
@@ -104,7 +104,7 @@ export default function UsersPage() {
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               <MetricCard
-                label={t('impersonation.users.kpi.available', 'Available Subjects')}
+                label={t('impersonation.users.kpi.available', 'Available subjects')}
                 /* On a candidates-fetch error the count is unknown, not zero —
                    "—" avoids implying "0 subjects" next to the table's error. */
                 value={open ? '0' : subjectsError ? '—' : fmtInt(subjects.length)}
@@ -112,7 +112,7 @@ export default function UsersPage() {
                 color="cyan"
               />
               <MetricCard
-                label={t('impersonation.users.kpi.accessMode', 'Access Mode')}
+                label={t('impersonation.users.kpi.accessMode', 'Access mode')}
                 value={accessMode}
                 icon={
                   open ? (
@@ -124,13 +124,13 @@ export default function UsersPage() {
                 color={open ? 'amber' : 'blue'}
               />
               <MetricCard
-                label={t('impersonation.users.kpi.session', 'Session Status')}
+                label={t('impersonation.users.kpi.session', 'Session status')}
                 value={sessionStatus}
                 icon={<UserCog className="h-5 w-5" aria-hidden="true" />}
                 color={active ? 'green' : 'cyan'}
               />
               <MetricCard
-                label={t('impersonation.users.kpi.limit', 'Session Limit')}
+                label={t('impersonation.users.kpi.limit', 'Session limit')}
                 value={t('impersonation.users.kpi.limitValue', '15 min')}
                 icon={<Clock className="h-5 w-5" aria-hidden="true" />}
                 color="purple"

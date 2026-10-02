@@ -193,11 +193,11 @@ describe('FleetAPIPage', () => {
     renderPage();
 
     // The page shell + labelled KPI region are always present.
-    expect(screen.getByText('Fleet API Settings')).toBeInTheDocument();
+    expect(screen.getByText('Fleet API settings')).toBeInTheDocument();
     expect(kpiRegion()).toBeInTheDocument();
 
     // During the KPI skeleton no metric labels are rendered yet...
-    expect(within(kpiRegion()).queryByText('API Status')).toBeNull();
+    expect(within(kpiRegion()).queryByText('API status')).toBeNull();
     // ...and no toggle switches exist while polling/settings are still loading.
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
   });
@@ -353,6 +353,41 @@ describe('FleetAPIPage', () => {
     expect(screen.getByRole('switch', { name: 'Enable POST /api/1/vehicles/{vin}/command/door_lock' })).toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: /Enable .*charge_state/ })).toBeNull();
     expect(within(screen.getByRole('navigation', { name: 'Route groups' })).getByRole('button', { name: /All routes/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('retains full loaded group candidates when text search narrows the shared table', async () => {
+    installRequest();
+    renderPage();
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Search API routes' }), { target: { value: 'charge_state' } });
+    const region = screen.getByRole('region', { name: 'Vehicle data' });
+    fireEvent.click(within(region).getByRole('button', { name: 'Filter API path' }));
+    const menu = screen.getByRole('dialog', { name: 'Filter API path' });
+    expect(within(menu).getByRole('checkbox', { name: '/api/1/vehicles' })).toBeInTheDocument();
+    expect(within(menu).getByRole('checkbox', { name: '/api/1/vehicles/{vin}/vehicle_data?endpoints=drive_state' })).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Enable GET /api/1/vehicles' })).not.toBeInTheDocument();
+  });
+
+  it('filters auto-poll by the effective switch state when endpoint access is disabled', async () => {
+    installRequest({
+      polling: makePolling({
+        auto_polling_enabled: true,
+        auto_endpoints: {
+          'vehicles.list': true,
+          'vehicle_data.charge_state': true,
+          'vehicle_data.drive_state': true,
+        },
+      }),
+    });
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: 'Auto-poll GET /api/1/vehicles' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(toggle).toBeDisabled();
+    const region = screen.getByRole('region', { name: 'Vehicle data' });
+    fireEvent.click(within(region).getByRole('button', { name: 'Filter Auto-poll' }));
+    const menu = screen.getByRole('dialog', { name: 'Filter Auto-poll' });
+    expect(within(menu).getByRole('checkbox', { name: 'Disabled' })).toBeInTheDocument();
+    expect(within(menu).queryByRole('checkbox', { name: 'Enabled' })).not.toBeInTheDocument();
   });
 
   it('groups by HTTP method and sorts routes by path and access state', async () => {

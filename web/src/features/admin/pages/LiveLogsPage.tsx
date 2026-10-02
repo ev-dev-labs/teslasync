@@ -432,6 +432,11 @@ export default function LiveLogsPage({
   const { t } = useTranslation();
   usePageTitle(t('liveLogs.title', 'Live logs'));
 
+  const levelLabel = useCallback((value: string | null | undefined) => {
+    const option = LEVEL_OPTIONS.find((option) => option.value === value);
+    return option ? t(option.i18nKey, option.defaultLabel) : value ?? '—';
+  }, [t]);
+
   const [level, setLevel] = useState<LogStreamLevel>('info');
   const [grep, setGrep] = useState('');
   const [grepDraft, setGrepDraft] = useState('');
@@ -563,6 +568,8 @@ export default function LiveLogsPage({
     return [
       {
         key: 'time',
+        filterValue: (row) => row.receivedAt ?? null,
+        filterValueLabel: (_value, row) => formatTime(row.receivedAt),
         header: t('liveLogs.table.time', 'Time'),
         defaultWidth: 110,
         render: (row) => (
@@ -573,18 +580,19 @@ export default function LiveLogsPage({
       },
       {
         key: 'level',
+        filterValue: (row) => row.level ?? null,
+        filterValueLabel: (_value, row) => levelLabel(row.level),
         header: t('liveLogs.table.level', 'Level'),
         defaultWidth: 80,
         render: (row) => (
           <Badge variant={levelBadgeVariant(row.level)} size="sm">
-            {row.level
-              ? row.level.toUpperCase()
-              : t('liveLogs.table.noLevel', '—')}
+            {row.level ? levelLabel(row.level) : t('liveLogs.table.noLevel', '—')}
           </Badge>
         ),
       },
       {
         key: 'message',
+        filterValue: (row) => extractMessage(row.parsed, row.payload),
         header: t('liveLogs.table.message', 'Message'),
         render: (row) => (
           <Text variant="code" className="block break-words">
@@ -630,7 +638,7 @@ export default function LiveLogsPage({
         },
       },
     ];
-  }, [grepPattern, t]);
+  }, [grepPattern, levelLabel, t]);
 
   // Connection state → neon hue for the status KPI icon chip. Color is
   // never the only signal — the ConnectionBadge carries text + a dot too.
@@ -756,7 +764,7 @@ export default function LiveLogsPage({
       />
       <MetricCard
         label={t('liveLogs.kpi.minLevel', 'Min level')}
-        value={(level ?? 'info').toUpperCase()}
+        value={levelLabel(level ?? 'info')}
         icon={<Filter className="h-5 w-5" aria-hidden />}
         color="purple"
         subtitle={t('liveLogs.kpi.minLevelSub', 'Server filter')}
@@ -898,6 +906,8 @@ export default function LiveLogsPage({
           <DataTable<LogStreamEvent>
             tableId="admin:live-logs"
             data={filteredEvents}
+            enableValueFilters
+            filterData={stream.events}
             columns={columns}
             mobileColumns={['time', 'level', 'message']}
             keyExtractor={(row) => row.seq}
@@ -919,7 +929,7 @@ export default function LiveLogsPage({
         'liveLogs.subtitle',
         "Stream the API server's structured log events in real time. Filter by severity and an optional regular expression. The connection is dropped when you navigate away.",
       )}
-      actions={toolbar}
+      secondaryActions={toolbar}
     >
       <div className="space-y-4 sm:space-y-6">
         <FadeIn>{kpiBand}</FadeIn>

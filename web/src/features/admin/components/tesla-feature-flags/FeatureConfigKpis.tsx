@@ -51,7 +51,7 @@ export function FeatureConfigKpis({ summary, isLoading, error }: FeatureConfigKp
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       <MetricCard
-        label={t('featureConfig.kpi.total', 'Total Features')}
+        label={t('featureConfig.kpi.total', 'Total features')}
         value={error ? UNKNOWN : fmtInt(total)}
         icon={<Flag className="h-5 w-5" aria-hidden="true" />}
         color="blue"
@@ -69,7 +69,7 @@ export function FeatureConfigKpis({ summary, isLoading, error }: FeatureConfigKp
         color="amber"
       />
       <MetricCard
-        label={t('featureConfig.kpi.enabledRate', 'Enabled Rate')}
+        label={t('featureConfig.kpi.enabledRate', 'Enabled rate')}
         value={error ? UNKNOWN : fmtPercent(enabledRate, 0)}
         icon={<Percent className="h-5 w-5" aria-hidden="true" />}
         color="cyan"

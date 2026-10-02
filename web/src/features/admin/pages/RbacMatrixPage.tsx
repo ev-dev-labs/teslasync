@@ -19,13 +19,12 @@
  * an inline "configure forward-auth then reload" placeholder instead of a
  * 401/501 toast loop.
  *
- * Modern-UI: the matrix is a single CSS grid (display:contents rows) so
- * columns stay perfectly aligned while the grid — not the page — scrolls
- * horizontally on narrow viewports. A KPI band + access-summary panel sit
+ * The shared semantic table keeps role columns aligned and owns horizontal
+ * scrolling on narrow viewports. A KPI band + access-summary panel sit
  * above it and reflow into more columns on wide monitors.
  */
 
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   CheckCheck,
@@ -49,6 +48,7 @@ import {
   Heading,
   HelperText,
   PanelTitle,
+  Table,
   Text,
 } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
@@ -155,12 +155,7 @@ interface MatrixGridProps {
   onToggle: (roleID: string, permID: string, next: boolean) => void
 }
 
-/**
- * The role × permission matrix. Rendered as one CSS grid — `role="table"`
- * with `display:contents` rowgroups/rows — so every column stays aligned
- * across category groups while the whole grid scrolls horizontally within
- * its own container (never the page) on small screens.
- */
+/** The role × permission matrix preserves category groups and editable grants. */
 function MatrixGrid({ payload, draft, editing, onToggle }: MatrixGridProps) {
   const { t } = useTranslation()
   const roles = payload.roles ?? []
@@ -169,10 +164,6 @@ function MatrixGrid({ payload, draft, editing, onToggle }: MatrixGridProps) {
     ? payload.categories
     : Array.from(grouped.keys())
   ).filter((cat) => (grouped.get(cat)?.length ?? 0) > 0)
-
-  // Dynamic column template: a wide permission column + one flexible,
-  // min-sized column per role. Computed → an allowed inline style.
-  const gridTemplateColumns = `minmax(11rem, 1.75fr) repeat(${roles.length}, minmax(4.75rem, 1fr))`
 
   if (roles.length === 0 || orderedCategories.length === 0) {
     return (
@@ -186,74 +177,68 @@ function MatrixGrid({ payload, draft, editing, onToggle }: MatrixGridProps) {
   }
 
   return (
-    <div className="-mx-4 overflow-x-auto sm:-mx-5" data-testid="rbac-matrix-scroll">
-      <div
-        role="table"
+    <div className="min-w-0" data-testid="rbac-matrix-scroll">
+      <Table
         aria-label={t('rbac.matrix.aria', 'Role permission matrix')}
         data-testid="rbac-matrix-grid"
-        className="grid min-w-full px-4 sm:px-5"
-        style={{ gridTemplateColumns }}
       >
-        <div role="rowgroup" className="contents">
-          <div role="row" className="contents">
-            <div
-              role="columnheader"
-              className="sticky left-0 z-[1] border-b border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2.5"
+        <thead>
+          <tr>
+            <th
+              scope="col"
+              className="sticky left-0 z-[1] min-w-44 bg-[var(--surface-2)]"
             >
               <Text variant="label">{t('rbac.permissionColumn', 'Permission')}</Text>
-            </div>
+            </th>
             {roles.map((role: RbacRole) => (
-              <div
+              <th
                 key={role.id}
-                role="columnheader"
+                scope="col"
                 data-testid={`rbac-col-${role.id}`}
-                className="flex items-center justify-center border-b border-[var(--border-subtle)] px-2 py-2.5 text-center"
+                className="min-w-20 text-center"
               >
                 <Text variant="label" className="truncate" title={role.name}>
                   {role.name}
                 </Text>
-              </div>
+              </th>
             ))}
-          </div>
-        </div>
+          </tr>
+        </thead>
 
-        <div role="rowgroup" className="contents">
           {orderedCategories.map((cat) => {
             const items = grouped.get(cat) ?? []
             return (
-              <Fragment key={`cat-${cat}`}>
-                <div role="row" className="contents">
-                  <div
-                    role="cell"
+              <tbody key={`cat-${cat}`}>
+                <tr>
+                  <th
+                    scope="rowgroup"
+                    colSpan={roles.length + 1}
                     data-testid={`rbac-category-row-${cat}`}
-                    className="col-span-full border-b border-[var(--border-subtle)] bg-white/[0.02] px-3 py-1.5"
+                    className="bg-[var(--surface-2)]"
                   >
                     <Text variant="label" className="tracking-widest">
                       {t(`rbac.category.${cat}`, cat)}
                     </Text>
-                  </div>
-                </div>
+                  </th>
+                </tr>
                 {items.map((perm) => (
-                  <div
+                  <tr
                     key={perm.id}
-                    role="row"
                     data-testid={`rbac-row-${perm.id}`}
-                    className="group/row contents"
                   >
-                    <div
-                      role="rowheader"
-                      className="sticky left-0 z-[1] flex min-h-11 flex-col justify-center border-b border-[var(--border-subtle)]/60 bg-[var(--surface-2)] px-3 py-2.5 group-hover/row:bg-white/[0.03]"
+                    <th
+                      scope="row"
+                      className="sticky left-0 z-[1] bg-[var(--surface-2)]"
                     >
                       <Text as="span" variant="body">
                         {perm.name}
                       </Text>
                       <Caption>{perm.id}</Caption>
-                    </div>
+                    </th>
                     {roles.map((role: RbacRole) => (
-                      <div
+                      <td
                         key={role.id}
-                        role="cell"
-                        className="flex min-h-11 items-center justify-center border-b border-[var(--border-subtle)]/60 px-2 py-2 group-hover/row:bg-white/[0.03]"
+                        className="text-center"
                       >
                         <MatrixCell
                           roleID={role.id}
@@ -262,15 +247,14 @@ function MatrixGrid({ payload, draft, editing, onToggle }: MatrixGridProps) {
                           editing={editing}
                           onToggle={onToggle}
                         />
-                      </div>
+                      </td>
                     ))}
-                  </div>
+                  </tr>
                 ))}
-              </Fragment>
+              </tbody>
             )
           })}
-        </div>
-      </div>
+      </Table>
     </div>
   )
 }
@@ -585,7 +569,7 @@ export default function RbacMatrixPage() {
     <PageContainer
       title={t('rbac.title', 'RBAC matrix')}
       subtitle={t('rbac.subtitle', 'Provider-agnostic role-permission bindings')}
-      actions={actions}
+      secondaryActions={actions}
       query={matrixQuery}
     >
       {submitError && (

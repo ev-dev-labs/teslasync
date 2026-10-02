@@ -64,13 +64,13 @@ describe('HttpStatusTool', () => {
     // Title + description come from the namespaced catalog keys. The negative
     // assertions are regression guards for the flat, defaultless keys that used
     // to render literally (t('Http Status Desc') → "Http Status Desc").
-    expect(screen.getByRole('heading', { name: 'HTTP Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'HTTP status' })).toBeInTheDocument()
     expect(screen.getByText('Reference for HTTP response status codes')).toBeInTheDocument()
     expect(screen.queryByText('Http Status Desc')).toBeNull()
     expect(screen.queryByText('Status Desc')).toBeNull()
 
     // The description column header now reads "Description", never "Status Desc".
-    expect(screen.getByRole('columnheader', { name: 'Description' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /^Description\b/ })).toBeInTheDocument()
   })
 
   it('renders every status code from the catalog', () => {
@@ -150,7 +150,7 @@ describe('HttpStatusTool', () => {
 
     // The sortable column renders an interactive button + reflects sort state
     // through aria-sort. Default is code-ascending, so the first row is 200.
-    const header = screen.getByRole('columnheader', { name: /Status Code/ })
+    const header = screen.getByRole('columnheader', { name: /Status code/ })
     expect(header).toHaveAttribute('aria-sort', 'ascending')
 
     const before = renderedCodes()
@@ -159,7 +159,7 @@ describe('HttpStatusTool', () => {
 
     // Clicking the header toggles to descending — the row order actually flips.
     // Before the elevation this button was a no-op (no onSort wiring).
-    fireEvent.click(screen.getByRole('button', { name: 'Status Code' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Status code' }))
 
     expect(header).toHaveAttribute('aria-sort', 'descending')
     const after = renderedCodes()

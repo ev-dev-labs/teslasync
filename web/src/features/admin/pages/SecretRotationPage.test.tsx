@@ -177,7 +177,7 @@ describe('SecretRotationPage', () => {
     // Title chrome is always present; the KPI cards are not — the band is
     // still showing its six pulse skeletons.
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Secret Rotation' }),
+      screen.getByRole('heading', { level: 1, name: 'Secret rotation' }),
     ).toBeInTheDocument()
     expect(screen.queryByText('Tracked secrets')).toBeNull()
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
@@ -276,12 +276,12 @@ describe('SecretRotationPage', () => {
     // Charts are announced to assistive tech via role=img + descriptive labels.
     expect(
       screen.getByRole('img', {
-        name: /horizontal bar chart of the oldest tracked secrets/i,
+        name: /horizontal bar chart of the oldest Tracked secrets/i,
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('img', {
-        name: /donut chart of tracked secrets grouped by rotation severity/i,
+        name: /donut chart of Tracked secrets grouped by rotation severity/i,
       }),
     ).toBeInTheDocument()
 
@@ -328,7 +328,7 @@ describe('SecretRotationPage', () => {
       expect(screen.getByText('Feature not supported')).toBeInTheDocument(),
     )
     expect(
-      screen.getByText(/rotation tracker is not configured on this deployment/i),
+      screen.getByText(/rotation tracker is Not configured on this deployment/i),
     ).toBeInTheDocument()
     // 503 is a graceful "not wired" state — never a red error panel.
     expect(screen.queryByText("Can't reach server")).toBeNull()

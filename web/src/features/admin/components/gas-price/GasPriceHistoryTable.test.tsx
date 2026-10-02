@@ -142,7 +142,7 @@ describe('GasPriceHistoryTable — rendering', () => {
     renderTable(makeQuery({ data: [r1, r2, r3] }));
 
     // Panel heading (i18n default).
-    expect(screen.getByRole('heading', { name: 'Price History' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument();
 
     // A real accessible table with the three records.
     const table = screen.getByRole('table');
@@ -171,7 +171,7 @@ describe('GasPriceHistoryTable — sorting', () => {
 
     expect(priceOrder()).toEqual(['$3.10', '$3.50', '$3.29']);
     // The active sort column advertises aria-sort for assistive tech.
-    const dateHeader = screen.getByRole('button', { name: 'Effective From' }).closest('th');
+    const dateHeader = screen.getByRole('button', { name: 'Effective from' }).closest('th');
     expect(dateHeader).toHaveAttribute('aria-sort', 'descending');
   });
 
@@ -228,7 +228,7 @@ describe('GasPriceHistoryTable — error / loading / empty', () => {
     const { container } = renderTable(makeQuery({ isLoading: true, data: undefined }));
 
     // Heading stays mounted; body is a skeleton placeholder.
-    expect(screen.getByRole('heading', { name: 'Price History' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
   });

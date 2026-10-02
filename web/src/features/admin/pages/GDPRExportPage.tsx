@@ -56,7 +56,7 @@ import {
 
 export default function GDPRExportPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.gdprExport.pageTitle', 'GDPR Export'));
+  usePageTitle(t('admin.gdprExport.pageTitle', 'GDPR export'));
 
   const [searchParams, setSearchParams] = useSearchParams();
   // The URL `?id=` param is the single source of truth for which artifact is
@@ -115,12 +115,12 @@ export default function GDPRExportPage() {
 
   return (
     <PageContainer
-      title={t('admin.gdprExport.pageTitle', 'GDPR Export')}
+      title={t('admin.gdprExport.pageTitle', 'GDPR export')}
       subtitle={t(
         'admin.gdprExport.subtitle',
         'Look up the status of a GDPR data export by artifact id and download the bundle when it completes. Bundles expire after the configured retention window.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={activeId ? query : undefined}
     >
       <div className="space-y-6">
@@ -190,7 +190,7 @@ export default function GDPRExportPage() {
                         <Badge
                           variant={STATUS_VARIANT[status] ?? 'neutral'}
                           size="lg"
-                          className="capitalize"
+                          className=""
                         >
                           <StatusIcon
                             className={cn('h-3.5 w-3.5', status === 'running' && 'animate-spin')}

@@ -270,7 +270,7 @@ export function findReplayEndpoint(
 
 export default function ApiPlaygroundPage() {
   const { t } = useTranslation();
-  usePageTitle(t('playground.title', 'API Playground'));
+  usePageTitle(t('playground.title', 'API playground'));
 
   const [selected, setSelected] = useState<ParsedEndpoint | null>(null);
   const [response, setResponse] = useState<ApiResponse | null>(null);
@@ -324,7 +324,7 @@ export default function ApiPlaygroundPage() {
       const failMsg = err instanceof Error ? err.message : t('playground.requestFailed', 'Request failed');
       setResponse({
         status: 0,
-        statusText: t('playground.networkError', 'Network Error'),
+        statusText: t('playground.networkError', 'Network error'),
         headers: {},
         body: { error: failMsg },
         bodyText: failMsg,
@@ -367,12 +367,12 @@ export default function ApiPlaygroundPage() {
   }, [history]);
 
   const kpis = useMemo<Array<{ key: string; label: string; value: string | number; icon: ReactNode; color: NeonColor }>>(() => [
-    { key: 'total', label: t('playground.kpi.total', 'Total Endpoints'), value: stats.total, icon: <Boxes className="h-5 w-5" aria-hidden="true" />, color: 'cyan' },
+    { key: 'total', label: t('playground.kpi.total', 'Total endpoints'), value: stats.total, icon: <Boxes className="h-5 w-5" aria-hidden="true" />, color: 'cyan' },
     { key: 'read', label: t('playground.kpi.read', 'Read (GET)'), value: stats.read, icon: <ArrowDownToLine className="h-5 w-5" aria-hidden="true" />, color: 'green' },
-    { key: 'write', label: t('playground.kpi.write', 'Write Ops'), value: stats.write, icon: <ArrowUpToLine className="h-5 w-5" aria-hidden="true" />, color: 'amber' },
-    { key: 'groups', label: t('playground.kpi.groups', 'API Groups'), value: stats.groups, icon: <Tags className="h-5 w-5" aria-hidden="true" />, color: 'purple' },
-    { key: 'recent', label: t('playground.kpi.recent', 'Recent Requests'), value: historyStats.count, icon: <History className="h-5 w-5" aria-hidden="true" />, color: 'blue' },
-    { key: 'latency', label: t('playground.kpi.latency', 'Avg Latency'), value: historyStats.count > 0 ? `${historyStats.avgMs} ms` : '—', icon: <Timer className="h-5 w-5" aria-hidden="true" />, color: 'cyan' },
+    { key: 'write', label: t('playground.kpi.write', 'Write ops'), value: stats.write, icon: <ArrowUpToLine className="h-5 w-5" aria-hidden="true" />, color: 'amber' },
+    { key: 'groups', label: t('playground.kpi.groups', 'API groups'), value: stats.groups, icon: <Tags className="h-5 w-5" aria-hidden="true" />, color: 'purple' },
+    { key: 'recent', label: t('playground.kpi.recent', 'Recent requests'), value: historyStats.count, icon: <History className="h-5 w-5" aria-hidden="true" />, color: 'blue' },
+    { key: 'latency', label: t('playground.kpi.latency', 'Avg latency'), value: historyStats.count > 0 ? `${historyStats.avgMs} ms` : '—', icon: <Timer className="h-5 w-5" aria-hidden="true" />, color: 'cyan' },
   ], [t, stats, historyStats]);
 
   const actions = (
@@ -388,9 +388,9 @@ export default function ApiPlaygroundPage() {
 
   return (
     <PageContainer
-      title={t('playground.title', 'API Playground')}
+      title={t('playground.title', 'API playground')}
       subtitle={t('playground.subtitle', 'Explore and test TeslaSync API endpoints')}
-      actions={actions}
+      secondaryActions={actions}
       query={specQuery}
     >
       {/* 1 — KPI band: derived spec + history metrics, full-width responsive strip */}

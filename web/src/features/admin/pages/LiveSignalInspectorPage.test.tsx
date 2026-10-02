@@ -196,7 +196,7 @@ describe('LiveSignalInspectorPage — empty fleet', () => {
 
     // KPI band always renders; freshest age collapses to the em-dash.
     const kpi = within(screen.getByRole('region', { name: 'Snapshot summary' }));
-    expect(kpi.getByText('Total Signals')).toBeInTheDocument();
+    expect(kpi.getByText('Total signals')).toBeInTheDocument();
     expect(kpi.getByText('—')).toBeInTheDocument();
   });
 
@@ -341,7 +341,7 @@ describe('LiveSignalInspectorPage — accessibility landmarks', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole('heading', { name: 'Live Signal Inspector' }),
+        screen.getByRole('heading', { name: 'Live signal inspector' }),
       ).toBeInTheDocument(),
     );
     expect(screen.getByRole('region', { name: 'Snapshot summary' })).toBeInTheDocument();

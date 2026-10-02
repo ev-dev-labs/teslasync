@@ -21,7 +21,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, DataTable, type Column } from '@/components/ui';
-import { PanelTitle, Caption, Text } from '@/components/ui/Typography';
+import { PanelTitle, Caption, Text } from '@/components/ui';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
@@ -76,7 +76,7 @@ function truncate(value: string, max = 18): string {
 
 export default function DiskForecastPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.diskForecast.pageTitle', 'Disk Forecast'));
+  usePageTitle(t('admin.diskForecast.pageTitle', 'Disk forecast'));
 
   const query = useDiskForecast();
   const subsystemMissing = isApiError(query.error) && query.error.status === 503;
@@ -168,6 +168,7 @@ export default function DiskForecastPage() {
     () => [
       {
         key: 'hypertable',
+        filterValue: (r) => r.hypertable_name ?? null,
         header: t('admin.diskForecast.colTable', 'Hypertable'),
         render: (r) => (
           <div className="flex flex-col">
@@ -180,6 +181,9 @@ export default function DiskForecastPage() {
       },
       {
         key: 'total',
+        filterValue: (r) => r.total_bytes ?? null,
+        filterValueLabel: (_value, r) => r.total_bytes == null ? '—' : formatBytes(r.total_bytes),
+        groupStart: true,
         header: t('admin.diskForecast.colTotal', 'Total'),
         align: 'right',
         render: (r) => <span className="tabular-nums">{formatBytes(r.total_bytes ?? 0)}</span>,
@@ -199,12 +203,16 @@ export default function DiskForecastPage() {
       },
       {
         key: 'growth',
+        filterValue: (r) => r.growth_bytes_per_day ?? null,
+        filterValueLabel: (_value, r) => r.growth_bytes_per_day == null ? '—' : `${formatBytes(r.growth_bytes_per_day)}/d`,
         header: t('admin.diskForecast.colGrowth', 'Growth (per day)'),
         align: 'right',
         render: (r) => <span className="tabular-nums">{formatBytes(r.growth_bytes_per_day ?? 0)}/d</span>,
       },
       {
         key: 'days',
+        filterValue: (r) => r.est_days_to_quota ?? null,
+        filterValueLabel: (_value, r) => r.est_days_to_quota == null ? '—' : fmtNumber(r.est_days_to_quota),
         header: t('admin.diskForecast.colDays', 'Days to quota'),
         align: 'right',
         render: (r) => (
@@ -217,6 +225,8 @@ export default function DiskForecastPage() {
       },
       {
         key: 'severity',
+        filterValue: (r) => r.severity ?? null,
+        filterValueLabel: (_value, r) => severityLabel[r.severity] ?? r.severity,
         header: t('admin.diskForecast.colSeverity', 'Severity'),
         align: 'right',
         render: (r) => (
@@ -233,7 +243,7 @@ export default function DiskForecastPage() {
 
   return (
     <PageContainer
-      title={t('admin.diskForecast.pageTitle', 'Disk Forecast')}
+      title={t('admin.diskForecast.pageTitle', 'Disk forecast')}
       subtitle={t(
         'admin.diskForecast.subtitle',
         'Per-hypertable disk usage with compressed/uncompressed split and days-to-quota estimate. Severity reflects the configured quota threshold.',
@@ -347,7 +357,7 @@ export default function DiskForecastPage() {
               emptyMessage={t('admin.diskForecast.noComposition', 'No hypertable sizes to chart yet.')}
               data={topBySizeChartRows}
               dataColumns={[
-                { key: 'hypertable_name', label: t('admin.diskForecast.colTable', 'Table') },
+                { key: 'hypertable_name', label: t('admin.diskForecast.colTable', 'Hypertable') },
                 { key: 'uncompressed_bytes', label: t('admin.diskForecast.uncompressed', 'Uncompressed'), format: (v) => formatBytes(Number(v)) },
                 { key: 'compressed_bytes', label: t('admin.diskForecast.compressed', 'Compressed'), format: (v) => formatBytes(Number(v)) },
               ]}
@@ -559,6 +569,7 @@ export default function DiskForecastPage() {
                   columns={columns}
                   mobileColumns={['hypertable', 'severity', 'days']}
                   data={rows}
+                  enableValueFilters
                   keyExtractor={(r) => r.hypertable_name}
                   emptyMessage={t('admin.diskForecast.emptyTable', 'No hypertables')}
                   pagination

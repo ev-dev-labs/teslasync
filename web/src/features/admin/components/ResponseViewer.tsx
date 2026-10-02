@@ -161,7 +161,7 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
         className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
         <ChevronDown aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
-        {t('playground.codeSnippet', 'Code Snippet')}
+        {t('playground.codeSnippet', 'Code snippet')}
       </UiButton>
       {open && (
         <div className="mt-2 rounded-lg border border-white/[0.06] bg-[var(--surface-overlay)] overflow-hidden">
@@ -224,7 +224,7 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
         className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
         <ChevronDown aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
-        {t('playground.responseHeaders', 'Response Headers')} ({entries.length})
+        {t('playground.responseHeaders', 'Response headers')} ({entries.length})
       </UiButton>
       {open && (
         <div className="mt-1 rounded-lg border border-white/[0.04] bg-[var(--surface-overlay)] p-2 text-2xs font-mono text-[var(--text-muted)] space-y-0.5 max-h-40 overflow-y-auto">
@@ -249,8 +249,8 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
 
   return (
     <GlassPanel className="p-3">
-      <Text as="h4" size="2xs" weight="semibold" color="muted" className="uppercase tracking-wider mb-2">
-        {t('playground.history', 'Recent Requests')}
+      <Text as="h4" size="2xs" weight="semibold" color="muted" className="tracking-wider mb-2">
+        {t('playground.history', 'Recent requests')}
       </Text>
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {items.map((h, i) => (
@@ -298,7 +298,7 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
     <div className="space-y-3">
       {/* Response */}
       <GlassPanel className="p-4">
-        <Text as="h4" size="xs" weight="semibold" color="secondary" className="uppercase tracking-wider mb-3">
+        <Text as="h4" size="xs" weight="semibold" color="secondary" className="tracking-wider mb-3">
           {t('playground.response', 'Response')}
         </Text>
 

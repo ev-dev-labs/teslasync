@@ -393,7 +393,7 @@ describe('FeedbackQueuePage', () => {
     )
 
     // Now change the status filter → param applied AND page reset to 0.
-    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'closed' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'closed' } })
     expect(mockUseFeedbackList).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'closed', limit: 25, offset: 0 }),
     )

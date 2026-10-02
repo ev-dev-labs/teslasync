@@ -150,7 +150,7 @@ describe('SchemaDriftPage', () => {
 
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Schema Drift');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Schema drift');
     // The KPI status label is always present; its verdict is not, because the
     // tile shows a skeleton until data arrives.
     expect(screen.getByText('Status')).toBeInTheDocument();
@@ -172,7 +172,7 @@ describe('SchemaDriftPage', () => {
 
     expect(screen.getByText('Feature not supported')).toBeInTheDocument();
     expect(
-      screen.getByText(/subsystem is not configured on this deployment/i),
+      screen.getByText(/subsystem is Not configured on this deployment/i),
     ).toBeInTheDocument();
     // Sections fall back to their empty state, never a crash.
     expect(screen.getByText('No fingerprint available')).toBeInTheDocument();

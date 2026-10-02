@@ -25,6 +25,7 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
     () => [
       {
         key: 'createdAt',
+        filterValue: (row) => asNonEmptyString(row.createdAt) ?? null,
         header: t('admin.security.col.time', 'Time'),
         sortable: true,
         render: (row) => (
@@ -33,6 +34,8 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
       },
       {
         key: 'locked',
+        filterValue: (row) => row.locked ?? null,
+        filterValueLabel: (_value, row) => row.locked == null ? '—' : row.locked ? t('admin.security.locked', 'Locked') : t('admin.security.unlocked', 'Unlocked'),
         header: t('admin.security.col.lock', 'Lock'),
         render: (row) => (
           <Badge variant={row.locked ? 'success' : 'danger'} size="sm">
@@ -42,6 +45,8 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
       },
       {
         key: 'sentryMode',
+        filterValue: (row) => row.sentryMode ?? null,
+        filterValueLabel: (_value, row) => row.sentryMode == null ? '—' : isSentryActive(row.sentryMode) ? t('admin.security.on', 'On') : t('admin.security.off', 'Off'),
         header: t('admin.security.col.sentry', 'Sentry'),
         render: (row) => {
           // `sentryMode` arrives as a string enum ("SentryModeStateOff") or a
@@ -58,6 +63,8 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
       },
       {
         key: 'doorState',
+        filterValue: (row) => row.doorState ?? null,
+        filterValueLabel: (_value, row) => row.doorState == null ? '—' : asNonEmptyString(row.doorState) ?? (doorClosed(row.doorState) ? t('admin.security.closed', 'Closed') : '—'),
         header: t('admin.security.col.doors', 'Doors'),
         render: (row) => (
           <span className={cn(typography.size.sm, doorClosed(row.doorState) ? 'text-emerald-300' : 'text-amber-300')}>
@@ -94,8 +101,8 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
   );
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <PanelTitle className="mb-3">{t('admin.security.eventHistory', 'Security Event History')}</PanelTitle>
+    <GlassPanel className={cn('min-w-0 p-4 sm:p-5', className)}>
+      <PanelTitle className="mb-3">{t('admin.security.eventHistory', 'Security event history')}</PanelTitle>
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading ? (
@@ -106,6 +113,7 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
           columns={eventColumns}
           mobileColumns={['createdAt', 'locked', 'sentryMode']}
           data={rows}
+          enableValueFilters
           keyExtractor={(row) => row.id}
           emptyMessage={t('admin.security.noEvents', 'No security events recorded yet.')}
           compact

@@ -222,7 +222,7 @@ describe('DataQualityPage', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Data Quality' }),
+      screen.getByRole('heading', { level: 1, name: 'Data quality' }),
     ).toBeInTheDocument();
     expect(screen.getByTestId('stub-kpis')).toBeInTheDocument();
     expect(screen.getByTestId('stub-versions')).toBeInTheDocument();
@@ -284,7 +284,7 @@ describe('DataQualityPage', () => {
     renderPage();
 
     expect(screen.getByText('Feature not supported')).toBeInTheDocument();
-    expect(screen.getByText(/data-quality scorer is not configured/i)).toBeInTheDocument();
+    expect(screen.getByText(/data-quality scorer is Not configured/i)).toBeInTheDocument();
     expect(captured.kpis.error).toBeNull();
     expect(captured.versions.error).toBeNull();
     expect(captured.fields.error).toBeNull();

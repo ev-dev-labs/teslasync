@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListChecks, Search, Flag } from 'lucide-react';
 
-import { GlassPanel, Badge, Input, Select, DataTable, useSortToggle, type Column } from '@/components/ui';
-import { PanelTitle, Caption, Code } from '@/components/ui/Typography';
+import { GlassPanel, Badge, Input, Select, DataTable, PanelTitle, Caption, Code, useSortToggle, type Column } from '@/components/ui';
 import { EmptyState, QueryError, TableSkeleton } from '@/components/feedback';
 import { fmtInt } from '@/lib/numberFormat';
 import type { FeatureFlagEntry, FeatureFlagKind } from './parseFeatureFlags';
@@ -91,6 +90,7 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
     () => [
       {
         key: 'key',
+        filterValue: (row) => row.key ?? null,
         header: t('featureConfig.feature', 'Feature'),
         sortable: true,
         visibleOnMobile: true,
@@ -102,6 +102,8 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
       },
       {
         key: 'kind',
+        filterValue: (row) => row.kind ?? null,
+        filterValueLabel: (_value, row) => kindLabel[row.kind],
         header: t('featureConfig.typeColumn', 'Type'),
         sortable: true,
         render: (row) => (
@@ -112,6 +114,8 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
       },
       {
         key: 'enabled',
+        filterValue: (row) => row.enabled ?? null,
+        filterValueLabel: (_value, row) => row.enabled == null ? '—' : row.enabled ? t('featureConfig.enabled', 'Enabled') : t('featureConfig.disabled', 'Disabled'),
         header: t('featureConfig.status', 'Status'),
         sortable: true,
         visibleOnMobile: true,
@@ -123,6 +127,7 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
       },
       {
         key: 'details',
+        filterValue: (row) => row.details ?? null,
         header: t('featureConfig.details', 'Details'),
         render: (row) => (
           <Caption className="block max-w-[26rem] truncate" title={row.details ?? undefined}>
@@ -135,11 +140,11 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
   );
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
+    <GlassPanel className="min-w-0 p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('featureConfig.tableTitle', 'Feature Flags')}
+          {t('featureConfig.tableTitle', 'Feature flags')}
         </PanelTitle>
         {safeEntries.length > 0 && (
           <Caption>
@@ -188,6 +193,8 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
             tableId="admin:tesla-feature-flags"
             columns={columns}
             data={sortedRows}
+            enableValueFilters
+            filterData={safeEntries}
             keyExtractor={(row) => row.key}
             sortKey={sortKey}
             sortDir={sortDir}

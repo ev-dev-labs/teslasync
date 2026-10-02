@@ -69,7 +69,7 @@ function makeHistory(overrides: Partial<HistoryEntry> = {}): HistoryEntry {
 
 const RESPONSE_BODY = { name: 'Response body' } as const;
 const SNIPPET_LABEL = 'Generated code snippet';
-const SNIPPET_TOGGLE = { name: 'Code Snippet' } as const;
+const SNIPPET_TOGGLE = { name: 'Code snippet' } as const;
 const noop = () => {};
 
 const url = 'https://api.test/v1/vehicles';
@@ -254,7 +254,7 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    expect(screen.queryByRole('button', { name: /Response Headers/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Response headers/ })).toBeNull();
   });
 
   it('expands and collapses the response headers, reflecting aria-expanded', () => {
@@ -268,7 +268,7 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    const toggle = screen.getByRole('button', { name: /Response Headers \(2\)/ });
+    const toggle = screen.getByRole('button', { name: /Response headers \(2\)/ });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('abc123')).toBeNull();
 
@@ -284,7 +284,7 @@ describe('ResponseViewer', () => {
 
   it('does not render the history strip when there is no history', () => {
     render(<ResponseViewer response={null} loading={false} history={[]} onReplay={noop} />);
-    expect(screen.queryByText('Recent Requests')).toBeNull();
+    expect(screen.queryByText('Recent requests')).toBeNull();
   });
 
   it('is resilient to a nullish history prop (defensive ?? [])', () => {
@@ -296,7 +296,7 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    expect(screen.queryByText('Recent Requests')).toBeNull();
+    expect(screen.queryByText('Recent requests')).toBeNull();
   });
 
   it('renders each history entry and replays the clicked one via onReplay', () => {
@@ -317,7 +317,7 @@ describe('ResponseViewer', () => {
         onReplay={onReplay}
       />,
     );
-    expect(screen.getByText('Recent Requests')).toBeInTheDocument();
+    expect(screen.getByText('Recent requests')).toBeInTheDocument();
     expect(screen.getByText('/vehicles')).toBeInTheDocument();
     expect(screen.getByText('/charging')).toBeInTheDocument();
 
@@ -469,7 +469,7 @@ describe('SnippetPanel', () => {
     const toggle = screen.getByRole('button', SNIPPET_TOGGLE);
     // The chevron inside the toggle is aria-hidden so the accessible name is
     // just "Code Snippet" (asserted implicitly by getByRole matching above).
-    expect(within(toggle).getByText('Code Snippet')).toBeInTheDocument();
+    expect(within(toggle).getByText('Code snippet')).toBeInTheDocument();
     expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 });

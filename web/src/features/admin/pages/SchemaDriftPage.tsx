@@ -65,7 +65,7 @@ interface SectionState {
 
 export default function SchemaDriftPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.schemaDrift.pageTitle', 'Schema Drift'));
+  usePageTitle(t('admin.schemaDrift.pageTitle', 'Schema drift'));
 
   const query = useSchemaDrift();
   const { data, isLoading, error, isFetching } = query;
@@ -97,12 +97,12 @@ export default function SchemaDriftPage() {
 
   return (
     <PageContainer
-      title={t('admin.schemaDrift.pageTitle', 'Schema Drift')}
+      title={t('admin.schemaDrift.pageTitle', 'Schema drift')}
       subtitle={t(
         'admin.schemaDrift.subtitle',
         'Current database schema fingerprint compared against the recorded seed. Drift indicates a migration ran without a seed refresh, or raw DDL bypassed the migration system.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={query}
     >
       {subsystemMissing && (

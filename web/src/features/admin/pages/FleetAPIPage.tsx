@@ -24,53 +24,7 @@ import {
   useUpdatePollingConfig, useVersionInfo,
 } from '@/api/hooks/useSettings';
 import type { FleetEndpoint } from '@/api/hooks/useSettings';
-
-function EndpointToggle({ endpoint, enabled, auto, pollingEnabled, onEnable, onAuto, pending }: {
-  endpoint: FleetEndpoint;
-  enabled: boolean;
-  auto: boolean;
-  pollingEnabled: boolean;
-  onEnable: () => void;
-  onAuto: () => void;
-  pending: boolean;
-}) {
-  const { t } = useTranslation();
-  const name = `${endpoint.method} ${endpoint.path}`;
-  return (
-    <div className={`flex min-w-0 flex-col gap-2 border-b border-[var(--border-default)] px-3 py-2.5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between ${enabled ? 'bg-[var(--surface-2)]' : ''}`}>
-      <div className="grid min-w-0 flex-1 gap-1 md:grid-cols-[minmax(12rem,0.7fr)_minmax(0,1.3fr)] md:items-center md:gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <Badge variant={endpoint.method === 'GET' ? 'info' : 'warning'} size="sm" className="shrink-0">{endpoint.method}</Badge>
-          <Text as="span" size="sm" weight="medium" color="primary" className="min-w-0">
-            {endpoint.key.replace(/\./g, ' › ').replace(/_/g, ' ')}
-          </Text>
-        </div>
-        <Code className="block min-w-0 break-all text-[var(--text-muted)]">{endpoint.path}</Code>
-      </div>
-      <div className="grid w-full shrink-0 grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-2 sm:w-[20rem] sm:grid-cols-[7.5rem_12rem]">
-        <div className="flex items-center justify-end gap-2">
-          <Caption className="sm:hidden">{t('fleetApi.controls.enabled', 'Access')}</Caption>
-          <Toggle checked={enabled} onChange={onEnable} disabled={pending} size="sm"
-            aria-label={`${t('fleetApi.controls.enable', 'Enable')} ${name}`} />
-        </div>
-        {endpoint.pollable ? (
-          <div className="flex items-center justify-end gap-2 border-l border-[var(--border-default)] pl-3">
-            <Caption className="sm:hidden">{t('fleetApi.controls.autoPoll', 'Auto-poll')}</Caption>
-            <Toggle checked={enabled && auto} onChange={onAuto} disabled={pending || !enabled || !pollingEnabled} size="sm"
-              aria-label={`${t('fleetApi.controls.poll', 'Auto-poll')} ${name}`} />
-          </div>
-        ) : (
-          <Caption className="border-l border-[var(--border-default)] pl-3 text-right"
-            title={t('fleetApi.controls.onDemandOnly', 'Not scheduled')}
-            aria-label={t('fleetApi.controls.onDemandOnly', 'Not scheduled')}>
-            <span className="sm:hidden">{t('fleetApi.controls.onDemandOnly', 'Not scheduled')}</span>
-            <span className="hidden sm:inline" aria-hidden="true">—</span>
-          </Caption>
-        )}
-      </div>
-    </div>
-  );
-}
+import { FleetEndpointTable } from '../components/FleetEndpointTable';
 
 export default function FleetAPIPage() {
   const { t } = useTranslation();
@@ -204,9 +158,9 @@ export default function FleetAPIPage() {
   };
 
   const configuredEndpoints = [
-    { key: 'api', label: t('fleetApi.configured.api', 'API (Internal)') },
-    { key: 'web', label: t('fleetApi.configured.web', 'Web Frontend') },
-    { key: 'oauth_callback', label: t('fleetApi.configured.oauthCallback', 'OAuth Callback') },
+    { key: 'api', label: t('fleetApi.configured.api', 'API (internal)') },
+    { key: 'web', label: t('fleetApi.configured.web', 'Web frontend') },
+    { key: 'oauth_callback', label: t('fleetApi.configured.oauthCallback', 'OAuth callback') },
     { key: 'tesla_api', label: t('fleetApi.configured.teslaApi', 'Tesla Fleet API') },
   ];
 
@@ -234,7 +188,7 @@ export default function FleetAPIPage() {
 
   return (
     <PageContainer
-      title={t('fleetApi.pageTitle', 'Fleet API Settings')}
+      title={t('fleetApi.pageTitle', 'Fleet API settings')}
       subtitle={t('fleetApi.subtitle', 'Choose which Tesla Fleet API routes are available and which can be polled automatically')}
       query={[settingsQuery, pollingQuery, versionQuery]}
       dataSources={dataSources}
@@ -254,7 +208,7 @@ export default function FleetAPIPage() {
           ) : (
             <>
               <MetricCard
-                label={t('fleetApi.kpis.apiStatus', 'API Status')}
+                label={t('fleetApi.kpis.apiStatus', 'API status')}
                 value={apiStatusKnown && pollingKnown
                   ? (apiSuspended ? t('fleetApi.status.suspended', 'Suspended') : pollingConfig.auto_polling_enabled
                     ? t('fleetApi.status.polling', 'Polling enabled') : t('fleetApi.status.onDemand', 'On demand only'))
@@ -264,7 +218,7 @@ export default function FleetAPIPage() {
                 subtitle={t('fleetApi.kpis.apiStatusHint', 'Automatic Fleet API polling')}
               />
               <MetricCard
-                label={t('fleetApi.kpis.endpointsEnabled', 'Endpoints Enabled')}
+                label={t('fleetApi.kpis.endpointsEnabled', 'Endpoints enabled')}
                 value={pollingKnown ? `${fmtInt(enabledCount)} / ${fmtInt(totalCount)}` : EM_DASH}
                 icon={<Shield className="h-5 w-5" />}
                 color="cyan"
@@ -284,7 +238,7 @@ export default function FleetAPIPage() {
                   {pollingConfig?.auto_polling_enabled ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
                 </IconBox>
                 <div className="min-w-0">
-                  <PanelTitle>{t('fleetApi.polling.title', 'Tesla API Polling')}</PanelTitle>
+                  <PanelTitle>{t('fleetApi.polling.title', 'Tesla API polling')}</PanelTitle>
                   <HelperText className="mt-0.5">
                     {t('fleetApi.polling.masterDesc', 'Off by default. Turning this off stops scheduled Fleet API reads, not manual requests or token refresh.')}
                   </HelperText>
@@ -340,7 +294,7 @@ export default function FleetAPIPage() {
               <Shield className="h-5 w-5" />
             </IconBox>
             <div className="min-w-0 flex-1">
-              <PanelTitle>{t('fleetApi.controls.title', 'API Endpoint Controls')}</PanelTitle>
+              <PanelTitle>{t('fleetApi.controls.title', 'API endpoint controls')}</PanelTitle>
               <HelperText className="mt-0.5">
                 {t('fleetApi.controls.subtitle', 'Allow manual requests per endpoint, then opt supported reads into background refresh. Routes without a scheduled job stay manual only.')}
               </HelperText>
@@ -483,25 +437,18 @@ export default function FleetAPIPage() {
                         <PanelTitle>{groupLabel(group)}</PanelTitle>
                         <Badge size="sm" variant="info">{t('fleetApi.controls.groupCount', '{{count}} routes', { count: endpoints.length })}</Badge>
                       </div>
-                      <div className="hidden w-[20rem] grid-cols-[7.5rem_12rem] gap-2 text-right sm:grid">
-                        <Caption>{t('fleetApi.controls.enabled', 'Access')}</Caption>
-                        <Caption>{t('fleetApi.controls.autoPoll', 'Auto-poll')}</Caption>
-                      </div>
                     </div>
-                    <div>
-                      {endpoints.map((ep) => (
-                        <EndpointToggle
-                          key={ep.key}
-                          endpoint={ep}
-                          enabled={!!pollingConfig.fleet_endpoints[ep.key]}
-                          auto={!!pollingConfig.auto_endpoints[ep.key]}
-                          pollingEnabled={pollingConfig.auto_polling_enabled}
-                          pending={pollingConfigMut.isPending}
-                          onEnable={() => toggleEndpoint(ep)}
-                          onAuto={() => toggleAuto(ep.key)}
-                        />
-                      ))}
-                    </div>
+                    <FleetEndpointTable
+                      tableId={`admin:fleet-endpoints:${groupBy}:${group}`}
+                      endpoints={endpoints}
+                      candidates={catalog.filter((endpoint) => (groupBy === 'category' ? endpoint.category : endpoint.method) === group)}
+                      access={pollingConfig.fleet_endpoints}
+                      auto={pollingConfig.auto_endpoints}
+                      pollingEnabled={pollingConfig.auto_polling_enabled}
+                      pending={pollingConfigMut.isPending}
+                      onEnable={toggleEndpoint}
+                      onAuto={toggleAuto}
+                    />
                   </section>
                 ))}
               </div>
@@ -517,7 +464,7 @@ export default function FleetAPIPage() {
               <Globe className="h-5 w-5" />
             </IconBox>
             <div className="min-w-0 flex-1">
-              <PanelTitle>{t('fleetApi.configured.title', 'API Endpoints')}</PanelTitle>
+              <PanelTitle>{t('fleetApi.configured.title', 'API endpoints')}</PanelTitle>
               {versionLabel && (
                 <Text as="p" size="xs" color="muted" mono className="mt-0.5 truncate">{versionLabel}</Text>
               )}
@@ -549,7 +496,7 @@ export default function FleetAPIPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <LinkIcon className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-                <Label>{t('fleetApi.configured.heading', 'Configured Endpoints')}</Label>
+                <Label>{t('fleetApi.configured.heading', 'Configured endpoints')}</Label>
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
                 {configuredEndpoints.filter((ep) => configuredEndpointMap[ep.key]).map((ep) => (

@@ -103,7 +103,7 @@ function TagGroup({
             open && 'rotate-180',
           )}
         />
-        <Text size="xs" weight="semibold" color="secondary" className="flex-1 uppercase tracking-wider">
+        <Text size="xs" weight="semibold" color="secondary" className="flex-1 tracking-wider">
           {tag}
         </Text>
         <Text size="2xs" color="muted" mono>{endpoints.length}</Text>

@@ -151,7 +151,7 @@ function readRows(): Array<{ date: string; price: number }> {
 describe('GasPriceTrendChart — panel chrome', () => {
   it('always renders the panel title regardless of state', () => {
     renderChart(makeQuery({ data: HISTORY }));
-    expect(screen.getByText('Price Trend')).toBeInTheDocument();
+    expect(screen.getByText('Price trend')).toBeInTheDocument();
   });
 });
 
@@ -163,7 +163,7 @@ describe('GasPriceTrendChart — loading', () => {
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
     // The title still frames the panel while loading.
-    expect(screen.getByText('Price Trend')).toBeInTheDocument();
+    expect(screen.getByText('Price trend')).toBeInTheDocument();
   });
 
   it('does not flash the loading skeleton once rows exist (background refetch)', () => {
@@ -177,14 +177,14 @@ describe('GasPriceTrendChart — loading', () => {
 describe('GasPriceTrendChart — empty', () => {
   it('shows the no-history empty state when the list is loaded but empty', () => {
     renderChart(makeQuery({ data: [] }));
-    expect(screen.getByText(/No price history recorded yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No Price history recorded yet/i)).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
   it('treats undefined data (idle, not loading, not error) as empty', () => {
     renderChart(makeQuery({ data: undefined, isLoading: false }));
-    expect(screen.getByText(/No price history recorded yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No Price history recorded yet/i)).toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 });

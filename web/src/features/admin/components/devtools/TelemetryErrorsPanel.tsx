@@ -77,8 +77,9 @@ export function TelemetryErrorsPanel({
         <DataTable
           tableId="admin:fleet-api-errors"
           columns={columns}
-          mobileColumns={[]}
+          mobileColumns={['timestamp', 'code', 'message']}
           data={rows}
+          enableValueFilters
           keyExtractor={(r) => r.rowKey}
           compact
           pagination={{ defaultPageSize: 50 }}

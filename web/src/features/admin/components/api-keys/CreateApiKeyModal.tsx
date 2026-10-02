@@ -70,7 +70,7 @@ function CreateApiKeyDialog({ onClose }: { onClose: () => void }) {
           value === 'read'
             ? t('apiKeys.perm.read', 'Read')
             : value === 'read-write'
-              ? t('apiKeys.perm.readWrite', 'Read-Write')
+              ? t('apiKeys.perm.readWrite', 'Read-write')
               : t('apiKeys.perm.admin', 'Admin'),
       })),
     [t],
@@ -80,7 +80,7 @@ function CreateApiKeyDialog({ onClose }: { onClose: () => void }) {
     <Modal
       open
       onClose={handleClose}
-      title={generatedKey ? t('apiKeys.keyCreated', 'API Key Created') : t('apiKeys.newKey', 'New API Key')}
+      title={generatedKey ? t('apiKeys.keyCreated', 'API key created') : t('apiKeys.newKey', 'New API key')}
     >
       {generatedKey ? (
         <div className="space-y-4">
@@ -149,7 +149,7 @@ function CreateApiKeyDialog({ onClose }: { onClose: () => void }) {
               disabled={!name.trim()}
               loading={createMut.isPending}
             >
-              {t('apiKeys.generate', 'Generate Key')}
+              {t('apiKeys.generate', 'Generate key')}
             </Button>
             <Button variant="secondary" size="sm" onClick={handleClose}>
               {t('apiKeys.cancel', 'Cancel')}

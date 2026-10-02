@@ -197,7 +197,7 @@ describe('SlowQueriesPage — populated view', () => {
 
     // Page scaffolding.
     expect(
-      screen.getByRole('heading', { name: 'Slow Queries', level: 1 }),
+      screen.getByRole('heading', { name: 'Slow queries', level: 1 }),
     ).toBeInTheDocument();
 
     // KPI band — real aggregates over the three rows.
@@ -217,7 +217,7 @@ describe('SlowQueriesPage — populated view', () => {
     // Chart section exposes an accessible image role for the bar ranking.
     expect(
       screen.getByRole('img', {
-        name: /Horizontal bar chart ranking the top queries/i,
+        name: /Horizontal bar chart ranking the Top queries/i,
       }),
     ).toBeInTheDocument();
 
@@ -246,7 +246,7 @@ describe('SlowQueriesPage — non-happy states', () => {
 
     // Scaffolding stays; KPI values do not exist yet.
     expect(
-      screen.getByRole('heading', { name: 'Slow Queries', level: 1 }),
+      screen.getByRole('heading', { name: 'Slow queries', level: 1 }),
     ).toBeInTheDocument();
     expect(screen.queryByText('Queries analyzed')).toBeNull();
     // At least one skeleton placeholder is on screen.

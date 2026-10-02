@@ -48,12 +48,12 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('admin.security.sentryChart', 'Sentry Mode Activity')}
+        {t('admin.security.sentryChart', 'Sentry mode activity')}
       </PanelTitle>
       <EmbeddedChart
         chartKey="admin-security-sentry-mode"
-        title={t('admin.security.sentryChart', 'Sentry Mode Activity')}
-        ariaLabel={t('admin.security.sentryChart', 'Sentry Mode Activity')}
+        title={t('admin.security.sentryChart', 'Sentry mode activity')}
+        ariaLabel={t('admin.security.sentryChart', 'Sentry mode activity')}
         loading={isLoading && !error}
         error={error instanceof Error ? error : error ? new Error(String(error)) : undefined}
         onRetry={onRetry}
@@ -69,8 +69,8 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
         data={chartRows}
         dataColumns={[
           { key: 'date', label: t('admin.security.chart.date', 'Date') },
-          { key: 'sentryOn', label: t('admin.security.chart.sentryOn', 'Sentry On') },
-          { key: 'sentryOff', label: t('admin.security.chart.sentryOff', 'Sentry Off') },
+          { key: 'sentryOn', label: t('admin.security.chart.sentryOn', 'Sentry on') },
+          { key: 'sentryOff', label: t('admin.security.chart.sentryOff', 'Sentry off') },
         ]}
       >
         {({ hiddenSeries }) => (
@@ -87,7 +87,7 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
               <ChartLegend />
               <Bar
                 dataKey="sentryOn"
-                name={t('admin.security.chart.sentryOn', 'Sentry On')}
+                name={t('admin.security.chart.sentryOn', 'Sentry on')}
                 fill={chartTokens.series[0]}
                 radius={[4, 4, 0, 0]}
                 stackId="sentry"
@@ -95,7 +95,7 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
               />
               <Bar
                 dataKey="sentryOff"
-                name={t('admin.security.chart.sentryOff', 'Sentry Off')}
+                name={t('admin.security.chart.sentryOff', 'Sentry off')}
                 fill={chartTokens.axisStroke}
                 radius={[4, 4, 0, 0]}
                 stackId="sentry"

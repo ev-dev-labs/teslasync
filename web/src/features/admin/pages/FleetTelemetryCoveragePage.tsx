@@ -149,6 +149,7 @@ function buildFieldColumns(
   return [
     {
       key: 'field',
+      filterValue: (row) => row.field ?? null,
       header: t('coverage.col.field', 'Field'),
       sortable: true,
       render: (row) => (
@@ -159,6 +160,7 @@ function buildFieldColumns(
     },
     {
       key: 'destination',
+      filterValue: (row) => row.destination ?? null,
       header: t('coverage.col.destination', 'Destination'),
       sortable: true,
       render: (row) => (
@@ -169,6 +171,7 @@ function buildFieldColumns(
     },
     {
       key: 'column',
+      filterValue: (row) => row.column ?? null,
       header: t('coverage.col.column', 'Column'),
       sortable: true,
       render: (row) =>
@@ -184,6 +187,7 @@ function buildFieldColumns(
     },
     {
       key: 'also_signal_log',
+      filterValue: (row) => row.also_signal_log ?? null,
       header: t('coverage.col.dualWrite', 'Dual write'),
       render: (row) =>
         row.also_signal_log ? (
@@ -198,6 +202,10 @@ function buildFieldColumns(
     },
     {
       key: 'subscribed',
+      filterValue: (row) => row.subscribed ?? null,
+      filterValueLabel: (_value, row) => row.subscribed == null ? '—' : row.subscribed
+        ? t('coverage.subscribed.yes', 'yes')
+        : t('coverage.subscribed.no', 'no'),
       header: t('coverage.col.subscribed', 'Subscribed'),
       sortable: true,
       render: (row) =>
@@ -240,7 +248,7 @@ function CategorySection({
 
   return (
     <GlassPanel
-      className="h-full p-4 sm:p-5"
+      className="h-full min-w-0 p-4 sm:p-5"
       data-testid={`coverage-category-${category.category}`}
     >
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -274,6 +282,8 @@ function CategorySection({
           <DataTable<FleetTelemetryFieldCoverage>
             tableId={`coverage:fields:${category.category}`}
             data={filtered}
+            enableValueFilters
+            filterData={category.fields ?? []}
             columns={columns}
             mobileColumns={['field', 'destination', 'subscribed']}
             keyExtractor={(row) => `${category.category}:${row.field}`}
@@ -289,7 +299,7 @@ export default function FleetTelemetryCoveragePage({
   testHookOverride,
 }: FleetTelemetryCoveragePageProps = {}) {
   const { t } = useTranslation()
-  usePageTitle(t('coverage.pageTitle', 'Fleet Telemetry Coverage'))
+  usePageTitle(t('coverage.pageTitle', 'Fleet Telemetry coverage'))
 
   const liveQuery = useFleetTelemetryCoverage()
   const query = testHookOverride ?? liveQuery
@@ -384,13 +394,13 @@ export default function FleetTelemetryCoveragePage({
 
   return (
     <PageContainer
-      title={t('coverage.pageTitle', 'Fleet Telemetry Coverage')}
+      title={t('coverage.pageTitle', 'Fleet Telemetry coverage')}
       subtitle={t(
         'coverage.subtitle',
         'Package-derived snapshot of which Tesla proto fields the build routes and which the current subscription pushes. Sourced from routing.yaml and teslaconfig.Builder — no per-vehicle telemetry counts.',
       )}
       query={query}
-      actions={
+      secondaryActions={
         <Button
           variant="ghost"
           onClick={() => {

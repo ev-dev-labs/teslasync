@@ -176,7 +176,7 @@ describe('DiskForecastPage', () => {
     // Title chrome is always present; the KPI cards are not — the band is
     // still showing its six pulse skeletons.
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Disk Forecast' }),
+      screen.getByRole('heading', { level: 1, name: 'Disk forecast' }),
     ).toBeInTheDocument()
     expect(screen.queryByText('Total disk')).toBeNull()
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)

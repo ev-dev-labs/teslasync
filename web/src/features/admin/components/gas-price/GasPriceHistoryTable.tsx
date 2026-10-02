@@ -57,7 +57,9 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
     () => [
       {
         key: 'effective_from',
-        header: t('gas.effectiveFrom', 'Effective From'),
+        filterValue: (r) => r.effective_from ?? null,
+        filterValueLabel: (_value, r) => formatDateTime(r.effective_from),
+        header: t('gas.effectiveFrom', 'Effective from'),
         sortable: true,
         render: (r) => (
           <Text variant="body">{formatDateTime(r.effective_from)}</Text>
@@ -65,6 +67,9 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
       },
       {
         key: 'price_per_unit',
+        filterValue: (r) => r.price_per_unit ?? null,
+        filterValueLabel: (_value, r) => r.price_per_unit == null ? '—' : `${formatCurrency(r.price_per_unit)}/${r.unit ?? '—'}`,
+        align: 'right',
         header: t('gas.price', 'Price'),
         sortable: true,
         render: (r) => (
@@ -76,6 +81,7 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
       },
       {
         key: 'unit',
+        filterValue: (r) => r.unit ?? null,
         header: t('gas.unit', 'Unit'),
         sortable: true,
         render: (r) => (
@@ -86,6 +92,9 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
       },
       {
         key: 'efficiency_mpg',
+        filterValue: (r) => r.efficiency_mpg ?? null,
+        filterValueLabel: (_value, r) => r.efficiency_mpg == null ? '—' : `${fmtNumber(r.efficiency_mpg, 0)} ${t('gas.mpg', 'mpg')}`,
+        align: 'right',
         header: t('gas.efficiency', 'Efficiency'),
         sortable: true,
         render: (r) => (
@@ -96,7 +105,9 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
       },
       {
         key: 'effective_to',
-        header: t('gas.effectiveTo', 'Effective To'),
+        filterValue: (r) => r.effective_to ?? null,
+        filterValueLabel: (_value, r) => r.effective_to ? formatDateTime(r.effective_to) : t('gas.current', 'Current'),
+        header: t('gas.effectiveTo', 'Effective to'),
         sortable: false,
         render: (r) =>
           r.effective_to ? (
@@ -112,17 +123,17 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
   );
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
+    <GlassPanel className="min-w-0 p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('gas.historyTitle', 'Price History')}
+        {t('gas.historyTitle', 'Price history')}
       </PanelTitle>
 
       {isError ? (
         <QueryError
           error={error}
           onRetry={() => void refetch()}
-          resourceName={t('gas.title', 'Gas Price Auto-Poll')}
+          resourceName={t('gas.title', 'Gas price auto-poll')}
         />
       ) : isLoading && rows.length === 0 ? (
         <Skeleton height={240} className="rounded-xl" />
@@ -132,6 +143,7 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
           columns={columns}
           mobileColumns={['effective_from', 'price_per_unit', 'effective_to']}
           data={sortedRows}
+          enableValueFilters
           keyExtractor={(r) => r.id}
           sortKey={sortKey}
           sortDir={sortDir}

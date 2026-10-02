@@ -68,6 +68,7 @@ export function SubjectsTable({
     () => [
       {
         key: 'subject',
+        filterValue: (row) => row.subject ?? null,
         header: t('impersonation.users.subjectColumn', 'Subject'),
         sortable: true,
         visibleOnMobile: true,
@@ -82,6 +83,10 @@ export function SubjectsTable({
       },
       {
         key: 'status',
+        filterValue: (row) => targetSubject != null && row.subject === targetSubject,
+        filterValueLabel: (_value, row) => targetSubject && row.subject === targetSubject
+          ? t('impersonation.users.currentTarget', 'Current target')
+          : t('impersonation.users.available', 'Available'),
         header: t('impersonation.users.statusColumn', 'Status'),
         render: (row) =>
           targetSubject && row.subject === targetSubject ? (
@@ -110,11 +115,11 @@ export function SubjectsTable({
   )
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
+    <GlassPanel className="min-w-0 p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Users className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('impersonation.users.tableTitle', 'Active Subjects')}
+          {t('impersonation.users.tableTitle', 'Active subjects')}
         </PanelTitle>
         {showSubjectList && (
           <Caption>
@@ -163,6 +168,8 @@ export function SubjectsTable({
             tableId="admin:impersonation-subjects"
             columns={columns}
             data={filtered}
+            enableValueFilters
+            filterData={subjects}
             keyExtractor={(row) => row.subject}
             mobileColumns={['subject', 'action']}
             emptyMessage={t('impersonation.users.noMatch', 'No subjects match your search.')}

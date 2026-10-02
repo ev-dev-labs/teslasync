@@ -24,11 +24,11 @@ export function CronParserTool() {
 
   const presets = useMemo(
     () => [
-      { label: t('devtools.utils.cronEveryMinute', 'Every Minute'), value: '* * * * *' },
-      { label: t('devtools.utils.cronEveryHour', 'Every Hour'), value: '0 * * * *' },
-      { label: t('devtools.utils.cronEveryDay', 'Every Day'), value: '0 0 * * *' },
-      { label: t('devtools.utils.cronEveryWeek', 'Every Week'), value: '0 0 * * 0' },
-      { label: t('devtools.utils.cronEveryMonth', 'Every Month'), value: '0 0 1 * *' },
+      { label: t('devtools.utils.cronEveryMinute', 'Every minute'), value: '* * * * *' },
+      { label: t('devtools.utils.cronEveryHour', 'Every hour'), value: '0 * * * *' },
+      { label: t('devtools.utils.cronEveryDay', 'Every day'), value: '0 0 * * *' },
+      { label: t('devtools.utils.cronEveryWeek', 'Every week'), value: '0 0 * * 0' },
+      { label: t('devtools.utils.cronEveryMonth', 'Every month'), value: '0 0 1 * *' },
     ],
     [t],
   )
@@ -36,10 +36,10 @@ export function CronParserTool() {
   const applyPreset = useCallback((value: string) => setExpr(value), [])
 
   return (
-    <ToolCard icon={Timer} color="green" title={t('devtools.utils.cron', 'Cron Parser')} description={t('devtools.utils.cronDesc', 'Cron Parser Desc')}>
+    <ToolCard icon={Timer} color="green" title={t('devtools.utils.cron', 'Cron parser')} description={t('devtools.utils.cronDesc', 'Cron parser desc')}>
       <div className="space-y-3">
         <Input
-          label={t('devtools.utils.cronExpression', 'Cron Expression')}
+          label={t('devtools.utils.cronExpression', 'Cron expression')}
           placeholder="*/5 * * * *"
           value={expr}
           onChange={(e) => setExpr(e.target.value)}
@@ -74,7 +74,7 @@ export function CronParserTool() {
               <p className="text-sm text-emerald-300">{description || '—'}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronNextRuns', 'Next Runs')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronNextRuns', 'Next runs')}</span>
               {nextRuns.length > 0 ? (
                 nextRuns.map((d, i) => (
                   <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">

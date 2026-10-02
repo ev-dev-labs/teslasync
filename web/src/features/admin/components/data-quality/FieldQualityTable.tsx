@@ -60,6 +60,7 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
     () => [
       {
         key: 'field',
+        filterValue: (r) => r.field ?? null,
         header: t('admin.dataQuality.colField', 'Field'),
         render: (r) => (
           <div className="flex flex-col">
@@ -76,6 +77,7 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
       },
       {
         key: 'severity',
+        filterValue: (r) => r.severity ?? null,
         header: t('admin.dataQuality.colSeverity', 'Quality'),
         render: (r) => (
           <div className="flex items-center gap-2">
@@ -88,6 +90,9 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
       },
       {
         key: 'freshness',
+        filterValue: (r) => r.freshness_seconds ?? null,
+        filterValueLabel: (_value, r) => formatSeconds(r.freshness_seconds) ?? NO_VALUE,
+        groupStart: true,
         header: t('admin.dataQuality.colFreshness', 'Freshness'),
         align: 'right',
         render: (r) => (
@@ -96,6 +101,8 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
       },
       {
         key: 'gap',
+        filterValue: (r) => r.max_gap_seconds ?? null,
+        filterValueLabel: (_value, r) => formatSeconds(r.max_gap_seconds) ?? NO_VALUE,
         header: t('admin.dataQuality.colMaxGap', 'Max gap'),
         align: 'right',
         render: (r) => (
@@ -104,6 +111,8 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
       },
       {
         key: 'duplicates',
+        filterValue: (r) => r.duplicate_ratio ?? null,
+        filterValueLabel: (_value, r) => formatDuplicateRatio(r.duplicate_ratio) ?? NO_VALUE,
         header: t('admin.dataQuality.colDuplicates', 'Duplicates'),
         align: 'right',
         render: (r) => (
@@ -112,12 +121,17 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
       },
       {
         key: 'versioned',
+        filterValue: (r) => r.versioned_sample_count ?? null,
+        filterValueLabel: (_value, r) => fmtInt(r.versioned_sample_count),
+        groupStart: true,
         header: t('admin.dataQuality.colVersioned', 'Attested'),
         align: 'right',
         render: (r) => <Text className="tabular-nums">{fmtInt(r.versioned_sample_count)}</Text>,
       },
       {
         key: 'unversioned',
+        filterValue: (r) => r.unversioned_sample_count ?? null,
+        filterValueLabel: (_value, r) => r.unversioned_sample_count == null ? NO_VALUE : fmtInt(r.unversioned_sample_count),
         header: t('admin.dataQuality.colUnversioned', 'Unattested'),
         align: 'right',
         render: (r) => {
@@ -131,6 +145,8 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
       },
       {
         key: 'coverage',
+        filterValue: (r) => r.normalization_coverage_pct ?? null,
+        filterValueLabel: (_value, r) => formatCoveragePct(r.normalization_coverage_pct, r.normalization_coverage_state) ?? t('admin.dataQuality.unknown', 'Unknown'),
         header: t('admin.dataQuality.colCoverage', 'Coverage'),
         align: 'right',
         render: (r) => {
@@ -157,7 +173,7 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
   );
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
+    <GlassPanel className="min-w-0 p-4 sm:p-5">
       <PanelTitle className="mb-1">
         {t('admin.dataQuality.tableTitle', 'Per-field quality and provenance')}
       </PanelTitle>
@@ -188,6 +204,7 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
             columns={columns}
             mobileColumns={['field', 'severity', 'freshness']}
             data={rows}
+            enableValueFilters
             keyExtractor={(r) => r.field}
             emptyMessage={t('admin.dataQuality.fieldsEmptyTable', 'No field scores')}
           />

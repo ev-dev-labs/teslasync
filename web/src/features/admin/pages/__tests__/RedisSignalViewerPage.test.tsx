@@ -160,7 +160,7 @@ describe('RedisSignalViewerPage — Phase-46 / Prompt 59 (error states)', () => 
     // Stat cards must show the placeholder, not "0", so the operator
     // doesn't see a fake "0 Total Signals" reading on a failed request.
     await waitFor(() => {
-      const labelEl = screen.getByText('Total Signals');
+      const labelEl = screen.getByText('Total signals');
       // Walk up to the StatCard root and inspect its rendered value text.
       const card = labelEl.closest('div')?.parentElement?.parentElement;
       expect(card?.textContent).toContain('—');
@@ -215,11 +215,11 @@ describe('RedisSignalViewerPage — Purge cache controls', () => {
 
     renderPage();
 
-    const purgeAllBtn = screen.getByRole('button', { name: /Purge All Redis/ });
+    const purgeAllBtn = screen.getByRole('button', { name: /Purge all Redis/ });
     fireEvent.click(purgeAllBtn);
 
     // Confirm button must be disabled until "PURGE ALL" is typed.
-    const confirmBtns = await screen.findAllByRole('button', { name: 'Purge All Vehicles' });
+    const confirmBtns = await screen.findAllByRole('button', { name: 'Purge all vehicles' });
     const confirmBtn = confirmBtns[confirmBtns.length - 1];
     expect(confirmBtn).toBeDisabled();
 
@@ -298,8 +298,8 @@ describe('RedisSignalViewerPage — Purge cache controls', () => {
     mockedPurgeAll.mockResolvedValue({ purged: 1000, scanned: 1000, limit: 1000, has_more: true });
 
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /Purge All Redis/ }));
-    const confirmBtns = await screen.findAllByRole('button', { name: 'Purge All Vehicles' });
+    fireEvent.click(screen.getByRole('button', { name: /Purge all Redis/ }));
+    const confirmBtns = await screen.findAllByRole('button', { name: 'Purge all vehicles' });
     const confirmBtn = confirmBtns[confirmBtns.length - 1];
     fireEvent.change(screen.getByLabelText('Type PURGE ALL to confirm'), { target: { value: 'PURGE ALL' } });
     fireEvent.click(confirmBtn);

@@ -67,7 +67,7 @@ describe('XRayHeader', () => {
     renderHeader({ data: makeResponse() });
 
     const region = screen.getByRole('region', {
-      name: /ingest summary metrics/i,
+      name: /Ingest Summary metrics/i,
     });
     expect(region).toBeInTheDocument();
 

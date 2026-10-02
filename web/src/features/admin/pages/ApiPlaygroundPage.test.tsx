@@ -251,13 +251,13 @@ describe('ApiPlaygroundPage', () => {
 
     const region = kpiRegion()
     // During load the KPI band shows skeletons, not the metric labels.
-    expect(within(region).queryByText('Total Endpoints')).toBeNull()
+    expect(within(region).queryByText('Total endpoints')).toBeNull()
     expect(region.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
 
     // Resolve so the query settles and teardown is clean.
     resolve(EMPTY_SPEC_YAML)
     await waitFor(() =>
-      expect(within(kpiRegion()).getByText('Total Endpoints')).toBeInTheDocument(),
+      expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument(),
     )
   })
 
@@ -267,7 +267,7 @@ describe('ApiPlaygroundPage', () => {
     renderPage()
 
     await waitFor(() =>
-      expect(within(kpiRegion()).getByText('Total Endpoints')).toBeInTheDocument(),
+      expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument(),
     )
 
     // Spec fetched as text (not JSON) from the canonical route.
@@ -278,12 +278,12 @@ describe('ApiPlaygroundPage', () => {
 
     // KPI band: 3 endpoints, 2 GET, 1 write, 2 tag groups.
     const region = kpiRegion()
-    expect(within(region).getByText('Total Endpoints')).toBeInTheDocument()
+    expect(within(region).getByText('Total endpoints')).toBeInTheDocument()
     expect(within(region).getByText('3')).toBeInTheDocument() // total (unique)
     expect(within(region).getByText('1')).toBeInTheDocument() // write ops (unique)
     expect(within(region).getByText('Read (GET)')).toBeInTheDocument()
-    expect(within(region).getByText('API Groups')).toBeInTheDocument()
-    expect(within(region).getByText('Avg Latency')).toBeInTheDocument()
+    expect(within(region).getByText('API groups')).toBeInTheDocument()
+    expect(within(region).getByText('Avg latency')).toBeInTheDocument()
 
     // Tag groups + endpoint rows from the parser.
     expect(screen.getByText('Vehicles')).toBeInTheDocument()
@@ -304,7 +304,7 @@ describe('ApiPlaygroundPage', () => {
       ).toBeInTheDocument(),
     )
     // KPI band still present, all zero.
-    expect(within(kpiRegion()).getByText('Total Endpoints')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument()
   })
 
   it('surfaces a QueryError and still renders zeroed KPIs when the spec fails', async () => {
@@ -320,7 +320,7 @@ describe('ApiPlaygroundPage', () => {
 
     // The KPI band must not disappear — it shows zeros rather than lying by omission.
     const region = kpiRegion()
-    expect(within(region).getByText('Total Endpoints')).toBeInTheDocument()
+    expect(within(region).getByText('Total endpoints')).toBeInTheDocument()
     expect(within(region).getAllByText('0').length).toBeGreaterThan(0)
   })
 
@@ -392,7 +392,7 @@ describe('ApiPlaygroundPage', () => {
     renderPage()
 
     await waitFor(() =>
-      expect(within(kpiRegion()).getByText('Total Endpoints')).toBeInTheDocument(),
+      expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument(),
     )
 
     const before = mockedRequest.mock.calls.length

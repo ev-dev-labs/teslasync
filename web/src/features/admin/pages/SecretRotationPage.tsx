@@ -90,7 +90,7 @@ function truncate(value: string, max = 22): string {
 
 export default function SecretRotationPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.secretRotation.pageTitle', 'Secret Rotation'));
+  usePageTitle(t('admin.secretRotation.pageTitle', 'Secret rotation'));
 
   const query = useSecretRotation();
   const subsystemMissing = isApiError(query.error) && query.error.status === 503;
@@ -193,6 +193,8 @@ export default function SecretRotationPage() {
     () => [
       {
         key: 'kind',
+        filterValue: (r) => r.kind ?? null,
+        filterValueLabel: (_value, r) => kindLabel(r.kind),
         header: t('admin.secretRotation.colKind', 'Kind'),
         render: (r) => (
           <div className="flex flex-col">
@@ -203,6 +205,8 @@ export default function SecretRotationPage() {
       },
       {
         key: 'rotated',
+        filterValue: (r) => r.last_rotated ?? null,
+        filterValueLabel: (_value, r) => formatDateTime(r.last_rotated),
         header: t('admin.secretRotation.colRotated', 'Last rotated'),
         render: (r) => (
           <div>
@@ -213,12 +217,16 @@ export default function SecretRotationPage() {
       },
       {
         key: 'age',
+        filterValue: (r) => r.age_days ?? null,
+        filterValueLabel: (_value, r) => r.age_days == null ? '—' : fmtNumber(r.age_days),
         header: t('admin.secretRotation.colAge', 'Age (days)'),
         align: 'right',
         render: (r) => <span className="tabular-nums">{fmtNumber(r.age_days ?? 0)}</span>,
       },
       {
         key: 'expiry',
+        filterValue: (r) => r.expires_at || null,
+        filterValueLabel: (_value, r) => r.expires_at ? formatDateTime(r.expires_at) : '—',
         header: t('admin.secretRotation.colExpiry', 'Expires'),
         render: (r) => {
           if (!r.expires_at) return <Text color="secondary">—</Text>;
@@ -246,6 +254,8 @@ export default function SecretRotationPage() {
       },
       {
         key: 'severity',
+        filterValue: (r) => r.severity ?? null,
+        filterValueLabel: (_value, r) => severityLabel[r.severity] ?? r.severity,
         header: t('admin.secretRotation.colSeverity', 'Severity'),
         align: 'right',
         render: (r) => (
@@ -262,7 +272,7 @@ export default function SecretRotationPage() {
 
   return (
     <PageContainer
-      title={t('admin.secretRotation.pageTitle', 'Secret Rotation')}
+      title={t('admin.secretRotation.pageTitle', 'Secret rotation')}
       subtitle={t(
         'admin.secretRotation.subtitle',
         'Status of every tracked credential. Severity reflects per-kind warn/critical thresholds; rotate anything in the critical tier as soon as possible.',
@@ -590,6 +600,7 @@ export default function SecretRotationPage() {
                   columns={columns}
                   mobileColumns={['kind', 'age', 'severity']}
                   data={items}
+                  enableValueFilters
                   keyExtractor={rowKey}
                   emptyMessage={t('admin.secretRotation.emptyTable', 'No tracked secrets')}
                   pagination

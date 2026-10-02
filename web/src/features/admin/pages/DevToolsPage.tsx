@@ -37,7 +37,7 @@ type TabKey = (typeof TAB_KEYS)[number]
 
 export default function DevToolsPage() {
   const { t } = useTranslation()
-  usePageTitle(t('devtools.title', 'Developer Tools'))
+  usePageTitle(t('devtools.title', 'Developer tools'))
 
   const [tab, setTab] = useUrlEnum<TabKey>(TAB_KEY, TAB_KEYS, DEFAULT_TAB)
 
@@ -91,9 +91,9 @@ export default function DevToolsPage() {
 
   return (
     <PageContainer
-      title={t('devtools.title', 'Developer Tools')}
+      title={t('devtools.title', 'Developer tools')}
       subtitle={t('devtools.subtitle', 'Fleet API, telemetry, infrastructure & utilities')}
-      actions={actions}
+      secondaryActions={actions}
       query={telemetryQuery}
     >
       <div className="space-y-6">

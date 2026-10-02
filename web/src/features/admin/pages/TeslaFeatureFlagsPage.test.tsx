@@ -213,12 +213,12 @@ describe('TeslaFeatureFlagsPage', () => {
     renderPage();
 
     // Page shell + labelled KPI region are present from the first paint.
-    expect(screen.getByRole('heading', { level: 1, name: 'Feature Flags' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Feature flags' })).toBeInTheDocument();
     expect(kpiRegion()).toBeInTheDocument();
     expect(getRefreshButton()).toBeInTheDocument();
 
     // KPI skeleton renders no metric labels yet...
-    expect(within(kpiRegion()).queryByText('Total Features')).toBeNull();
+    expect(within(kpiRegion()).queryByText('Total features')).toBeNull();
     // ...and the interactive composition chart only exists once data lands.
     expect(screen.queryByRole('group', { name: /Enabled versus disabled/i })).toBeNull();
   });
@@ -231,14 +231,14 @@ describe('TeslaFeatureFlagsPage', () => {
     const region = kpiRegion();
     // Total is unique in the band; enabled + disabled both read "2".
     expect(await within(region).findByText('4')).toBeInTheDocument();
-    expect(within(region).getByText('Total Features')).toBeInTheDocument();
+    expect(within(region).getByText('Total features')).toBeInTheDocument();
     expect(within(region).getByText('50%')).toBeInTheDocument();
     expect(within(region).getAllByText('2')).toHaveLength(2);
     // Truthful data → no fabricated em-dash placeholders in the band.
     expect(within(region).queryByText('—')).toBeNull();
 
     // Overview bento: the enabled-rate gauge label + the grouped-bar chart.
-    expect(within(overviewRegion()).getByText('Enabled Rate')).toBeInTheDocument();
+    expect(within(overviewRegion()).getByText('Enabled rate')).toBeInTheDocument();
     expect(
       screen.getByRole('group', { name: /Enabled versus disabled feature counts/i }),
     ).toBeInTheDocument();
@@ -324,7 +324,7 @@ describe('TeslaFeatureFlagsPage', () => {
     // Truthfulness guard: the KPI band must NOT invent "0 features" — every
     // value collapses to an em-dash while the labels stay put.
     const region = kpiRegion();
-    expect(within(region).getByText('Total Features')).toBeInTheDocument();
+    expect(within(region).getByText('Total features')).toBeInTheDocument();
     expect(within(region).getAllByText('—')).toHaveLength(4);
     expect(within(region).queryByText('0')).toBeNull();
     expect(within(region).queryByText('0%')).toBeNull();

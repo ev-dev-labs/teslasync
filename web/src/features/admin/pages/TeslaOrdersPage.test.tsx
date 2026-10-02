@@ -217,7 +217,7 @@ describe('TeslaOrdersPage — ready state', () => {
     renderPage()
 
     // Header + subtitle + primary action.
-    expect(screen.getByRole('heading', { name: 'Tesla Orders' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Tesla orders' })).toBeInTheDocument()
     expect(
       screen.getByText('Vehicle orders and delivery tracking pulled from your Tesla account.'),
     ).toBeInTheDocument()
@@ -228,13 +228,13 @@ describe('TeslaOrdersPage — ready state', () => {
     const table = await screen.findByRole('table')
 
     // KPI band shows the derived total once data lands.
-    expect(within(kpiRegion()).getByText('Total Orders')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('Total orders')).toBeInTheDocument()
     expect(within(kpiRegion()).getByText('4')).toBeInTheDocument()
 
     // Status breakdown badges — one per non-empty lifecycle bucket + "Other".
     const insights = insightsRegion()
-    expect(within(insights).getByText('In Progress')).toBeInTheDocument()
-    expect(within(insights).getByText('Ready · In Transit')).toBeInTheDocument()
+    expect(within(insights).getByText('In progress')).toBeInTheDocument()
+    expect(within(insights).getByText('Ready · in transit')).toBeInTheDocument()
     expect(within(insights).getByText('Delivered')).toBeInTheDocument()
     expect(within(insights).getByText('Cancelled')).toBeInTheDocument()
     expect(within(insights).getByText('Other')).toBeInTheDocument()
@@ -275,7 +275,7 @@ describe('TeslaOrdersPage — loading, error, empty', () => {
 
     // Header shell + KPI band stay mounted; each data section shows a skeleton.
     expect(headerRefresh()).toBeInTheDocument()
-    expect(within(kpiRegion()).getByText('Total Orders')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('Total orders')).toBeInTheDocument()
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4)
 
     // No resolved data or error surfaced yet.
@@ -292,7 +292,7 @@ describe('TeslaOrdersPage — loading, error, empty', () => {
       expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(1),
     )
     // KPI band still renders its (zeroed) shell rather than disappearing.
-    expect(within(kpiRegion()).getByText('Total Orders')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('Total orders')).toBeInTheDocument()
 
     const before = ordersCallCount()
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0])

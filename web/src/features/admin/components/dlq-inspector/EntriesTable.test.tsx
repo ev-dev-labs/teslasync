@@ -182,7 +182,7 @@ describe('EntriesTable', () => {
 
     // One Inspect action per row.
     expect(
-      screen.getAllByRole('button', { name: /inspect dlq entry/i }),
+      screen.getAllByRole('button', { name: /Inspect DLQ entry/i }),
     ).toHaveLength(3)
   })
 
@@ -220,7 +220,7 @@ describe('EntriesTable', () => {
     const onInspect = vi.fn()
     renderTable({ rows: [e1, e2, e3], onInspect })
 
-    fireEvent.click(screen.getByRole('button', { name: /inspect dlq entry 2/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Inspect DLQ entry 2/i }))
 
     expect(onInspect).toHaveBeenCalledTimes(1)
     expect(onInspect).toHaveBeenCalledWith(e2)
@@ -239,7 +239,7 @@ describe('EntriesTable', () => {
 
     expect(screen.getByText(/No DLQ entries/i)).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /inspect dlq entry/i }),
+      screen.queryByRole('button', { name: /Inspect DLQ entry/i }),
     ).toBeNull()
     expect(screen.queryByText(/Loading/i)).toBeNull()
   })

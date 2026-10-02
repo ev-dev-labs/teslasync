@@ -164,7 +164,7 @@ describe('SentryModeChart — panel chrome', () => {
     for (const props of cases) {
       const { unmount } = renderChart(props);
       const heading = screen.getByRole('heading', {
-        name: /sentry mode activity/i,
+        name: /Sentry mode activity/i,
       });
       expect(heading).toBeInTheDocument();
       // The decorative Activity icon must be hidden from the a11y tree.
@@ -205,13 +205,13 @@ describe('SentryModeChart — ready state', () => {
 
     // Sentry On — first series, brand blue, stacked.
     expect(bars[0]).toHaveAttribute('data-key', 'sentryOn');
-    expect(bars[0]).toHaveAttribute('data-name', 'Sentry On');
+    expect(bars[0]).toHaveAttribute('data-name', 'Sentry on');
     expect(bars[0]).toHaveAttribute('data-fill', chartTokens.series[0]);
     expect(bars[0]).toHaveAttribute('data-stack', 'sentry');
 
     // Sentry Off — muted axis colour, same stack so the bars sum per day.
     expect(bars[1]).toHaveAttribute('data-key', 'sentryOff');
-    expect(bars[1]).toHaveAttribute('data-name', 'Sentry Off');
+    expect(bars[1]).toHaveAttribute('data-name', 'Sentry off');
     expect(bars[1]).toHaveAttribute('data-fill', chartTokens.axisStroke);
     expect(bars[1]).toHaveAttribute('data-stack', 'sentry');
   });
@@ -220,7 +220,7 @@ describe('SentryModeChart — ready state', () => {
     renderChart({ sentryBuckets: [bucket()] });
 
     expect(
-      screen.getByRole('img', { name: /sentry mode activity/i }),
+      screen.getByRole('img', { name: /Sentry mode activity/i }),
     ).toBeInTheDocument();
 
     const xAxis = screen.getByTestId('x-axis');

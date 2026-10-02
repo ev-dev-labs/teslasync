@@ -367,7 +367,7 @@ describe('SecurityAccessPage — secure happy path', () => {
     await waitFor(() => expect(screen.getByTestId('twin')).toHaveAttribute('data-hasdata', 'true'));
 
     // Page chrome + a11y landmarks (each bento section is a labelled region).
-    expect(screen.getByRole('heading', { name: 'Security & Access' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Security & access' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Security posture' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Live vehicle state' })).toBeInTheDocument();
@@ -411,7 +411,7 @@ describe('SecurityAccessPage — secure happy path', () => {
     expect(calledUrl).not.toContain('/api/v1');
 
     // Document title registered.
-    expect(mockedUsePageTitle).toHaveBeenCalledWith('Security & Access');
+    expect(mockedUsePageTitle).toHaveBeenCalledWith('Security & access');
   });
 });
 

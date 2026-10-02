@@ -202,10 +202,10 @@ describe('UsersPage', () => {
     expect(screen.getByText('How impersonation works')).toBeInTheDocument()
 
     // KPI band derived from the candidates + inactive status.
-    expect(kpiValue('Available Subjects')).toBe('2')
-    expect(kpiValue('Access Mode')).toBe('Forward-auth')
-    expect(kpiValue('Session Status')).toBe('Idle')
-    expect(kpiValue('Session Limit')).toBe('15 min')
+    expect(kpiValue('Available subjects')).toBe('2')
+    expect(kpiValue('Access mode')).toBe('Forward-auth')
+    expect(kpiValue('Session status')).toBe('Idle')
+    expect(kpiValue('Session limit')).toBe('15 min')
 
     // Both subjects appear in the hero table.
     expect(screen.getByText('alice')).toBeInTheDocument()
@@ -224,7 +224,7 @@ describe('UsersPage', () => {
 
     // KPI band collapses to a skeleton — no derived metric labels yet.
     expect(screen.getByTestId('stat-grid-skeleton')).toBeInTheDocument()
-    expect(screen.queryByText('Available Subjects')).not.toBeInTheDocument()
+    expect(screen.queryByText('Available subjects')).not.toBeInTheDocument()
     // The subjects table shows its own loading affordance.
     expect(screen.getByTestId('users-page-loading')).toBeInTheDocument()
   })
@@ -234,8 +234,8 @@ describe('UsersPage', () => {
     hoisted.state.candidates = makeCandidatesQuery({ data: { mode: 'open' } })
     renderPage()
 
-    expect(kpiValue('Access Mode')).toBe('Open')
-    expect(kpiValue('Available Subjects')).toBe('0')
+    expect(kpiValue('Access mode')).toBe('Open')
+    expect(kpiValue('Available subjects')).toBe('0')
     // The table renders the open-mode callout, not a searchable list.
     expect(screen.getByTestId('users-page-open-mode')).toBeInTheDocument()
     expect(screen.queryByTestId('users-page-list')).not.toBeInTheDocument()
@@ -252,7 +252,7 @@ describe('UsersPage', () => {
     })
     renderPage()
 
-    expect(kpiValue('Session Status')).toBe('Active')
+    expect(kpiValue('Session status')).toBe('Active')
     // The impersonated row is badged; the other stays "Available".
     expect(screen.getByText('Current target')).toBeInTheDocument()
     expect(screen.getByText('Available')).toBeInTheDocument()
@@ -271,7 +271,7 @@ describe('UsersPage', () => {
     renderPage()
 
     // Bug-fix: the count is unknown, not zero — "—" avoids implying 0 subjects.
-    expect(kpiValue('Available Subjects')).toBe('—')
+    expect(kpiValue('Available subjects')).toBe('—')
 
     // The table degrades to a retryable QueryError wired to refetch.
     expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(1)
@@ -290,10 +290,10 @@ describe('UsersPage', () => {
     renderPage()
 
     // Hardening: don't confidently claim Forward-auth/Idle on a failed fetch.
-    expect(kpiValue('Access Mode')).toBe('—')
-    expect(kpiValue('Session Status')).toBe('—')
+    expect(kpiValue('Access mode')).toBe('—')
+    expect(kpiValue('Session status')).toBe('—')
     // Candidates are still healthy, so the count remains truthful.
-    expect(kpiValue('Available Subjects')).toBe('2')
+    expect(kpiValue('Available subjects')).toBe('2')
   })
 
   it('refetches both queries and exposes an accessible refresh control', () => {
@@ -328,7 +328,7 @@ describe('UsersPage', () => {
     })
     renderPage()
 
-    expect(kpiValue('Available Subjects')).toBe('0')
+    expect(kpiValue('Available subjects')).toBe('0')
     expect(screen.getByText('No other subjects')).toBeInTheDocument()
     // No searchable list is drawn when there is nothing to search.
     expect(screen.queryByTestId('users-page-list')).not.toBeInTheDocument()

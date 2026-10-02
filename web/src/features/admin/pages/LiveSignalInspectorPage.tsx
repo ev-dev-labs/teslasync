@@ -40,7 +40,7 @@ import {
 
 export default function LiveSignalInspectorPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.liveSignals.pageTitle', 'Live Signal Inspector'));
+  usePageTitle(t('admin.liveSignals.pageTitle', 'Live signal inspector'));
 
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const live = useVehicleLiveSignals(vehicleId ?? undefined, {
@@ -104,12 +104,12 @@ export default function LiveSignalInspectorPage() {
 
   return (
     <PageContainer
-      title={t('admin.liveSignals.pageTitle', 'Live Signal Inspector')}
+      title={t('admin.liveSignals.pageTitle', 'Live signal inspector')}
       subtitle={t(
         'admin.liveSignals.subtitle',
         'Realtime view of the Redis-cached live signal snapshot. Refreshes every second while this tab is in the foreground.',
       )}
-      actions={actions}
+      contextActions={actions}
       query={live}
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
@@ -150,7 +150,7 @@ export default function LiveSignalInspectorPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('admin.liveSignals.panels.snapshot', 'Live Snapshot')}
+              {t('admin.liveSignals.panels.snapshot', 'Live snapshot')}
             </PanelTitle>
             <LiveSectionState
               status={status}

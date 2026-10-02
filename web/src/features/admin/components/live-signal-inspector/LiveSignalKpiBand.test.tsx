@@ -62,11 +62,11 @@ function makeStats(overrides: Partial<LiveSignalStats> = {}): LiveSignalStats {
 
 /** Assert all six cards are on screen regardless of the underlying values. */
 function expectAllSixCards() {
-  expect(screen.getByText('Total Signals')).toBeInTheDocument();
+  expect(screen.getByText('Total signals')).toBeInTheDocument();
   expect(screen.getByText(/^Live/)).toBeInTheDocument(); // "Live · L1"
   expect(screen.getByText('Stale')).toBeInTheDocument();
   expect(screen.getByText(/^Legacy/)).toBeInTheDocument(); // "Legacy · L2"
-  expect(screen.getByText('Numeric Fields')).toBeInTheDocument();
+  expect(screen.getByText('Numeric fields')).toBeInTheDocument();
   expect(screen.getByText('Freshest')).toBeInTheDocument();
 }
 

@@ -201,7 +201,7 @@ describe('AuditLogPage — populated view', () => {
     renderPage();
 
     // Page + section scaffolding (all headings always present).
-    expect(screen.getByRole('heading', { name: 'Audit Log', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Audit log', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Filters' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hash chain integrity' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Entries' })).toBeInTheDocument();
@@ -290,7 +290,7 @@ describe('AuditLogPage — filtering', () => {
     mockUseAuditLog.mockReturnValue(q);
     renderPage();
 
-    fireEvent.change(screen.getByLabelText('Actor'), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Actor' }), {
       target: { value: 'root@local' },
     });
     await waitFor(() => {

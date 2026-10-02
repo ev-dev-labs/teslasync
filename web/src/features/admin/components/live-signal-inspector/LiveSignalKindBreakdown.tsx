@@ -75,7 +75,7 @@ export function LiveSignalKindBreakdown({
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('admin.liveSignals.panels.kinds', 'Signal Kinds')}
+        {t('admin.liveSignals.panels.kinds', 'Signal kinds')}
       </PanelTitle>
 
       <LiveSectionState
@@ -94,7 +94,7 @@ export function LiveSignalKindBreakdown({
         )}
       >
         <EmbeddedChart
-          title={t('admin.liveSignals.panels.kinds', 'Signal Kinds')}
+          title={t('admin.liveSignals.panels.kinds', 'Signal kinds')}
           ariaLabel={t(
             'admin.liveSignals.kinds.chartAria',
             'Bar chart of live signal counts grouped by value kind.',

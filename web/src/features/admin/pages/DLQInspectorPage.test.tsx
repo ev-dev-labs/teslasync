@@ -285,7 +285,7 @@ describe('DLQInspectorPage — bento surface', () => {
     expect(screen.getAllByText('kind_mismatch').length).toBeGreaterThan(0);
 
     // Page chrome + KPI band labels.
-    expect(screen.getByRole('heading', { name: 'DLQ Inspector' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'DLQ inspector' })).toBeInTheDocument();
     expect(screen.getByText('Total entries')).toBeInTheDocument();
     // "Replayable" is both a KPI label and a table column header → >= 2.
     expect(screen.getAllByText('Replayable').length).toBeGreaterThan(0);

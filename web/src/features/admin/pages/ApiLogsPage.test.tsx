@@ -3,7 +3,7 @@
  *
  * The page is the admin "API Call Log" viewer: a KPI band (total calls,
  * error rate, avg duration, last-24h), a "By Service" quick-pick rail, a
- * filter panel (service/method/status/endpoint), and a paginated, expandable
+ * server-owned column-header filters, and a paginated, expandable
  * log table with a consistent CSV / JSON export menu.
  *
  * These tests exercise the page's real branches end-to-end (no smoke render):
@@ -26,10 +26,10 @@
  * fallback strings with {{var}} interpolation. Nothing hits real fetch.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 vi.mock('react-i18next', () => ({
@@ -71,18 +71,21 @@ vi.mock('@/api/devtools', async () => {
   };
 });
 
-vi.mock('@/api/hooks/useAdmin', () => ({
+vi.mock('@/api/hooks/useAdmin', async () => ({
+  ...await vi.importActual<typeof import('@/api/hooks/useAdmin')>('@/api/hooks/useAdmin'),
   useWebErrorsSummary: () => ({ data: { total: 0, top: [] }, isLoading: false }),
 }));
 
 import { getAPICallLogs, getAPICallLogStats, getErrorStats } from '@/api/devtools';
-import { ToastProvider } from '@/components/feedback/Toast';
+import { ToastProvider } from '@/components/feedback';
 import ApiLogsPage from './ApiLogsPage';
 import type { APICallLog, APICallLogResponse, APICallLogStats } from '@/api/types';
+import * as exportHelpers from '@/lib/export';
+import { BADGE_VARIANTS } from '@/components/ui';
 
-const mockedLogs = getAPICallLogs as unknown as Mock;
-const mockedStats = getAPICallLogStats as unknown as Mock;
-const mockedRuntime = getErrorStats as unknown as Mock;
+const mockedLogs = vi.mocked(getAPICallLogs);
+const mockedStats = vi.mocked(getAPICallLogStats);
+const mockedRuntime = vi.mocked(getErrorStats);
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
@@ -135,17 +138,27 @@ function makeStats(overrides: Partial<APICallLogStats> = {}): APICallLogStats {
   };
 }
 
+function UrlProbe() {
+  const location = useLocation();
+  return <output data-testid="api-log-url">{location.search}</output>;
+}
+
 function renderPage(route = '/api-logs') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[route]}>
+  const router = createMemoryRouter([{
+    path: '/api-logs',
+    element: (
         <ToastProvider>
           <ApiLogsPage />
+          <UrlProbe />
         </ToastProvider>
-      </MemoryRouter>
+    ),
+  }], { initialEntries: [route] });
+  return { ...render(
+    <QueryClientProvider client={qc}>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
-  );
+  ), router };
 }
 
 /**
@@ -162,7 +175,33 @@ function railChip(name: RegExp): HTMLElement {
   return chip;
 }
 
+async function requestRow(endpoint: string) {
+  const cell = await screen.findByText(endpoint);
+  const row = cell.closest('tr');
+  if (!row) throw new Error(`Missing evidence row for ${endpoint}`);
+  return row;
+}
+
+function expansionButton(row: HTMLElement) {
+  return within(row).getByRole('button', { name: /^(Expand|Collapse) row$/ });
+}
+
+function filterControl(label: string) {
+  const openFilter = screen.queryByRole('dialog', { name: / filter$/ });
+  if (openFilter) fireEvent.click(within(openFilter).getByRole('button', { name: 'Done' }));
+  if (!screen.queryByRole('button', { name: `${label} filter` })) {
+    const menu = screen.getByRole('button', { name: 'Reorder or hide columns' });
+    fireEvent.click(menu);
+    fireEvent.click(screen.getByRole('checkbox', { name: `Show or hide ${label}` }));
+    fireEvent.click(menu);
+  }
+  fireEvent.click(screen.getByRole('button', { name: `${label} filter` }));
+  return within(screen.getByRole('dialog', { name: `${label} filter` })).getByLabelText(label);
+}
+
 beforeEach(() => {
+  localStorage.removeItem('teslasync.table.admin:api-logs.columns');
+  localStorage.removeItem('teslasync.table.admin:api-logs.visible');
   mockedLogs.mockReset();
   mockedStats.mockReset();
   mockedRuntime.mockReset();
@@ -203,10 +242,10 @@ describe('ApiLogsPage', () => {
     await waitFor(() => expect(railChip(/Notifications/)).toHaveTextContent('12'));
     const start = new Date('2026-09-19T00:00:00').toISOString();
     const endExclusive = new Date('2026-09-26T00:00:00').toISOString();
-    expect(mockedStats).toHaveBeenCalledWith(start, endExclusive);
+    expect(mockedStats).toHaveBeenCalledWith(start, endExclusive, { signal: expect.any(AbortSignal) });
     expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({
       service: 'notify-generic', start, endExclusive,
-    }));
+    }), { signal: expect.any(AbortSignal) });
     expect(mockedLogs.mock.lastCall?.[0]).not.toHaveProperty('end');
   });
 
@@ -215,11 +254,12 @@ describe('ApiLogsPage', () => {
     mockedLogs.mockResolvedValue(makeLogsResponse());
     renderPage('/api-logs?time_scope=24h');
     await waitFor(() => expect(mockedStats).toHaveBeenCalled());
-    const [start, end] = mockedStats.mock.lastCall as [string, string];
+    const [start, end] = mockedStats.mock.lastCall ?? [];
+    if (!start || !end) throw new Error('Missing rolling range bounds');
     expect(new Date(end).getTime() - new Date(start).getTime()).toBe(86_400_000);
     expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({
       start, endExclusive: end,
-    }));
+    }), { signal: expect.any(AbortSignal) });
   });
 
   it('distinguishes a clean backend from a failed runtime-summary request', async () => {
@@ -243,7 +283,7 @@ describe('ApiLogsPage', () => {
     renderPage();
 
     // Page shell renders immediately.
-    expect(screen.getByRole('heading', { name: 'API Logs', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'API logs', level: 1 })).toBeInTheDocument();
     // Both data sources requested exactly once on mount.
     expect(mockedStats).toHaveBeenCalledTimes(1);
     expect(mockedLogs).toHaveBeenCalledTimes(1);
@@ -260,7 +300,7 @@ describe('ApiLogsPage', () => {
 
     // KPI band — formatted with the default en-US / precision-2 formatters.
     await waitFor(() => expect(screen.getByText('1,234')).toBeInTheDocument());
-    expect(screen.getByText('Total Calls')).toBeInTheDocument();
+    expect(screen.getByText('Total calls')).toBeInTheDocument();
     expect(screen.getByText('6.50%')).toBeInTheDocument(); // error_rate
     expect(screen.getByText('145ms')).toBeInTheDocument(); // avg_duration_ms
     expect(screen.getByText('56')).toBeInTheDocument(); // last_24h
@@ -286,6 +326,8 @@ describe('ApiLogsPage', () => {
 
   it('shows verified app key and installation separately and filters full server results', async () => {
     const id = 'android:550e8400-e29b-41d4-a716-446655440000';
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     mockedStats.mockResolvedValue(makeStats());
     mockedLogs.mockResolvedValue(makeLogsResponse({
       data: [makeLog({
@@ -300,17 +342,19 @@ describe('ApiLogsPage', () => {
       total: 1,
     }));
     renderPage();
-    const row = await screen.findByRole('button', { name: /Living room tablet/ });
+    const row = await requestRow('/vehicles');
     expect(row).toHaveTextContent('42');
     expect(row).toHaveTextContent('android');
     expect(row).toHaveTextContent('550e8400');
-    fireEvent.click(row);
+    fireEvent.click(expansionButton(row));
     expect(screen.getByText(`App installation: ${id}`)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy app installation ID' })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('App key'), { target: { value: 'Living room' } });
-    await waitFor(() => expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({ key: 'Living room' })));
-    fireEvent.change(screen.getByLabelText('App installation'), { target: { value: 'android' } });
-    await waitFor(() => expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({ client: 'android', key: 'Living room' })));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy app installation ID' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(id));
+    fireEvent.change(filterControl('App key'), { target: { value: 'Living room' } });
+    await waitFor(() => expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({ key: 'Living room' }), { signal: expect.any(AbortSignal) }));
+    fireEvent.change(filterControl('App installation'), { target: { value: 'android' } });
+    await waitFor(() => expect(mockedLogs).toHaveBeenCalledWith(expect.objectContaining({ client: 'android', key: 'Living room' }), { signal: expect.any(AbortSignal) }));
   });
 
   it('does not treat a client installation header without verified key metadata as trusted', async () => {
@@ -320,9 +364,9 @@ describe('ApiLogsPage', () => {
       total: 1,
     }));
     renderPage();
-    const row = await screen.findByRole('button', { name: /\/vehicles/ });
+    const row = await requestRow('/vehicles');
     expect(row).not.toHaveTextContent('android');
-    fireEvent.click(row);
+    fireEvent.click(expansionButton(row));
     expect(screen.queryByText(/App installation:/)).not.toBeInTheDocument();
   });
 
@@ -332,7 +376,7 @@ describe('ApiLogsPage', () => {
 
     renderPage();
 
-    const row = await screen.findByRole('button', { name: /\/vehicles/ });
+    const row = expansionButton(await requestRow('/vehicles'));
     expect(row).toHaveAttribute('aria-expanded', 'false');
 
     fireEvent.click(row);
@@ -345,9 +389,9 @@ describe('ApiLogsPage', () => {
     // Null request body → the explicit "No request body" branch.
     expect(screen.getByText('No request body')).toBeInTheDocument();
     // Per-body copy affordance carries an accessible label.
-    expect(screen.getByRole('button', { name: 'Copy Response Body' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy Request Headers' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy Response Headers' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy Response body' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy Request headers' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy Response headers' })).toBeInTheDocument();
     expect(screen.getByText(/Bodies are recorded only when API_LOG_CAPTURE_BODIES/)).toBeInTheDocument();
     expect(screen.getByText('Rate limited: No')).toBeInTheDocument();
 
@@ -364,15 +408,15 @@ describe('ApiLogsPage', () => {
     renderPage();
 
     // Row 2 (500 / geocoder-google) carries an error_message + JSON request body.
-    const errorRow = await screen.findByRole('button', { name: /\/geo\/lookup/ });
+    const errorRow = expansionButton(await requestRow('/geo/lookup'));
     fireEvent.click(errorRow);
-    expect(screen.getByText('Error')).toBeInTheDocument(); // uppercase error label
+    expect(screen.getAllByText('Error').length).toBeGreaterThan(0);
     expect(screen.getByText(/"a": 1/)).toBeInTheDocument(); // request body re-indented
     fireEvent.click(errorRow);
 
     // Row 3 has an unparseable request body + plain-text response — both must
     // render verbatim (the JsonViewer catch branch).
-    const rawRow = await screen.findByRole('button', { name: /\/charging\/5/ });
+    const rawRow = expansionButton(await requestRow('/charging/5'));
     fireEvent.click(rawRow);
     expect(screen.getByText('not-json{')).toBeInTheDocument();
     expect(screen.getByText('plain text body')).toBeInTheDocument();
@@ -423,7 +467,7 @@ describe('ApiLogsPage', () => {
     renderPage();
 
     await screen.findByText('/vehicles');
-    fireEvent.change(screen.getByLabelText('Method'), { target: { value: 'POST' } });
+    fireEvent.change(filterControl('Method'), { target: { value: 'POST' } });
 
     await waitFor(() =>
       expect(mockedLogs.mock.calls.some(([p]) => p?.method === 'POST')).toBe(true),
@@ -451,7 +495,7 @@ describe('ApiLogsPage', () => {
     expect(railChip(/Geocoder \(Google\)/)).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('shows Clear only when a filter is active and resets it to an unfiltered fetch', async () => {
+  it('enables the table reset only when a filter is active and resets to an unfiltered fetch', async () => {
     mockedStats.mockResolvedValue(makeStats());
     mockedLogs.mockResolvedValue(makeLogsResponse());
 
@@ -469,8 +513,7 @@ describe('ApiLogsPage', () => {
       const last = mockedLogs.mock.calls[mockedLogs.mock.calls.length - 1][0];
       expect(last.method).toBeUndefined();
     });
-    // Clear disappears once no filters remain.
-    expect(screen.queryByRole('button', { name: /Clear/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Clear/ })).toBeDisabled();
   });
 
   it('offers CSV and JSON and exports the current page via a DOM-attached anchor', async () => {
@@ -528,5 +571,253 @@ describe('ApiLogsPage', () => {
     await waitFor(() =>
       expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeInTheDocument(),
     );
+  });
+
+  it('renders a compact responsive evidence table with persistent column controls, not card buttons', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse());
+    renderPage();
+    const row = await requestRow('/vehicles');
+    const table = screen.getByRole('table', { name: 'API call log' });
+    expect(table).toContainElement(row);
+    const headers = within(table).getAllByRole('columnheader');
+    const header = (name: string) => {
+      const found = headers.find((element) => element.textContent?.includes(name));
+      if (!found) throw new Error(`Missing column ${name}`);
+      return found;
+    };
+    expect(header('Time')).toHaveClass('hidden', 'md:table-cell');
+    expect(header('Method')).not.toHaveClass('hidden');
+    expect(header('Endpoint')).not.toHaveClass('hidden');
+    expect(header('Endpoint')).toHaveClass('max-md:!min-w-0');
+    expect(header('Status')).not.toHaveClass('hidden');
+    expect(header('Service')).not.toHaveClass('hidden');
+    expect(header('App installation')).not.toHaveClass('hidden');
+    expect(screen.queryByRole('group', { name: 'Filters' })).not.toBeInTheDocument();
+    expect(within(table).getAllByRole('button', { name: / filter$/ })).toHaveLength(5);
+    expect(within(table).queryByRole('columnheader', { name: 'App key' })).not.toBeInTheDocument();
+    expect(header('Latency (ms)')).toHaveClass('text-right');
+    expect(within(row).getAllByText('GET')).toHaveLength(2); // dedicated desktop cell + phone summary
+    expect(expansionButton(row)).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /GET.*\/vehicles/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/exports include only this loaded page/)).toBeInTheDocument();
+    const resizer = within(table).getByRole('separator', { name: 'Resize column Latency (ms)' });
+    const width = Number(resizer.getAttribute('aria-valuenow'));
+    fireEvent.keyDown(resizer, { key: 'ArrowRight' });
+    expect(resizer).toHaveAttribute('aria-valuenow', String(width + 8));
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
+    expect(screen.getByRole('checkbox', { name: 'Show or hide Latency (ms)' })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Move Latency (ms) up' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Latency (ms) up' }));
+    const reordered = within(table).getAllByRole('columnheader').map((element) => element.getAttribute('aria-label'));
+    expect(reordered.indexOf('Latency (ms)')).toBeLessThan(reordered.indexOf('Service'));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Latency (ms)' }));
+    expect(within(table).queryByRole('columnheader', { name: /Latency/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('datatable-column-menu-reset'));
+    expect(within(table).getByRole('columnheader', { name: /Latency/ })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['Method', 'method', 'PATCH'],
+    ['Status', 'status', '5xx'],
+    ['Endpoint', 'endpoint', '/debug'],
+    ['Service', 'service', 'tesla-api'],
+    ['App installation', 'client', 'android'],
+    ['App key', 'key', 'tablet'],
+  ])('resets the server offset atomically when %s changes', async (label, predicate, value) => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({ total: 200 }));
+    renderPage('/api-logs?page=3&method=GET&status=4xx&endpoint=/old&service=notify-generic&client=desktop&key=old-key');
+    await requestRow('/vehicles');
+    expect(mockedLogs.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
+      limit: 25, offset: 75, method: 'GET', status: '4xx', endpoint: '/old',
+      service: 'notify-generic', client: 'desktop', key: 'old-key',
+    }));
+    fireEvent.change(filterControl(label), { target: { value } });
+    await waitFor(() => expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      [predicate]: value, offset: 0, limit: 25,
+    })));
+    const url = new URLSearchParams(screen.getByTestId('api-log-url').textContent ?? '');
+    expect(url.get(predicate)).toBe(value);
+    expect(url.has('page')).toBe(false);
+    expect(screen.getByRole('button', { name: `${label} filter` })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('dialog', { name: `${label} filter` })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog', { name: `${label} filter` })).getByRole('button', { name: 'Clear' }));
+    await waitFor(() => expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      [predicate]: undefined, offset: 0,
+    })));
+    expect(screen.getByRole('button', { name: `${label} filter` })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('keeps header popovers editable during pending server filters and restores the matching cached requests', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValueOnce(makeLogsResponse({ total: 200 }));
+    mockedLogs.mockImplementation(() => new Promise(() => undefined));
+    renderPage();
+    const row = await requestRow('/vehicles');
+    fireEvent.click(expansionButton(row));
+    fireEvent.change(filterControl('Endpoint'), { target: { value: '/not-on-this-page' } });
+    await waitFor(() => expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      endpoint: '/not-on-this-page', offset: 0,
+    })));
+    expect(screen.getByRole('dialog', { name: 'Endpoint filter' })).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog', { name: 'Endpoint filter' })).getByLabelText('Endpoint')).toHaveValue('/not-on-this-page');
+    expect(screen.getByRole('button', { name: 'Endpoint filter' })).toHaveAttribute('aria-pressed', 'true');
+    const pendingSignal = mockedLogs.mock.lastCall?.[1]?.signal;
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Endpoint filter' })).getByRole('button', { name: 'Clear' }));
+    expect(pendingSignal?.aborted).toBe(true);
+    expect(screen.getByRole('dialog', { name: 'Endpoint filter' })).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog', { name: 'Endpoint filter' })).getByLabelText('Endpoint')).toHaveValue('');
+    expect(await requestRow('/vehicles')).toBeInTheDocument();
+    expect(screen.getByText(/"ok": true/)).toBeInTheDocument();
+  });
+
+  it('keeps column filters and clear-all available when a server filter returns no requests', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({ data: [], total: 0 }));
+    renderPage('/api-logs?method=PATCH&key=missing');
+    await screen.findByText('No API call logs');
+    expect(screen.getByRole('table', { name: 'API call log' })).toBeInTheDocument();
+    expect(filterControl('App key')).toHaveValue('missing');
+    expect(screen.getByRole('button', { name: 'App key filter' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'App key filter' })).getByRole('button', { name: 'Done' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear' })[0]);
+    await waitFor(() => expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      method: undefined, key: undefined, offset: 0,
+    })));
+    expect(screen.getByRole('button', { name: 'Method filter' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('retains requests, open inspection, KPIs and runtime data after a failed refresh', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse());
+    mockedRuntime.mockResolvedValue({ total_errors: 3, uptime: '2h', by_code: {} });
+    renderPage();
+    const row = await requestRow('/vehicles');
+    fireEvent.click(expansionButton(row));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled());
+    mockedLogs.mockRejectedValue(new Error('refresh offline'));
+    mockedStats.mockRejectedValue(new Error('stats refresh offline'));
+    mockedRuntime.mockRejectedValue(new Error('runtime refresh offline'));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3));
+    expect(screen.getByText('/vehicles')).toBeInTheDocument();
+    expect(screen.getByText(/"ok": true/)).toBeInTheDocument();
+    expect(screen.getByText('1,234')).toBeInTheDocument();
+    expect(screen.getByText('3 errors · uptime 2h')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled();
+  });
+
+  it('keeps unknown latency distinct from zero, and preserves a zero status without success styling', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    const missingDuration = makeLog({ id: 20, endpoint: '/unknown', status_code: null });
+    // Exercise a missing runtime field without weakening the production API type.
+    Reflect.set(missingDuration, 'duration_ms', null);
+    mockedLogs.mockResolvedValue(makeLogsResponse({
+      data: [
+        missingDuration,
+        makeLog({ id: 21, endpoint: '/zero', duration_ms: 0, status_code: 0, rate_limited: true }),
+      ],
+      total: 2,
+    }));
+    renderPage();
+    const unknown = await requestRow('/unknown');
+    const zero = await requestRow('/zero');
+    expect(within(unknown).queryByText('0ms')).not.toBeInTheDocument();
+    expect(within(unknown).getByText('N/A')).toBeInTheDocument();
+    expect(within(zero).getByText('0ms')).toBeInTheDocument();
+    expect(within(zero).getByText('Rate limited')).toBeInTheDocument();
+    const statusCell = zero.querySelector('[data-column-key="status"]');
+    if (!statusCell) throw new Error('Missing HTTP status evidence');
+    expect(within(statusCell).getByText('0')).toHaveClass(...BADGE_VARIANTS.neutral.split(' '));
+    fireEvent.click(expansionButton(unknown));
+    expect(screen.getByText('Duration: —')).toBeInTheDocument();
+    fireEvent.click(expansionButton(zero));
+    expect(screen.getByText('Duration: 0ms')).toBeInTheDocument();
+    expect(screen.getByText('Status: 0')).toBeInTheDocument();
+    expect(screen.getByText('Rate limited: Yes')).toBeInTheDocument();
+    expect(screen.queryByText('Duration: —')).not.toBeInTheDocument(); // one inspection at a time
+  });
+
+  it('copies pretty JSON headers/body and raw bodies without altering diagnostic content', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse());
+    renderPage();
+    fireEvent.click(expansionButton(await requestRow('/vehicles')));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Response body' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('{\n  "ok": true\n}'));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Request headers' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(JSON.stringify(LOGS[0].request_headers, null, 2)));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Response headers' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(JSON.stringify(LOGS[0].response_headers, null, 2)));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy request URL' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('GET /vehicles'));
+    fireEvent.click(expansionButton(await requestRow('/charging/5')));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Request body' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('not-json{'));
+  });
+
+  it('exports only the loaded server page in both formats, including all diagnostic metadata', async () => {
+    const csv = vi.spyOn(exportHelpers, 'exportAsCSV').mockImplementation(() => {});
+    const json = vi.spyOn(exportHelpers, 'exportAsJSON').mockImplementation(() => {});
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({ total: 400, offset: 50 }));
+    renderPage('/api-logs?page=2');
+    await requestRow('/vehicles');
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
+    expect(csv).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({
+        id: 1, request_headers: LOGS[0].request_headers,
+        response_headers: LOGS[0].response_headers, duration_ms: 12,
+        request_body: null, response_body: '{"ok":true}', app_key_id: '', app_installation: '',
+      })]),
+      expect.stringMatching(/\.csv$/),
+    );
+    expect(csv.mock.calls[0]?.[0]).toHaveLength(5);
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+    expect(json).toHaveBeenCalledWith(LOGS, expect.stringMatching(/\.json$/));
+    expect(mockedLogs).toHaveBeenCalledTimes(1); // export never pretends to fetch all 400
+    expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({ limit: 25, offset: 50 }));
+  });
+
+  it('resets paging after header range navigation and sends exclusive bounds to both server queries', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({ total: 200 }));
+    const { router } = renderPage('/api-logs?page=3&method=GET&from=2026-09-01&to=2026-09-02');
+    await requestRow('/vehicles');
+    await act(() => router.navigate('/api-logs?page=3&method=GET&from=2026-09-19&to=2026-09-25'));
+    const start = new Date('2026-09-19T00:00:00').toISOString();
+    const endExclusive = new Date('2026-09-26T00:00:00').toISOString();
+    await waitFor(() => expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      method: 'GET', offset: 0, start, endExclusive,
+    })));
+    expect(mockedStats).toHaveBeenLastCalledWith(start, endExclusive, { signal: expect.any(AbortSignal) });
+    expect(new URLSearchParams(router.state.location.search).has('page')).toBe(false);
+  });
+
+  it('pages on the server without dropping filters and clears all predicates in one URL write', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({ total: 200 }));
+    renderPage('/api-logs?method=POST&status=5xx&endpoint=/debug&service=tesla-api&client=android&key=tablet');
+    await requestRow('/vehicles');
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      offset: 25, method: 'POST', status: '5xx', endpoint: '/debug',
+      service: 'tesla-api', client: 'android', key: 'tablet',
+    })));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    await waitFor(() => expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      offset: 0, method: undefined, status: undefined, endpoint: undefined,
+      service: undefined, client: undefined, key: undefined,
+    })));
+    const url = new URLSearchParams(screen.getByTestId('api-log-url').textContent ?? '');
+    for (const name of ['page', 'method', 'status', 'endpoint', 'service', 'client', 'key']) {
+      expect(url.has(name)).toBe(false);
+    }
   });
 });

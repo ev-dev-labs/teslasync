@@ -30,7 +30,7 @@ import {
 
 export default function GasPriceAutoPollPage() {
   const { t } = useTranslation();
-  const title = t('gas.title', 'Gas Price Auto-Poll');
+  const title = t('gas.title', 'Gas price auto-poll');
   usePageTitle(title);
 
   const statusQuery = useGasPriceStatus();
@@ -45,7 +45,7 @@ export default function GasPriceAutoPollPage() {
       loading={pollMut.isPending}
       onClick={() => pollMut.mutate()}
     >
-      {t('gas.pollNow', 'Poll Now')}
+      {t('gas.pollNow', 'Poll now')}
     </Button>
   );
 
@@ -53,7 +53,7 @@ export default function GasPriceAutoPollPage() {
     <PageContainer
       title={title}
       subtitle={t('gas.subtitle', 'Automatically fetch US average gas prices from EIA')}
-      actions={actions}
+      primaryAction={actions}
       query={[statusQuery, historyQuery]}
     >
       <FadeIn>

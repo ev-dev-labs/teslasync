@@ -204,8 +204,8 @@ function renderPage() {
 
 /** Read a MetricCard's rendered value by its visible label. */
 function metricValue(label: string): string {
-  const labelEl = screen.getByText(label);
-  return labelEl.closest('p')?.nextElementSibling?.textContent ?? '';
+  const labelEl = screen.getAllByText(label).find((element) => element.closest('[data-role="metric-card"]'));
+  return labelEl?.closest('[data-role="metric-card"]')?.querySelector('[data-role="metric-value"]')?.textContent ?? '';
 }
 
 /** The `<tr>` in the registry table that owns the given flag key. */
@@ -241,18 +241,18 @@ describe('FeatureFlagsPage', () => {
 
     // Page + section chrome.
     expect(
-      screen.getByRole('heading', { name: 'Feature Flags', level: 1 }),
+      screen.getByRole('heading', { name: 'Feature flags', level: 1 }),
     ).toBeInTheDocument();
     expect(screen.getByText('Registry')).toBeInTheDocument();
     expect(screen.getByText('Value composition')).toBeInTheDocument();
-    expect(screen.getByText('Recent changes')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recent changes' })).toBeInTheDocument();
 
     // KPI band counts derived from BOTH feeds (5 flags: 2 boolean, 2
     // structured, 1 string; 2 changes: 1 delete, 2 distinct actors).
-    expect(metricValue('Total Flags')).toBe('5');
-    expect(metricValue('Boolean Toggles')).toBe('2');
+    expect(metricValue('Total flags')).toBe('5');
+    expect(metricValue('Boolean toggles')).toBe('2');
     expect(metricValue('Structured')).toBe('2');
-    expect(metricValue('Recent Changes')).toBe('2');
+    expect(metricValue('Recent changes')).toBe('2');
     expect(metricValue('Deletes')).toBe('1');
     expect(metricValue('Contributors')).toBe('2');
 
@@ -280,7 +280,7 @@ describe('FeatureFlagsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add flag' }));
 
     expect(screen.getByText('Create flag')).toBeInTheDocument();
-    const keyInput = screen.getByLabelText(/flag key/i) as HTMLInputElement;
+    const keyInput = screen.getByRole('textbox', { name: /^Flag key\b/i }) as HTMLInputElement;
     expect(keyInput).toHaveValue('');
     expect(keyInput).not.toBeDisabled();
     // Nothing is committed just by opening the drawer.
@@ -292,17 +292,17 @@ describe('FeatureFlagsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add flag' }));
 
-    fireEvent.change(screen.getByLabelText(/flag key/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
       target: { value: 'feature.new' },
     });
     fireEvent.change(screen.getByLabelText(/value \(json\)/i), {
       target: { value: '{"enabled":true}' },
     });
-    fireEvent.change(screen.getByLabelText(/reason/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
       target: { value: 'rolling out' },
     });
 
-    const save = screen.getByRole('button', { name: /save flag/i });
+    const save = screen.getByRole('button', { name: /Save flag/i });
     expect(save).not.toBeDisabled();
     fireEvent.click(save);
 
@@ -325,17 +325,17 @@ describe('FeatureFlagsPage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add flag' }));
-    fireEvent.change(screen.getByLabelText(/flag key/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
       target: { value: 'feature.new' },
     });
     fireEvent.change(screen.getByLabelText(/value \(json\)/i), {
       target: { value: 'false' },
     });
-    fireEvent.change(screen.getByLabelText(/reason/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
       target: { value: 'attempt' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /save flag/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Save flag/i }));
 
     await waitFor(() =>
       expect(hoisted.setFlagMutateAsync).toHaveBeenCalledTimes(1),
@@ -353,7 +353,7 @@ describe('FeatureFlagsPage', () => {
     expect(
       screen.getByText('Edit flag "ui.new_dashboard"'),
     ).toBeInTheDocument();
-    const keyInput = screen.getByLabelText(/flag key/i) as HTMLInputElement;
+    const keyInput = screen.getByRole('textbox', { name: /^Flag key\b/i }) as HTMLInputElement;
     expect(keyInput).toBeDisabled();
     expect(keyInput).toHaveValue('ui.new_dashboard');
     // The stored `false` value is seeded into the JSON editor.
@@ -372,7 +372,7 @@ describe('FeatureFlagsPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete flag' })).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText(/reason/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
       target: { value: 'no longer needed' },
     });
 
@@ -435,7 +435,7 @@ describe('FeatureFlagsPage', () => {
     expect(screen.getByText(/Loading flags/)).toBeInTheDocument();
     expect(screen.getByText(/Loading audit log/)).toBeInTheDocument();
     // The KPI band collapses to skeletons — no derived metric labels yet.
-    expect(screen.queryByText('Total Flags')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total flags')).not.toBeInTheDocument();
   });
 
   it('renders per-section empty messaging when both feeds are empty', () => {
@@ -445,7 +445,7 @@ describe('FeatureFlagsPage', () => {
     });
     renderPage();
 
-    expect(metricValue('Total Flags')).toBe('0');
+    expect(metricValue('Total flags')).toBe('0');
     expect(
       screen.getByText('No feature flags are set on this server.'),
     ).toBeInTheDocument();

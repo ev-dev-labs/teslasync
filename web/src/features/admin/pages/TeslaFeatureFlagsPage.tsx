@@ -36,7 +36,7 @@ import {
 
 export default function TeslaFeatureFlagsPage() {
   const { t } = useTranslation();
-  const title = t('featureConfig.title', 'Feature Flags');
+  const title = t('featureConfig.title', 'Feature flags');
   usePageTitle(title);
 
   const featureQuery = useTeslaFeatureConfig();
@@ -70,7 +70,7 @@ export default function TeslaFeatureFlagsPage() {
     <PageContainer
       title={title}
       subtitle={t('featureConfig.subtitle', 'Tesla account feature configuration')}
-      actions={actions}
+      secondaryActions={actions}
       query={featureQuery}
     >
       <FadeIn>

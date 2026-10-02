@@ -38,7 +38,7 @@ import {
 
 export default function APIKeysPage() {
   const { t } = useTranslation();
-  usePageTitle(t('apiKeys.title', 'API Keys'));
+  usePageTitle(t('apiKeys.title', 'API keys'));
 
   const keysQuery = useApiKeys();
   const { data, isLoading, isError, error, refetch } = keysQuery;
@@ -60,10 +60,10 @@ export default function APIKeysPage() {
   const summary = useMemo(() => summarizeKeys(keys), [keys]);
 
   const kpis: { key: string; label: string; value: number; icon: React.ReactNode; color: NeonColor }[] = [
-    { key: 'total', label: t('apiKeys.kpi.total', 'Total Keys'), value: summary.total, icon: <Key className="h-5 w-5" />, color: 'cyan' },
+    { key: 'total', label: t('apiKeys.kpi.total', 'Total keys'), value: summary.total, icon: <Key className="h-5 w-5" />, color: 'cyan' },
     { key: 'active', label: t('apiKeys.kpi.active', 'Active'), value: summary.active, icon: <ShieldCheck className="h-5 w-5" />, color: 'green' },
     { key: 'expired', label: t('apiKeys.kpi.expired', 'Expired'), value: summary.expired, icon: <XCircle className="h-5 w-5" />, color: 'red' },
-    { key: 'admin', label: t('apiKeys.kpi.admin', 'Admin Access'), value: summary.admin, icon: <Crown className="h-5 w-5" />, color: 'purple' },
+    { key: 'admin', label: t('apiKeys.kpi.admin', 'Admin access'), value: summary.admin, icon: <Crown className="h-5 w-5" />, color: 'purple' },
   ];
 
   const guidancePoints = [
@@ -74,10 +74,10 @@ export default function APIKeysPage() {
 
   return (
     <PageContainer
-      title={t('apiKeys.title', 'API Keys')}
+      title={t('apiKeys.title', 'API keys')}
       subtitle={t('apiKeys.subtitle', 'Manage programmatic access to TeslaSync')}
       query={keysQuery}
-      actions={
+      primaryAction={
         <Button
           variant="primary"
           size="sm"
@@ -86,7 +86,7 @@ export default function APIKeysPage() {
           disabled={!operationalMode.canWrite}
           title={operationalMode.writeBlockReason ?? undefined}
         >
-          {t('apiKeys.createKey', 'Create Key')}
+          {t('apiKeys.createKey', 'Create key')}
         </Button>
       }
     >
@@ -127,7 +127,7 @@ export default function APIKeysPage() {
             <div className="mb-3 flex items-center justify-between gap-2">
               <PanelTitle className="flex items-center gap-2">
                 <Key className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('apiKeys.keysPanel', 'Your API Keys')}
+                {t('apiKeys.keysPanel', 'Your API keys')}
               </PanelTitle>
               {!isLoading && !isError && summary.total > 0 && (
                 <Caption>{t('apiKeys.count', '{{count}} total', { count: summary.total })}</Caption>
@@ -178,7 +178,7 @@ export default function APIKeysPage() {
             <GlassPanel className="p-4 sm:p-5">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <KeyRound className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('apiKeys.accessLevels', 'Access Levels')}
+                {t('apiKeys.accessLevels', 'Access levels')}
               </PanelTitle>
               {isLoading ? (
                 <Skeleton height={160} />
@@ -214,7 +214,7 @@ export default function APIKeysPage() {
             <GlassPanel className="p-4 sm:p-5">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <Info className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('apiKeys.guidance.title', 'About API Keys')}
+                {t('apiKeys.guidance.title', 'About API keys')}
               </PanelTitle>
               <ul className="space-y-2">
                 {guidancePoints.map((point, i) => (
@@ -235,7 +235,7 @@ export default function APIKeysPage() {
       {/* Delete confirmation */}
       <ConfirmDialog
         open={deleteTarget !== null}
-        title={t('apiKeys.deleteTitle', 'Delete API Key')}
+        title={t('apiKeys.deleteTitle', 'Delete API key')}
         message={t('apiKeys.deleteConfirm', 'Are you sure you want to permanently delete the key "{{name}}"?', {
           name: deleteTarget?.name,
         })}

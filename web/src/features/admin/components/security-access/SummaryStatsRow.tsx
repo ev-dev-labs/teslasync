@@ -41,25 +41,25 @@ export function SummaryStatsRow({
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <MetricCard
-        label={t('admin.security.stat.status', 'Current Status')}
+        label={t('admin.security.stat.status', 'Current status')}
         value={isSecure ? t('admin.security.secure', 'Secure') : t('admin.security.unsecure', 'Unsecure')}
         icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
         color={isSecure ? 'green' : 'red'}
       />
       <MetricCard
-        label={t('admin.security.stat.lastLock', 'Last Lock Change')}
+        label={t('admin.security.stat.lastLock', 'Last lock change')}
         value={timeSince(lastLockChange, t)}
         icon={<Clock className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
       />
       <MetricCard
-        label={t('admin.security.stat.sentryUptime', 'Sentry Uptime')}
+        label={t('admin.security.stat.sentryUptime', 'Sentry uptime')}
         value={`${fmtInt(sentryUptime)}%`}
         icon={<Activity className="h-5 w-5" aria-hidden="true" />}
         color="blue"
       />
       <MetricCard
-        label={t('admin.security.stat.totalEvents', 'Total Events')}
+        label={t('admin.security.stat.totalEvents', 'Total events')}
         // fmtInt matches the Sentry Uptime card, adds locale thousands
         // separators for large histories, and coerces a non-finite count to 0.
         value={fmtInt(totalEvents)}

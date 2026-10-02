@@ -299,7 +299,7 @@ function renderPage() {
 
 // Wait until both queries have resolved and the KPI band replaced its skeleton.
 async function waitForLoaded() {
-  await screen.findByText('Total Configs');
+  await screen.findByText('Total configs');
 }
 
 beforeEach(() => {
@@ -320,10 +320,10 @@ describe('BackupRestorePage — data rendering', () => {
     expect(screen.getByRole('region', { name: 'Backup overview' })).toBeInTheDocument();
 
     // Labels for all six KPIs.
-    expect(screen.getByText('Total Configs')).toBeInTheDocument();
-    expect(screen.getByText('Total Backups')).toBeInTheDocument();
-    expect(screen.getByText('Failed Runs')).toBeInTheDocument();
-    expect(screen.getByText('Total Size')).toBeInTheDocument();
+    expect(screen.getByText('Total configs')).toBeInTheDocument();
+    expect(screen.getByText('Total backups')).toBeInTheDocument();
+    expect(screen.getByText('Failed runs')).toBeInTheDocument();
+    expect(screen.getByText('Total size')).toBeInTheDocument();
 
     // Derived values: 3 completed of 4 → 75%, total size 8.0 MB.
     expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
@@ -344,7 +344,7 @@ describe('BackupRestorePage — data rendering', () => {
     renderPage();
     await waitForLoaded();
 
-    expect(screen.getByText('Reliability & Storage')).toBeInTheDocument();
+    expect(screen.getByText('Reliability & storage')).toBeInTheDocument();
     // Completed-vs-total sublabel.
     expect(screen.getByText('3 / 4')).toBeInTheDocument();
     // s3 accumulates 6MB across 2 runs (sorted first by size).
@@ -385,7 +385,7 @@ describe('BackupRestorePage — data rendering', () => {
     await waitForLoaded();
 
     expect(await screen.findByText('Partial data')).toBeInTheDocument();
-    expect(screen.getByText('Backup configurations')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Backup configurations' })).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.getByText('Backup runs')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
@@ -401,7 +401,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     renderPage();
     await waitForLoaded();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Quick Backup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Quick backup' }));
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -416,7 +416,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     renderPage();
     await waitForLoaded();
 
-    fireEvent.click(screen.getByRole('button', { name: 'New Config' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New config' }));
 
     const dialog = await screen.findByRole('dialog');
     const createBtn = within(dialog).getByRole('button', { name: 'Create' });
@@ -448,7 +448,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     renderPage();
     await waitForLoaded();
 
-    fireEvent.click(screen.getByRole('button', { name: 'New Config' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New config' }));
     const dialog = await screen.findByRole('dialog');
 
     // Default provider is local → a single Path field.
@@ -462,7 +462,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     // S3 reveals bucket/region/credentials and drops the local Path field.
     expect(within(dialog).getByLabelText(/Bucket/)).toBeInTheDocument();
     expect(within(dialog).getByLabelText(/Region/)).toBeInTheDocument();
-    expect(within(dialog).getByLabelText(/Secret Key/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Secret key/)).toBeInTheDocument();
     expect(within(dialog).queryByLabelText(/Path/)).not.toBeInTheDocument();
   });
 
@@ -478,7 +478,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     expect(nameInput.value).toBe('Nightly Full');
 
     fireEvent.change(nameInput, { target: { value: 'Nightly Full v2' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Save Changes' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -627,6 +627,6 @@ describe('BackupRestorePage — restore preview', () => {
 
     expect(await screen.findByText('Failed to load preview')).toBeInTheDocument();
     // The restore-preview modal never opened.
-    expect(screen.queryByText('Restore Preview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Restore preview')).not.toBeInTheDocument();
   });
 });

@@ -123,7 +123,7 @@ describe('FeatureConfigDistribution', () => {
 
     expect(heading()).toBeInTheDocument();
     // Gauge — labelled, whole-percent value, and its unit.
-    expect(screen.getByText('Enabled Rate')).toBeInTheDocument();
+    expect(screen.getByText('Enabled rate')).toBeInTheDocument();
     expect(screen.getByText('75')).toBeInTheDocument();
     expect(screen.getByText('%')).toBeInTheDocument();
     // Count chips.
@@ -162,7 +162,7 @@ describe('FeatureConfigDistribution', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('No feature data to summarise yet.')).toBeInTheDocument();
     // The gauge and chips must not leak behind the empty state.
-    expect(screen.queryByText('Enabled Rate')).toBeNull();
+    expect(screen.queryByText('Enabled rate')).toBeNull();
     expect(screen.queryByText(/^Enabled:/)).toBeNull();
     // …but the panel is never headless.
     expect(heading()).toBeInTheDocument();
@@ -176,7 +176,7 @@ describe('FeatureConfigDistribution', () => {
 
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
     // Loading wins even though there is data and no error.
-    expect(screen.queryByText('Enabled Rate')).toBeNull();
+    expect(screen.queryByText('Enabled rate')).toBeNull();
     expect(screen.queryByText('No feature data to summarise yet.')).toBeNull();
     expect(heading()).toBeInTheDocument();
   });
@@ -196,7 +196,7 @@ describe('FeatureConfigDistribution', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
 
     // Neither the gauge nor the empty-state copy renders behind the error.
-    expect(screen.queryByText('Enabled Rate')).toBeNull();
+    expect(screen.queryByText('Enabled rate')).toBeNull();
     expect(screen.queryByText('No feature data to summarise yet.')).toBeNull();
     expect(heading()).toBeInTheDocument();
   });
@@ -225,7 +225,7 @@ describe('FeatureConfigDistribution', () => {
 
     expect(() => renderPanel({ summary: partial })).not.toThrow();
     // total > 0 → gauge branch; the missing counts read as 0.
-    expect(screen.getByText('Enabled Rate')).toBeInTheDocument();
+    expect(screen.getByText('Enabled rate')).toBeInTheDocument();
     expect(screen.getByText('Enabled: 0')).toBeInTheDocument();
     expect(screen.getByText('Disabled: 0')).toBeInTheDocument();
   });

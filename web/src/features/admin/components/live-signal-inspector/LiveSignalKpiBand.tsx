@@ -26,7 +26,7 @@ export function LiveSignalKpiBand({ stats }: LiveSignalKpiBandProps) {
     // to 0 rather than rendering a blank card value.
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
       <MetricCard
-        label={t('admin.liveSignals.kpi.total', 'Total Signals')}
+        label={t('admin.liveSignals.kpi.total', 'Total signals')}
         value={stats.total ?? 0}
         icon={<Radio className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
@@ -53,7 +53,7 @@ export function LiveSignalKpiBand({ stats }: LiveSignalKpiBandProps) {
         subtitle={t('admin.liveSignals.kpi.legacyHint', 'Redis, unknown age')}
       />
       <MetricCard
-        label={t('admin.liveSignals.kpi.numeric', 'Numeric Fields')}
+        label={t('admin.liveSignals.kpi.numeric', 'Numeric fields')}
         value={stats.numeric ?? 0}
         icon={<Hash className="h-5 w-5" aria-hidden="true" />}
         color="purple"

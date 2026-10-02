@@ -42,7 +42,7 @@ const EMPTY_FIELDS: DataQualityFieldScore[] = [];
 
 export default function DataQualityPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.dataQuality.pageTitle', 'Data Quality'));
+  usePageTitle(t('admin.dataQuality.pageTitle', 'Data quality'));
 
   const query = useDataQuality();
   const subsystemMissing = isApiError(query.error) && query.error.status === 503;
@@ -60,7 +60,7 @@ export default function DataQualityPage() {
 
   return (
     <PageContainer
-      title={t('admin.dataQuality.pageTitle', 'Data Quality')}
+      title={t('admin.dataQuality.pageTitle', 'Data quality')}
       subtitle={t(
         'admin.dataQuality.subtitle',
         'Per-field signal freshness, gaps and duplicates, with normalization-version provenance for the same bounded window.',

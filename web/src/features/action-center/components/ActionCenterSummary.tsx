@@ -41,7 +41,7 @@ export function ActionCenterSummary({ summary, loading }: ActionCenterSummaryPro
   ] as const;
 
   return (
-    <section aria-label={t('actionCenter.summary.label', 'Action Center summary')}>
+    <section aria-label={t('actionCenter.summary.label', 'Action center summary')}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {metrics.map(({ key, label, value, Icon }) => (
           <GlassPanel key={key} padding="md" className="min-h-24">

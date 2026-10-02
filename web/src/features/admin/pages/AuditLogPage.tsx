@@ -77,7 +77,7 @@ const LIMIT_OPTIONS = [
 
 export default function AuditLogPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.auditLog.pageTitle', 'Audit Log'));
+  usePageTitle(t('admin.auditLog.pageTitle', 'Audit log'));
 
   // Filter state — string fields are empty=unset, never undefined,
   // so the controlled inputs stay controlled.
@@ -274,7 +274,7 @@ export default function AuditLogPage() {
 
   return (
     <PageContainer
-      title={t('admin.auditLog.pageTitle', 'Audit Log')}
+      title={t('admin.auditLog.pageTitle', 'Audit log')}
       subtitle={t(
         'admin.auditLog.subtitle',
         'Append-only audit ledger with SHA-256 hash chaining. Narrow the scope with the filter row and verify the chain to re-derive integrity on demand.',
@@ -546,6 +546,7 @@ export default function AuditLogPage() {
             ) : (
               <DataTable
                 tableId="admin:audit-log"
+                enableValueFilters={false}
                 columns={columns}
                 mobileColumns={['action', 'success', 'ts']}
                 data={rows}

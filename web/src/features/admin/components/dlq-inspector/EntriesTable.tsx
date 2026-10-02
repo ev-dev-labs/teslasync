@@ -79,6 +79,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
     () => [
       {
         key: 'arrived_at',
+        filterValue: (row) => row.arrived_at ?? null,
         header: t('admin.dlq.cols.arrived', 'Arrived'),
         sortable: true,
         visibleOnMobile: true,
@@ -86,6 +87,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'parsed_reason',
+        filterValue: (row) => row.parsed_reason || null,
         header: t('admin.dlq.cols.reason', 'Reason'),
         sortable: true,
         visibleOnMobile: true,
@@ -93,6 +95,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'parsed_vin',
+        filterValue: (row) => row.parsed_vin ?? null,
         header: t('admin.dlq.cols.vin', 'VIN'),
         sortable: true,
         render: (row) => (
@@ -103,6 +106,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'parsed_source_topic',
+        filterValue: (row) => row.parsed_source_topic ?? null,
         header: t('admin.dlq.cols.topic', 'Source topic'),
         render: (row) => (
           <Text mono size="xs" color="muted">
@@ -112,6 +116,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'parsed_redeliveries',
+        filterValue: (row) => row.parsed_redeliveries ?? null,
         header: t('admin.dlq.cols.redeliveries', 'Redel.'),
         align: 'right',
         render: (row) =>
@@ -121,6 +126,8 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'raw_payload_size',
+        filterValue: (row) => row.raw_payload_size ?? null,
+        filterValueLabel: (_value, row) => formatBytes(row.raw_payload_size),
         header: t('admin.dlq.cols.size', 'Payload'),
         align: 'right',
         sortable: true,
@@ -128,6 +135,8 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'replayable',
+        filterValue: (row) => row.replayable ?? null,
+        filterValueLabel: (_value, row) => row.replayable == null ? '—' : row.replayable ? t('common.yes', 'Yes') : t('common.no', 'No'),
         header: t('admin.dlq.cols.replayable', 'Replayable'),
         render: (row) =>
           row.replayable ? (
@@ -165,6 +174,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       name="dlq-entries"
       columns={columns}
       data={sorted}
+      enableValueFilters
       keyExtractor={(row) => row.id}
       sortKey={sortKey}
       sortDir={sortDir}

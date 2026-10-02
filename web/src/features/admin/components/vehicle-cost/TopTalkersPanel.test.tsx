@@ -143,7 +143,7 @@ describe('TopTalkersPanel — chrome', () => {
     for (const s of statuses) {
       const { unmount } = renderPanel(s);
 
-      const heading = screen.getByRole('heading', { name: /top talkers/i });
+      const heading = screen.getByRole('heading', { name: /Top talkers/i });
       expect(heading).toBeInTheDocument();
 
       // The Flame glyph is presentational — it must not pollute the accessible
@@ -340,7 +340,7 @@ describe('TopTalkersPanel — accessibility', () => {
       ],
     });
 
-    const list = screen.getByRole('list', { name: /top talkers ranked by ingested rows/i });
+    const list = screen.getByRole('list', { name: /Top talkers ranked by ingested rows/i });
     expect(list).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });

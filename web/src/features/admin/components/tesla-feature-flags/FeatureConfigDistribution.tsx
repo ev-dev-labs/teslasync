@@ -71,7 +71,7 @@ export function FeatureConfigDistribution({
             decimals={0}
             color={GAUGE_COLOR}
             size={148}
-            label={t('featureConfig.kpi.enabledRate', 'Enabled Rate')}
+            label={t('featureConfig.kpi.enabledRate', 'Enabled rate')}
           />
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Badge variant="success" dot>

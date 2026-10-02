@@ -215,7 +215,7 @@ describe('VehicleCostPage', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Vehicle Ingest Cost' }),
+      screen.getByRole('heading', { level: 1, name: 'Vehicle ingest cost' }),
     ).toBeInTheDocument();
     // Every section is present — no gutted / hidden panels.
     expect(screen.getByTestId('stub-kpis')).toBeInTheDocument();
@@ -301,7 +301,7 @@ describe('VehicleCostPage', () => {
 
     expect(screen.getByText('Feature not supported')).toBeInTheDocument();
     expect(
-      screen.getByText(/ingest-x-ray subsystem is not configured/i),
+      screen.getByText(/ingest-x-ray subsystem is Not configured/i),
     ).toBeInTheDocument();
     // sectionError is nulled so panels render calm empty states, not red errors.
     expect(captured.kpis.error).toBeNull();

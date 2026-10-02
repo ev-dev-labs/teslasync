@@ -35,7 +35,7 @@ import {
 
 export default function TeslaOrdersPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.teslaOrders.pageTitle', 'Tesla Orders'));
+  usePageTitle(t('admin.teslaOrders.pageTitle', 'Tesla orders'));
 
   const ordersQuery = useTeslaUserOrders();
   const ordersRefresh = useRefreshTeslaOrders();
@@ -95,12 +95,12 @@ export default function TeslaOrdersPage() {
 
   return (
     <PageContainer
-      title={t('admin.teslaOrders.pageTitle', 'Tesla Orders')}
+      title={t('admin.teslaOrders.pageTitle', 'Tesla orders')}
       subtitle={t(
         'admin.teslaOrders.subtitle',
         'Vehicle orders and delivery tracking pulled from your Tesla account.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={ordersQuery}
     >
       {/* 1 — KPI band: full-width responsive metric grid (always visible) */}
@@ -166,7 +166,7 @@ export default function TeslaOrdersPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('admin.teslaOrders.panels.details', 'Order Details')}
+              {t('admin.teslaOrders.panels.details', 'Order details')}
             </PanelTitle>
             <OrdersSectionState
               status={status}
