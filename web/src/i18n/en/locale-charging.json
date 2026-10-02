@@ -1095,6 +1095,14 @@
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
   },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    }
+  },
   "date": {
     "preset": {
       "all": "All time",
@@ -1655,6 +1663,10 @@
   "table": {
     "bulkActions": {
       "exportCsv": "Export CSV"
+    },
+    "filter": {
+      "mobileValues": "Column value filters are active. Open the desktop grid to edit them, or clear them here.",
+      "noValue": "(Not recorded)"
     }
   },
   "tagInput": {

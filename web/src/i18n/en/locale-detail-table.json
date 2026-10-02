@@ -3,7 +3,7 @@
     "filter": {
       "loadedRowCount": "{{filtered}} matching / {{loaded}} loaded rows",
       "unavailableLoadedValues": "Some saved selections are not present in the loaded rows. Clear the filter to reset them.",
-      "column": "Filter {{column}}",
+      "column": "{{column}} filter",
       "clear": "Clear",
       "done": "Done",
       "active": "Active",

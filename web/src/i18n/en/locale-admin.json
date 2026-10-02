@@ -1499,7 +1499,6 @@
     "filterClient": "Platform or installation ID...",
     "filterEndpoint": "Filter by endpoint...",
     "filterKey": "Key name or ID...",
-    "filters": "Filters",
     "frontendErrors": {
       "loadError": "Unable to load frontend error summary.",
       "loading": "Loading frontend error summary",
@@ -1601,6 +1600,14 @@
     "maxReached": "Maximum reached",
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
+  },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    }
   },
   "date": {
     "preset": {

@@ -730,6 +730,12 @@
     }
   },
   "dataState": {
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    },
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
     "stale": {
       "title": "Data may be stale",
       "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
@@ -8093,7 +8099,7 @@
     "filter": {
       "loadedRowCount": "{{filtered}} matching / {{loaded}} loaded rows",
       "unavailableLoadedValues": "Some saved selections are not present in the loaded rows. Clear the filter to reset them.",
-      "column": "Filter {{column}}",
+      "column": "{{column}} filter",
       "clear": "Clear",
       "done": "Done",
       "active": "Active",
@@ -14736,6 +14742,9 @@
       "noVehicle": "No vehicle selected"
     },
     "costBreakdown": {
+      "latestMonth": "Latest recorded month",
+      "monthlySavingsEstimate": "Monthly savings estimate vs gas: {{amount}}",
+      "gasEstimate": "Gas comparison is estimated.",
       "monthlyTotal": "This month",
       "savedVsGas": "Saved {{amount}} vs gas",
       "saving": "Saving",
@@ -14750,6 +14759,9 @@
       "month": "Month"
     },
     "costForecast": {
+      "avgEnergyRate": "Avg {{currency}}/{{unit}}",
+      "estimate": "Forecast values are estimates.",
+      "chartLabel": "Monthly charging cost history and forecast",
       "noData": "No forecast data",
       "nextMonth": "Next month",
       "trend": "Trend",
@@ -14803,6 +14815,8 @@
     "frunkOpen": "Frunk open",
     "trunkOpen": "Trunk open",
     "doorWindow": {
+      "doorsUnknown": "Doors unknown",
+      "windowsUnknown": "Windows unknown",
       "closed": "Closed",
       "open": "Open",
       "partial": "Partial",
@@ -14985,6 +14999,8 @@
     "guardAutoPanic": "Auto-panic",
     "guardOn": "On",
     "guardOff": "Off",
+    "guardUnknown": "Unknown",
+    "commandUnknown": "Unknown",
     "guardNoEvents": "No guard events",
     "guardMode": "Guard mode",
     "noGuardData": "No guard data",
@@ -15212,6 +15228,11 @@
       "title": "Route efficiency"
     },
     "safety": {
+      "partialReadings": "Some feature states are unknown",
+      "aebDisabled": "Automatic emergency braking disabled",
+      "historyFcw": "FCW",
+      "historyElda": "Emergency lane departure avoidance",
+      "historyScope": "Summary of returned safety snapshots, not activation counts",
       "fcw": "Forward collision warning",
       "aeb": "Auto emergency braking",
       "disabled": "Disabled",
@@ -15445,7 +15466,7 @@
       "noEvents": "No recent drain events",
       "noData": "No vampire drain data"
     },
-    "vehicleAccessDrivers": "Drivers",
+    "vehicleAccessDrivers": "drivers",
     "vehicleAccessMobileOn": "Mobile access enabled",
     "vehicleAccessMobileOff": "Mobile access disabled",
     "vehicleAccessMobileUnknown": "Mobile access unknown",
@@ -15642,6 +15663,56 @@
     "colSignal": "Signal"
   },
   "driveDetail": {
+    "report": {
+      "overview": "Overview",
+      "telemetry": "Telemetry",
+      "energy": "Energy and cost",
+      "diagnostics": "Diagnostics",
+      "recordedScore": "Recorded score",
+      "speedInsights": "Helix speed-profile insights",
+      "coaching": "Helix drive coaching",
+      "sectionUnavailable": "No {{section}} data is available for this drive.",
+      "metric": "Metric",
+      "term": "Physics term",
+      "source": "Source and method",
+      "reconciliation": "Ledger reconciliation",
+      "signal": "Signal",
+      "sampleStatistics": "Sample statistics · arithmetic means, not time-weighted drive aggregates",
+      "gear": "Gear",
+      "latch": "Charge-port latch",
+      "port": "Charge port",
+      "evidence": "Evidence",
+      "batteryRate": "Battery use per 100 {{unit}}",
+      "aggregateSource": "Drive aggregates · comparisons use this vehicle’s history",
+      "baselines": "Vehicle baselines",
+      "consumptionEstimate": "Consumption uses estimated energy; see energy evidence for assumptions.",
+      "persisted": "Persisted drive aggregate",
+      "sampled": "Recorded telemetry samples",
+      "energyEstimate": "Estimate: absolute average power × duration; not metered energy",
+      "regenEstimate": "Estimate: negative-power sample mean × duration; assumes uniform sampling",
+      "rangeSource": "First/last available ideal range; rated range is the fallback",
+      "rangeDelta": "Difference of available range estimates, not distance travelled",
+      "batteryDelta": "Endpoint SOC difference, not a measured energy total",
+      "energyEvidence": "Energy and range evidence",
+      "noNet": "Consumed and recovered energy retain their original source semantics. No additional net-energy total is inferred.",
+      "costMethod": "Estimate using configured rates, not a charging invoice. Energy source is listed in energy evidence.",
+      "powerMethod": "Power samples preserve sign: positive draw, negative regeneration. Peak values require observations.",
+      "sampleMeanPower": "Mean sampled power",
+      "sampleShare": "% of speed samples",
+      "climateOn": "On",
+      "climateOff": "Off",
+      "climateMostlyOff": "Mostly off",
+      "regenShareEstimate": "Estimated regen ratio {{share}}",
+      "regenRatioMethod": "Recovered / (consumed + recovered), using drive-summary energy sources. This ratio is not a metered braking-efficiency measurement.",
+      "ratedRange": "Range (rated)",
+      "rangeSeriesSource": "First/last recorded values of this range estimator; gaps are not zero",
+      "honesty": {
+        "live": "Observed",
+        "stale": "Limited evidence",
+        "guessed": "Estimated",
+        "missing": "Missing"
+      }
+    },
     "road": {
       "title": "Possible road-surface anomalies",
       "subtitle": "Historical telemetry review — not confirmed potholes",

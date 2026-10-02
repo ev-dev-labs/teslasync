@@ -1707,7 +1707,7 @@
     "filter": {
       "active": "Active",
       "clear": "Clear",
-      "column": "Filter {{column}}",
+      "column": "{{column}} filter",
       "conditions": "Conditions",
       "done": "Done",
       "invalidValues": "This saved value filter is invalid. Clear it to reset.",

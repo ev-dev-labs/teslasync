@@ -149,7 +149,7 @@ describe('English presentation casing', () => {
   });
 
   it('does not alter interpolation or technical names in sentence bodies', () => {
-    expect(catalog.table.filter.column).toBe('Filter {{column}}');
+    expect(catalog.table.filter.column).toBe('{{column}} filter');
     expect(catalog.common.emptyResultsForTitle).toBe('No {{title}} found.');
     expect(catalog.help.fields.channels.hmacSecret).toContain('X-TeslaSync-Signature');
     expect(catalog.ai.settings.provider.azureProtocolHint).toContain('Chat Completions');

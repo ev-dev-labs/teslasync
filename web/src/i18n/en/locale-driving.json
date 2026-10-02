@@ -903,6 +903,56 @@
     }
   },
   "driveDetail": {
+    "report": {
+      "overview": "Overview",
+      "telemetry": "Telemetry",
+      "energy": "Energy and cost",
+      "diagnostics": "Diagnostics",
+      "recordedScore": "Recorded score",
+      "speedInsights": "Helix speed-profile insights",
+      "coaching": "Helix drive coaching",
+      "sectionUnavailable": "No {{section}} data is available for this drive.",
+      "metric": "Metric",
+      "term": "Physics term",
+      "source": "Source and method",
+      "reconciliation": "Ledger reconciliation",
+      "signal": "Signal",
+      "sampleStatistics": "Sample statistics · arithmetic means, not time-weighted drive aggregates",
+      "gear": "Gear",
+      "latch": "Charge-port latch",
+      "port": "Charge port",
+      "evidence": "Evidence",
+      "batteryRate": "Battery use per 100 {{unit}}",
+      "aggregateSource": "Drive aggregates · comparisons use this vehicle’s history",
+      "baselines": "Vehicle baselines",
+      "consumptionEstimate": "Consumption uses estimated energy; see energy evidence for assumptions.",
+      "persisted": "Persisted drive aggregate",
+      "sampled": "Recorded telemetry samples",
+      "energyEstimate": "Estimate: absolute average power × duration; not metered energy",
+      "regenEstimate": "Estimate: negative-power sample mean × duration; assumes uniform sampling",
+      "rangeSource": "First/last available ideal range; rated range is the fallback",
+      "rangeDelta": "Difference of available range estimates, not distance travelled",
+      "batteryDelta": "Endpoint SOC difference, not a measured energy total",
+      "energyEvidence": "Energy and range evidence",
+      "noNet": "Consumed and recovered energy retain their original source semantics. No additional net-energy total is inferred.",
+      "costMethod": "Estimate using configured rates, not a charging invoice. Energy source is listed in energy evidence.",
+      "powerMethod": "Power samples preserve sign: positive draw, negative regeneration. Peak values require observations.",
+      "sampleMeanPower": "Mean sampled power",
+      "sampleShare": "% of speed samples",
+      "climateOn": "On",
+      "climateOff": "Off",
+      "climateMostlyOff": "Mostly off",
+      "regenShareEstimate": "Estimated regen ratio {{share}}",
+      "regenRatioMethod": "Recovered / (consumed + recovered), using drive-summary energy sources. This ratio is not a metered braking-efficiency measurement.",
+      "ratedRange": "Range (rated)",
+      "rangeSeriesSource": "First/last recorded values of this range estimator; gaps are not zero",
+      "honesty": {
+        "live": "Observed",
+        "stale": "Limited evidence",
+        "guessed": "Estimated",
+        "missing": "Missing"
+      }
+    },
     "road": {
       "title": "Possible road-surface anomalies",
       "subtitle": "Historical telemetry review — not confirmed potholes",
@@ -3679,6 +3729,14 @@
       "error": "Command failed: {{message}}",
       "failed": "Command failed",
       "success": "Command sent successfully"
+    }
+  },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
     }
   },
   "date": {

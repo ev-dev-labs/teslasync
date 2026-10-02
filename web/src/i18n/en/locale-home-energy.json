@@ -263,6 +263,14 @@
     "noData": "No data available",
     "noDataDescription": "No chartable observations are available for the current selection yet."
   },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    }
+  },
   "delta": {
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}"

@@ -954,6 +954,9 @@
       "noVehicle": "No vehicle selected"
     },
     "costBreakdown": {
+      "latestMonth": "Latest recorded month",
+      "monthlySavingsEstimate": "Monthly savings estimate vs gas: {{amount}}",
+      "gasEstimate": "Gas comparison is estimated.",
       "monthlyTotal": "This month",
       "savedVsGas": "Saved {{amount}} vs gas",
       "saving": "Saving",
@@ -968,6 +971,9 @@
       "month": "Month"
     },
     "costForecast": {
+      "avgEnergyRate": "Avg {{currency}}/{{unit}}",
+      "estimate": "Forecast values are estimates.",
+      "chartLabel": "Monthly charging cost history and forecast",
       "noData": "No forecast data",
       "nextMonth": "Next month",
       "trend": "Trend",
@@ -1021,6 +1027,8 @@
     "frunkOpen": "Frunk open",
     "trunkOpen": "Trunk open",
     "doorWindow": {
+      "doorsUnknown": "Doors unknown",
+      "windowsUnknown": "Windows unknown",
       "closed": "Closed",
       "open": "Open",
       "partial": "Partial",
@@ -1203,6 +1211,8 @@
     "guardAutoPanic": "Auto-panic",
     "guardOn": "On",
     "guardOff": "Off",
+    "guardUnknown": "Unknown",
+    "commandUnknown": "Unknown",
     "guardNoEvents": "No guard events",
     "guardMode": "Guard mode",
     "noGuardData": "No guard data",
@@ -1430,6 +1440,11 @@
       "title": "Route efficiency"
     },
     "safety": {
+      "partialReadings": "Some feature states are unknown",
+      "aebDisabled": "Automatic emergency braking disabled",
+      "historyFcw": "FCW",
+      "historyElda": "Emergency lane departure avoidance",
+      "historyScope": "Summary of returned safety snapshots, not activation counts",
       "fcw": "Forward collision warning",
       "aeb": "Auto emergency braking",
       "disabled": "Disabled",
@@ -1663,7 +1678,7 @@
       "noEvents": "No recent drain events",
       "noData": "No vampire drain data"
     },
-    "vehicleAccessDrivers": "Drivers",
+    "vehicleAccessDrivers": "drivers",
     "vehicleAccessMobileOn": "Mobile access enabled",
     "vehicleAccessMobileOff": "Mobile access disabled",
     "vehicleAccessMobileUnknown": "Mobile access unknown",
@@ -1961,6 +1976,14 @@
       "error": "Command failed: {{message}}",
       "failed": "Command failed",
       "success": "Command sent successfully"
+    }
+  },
+  "dataState": {
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
     }
   },
   "date": {

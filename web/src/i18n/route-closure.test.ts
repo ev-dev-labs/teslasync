@@ -47,7 +47,9 @@ describe('route-owned shared locale closures', () => {
     {
       path: '/drives/412/', namespace: 'drives', bundle: 'driving',
       keys: ['date.preset.last24h', 'drives.title', 'bulk.actions.delete',
-        'operations.drives.noDataTitle', 'savedViews.title', 'chart.col.date'],
+        'operations.drives.noDataTitle', 'savedViews.title', 'chart.col.date',
+        'driveDetail.report.overview', 'driveDetail.report.sampleMeanPower',
+        'driveDetail.report.energyEstimate', 'driveDetail.report.honesty.missing'],
     },
     {
       path: '/charging', namespace: 'charging', bundle: 'charging',
@@ -57,7 +59,8 @@ describe('route-owned shared locale closures', () => {
     },
     {
       path: '/vehicles', namespace: 'vehicles', bundle: 'vehicles',
-      keys: ['operations.vehicles.narrative.whatChangedWithoutBattery', 'vehicles.preview.trust.checking'],
+      keys: ['operations.vehicles.narrative.whatChangedWithoutBattery', 'vehicles.preview.trust.checking',
+        'dataState.staleNamed.title', 'dataState.refreshBlocked.message'],
     },
   ])('serves $path shared keys from its own lazy bundle', async ({ path, namespace, bundle, keys }) => {
     window.history.replaceState(null, '', path)

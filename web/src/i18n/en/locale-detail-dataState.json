@@ -1,5 +1,11 @@
 {
   "dataState": {
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
+    },
+    "refreshBlocked": {
+      "message": "The device is offline, so this section is showing the last values it received."
+    },
     "stale": {
       "title": "Data may be stale",
       "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
