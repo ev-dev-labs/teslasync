@@ -3,23 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
+import { Skeleton } from '@/components/feedback';
 import { useWarrantyDetails } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
+import { useDataState } from '@/hooks/useDataState';
+import { knownNumber } from '@/api/dataState';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetDetailCard, type DetailEntry } from './shared';
+import { WidgetBigNumber, WidgetDetailCard, WidgetStatGrid, type DetailEntry } from './shared';
+import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
-
-/**
- * 1 mile = 1609.344 m exactly (international yard, NIST). Mirrors the private
- * constant inside `@/lib/unitConversion`; re-declared locally because the
- * warranty API delivers mileage in MILES (`*_mi` fields) while
- * `convertDistanceFromSI` only accepts SI meters.
- */
-const METERS_PER_MILE = 1609.344;
+import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 
 /** Safely extract a string from an unknown value */
 export function asString(val: unknown): string | null {
@@ -31,13 +26,7 @@ export function asString(val: unknown): string | null {
 
 /** Safely extract a number from an unknown value */
 export function asNumber(val: unknown): number | null {
-  if (val == null) return null;
-  if (typeof val === 'number' && isFinite(val)) return val;
-  if (typeof val === 'string') {
-    const n = Number(val);
-    return isFinite(n) ? n : null;
-  }
-  return null;
+  return knownNumber(val);
 }
 
 /** Compute days remaining from an expiry date string (ISO or date) */
@@ -50,22 +39,24 @@ export function daysUntil(dateStr: string | null): number | null {
 }
 
 /** Badge variant based on days remaining */
-export function statusVariant(days: number | null): 'success' | 'warning' | 'error' {
-  if (days == null || days <= 0) return 'error';
+export function statusVariant(days: number | null): 'success' | 'warning' | 'error' | 'neutral' {
+  if (days == null) return 'neutral';
+  if (days <= 0) return 'error';
   if (days <= 90) return 'warning';
   return 'success';
 }
 
 /** Status label based on days remaining */
 export function statusLabel(days: number | null, t: (k: string, f: string) => string): string {
-  if (days == null || days <= 0) return t('widget.warranty.expired', 'Expired');
+  if (days == null) return t('widget.status.unknown', 'Unknown');
+  if (days <= 0) return t('widget.warranty.expired', 'Expired');
   return t('widget.warranty.active', 'Active');
 }
 
 /** Known warranty coverage types to extract from data */
 const COVERAGE_TYPES = [
   { key: 'basic', labelKey: 'widget.warranty.basic', fallback: 'Basic' },
-  { key: 'battery_drive_unit', labelKey: 'widget.warranty.batteryDrive', fallback: 'Battery/Drive Unit' },
+  { key: 'battery_drive_unit', labelKey: 'widget.warranty.batteryDrive', fallback: 'Battery/drive unit' },
   { key: 'corrosion', labelKey: 'widget.warranty.corrosion', fallback: 'Corrosion' },
   { key: 'emissions', labelKey: 'widget.warranty.emissions', fallback: 'Emissions' },
   { key: 'body', labelKey: 'widget.warranty.body', fallback: 'Body' },
@@ -82,6 +73,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
     [distanceUnit],
   );
 
+  const query = useWarrantyDetails(vehicleId ? String(vehicleId) : undefined);
   const {
     data: envelope,
     isLoading,
@@ -90,7 +82,11 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useWarrantyDetails(vehicleId ? String(vehicleId) : undefined);
+  } = query;
+  const trust = useDataState({
+    ...query,
+    data: envelope ?? (isLoading || isError ? undefined : null),
+  }, { provenance: 'cached', unavailable: envelope?.data == null });
 
   const warrantyData = envelope?.data ?? null;
   const isCompact = size.cols <= 1;
@@ -102,11 +98,9 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
     ?? warrantyData?.basic_expiry_date,
   );
   const daysRemaining = daysUntil(expiryDate);
-  const variant = statusVariant(daysRemaining);
 
   const mileageLimitMi = asNumber(
     warrantyData?.mileage_limit_mi
-    ?? warrantyData?.mileage_limit
     ?? warrantyData?.basic_mileage_limit_mi,
   );
   const currentMileageMi = asNumber(
@@ -119,8 +113,12 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   // `convertDistanceFromSI` (and thus `toDistanceDisplay`) expects SI meters.
   // Convert miles→meters up front so a 50,000 mi limit renders as "50,000 mi"
   // (or "80,467 km"), not the ~31 mi / ~50 km the raw-value path produced.
-  const mileageLimitM = mileageLimitMi != null ? mileageLimitMi * METERS_PER_MILE : null;
-  const currentMileageM = currentMileageMi != null ? currentMileageMi * METERS_PER_MILE : null;
+  const mileageLimitM = mileageLimitMi != null ? convertDistanceToSI(mileageLimitMi, 'mi') : null;
+  const currentMileageM = currentMileageMi != null ? convertDistanceToSI(currentMileageMi, 'mi') : null;
+  const mileageExceeded = mileageLimitM != null && currentMileageM != null && currentMileageM >= mileageLimitM;
+  const mileageUnknown = mileageLimitM != null && currentMileageM == null;
+  const effectiveDays = mileageExceeded ? 0 : mileageUnknown ? null : daysRemaining;
+  const variant = statusVariant(effectiveDays);
 
   // Total warranty period in days (for progress bar)
   const startDate = asString(
@@ -142,74 +140,75 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
 
   // Build detail entries for WidgetDetailCard
   const entries: DetailEntry[] = useMemo(() => {
-    if (!warrantyData) return [];
     const items: DetailEntry[] = [];
 
     // Expiry date
     items.push({
-      label: t('widget.warranty.expiryDate', 'Expiry Date'),
-      value: expiryDate
+      label: t('widget.warranty.expiryDate', 'Expiry date'),
+      value: expiryDate && daysRemaining != null
         ? formatDate(expiryDate)
         : null,
-      badge: { text: statusLabel(daysRemaining, t), variant },
+      badge: { text: statusLabel(effectiveDays, t), variant },
     });
 
     // Days remaining
     items.push({
-      label: t('widget.warranty.daysRemaining', 'Days Remaining'),
+      label: t('widget.warranty.daysRemaining', 'Days remaining'),
       value: daysRemaining != null ? fmtInt(Math.max(daysRemaining, 0)) : null,
       mono: true,
     });
 
     // Mileage limit (converted)
-    if (mileageLimitM != null) {
-      const converted = toDistanceDisplay(mileageLimitM);
+    {
+      const converted = mileageLimitM == null ? null : toDistanceDisplay(mileageLimitM);
       items.push({
-        label: t('widget.warranty.mileageLimit', 'Mileage Limit'),
-        value: `${fmtNumber(converted, 0)} ${distanceUnit}`,
+        label: t('widget.warranty.mileageLimit', 'Mileage limit'),
+        value: converted == null ? null : `${fmtNumber(converted, 0)} ${distanceUnit}`,
         mono: true,
       });
     }
 
     // Current mileage (converted)
-    if (currentMileageM != null) {
-      const converted = toDistanceDisplay(currentMileageM);
+    {
+      const converted = currentMileageM == null ? null : toDistanceDisplay(currentMileageM);
       items.push({
-        label: t('widget.warranty.currentMileage', 'Current Mileage'),
-        value: `${fmtNumber(converted, 0)} ${distanceUnit}`,
+        label: t('widget.warranty.currentMileage', 'Current mileage'),
+        value: converted == null ? null : `${fmtNumber(converted, 0)} ${distanceUnit}`,
         mono: true,
       });
     }
 
     // Coverage type badges
     for (const cov of COVERAGE_TYPES) {
-      const covVal = warrantyData[cov.key];
+      const covVal = warrantyData?.[cov.key];
       if (covVal != null && covVal !== false && covVal !== '') {
         const covExpiry = asString(
-          (warrantyData as Record<string, unknown>)[`${cov.key}_expiry_date`],
+          warrantyData?.[`${cov.key}_expiry_date`],
         );
         const covDays = daysUntil(covExpiry);
-        const covActive = covExpiry ? (covDays != null && covDays > 0) : true;
+        const covActive = covDays != null && covDays > 0;
         items.push({
           label: t(cov.labelKey, cov.fallback),
-          value: covExpiry
+          value: covExpiry && covDays != null
             ? new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(new Date(covExpiry))
             : t('widget.warranty.included', 'Included'),
           badge: {
-            text: covActive
+            text: covDays == null ? t('widget.status.unknown', 'Unknown') : covActive
               ? t('widget.warranty.covered', 'Covered')
               : t('widget.warranty.expired', 'Expired'),
-            variant: covActive ? 'success' : 'error',
+            variant: covDays == null ? 'neutral' : covActive ? 'success' : 'error',
           },
         });
       }
     }
 
     return items;
-  }, [warrantyData, expiryDate, daysRemaining, variant, mileageLimitM, currentMileageM, toDistanceDisplay, distanceUnit, t, formatDate, locale]);
+  }, [warrantyData, expiryDate, daysRemaining, effectiveDays, variant, mileageLimitM, currentMileageM, toDistanceDisplay, distanceUnit, t, formatDate, locale]);
 
   const shellProps = {
     loading: isLoading,
+    dataState: trust,
+    loadingContent: <div className="flex flex-col gap-3"><Skeleton className="h-16" /><Skeleton className="h-24" /></div>,
     updatedAt: dataUpdatedAt ?? 0,
     isFetching,
     isStale,
@@ -222,30 +221,22 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
     return (
       <WidgetShell {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
-          {warrantyData ? (
             <>
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              <span className="text-2xl font-bold text-[var(--text-primary)]">
-                {daysRemaining != null ? fmtInt(Math.max(daysRemaining, 0)) : '—'}
-              </span>
-              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-                {t('widget.warranty.daysLeft', 'days left')}
-              </span>
+              <WidgetBigNumber
+                value={daysRemaining != null ? fmtInt(Math.max(daysRemaining, 0)) : null}
+                label={t('widget.warranty.daysLeft', 'days left')}
+                align="center"
+              />
               <Badge
                 variant={variant === 'error' ? 'danger' : variant}
                 size="sm"
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
-                {statusLabel(daysRemaining, t)}
+                {statusLabel(effectiveDays, t)}
               </Badge>
             </>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<ShieldCheck className="h-5 w-5" />}
-              message={t('widget.warranty.noData', 'No warranty data')}
-              className="py-2"
-            />
-          )}
+          {!warrantyData && <p className={dashboardTokens.metricLabel}>{t('widget.warranty.noData', 'No warranty data')}</p>}
         </div>
       </WidgetShell>
     );
@@ -254,19 +245,22 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   // ── Standard layout (2×2): progress bars + coverage badges ──
   return (
     <WidgetShell
-      title={t('widget.warranty.title', 'Warranty Status')}
+      title={t('widget.warranty.title', 'Warranty status')}
       icon={<ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
-      {warrantyData ? (
         <div className="h-full flex flex-col gap-3 overflow-y-auto">
+          <WidgetStatGrid cols={2} stats={[
+            { label: t('widget.warranty.daysRemaining', 'Days remaining'), value: daysRemaining == null ? null : fmtInt(Math.max(daysRemaining, 0)) },
+            { label: t('widget.warranty.mileageRemaining', 'Mileage remaining'), value: mileageLimitM == null || currentMileageM == null ? null : fmtNumber(toDistanceDisplay(Math.max(mileageLimitM - currentMileageM, 0)), 0), unit: mileageLimitM == null || currentMileageM == null ? undefined : distanceUnit },
+          ]} />
           {/* Time remaining progress bar */}
-          {totalDays != null && daysUsed != null && (
+          {totalDays != null && totalDays > 0 && daysUsed != null && (
             <MetricBar
               value={daysUsed}
               max={totalDays}
               color={variant === 'success' ? '#10b981' : variant === 'warning' ? '#f59e0b' : '#ef4444'}
-              label={t('widget.warranty.timeRemaining', 'Time Remaining')}
+              label={t('widget.warranty.timeRemaining', 'Time remaining')}
               sublabel={
                 daysRemaining != null
                   ? `${fmtInt(Math.max(daysRemaining, 0))} ${t('widget.warranty.daysUnit', 'days')}`
@@ -287,8 +281,8 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                     ? '#f59e0b'
                     : '#10b981'
               }
-              label={t('widget.warranty.mileageRemaining', 'Mileage Remaining')}
-              sublabel={`${fmtNumber(toDistanceDisplay(mileageLimitM - currentMileageM), 0)} ${distanceUnit}`}
+              label={t('widget.warranty.mileageRemaining', 'Mileage remaining')}
+              sublabel={`${fmtNumber(toDistanceDisplay(Math.max(mileageLimitM - currentMileageM, 0)), 0)} ${distanceUnit}`}
             />
           )}
 
@@ -298,14 +292,11 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
             emptyMessage={t('widget.warranty.noData', 'No warranty data')}
             emptyIcon={<ShieldCheck className="h-5 w-5" />}
           />
+          <p className={dashboardTokens.metricLabel}>
+            {t('widget.warranty.coverageCaveat', 'Cached warranty information; coverage ends at the first time or mileage limit. Confirm terms with Tesla.')}
+          </p>
+          {!warrantyData && <p className={dashboardTokens.metricLabel}>{t('widget.warranty.noData', 'No warranty data')}</p>}
         </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<ShieldCheck className="h-5 w-5" />}
-          message={t('widget.warranty.noData', 'No warranty data')}
-          className="py-4"
-        />
-      )}
     </WidgetShell>
   );
 }

@@ -151,7 +151,7 @@ beforeEach(() => {
 describe('classifyChargerType', () => {
   it('buckets Supercharger / Tesla connectors as "supercharger"', () => {
     expect(classifyChargerType(makeSession({ charger_type: 'SUPERCHARGER' }))).toBe('supercharger');
-    expect(classifyChargerType(makeSession({ charger_type: 'Tesla Wall Connector' }))).toBe(
+    expect(classifyChargerType(makeSession({ charger_type: 'Tesla Wall connector' }))).toBe(
       'supercharger',
     );
   });
@@ -177,7 +177,7 @@ describe('ChargeSessionChartWidget states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Charge Sessions')).toBeNull();
+    expect(screen.queryByText('Charge sessions')).toBeInTheDocument();
     expect(screen.queryByText('No charge sessions yet')).toBeNull();
   });
 
@@ -186,6 +186,7 @@ describe('ChargeSessionChartWidget states', () => {
     renderWidget(STANDARD);
 
     const empty = await screen.findByText('No charge sessions yet');
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(empty).toBeInTheDocument();
     expect(empty.closest('[role="status"]')).not.toBeNull();
   });
@@ -206,6 +207,7 @@ describe('ChargeSessionChartWidget states', () => {
     );
 
     expect(await screen.findByText('No charge sessions yet')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(chargingCallCount()).toBe(0);
   });
 
@@ -218,8 +220,9 @@ describe('ChargeSessionChartWidget states', () => {
     renderWidget(STANDARD);
 
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Charge Sessions')).toBeNull();
+    expect(screen.queryByText('Charge sessions')).toBeInTheDocument();
   });
 });
 
@@ -234,7 +237,8 @@ describe('ChargeSessionChartWidget standard layout', () => {
     ]);
     renderWidget(STANDARD);
 
-    expect(await screen.findByText('Charge Sessions')).toBeInTheDocument();
+    expect(await screen.findByText('Charge sessions')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Summary stats: total (60 kWh), avg (20 kWh), session count (3).
     expect(screen.getByText('Total')).toBeInTheDocument();
@@ -253,7 +257,7 @@ describe('ChargeSessionChartWidget standard layout', () => {
     // Legend labels are always present and accessible (colour swatches hidden).
     expect(screen.getByText('Home / AC')).toBeInTheDocument();
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('DC Fast')).toBeInTheDocument();
+    expect(screen.getByText('DC fast')).toBeInTheDocument();
   });
 
   it('derives total/avg from SI energy converted to kWh (÷1000)', async () => {
@@ -263,8 +267,9 @@ describe('ChargeSessionChartWidget standard layout', () => {
     ]);
     renderWidget(STANDARD);
 
-    expect(await screen.findByText('20.0')).toBeInTheDocument(); // total 5 + 15 kWh
-    expect(screen.getByText('10.0')).toBeInTheDocument(); // avg (20 / 2)
+    expect(await screen.findByText('20.0')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull()); // total 5 + 15 kWh
+    expect(screen.getByText('10.0')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument(); // session count
   });
 
@@ -278,8 +283,9 @@ describe('ChargeSessionChartWidget standard layout', () => {
     ]);
     renderWidget(STANDARD);
 
-    expect(await screen.findByText('20.0')).toBeInTheDocument(); // total
-    expect(screen.getByText('10.0')).toBeInTheDocument(); // avg (20 / 2)
+    expect(await screen.findAllByText('20.0')).toHaveLength(2);
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull()); // total
+    expect(screen.getAllByText('20.0')).toHaveLength(2);
     expect(screen.queryByText('NaN')).toBeNull();
     expect(screen.queryByText('0.0')).toBeNull();
   });
@@ -296,12 +302,13 @@ describe('ChargeSessionChartWidget compact layout', () => {
     renderWidget(COMPACT);
 
     expect(await screen.findByText('Total')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('Sessions')).toBeInTheDocument();
     expect(screen.getByText('10.0')).toBeInTheDocument(); // total
     expect(screen.getByText('2')).toBeInTheDocument(); // count
 
     // Compact widgets hide the header title, the chart, and the legend.
-    expect(screen.queryByText('Charge Sessions')).toBeNull();
+    expect(screen.queryByText('Charge sessions')).toBeNull();
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.queryByText('Home / AC')).toBeNull();
   });
@@ -310,11 +317,24 @@ describe('ChargeSessionChartWidget compact layout', () => {
 // ── Component: refresh interaction ─────────────────────────────────────────
 
 describe('ChargeSessionChartWidget refresh', () => {
+  it('retains cached summaries, legend and chart after a refresh error', async () => {
+    routeCharging([makeSession({ total_energy_added_wh: 0 })]);
+    renderWidget(STANDARD);
+    expect(await screen.findAllByText('0.0')).toHaveLength(2);
+    mockRequest.mockImplementation((path: string) => String(path).startsWith('/charging')
+      ? Promise.reject(new Error('refresh failed')) : Promise.resolve([]));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Bar chart of energy added per charge session' })).toBeInTheDocument();
+    expect(screen.getByText('Supercharger')).toBeInTheDocument();
+    expect(screen.getAllByText('0.0')).toHaveLength(2);
+  });
   it('refetches the sessions when the freshness refresh control is activated', async () => {
     routeCharging([makeSession()]);
     renderWidget(STANDARD);
 
     const refresh = await screen.findByRole('button', { name: /Refresh data/ });
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     const before = chargingCallCount();
     expect(before).toBeGreaterThanOrEqual(1);
 

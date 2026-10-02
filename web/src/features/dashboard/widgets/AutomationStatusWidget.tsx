@@ -208,7 +208,7 @@ export default function AutomationStatusWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact && size.cols <= 1 ? undefined : t('widget.automationStatus', 'Automation Status')}
+      title={isCompact && size.cols <= 1 ? undefined : t('widget.automationStatus', 'Automation status')}
       icon={
         isCompact && size.cols <= 1 ? undefined : (
           <Workflow className="h-3.5 w-3.5 text-neon-cyan" />

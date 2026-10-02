@@ -206,7 +206,7 @@ describe('VampireDrainWidget — standard layout (2 col)', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // Headline stat card: label + value + event/hours sublabel.
-    expect(screen.getByText('Avg Drain')).toBeInTheDocument();
+    expect(screen.getByText('Avg drain')).toBeInTheDocument();
     expect(screen.getByText('2.4%/day')).toBeInTheDocument();
     expect(screen.getByText('12 events · 48h total')).toBeInTheDocument();
 
@@ -239,7 +239,7 @@ describe('VampireDrainWidget — standard layout (2 col)', () => {
 
     // hasData is true (stats present) → the card renders and the feed degrades
     // to a labelled empty state rather than a blank gap.
-    expect(screen.getByText('Avg Drain')).toBeInTheDocument();
+    expect(screen.getByText('Avg drain')).toBeInTheDocument();
     expect(screen.getByText('No recent drain events')).toBeInTheDocument();
   });
 });
@@ -251,8 +251,8 @@ describe('VampireDrainWidget — compact layout (1 col)', () => {
     expect(screen.getByText('2.4%')).toBeInTheDocument();
     expect(screen.getByText('/day')).toBeInTheDocument();
     // No stat card / title chrome in the 1x1 slot.
-    expect(screen.queryByText('Avg Drain')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Vampire Drain' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg drain')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Vampire drain' })).not.toBeInTheDocument();
   });
 
   it('does not fabricate a zero average when only events are available', () => {
@@ -270,7 +270,7 @@ describe('VampireDrainWidget — wide layout (>=3 col)', () => {
   it('adds the drain-rate sparkline alongside the card and event feed', () => {
     const { container } = renderWidget({ size: { cols: 4, rows: 2 } });
 
-    expect(screen.getByText('Avg Drain')).toBeInTheDocument();
+    expect(screen.getByText('Avg drain')).toBeInTheDocument();
     expect(screen.getByText('Daily drain rate (last 30)')).toBeInTheDocument();
     // Two samples → a real sparkline (role=img) is drawn.
     expect(container.querySelector('svg[role="img"]')).not.toBeNull();
@@ -294,7 +294,7 @@ describe('VampireDrainWidget — loading / empty / error', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No vampire drain data')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Vampire Drain' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Vampire drain' })).toBeInTheDocument();
   });
 
   it('shows the empty state (not a blank panel) when no data has arrived', () => {
@@ -303,9 +303,9 @@ describe('VampireDrainWidget — loading / empty / error', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // Title still renders; the body degrades to a labelled empty state.
-    expect(screen.getByRole('heading', { name: 'Vampire Drain' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vampire drain' })).toBeInTheDocument();
     expect(screen.getByText('No vampire drain data')).toBeInTheDocument();
-    expect(screen.queryByText('Avg Drain')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg drain')).not.toBeInTheDocument();
   });
 
   it('treats a nullable empty distribution as unavailable rather than zero drain', () => {
@@ -398,13 +398,13 @@ describe('VampireDrainWidget — watchdog strip', () => {
           status: 'alert',
           threshold_pct_per_day: 3,
           breach_streak: 3,
-          recommendation: 'Check Sentry Mode.',
+          recommendation: 'Check Sentry mode.',
         },
       }),
     );
     renderWidget({ size: { cols: 2, rows: 2 } });
     const strip = screen.getByRole('status', { name: 'Drain watchdog status' });
     expect(strip.textContent).toContain('3');
-    expect(strip.textContent).toContain('Check Sentry Mode.');
+    expect(strip.textContent).toContain('Check Sentry mode.');
   });
 });

@@ -187,9 +187,9 @@ describe('WeatherAtCarWidget — standard (≥2 col) layout', () => {
     );
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getByRole('heading', { name: 'Weather at Car' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
     expect(screen.getByText(`20${DEG}C`)).toBeInTheDocument();
-    expect(screen.getByText('Outside Temperature')).toBeInTheDocument();
+    expect(screen.getByText('Outside temperature')).toBeInTheDocument();
     // Coordinates are rendered to two decimals.
     expect(screen.getByText(`37.42${DEG}, -122.08${DEG}`)).toBeInTheDocument();
   });
@@ -220,8 +220,8 @@ describe('WeatherAtCarWidget — compact (1×1) layout', () => {
     expect(screen.getByText(`18${DEG}C`)).toBeInTheDocument();
     // Compact chrome is stripped: no header title, no descriptive label,
     // no coordinate line.
-    expect(screen.queryByRole('heading', { name: 'Weather at Car' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Outside Temperature')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Weather at car' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Outside temperature')).not.toBeInTheDocument();
     expect(screen.queryByText(`37.42${DEG}, -122.08${DEG}`)).not.toBeInTheDocument();
   });
 });
@@ -320,7 +320,7 @@ describe('WeatherAtCarWidget — loading / empty / error', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No weather data')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Weather at Car' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
   });
 
   it('shows the labelled empty state (not a blank panel) when no state has arrived', () => {
@@ -328,7 +328,7 @@ describe('WeatherAtCarWidget — loading / empty / error', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // Title still renders; the body degrades to a labelled empty state.
-    expect(screen.getByRole('heading', { name: 'Weather at Car' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
     expect(screen.getByText('No weather data')).toBeInTheDocument();
   });
 

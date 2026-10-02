@@ -193,7 +193,8 @@ describe('SuperchargerHistoryWidget — full view', () => {
     renderWidget(FULL);
 
     // The full tile shows a header title once the query resolves.
-    expect(await screen.findByText('Supercharger History')).toBeInTheDocument();
+    expect(await screen.findByText('Supercharger history')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Un-prefixed endpoint — no /api/v1 double-prefix, no query params.
     expect(mockedRequest.mock.calls[0]?.[0]).toBe(HISTORY_ENDPOINT);
@@ -255,6 +256,7 @@ describe('SuperchargerHistoryWidget — full view', () => {
 
     // A recent session confirms the list mounted.
     expect(await screen.findByText('Recent 9')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Exactly ten rows, and neither high-energy old row survived the date slice.
     expect(screen.getAllByRole('listitem')).toHaveLength(10);
@@ -284,6 +286,7 @@ describe('SuperchargerHistoryWidget — full view', () => {
     renderWidget(FULL);
 
     expect(await screen.findByText('Valid 9')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // No crash, ten rows, and the malformed-date row was sliced out as oldest.
     expect(screen.getAllByRole('listitem')).toHaveLength(10);
     expect(screen.queryByText('BrokenSite')).toBeNull();
@@ -307,6 +310,7 @@ describe('SuperchargerHistoryWidget — full view', () => {
 
     // Missing site name falls back to an em dash.
     expect(await screen.findByText('—')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Null usage → 0 Wh formats to "0.0 kWh"; it shows in the row AND the totals.
     expect(screen.getAllByText('0.0 kWh').length).toBeGreaterThanOrEqual(2);
@@ -329,11 +333,12 @@ describe('SuperchargerHistoryWidget — compact view', () => {
 
     // The spend lands as a big number (reduced-motion → synchronous commit).
     expect(await screen.findByText('120')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('$')).toBeInTheDocument();
     expect(screen.getByText('30-day Supercharger')).toBeInTheDocument();
 
     // A compact tile drops the header title and the ranked list entirely.
-    expect(screen.queryByText('Supercharger History')).toBeNull();
+    expect(screen.queryByText('Supercharger history')).toBeNull();
     expect(screen.queryByRole('listitem')).toBeNull();
   });
 
@@ -342,6 +347,7 @@ describe('SuperchargerHistoryWidget — compact view', () => {
     renderWidget(COMPACT);
 
     expect(await screen.findByText('No Supercharger sessions')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('status')).toBeInTheDocument();
     // The big-number label only renders in the populated compact path.
     expect(screen.queryByText('30-day Supercharger')).toBeNull();
@@ -354,6 +360,7 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
     renderWidget(FULL);
 
     expect(await screen.findByText('No Supercharger sessions')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByRole('listitem')).toBeNull();
     // No totals row when there is nothing to summarise.
@@ -365,7 +372,7 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
     const { container } = renderWidget(FULL);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Supercharger History')).toBeNull();
+    expect(screen.queryByText('Supercharger history')).toBeInTheDocument();
     expect(screen.queryByText('No Supercharger sessions')).toBeNull();
     expect(screen.queryByRole('listitem')).toBeNull();
   });
@@ -377,6 +384,7 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
     // The error branch renders WidgetShell's <QueryError> — an alert card — and
     // suppresses the list / empty state entirely.
     expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(mockedRequest.mock.calls[0]?.[0]).toBe(HISTORY_ENDPOINT);
     expect(screen.queryByText('No Supercharger sessions')).toBeNull();
@@ -394,7 +402,8 @@ describe('SuperchargerHistoryWidget — refresh', () => {
 
     // Wait for the first load to settle — a visible title implies the query is
     // no longer fetching, so the refresh control is armed.
-    expect(await screen.findByText('Supercharger History')).toBeInTheDocument();
+    expect(await screen.findByText('Supercharger history')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(mockedRequest).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));

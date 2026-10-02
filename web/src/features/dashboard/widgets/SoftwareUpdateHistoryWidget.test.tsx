@@ -205,7 +205,7 @@ describe('SoftwareUpdateHistoryWidget', () => {
     renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_COMPACT} />);
 
     // Title chrome + version + the "Current" badge (installed → Current).
-    expect(screen.getByText('Update History')).toBeInTheDocument();
+    expect(screen.getByText('Update history')).toBeInTheDocument();
     expect(screen.getByText('2024.44.25')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
   });
@@ -309,7 +309,7 @@ describe('SoftwareUpdateHistoryWidget', () => {
     const { container } = renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Update History')).not.toBeInTheDocument();
+    expect(screen.queryByText('Update history')).toBeInTheDocument();
     expect(screen.queryByText('2024.44.25')).not.toBeInTheDocument();
   });
 

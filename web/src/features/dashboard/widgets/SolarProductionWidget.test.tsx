@@ -14,8 +14,7 @@
  *      timezone-stable `shortDate` label derivation (the hardened source parses
  *      the calendar date straight off the ISO string, so "2024-12-31" stays
  *      "12/31" instead of shifting a day back in negative-offset zones).
- *   3. The Today/Total/Avg maths, including the em-dash-free `0.0` today value
- *      when no bucket matches the current UTC date.
+ *   3. Today/Total/Avg maths, preserving unknown buckets and genuine zeros.
  *   4. The chart-axis/tooltip formatters flow through the shared `fmt` /
  *      `fmtNumber` helpers (Y-axis integer ticks, tooltip "x.x kWh" + "Solar").
  *   5. Loading / error / empty branches (never a blank panel). Crucially, a
@@ -50,6 +49,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { chartTokens } from '@/lib/tokens';
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { unit_of_length: 'km', locale: 'en-US' } }),
+}));
 
 // jsdom lacks matchMedia; framer-motion (useReducedMotion, read by the
 // freshness chip) reads it at module load. Report reduced motion so the
@@ -281,24 +284,24 @@ describe('SolarProductionWidget', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('Solar Production')).toBeInTheDocument();
+    expect(screen.getByText('Solar production')).toBeInTheDocument();
 
-    for (const label of ['Today', '30-Day Total', 'Daily Avg']) {
+    for (const label of ['Today', '30-day total', 'Daily avg']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
 
-    // Real formatter output: today 0.0 (no bucket for today), total 6, avg 2.0.
-    expect(screen.getByText('0.0')).toBeInTheDocument();
+    // No bucket for today means unknown, not zero. Total 6, daily average 2.0.
+    expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.getByText('6')).toBeInTheDocument();
     expect(screen.getByText('2.0')).toBeInTheDocument();
-    // Every stat carries the kWh unit.
-    expect(screen.getAllByText('kWh')).toHaveLength(3);
+    // Only measured stats carry a unit.
+    expect(screen.getAllByText('kWh')).toHaveLength(2);
 
     // The area is wired to the solar series with the amber stroke.
     const area = screen.getByTestId('area');
     expect(area).toHaveAttribute('data-key', 'solar_kwh');
     expect(area).toHaveAttribute('data-name', 'Solar');
-    expect(area).toHaveAttribute('data-stroke', '#facc15');
+    expect(area).toHaveAttribute('data-stroke', chartTokens.series[2]);
 
     // Standard layout uses the small axis ticks.
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-ticksize', 'sm');
@@ -377,14 +380,14 @@ describe('SolarProductionWidget', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('Today')).toBeInTheDocument();
-    expect(screen.getByText('Daily Avg')).toBeInTheDocument();
-    expect(screen.getByText('0.0')).toBeInTheDocument();
+    expect(screen.getByText('Daily avg')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.getByText('2.0')).toBeInTheDocument();
-    expect(screen.getAllByText('kWh')).toHaveLength(2);
+    expect(screen.getAllByText('kWh')).toHaveLength(1);
 
     // Compact is title-less, never mounts the chart, and drops the 30-day stat.
-    expect(screen.queryByText('Solar Production')).not.toBeInTheDocument();
-    expect(screen.queryByText('30-Day Total')).not.toBeInTheDocument();
+    expect(screen.queryByText('Solar production')).not.toBeInTheDocument();
+    expect(screen.queryByText('30-day total')).not.toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
@@ -402,7 +405,7 @@ describe('SolarProductionWidget', () => {
     historyMock.mockReturnValue(makeQuery({ data: [] }));
     renderWidget();
 
-    expect(screen.getByText('No Tesla Energy site linked')).toBeInTheDocument();
+    expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
     // Genuinely-empty, not a fetch failure.
     expect(screen.queryByText('No solar data')).not.toBeInTheDocument();
     // With no site the history hook is called with an undefined id (disabled).
@@ -420,21 +423,21 @@ describe('SolarProductionWidget', () => {
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The misleading empty state / title must NOT appear on error.
-    expect(screen.queryByText('No Tesla Energy site linked')).not.toBeInTheDocument();
-    expect(screen.queryByText('Solar Production')).not.toBeInTheDocument();
+    expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Solar production')).toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('shows the no-data empty state (keeping the titled shell) with a linked site', () => {
     historyMock.mockReturnValue(makeQuery({ data: [] }));
     renderWidget();
 
-    expect(screen.getByText('Solar Production')).toBeInTheDocument();
+    expect(screen.getByText('Solar production')).toBeInTheDocument();
     expect(screen.getByText('No solar data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Stats + chart are not rendered while empty.
-    expect(screen.queryByText('30-Day Total')).not.toBeInTheDocument();
+    expect(screen.queryByText('30-day total')).not.toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
@@ -443,7 +446,7 @@ describe('SolarProductionWidget', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
-    expect(screen.queryByText('Solar Production')).not.toBeInTheDocument();
+    expect(screen.queryByText('Solar production')).toBeInTheDocument();
   });
 
   it('renders a skeleton while the history query loads for a linked site', () => {
@@ -452,7 +455,7 @@ describe('SolarProductionWidget', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
-    expect(screen.queryByText('Solar Production')).not.toBeInTheDocument();
+    expect(screen.queryByText('Solar production')).toBeInTheDocument();
   });
 
   it('surfaces the error panel (not the empty state) when the history query fails', () => {
@@ -465,7 +468,7 @@ describe('SolarProductionWidget', () => {
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('No solar data')).not.toBeInTheDocument();
-    expect(screen.queryByText('Solar Production')).not.toBeInTheDocument();
+    expect(screen.queryByText('Solar production')).toBeInTheDocument();
   });
 
   it('refreshes both the sites and history queries when a site is linked', () => {
@@ -503,10 +506,8 @@ describe('SolarProductionWidget', () => {
     expect(() => renderWidget()).not.toThrow();
 
     const rows = chartRows();
-    expect(rows).toHaveLength(2);
-    // The null entry coerces to an empty label + zero-kWh datum.
-    expect(rows[0]).toEqual({ date: '', solar_kwh: 0 });
-    expect(rows[1]).toEqual({ date: '3/1', solar_kwh: 1 });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual({ date: '3/1', solar_kwh: 1 });
   });
 
   it('is null-safe: a non-array history payload renders the empty state', () => {
@@ -522,5 +523,28 @@ describe('SolarProductionWidget', () => {
     renderWidget();
 
     expect(historyMock).toHaveBeenCalledWith(777, 'day', expect.any(String));
+  });
+
+  it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }, { cols: 3, rows: 4 }])('retains solar history on cached refresh failure in %j', (size) => {
+    historyMock.mockReturnValue(makeQuery({ data: HISTORY, error: new Error('refresh failed'), isError: true }));
+    renderWidget(size);
+    expect(screen.getByText('2.0')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('preserves measured zero solar production and missing buckets as gaps', () => {
+    const today = new Date().toISOString().slice(0, 10);
+    historyMock.mockReturnValue(makeQuery({ data: [
+      makeEntry(today, 0), makeEntry('2024-03-01', null),
+    ] }));
+    renderWidget();
+    expect(screen.queryByText('No solar data')).not.toBeInTheDocument();
+    expect(chartRows()).toEqual([
+      { date: `${Number(today.slice(5, 7))}/${Number(today.slice(8, 10))}`, solar_kwh: 0 },
+      { date: '3/1', solar_kwh: null },
+    ]);
+    expect(screen.getAllByText('0.0')).toHaveLength(2);
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 });

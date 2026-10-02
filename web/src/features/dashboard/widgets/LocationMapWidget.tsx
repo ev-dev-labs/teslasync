@@ -61,7 +61,7 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.locationMap.title', 'Vehicle Location Map')}
+      title={isCompact ? undefined : t('widget.locationMap.title', 'Vehicle location map')}
       icon={isCompact ? undefined : <MapPin className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
       loading={isLoading}
       noPadding

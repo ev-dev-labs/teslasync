@@ -160,9 +160,9 @@ describe('CommandQuickActionsWidget', () => {
   it('renders the title and the 6-command medium set (Flash/Trunk are wide-only)', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
 
-    expect(screen.getByText('Quick Actions')).toBeInTheDocument();
+    expect(screen.getByText('Quick actions')).toBeInTheDocument();
     // Medium tiles carry a visible text label alongside the icon.
-    expect(screen.getByText('Climate On')).toBeInTheDocument();
+    expect(screen.getByText('Climate on')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Horn' })).toBeInTheDocument();
     // The 7th/8th commands only appear once the tile is wide.
@@ -184,13 +184,13 @@ describe('CommandQuickActionsWidget', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_COMPACT} />);
 
     // 1×1 tile suppresses the title chrome.
-    expect(screen.queryByText('Quick Actions')).not.toBeInTheDocument();
+    expect(screen.queryByText('Quick actions')).not.toBeInTheDocument();
     // Tiles are still reachable/announced via aria-label...
     expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Climate Off' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Climate off' })).toBeInTheDocument();
     // ...but the visible text label is dropped (icon-only), and the 5th
     // command (Frunk) is not part of the compact set.
-    expect(screen.queryByText('Climate Off')).not.toBeInTheDocument();
+    expect(screen.queryByText('Climate off')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Frunk' })).not.toBeInTheDocument();
   });
 

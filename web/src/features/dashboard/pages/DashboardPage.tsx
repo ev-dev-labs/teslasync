@@ -233,7 +233,7 @@ function DashboardMoreMenu({
 
 export default function DashboardPage() {
   const { t } = useTranslation('dashboard');
-  usePageTitle(t('title', 'Fleet Operations'));
+  usePageTitle(t('title', 'Fleet operations'));
   const queryClient = useQueryClient();
 
   /* ——— Dashboard layout state ——— */
@@ -541,21 +541,18 @@ export default function DashboardPage() {
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}
-            aria-label={t('dashboard.addWidget', 'Add Widget')}>
+            aria-label={t('dashboard.addWidget', 'Add widget')}>
             <Icons.add className="h-3.5 w-3.5 sm:me-1" />
-            <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
+            <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add widget')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={autoArrange}
-            aria-label={t('dashboard.autoArrange', 'Auto Arrange')}>
+            aria-label={t('dashboard.autoArrange', 'Auto arrange')}>
             <Icons.layoutGrid className="h-3.5 w-3.5 sm:me-1" />
-            <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
+            <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto arrange')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={() => void handleResetRequest()}>
             <Icons.undo className="h-3.5 w-3.5 sm:me-1" />
             {t('dashboard.reset', 'Reset')}
-          </Button>
-          <Button size="sm" onClick={() => setEditMode(false)}>
-            {t('dashboard.done', 'Done')}
           </Button>
         </>
       ) : (
@@ -570,27 +567,6 @@ export default function DashboardPage() {
             <Icons.refresh className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden="true" />
             <span>{t('dashboard.refreshShort', 'Refresh')}</span>
           </Button>
-          {vehicleList.length > 0 && (
-            <>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setEditMode(true)}
-                data-tour="edit-mode-btn"
-              >
-                <Icons.settings className="h-4 w-4" aria-hidden="true" />
-                <span>{t('dashboard.customize', 'Customize')}</span>
-              </Button>
-              <DashboardMoreMenu
-                onExport={() => setShowExportModal(true)}
-                onImport={() => {
-                  setImportJson(null);
-                  setShowImportModal(true);
-                }}
-                onKiosk={() => setShowKioskSettings(true)}
-              />
-            </>
-          )}
         </>
       )}
     </div>
@@ -598,12 +574,58 @@ export default function DashboardPage() {
 
   return (
     <PageContainer
-      title={t('title', 'Fleet Operations')}
+      title={t('title', 'Fleet operations')}
       subtitle={t(
         'subtitle',
         'Monitor readiness, investigate exceptions, and act from one workspace',
       )}
-      actions={headerActions}
+      contextActions={dashboards.length > 0 && vehicleList.length > 0 && !vehiclesLoading ? (
+        <section aria-label={t('dashboard.layoutsRegion', 'Dashboard layouts')} className="min-w-0">
+          <LayoutSwitcher
+            dashboards={dashboards}
+            activeId={activeId}
+            dirty={dirty}
+            editMode={editMode}
+            onSwitch={switchDashboard}
+            onCreate={(name) => createDashboard(name)}
+            onDuplicate={duplicateDashboard}
+            onReset={resetToDefault}
+            onPinToVehicle={pinToVehicle}
+            onToggleEdit={() => setEditMode((value) => !value)}
+            onRename={renameDashboard}
+            onDelete={deleteDashboard}
+            onReorder={reorderDashboards}
+            onOpenTemplates={openTemplates}
+            onOpenSettings={(id) => setShowDashSettings(id)}
+          />
+        </section>
+      ) : undefined}
+      secondaryActions={headerActions}
+      primaryAction={editMode ? (
+        <Button size="sm" onClick={() => setEditMode(false)}>
+          {t('dashboard.done', 'Done')}
+        </Button>
+      ) : vehicleList.length > 0 ? (
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => setEditMode(true)}
+          data-tour="edit-mode-btn"
+        >
+          <Icons.settings className="h-4 w-4" aria-hidden="true" />
+          <span>{t('dashboard.customize', 'Customize')}</span>
+        </Button>
+      ) : undefined}
+      overflowActions={!editMode && vehicleList.length > 0 ? (
+        <DashboardMoreMenu
+          onExport={() => setShowExportModal(true)}
+          onImport={() => {
+            setImportJson(null);
+            setShowImportModal(true);
+          }}
+          onKiosk={() => setShowKioskSettings(true)}
+        />
+      ) : undefined}
       query={vehiclesQuery}
       error={!authLoading && auth?.authenticated !== false ? vehiclesError : null}
     >
@@ -661,45 +683,6 @@ export default function DashboardPage() {
               </AlertBanner>
             )}
           </div>
-        )}
-
-        {/* Layout switcher + manager — shown whenever saved dashboards exist. */}
-        {dashboards.length > 0 && vehicleList.length > 0 && !vehiclesLoading && (
-          <FadeIn delay={0.05}>
-            <section
-              aria-label={t('dashboard.layoutsRegion', 'Dashboard layouts')}
-              className="space-y-3 border-t border-[var(--border-default)] pt-5"
-            >
-              <div>
-                <Caption className="font-semibold uppercase tracking-[0.1em]">
-                  {t('dashboard.personalWorkspace', 'Personal workspace')}
-                </Caption>
-                <Text as="p" variant="caption" className="mt-1">
-                  {t(
-                    'dashboard.personalWorkspaceHelp',
-                    'Arrange the live modules your team checks most often.',
-                  )}
-                </Text>
-              </div>
-              <LayoutSwitcher
-                dashboards={dashboards}
-                activeId={activeId}
-                dirty={dirty}
-                editMode={editMode}
-                onSwitch={switchDashboard}
-                onCreate={(name) => createDashboard(name)}
-                onDuplicate={duplicateDashboard}
-                onReset={resetToDefault}
-                onPinToVehicle={pinToVehicle}
-                onToggleEdit={() => setEditMode((value) => !value)}
-                onRename={renameDashboard}
-                onDelete={deleteDashboard}
-                onReorder={reorderDashboards}
-                onOpenTemplates={openTemplates}
-                onOpenSettings={(id) => setShowDashSettings(id)}
-              />
-            </section>
-          </FadeIn>
         )}
 
         {/* Primary surface — the customizable widget bento (hero). Owns its
@@ -985,7 +968,7 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
         </div>
 
         <aside className="border-t border-[var(--border-default)] bg-[var(--surface-2)] p-6 sm:p-8 xl:border-s xl:border-t-0">
-          <Caption className="font-semibold uppercase tracking-[0.08em]">
+          <Caption className="font-semibold tracking-[0.08em]">
             {t('onboarding.progress.label', 'Setup progress')}
           </Caption>
           <ol className="mt-5 space-y-5">

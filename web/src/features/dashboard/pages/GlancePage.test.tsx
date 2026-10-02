@@ -290,7 +290,7 @@ describe('GlancePage — vehicle guard', () => {
     mockVehicles.mockReturnValue({ data: [], isLoading: false, error: null });
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Quick Glance', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Quick glance', level: 1 })).toBeInTheDocument();
     expect(screen.getByText('No vehicle available')).toBeInTheDocument();
     expect(screen.getByText(/Register or sync a Tesla vehicle/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Manage vehicles' })).toHaveAttribute(
@@ -306,7 +306,7 @@ describe('GlancePage — vehicle guard', () => {
     mockVehicles.mockReturnValue({ data: undefined, isLoading: true, error: null });
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Quick Glance', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Quick glance', level: 1 })).toBeInTheDocument();
     // PageContainer spinner replaces children: neither the empty state nor any
     // panel is mounted.
     expect(screen.queryByText('No vehicle available')).toBeNull();
@@ -438,7 +438,7 @@ describe('GlancePage — command band', () => {
     expect(sendCommand.mutate).toHaveBeenCalledWith({ vehicleId: 1, command: 'unlock' });
 
     // is_climate_on → offers Climate Off and sends "climate_off".
-    fireEvent.click(within(controls).getByRole('button', { name: 'Climate Off' }));
+    fireEvent.click(within(controls).getByRole('button', { name: 'Climate off' }));
     expect(sendCommand.mutate).toHaveBeenCalledWith({ vehicleId: 1, command: 'climate_off' });
 
     fireEvent.click(within(controls).getByRole('button', { name: 'Horn' }));

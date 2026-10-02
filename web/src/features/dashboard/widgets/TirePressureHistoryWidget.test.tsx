@@ -260,7 +260,7 @@ describe('TirePressureHistoryWidget', () => {
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
 
     // Title header (visible above compact).
-    expect(screen.getByText('Tire Pressure History')).toBeInTheDocument();
+    expect(screen.getByText('Tire pressure history')).toBeInTheDocument();
 
     // Per-corner labels.
     expect(screen.getByText('FL')).toBeInTheDocument();
@@ -294,7 +294,7 @@ describe('TirePressureHistoryWidget', () => {
   it('hides the title in compact layout but still renders the per-tire summary', () => {
     renderWidget(<TirePressureHistoryWidget size={SIZE_COMPACT} />);
 
-    expect(screen.queryByText('Tire Pressure History')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tire pressure history')).not.toBeInTheDocument();
     expect(screen.getByText('FL')).toBeInTheDocument();
     expect(screen.getByText('2.5')).toBeInTheDocument();
   });
@@ -336,7 +336,7 @@ describe('TirePressureHistoryWidget', () => {
     const { container } = renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Tire Pressure History')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tire pressure history')).toBeInTheDocument();
     expect(screen.queryByText('FL')).not.toBeInTheDocument();
   });
 

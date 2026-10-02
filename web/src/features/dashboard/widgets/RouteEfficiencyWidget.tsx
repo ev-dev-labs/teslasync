@@ -4,19 +4,24 @@ import { Route } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { knownNumber } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
+import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
 import type { WidgetProps } from './types';
 
+const LIST_LAYOUT_CLASS = 'min-w-0 [&_li>div.relative]:flex-wrap [&_li>div.relative>span.flex-1]:basis-full @sm:[&_li>div.relative>span.flex-1]:basis-auto [&_li>div.relative>span.flex-1]:whitespace-normal [&_li>div.relative>span.flex-1]:break-words [&_li>div.relative>span.shrink-0]:max-w-full';
+
 function efficiencyBadge(
-  rawWhPerMi: number,
+  rawWhPerKm: number,
   t: (key: string, fallback: string) => string,
 ): RankedItem['badge'] {
-  if (rawWhPerMi <= 250) return { text: t('widget.routeEfficiency.excellent', 'Excellent'), variant: 'success' };
-  if (rawWhPerMi <= 325) return { text: t('widget.routeEfficiency.good', 'Good'), variant: 'success' };
-  if (rawWhPerMi <= 400) return { text: t('widget.routeEfficiency.fair', 'Fair'), variant: 'warning' };
+  if (rawWhPerKm <= 250) return { text: t('widget.routeEfficiency.excellent', 'Excellent'), variant: 'success' };
+  if (rawWhPerKm <= 325) return { text: t('widget.routeEfficiency.good', 'Good'), variant: 'success' };
+  if (rawWhPerKm <= 400) return { text: t('widget.routeEfficiency.fair', 'Fair'), variant: 'warning' };
   return { text: t('widget.routeEfficiency.poor', 'Poor'), variant: 'error' };
 }
 
@@ -26,15 +31,16 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
 
-  const {
-    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useRouteEfficiency(vehicleIdStr);
+  const query = useRouteEfficiency(vehicleIdStr);
+  const { data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+  const trust = useDataState({ ...query, data: data ?? undefined }, { provenance: 'historical' });
 
   const { unitPrefs } = useUnits();
   const isMiles = unitPrefs.distance === 'mi';
   // Stable across renders (keyed on the unit only) so the `items` memo below
   // is not defeated by a fresh closure on every render.
   const toEfficiencyDisplay = useCallback(
-    (whPerKm: number) => (isMiles ? whPerKm * 1.609344 : whPerKm),
+    (whPerKm: number) => convertEfficiencyFromSI(whPerKm, isMiles ? 'mi' : 'km'),
     [isMiles],
   );
 
@@ -47,19 +53,23 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   const items: RankedItem[] = useMemo(() => {
     const bestRaw = routes.length > 0
-      ? Math.min(...routes.map(r => r.avgEfficiency ?? Infinity))
+      ? Math.min(...routes.map(r => knownNumber(r.avgEfficiency) ?? Infinity))
       : Infinity;
 
     return routes.map((r, i) => {
-      const rawEff = r.avgEfficiency ?? 0;
-      const eff = toEfficiencyDisplay(rawEff);
-      const trips = r.tripCount ?? 0;
-      const isBest = rawEff === bestRaw && rawEff > 0;
+      const rawEff = knownNumber(r.avgEfficiency);
+      const eff = rawEff == null ? null : toEfficiencyDisplay(rawEff);
+      const trips = knownNumber(r.tripCount);
+      const isBest = rawEff != null && rawEff === bestRaw;
+      const reading = (value: unknown) => {
+        const number = knownNumber(value);
+        return number == null ? '—' : fmtNumber(toEfficiencyDisplay(number), 0);
+      };
 
       let label = `${r.startLocation ?? '—'} → ${r.endLocation ?? '—'}`;
       if (isWide) {
-        const bestEff = fmtNumber(toEfficiencyDisplay(r.bestEfficiency ?? 0), 0);
-        const worstEff = fmtNumber(toEfficiencyDisplay(r.worstEfficiency ?? 0), 0);
+        const bestEff = reading(r.bestEfficiency);
+        const worstEff = reading(r.worstEfficiency);
         label += `  ·  ${t('widget.routeEfficiency.best', 'best')} ${bestEff} / ${t('widget.routeEfficiency.worst', 'worst')} ${worstEff} ${efficiencyUnit}`;
       }
 
@@ -67,9 +77,9 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
         id: i,
         label,
         // Invert: lower Wh/unit (better) → higher value → ranks first
-        value: eff > 0 ? 10000 / eff : 0,
-        formattedValue: `${fmtNumber(eff, 0)} ${efficiencyUnit} · ${fmtInt(trips)}×`,
-        badge: efficiencyBadge(rawEff, t),
+        value: eff == null ? 0 : 10000 / (Math.max(0, eff) + 1),
+        formattedValue: `${eff == null ? '—' : `${fmtNumber(eff, 0)} ${efficiencyUnit}`} · ${trips == null ? '—' : fmtInt(trips)}×`,
+        badge: rawEff == null ? undefined : efficiencyBadge(rawEff, t),
         barColor: isBest ? 'bg-emerald-400' : 'bg-blue-400',
       };
     });
@@ -81,7 +91,7 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   const shellProps = {
     loading: isLoading,
-    error: error ? String(error) : null,
+    dataState: data != null || isLoading || isError || error ? trust : undefined,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -92,7 +102,7 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
-        <div className="flex h-full flex-col min-h-[44px]">
+        <div className={LIST_LAYOUT_CLASS}>
           {routes.length > 0 ? (
             <WidgetRankedList
               items={items}
@@ -114,16 +124,18 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   return (
     <WidgetShell
-      title={t('widget.routeEfficiency.title', 'Route Efficiency')}
+      title={t('widget.routeEfficiency.title', 'Route efficiency')}
       icon={<Route className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
       {routes.length > 0 ? (
-        <WidgetRankedList
-          items={items}
-          emptyMessage={t('widget.routeEfficiency.noData', 'No route data')}
-          emptyIcon={<Route className="h-5 w-5" />}
-        />
+        <div className={LIST_LAYOUT_CLASS}>
+          <WidgetRankedList
+            items={items}
+            emptyMessage={t('widget.routeEfficiency.noData', 'No route data')}
+            emptyIcon={<Route className="h-5 w-5" />}
+          />
+        </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Route className="h-5 w-5" />}

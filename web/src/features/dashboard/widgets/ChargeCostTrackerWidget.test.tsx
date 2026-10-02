@@ -269,13 +269,13 @@ describe('computeMetrics', () => {
       vi.fn(() => 0),
       vi.fn(() => 0),
     );
-    expect(withMissingEnergy.totalKwh).toBe(0);
+    expect(withMissingEnergy.totalKwh).toBeNull();
     expect(withMissingEnergy.totalCost).toBe(4);
 
     const empty = computeMetrics([], 0.12, vi.fn(() => null), vi.fn(() => null));
-    expect(empty.totalKwh).toBe(0);
+    expect(empty.totalKwh).toBeNull();
     expect(empty.sessionCount).toBe(0);
-    expect(empty.totalDistanceM).toBe(0);
+    expect(empty.totalDistanceM).toBeNull();
   });
 });
 
@@ -287,8 +287,8 @@ describe('ChargeCostTrackerWidget — loading & error states', () => {
     const { container } = renderWidget(FULL);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('heading')).toBeNull();
-    expect(screen.queryByText('Total Energy')).toBeNull();
+    expect(screen.queryByRole('heading')).toBeInTheDocument();
+    expect(screen.queryByText('Total energy')).toBeNull();
   });
 
   it('shows an error panel (not the empty state) when the initial load fails with no data', () => {
@@ -306,7 +306,7 @@ describe('ChargeCostTrackerWidget — loading & error states', () => {
 
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText("Can't reach server")).toBeNull();
-    expect(screen.getByText('Total Energy')).toBeInTheDocument();
+    expect(screen.getByText('Total energy')).toBeInTheDocument();
   });
 });
 
@@ -337,19 +337,19 @@ describe('ChargeCostTrackerWidget — full layout', () => {
     setQuery({ data: [makeSession({ total_energy_added_wh: 10_000, cost: 3 })] });
     renderWidget(NONTALL);
 
-    expect(screen.getByText('Total Energy')).toBeInTheDocument();
-    expect(screen.getByText('Total Cost')).toBeInTheDocument();
+    expect(screen.getByText('Total energy')).toBeInTheDocument();
+    expect(screen.getByText('Total cost')).toBeInTheDocument();
     expect(screen.getByText('10.0 kWh')).toBeInTheDocument(); // 10 kWh from 10 000 Wh
-    expect(screen.queryByText('vs Gas Savings')).toBeNull();
+    expect(screen.queryByText('vs gas savings')).toBeNull();
   });
 
   it('tall: adds the cost/distance and gas-savings cards and exposes the title heading', () => {
     setQuery({ data: [makeSession({ total_energy_added_wh: 10_000, cost: 1 })] });
     renderWidget(FULL);
 
-    expect(screen.getByRole('heading', { name: /Charge Cost Tracker/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Charge cost tracker/i })).toBeInTheDocument();
     expect(screen.getByText('Cost / mi')).toBeInTheDocument(); // distanceUnit = 'mi'
-    expect(screen.getByText('vs Gas Savings')).toBeInTheDocument();
+    expect(screen.getByText('vs gas savings')).toBeInTheDocument();
   });
 
   it('renders realistic gas savings because SI meters (not miles) reach the helpers', () => {
@@ -404,6 +404,26 @@ describe('ChargeCostTrackerWidget — request contract', () => {
 // ── Interactions & accessibility ──────────────────────────────────────────────
 
 describe('ChargeCostTrackerWidget — interactions & a11y', () => {
+  it('preserves signed recorded costs and real zero energy without inventing unknown costs', () => {
+    const metrics = computeMetrics([
+      makeSession({ cost_decimal: -2, cost: 4, total_energy_added_wh: 0 }),
+    ], COST_PER_KWH, costPerDistanceUnit, estimateGasCost);
+    expect(metrics.totalCost).toBe(-2);
+    expect(metrics.totalKwh).toBe(0);
+    setQuery({ data: [makeSession({ total_energy_added_wh: null as unknown as number, cost: null })] });
+    renderWidget(COMPACT);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('$0')).not.toBeInTheDocument();
+  });
+
+  it('flags capped responses as partial without presenting exhaustive filters', () => {
+    setQuery({ data: Array.from({ length: 100 }, () => makeSession()) });
+    const { container } = renderWidget(FULL);
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByText('100 sessions')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
   it('invokes refetch when the accessible refresh control is activated', () => {
     const q = setQuery({ data: [makeSession()] });
     renderWidget(FULL);

@@ -109,7 +109,7 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
 
   return (
     <WidgetShell
-      title={t('widget.locationFavorites.title', 'Favorite Locations')}
+      title={t('widget.locationFavorites.title', 'Favorite locations')}
       icon={<MapPin className="h-3.5 w-3.5 text-blue-400" />}
       {...shellProps}
     >

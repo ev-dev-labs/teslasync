@@ -71,6 +71,44 @@ vi.hoisted(() => {
   }
 });
 
+describe('GuardModeWidget independent source trust', () => {
+  it('keeps a missing event payload unknown rather than reporting zero events', () => {
+    useGuardConfigMock.mockReturnValue(makeConfigQuery({ data: makeConfig() }));
+    renderWidget({ cols: 1, rows: 2 });
+    expect(screen.getByText('— events')).toBeInTheDocument();
+    expect(screen.queryByText('0 events')).toBeNull();
+  });
+
+  it('retains event evidence when configuration fails without claiming disarmed', () => {
+    useGuardConfigMock.mockReturnValue(makeConfigQuery({ isError: true, error: new Error('config failed') }));
+    useGuardEventsMock.mockReturnValue(makeEventsQuery({ data: [makeEvent()] }));
+    renderWidget({ cols: 4, rows: 4 });
+    expect(screen.getByText('Vehicle moved')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('Disarmed')).toBeNull();
+  });
+
+  it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 2 }, { cols: 4, rows: 4 }])('retains config and acknowledged history across refresh failures in %o', (size) => {
+    useGuardConfigMock.mockReturnValue(makeConfigQuery({
+      data: makeConfig({ enabled: false }), isError: true, error: new Error('refresh failed'),
+    }));
+    useGuardEventsMock.mockReturnValue(makeEventsQuery({ data: [makeEvent({ acknowledged_at: new Date().toISOString() })] }));
+    renderWidget(size);
+    expect(screen.getByText('Disarmed')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    if (size.cols > 1) expect(screen.getByText('Acknowledged')).toBeInTheDocument();
+  });
+
+  it('does not substitute a successful empty feed for an initial events error', () => {
+    useGuardConfigMock.mockReturnValue(makeConfigQuery({ data: makeConfig() }));
+    useGuardEventsMock.mockReturnValue(makeEventsQuery({ isError: true, error: new Error('events failed') }));
+    renderWidget();
+    expect(screen.getByText('Armed')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('No guard events')).toBeNull();
+  });
+});
+
 const { useVehiclesMock, useGuardConfigMock, useGuardEventsMock } = vi.hoisted(() => ({
   useVehiclesMock: vi.fn(),
   useGuardConfigMock: vi.fn(),
@@ -201,14 +239,15 @@ describe('GuardModeWidget — standard layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Guard Mode')).toBeInTheDocument();
+    expect(screen.getByText('Guard mode')).toBeInTheDocument();
     expect(screen.getByText('Armed')).toBeInTheDocument();
-    expect(screen.getByText('ON')).toBeInTheDocument();
-    expect(screen.getByText(/Sensitivity:\s*high/)).toBeInTheDocument();
+    expect(screen.getAllByText('On')).toHaveLength(2);
+    expect(screen.getByText('Sensitivity')).toBeInTheDocument();
+    expect(screen.getByText('high')).toBeInTheDocument();
     expect(screen.getByText(/Auto-panic/)).toBeInTheDocument();
   });
 
-  it('renders the disarmed status line + OFF badge and omits the auto-panic caption', () => {
+  it('renders the disarmed status and the measured auto-panic off state', () => {
     useGuardConfigMock.mockReturnValue(
       makeConfigQuery({ data: makeConfig({ enabled: false, sensitivity: 'low', auto_panic: false }) }),
     );
@@ -216,9 +255,10 @@ describe('GuardModeWidget — standard layout', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Disarmed')).toBeInTheDocument();
-    expect(screen.getByText('OFF')).toBeInTheDocument();
-    expect(screen.getByText(/Sensitivity:\s*low/)).toBeInTheDocument();
-    expect(screen.queryByText(/Auto-panic/)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Off')).toHaveLength(2);
+    expect(screen.getByText('Sensitivity')).toBeInTheDocument();
+    expect(screen.getByText('low')).toBeInTheDocument();
+    expect(screen.getByText('Auto-panic')).toBeInTheDocument();
   });
 });
 
@@ -259,7 +299,7 @@ describe('GuardModeWidget — event feed mapping', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Unauthorized Unlock')).toBeInTheDocument();
+    expect(screen.getByText('Unauthorized unlock')).toBeInTheDocument();
     expect(screen.getByText('Unacknowledged')).toBeInTheDocument();
   });
 
@@ -275,7 +315,7 @@ describe('GuardModeWidget — event feed mapping', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Sentry Triggered')).toBeInTheDocument();
+    expect(screen.getByText('Sentry triggered')).toBeInTheDocument();
     expect(screen.getByText('Acknowledged')).toBeInTheDocument();
     expect(screen.queryByText('Unacknowledged')).not.toBeInTheDocument();
   });
@@ -314,7 +354,7 @@ describe('GuardModeWidget — event feed mapping', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Guard Mode')).toBeInTheDocument();
+    expect(screen.getByText('Guard mode')).toBeInTheDocument();
     expect(screen.getByText('No guard events')).toBeInTheDocument();
   });
 });
@@ -326,7 +366,7 @@ describe('GuardModeWidget — query states', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Guard Mode')).not.toBeInTheDocument();
+    expect(screen.queryByText('Guard mode')).toBeInTheDocument();
     expect(screen.queryByText('No guard data')).not.toBeInTheDocument();
   });
 
@@ -339,7 +379,7 @@ describe('GuardModeWidget — query states', () => {
     // isLoading = configLoading || eventsLoading → the shell shows the skeleton
     // and suppresses the content even though the config payload has landed.
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Armed')).not.toBeInTheDocument();
+    expect(screen.getByText('Armed')).toBeInTheDocument();
   });
 
   it('renders the QueryError panel on an initial config load failure (no cached config)', () => {
@@ -351,7 +391,7 @@ describe('GuardModeWidget — query states', () => {
 
     // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Guard Mode')).not.toBeInTheDocument();
+    expect(screen.queryByText('Guard mode')).toBeInTheDocument();
     expect(screen.queryByText('No guard data')).not.toBeInTheDocument();
   });
 
@@ -360,7 +400,7 @@ describe('GuardModeWidget — query states', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Guard Mode')).toBeInTheDocument();
+    expect(screen.getByText('Guard mode')).toBeInTheDocument();
     expect(screen.getByText('No guard data')).toBeInTheDocument();
   });
 
@@ -455,7 +495,7 @@ describe('GuardModeWidget — graceful degradation on transient error', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     // Config is still on screen …
-    expect(screen.getByText('Guard Mode')).toBeInTheDocument();
+    expect(screen.getByText('Guard mode')).toBeInTheDocument();
     expect(screen.getByText('Armed')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();

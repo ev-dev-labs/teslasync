@@ -211,10 +211,10 @@ describe('ChargingSessionDetailWidget — standard layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Charge Session Detail')).toBeInTheDocument();
+    expect(screen.getByText('Charge session detail')).toBeInTheDocument();
 
     // Energy Added: 25000 Wh → 25 kWh → "25.0" kWh.
-    expect(screen.getByText('Energy Added')).toBeInTheDocument();
+    expect(screen.getByText('Energy added')).toBeInTheDocument();
     expect(screen.getByText('25.0')).toBeInTheDocument();
     expect(screen.getByText('kWh')).toBeInTheDocument();
 
@@ -223,7 +223,7 @@ describe('ChargingSessionDetailWidget — standard layout', () => {
     expect(screen.getByText('45m')).toBeInTheDocument();
 
     // Peak Power is the max power_w across the telemetry series, displayed in kW.
-    expect(screen.getByText('Peak Power')).toBeInTheDocument();
+    expect(screen.getByText('Peak power')).toBeInTheDocument();
     expect(screen.getByText('72.0')).toBeInTheDocument();
     expect(screen.getByText('kW')).toBeInTheDocument();
 
@@ -241,10 +241,10 @@ describe('ChargingSessionDetailWidget — standard layout', () => {
 
     renderWidget({ cols: 4, rows: 2 });
 
-    expect(screen.getByText('Charge Session Detail')).toBeInTheDocument();
-    expect(screen.getByText('Energy Added')).toBeInTheDocument();
+    expect(screen.getByText('Charge session detail')).toBeInTheDocument();
+    expect(screen.getByText('Energy added')).toBeInTheDocument();
     expect(screen.getByText('10.0')).toBeInTheDocument();
-    expect(screen.getByText('DC Fast')).toBeInTheDocument();
+    expect(screen.getByText('DC fast')).toBeInTheDocument();
   });
 });
 
@@ -284,29 +284,29 @@ describe('ChargingSessionDetailWidget — charger classification', () => {
 
   it('classifies a null charger as "AC / Home"', () => {
     renderCompactWithCharger(null);
-    expect(screen.getByText('AC / Home')).toBeInTheDocument();
+    expect(screen.getByText('AC / home')).toBeInTheDocument();
   });
 
   it('classifies a Supercharger (case-insensitive) as "Supercharger"', () => {
     renderCompactWithCharger('SUPERCHARGER');
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
-    expect(screen.queryByText('DC Fast')).not.toBeInTheDocument();
+    expect(screen.queryByText('DC fast')).not.toBeInTheDocument();
   });
 
   it('classifies a Tesla connector as "Supercharger" via the "tesla" match', () => {
-    renderCompactWithCharger('Tesla Wall Connector');
+    renderCompactWithCharger('Tesla Wall connector');
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
   });
 
   it('classifies the "<invalid>" sentinel as "AC / Home", not "DC Fast"', () => {
     renderCompactWithCharger('<invalid>');
-    expect(screen.getByText('AC / Home')).toBeInTheDocument();
-    expect(screen.queryByText('DC Fast')).not.toBeInTheDocument();
+    expect(screen.getByText('AC / home')).toBeInTheDocument();
+    expect(screen.queryByText('DC fast')).not.toBeInTheDocument();
   });
 
   it('classifies any other non-empty charger as "DC Fast"', () => {
     renderCompactWithCharger('CCS_COMBO_2');
-    expect(screen.getByText('DC Fast')).toBeInTheDocument();
+    expect(screen.getByText('DC fast')).toBeInTheDocument();
   });
 });
 
@@ -327,11 +327,11 @@ describe('ChargingSessionDetailWidget — peak power derivation', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Peak Power')).toBeInTheDocument();
+    expect(screen.getByText('Peak power')).toBeInTheDocument();
     expect(screen.getByText('33.3')).toBeInTheDocument();
   });
 
-  it('reports 0.0 peak power when there is no telemetry', () => {
+  it('keeps peak power unknown when there is no telemetry', () => {
     useChargingSessionDetailMock.mockReturnValue(
       makeDetailQuery({ data: makeDetail({ total_energy_added_wh: 5000, duration_min: 10 }) }),
     );
@@ -339,10 +339,10 @@ describe('ChargingSessionDetailWidget — peak power derivation', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Peak Power')).toBeInTheDocument();
+    expect(screen.getByText('Peak power')).toBeInTheDocument();
     // Energy "5.0" is distinct from peak "0.0", so this asserts the null-safe
     // reduce produced a numeric zero rather than NaN / a crash.
-    expect(screen.getByText('0.0')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.getByText('5.0')).toBeInTheDocument();
   });
 });
@@ -363,9 +363,9 @@ describe('ChargingSessionDetailWidget — compact layout', () => {
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
 
     // Compact mode drops the titled header and the full stat grid.
-    expect(screen.queryByText('Charge Session Detail')).not.toBeInTheDocument();
-    expect(screen.queryByText('Energy Added')).not.toBeInTheDocument();
-    expect(screen.queryByText('Peak Power')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge session detail')).not.toBeInTheDocument();
+    expect(screen.queryByText('Energy added')).not.toBeInTheDocument();
+    expect(screen.queryByText('Peak power')).not.toBeInTheDocument();
   });
 
   it('shows the empty placeholder (not a blank panel) when compact and data-less', () => {
@@ -387,11 +387,11 @@ describe('ChargingSessionDetailWidget — query states', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Charge Session Detail')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge session detail')).toBeInTheDocument();
     expect(screen.queryByText('No charge sessions')).not.toBeInTheDocument();
   });
 
-  it('also renders a skeleton while the telemetry query is loading', () => {
+  it('keeps ready detail visible while telemetry is loading', () => {
     // Detail is ready but telemetry is still in flight — `isLoading` ORs the two
     // sources, so the whole widget must show the loading state.
     useChargingSessionDetailMock.mockReturnValue(
@@ -401,8 +401,8 @@ describe('ChargingSessionDetailWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Energy Added')).not.toBeInTheDocument();
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.getByText('Energy added')).toBeInTheDocument();
   });
 
   it('renders the QueryError panel on an initial load failure (no cached detail)', () => {
@@ -414,8 +414,8 @@ describe('ChargingSessionDetailWidget — query states', () => {
 
     // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Charge Session Detail')).not.toBeInTheDocument();
-    expect(screen.queryByText('Energy Added')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge session detail')).toBeInTheDocument();
+    expect(screen.queryByText('Energy added')).not.toBeInTheDocument();
   });
 
   it('renders an EmptyState placeholder (never a blank panel) when detail is absent', () => {
@@ -426,12 +426,12 @@ describe('ChargingSessionDetailWidget — query states', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // Titled shell still renders; the body degrades to the placeholder.
-    expect(screen.getByText('Charge Session Detail')).toBeInTheDocument();
+    expect(screen.getByText('Charge session detail')).toBeInTheDocument();
     expect(screen.getByText('No charge sessions')).toBeInTheDocument();
-    expect(screen.queryByText('Energy Added')).not.toBeInTheDocument();
+    expect(screen.queryByText('Energy added')).not.toBeInTheDocument();
   });
 
-  it('degrades a partial {} detail to zeros / "AC / Home" without throwing', () => {
+  it('keeps partial detail readings unknown without throwing', () => {
     // A `{}` payload is truthy, so stats render — every field falls back via the
     // widget's `?? 0` / `?? null` guards rather than crashing.
     useChargingSessionDetailMock.mockReturnValue(
@@ -439,10 +439,10 @@ describe('ChargingSessionDetailWidget — query states', () => {
     );
 
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
-    expect(screen.getByText('Energy Added')).toBeInTheDocument();
-    expect(screen.getByText('0m')).toBeInTheDocument();
-    expect(screen.getByText('AC / Home')).toBeInTheDocument();
-    expect(screen.getAllByText('0.0').length).toBeGreaterThan(0);
+    expect(screen.getByText('Energy added')).toBeInTheDocument();
+    expect(screen.queryByText('0m')).not.toBeInTheDocument();
+    expect(screen.getByText('AC / home')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
   });
 });
 
@@ -465,9 +465,9 @@ describe('ChargingSessionDetailWidget — graceful degradation on transient erro
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     // Data is still on screen …
-    expect(screen.getByText('Charge Session Detail')).toBeInTheDocument();
+    expect(screen.getByText('Charge session detail')).toBeInTheDocument();
     expect(screen.getByText('30.0')).toBeInTheDocument();
-    expect(screen.getByText('DC Fast')).toBeInTheDocument();
+    expect(screen.getByText('DC fast')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator is in its error state (red dot).
@@ -535,6 +535,21 @@ describe('ChargingSessionDetailWidget — vehicle + session resolution', () => {
 });
 
 describe('ChargingSessionDetailWidget — freshness interaction', () => {
+  it('preserves signed peak power and exposes telemetry refresh failures without hiding detail', () => {
+    useChargingSessionDetailMock.mockReturnValue(makeDetailQuery({
+      data: makeDetail({ total_energy_added_wh: 0, duration_min: 0 }),
+    }));
+    useChargeTelemetryMock.mockReturnValue({
+      ...makeTelemetryQuery({ data: [makeReading({ power_w: -2000 }), makeReading({ power_w: null })] }),
+      isError: true,
+      error: new Error('telemetry failed'),
+    });
+    renderWidget({ cols: 2, rows: 2 });
+    expect(screen.getByText('-2.0')).toBeInTheDocument();
+    expect(screen.getByText('0.0')).toBeInTheDocument();
+    expect(screen.getByText('0m')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
   it('refetches when the accessible refresh control is clicked', () => {
     const refetch = vi.fn();
     useChargingSessionDetailMock.mockReturnValue(

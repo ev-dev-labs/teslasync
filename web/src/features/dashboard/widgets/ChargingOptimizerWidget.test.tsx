@@ -208,7 +208,7 @@ describe('ChargingOptimizerWidget', () => {
     expect(screen.getByText('$45/mo')).toBeInTheDocument();
 
     // Compact is title-less and never renders the standard metric grid.
-    expect(screen.queryByText('Charging Optimizer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charging optimizer')).not.toBeInTheDocument();
     expect(screen.queryByText('Optimal start')).not.toBeInTheDocument();
   });
 
@@ -237,7 +237,7 @@ describe('ChargingOptimizerWidget', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('Charging Optimizer')).toBeInTheDocument();
+    expect(screen.getByText('Charging optimizer')).toBeInTheDocument();
 
     for (const label of ['Optimal start', 'Target SOC', 'Savings/mo']) {
       expect(screen.getByText(label)).toBeInTheDocument();
@@ -253,7 +253,7 @@ describe('ChargingOptimizerWidget', () => {
     expect(screen.getByText('Optimized')).toBeInTheDocument();
 
     // The 24h timeline belongs to the wide layout only.
-    expect(screen.queryByRole('img', { name: '24h Rate Timeline' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: '24h rate timeline' })).not.toBeInTheDocument();
   });
 
   it('flips the schedule badge to "Can improve" once peak usage crosses 30%', () => {
@@ -290,7 +290,7 @@ describe('ChargingOptimizerWidget', () => {
     renderWidget({ cols: 4, rows: 2 });
 
     // The timeline is exposed as a single labelled image (a11y).
-    expect(screen.getByRole('img', { name: '24h Rate Timeline' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '24h rate timeline' })).toBeInTheDocument();
 
     // Cells carry a title tooltip classifying each hour.
     expect(screen.getByTitle('6 PM — Peak')).toBeInTheDocument();
@@ -337,7 +337,7 @@ describe('ChargingOptimizerWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     // No content while loading.
-    expect(screen.queryByText('Charging Optimizer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charging optimizer')).toBeInTheDocument();
     expect(screen.queryByText('Optimal start')).not.toBeInTheDocument();
   });
 
@@ -351,16 +351,16 @@ describe('ChargingOptimizerWidget', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The misleading "no data" empty state must NOT appear on error.
     expect(screen.queryByText('No optimizer data')).not.toBeInTheDocument();
-    expect(screen.queryByText('Charging Optimizer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charging optimizer')).toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('shows the no-data empty state (standard) while keeping the titled shell', () => {
     optimizerMock.mockReturnValue(makeQuery({ data: undefined }));
     renderWidget();
 
-    expect(screen.getByText('Charging Optimizer')).toBeInTheDocument();
+    expect(screen.getByText('Charging optimizer')).toBeInTheDocument();
     expect(screen.getByText('No optimizer data')).toBeInTheDocument();
     expect(screen.queryByText('Optimal start')).not.toBeInTheDocument();
   });
@@ -426,7 +426,7 @@ describe('ChargingOptimizerWidget', () => {
 
     // The timeline still renders; with no peak/off-peak lists every hour is
     // classified "Standard".
-    expect(screen.getByRole('img', { name: '24h Rate Timeline' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '24h rate timeline' })).toBeInTheDocument();
     expect(screen.getByTitle('6 PM — Standard')).toBeInTheDocument();
     // A non-array recommendations field coerces to an empty tip list.
     expect(screen.getByText('No recommendations')).toBeInTheDocument();

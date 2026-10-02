@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingDown } from 'lucide-react';
 import {
@@ -9,9 +9,14 @@ import {
   EmbeddedChart,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
+import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { fmtNumber } from '@/lib/numberFormat';
+import { knownNumber } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { gaugeTone } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary } from './shared';
 import type { ChartSummaryStat } from './shared';
@@ -23,24 +28,28 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : null;
 
-  const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = useBatteryDegradation(idStr);
+  const query = useBatteryDegradation(idStr);
+  const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
+  const trust = useDataState(query, { provenance: 'historical' });
+  const gradientId = `degradation-${useId().replace(/:/g, '')}`;
+  const { reduce } = useMotionPreference();
 
   const chartData = useMemo(() => {
     const trend = data?.monthly_trend ?? [];
     if (trend.length === 0) return [];
-    const originalRange = trend[0]?.avg_range ?? 0;
+    const originalRange = knownNumber(trend[0]?.avg_range);
     return trend.map((entry) => ({
       month: entry.month ?? '',
-      range: entry.avg_range ?? 0,
-      health: entry.avg_health ?? 0,
+      range: knownNumber(entry.avg_range),
+      health: knownNumber(entry.avg_health),
       original: originalRange,
     }));
   }, [data]);
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
-  const currentHealth = data?.current_health_pct ?? data?.current_health ?? null;
-  const degradationRate = data?.degradation_rate_pct_per_month ?? null;
-  const totalCycles = data?.current_cycles ?? null;
+  const currentHealth = knownNumber(data?.current_health_pct) ?? knownNumber(data?.current_health);
+  const degradationRate = knownNumber(data?.degradation_rate_pct_per_month);
+  const totalCycles = knownNumber(data?.current_cycles);
 
   // Series colour follows the active theme.
   const palette = useThemeChartPalette();
@@ -51,13 +60,10 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
       label: t('widget.soh', 'SoH'),
       value: currentHealth != null ? `${fmtNumber(currentHealth, 1)}%` : '—',
     });
-    if (degradationRate != null && degradationRate > 0) {
       items.push({
         label: t('widget.degradation', 'Degradation'),
-        value: `−${fmtNumber(degradationRate, 2)}%`,
-        unit: `/${t('widget.mo', 'mo')}`,
+        value: degradationRate != null ? `${degradationRate > 0 ? '−' : ''}${fmtNumber(degradationRate, 2)}%/${t('widget.mo', 'mo')}` : '—',
       });
-    }
     items.push({
       label: t('widget.cycles', 'Cycles'),
       value: totalCycles != null ? fmtNumber(totalCycles, 0) : '—',
@@ -71,13 +77,13 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
 
   const chart = (
     <EmbeddedChart
-      title={t('widget.batteryDegradation', 'Battery Degradation')}
+      title={t('widget.batteryDegradation', 'Battery degradation')}
       ariaLabel={t(
         'widget.batteryDegradationChart.aria',
         'Monthly battery health trend',
       )}
-      empty={chartData.length <= 1}
-      emptyMessage={t('widget.needMoreData', 'More data needed for trend')}
+      empty={chartData.filter((point) => point.health != null).length <= 1}
+      emptyMessage={data ? t('widget.needMoreData', 'More data needed for trend') : t('widget.noDegradation', 'No degradation data')}
       data={chartData}
       dataColumns={[
         { key: 'month', label: t('widget.batteryDegradationChart.month', 'Month') },
@@ -86,7 +92,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
     >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-          {areaGradient('degradation-grad', palette.series[1])}
+          {areaGradient(gradientId, palette.series[1])}
           {chartGrid}
           <XAxis dataKey="month" {...axisTickSm} />
           <YAxis
@@ -95,12 +101,13 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
             {...axisTickSm}
           />
           <Tooltip content={<ChartTooltip />} />
-          <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.4} />
+          <ReferenceLine y={80} stroke={gaugeTone.danger} strokeDasharray="4 4" strokeOpacity={0.4} />
           <Area
             {...AREA_DEFAULTS}
             dataKey="health"
             stroke={palette.series[1]}
-            fill="url(#degradation-grad)"
+            fill={`url(#${gradientId})`}
+            isAnimationActive={!reduce}
             name={t('widget.healthPct', 'Health %')}
           />
         </AreaChart>
@@ -110,10 +117,10 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.batteryDegradation', 'Battery Degradation')}
-      icon={isCompact ? undefined : <TrendingDown className="h-3.5 w-3.5 text-neon-amber" />}
+      title={isCompact ? undefined : t('widget.batteryDegradation', 'Battery degradation')}
+      icon={isCompact ? undefined : <TrendingDown className="h-3.5 w-3.5" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={data != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -124,10 +131,12 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
         stats={stats}
         chart={chart}
         compact={isCompact}
-        isEmpty={currentHealth == null && chartData.length === 0}
         emptyMessage={t('widget.noDegradation', 'No degradation data')}
         emptyIcon={<TrendingDown className="h-5 w-5" />}
       />
+      {isCompact && !data && (
+        <EmptyState message={t('widget.noDegradation', 'No degradation data')} icon={<TrendingDown className="h-5 w-5" />} />
+      )}
     </WidgetShell>
   );
 }

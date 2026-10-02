@@ -1,29 +1,19 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cog } from 'lucide-react';
-import { EmptyState } from '@/components/feedback';
+import { Skeleton } from '@/components/feedback';
 import { useDrivetrainHealth } from '@/api/hooks/useDriving';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
+import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates } from '@/api/dataState';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetGaugeHero, type GaugeHeroStat } from './shared';
+import { WidgetStatusGrid, WidgetStatGrid, type StatGridItem } from './shared';
+import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
-
-function healthScore(overall: string | undefined): number {
-  if (overall === 'good') return 95;
-  if (overall === 'warning') return 60;
-  if (overall === 'critical') return 25;
-  return 0;
-}
-
-function healthColor(score: number): string {
-  if (score >= 80) return '#10b981';
-  if (score >= 50) return '#f59e0b';
-  return '#ef4444';
-}
 
 export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -37,24 +27,33 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
 
+  const healthQuery = useDrivetrainHealth(vehicleIdStr);
   const {
     data: health, isLoading: healthLoading, error: healthError,
     isFetching: healthFetching, isStale: healthStale, isError: healthIsError,
     dataUpdatedAt: healthUpdatedAt, refetch: healthRefetch,
-  } = useDrivetrainHealth(vehicleIdStr);
+  } = healthQuery;
 
+  const motorQuery = useMotorLatest(vid ?? 0);
   const {
     data: motor, isLoading: motorLoading,
     dataUpdatedAt: motorUpdatedAt,
     isFetching: motorFetching,
-  } = useMotorLatest(vid ?? 0);
+  } = motorQuery;
 
   const isLoading = healthLoading || motorLoading || (vehicleId == null && vehiclesLoading);
   const isCompact = size.cols <= 1;
   const hasData = !!health || !!motor;
 
-  const score = useMemo(() => healthScore(health?.overallHealth), [health?.overallHealth]);
-  const color = useMemo(() => healthColor(score), [score]);
+  const healthTrust = useDataState({
+    ...healthQuery,
+    data: health ?? (healthLoading || healthIsError ? undefined : null),
+  }, { provenance: 'inferred' });
+  const motorTrust = useDataState({
+    ...motorQuery,
+    data: motor ?? (motorLoading || motorQuery.isError ? undefined : null),
+  }, { provenance: 'cached', maxAgeMs: 120_000 });
+  const combined = combineDataStates([healthTrust, motorTrust]);
   const statusLabel = useMemo(() => {
     switch (health?.overallHealth) {
       case 'good':
@@ -68,66 +67,78 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
     }
   }, [health?.overallHealth, t]);
 
-  const gaugeConfig = useMemo(() => ({
-    value: score,
-    max: 100,
-    label: statusLabel,
-    unit: t('widget.drivetrainHealth.score', 'health'),
-    color,
-  }), [score, color, statusLabel, t]);
+  // The API supplies a categorical assessment, not a numerical score.
+  // A good assessment must never become a fabricated "95%" reading.
+  const assessmentStatus = health?.overallHealth === 'good'
+    ? 'ok' : health?.overallHealth === 'warning'
+      ? 'warning' : health?.overallHealth === 'critical' ? 'error' : 'unknown';
+  const assessment = [{
+    id: 'assessment',
+    label: t('widget.drivetrainHealth.assessment', 'Assessment'),
+    status: assessmentStatus,
+    statusLabel,
+  }] satisfies Parameters<typeof WidgetStatusGrid>[0]['cells'];
 
   const motorTemp = health?.frontMotorTempC ?? motor?.motor_temp_c_front ?? null;
-  const statorTemp = motor?.di_stator_temp ?? health?.rearMotorTempC ?? null;
+  const statorTemp = motor?.di_stator_temp ?? null;
   const inverterTemp = health?.inverterTempC ?? motor?.inverter_temp_c ?? null;
   const driveState = motor?.state_front ?? health?.motorStatus ?? '—';
 
-  const stats: GaugeHeroStat[] = useMemo(() => [
+  const stats: StatGridItem[] = useMemo(() => [
     {
-      label: t('widget.drivetrainHealth.motorTemp', 'Motor Temp'),
+      label: t('widget.drivetrainHealth.motorTemp', 'Motor temp'),
       value: motorTemp != null ? fmtNumber(toTemperatureDisplay(motorTemp), 0) : '—',
-      unit: tempUnit,
+      unit: motorTemp != null ? tempUnit : undefined,
     },
     {
-      label: t('widget.drivetrainHealth.statorTemp', 'Stator Temp'),
+      label: t('widget.drivetrainHealth.statorTemp', 'Stator temp'),
       value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp), 0) : '—',
-      unit: tempUnit,
+      unit: statorTemp != null ? tempUnit : undefined,
     },
     {
       label: t('widget.drivetrainHealth.inverterHealth', 'Inverter'),
       value: inverterTemp != null ? fmtNumber(toTemperatureDisplay(inverterTemp), 0) : '—',
-      unit: tempUnit,
+      unit: inverterTemp != null ? tempUnit : undefined,
     },
     {
-      label: t('widget.drivetrainHealth.driveState', 'Drive State'),
+      label: t('widget.drivetrainHealth.driveState', 'Drive state'),
       value: driveState,
     },
-  ], [motorTemp, statorTemp, inverterTemp, driveState, toTemperatureDisplay, tempUnit, t]);
+    {
+      label: t('widget.drivetrainHealth.rearMotorTemp', 'Rear motor temp'),
+      value: health?.rearMotorTempC != null || motor?.motor_temp_c_rear != null
+        ? fmtNumber(toTemperatureDisplay(health?.rearMotorTempC ?? motor?.motor_temp_c_rear ?? 0), 0)
+        : '—',
+      unit: health?.rearMotorTempC != null || motor?.motor_temp_c_rear != null ? tempUnit : undefined,
+    },
+  ], [motorTemp, statorTemp, inverterTemp, driveState, health?.rearMotorTempC, motor?.motor_temp_c_rear, toTemperatureDisplay, tempUnit, t]);
 
-  const updatedAt = Math.max(healthUpdatedAt ?? 0, motorUpdatedAt ?? 0);
+  const updatedAt = combined.updatedAt ?? Math.min(healthUpdatedAt || Infinity, motorUpdatedAt || Infinity);
 
   const shellProps = {
     loading: isLoading,
-    error: healthError ? String(healthError) : null,
-    updatedAt,
+    error: combined.fatalError ? String(healthError) : null,
+    dataState: {
+      ...combined,
+      status: !hasData && isLoading ? 'initial' : combined.status,
+      data: [health, motor],
+      hasData,
+      retry: () => { void healthRefetch(); void motorQuery.refetch?.(); },
+    } satisfies Parameters<typeof WidgetShell>[0]['dataState'],
+    loadingContent: <Skeleton className="h-24 w-full" />,
+    updatedAt: Number.isFinite(updatedAt) ? updatedAt : 0,
     isFetching: healthFetching || motorFetching,
     isStale: healthStale,
     isError: healthIsError,
-    onRefresh: () => healthRefetch(),
+    onRefresh: () => { void healthRefetch(); void motorQuery.refetch?.(); },
   };
 
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
         <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
-          {hasData ? (
-            <WidgetGaugeHero gauge={gaugeConfig} compact />
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Cog className="h-5 w-5" />}
-              message={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
-              className="py-2"
-            />
-          )}
+          <WidgetStatusGrid cells={assessment} compact />
+          {!hasData && <p className={dashboardTokens.metricLabel}>{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</p>}
         </div>
       </WidgetShell>
     );
@@ -135,19 +146,18 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
 
   return (
     <WidgetShell
-      title={t('widget.drivetrainHealth.title', 'Drivetrain Health')}
+      title={t('widget.drivetrainHealth.title', 'Drivetrain health')}
       icon={<Cog className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
-      {hasData ? (
-        <WidgetGaugeHero gauge={gaugeConfig} stats={stats} />
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Cog className="h-5 w-5" />}
-          message={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
-          className="py-4"
-        />
-      )}
+      <div className="flex min-w-0 flex-col gap-3">
+        <WidgetStatusGrid cells={assessment} />
+        <WidgetStatGrid stats={stats} cols={2} />
+        <p className={dashboardTokens.metricLabel}>
+          {t('widget.drivetrainHealth.assessmentCaveat', 'Assessment from available telemetry; not a mechanical inspection.')}
+        </p>
+        {!hasData && <p className={dashboardTokens.metricLabel}>{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</p>}
+      </div>
     </WidgetShell>
   );
 }

@@ -118,7 +118,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
       >
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BatteryFull className="h-5 w-5" />}
-          message={t('widget.backupHistory.noSite', 'No Tesla Energy site linked')}
+          message={t('widget.backupHistory.noSite', 'No Tesla energy site linked')}
           className="py-4"
         />
       </WidgetShell>
@@ -176,7 +176,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
   // ── Standard layout (2×4+) ──
   return (
     <WidgetShell
-      title={t('widget.backupHistory.title', 'Backup History')}
+      title={t('widget.backupHistory.title', 'Backup history')}
       icon={<BatteryFull className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
       error={null}
@@ -201,7 +201,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
               value={fmtInt(totalOutages)}
             />
             <StatCard
-              label={t('widget.backupHistory.avgDuration', 'Avg Duration')}
+              label={t('widget.backupHistory.avgDuration', 'Avg duration')}
               value={fmtDuration(avgDurationSec)}
             />
           </div>

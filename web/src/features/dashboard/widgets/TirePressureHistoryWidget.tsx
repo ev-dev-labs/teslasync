@@ -148,7 +148,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
 
   const chart = (
     <EmbeddedChart
-      title={t('widget.tirePressureHistory.title', 'Tire Pressure History')}
+      title={t('widget.tirePressureHistory.title', 'Tire pressure history')}
       ariaLabel={t(
         'widget.tirePressureHistory.chartAria',
         'Front and rear tire pressure history',
@@ -241,7 +241,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
 
   return (
     <WidgetShell
-      title={t('widget.tirePressureHistory.title', 'Tire Pressure History')}
+      title={t('widget.tirePressureHistory.title', 'Tire pressure history')}
       icon={<CircleDot className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}

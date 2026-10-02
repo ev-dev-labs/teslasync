@@ -174,7 +174,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
 
   return (
     <WidgetShell
-      title={t('widget.softwareUpdateHistory', 'Update History')}
+      title={t('widget.softwareUpdateHistory', 'Update history')}
       icon={<Download className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}

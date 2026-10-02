@@ -181,13 +181,13 @@ describe('MileageStatsWidget — standard layout (km)', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Mileage Stats')).toBeInTheDocument();
+    expect(screen.getByText('Mileage stats')).toBeInTheDocument();
 
     // Labels.
-    expect(screen.getByText('Daily Avg')).toBeInTheDocument();
-    expect(screen.getByText('Weekly Avg')).toBeInTheDocument();
-    expect(screen.getByText('Monthly Avg')).toBeInTheDocument();
-    expect(screen.getByText('Next Milestone')).toBeInTheDocument();
+    expect(screen.getByText('Daily avg')).toBeInTheDocument();
+    expect(screen.getByText('Weekly avg')).toBeInTheDocument();
+    expect(screen.getByText('Monthly avg')).toBeInTheDocument();
+    expect(screen.getByText('Next milestone')).toBeInTheDocument();
 
     // daily = 900 / 30 = 30 km/day (1 dp) → weekly ×7, monthly ×30.
     expect(screen.getByText('30.0')).toBeInTheDocument();
@@ -255,8 +255,8 @@ describe('MileageStatsWidget — compact layout', () => {
     expect(screen.getByText('30')).toBeInTheDocument();
     expect(screen.getByText('km/day')).toBeInTheDocument();
     // Compact drops the header title and the stat grid.
-    expect(screen.queryByText('Mileage Stats')).not.toBeInTheDocument();
-    expect(screen.queryByText('Daily Avg')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mileage stats')).not.toBeInTheDocument();
+    expect(screen.queryByText('Daily avg')).not.toBeInTheDocument();
   });
 
   it('shows an EmptyState (never a blank panel) when compact and data-less', () => {
@@ -265,7 +265,7 @@ describe('MileageStatsWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No mileage data')).toBeInTheDocument();
-    expect(screen.queryByText('Mileage Stats')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mileage stats')).not.toBeInTheDocument();
   });
 });
 
@@ -278,7 +278,7 @@ describe('MileageStatsWidget — query states', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Mileage Stats')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mileage stats')).toBeInTheDocument();
     expect(screen.queryByText('No mileage data')).not.toBeInTheDocument();
   });
 
@@ -291,8 +291,8 @@ describe('MileageStatsWidget — query states', () => {
 
     // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Mileage Stats')).not.toBeInTheDocument();
-    expect(screen.queryByText('Daily Avg')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mileage stats')).toBeInTheDocument();
+    expect(screen.queryByText('Daily avg')).not.toBeInTheDocument();
   });
 
   it('renders the titled shell with an EmptyState placeholder when data is absent', () => {
@@ -302,24 +302,22 @@ describe('MileageStatsWidget — query states', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Mileage Stats')).toBeInTheDocument();
+    expect(screen.getByText('Mileage stats')).toBeInTheDocument();
     expect(screen.getByText('No mileage data')).toBeInTheDocument();
-    expect(screen.queryByText('Daily Avg')).not.toBeInTheDocument();
+    expect(screen.queryByText('Daily avg')).not.toBeInTheDocument();
   });
 
-  it('degrades a partial payload to zeros without throwing (null-safety)', () => {
-    // A `{}` payload is truthy, so the grid renders — every field falls back to
-    // 0 via the widget's `?? 0` guards rather than crashing, and the milestone
-    // rounds up from 0 to the first 10 000 step.
+  it('keeps every missing reading unknown without inventing a milestone', () => {
     useMileageStatsMock.mockReturnValue(
       makeQuery({ data: {} as MileageStats }),
     );
 
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
 
-    expect(screen.getByText('Daily Avg')).toBeInTheDocument();
-    expect(screen.getByText('0.0')).toBeInTheDocument();
-    expect(screen.getByText('10,000')).toBeInTheDocument();
+    expect(screen.getByText('Daily avg')).toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('10,000')).not.toBeInTheDocument();
   });
 });
 
@@ -399,11 +397,12 @@ describe('MileageStatsWidget — graceful degradation on transient error', () =>
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     // Data is still on screen …
-    expect(screen.getByText('Mileage Stats')).toBeInTheDocument();
+    expect(screen.getByText('Mileage stats')).toBeInTheDocument();
     expect(screen.getByText('30.0')).toBeInTheDocument();
     expect(screen.getByText('50,000')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     // … and the freshness indicator is in its error state (red dot).
     expect(container.querySelector('.bg-red-400')).toBeTruthy();
   });

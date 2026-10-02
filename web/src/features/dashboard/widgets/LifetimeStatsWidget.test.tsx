@@ -184,7 +184,7 @@ describe('LifetimeStatsWidget — distance conversion (km→metres regression gu
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // 50,000 km → metres → km = 50,000 (rendered as plain text by StatCard).
-    expect(screen.getByText('Total Distance')).toBeInTheDocument();
+    expect(screen.getByText('Total distance')).toBeInTheDocument();
     expect(screen.getByText('50,000')).toBeInTheDocument();
     // The old bug (km × 0.621371 ÷ 1000 ≈ 31) must never surface.
     expect(screen.queryByText('31')).not.toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('LifetimeStatsWidget — distance conversion (km→metres regression gu
     expect(screen.getByText('50,000')).toBeInTheDocument();
     expect(screen.getByText(/km\s+lifetime/)).toBeInTheDocument();
     // No stat-grid labels in the compact variant.
-    expect(screen.queryByText('Total Drives')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total drives')).not.toBeInTheDocument();
   });
 });
 
@@ -223,17 +223,17 @@ describe('LifetimeStatsWidget — layout variants', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // Title + core stats.
-    expect(screen.getByRole('heading', { name: 'Lifetime Stats' })).toBeInTheDocument();
-    expect(screen.getByText('Total Distance')).toBeInTheDocument();
-    expect(screen.getByText('Total Drives')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Lifetime stats' })).toBeInTheDocument();
+    expect(screen.getByText('Total distance')).toBeInTheDocument();
+    expect(screen.getByText('Total drives')).toBeInTheDocument();
     expect(screen.getByText('1,234')).toBeInTheDocument();
-    expect(screen.getByText('Total Energy')).toBeInTheDocument();
+    expect(screen.getByText('Total energy')).toBeInTheDocument();
     expect(screen.getByText('8,500.5')).toBeInTheDocument();
     expect(screen.getByText('3,200')).toBeInTheDocument();
     // Wide-only stats are absent when not wide.
-    expect(screen.queryByText('Total Cost')).not.toBeInTheDocument();
-    expect(screen.queryByText('Ownership Days')).not.toBeInTheDocument();
-    expect(screen.queryByText('Avg Daily Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total cost')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ownership days')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg daily distance')).not.toBeInTheDocument();
   });
 
   it('adds cost / ownership / avg-daily in the wide (≥3-col) layout', () => {
@@ -242,11 +242,11 @@ describe('LifetimeStatsWidget — layout variants', () => {
     );
     renderWidget({ size: { cols: 4, rows: 2 } });
 
-    expect(screen.getByText('Total Cost')).toBeInTheDocument();
+    expect(screen.getByText('Total cost')).toBeInTheDocument();
     expect(screen.getByText('$456.78')).toBeInTheDocument();
-    expect(screen.getByText('Ownership Days')).toBeInTheDocument();
+    expect(screen.getByText('Ownership days')).toBeInTheDocument();
     expect(screen.getByText('1,000')).toBeInTheDocument();
-    expect(screen.getByText('Avg Daily Distance')).toBeInTheDocument();
+    expect(screen.getByText('Avg daily distance')).toBeInTheDocument();
     // 50,000 km / 1,000 days = 50 km/day → "50.0".
     expect(screen.getByText('50.0')).toBeInTheDocument();
   });
@@ -255,8 +255,8 @@ describe('LifetimeStatsWidget — layout variants', () => {
     mockLifetime.mockReturnValue(makeQuery({ data: makeStats() }));
     renderWidget({ size: { cols: 1, rows: 1 } });
 
-    expect(screen.queryByText('Lifetime Stats')).not.toBeInTheDocument();
-    expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lifetime stats')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });
 });
 
@@ -287,7 +287,7 @@ describe('LifetimeStatsWidget — null safety', () => {
     );
     renderWidget({ size: { cols: 4, rows: 2 } });
 
-    expect(screen.getByText('Avg Daily Distance')).toBeInTheDocument();
+    expect(screen.getByText('Avg daily distance')).toBeInTheDocument();
     // Guarded to 0 → "0.0"; never NaN / Infinity.
     expect(screen.getByText('0.0')).toBeInTheDocument();
     expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
@@ -301,7 +301,7 @@ describe('LifetimeStatsWidget — loading / empty / error', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No lifetime data')).not.toBeInTheDocument();
-    expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (not a blank panel) when no data has arrived', () => {
@@ -309,7 +309,7 @@ describe('LifetimeStatsWidget — loading / empty / error', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     expect(screen.getByText('No lifetime data')).toBeInTheDocument();
-    expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });
 
   it('shows the compact empty state when no data has arrived', () => {

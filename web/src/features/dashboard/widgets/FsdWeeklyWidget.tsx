@@ -119,7 +119,7 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
           {!isCompact && (
             <div className="mt-auto flex flex-wrap gap-3 text-xs font-medium">
               <Link to="/fsd" className="text-cyan-300 hover:text-cyan-200">
-                {t('widget.fsdWeekly.openFsd', 'FSD Insights')}
+                {t('widget.fsdWeekly.openFsd', 'FSD insights')}
               </Link>
               <Link to="/weekly-digest" className="text-cyan-300 hover:text-cyan-200">
                 {t('widget.fsdWeekly.openDigest', 'Weekly digest')}

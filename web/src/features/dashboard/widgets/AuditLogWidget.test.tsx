@@ -275,8 +275,8 @@ describe('AuditLogWidget — loading / error / refresh', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Audit Log')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Audit log')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('surfaces a genuine load error as an error panel instead of a misleading empty state', () => {

@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Server } from 'lucide-react';
-import { StatusBadge, StatCard } from '@/components/data-display';
+import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useSystemHealth, useDBStats, useConnectionPool } from '@/api/hooks/useAdmin';
 import { fmtInt } from '@/lib/numberFormat';
+import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
 import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid, type StatusCell } from './shared';
 import type { WidgetProps } from './types';
 
 type Translate = (key: string, fallback: string) => string;
@@ -49,13 +51,6 @@ export function statusTier(status: string | null | undefined): StatusTier {
   }
 }
 
-const TIER_DOT: Record<StatusTier, string> = {
-  ok: 'bg-green-500 shadow-green-500/40',
-  degraded: 'bg-amber-400 shadow-amber-400/40',
-  unknown: 'bg-gray-400 shadow-gray-400/40',
-  down: 'bg-red-500 shadow-red-500/40',
-};
-
 const TIER_LABEL: Record<StatusTier, { key: string; fallback: string }> = {
   ok: { key: 'widget.systemHealth.statusOk', fallback: 'Healthy' },
   degraded: { key: 'widget.systemHealth.statusDegraded', fallback: 'Degraded' },
@@ -68,28 +63,16 @@ function tierLabel(tier: StatusTier, t: Translate): string {
   return t(meta.key, meta.fallback);
 }
 
-function StatusDot({ tier, label }: { tier: StatusTier; label: string }) {
-  return (
-    <span
-      role="img"
-      aria-label={label}
-      title={label}
-      className={`inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_6px] ${TIER_DOT[tier]}`}
-    />
-  );
-}
-
 /** Human label for the overall system status shown in the compact layout. */
 export function overallLabel(status: string, t: Translate): string {
-  if (status === 'healthy') return t('widget.systemHealth.healthy', 'Healthy');
-  if (status === 'degraded') return t('widget.systemHealth.degraded', 'Degraded');
-  return t('widget.systemHealth.down', 'Down');
+  return tierLabel(statusTier(status), t);
 }
 
 /** Map the overall system status onto a StatusBadge presence tone. */
-export function overallBadgeStatus(status: string): 'online' | 'away' | 'offline' {
-  if (status === 'healthy') return 'online';
-  if (status === 'degraded') return 'away';
+export function overallBadgeStatus(status: string): 'online' | 'away' | 'offline' | 'unknown' {
+  if (statusTier(status) === 'ok') return 'online';
+  if (statusTier(status) === 'degraded') return 'away';
+  if (statusTier(status) === 'unknown') return 'unknown';
   return 'offline';
 }
 
@@ -105,10 +88,13 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
   const services = useMemo(() => {
     const components = health.data?.components ?? {};
     return SERVICE_KEYS.map((svc) => {
-      const tier = statusTier(components[svc.key]?.status ?? 'unhealthy');
+      const tier = statusTier(components[svc.key]?.status);
       const label = t(
         `widget.systemHealth.${svc.i18n}`,
-        svc.key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        svc.key === 'tesla_api' ? 'Tesla API'
+          : svc.key === 'mqtt' ? 'MQTT'
+            : svc.key === 'fleet_telemetry' ? 'Fleet Telemetry'
+            : svc.key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()),
       );
       return { key: svc.key, label, tier, a11yLabel: `${label}: ${tierLabel(tier, t)}` };
     });
@@ -120,75 +106,68 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
   // `||` (not `??`) so an empty-string databaseSize also degrades to the
   // placeholder instead of rendering a blank stat value.
   const dbSize = health.data?.databaseSize || dbStats.data?.databaseSize || '—';
-  const activeConns = pool.data?.inUse ?? 0;
-  const maxConns = pool.data?.maxOpen ?? 0;
-  const runtime = pool.data as Record<string, unknown> | undefined;
-  const goroutines = runtime?.goroutines;
-  const memory = runtime?.memoryMB;
+  const activeConns = knownNumber(pool.data?.inUse);
+  const maxConns = knownNumber(pool.data?.maxOpen);
+  const runtime = pool.data;
+  const goroutines = knownNumber(runtime && 'goroutines' in runtime ? runtime.goroutines : null);
+  const memory = knownNumber(runtime && 'memoryMB' in runtime ? runtime.memoryMB : null);
+  const sourceStates = [health, dbStats, pool].map((query) =>
+    deriveDataState({ ...query, data: query.data ?? (query.isLoading || query.isError || query.error ? undefined : null) }));
+  const state = { ...sourceStates[0]!, ...combineDataStates(sourceStates) };
+  if (health.data == null && dbStats.data == null && pool.data == null) {
+    const fatal = sourceStates.find((source) => source.fatalError)?.fatalError;
+    if (fatal) { state.status = 'initialFailure'; state.fatalError = fatal; }
+  }
+  const cells: StatusCell[] = services.map((service) => ({
+    id: service.key,
+    label: service.label,
+    status: service.tier === 'degraded' ? 'warning' : service.tier === 'down' ? 'error' : service.tier,
+    statusLabel: tierLabel(service.tier, t),
+  }));
+  const summary = health.data ? `${healthyCount}/${services.length}` : null;
 
   const isLoading = health.isLoading;
-  const hasError = health.error ? String(health.error) : null;
+  const hasError = state.fatalError?.message;
   const hasData = health.data != null;
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.systemHealth.title', 'System Health')}
-      icon={<Server className="h-3.5 w-3.5 text-neon-green" />}
+      title={isCompact ? undefined : t('widget.systemHealth.title', 'System health')}
+      icon={<Server className="h-3.5 w-3.5" />}
       loading={isLoading}
+      dataState={state}
       error={hasError}
-      updatedAt={health.dataUpdatedAt}
-      isFetching={health.isFetching}
-      isStale={health.isStale}
-      isError={health.isError}
-      onRefresh={() => health.refetch()}
+      updatedAt={state.updatedAt ?? 0}
+      isFetching={health.isFetching || dbStats.isFetching || pool.isFetching}
+      isStale={health.isStale || dbStats.isStale || pool.isStale}
+      isError={health.isError || dbStats.isError || pool.isError}
+      onRefresh={() => { void health.refetch(); void dbStats.refetch(); void pool.refetch(); }}
     >
-      {hasData ? (
-        isCompact ? (
+      {isCompact ? (
           /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-            <StatusBadge status={overallBadgeStatus(overallStatus)} size="sm" />
-            <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
+            <Badge variant={overallStatus === 'healthy' ? 'success' : overallStatus === 'degraded' ? 'warning' : statusTier(overallStatus) === 'unknown' ? 'neutral' : 'danger'}>
               {overallLabel(overallStatus, t)}
-            </span>
-            <span className="text-xs text-[var(--text-secondary)]">
-              {healthyCount}/{services.length} {t('widget.systemHealth.services', 'services')}
-            </span>
+            </Badge>
+            <WidgetBigNumber value={summary} label={t('widget.systemHealth.services', 'Services')} />
           </div>
         ) : (
           /* ── Standard layout (2×4) ── */
           <div className="flex flex-col gap-3 h-full">
             {/* Service status grid */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {services.map((svc) => (
-                <div key={svc.key} className="flex items-center gap-2 min-h-[44px]">
-                  <StatusDot tier={svc.tier} label={svc.a11yLabel} />
-                  <span className="text-xs text-[var(--text-secondary)] truncate">{svc.label}</span>
-                </div>
-              ))}
-            </div>
+            <WidgetStatusGrid cells={cells} cols={size.cols >= 3 ? 4 : 2} />
 
             {/* Stats grid */}
-            <div className="grid grid-cols-2 gap-2 mt-auto">
-              <StatCard
-                label={t('widget.systemHealth.dbSize', 'DB Size')}
-                value={dbSize}
-              />
-              <StatCard
-                label={t('widget.systemHealth.activeConns', 'Active Conns')}
-                value={maxConns > 0 ? `${fmtInt(activeConns)}/${fmtInt(maxConns)}` : fmtInt(activeConns)}
-              />
-              <StatCard
-                label={t('widget.systemHealth.memory', 'Memory')}
-                value={memory != null ? `${fmtInt(memory)} MB` : '—'}
-              />
-              <StatCard
-                label={t('widget.systemHealth.goroutines', 'Goroutines')}
-                value={goroutines != null ? fmtInt(goroutines) : '—'}
-              />
-            </div>
+            <WidgetStatGrid cols={2} stats={[
+              { label: t('widget.systemHealth.dbSize', 'DB size'), value: dbSize },
+              { label: t('widget.systemHealth.activeConns', 'Active conns'),
+                value: activeConns == null ? '—' : maxConns != null && maxConns > 0 ? `${fmtInt(activeConns)}/${fmtInt(maxConns)}` : fmtInt(activeConns) },
+              { label: t('widget.systemHealth.memory', 'Memory'), value: memory == null ? '—' : `${fmtInt(memory)} MB` },
+              { label: t('widget.systemHealth.goroutines', 'Goroutines'), value: goroutines == null ? '—' : fmtInt(goroutines) },
+            ]} />
           </div>
-        )
-      ) : (
+      )}
+      {!hasData && (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Server className="h-5 w-5" />}
           message={t('widget.systemHealth.noData', 'No system health data')}

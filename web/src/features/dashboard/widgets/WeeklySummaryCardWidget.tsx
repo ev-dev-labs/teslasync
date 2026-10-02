@@ -85,7 +85,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
             <span className="text-2xl font-bold text-[var(--text-primary)]">
               {fmtNumber(metrics.distance, 0)}
             </span>
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
               {distanceUnit} {t('widget.weeklySummary.thisWeek', 'this week')}
             </span>
           </div>
@@ -102,7 +102,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
 
   return (
     <WidgetShell
-      title={t('widget.weeklySummary.title', 'Weekly Summary')}
+      title={t('widget.weeklySummary.title', 'Weekly summary')}
       icon={<TrendingUp className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       error={error ? String(error) : null}

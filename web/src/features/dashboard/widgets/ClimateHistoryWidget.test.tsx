@@ -200,7 +200,7 @@ describe('ClimateHistoryWidget — full view (°C)', () => {
     renderWidget(FULL, 7);
 
     // Full tile shows a header title once the query resolves.
-    expect(await screen.findByText('Climate History')).toBeInTheDocument();
+    expect(await screen.findByText('Climate history')).toBeInTheDocument();
     expect(await screen.findByTestId('area-chart')).toBeInTheDocument();
 
     // Snake_case param, no /api/v1 double-prefix.
@@ -292,7 +292,7 @@ describe('ClimateHistoryWidget — compact view', () => {
 
     // A compact tile drops the chart, the header title, and the SVG region.
     expect(screen.queryByTestId('area-chart')).toBeNull();
-    expect(screen.queryByText('Climate History')).toBeNull();
+    expect(screen.queryByText('Climate history')).toBeNull();
     expect(screen.queryByRole('img')).toBeNull();
   });
 });
@@ -314,7 +314,7 @@ describe('ClimateHistoryWidget — empty / lifecycle states', () => {
     const { container } = renderWidget(FULL, 7);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Climate History')).toBeNull();
+    expect(screen.queryByText('Climate history')).toBeInTheDocument();
     expect(screen.queryByText('No climate history')).toBeNull();
     expect(screen.queryByTestId('area-chart')).toBeNull();
   });

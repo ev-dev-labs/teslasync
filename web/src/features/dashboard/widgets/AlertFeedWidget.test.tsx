@@ -161,7 +161,7 @@ describe('AlertFeedWidget — shell states', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     // Title + rows are suppressed until the shell resolves.
-    expect(screen.queryByText('Alert Feed')).toBeNull();
+    expect(screen.queryByText('Alert feed')).toBeInTheDocument();
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
@@ -173,7 +173,7 @@ describe('AlertFeedWidget — shell states', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Alert Feed')).toBeNull();
+    expect(screen.queryByText('Alert feed')).toBeInTheDocument();
     // The shared error card now carries "where to look next" destinations
     // (HELP-05), so scope the "no alert rows" assertion to the widget body
     // instead of asserting the absence of every link on screen.
@@ -184,7 +184,7 @@ describe('AlertFeedWidget — shell states', () => {
     mockAlerts.mockReturnValue(qr({ data: [] }));
     renderWidget(NARROW);
 
-    expect(screen.getByText('Alert Feed')).toBeInTheDocument();
+    expect(screen.getByText('Alert feed')).toBeInTheDocument();
     expect(screen.getByText('No alerts yet')).toBeInTheDocument();
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
@@ -193,7 +193,7 @@ describe('AlertFeedWidget — shell states', () => {
     mockAlerts.mockReturnValue(qr({ data: undefined }));
     renderWidget(NARROW);
 
-    expect(screen.getByText('Alert Feed')).toBeInTheDocument();
+    expect(screen.getByText('Alert feed')).toBeInTheDocument();
     expect(screen.getByText('No alerts yet')).toBeInTheDocument();
   });
 });

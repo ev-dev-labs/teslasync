@@ -54,7 +54,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.softwareUpdate', 'Software Update')}
+      title={isCompact ? undefined : t('widget.softwareUpdate', 'Software update')}
       icon={isCompact ? undefined : <MonitorSmartphone className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}
@@ -144,7 +144,7 @@ function FullView({
       {/* Current version row */}
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="min-w-0">
-          <p className="text-2xs text-[var(--text-muted)]">{t('widget.currentVersion', 'Current Version')}</p>
+          <p className="text-2xs text-[var(--text-muted)]">{t('widget.currentVersion', 'Current version')}</p>
           <p className="text-sm font-bold text-[var(--text-primary)] truncate">{version || '—'}</p>
         </div>
         <StatusBadgeSmall status={updateStatus} t={t} />

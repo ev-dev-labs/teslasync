@@ -71,8 +71,8 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 // and the id each hook is called with is captured so vehicle resolution can be
 // asserted. `MOCK_`/`mock` prefixes let vitest hoist the factory safely.
 let MOCK_STATS: StatsQuery;
-let MOCK_GAPS: { data: GapMap | undefined };
-let MOCK_SIGNALS: { data: string[] | undefined };
+let MOCK_GAPS: { data: GapMap | undefined; isError?: boolean; error?: unknown; refetch?: () => void };
+let MOCK_SIGNALS: { data: string[] | undefined; isError?: boolean; error?: unknown; refetch?: () => void };
 const mockStatsIds: number[] = [];
 const mockGapsIds: number[] = [];
 const mockSignalsIds: number[] = [];
@@ -96,6 +96,7 @@ import type { WidgetSize } from './types';
 
 /** Only the fields the widget reads off the stats query result. */
 interface StatsQuery {
+  error?: unknown;
   data: unknown;
   isLoading: boolean;
   isFetching: boolean;
@@ -173,17 +174,56 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('SignalHealthWidget — independent source trust', () => {
+  it('shows fatal failure only when no source has retained data', () => {
+    MOCK_STATS = makeStats({ data: undefined, isError: true, error: new Error('failed') });
+    MOCK_GAPS = { data: undefined };
+    MOCK_SIGNALS = { data: undefined };
+    renderWidget(STANDARD);
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+  });
+
+  it('retains live signal analysis when its background refresh fails', () => {
+    MOCK_SIGNALS = { data: ['A'] };
+    MOCK_GAPS = { data: { A: { timestamp: ago(10 * S) } }, isError: true, error: new Error('refresh') };
+    const { container } = renderWidget(WIDE);
+    expect(statValue('Active')).toBe('1');
+    expect(screen.getByText('No observed signal gaps')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
+  });
+
+  it('refreshes every source that contributes to health', () => {
+    const stats = vi.fn(), gaps = vi.fn(), signals = vi.fn();
+    MOCK_STATS = makeStats({ refetch: stats });
+    MOCK_GAPS = { data: {}, refetch: gaps };
+    MOCK_SIGNALS = { data: [], refetch: signals };
+    renderWidget(STANDARD);
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(stats).toHaveBeenCalledTimes(1);
+    expect(gaps).toHaveBeenCalledTimes(1);
+    expect(signals).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a loading skeleton before any contributing source has arrived', () => {
+    MOCK_STATS = makeStats({ data: undefined, isLoading: true });
+    MOCK_GAPS = { data: undefined };
+    MOCK_SIGNALS = { data: undefined };
+    const { container } = renderWidget(STANDARD);
+    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+  });
+});
+
 describe('SignalHealthWidget — lifecycle states', () => {
-  it('renders a skeleton (and no content) while stats are loading', () => {
+  it('keeps measured signal readings visible while the stats source loads', () => {
     MOCK_STATS = makeStats({ isLoading: true });
     MOCK_SIGNALS = { data: ['A', 'B'] };
     MOCK_GAPS = { data: { A: { timestamp: ago(10 * S) } } };
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     // Loading short-circuits the shell: title, content and empty state are gone.
-    expect(screen.queryByText('Signal Health')).toBeNull();
-    expect(screen.queryByText('Total Signals')).toBeNull();
+    expect(screen.queryByText('Signal health')).toBeInTheDocument();
+    expect(screen.getByText('Total signals')).toBeInTheDocument();
     expect(screen.queryByText('No signal health data')).toBeNull();
   });
 
@@ -196,7 +236,8 @@ describe('SignalHealthWidget — lifecycle states', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('No signal health data')).toBeInTheDocument();
     // No StatCards leak through the empty branch.
-    expect(screen.queryByText('Total Signals')).toBeNull();
+    expect(screen.getByText('Total signals')).toBeInTheDocument();
+    expect(statValue('Total signals')).toBe('—');
   });
 
   it('resolves to vehicle id 0 and still calls every hook when the fleet is empty', () => {
@@ -225,9 +266,9 @@ describe('SignalHealthWidget — health classification (standard view)', () => {
     };
     renderWidget(STANDARD);
 
-    expect(statValue('Total Signals')).toBe('5');
+    expect(statValue('Total signals')).toBe('5');
     expect(statValue('Active')).toBe('2');
-    expect(statValue('With Gaps')).toBe('0');
+    expect(statValue('With gaps')).toBe('0');
     expect(statValue('Freshness')).toBe('30s ago');
     expect(screen.getByText('Healthy')).toBeInTheDocument();
   });
@@ -245,7 +286,7 @@ describe('SignalHealthWidget — health classification (standard view)', () => {
     renderWidget(STANDARD);
 
     expect(statValue('Active')).toBe('3');
-    expect(statValue('With Gaps')).toBe('1');
+    expect(statValue('With gaps')).toBe('1');
     expect(statValue('Freshness')).toBe('10s ago'); // newest is 10s
     expect(screen.getByText('Degraded')).toBeInTheDocument();
     expect(screen.queryByText('Healthy')).toBeNull();
@@ -263,7 +304,7 @@ describe('SignalHealthWidget — health classification (standard view)', () => {
     renderWidget(STANDARD);
 
     expect(statValue('Active')).toBe('1');
-    expect(statValue('With Gaps')).toBe('2');
+    expect(statValue('With gaps')).toBe('2');
     expect(screen.getByText('Critical')).toBeInTheDocument();
   });
 
@@ -272,9 +313,9 @@ describe('SignalHealthWidget — health classification (standard view)', () => {
     MOCK_GAPS = { data: {} };
     renderWidget(STANDARD);
 
-    expect(statValue('Total Signals')).toBe('2');
+    expect(statValue('Total signals')).toBe('2');
     expect(statValue('Active')).toBe('0');
-    expect(statValue('With Gaps')).toBe('0');
+    expect(statValue('With gaps')).toBe('0');
     expect(statValue('Freshness')).toBe('—');
     expect(screen.getByText('Unknown')).toBeInTheDocument();
   });
@@ -309,11 +350,11 @@ describe('SignalHealthWidget — compact view', () => {
     // 2 of 3 live signals active.
     expect(screen.getByText('2/3')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
-    expect(screen.getByText('signals')).toBeInTheDocument();
+    expect(screen.getByText('Signals')).toBeInTheDocument();
     expect(screen.getByText('30s ago')).toBeInTheDocument();
     // Compact tiles suppress the header title AND the StatCard grid.
-    expect(screen.queryByText('Signal Health')).toBeNull();
-    expect(screen.queryByText('Total Signals')).toBeNull();
+    expect(screen.queryByText('Signal health')).toBeNull();
+    expect(screen.queryByText('Total signals')).toBeNull();
   });
 });
 
@@ -329,7 +370,7 @@ describe('SignalHealthWidget — wide view stale list', () => {
     };
     renderWidget(WIDE);
 
-    expect(screen.getByText('Stale / Gap Signals')).toBeInTheDocument();
+    expect(screen.getByText('Stale / gap signals')).toBeInTheDocument();
     expect(screen.getByText('GammaGap')).toBeInTheDocument();
     expect(screen.getByText('BetaStale')).toBeInTheDocument();
     // The active signal is not a gap.
@@ -346,7 +387,7 @@ describe('SignalHealthWidget — wide view stale list', () => {
 
     // The standard StatCards still render alongside the list.
     expect(statValue('Active')).toBe('1');
-    expect(statValue('With Gaps')).toBe('2');
+    expect(statValue('With gaps')).toBe('2');
   });
 });
 
@@ -366,7 +407,7 @@ describe('SignalHealthWidget — unparseable timestamp hardening', () => {
     // BadSig was miscounted as active → Active=2, and freshness collapsed to
     // "NaNh ago" because the bad string won the max-timestamp comparison.)
     expect(statValue('Active')).toBe('1');
-    expect(statValue('With Gaps')).toBe('2');
+    expect(statValue('With gaps')).toBe('2');
     expect(statValue('Freshness')).toBe('30s ago');
 
     // A majority-stale snapshot is Critical, never the pre-fix "Degraded".

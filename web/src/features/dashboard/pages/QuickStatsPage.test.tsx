@@ -276,8 +276,9 @@ describe('QuickStatsPage', () => {
   it('renders the page shell and requests the 30-day fleet rollup', () => {
     renderPage();
 
+    expect(screen.getByRole('main')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Quick Stats' }),
+      screen.getByRole('heading', { level: 1, name: 'Quick stats' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Fleet snapshot · last 30 days')).toBeInTheDocument();
     // Both bento children mount — no gutted panels.
@@ -292,14 +293,14 @@ describe('QuickStatsPage', () => {
 
     // Labels (each unique) — every section is present.
     for (const label of [
-      'Distance Driven',
+      'Distance driven',
       'Drives',
-      'Charging Sessions',
-      'Energy Used',
-      'Total Cost',
-      'Avg Efficiency',
-      'CO₂ Saved',
-      'Fleet Vehicles',
+      'Charging sessions',
+      'Energy used',
+      'Total cost',
+      'Avg efficiency',
+      'CO₂ saved',
+      'Fleet vehicles',
     ]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
@@ -335,7 +336,7 @@ describe('QuickStatsPage', () => {
     renderPage();
 
     expect(screen.getByTestId('stat-grid-skeleton')).toBeInTheDocument();
-    expect(screen.queryByText('Distance Driven')).not.toBeInTheDocument();
+    expect(screen.queryByText('Distance driven')).not.toBeInTheDocument();
   });
 
   it('shows a retry-able error when the rollup fails', () => {
@@ -348,7 +349,7 @@ describe('QuickStatsPage', () => {
     fireEvent.click(retry);
     expect(q.refetch).toHaveBeenCalledTimes(1);
     // KPI cards are not rendered in the error state.
-    expect(screen.queryByText('Distance Driven')).not.toBeInTheDocument();
+    expect(screen.queryByText('Distance driven')).not.toBeInTheDocument();
   });
 
   it('shows the empty state when the rollup resolves to no data', () => {
@@ -356,7 +357,7 @@ describe('QuickStatsPage', () => {
     renderPage();
 
     expect(screen.getByText('No fleet metrics available yet')).toBeInTheDocument();
-    expect(screen.queryByText('Distance Driven')).not.toBeInTheDocument();
+    expect(screen.queryByText('Distance driven')).not.toBeInTheDocument();
   });
 
   it('is null-safe: a partial rollup renders zeros instead of throwing', () => {
@@ -365,7 +366,7 @@ describe('QuickStatsPage', () => {
     analyticsMock.mockReturnValue(makeQuery({ data: {} as AnalyticsSummary }));
     renderPage();
 
-    expect(screen.getByText('Distance Driven')).toBeInTheDocument();
+    expect(screen.getByText('Distance driven')).toBeInTheDocument();
     expect(screen.getByText('0 km')).toBeInTheDocument();
     expect(screen.getByText('0 kWh')).toBeInTheDocument();
     expect((captured.fleet.entries as unknown[]).length).toBe(0);
@@ -430,7 +431,7 @@ describe('QuickStatsPage', () => {
     expect(screen.getByText('No vehicle found')).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-hero')).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Vehicle Details' }),
+      screen.queryByRole('button', { name: 'Vehicle details' }),
     ).not.toBeInTheDocument();
   });
 
@@ -503,13 +504,13 @@ describe('QuickStatsPage', () => {
   it('navigates from the quick-link buttons', () => {
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open dashboard' }));
     expect(navigateMock).toHaveBeenCalledWith('/');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Vehicle Details' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Vehicle details' }));
     expect(navigateMock).toHaveBeenCalledWith('/vehicles/1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'View Analytics' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View analytics' }));
     expect(navigateMock).toHaveBeenCalledWith('/statistics');
   });
 });

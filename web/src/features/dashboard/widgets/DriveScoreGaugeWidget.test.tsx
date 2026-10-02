@@ -188,7 +188,7 @@ describe('DriveScoreGaugeWidget states', () => {
     const { container } = renderWidget(TALL);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Drive Score')).toBeNull();
+    expect(screen.queryByText('Drive score')).toBeInTheDocument();
     expect(screen.queryByText('No score yet')).toBeNull();
   });
 
@@ -200,7 +200,7 @@ describe('DriveScoreGaugeWidget states', () => {
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Drive Score')).toBeNull();
+    expect(screen.queryByText('Drive score')).toBeInTheDocument();
   });
 });
 
@@ -250,14 +250,14 @@ describe('DriveScoreGaugeWidget standard layout', () => {
     mockUseDriveScore.mockReturnValue(qr({ data: makeScore() }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Drive Score')).toBeInTheDocument(); // header title
+    expect(screen.getByText('Drive score')).toBeInTheDocument(); // header title
     expect(screen.getByText('87')).toBeInTheDocument(); // gauge overall
     expect(screen.getByText('B')).toBeInTheDocument(); // gauge grade label
 
     // Stat labels + values are present.
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
     expect(screen.getByText('Smoothness')).toBeInTheDocument();
-    expect(screen.getByText('Speed Discipline')).toBeInTheDocument();
+    expect(screen.getByText('Speed discipline')).toBeInTheDocument();
     expect(screen.getByText('90')).toBeInTheDocument();
     expect(screen.getByText('82')).toBeInTheDocument();
     expect(screen.getByText('75')).toBeInTheDocument();
@@ -277,7 +277,7 @@ describe('DriveScoreGaugeWidget tall layout', () => {
     // Once in the stat row, once as a MetricBar label.
     expect(screen.getAllByText('Efficiency')).toHaveLength(2);
     expect(screen.getAllByText('Smoothness')).toHaveLength(2);
-    expect(screen.getAllByText('Speed Discipline')).toHaveLength(2);
+    expect(screen.getAllByText('Speed discipline')).toHaveLength(2);
 
     // The bar sublabel echoes the value alongside the stat value → two "90"s.
     expect(screen.getAllByText('90')).toHaveLength(2);
@@ -296,7 +296,7 @@ describe('DriveScoreGaugeWidget compact layout', () => {
     expect(screen.getByText('87')).toBeInTheDocument();
     expect(screen.getByText('B')).toBeInTheDocument();
 
-    expect(screen.queryByText('Drive Score')).toBeNull(); // title hidden
+    expect(screen.queryByText('Drive score')).toBeNull(); // title hidden
     expect(screen.queryByText('Efficiency')).toBeNull(); // stats hidden
     expect(screen.queryByText('90')).toBeNull(); // stat value hidden
   });
@@ -305,6 +305,33 @@ describe('DriveScoreGaugeWidget compact layout', () => {
 // ── Refresh interaction ─────────────────────────────────────────────────────
 
 describe('DriveScoreGaugeWidget refresh', () => {
+  it('retains the score and breakdown on refresh failure with a working warning retry', () => {
+    const refetch = vi.fn();
+    mockUseDriveScore.mockReturnValue(qr({ data: makeScore(), error: new Error('offline'), isError: true, refetch }));
+    renderWidget(TALL);
+    expect(screen.getByText('87')).toBeInTheDocument();
+    expect(screen.getAllByText('Efficiency')).toHaveLength(2);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves a legitimate zero overall score and keeps missing subscores unknown', () => {
+    mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ overall: 0, efficiency: undefined, smoothness: 0 }) }));
+    renderWidget(STANDARD);
+    expect(screen.getAllByText('0')).toHaveLength(2);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('No score yet')).not.toBeInTheDocument();
+  });
+
+  it('does not invent an overall gauge for a partial score', () => {
+    mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ overall: undefined }) }));
+    renderWidget(TALL);
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.getByText('Weekly score')).toBeInTheDocument();
+    expect(screen.getAllByText('90')).toHaveLength(2);
+  });
+
   it('invokes refetch when the freshness refresh control is activated', () => {
     const refetch = vi.fn();
     mockUseDriveScore.mockReturnValue(qr({ data: makeScore(), refetch }));

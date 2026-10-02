@@ -312,7 +312,7 @@ describe('PositionHeatmapWidget — standard layout', () => {
   it('renders the titled shell, one marker per cluster, and centres on the centroid', () => {
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Position Heatmap')).toBeInTheDocument();
+    expect(screen.getByText('Position heatmap')).toBeInTheDocument();
 
     const clusters = clusterPositions(POSITIONS, 500);
     expect(screen.getAllByTestId('marker')).toHaveLength(clusters.length);
@@ -368,7 +368,7 @@ describe('PositionHeatmapWidget — compact layout', () => {
   it('drops the title + badge and renders a static, coarser-grid map', () => {
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.queryByText('Position Heatmap')).not.toBeInTheDocument();
+    expect(screen.queryByText('Position heatmap')).not.toBeInTheDocument();
     expect(screen.queryByText(/\bpositions\b/)).not.toBeInTheDocument();
 
     expect(screen.getAllByTestId('marker')).toHaveLength(2);
@@ -388,7 +388,7 @@ describe('PositionHeatmapWidget — data states', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
-    expect(screen.queryByText('Position Heatmap')).not.toBeInTheDocument();
+    expect(screen.queryByText('Position heatmap')).toBeInTheDocument();
     expect(screen.queryByTestId('marker')).not.toBeInTheDocument();
     expect(captured.map).toBeNull();
   });
@@ -430,7 +430,7 @@ describe('PositionHeatmapWidget — data states', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The misleading empty state / titled shell must NOT appear on error.
     expect(screen.queryByText('No position data')).not.toBeInTheDocument();
-    expect(screen.queryByText('Position Heatmap')).not.toBeInTheDocument();
+    expect(screen.queryByText('Position heatmap')).toBeInTheDocument();
     expect(screen.queryByTestId('marker')).not.toBeInTheDocument();
   });
 

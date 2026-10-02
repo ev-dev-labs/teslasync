@@ -252,6 +252,7 @@ describe('YearReviewWidget vehicle resolution', () => {
 
     // Empty state (never a blank panel) and no request fired.
     expect(await screen.findByText('No year-in-review data')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(yrCalls()).toHaveLength(0);
   });
 });
@@ -278,6 +279,7 @@ describe('YearReviewWidget states', () => {
 
     // Regression: a failed request must NOT masquerade as "no data".
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('No year-in-review data')).toBeNull();
     expect(screen.queryByText(`Year in Review ${YEAR}`)).toBeNull();
@@ -288,6 +290,7 @@ describe('YearReviewWidget states', () => {
     renderWidget(2, 1);
 
     const empty = await screen.findByText('No year-in-review data');
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(empty).toBeInTheDocument();
     expect(empty.closest('[role="status"]')).not.toBeNull();
   });
@@ -299,7 +302,8 @@ describe('YearReviewWidget standard layout', () => {
   it('renders the titled core stat grid with correctly-scaled km values', async () => {
     renderWidget(2, 1);
 
-    expect(await screen.findByText(`Year in Review ${YEAR}`)).toBeInTheDocument();
+    expect(await screen.findByText(`Year in review ${YEAR}`)).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Total distance: 12000 km → 12,000 km (NOT the old ~7 the bug produced).
     expect(screen.getByText('12,000')).toBeInTheDocument();
@@ -310,8 +314,8 @@ describe('YearReviewWidget standard layout', () => {
     expect(screen.getByText('500.0')).toBeInTheDocument(); // longest drive km
 
     // Standard layout must NOT include the wide-only stats.
-    expect(screen.queryByText('Driving Time')).toBeNull();
-    expect(screen.queryByText('Top Speed')).toBeNull();
+    expect(screen.queryByText('Driving time')).toBeNull();
+    expect(screen.queryByText('Top speed')).toBeNull();
   });
 });
 
@@ -321,9 +325,10 @@ describe('YearReviewWidget wide layout', () => {
   it('adds Driving Time and Top Speed to the grid', async () => {
     renderWidget(4, 1);
 
-    expect(await screen.findByText('Driving Time')).toBeInTheDocument();
+    expect(await screen.findByText('Driving time')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('300')).toBeInTheDocument(); // 18000 min → 300 h
-    expect(screen.getByText('Top Speed')).toBeInTheDocument();
+    expect(screen.getByText('Top speed')).toBeInTheDocument();
     expect(screen.getByText('180')).toBeInTheDocument(); // 180 km/h
     // Core stats still present.
     expect(screen.getByText('12,000')).toBeInTheDocument();
@@ -339,6 +344,7 @@ describe('YearReviewWidget unit conversion (mi/mph)', () => {
 
     // 12000 km → 12000*1000 m / 1609.344 = 7,456 mi.
     expect(await screen.findByText('7,456')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // 180 km/h → (180/3.6) m/s → 111.85 → 112 mph.
     expect(screen.getByText('112')).toBeInTheDocument();
     // 500 km → 310.7 mi.
@@ -358,13 +364,14 @@ describe('YearReviewWidget compact layout', () => {
 
     // AnimatedNumber lands on the converted distance (reduced motion pinned).
     expect(await screen.findByText('12,000')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Unit + "in {year}" caption.
     expect(screen.getByText(/km\s+in\s+2/)).toBeInTheDocument();
     expect(screen.getByText(new RegExp(String(YEAR)))).toBeInTheDocument();
 
     // Compact has no title and no stat-grid labels.
     expect(screen.queryByText(`Year in Review ${YEAR}`)).toBeNull();
-    expect(screen.queryByText('Total Drives')).toBeNull();
+    expect(screen.queryByText('Total drives')).toBeNull();
   });
 });
 
@@ -386,7 +393,8 @@ describe('YearReviewWidget null-safety', () => {
     );
     renderWidget(4, 1);
 
-    await screen.findByText(`Year in Review ${YEAR}`);
+    await screen.findByText(`Year in review ${YEAR}`);
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Busiest month with no monthly stats collapses to the em-dash placeholder.
     expect(screen.getByText('—')).toBeInTheDocument();
@@ -409,6 +417,7 @@ describe('YearReviewWidget null-safety', () => {
 
     // November has the most drives → 'Nov'.
     expect(await screen.findByText('Nov')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.queryByText('Feb')).toBeNull();
   });
 });
@@ -420,6 +429,7 @@ describe('YearReviewWidget refresh', () => {
     renderWidget(2, 1);
 
     const refresh = await screen.findByRole('button', { name: /^Refresh/i });
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     const before = yrCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

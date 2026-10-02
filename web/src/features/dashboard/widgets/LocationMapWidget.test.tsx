@@ -235,7 +235,7 @@ describe('LocationMapWidget', () => {
     renderWidget(<LocationMapWidget size={SIZE_MEDIUM} />);
 
     // Title chrome shows above compact.
-    expect(screen.getByText('Vehicle Location Map')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle location map')).toBeInTheDocument();
 
     // The map receives the memoised center and the non-compact zoom.
     const map = screen.getByTestId('map');
@@ -272,7 +272,7 @@ describe('LocationMapWidget', () => {
 
     renderWidget(<LocationMapWidget size={SIZE_COMPACT} />);
 
-    expect(screen.queryByText('Vehicle Location Map')).not.toBeInTheDocument();
+    expect(screen.queryByText('Vehicle location map')).not.toBeInTheDocument();
     expect(screen.queryByText('Last known position')).not.toBeInTheDocument();
     expect(screen.queryByRole('group')).not.toBeInTheDocument();
     // ...but the map + marker still render, at the compact zoom.

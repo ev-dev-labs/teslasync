@@ -2,8 +2,8 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { DollarSign, Zap, Fuel, TrendingDown } from 'lucide-react';
-import { MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
+import { deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
@@ -11,17 +11,19 @@ import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceToSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
 
 export interface CostMetrics {
-  totalKwh: number;
-  totalCost: number;
+  totalKwh: number | null;
+  totalCost: number | null;
   costPerDistance: number | null;
   gasSavings: number | null;
   sessionCount: number;
   /** Estimated distance covered by the charged energy, in SI meters. */
-  totalDistanceM: number;
+  totalDistanceM: number | null;
 }
 
 /**
@@ -46,21 +48,26 @@ export function computeMetrics(
   costPerDistFn: (kwh: number, distanceM: number) => number | null,
   estimateGasCostFn: (distanceM: number) => number | null,
 ): CostMetrics {
-  let totalKwh = 0;
-  let totalCost = 0;
+  const energies = sessions.map(s => {
+    const energy = knownNumber(s.total_energy_added_wh);
+    return energy == null ? null : convertEnergyFromSI(energy, 'kWh');
+  });
+  const costs = sessions.map((s, index) => {
+    const recorded = knownNumber(s.cost_decimal) ?? knownNumber(s.cost);
+    const energy = energies[index];
+    return recorded ?? (energy == null ? null : energy * costPerKwh);
+  });
+  const totalKwh = sumKnown(energies);
+  const totalCost = sumKnown(costs);
 
-  for (const s of sessions) {
-    const energy = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
-    totalKwh += energy;
-    // Prefer session cost if recorded, otherwise estimate from kWh
-    totalCost += s.cost != null ? s.cost : energy * costPerKwh;
-  }
+  const totalDistanceM = totalKwh == null || energies.some(energy => energy == null)
+    ? null : totalKwh * AVG_METERS_PER_KWH;
 
-  const totalDistanceM = totalKwh * AVG_METERS_PER_KWH;
-
-  const costPerDistance = costPerDistFn(totalKwh, totalDistanceM);
-  const gasCost = estimateGasCostFn(totalDistanceM);
-  const gasSavings = gasCost != null ? gasCost - totalCost : null;
+  const costPerDistance = totalKwh != null && totalDistanceM != null
+    ? costPerDistFn(totalKwh, totalDistanceM) : null;
+  const gasCost = totalDistanceM != null ? estimateGasCostFn(totalDistanceM) : null;
+  const gasSavings = gasCost != null && totalCost != null && costs.every(cost => cost != null)
+    ? gasCost - totalCost : null;
 
   return {
     totalKwh,
@@ -88,7 +95,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
     return d.toISOString();
   }, []);
 
-  const { data: sessions, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
+  const query = useQuery({
     queryKey: ['charging', id, 'cost-tracker-30d', thirtyDaysAgo],
     queryFn: () =>
       request<ChargingSession[]>(
@@ -97,6 +104,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
     enabled: id > 0,
     staleTime: 60_000,
   });
+  const { data: sessions, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
 
   const metrics = useMemo(
     () =>
@@ -112,6 +120,12 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const isTall = size.rows >= 2;
   const hasData = (sessions ?? []).length > 0;
+  const energyWh = sumKnown((sessions ?? []).map(session => session.total_energy_added_wh));
+  const dataState = sessions ? deriveDataState(query, {
+    provenance: 'inferred',
+    partial: sessions.length >= 100 || sessions.some(session => knownNumber(session.total_energy_added_wh) == null),
+  }) : undefined;
+  const currency = (value: number | null, decimals?: number) => value == null ? null : formatCurrency(value, decimals);
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -130,7 +144,8 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   if (isCompact) {
     return (
       <WidgetShell
-        loading={isLoading}
+        loading={isLoading && !sessions}
+        dataState={dataState}
         error={errorMessage}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
@@ -139,14 +154,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
         onRefresh={handleRefresh}
       >
         {hasData ? (
-          <div className="h-full flex flex-col items-center justify-center gap-0.5">
-            <span className="text-2xl font-bold text-[var(--text-primary)]">
-              {formatCurrency(metrics.totalCost, 0)}
-            </span>
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-              {t('widget.chargeCost.monthly', '30-day cost')}
-            </span>
-          </div>
+          <WidgetBigNumber value={currency(metrics.totalCost, 0)} label={t('widget.chargeCost.monthly', '30-day cost')} animated={false} align="center" />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-5 w-5" />}
@@ -160,9 +168,10 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
 
   return (
     <WidgetShell
-      title={t('widget.chargeCost.title', 'Charge Cost Tracker')}
+      title={t('widget.chargeCost.title', 'Charge cost tracker')}
       icon={<DollarSign className="h-3.5 w-3.5 text-emerald-400" />}
-      loading={isLoading}
+      loading={isLoading && !sessions}
+      dataState={dataState}
       error={errorMessage}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
@@ -172,59 +181,29 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
     >
       {hasData ? (
         <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <MetricCard
-              label={t('widget.chargeCost.totalEnergy', 'Total Energy')}
-              value={`${fmtNumber(metrics.totalKwh, 1)} kWh`}
-              icon={<Zap className="h-3.5 w-3.5" />}
-              color="cyan"
-              subtitle={t('widget.chargeCost.sessions', '{{count}} sessions', {
-                count: metrics.sessionCount,
-              })}
-            />
-            <MetricCard
-              label={t('widget.chargeCost.totalCost', 'Total Cost')}
-              value={formatCurrency(metrics.totalCost)}
-              icon={<DollarSign className="h-3.5 w-3.5" />}
-              color="green"
-              subtitle={`${formatCurrency(costPerKwh)}/${t('widget.chargeCost.kwh', 'kWh')}`}
-            />
+          <WidgetStatGrid cols={2} stats={[
+            { label: t('widget.chargeCost.totalEnergy', 'Total energy'), value: energyWh == null ? null : `${fmtNumber(convertEnergyFromSI(energyWh, unitPrefs.energy), 1)} ${unitPrefs.energy}`, icon: <Zap className="h-3.5 w-3.5" /> },
+            { label: t('widget.chargeCost.totalCost', 'Total cost'), value: currency(metrics.totalCost), icon: <DollarSign className="h-3.5 w-3.5" /> },
+          ]} />
+          <div className={`flex min-w-0 flex-wrap justify-between gap-2 ${dashboardTokens.metricLabel}`}>
+            <span>{t('widget.chargeCost.sessions', '{{count}} sessions', { count: metrics.sessionCount })}</span>
+            <span>{formatCurrency(costPerKwh)}/{t('widget.chargeCost.kwh', 'kWh')}</span>
           </div>
 
           {isTall && (
-            <div className="grid grid-cols-2 gap-2">
-              <MetricCard
-                label={t('widget.chargeCost.costPerDistance', 'Cost / {{unit}}', {
-                  unit: distanceUnit,
-                })}
-                value={
-                  metrics.costPerDistance != null
-                    ? formatCurrency(metrics.costPerDistance, 3)
-                    : '—'
-                }
-                icon={<Fuel className="h-3.5 w-3.5" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('widget.chargeCost.gasSavings', 'vs Gas Savings')}
-                value={
-                  metrics.gasSavings != null
-                    ? formatCurrency(metrics.gasSavings)
-                    : '—'
-                }
-                icon={<TrendingDown className="h-3.5 w-3.5" />}
-                color="green"
-                subtitle={
-                  metrics.gasSavings != null
-                    ? t('widget.chargeCost.savingsNote', '30-day estimate')
-                    : t('widget.chargeCost.configureGas', 'Set gas price in settings')
-                }
-              />
+            <div className="space-y-2">
+              <WidgetStatGrid cols={2} stats={[
+                { label: t('widget.chargeCost.costPerDistance', 'Cost / {{unit}}', { unit: distanceUnit }), value: currency(metrics.costPerDistance, 3), icon: <Fuel className="h-3.5 w-3.5" /> },
+                { label: t('widget.chargeCost.gasSavings', 'vs gas savings'), value: currency(metrics.gasSavings), icon: <TrendingDown className="h-3.5 w-3.5" /> },
+              ]} />
+              <p className={dashboardTokens.metricLabel}>
+                {metrics.gasSavings != null ? t('widget.chargeCost.savingsNote', '30-day estimate') : t('widget.chargeCost.configureGas', 'Set gas price in settings')}
+              </p>
             </div>
           )}
 
           {!isTall && (
-            <div className="flex items-center justify-between text-2xs text-[var(--text-muted)] px-1">
+            <div className={`flex min-w-0 flex-wrap items-center justify-between gap-2 ${dashboardTokens.metricLabel}`}>
               <span>
                 {metrics.costPerDistance != null
                   ? `${formatCurrency(metrics.costPerDistance, 3)}/${distanceUnit}`

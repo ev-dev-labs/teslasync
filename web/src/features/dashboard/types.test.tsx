@@ -162,7 +162,7 @@ describe('Vehicle + VehicleState (via <VehicleHero>)', () => {
     const { toSpeedDisplay } = renderHero(null);
 
     expect(screen.getByText('Vehicle asleep — wake to see live data')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Wake Up' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Wake up' })).toBeInTheDocument();
     // Gauges + their converters must not run without a live state.
     expect(screen.queryByText('Battery')).toBeNull();
     expect(toSpeedDisplay).not.toHaveBeenCalled();
@@ -325,8 +325,8 @@ describe('Drive + ChargingSession + FleetAnalytics (via <RecentActivity>)', () =
     expect(timeline.textContent).toMatch(/12(\.\d)?\s*km/);
     expect(timeline.textContent).toMatch(/25(\.\d)?\s*kWh/);
     // FleetAnalytics scalars land in the performance panel.
-    expect(screen.getByText('Total Drives (30d)').parentElement).toHaveTextContent('42');
-    expect(screen.getByText('Charge Sessions').parentElement).toHaveTextContent('7');
+    expect(screen.getByText('Total drives (30d)').parentElement).toHaveTextContent('42');
+    expect(screen.getByText('Charge sessions').parentElement).toHaveTextContent('7');
   });
 
   it('shows the empty state (not a blank panel) when there is no drive or charge activity', () => {

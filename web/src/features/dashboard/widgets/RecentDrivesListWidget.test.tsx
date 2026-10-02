@@ -181,6 +181,28 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe('RecentDrivesListWidget — measured values and retained trust', () => {
+  it('does not fabricate distance or duration when the fields are absent', () => {
+    const drive = Object.assign(makeDrive(), { distance_m: null, duration_s: null });
+    setup({ drives: makeQuery({ data: [drive] }) });
+    renderWidget({ size: STANDARD });
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByText('0.0 km')).not.toBeInTheDocument();
+  });
+
+  it('keeps drill-through rows during a background failure', () => {
+    setup({ drives: makeQuery({
+      data: [makeDrive()],
+      error: new Error('background outage'),
+      isError: true,
+    }) });
+    renderWidget({ size: WIDE });
+    expect(screen.getByText('10.0 km')).toBeInTheDocument();
+    expect(screen.getByText('123 Main St')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+  });
+});
+
 describe('truncateAddress', () => {
   it('returns the em-dash placeholder for nullish or empty input', () => {
     expect(truncateAddress(undefined, 30)).toBe('—');
@@ -229,7 +251,7 @@ describe('RecentDrivesListWidget — rendering', () => {
     setup({ drives: makeQuery({ data: [makeDrive()] }) });
     renderWidget({ size: STANDARD });
 
-    expect(screen.getByText('Recent Drives')).toBeInTheDocument();
+    expect(screen.getByText('Recent drives')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View all' })).toHaveAttribute('href', '/drives');
 
     // Left column: distance (10,000 m → 10.0 km) + duration (1500 s → 25m).
@@ -355,7 +377,7 @@ describe('RecentDrivesListWidget — states & interaction', () => {
     expect(screen.getByText('No recent drives recorded')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Standard widgets keep their header even when empty…
-    expect(screen.getByText('Recent Drives')).toBeInTheDocument();
+    expect(screen.getByText('Recent drives')).toBeInTheDocument();
     // …but the list itself is gated behind having rows.
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
@@ -365,7 +387,7 @@ describe('RecentDrivesListWidget — states & interaction', () => {
     const { container } = renderWidget({ size: STANDARD });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Recent Drives')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent drives')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives recorded')).not.toBeInTheDocument();
   });
 
@@ -377,7 +399,7 @@ describe('RecentDrivesListWidget — states & interaction', () => {
     // the misleading "No recent drives" empty state must NOT show here.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Recent Drives')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent drives')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives recorded')).not.toBeInTheDocument();
   });
 

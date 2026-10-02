@@ -133,11 +133,11 @@ describe('LiveTelemetry', () => {
   it('renders the section title and all six telemetry panel headings', () => {
     renderLive();
 
-    expect(screen.getByRole('heading', { name: /Live Telemetry/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Live telemetry/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Drivetrain' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Climate' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Tire Pressure' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Tire pressure' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Media' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Navigation' })).toBeInTheDocument();
   });
@@ -244,7 +244,7 @@ describe('LiveTelemetry', () => {
       climateData: { ...climate, defrost_mode: 'Front', battery_heater_on: true },
     });
     expect(screen.getByText('Defrost')).toBeInTheDocument();
-    expect(screen.getByText('Bat Heater')).toBeInTheDocument();
+    expect(screen.getByText('Bat heater')).toBeInTheDocument();
     cleanup();
 
     renderLive({
@@ -260,7 +260,7 @@ describe('LiveTelemetry', () => {
     expect(screen.getByText(/Locked$/)).toBeInTheDocument();
     expect(screen.getByText(/Active$/)).toBeInTheDocument(); // sentry on
     // Doors + windows both report "All Closed".
-    expect(screen.getAllByText('All Closed')).toHaveLength(2);
+    expect(screen.getAllByText('All closed')).toHaveLength(2);
   });
 
   it('counts open doors and windows and reflects unlocked / sentry-off state', () => {
@@ -289,7 +289,7 @@ describe('LiveTelemetry', () => {
     expect(screen.getByText('2.3')).toBeInTheDocument();
     expect(screen.getByText('2.8')).toBeInTheDocument();
     expect(screen.getAllByText('bar')).toHaveLength(4); // unit under each tile
-    expect(screen.getByText('All Normal')).toBeInTheDocument();
+    expect(screen.getByText('All normal')).toBeInTheDocument();
   });
 
   it('colours low pressure, flags a warning, and dashes a missing tire', () => {

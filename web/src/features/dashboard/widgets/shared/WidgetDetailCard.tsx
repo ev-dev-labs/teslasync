@@ -60,7 +60,7 @@ export function WidgetDetailCard({
             i < visible.length - 1 && 'border-b border-white/[0.06]',
           )}
         >
-          <dt className="min-w-0 truncate text-2xs uppercase text-[var(--text-muted)] tracking-wide">
+          <dt className="min-w-0 truncate text-2xs text-[var(--text-muted)] tracking-wide">
             {entry.label}
           </dt>
           <dd className="flex min-w-0 items-center gap-2">

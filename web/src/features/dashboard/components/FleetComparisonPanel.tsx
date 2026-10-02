@@ -68,7 +68,7 @@ export function FleetComparisonPanel({
     <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading || undefined}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('quickStats.fleet.title', 'Fleet Comparison')}
+        {t('quickStats.fleet.title', 'Fleet comparison')}
       </PanelTitle>
 
       {loading ? (
@@ -82,7 +82,7 @@ export function FleetComparisonPanel({
           action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
         />
       ) : (
-        <ul className="space-y-3" aria-label={t('quickStats.fleet.title', 'Fleet Comparison')}>
+        <ul className="space-y-3" aria-label={t('quickStats.fleet.title', 'Fleet comparison')}>
           {rows.map((r, i) => (
             <li key={r.id}>
               <MetricBar

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import {
@@ -7,17 +7,24 @@ import {
   ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
 import { useTeslaEnergyLiveStatusHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
+import { averageKnown, knownNumber } from '@/api/dataState';
+import { DataProvenanceBadge } from '@/components/data-display';
+import { Skeleton } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { useUnits } from '@/hooks/useUnits';
+import { convertPowerFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
-  solar: number;
-  battery: number;
-  grid: number;
-  home: number;
+  solar: number | null;
+  battery: number | null;
+  grid: number | null;
+  home: number | null;
 }
 
 export function shortTime(iso: string): string {
@@ -28,6 +35,8 @@ export function shortTime(iso: string): string {
 
 export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { unitPrefs } = useUnits();
+  const widgetId = useId();
 
   const {
     data: sites,
@@ -64,46 +73,58 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   const isFetching = sitesFetching || historyFetching;
   const isStale = sitesStale || historyStale;
   const isError = sitesIsError || historyIsError;
-  const updatedAt = Math.max(sitesUpdatedAt ?? 0, historyUpdatedAt ?? 0);
+  const updatedAt = siteId ? historyUpdatedAt : sitesUpdatedAt;
 
   const hasSites = (sites ?? []).length > 0;
 
   const chartData = useMemo<ChartDatum[]>(() => {
-    const items = history ?? [];
-    return items.map((entry) => ({
-      time: shortTime(entry.timestamp ?? ''),
-      solar: (entry.solar_power ?? 0) / 1000,
-      battery: (entry.battery_power ?? 0) / 1000,
-      grid: (entry.grid_power ?? 0) / 1000,
-      home: (entry.load_power ?? 0) / 1000,
-    }));
-  }, [history]);
+    const items = Array.isArray(history) ? history.filter((entry) => entry != null) : [];
+    return items.map((entry) => {
+      const solar = knownNumber(entry.solar_power);
+      const battery = knownNumber(entry.battery_power);
+      const grid = knownNumber(entry.grid_power);
+      const home = knownNumber(entry.load_power);
+      return {
+        time: shortTime(entry.timestamp ?? ''),
+        solar: solar == null ? null : convertPowerFromSI(solar, unitPrefs.power),
+        battery: battery == null ? null : convertPowerFromSI(battery, unitPrefs.power),
+        grid: grid == null ? null : convertPowerFromSI(grid, unitPrefs.power),
+        home: home == null ? null : convertPowerFromSI(home, unitPrefs.power),
+      };
+    });
+  }, [history, unitPrefs.power]);
 
-  const avgSolarKw = useMemo(() => {
-    if (chartData.length === 0) return 0;
-    return chartData.reduce((s, d) => s + d.solar, 0) / chartData.length;
-  }, [chartData]);
+  const avgSolarKw = useMemo(() => averageKnown(chartData.map((d) => d.solar)), [chartData]);
 
   const peakHomeKw = useMemo(
-    () => chartData.reduce((mx, d) => Math.max(mx, d.home), 0),
+    () => chartData.reduce<number | null>((mx, d) => d.home == null ? mx : mx == null ? d.home : Math.max(mx, d.home), null),
     [chartData],
   );
 
-  const netGridKwh = useMemo(
-    () => chartData.reduce((s, d) => s + d.grid, 0),
+  // A sum of sampled power is neither net power nor energy. Report the
+  // observed sample mean without inventing a sampling interval.
+  const avgGridPower = useMemo(
+    () => averageKnown(chartData.map((d) => d.grid)),
     [chartData],
   );
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
-  const hasData = chartData.length > 0 && chartData.some(
-    (d) => d.solar !== 0 || d.battery !== 0 || d.grid !== 0 || d.home !== 0,
-  );
+  const hasData = chartData.length > 0;
 
   const handleRefresh = () => {
     refetchSites();
     if (siteId) refetchHistory();
   };
+  const dataState = useDataState({
+    data: siteId ? history ?? (isLoading || isError || error ? undefined : null)
+      : isLoading || isError || error ? undefined : sites ?? null,
+    error,
+    isError,
+    isFetching,
+    dataUpdatedAt: siteId ? historyUpdatedAt : sitesUpdatedAt,
+    refetch: handleRefresh,
+  }, { provenance: 'historical', partial: chartData.some((d) => [d.solar, d.battery, d.grid, d.home].some((value) => value == null)) });
 
   // No energy sites linked. Only surface the "no site" empty state when the
   // sites query genuinely returned none — a sites *error* must fall through so
@@ -113,7 +134,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
     return (
       <WidgetShell
         loading={false}
-        error={null}
+        dataState={dataState}
         updatedAt={sitesUpdatedAt}
         isFetching={sitesFetching}
         isStale={sitesStale}
@@ -123,7 +144,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
         <WidgetChartSummary
           compact={isCompact}
           isEmpty
-          emptyMessage={t('widget.powerFlowHistory.noSite', 'No Tesla Energy site linked')}
+          emptyMessage={t('widget.powerFlowHistory.noSite', 'No Tesla energy site linked')}
           emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
           stats={[]}
           chart={null}
@@ -137,7 +158,8 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
     return (
       <WidgetShell
         loading={isLoading}
-        error={error ? String(error) : null}
+        dataState={dataState}
+        loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
         updatedAt={updatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -151,14 +173,14 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
           emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
           stats={hasData ? [
             {
-              label: t('widget.powerFlowHistory.avgSolar', 'Avg Solar'),
-              value: fmtNumber(avgSolarKw, 1),
-              unit: 'kW',
+              label: t('widget.powerFlowHistory.avgSolar', 'Avg solar'),
+              value: avgSolarKw == null ? null : fmtNumber(avgSolarKw, 1),
+              unit: unitPrefs.power,
             },
             {
-              label: t('widget.powerFlowHistory.peakHome', 'Peak Home'),
-              value: fmtNumber(peakHomeKw, 1),
-              unit: 'kW',
+              label: t('widget.powerFlowHistory.peakHome', 'Peak home'),
+              value: peakHomeKw == null ? null : fmtNumber(peakHomeKw, 1),
+              unit: unitPrefs.power,
             },
           ] : []}
           chart={null}
@@ -167,36 +189,37 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
     );
   }
 
-  // Standard (2×4+): stat header + stacked area chart
+  // Standard (2×4+): stat header + independent signed power series.
   const stats: ChartSummaryStat[] = hasData
     ? [
         {
-          label: t('widget.powerFlowHistory.avgSolar', 'Avg Solar'),
-          value: fmtNumber(avgSolarKw, 1),
-          unit: 'kW',
+          label: t('widget.powerFlowHistory.avgSolar', 'Avg solar'),
+          value: avgSolarKw == null ? null : fmtNumber(avgSolarKw, 1),
+          unit: unitPrefs.power,
         },
         {
-          label: t('widget.powerFlowHistory.peakHome', 'Peak Home'),
-          value: fmtNumber(peakHomeKw, 1),
-          unit: 'kW',
+          label: t('widget.powerFlowHistory.peakHome', 'Peak home'),
+          value: peakHomeKw == null ? null : fmtNumber(peakHomeKw, 1),
+          unit: unitPrefs.power,
         },
         {
-          label: t('widget.powerFlowHistory.netGrid', 'Net Grid'),
-          value: fmtNumber(netGridKwh, 1),
-          unit: 'kW',
+          label: t('widget.powerFlowHistory.avgNetGrid', 'Avg net grid'),
+          value: avgGridPower == null ? null : fmtNumber(avgGridPower, 1),
+          unit: unitPrefs.power,
         },
       ]
     : [];
 
   const tick = isWide ? axisTick : axisTickSm;
-  const widgetId = 'pfh';
 
   return (
     <WidgetShell
-      title={t('widget.powerFlowHistory.title', 'Power Flow History')}
+      title={t('widget.powerFlowHistory.title', 'Power flow history')}
       icon={<TrendingUp aria-hidden="true" className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={dataState}
+      loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
+      status={<DataProvenanceBadge provenance={dataState.provenance} status={dataState.status} />}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -210,7 +233,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
         stats={stats}
         chart={
           <EmbeddedChart
-            title={t('widget.powerFlowHistory.title', 'Power Flow History')}
+            title={t('widget.powerFlowHistory.title', 'Power flow history')}
             ariaLabel={t(
               'widget.powerFlowHistory.chartAria',
               'Solar, battery, grid, and home power over the last 24 hours',
@@ -218,10 +241,10 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
             data={chartData}
             dataColumns={[
               { key: 'time', label: t('widget.powerFlowHistory.time', 'Time') },
-              { key: 'solar', label: t('widget.powerFlowHistory.solar', 'Solar (kW)') },
-              { key: 'battery', label: t('widget.powerFlowHistory.battery', 'Battery (kW)') },
-              { key: 'grid', label: t('widget.powerFlowHistory.grid', 'Grid (kW)') },
-              { key: 'home', label: t('widget.powerFlowHistory.home', 'Home (kW)') },
+              { key: 'solar', label: `${t('widget.powerFlowHistory.solar', 'Solar')} (${unitPrefs.power})` },
+              { key: 'battery', label: `${t('widget.powerFlowHistory.battery', 'Battery')} (${unitPrefs.power})` },
+              { key: 'grid', label: `${t('widget.powerFlowHistory.grid', 'Grid')} (${unitPrefs.power})` },
+              { key: 'home', label: `${t('widget.powerFlowHistory.home', 'Home')} (${unitPrefs.power})` },
             ]}
             chartKey="dashboard-power-flow-history"
           >
@@ -245,35 +268,34 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
               <Tooltip
                 content={<ChartTooltip />}
                 formatter={(value: number, name: string) => [
-                  `${fmtNumber(value, 2)} kW`,
+                  `${fmtNumber(value, 2)} ${unitPrefs.power}`,
                   name,
                 ]}
-                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                cursor={{ fill: chartTokens.gridStroke }}
               />
               <ChartLegend />
               <defs>
                 <linearGradient id={`${widgetId}-solarGrad`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#facc15" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#facc15" stopOpacity={0} />
+                  <stop offset="5%" stopColor={chartTokens.series[2]} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={chartTokens.series[2]} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id={`${widgetId}-batteryGrad`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  <stop offset="5%" stopColor={chartTokens.series[1]} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={chartTokens.series[1]} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id={`${widgetId}-gridGrad`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%" stopColor={chartTokens.series[0]} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={chartTokens.series[0]} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id={`${widgetId}-homeGrad`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#9ca3af" stopOpacity={0} />
+                  <stop offset="5%" stopColor={chartTokens.tooltipMutedText} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={chartTokens.tooltipMutedText} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <Area
                 type="monotone"
                 dataKey="solar"
-                stackId="1"
-                stroke="#facc15"
+                stroke={chartTokens.series[2]}
                 strokeWidth={2}
                 fill={`url(#${widgetId}-solarGrad)`}
                 name={t('widget.powerFlowHistory.solar', 'Solar')}
@@ -282,8 +304,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
               <Area
                 type="monotone"
                 dataKey="battery"
-                stackId="1"
-                stroke="#22c55e"
+                stroke={chartTokens.series[1]}
                 strokeWidth={2}
                 fill={`url(#${widgetId}-batteryGrad)`}
                 name={t('widget.powerFlowHistory.battery', 'Battery')}
@@ -292,8 +313,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
               <Area
                 type="monotone"
                 dataKey="grid"
-                stackId="1"
-                stroke="#3b82f6"
+                stroke={chartTokens.series[0]}
                 strokeWidth={2}
                 fill={`url(#${widgetId}-gridGrad)`}
                 name={t('widget.powerFlowHistory.grid', 'Grid')}
@@ -302,8 +322,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
               <Area
                 type="monotone"
                 dataKey="home"
-                stackId="1"
-                stroke="#9ca3af"
+                stroke={chartTokens.tooltipMutedText}
                 strokeWidth={2}
                 fill={`url(#${widgetId}-homeGrad)`}
                 name={t('widget.powerFlowHistory.home', 'Home')}

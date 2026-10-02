@@ -184,7 +184,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
               value={Math.round(minutesToArrival)}
               className="text-3xl font-bold text-cyan-400"
             />
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
               {etaDisplay}
             </span>
           </div>
@@ -193,7 +193,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
             <span className="text-xl font-semibold tabular-nums text-[var(--text-primary)]">
               {fmtNumber(displayDistance, 1)}
             </span>
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
               {distanceUnit}
             </span>
           </div>

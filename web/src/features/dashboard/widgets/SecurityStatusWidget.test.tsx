@@ -181,7 +181,7 @@ beforeEach(() => {
 
 describe('SecurityStatusWidget', () => {
   it('renders the titled shell and four "ok" cells when fully secured', () => {
-    const { container } = renderWidget();
+    renderWidget();
 
     expect(screen.getByText('Security')).toBeInTheDocument();
 
@@ -195,25 +195,24 @@ describe('SecurityStatusWidget', () => {
     expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     // Doors + Windows both closed → two "All Closed" values.
-    expect(screen.getAllByText('All Closed')).toHaveLength(2);
+    expect(screen.getAllByText('All closed')).toHaveLength(2);
 
-    // Every cell is "ok" → four emerald status dots, no alarm colours.
-    expect(container.querySelectorAll('.bg-emerald-500')).toHaveLength(4);
-    expect(container.querySelector('.bg-red-500')).toBeNull();
-    expect(container.querySelector('.bg-amber-500')).toBeNull();
+    expect(screen.getAllByText('Healthy')).toHaveLength(4);
+    expect(screen.queryByText('Error')).not.toBeInTheDocument();
+    expect(screen.queryByText('Warning')).not.toBeInTheDocument();
   });
 
   it('maps an unlocked car to a red "error" lock cell and sentry-off to "inactive"', () => {
     securityMock.mockReturnValue(
       makeQuery({ data: makeSecurity({ locked: false, sentry_mode: false }) }),
     );
-    const { container } = renderWidget();
+    renderWidget();
 
     expect(screen.getByText('Unlocked')).toBeInTheDocument();
     expect(screen.getByText('Off')).toBeInTheDocument();
 
-    // Unlocked → red error dot.
-    expect(container.querySelector('.bg-red-500')).toBeInTheDocument();
+    expect(screen.getByText('Error')).toBeInTheDocument();
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
     // Sentry "Off" is inactive (neutral), not an alarm.
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
@@ -222,7 +221,7 @@ describe('SecurityStatusWidget', () => {
     securityMock.mockReturnValue(
       makeQuery({ data: makeSecurity({ locked: null, sentry_mode: null }) }),
     );
-    const { container } = renderWidget();
+    renderWidget();
 
     // Both unknown cells collapse to the em-dash placeholder.
     expect(screen.getAllByText('—')).toHaveLength(2);
@@ -230,7 +229,7 @@ describe('SecurityStatusWidget', () => {
     // Crucially, a null lock is NOT reported as a red "Unlocked" alarm.
     expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
     expect(screen.queryByText('Locked')).not.toBeInTheDocument();
-    expect(container.querySelector('.bg-red-500')).toBeNull();
+    expect(screen.queryByText('Error')).not.toBeInTheDocument();
   });
 
   it('regression: absent door/window data renders unknown "—", not a false "All Closed"', () => {
@@ -253,7 +252,7 @@ describe('SecurityStatusWidget', () => {
 
     // Doors + Windows are unknown → two em-dashes, and NOT a green "All Closed".
     expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.queryByText('All Closed')).not.toBeInTheDocument();
+    expect(screen.queryByText('All closed')).not.toBeInTheDocument();
   });
 
   it('counts open doors + windows and flags them with a warning status', () => {
@@ -268,12 +267,11 @@ describe('SecurityStatusWidget', () => {
         }),
       }),
     );
-    const { container } = renderWidget();
+    renderWidget();
 
     expect(screen.getByText('2 Open')).toBeInTheDocument();
     expect(screen.getByText('1 Open')).toBeInTheDocument();
-    // Two warning cells → amber dots present.
-    expect(container.querySelectorAll('.bg-amber-500').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Warning')).toHaveLength(2);
   });
 
   it('treats a native boolean door_state=true as one open door', () => {
@@ -323,7 +321,7 @@ describe('SecurityStatusWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     // No header/cells while loading.
-    expect(screen.queryByText('Security')).not.toBeInTheDocument();
+    expect(screen.queryByText('Security')).toBeInTheDocument();
     expect(screen.queryByText('Lock')).not.toBeInTheDocument();
   });
 
@@ -339,7 +337,7 @@ describe('SecurityStatusWidget', () => {
     // The error panel replaces the empty-state + header (distinguishing a
     // failure from a genuine "no data yet").
     expect(screen.queryByText('No security data')).not.toBeInTheDocument();
-    expect(screen.queryByText('Security')).not.toBeInTheDocument();
+    expect(screen.queryByText('Security')).toBeInTheDocument();
   });
 
   it('keeps the last snapshot visible on a background error instead of the error panel', () => {

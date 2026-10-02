@@ -350,11 +350,22 @@ describe('buildDailyEfficiency', () => {
 });
 
 describe('DriveEfficiencyChartWidget — rendering', () => {
+  it('retains chart layers and stats on refresh failure with a working warning retry', () => {
+    const refetch = vi.fn();
+    setup({ drives: makeQuery({ data: recentDrives(), error: new Error('offline'), isError: true, refetch }) });
+    renderWidget({ size: STANDARD });
+    expect(screen.getByText('130')).toBeInTheDocument();
+    expect(screen.getByTestId('embedded-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders the title, Avg/Best/Trend stats, unit, and the two-series legend', () => {
     setup({ drives: makeQuery({ data: recentDrives() }) });
     renderWidget({ size: STANDARD });
 
-    expect(screen.getByText('Drive Efficiency')).toBeInTheDocument();
+    expect(screen.getByText('Drive efficiency')).toBeInTheDocument();
     expect(screen.getByText('Avg')).toBeInTheDocument();
     expect(screen.getByText('130')).toBeInTheDocument();
     expect(screen.getByText('Best day')).toBeInTheDocument();
@@ -389,7 +400,7 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     expect(screen.getByText('No efficiency data yet')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Standard widgets keep their header even when empty…
-    expect(screen.getByText('Drive Efficiency')).toBeInTheDocument();
+    expect(screen.getByText('Drive efficiency')).toBeInTheDocument();
     // …but the summary stats are gated behind having data.
     expect(screen.queryByText('Avg')).not.toBeInTheDocument();
   });
@@ -411,7 +422,7 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     const { container } = renderWidget({ size: STANDARD });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Drive Efficiency')).not.toBeInTheDocument();
+    expect(screen.queryByText('Drive efficiency')).toBeInTheDocument();
     expect(screen.queryByText('No efficiency data yet')).not.toBeInTheDocument();
   });
 
@@ -422,7 +433,7 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     // A non-ApiError falls through QueryError to the network/unknown branch.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Drive Efficiency')).not.toBeInTheDocument();
+    expect(screen.queryByText('Drive efficiency')).toBeInTheDocument();
   });
 });
 
@@ -441,7 +452,7 @@ describe('DriveEfficiencyChartWidget — interaction & layout', () => {
     renderWidget({ size: COMPACT });
 
     // Compact widgets are title-less and chart-less…
-    expect(screen.queryByText('Drive Efficiency')).not.toBeInTheDocument();
+    expect(screen.queryByText('Drive efficiency')).not.toBeInTheDocument();
     expect(screen.queryByTestId('chart-legend')).not.toBeInTheDocument();
     // …but the summary stats still render.
     expect(screen.getByText('Avg')).toBeInTheDocument();

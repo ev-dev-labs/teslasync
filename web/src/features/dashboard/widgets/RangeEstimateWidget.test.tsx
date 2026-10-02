@@ -8,7 +8,7 @@
  * none/0), the state query result, and the user's distance preference:
  *
  *   - a resolved `state` snapshot → the two labelled range rows.
- *   - no snapshot                → the accessible "No range data" empty state.
+ *   - no snapshot                → labelled unknowns plus the accessible empty state.
  *   - isLoading                  → skeleton chrome only.
  *   - a hard query error         → QueryError (never the misleading empty state).
  *
@@ -193,8 +193,8 @@ describe('RangeEstimateWidget — populated', () => {
       }),
     });
 
-    expect(screen.getByText('Rated Range')).toBeInTheDocument();
-    expect(screen.getByText('Ideal Range')).toBeInTheDocument();
+    expect(screen.getByText('Rated range')).toBeInTheDocument();
+    expect(screen.getByText('Ideal range')).toBeInTheDocument();
     expect(screen.getByText('500 km')).toBeInTheDocument();
     expect(screen.getByText('480 km')).toBeInTheDocument();
     // A present snapshot never shows the empty state.
@@ -231,8 +231,8 @@ describe('RangeEstimateWidget — populated', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.getByText('0 km')).toBeInTheDocument();
     // The section chrome still renders (never a blank panel).
-    expect(screen.getByText('Rated Range')).toBeInTheDocument();
-    expect(screen.getByText('Ideal Range')).toBeInTheDocument();
+    expect(screen.getByText('Rated range')).toBeInTheDocument();
+    expect(screen.getByText('Ideal range')).toBeInTheDocument();
   });
 });
 
@@ -254,22 +254,30 @@ describe('RangeEstimateWidget — vehicle resolution', () => {
 });
 
 describe('RangeEstimateWidget — lifecycle + empty states', () => {
+  it('keeps both range readings on cached refresh failure with a retry warning', () => {
+    renderWidget({ query: makeQuery({ error: new Error('transient'), isError: true }) });
+    expect(screen.getByText('500 km')).toBeInTheDocument();
+    expect(screen.getByText('480 km')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('shows an accessible empty state when no snapshot has landed', () => {
     renderWidget({ vehicleId: 7, query: makeQuery({ data: undefined }) });
 
     expect(screen.getByText('No range data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('Rated Range')).toBeNull();
+    expect(screen.getByText('Rated range')).toBeInTheDocument();
+    expect(screen.getByText('Ideal range')).toBeInTheDocument();
   });
 
   it('renders only a skeleton while the state query is loading', () => {
     const { container } = renderWidget({
       vehicleId: 7,
-      query: makeQuery({ isLoading: true }),
+      query: makeQuery({ isLoading: true, data: undefined }),
     });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Rated Range')).toBeNull();
+    expect(screen.queryByText('Rated range')).toBeNull();
     expect(screen.queryByText('No range data')).toBeNull();
   });
 
@@ -282,14 +290,14 @@ describe('RangeEstimateWidget — lifecycle + empty states', () => {
     // jsdom reports navigator.onLine === true → QueryError's non-offline branch.
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('No range data')).toBeNull();
-    expect(screen.queryByText('Rated Range')).toBeNull();
+    expect(screen.queryByText('Rated range')).toBeNull();
   });
 
   it('refetches when the accessible "Refresh" freshness control is activated', () => {
     const refetch = vi.fn();
     renderWidget({ vehicleId: 7, query: makeQuery({ refetch, isFetching: false }) });
 
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

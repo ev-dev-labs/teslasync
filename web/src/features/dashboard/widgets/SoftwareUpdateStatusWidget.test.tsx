@@ -198,9 +198,9 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Current Version')).toBeNull();
+    expect(screen.queryByText('Current version')).toBeNull();
     expect(screen.queryByText('No software data')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('renders an explicit empty state when neither live state nor an update exists', () => {
@@ -209,7 +209,7 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
     renderWidget();
 
     expect(screen.getByText('No software data')).toBeInTheDocument();
-    expect(screen.queryByText('Current Version')).toBeNull();
+    expect(screen.queryByText('Current version')).toBeNull();
   });
 
   it('is resilient when both queries resolve to undefined/null data', () => {
@@ -241,8 +241,8 @@ describe('SoftwareUpdateStatusWidget — compact (1×1)', () => {
     expect(screen.getByText('2025.20.1')).toBeInTheDocument();
     expect(screen.getByText('Up to date')).toBeInTheDocument();
     // Compact tiles have no header title…
-    expect(screen.queryByText('Software Update')).toBeNull();
-    expect(screen.queryByText('Current Version')).toBeNull();
+    expect(screen.queryByText('Software update')).toBeNull();
+    expect(screen.queryByText('Current version')).toBeNull();
     // …but still expose the refresh affordance as an icon-only overlay.
     expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
@@ -254,7 +254,7 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
     mockConfig.mockReturnValue(cfg({}));
     const { container } = renderWidget(FULL);
 
-    expect(screen.getByText('Current Version')).toBeInTheDocument();
+    expect(screen.getByText('Current version')).toBeInTheDocument();
     expect(screen.getByText('2025.20.1')).toBeInTheDocument();
     // "Up to date" appears twice: the status badge AND the confirmation line.
     expect(screen.getAllByText('Up to date')).toHaveLength(2);
@@ -392,7 +392,7 @@ describe('SoftwareUpdateStatusWidget — null-safety & hardening', () => {
     mockConfig.mockReturnValue(cfg({}));
     renderWidget(FULL);
 
-    expect(screen.getByText('Current Version')).toBeInTheDocument();
+    expect(screen.getByText('Current version')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 

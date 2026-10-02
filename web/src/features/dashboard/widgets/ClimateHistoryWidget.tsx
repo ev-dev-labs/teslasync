@@ -131,7 +131,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.climateHistory.title', 'Climate History')}
+      title={t('widget.climateHistory.title', 'Climate history')}
       icon={<ThermometerSun className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}
@@ -147,7 +147,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
         stats={stats}
         chart={
           <EmbeddedChart
-            title={t('widget.climateHistory.title', 'Climate History')}
+            title={t('widget.climateHistory.title', 'Climate history')}
             ariaLabel={t(
               'widget.climateHistory.chartAria',
               'Cabin and outside temperature history',

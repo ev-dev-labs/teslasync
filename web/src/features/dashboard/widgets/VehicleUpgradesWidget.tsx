@@ -138,7 +138,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
               <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {eligibleCount}
               </span>
-              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] tracking-wider">
                 {t('widget.upgrades.available', 'available')}
               </span>
             </>
@@ -155,15 +155,15 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
   // ── Standard / Wide layout ──
   return (
     <WidgetShell
-      title={t('widget.upgrades.title', 'Upgrades & Sharing')}
+      title={t('widget.upgrades.title', 'Upgrades & sharing')}
       icon={<ArrowUpCircle className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
       <div className="overflow-y-auto h-full space-y-3">
         {/* Upgrades section */}
         <div>
-          <h4 className="text-2xs uppercase text-[var(--text-muted)] tracking-wider mb-2">
-            {t('widget.upgrades.upgradesHeading', 'Available Upgrades')}
+          <h4 className="text-2xs text-[var(--text-muted)] tracking-wider mb-2">
+            {t('widget.upgrades.upgradesHeading', 'Available upgrades')}
           </h4>
           {upgrades.length > 0 ? (
             <div className="space-y-2">
@@ -222,14 +222,14 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
 
         {/* Share Links section */}
         <div>
-          <h4 className="text-2xs uppercase text-[var(--text-muted)] tracking-wider mb-2 flex items-center gap-1.5">
+          <h4 className="text-2xs text-[var(--text-muted)] tracking-wider mb-2 flex items-center gap-1.5">
             <Link2 className="h-3 w-3" />
-            {t('widget.upgrades.shareLinksHeading', 'Share Links')}
+            {t('widget.upgrades.shareLinksHeading', 'Share links')}
           </h4>
           {activeShareLinks.length > 0 ? (
             <div className="space-y-1">
               <div className="flex items-center justify-between py-1 px-1">
-                <span className="text-2xs uppercase text-[var(--text-muted)] tracking-wide">
+                <span className="text-2xs text-[var(--text-muted)] tracking-wide">
                   {t('widget.upgrades.activeLinks', 'Active links')}
                 </span>
                 <span className="text-sm text-[var(--text-primary)] font-medium">
@@ -238,7 +238,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
               </div>
               {nearestExpiry && (
                 <div className="flex items-center justify-between py-1 px-1">
-                  <span className="text-2xs uppercase text-[var(--text-muted)] tracking-wide">
+                  <span className="text-2xs text-[var(--text-muted)] tracking-wide">
                     {t('widget.upgrades.nearestExpiry', 'Nearest expiry')}
                   </span>
                   <Badge variant="warning" size="sm">

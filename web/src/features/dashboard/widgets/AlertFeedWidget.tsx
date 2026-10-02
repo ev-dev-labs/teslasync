@@ -59,7 +59,7 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.alertFeed', 'Alert Feed')}
+      title={t('widget.alertFeed', 'Alert feed')}
       icon={<Bell className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       error={error ? String(error) : null}

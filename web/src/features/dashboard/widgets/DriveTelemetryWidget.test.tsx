@@ -302,24 +302,40 @@ describe('DriveTelemetryWidget — shell states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Drive Telemetry')).toBeNull();
+    expect(screen.queryByText('Drive telemetry')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives')).toBeNull();
   });
 
-  it('shows a skeleton while the telemetry query loads', () => {
+  it('keeps drive statistics visible while the telemetry query loads', () => {
     mockTelemetry.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
-    const { container } = renderWidget(STANDARD);
+    renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(screen.getByText('Distance')).toBeInTheDocument();
+    expect(screen.getByText('Loading drive telemetry')).toBeInTheDocument();
   });
 
-  it('renders a QueryError (not an empty state) when the telemetry fetch fails', () => {
+  describe('DriveTelemetryWidget — retained trust', () => {
+    it('keeps summary values and chart samples when a background request fails', () => {
+      mockTelemetry.mockReturnValue(qr({
+        data: [makePoint({ power: 30_000 })],
+        error: new Error('background outage'),
+        isError: true,
+      }));
+      const { container } = renderWidget(WIDE);
+      expect(screen.getByText('Distance')).toBeInTheDocument();
+      expect(container.querySelector('.recharts-surface')).not.toBeNull();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps drive statistics and shows the telemetry failure independently', () => {
     mockTelemetry.mockReturnValue(
       qr({ isError: true, error: new Error('telemetry down'), data: undefined }),
     );
     renderWidget(STANDARD);
 
-    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('Drive telemetry unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.queryByText('No telemetry for this drive')).toBeNull();
     expect(screen.queryByText('No recent drives')).toBeNull();
   });
@@ -453,7 +469,7 @@ describe('DriveTelemetryWidget — compact layout', () => {
     expect(screen.getByText('Duration')).toBeInTheDocument();
     expect(screen.getByText('30')).toBeInTheDocument();
     // Compact tiles suppress the shell title, the chart, and the legend.
-    expect(screen.queryByText('Drive Telemetry')).toBeNull();
+    expect(screen.queryByText('Drive telemetry')).toBeNull();
     expect(screen.queryByTestId('chart-legend')).toBeNull();
   });
 
@@ -494,7 +510,7 @@ describe('DriveTelemetryWidget — null-safety & hardening', () => {
     expect(screen.getByText('0.0')).toBeInTheDocument(); // distance renders 0.0, not NaN
   });
 
-  it('renders zeroed stats (not NaN) when distance and duration are null', () => {
+  it('keeps missing distance and duration unknown rather than inventing zeros', () => {
     mockDrives.mockReturnValue(
       qr({
         data: [
@@ -509,9 +525,9 @@ describe('DriveTelemetryWidget — null-safety & hardening', () => {
     mockTelemetry.mockReturnValue(qr({ data: [] }));
     renderWidget(STANDARD);
 
-    // Without the `?? 0` guards these would be NaN → "NaN"/"—" style output.
-    expect(screen.getByText('0.0')).toBeInTheDocument(); // distance
-    expect(screen.getByText('0')).toBeInTheDocument(); // duration
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
   it('builds the chart without throwing when a telemetry point is entirely null', () => {

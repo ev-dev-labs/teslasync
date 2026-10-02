@@ -67,7 +67,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
       value: <span className="font-bold">{chartVersion}</span>,
     },
     {
-      label: t('widget.versionInfo.buildDate', 'Build Date'),
+      label: t('widget.versionInfo.buildDate', 'Build date'),
       value: buildDate,
     },
     {
@@ -75,7 +75,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
       value: <span className="font-mono break-all">{truncatedSha}</span>,
     },
     {
-      label: t('widget.versionInfo.goVersion', 'Go Version'),
+      label: t('widget.versionInfo.goVersion', 'Go version'),
       value: goVersion,
     },
     {
@@ -91,7 +91,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
         value: fmtNumber(signalsPerSec, 1),
       },
       {
-        label: t('widget.versionInfo.messagesToday', 'Messages Today'),
+        label: t('widget.versionInfo.messagesToday', 'Messages today'),
         value: fmtInt(messagesToday),
       },
     ];
@@ -99,11 +99,11 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
     if (isWide) {
       items.push(
         {
-          label: t('widget.versionInfo.bytesProcessed', 'Bytes Processed'),
+          label: t('widget.versionInfo.bytesProcessed', 'Bytes processed'),
           value: formatBytes(bytesProcessed),
         },
         {
-          label: t('widget.versionInfo.avgLatency', 'Avg Latency'),
+          label: t('widget.versionInfo.avgLatency', 'Avg latency'),
           value: `${fmtNumber(avgLatency, 1)} ms`,
         },
       );
@@ -118,7 +118,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.versionInfo.title', 'Version Info')}
+      title={isCompact ? undefined : t('widget.versionInfo.title', 'Version info')}
       icon={<Info className="h-3.5 w-3.5 text-neon-green" />}
       loading={isLoading}
       error={hasError}

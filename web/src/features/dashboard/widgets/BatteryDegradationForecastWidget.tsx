@@ -2,14 +2,16 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingDown, AlertTriangle, Lightbulb, Zap, Thermometer, Battery } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtNumber } from '@/lib/numberFormat';
+import { knownNumber } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetTipCards, type TipItem } from './shared';
+import { WidgetBigNumber, WidgetStatGrid, WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
 
 /** Map risk factor name to an icon for display. Null-safe: a missing name
@@ -74,14 +76,15 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
   const idStr = id != null ? String(id) : null;
   const { locale } = useDateFormat();
 
-  const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } =
-    useBatteryDegradation(idStr);
+  const query = useBatteryDegradation(idStr);
+  const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
+  const trust = useDataState(query, { provenance: 'inferred' });
 
   const isCompact = size.cols <= 1;
 
-  const rate = data?.degradation_rate_pct_per_month ?? 0;
-  const tier = useMemo(() => healthTier(rate), [rate]);
-  const currentHealthPct = data?.current_health_pct ?? data?.current_health ?? null;
+  const rate = knownNumber(data?.degradation_rate_pct_per_month);
+  const tier = rate != null ? healthTier(rate) : null;
+  const currentHealthPct = knownNumber(data?.current_health_pct) ?? knownNumber(data?.current_health);
   const projectedDate = formatProjectedMonth(data?.projected_80pct_date, locale);
 
   const riskFactors = data?.risk_factors ?? [];
@@ -106,143 +109,120 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
   // state when the predictive model omits the health/projection fields.
   const hasData =
     currentHealthPct != null ||
+    rate != null ||
+    (data?.horizon_outlook?.points?.length ?? 0) > 0 ||
     data?.projected_80pct_date != null ||
     riskFactors.length > 0 ||
     recommendations.length > 0;
+  const emptySectionMessage = hasData
+    ? t('widget.emptyMessage', 'This widget has no qualifying data yet.')
+    : t('widget.forecast.noData', 'No degradation forecast data');
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.forecast.title', 'Battery Forecast')}
-      icon={isCompact ? undefined : <TrendingDown className="h-3.5 w-3.5 text-neon-amber" />}
+      title={isCompact ? undefined : t('widget.forecast.title', 'Battery forecast')}
+      icon={isCompact ? undefined : <TrendingDown className="h-3.5 w-3.5" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={data != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {hasData ? (
-        isCompact ? (
+      {isCompact ? (
           /* ── Compact layout (1×2) ── */
-          <div className="h-full flex flex-col items-center justify-center gap-1">
-            <p className="text-2xl font-bold tabular-nums text-[var(--text-primary)]">
-              {currentHealthPct != null ? `${fmtNumber(currentHealthPct, 1)}%` : '—'}
-            </p>
-            <Badge variant={tier.variant} size="sm">
+          <div className="flex min-w-0 flex-col gap-2">
+            <WidgetBigNumber value={currentHealthPct != null ? `${fmtNumber(currentHealthPct, 1)}%` : null} label={t('widget.forecast.currentHealth', 'Current health')} />
+            {tier && <Badge variant={tier.variant} size="sm" className="self-start">
               {t(`widget.forecast.${tier.key}`, tier.label)}
-            </Badge>
+            </Badge>}
+            {!hasData && <EmptyState icon={<TrendingDown className="h-5 w-5" />} message={t('widget.forecast.noData', 'No degradation forecast data')} />}
           </div>
         ) : (
           /* ── Standard layout (2×4) ── */
-          <div className="h-full flex flex-col gap-3 overflow-y-auto">
+          <div className="flex min-w-0 flex-col gap-3">
             {/* Projected 80% date — hero section */}
-            <div className="text-center py-2">
-              <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)] mb-1">
-                {t('widget.forecast.projected80', 'Projected 80% Capacity')}
-              </p>
-              <p className="text-2xl font-bold tabular-nums text-[var(--text-primary)]">
-                {projectedDate}
-              </p>
-              <div className="flex items-center justify-center gap-2 mt-1.5">
-                <Badge variant={tier.variant} size="sm">
+            <div className="flex min-w-0 flex-col gap-2">
+              <WidgetBigNumber value={projectedDate === '—' ? null : projectedDate} label={t('widget.forecast.projected80', 'Projected 80% capacity')} animated={false} />
+              {tier && <Badge variant={tier.variant} size="sm" className="self-start">
                   {t(`widget.forecast.${tier.key}`, tier.label)}
-                </Badge>
-                {rate > 0 && (
-                  <span className="text-xs text-[var(--text-muted)]">
-                    −{fmtNumber(rate, 2)}%/{t('widget.mo', 'mo')}
-                  </span>
-                )}
-              </div>
+              </Badge>}
             </div>
 
             {/* Current health stat */}
-            {currentHealthPct != null && (
-              <StatCard
-                label={t('widget.forecast.currentHealth', 'Current Health')}
-                value={`${fmtNumber(currentHealthPct, 1)}%`}
-              />
-            )}
+            <WidgetStatGrid stats={[
+              { label: t('widget.forecast.currentHealth', 'Current health'), value: currentHealthPct != null ? `${fmtNumber(currentHealthPct, 1)}%` : null },
+              { label: t('widget.degradation', 'Degradation'), value: rate != null ? `${rate > 0 ? '−' : ''}${fmtNumber(rate, 2)}%/${t('widget.mo', 'mo')}` : null },
+            ]} cols={2} />
 
             {/* Horizon outlook: 1/3/5-year twin readout */}
-            {(data?.horizon_outlook?.points?.length ?? 0) > 0 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
-                  {t('widget.forecast.horizon', '1 / 3 / 5-Year Outlook')}
-                </p>
-                <ul className="grid grid-cols-3 gap-1.5">
+                <h4 className={dashboardTokens.metricLabel}>
+                  {t('widget.forecast.horizon', '1 / 3 / 5-year outlook')}
+                </h4>
+                {(data?.horizon_outlook?.points?.length ?? 0) > 0 ? <ul className="grid grid-cols-1 gap-2 @xs:grid-cols-3">
                   {(data?.horizon_outlook?.points ?? []).map((p) => (
                     <li
                       key={p.years}
-                      className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-2 py-2 text-center"
+                      className="min-w-0 border-b border-[var(--border-subtle)] py-2"
                     >
-                      <p className="text-2xs text-[var(--text-muted)]">
+                      <p className={dashboardTokens.metricLabel}>
                         {t('widget.forecast.years', '{{n}} yr', { n: p.years })}
                       </p>
-                      <p className="text-sm font-bold tabular-nums text-[var(--text-primary)]">
-                        {fmtNumber(p.health_pct, 1)}%
+                      <p className={dashboardTokens.secondaryMetric}>
+                        {knownNumber(p.health_pct) != null ? `${fmtNumber(p.health_pct, 1)}%` : '—'}
                       </p>
-                      <p className="text-2xs tabular-nums text-[var(--text-muted)]">
-                        {fmtNumber(p.confidence_low, 0)}–{fmtNumber(p.confidence_high, 0)}
+                      <p className={dashboardTokens.metricLabel}>
+                        {knownNumber(p.confidence_low) != null ? fmtNumber(p.confidence_low, 0) : '—'}–{knownNumber(p.confidence_high) != null ? fmtNumber(p.confidence_high, 0) : '—'}
                       </p>
                     </li>
                   ))}
-                </ul>
+                </ul> : <EmptyState message={emptySectionMessage} />}
               </div>
-            )}
 
             {/* Risk factors list */}
-            {riskFactors.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
-                  {t('widget.forecast.riskFactors', 'Risk Factors')}
-                </p>
-                <ul className="flex flex-col gap-1 overflow-y-auto max-h-40">
+                <h4 className={dashboardTokens.metricLabel}>
+                  {t('widget.forecast.riskFactors', 'Risk factors')}
+                </h4>
+                {riskFactors.length > 0 ? <ul className="flex flex-col gap-1">
                   {riskFactors.slice(0, 5).map((rf, idx) => {
-                    const impact = scoreToImpact(rf.score ?? 0);
+                    const score = knownNumber(rf.score);
+                    const impact = score != null ? scoreToImpact(score) : null;
                     return (
                       <li
                         key={`${rf.name ?? 'risk'}-${idx}`}
-                        className="flex items-center gap-2 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2 min-h-[44px]"
+                        className="flex min-w-0 items-start gap-2 border-b border-[var(--border-subtle)] py-2"
                       >
                         <span className="shrink-0 text-[var(--text-secondary)]">
                           {riskIcon(rf.name)}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm text-[var(--text-primary)] truncate block">
+                          <span className={`${dashboardTokens.title} block break-words`}>
                             {rf.label ?? rf.name ?? '—'}
                           </span>
-                          <span className="text-2xs text-[var(--text-muted)] truncate block">
+                          <span className={`${dashboardTokens.metricLabel} block break-words`}>
                             {rf.detail ?? '—'}
                           </span>
                         </div>
-                        <Badge variant={impactVariant(impact)} size="sm">
-                          {fmtNumber(rf.score, 0)}
+                        <Badge variant={impact != null ? impactVariant(impact) : 'neutral'} size="sm">
+                          {score != null ? fmtNumber(score, 0) : '—'}
                         </Badge>
                       </li>
                     );
                   })}
-                </ul>
+                </ul> : <EmptyState message={emptySectionMessage} />}
               </div>
-            )}
 
             {/* Recommendations as tip cards */}
-            {tipItems.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
+                <h4 className={dashboardTokens.metricLabel}>
                   {t('widget.forecast.recommendations', 'Recommendations')}
-                </p>
-                <WidgetTipCards tips={tipItems} maxTips={3} />
+                </h4>
+                <WidgetTipCards tips={tipItems} maxTips={3} emptyMessage={t('widget.chargingOptimizer.noRecommendations', 'No recommendations')} />
               </div>
-            )}
           </div>
-        )
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<TrendingDown className="h-5 w-5" />}
-          message={t('widget.forecast.noData', 'No degradation forecast data')}
-          className="py-4"
-        />
       )}
     </WidgetShell>
   );

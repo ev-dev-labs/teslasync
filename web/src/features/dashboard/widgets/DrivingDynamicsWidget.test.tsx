@@ -233,7 +233,7 @@ describe('DrivingDynamicsWidget — standard layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Driving Dynamics')).toBeInTheDocument();
+    expect(screen.getByText('Driving dynamics')).toBeInTheDocument();
     expect(screen.getByText('Accel')).toBeInTheDocument();
     expect(screen.getByText('Brake')).toBeInTheDocument();
     expect(screen.getByText('Lateral')).toBeInTheDocument();
@@ -252,12 +252,21 @@ describe('DrivingDynamicsWidget — standard layout', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // The distribution chart is gated behind the wide (cols >= 3) breakpoint.
-    expect(screen.queryByText('G-Force Distribution')).not.toBeInTheDocument();
+    expect(screen.queryByText('G-force distribution')).not.toBeInTheDocument();
     expect(screen.getByText('Accel')).toBeInTheDocument();
   });
 });
 
 describe('DrivingDynamicsWidget — wide layout (histogram)', () => {
+  it('retains independently loaded distribution when dynamics have not loaded', () => {
+    useDrivingDynamicsMock.mockReturnValue(makeQuery({ data: undefined }));
+    useAccelerationDistributionMock.mockReturnValue(makeDistQuery({ data: { values: [1, 3, 2] } }));
+    renderWidget({ cols: 3, rows: 3 });
+    expect(screen.getByText('G-force distribution')).toBeInTheDocument();
+    expect(screen.getByText('Unknown dynamics')).toBeInTheDocument();
+    expect(screen.queryByText('No dynamics data')).not.toBeInTheDocument();
+  });
+
   it('renders the "G-Force Distribution" chart when wide and the histogram has buckets', () => {
     useDrivingDynamicsMock.mockReturnValue(
       makeQuery({ data: makeDynamics({ avgAccelerationG: 0.2 }) }),
@@ -268,7 +277,7 @@ describe('DrivingDynamicsWidget — wide layout (histogram)', () => {
 
     renderWidget({ cols: 3, rows: 3 });
 
-    expect(screen.getByText('G-Force Distribution')).toBeInTheDocument();
+    expect(screen.getByText('G-force distribution')).toBeInTheDocument();
     // The gauges still render alongside the chart.
     expect(screen.getByText('Lateral')).toBeInTheDocument();
   });
@@ -285,7 +294,7 @@ describe('DrivingDynamicsWidget — wide layout (histogram)', () => {
 
     // histogramData is empty → the whole chart section is dropped, but the
     // gauges must still render (never a blank panel).
-    expect(screen.queryByText('G-Force Distribution')).not.toBeInTheDocument();
+    expect(screen.queryByText('G-force distribution')).not.toBeInTheDocument();
     expect(screen.getByText('Accel')).toBeInTheDocument();
   });
 });
@@ -368,7 +377,7 @@ describe('DrivingDynamicsWidget — compact layout', () => {
     expect(screen.getByText('Max g')).toBeInTheDocument();
     expect(screen.getByText('Smooth')).toBeInTheDocument();
     // Compact mode drops the header title and the gauges.
-    expect(screen.queryByText('Driving Dynamics')).not.toBeInTheDocument();
+    expect(screen.queryByText('Driving dynamics')).not.toBeInTheDocument();
     expect(screen.queryByText('Accel')).not.toBeInTheDocument();
   });
 
@@ -390,7 +399,7 @@ describe('DrivingDynamicsWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No dynamics data')).toBeInTheDocument();
-    expect(screen.queryByText('Driving Dynamics')).not.toBeInTheDocument();
+    expect(screen.queryByText('Driving dynamics')).not.toBeInTheDocument();
   });
 });
 
@@ -403,11 +412,11 @@ describe('DrivingDynamicsWidget — query states', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Driving Dynamics')).not.toBeInTheDocument();
+    expect(screen.queryByText('Driving dynamics')).toBeInTheDocument();
     expect(screen.queryByText('No dynamics data')).not.toBeInTheDocument();
   });
 
-  it('enters the loading state when only the distribution query is still loading', () => {
+  it('keeps measured dynamics while the independent distribution is loading', () => {
     useDrivingDynamicsMock.mockReturnValue(
       makeQuery({ data: makeDynamics({ avgAccelerationG: 0.2 }) }),
     );
@@ -417,10 +426,8 @@ describe('DrivingDynamicsWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    // isLoading = dynLoading || distLoading → the shell shows the skeleton
-    // and suppresses the gauges even though the dynamics payload has landed.
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Accel')).not.toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByText('Accel')).toBeInTheDocument();
   });
 
   it('renders the QueryError panel on an initial load failure (no cached data)', () => {
@@ -432,7 +439,7 @@ describe('DrivingDynamicsWidget — query states', () => {
 
     // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Driving Dynamics')).not.toBeInTheDocument();
+    expect(screen.queryByText('Driving dynamics')).toBeInTheDocument();
     expect(screen.queryByText('Accel')).not.toBeInTheDocument();
   });
 
@@ -443,15 +450,12 @@ describe('DrivingDynamicsWidget — query states', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Driving Dynamics')).toBeInTheDocument();
+    expect(screen.getByText('Driving dynamics')).toBeInTheDocument();
     expect(screen.getByText('No dynamics data')).toBeInTheDocument();
     expect(screen.queryByText('Accel')).not.toBeInTheDocument();
   });
 
-  it('degrades a partial payload to zeros without throwing (null-safety)', () => {
-    // A `{}` payload is truthy, so the gauges render — every g-force falls back
-    // to 0 via the widget's `?? 0` guards rather than crashing, and the mean
-    // trips the "calm" severity band.
+  it('keeps missing measurements unknown without inventing calm driving', () => {
     useDrivingDynamicsMock.mockReturnValue(
       makeQuery({ data: {} as DrivingDynamicsData }),
     );
@@ -462,9 +466,10 @@ describe('DrivingDynamicsWidget — query states', () => {
     }).not.toThrow();
 
     expect(screen.getByText('Accel')).toBeInTheDocument();
-    expect(screen.getByText('Calm')).toBeInTheDocument();
-    // Every g-force degraded to 0 → all three gauges paint green (< 0.2).
-    expect(gaugeArc(container, GREEN)).toBe(true);
+    expect(screen.getByText('Unknown dynamics')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
+    // No gauge fill is rendered for an unknown measurement.
+    expect(gaugeArc(container, GREEN)).toBe(false);
   });
 });
 
@@ -551,7 +556,7 @@ describe('DrivingDynamicsWidget — graceful degradation on transient error', ()
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     // Data is still on screen …
-    expect(screen.getByText('Driving Dynamics')).toBeInTheDocument();
+    expect(screen.getByText('Driving dynamics')).toBeInTheDocument();
     expect(screen.getByText('Accel')).toBeInTheDocument();
     expect(screen.getByText('Calm')).toBeInTheDocument();
     // … the full-panel error is NOT shown …

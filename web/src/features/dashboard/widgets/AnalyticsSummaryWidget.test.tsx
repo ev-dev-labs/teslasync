@@ -180,10 +180,10 @@ describe('AnalyticsSummaryWidget', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('Analytics Summary')).toBeInTheDocument();
+    expect(screen.getByText('Analytics summary')).toBeInTheDocument();
 
     // Every stat label is present (each is unique).
-    for (const label of ['Total Distance', 'Avg Efficiency', 'Energy Consumed', 'Cost / km']) {
+    for (const label of ['Total distance', 'Avg efficiency', 'Energy consumed', 'Cost / km']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
 
@@ -235,11 +235,11 @@ describe('AnalyticsSummaryWidget', () => {
 
     // Single headline (value + unit in one node), reduced-motion settled.
     expect(screen.getByText(/^1,000\s*km$/)).toBeInTheDocument();
-    expect(screen.getByText('Total Distance')).toBeInTheDocument();
+    expect(screen.getByText('Total distance')).toBeInTheDocument();
 
     // Compact never renders the stat grid or the titled header.
-    expect(screen.queryByText('Avg Efficiency')).not.toBeInTheDocument();
-    expect(screen.queryByText('Analytics Summary')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg efficiency')).not.toBeInTheDocument();
+    expect(screen.queryByText('Analytics summary')).not.toBeInTheDocument();
   });
 
   it('compact layout shows the empty state when there is no data', () => {
@@ -257,7 +257,7 @@ describe('AnalyticsSummaryWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     // No KPI content while loading.
-    expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });
 
   it('surfaces an error panel (and hides the KPI grid) when the query fails', () => {
@@ -268,19 +268,19 @@ describe('AnalyticsSummaryWidget', () => {
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
     // The freshness/refresh control lives in the header, which the error
     // branch replaces entirely.
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('shows the no-data empty state (standard) while keeping the titled shell', () => {
     analyticsMock.mockReturnValue(makeQuery({ data: undefined }));
     renderWidget();
 
-    expect(screen.getByText('Analytics Summary')).toBeInTheDocument();
+    expect(screen.getByText('Analytics summary')).toBeInTheDocument();
     expect(screen.getByText('No analytics data')).toBeInTheDocument();
-    expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });
 
   it('is null-safe: a partial payload renders zeros and an em dash for cost', () => {
@@ -330,7 +330,7 @@ describe('AnalyticsSummaryWidget', () => {
     // Each sparkline is an accessible image labelled from its metric.
     const trends = screen.getAllByRole('img', { name: /trend$/ });
     expect(trends).toHaveLength(4);
-    expect(screen.getByRole('img', { name: 'Total Distance trend' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Total distance trend' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Cost / km trend' })).toBeInTheDocument();
   });
 
@@ -363,7 +363,7 @@ describe('AnalyticsSummaryWidget', () => {
     // Only the one valid series survives coercion.
     const trends = screen.getAllByRole('img', { name: /trend$/ });
     expect(trends).toHaveLength(1);
-    expect(screen.getByRole('img', { name: 'Avg Efficiency trend' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Avg efficiency trend' })).toBeInTheDocument();
     expect(screen.getByText('1,000')).toBeInTheDocument();
   });
 });

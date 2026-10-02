@@ -104,7 +104,7 @@ describe('FsdWeeklyWidget', () => {
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.0 km');
     expect(screen.getByTestId('fsd-weekly-share')).toHaveTextContent('40.0%');
     expect(screen.getByTestId('fsd-weekly-change')).toHaveTextContent('+3.0 pts');
-    expect(screen.getByRole('link', { name: 'FSD Insights' })).toHaveAttribute('href', '/fsd');
+    expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
     expect(screen.getByRole('link', { name: 'Weekly digest' })).toHaveAttribute('href', '/weekly-digest');
   });
 

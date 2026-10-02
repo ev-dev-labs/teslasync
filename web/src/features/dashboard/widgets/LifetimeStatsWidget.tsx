@@ -46,24 +46,24 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
     if (!data) return [];
     return [
       {
-        label: t('widget.lifetimeStats.totalDistance', 'Total Distance'),
+        label: t('widget.lifetimeStats.totalDistance', 'Total distance'),
         value: fmtNumber(displayDistance, 0),
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.lifetimeStats.totalDrives', 'Total Drives'),
+        label: t('widget.lifetimeStats.totalDrives', 'Total drives'),
         value: fmtInt(data.total_drives ?? 0),
         icon: <Car className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.lifetimeStats.totalEnergy', 'Total Energy'),
+        label: t('widget.lifetimeStats.totalEnergy', 'Total energy'),
         value: fmtNumber(data.total_energy_kwh ?? 0, 1),
         unit: 'kWh',
         icon: <Zap className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.lifetimeStats.co2Saved', 'CO₂ Saved'),
+        label: t('widget.lifetimeStats.co2Saved', 'CO₂ saved'),
         value: fmtNumber(data.co2_offset_kg ?? 0, 0),
         unit: 'kg',
         icon: <Leaf className="h-3.5 w-3.5" />,
@@ -81,17 +81,17 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
 
     return [
       {
-        label: t('widget.lifetimeStats.totalCost', 'Total Cost'),
+        label: t('widget.lifetimeStats.totalCost', 'Total cost'),
         value: formatCurrency(data.total_charging_cost ?? 0),
         icon: <DollarSign className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.lifetimeStats.ownershipDays', 'Ownership Days'),
+        label: t('widget.lifetimeStats.ownershipDays', 'Ownership days'),
         value: fmtInt(data.ownership_days ?? 0),
         icon: <CalendarDays className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.lifetimeStats.avgDailyDistance', 'Avg Daily Distance'),
+        label: t('widget.lifetimeStats.avgDailyDistance', 'Avg daily distance'),
         value: fmtNumber(avgDailyDisplay, 1),
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
@@ -122,7 +122,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
               value={displayDistance}
               className="text-2xl font-bold text-[var(--text-primary)]"
             />
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
               {distanceUnit} {t('widget.lifetimeStats.lifetime', 'lifetime')}
             </span>
           </div>
@@ -140,7 +140,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   // Standard / Wide
   return (
     <WidgetShell
-      title={t('widget.lifetimeStats.title', 'Lifetime Stats')}
+      title={t('widget.lifetimeStats.title', 'Lifetime stats')}
       icon={<Trophy className="h-3.5 w-3.5 text-amber-400" />}
       loading={isLoading}
       error={isError && !data ? String(error ?? t('widget.lifetimeStats.error', 'Unable to load lifetime stats')) : null}

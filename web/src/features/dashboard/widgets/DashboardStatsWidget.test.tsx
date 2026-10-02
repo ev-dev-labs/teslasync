@@ -274,7 +274,7 @@ describe('DashboardStatsWidget — populated (full size)', () => {
 
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
     expect(screen.getByText('Trips')).toBeInTheDocument();
-    expect(screen.getByText('Charge Sessions')).toBeInTheDocument();
+    expect(screen.getByText('Charge sessions')).toBeInTheDocument();
     // fmtInt applies locale grouping — 1234 → "1,234", not "1234".
     expect(screen.getByText('1,234')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
@@ -285,8 +285,8 @@ describe('DashboardStatsWidget — populated (full size)', () => {
     useVehicleStateMachineMock.mockReturnValue(makeQ(makeFsm('online')));
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('FSM State')).toBeInTheDocument();
-    expect(screen.getByText('Current State')).toBeInTheDocument();
+    expect(screen.getByText('FSM state')).toBeInTheDocument();
+    expect(screen.getByText('Current state')).toBeInTheDocument();
     // The state appears once in the grid card and once in the StatusBadge.
     expect(screen.getAllByText('online')).toHaveLength(2);
   });
@@ -310,7 +310,7 @@ describe('DashboardStatsWidget — populated (full size)', () => {
   it('does not render the wide "Recent Transitions" section at full (cols=2) size', () => {
     useStateTimelineMock.mockReturnValue(makeQ({ transitions: [makeTransition()] }));
     renderWidget({ cols: 2, rows: 2 });
-    expect(screen.queryByText('Recent Transitions')).toBeNull();
+    expect(screen.queryByText('Recent transitions')).toBeNull();
   });
 });
 
@@ -325,7 +325,7 @@ describe('DashboardStatsWidget — compact', () => {
     expect(screen.getByText('active')).toBeInTheDocument();
     // The stat grid and current-state row are hidden in the compact variant.
     expect(screen.queryByText('Vehicles')).toBeNull();
-    expect(screen.queryByText('Current State')).toBeNull();
+    expect(screen.queryByText('Current state')).toBeNull();
   });
 
   it('floors a missing trips count to 0 in the compact hero', () => {
@@ -354,7 +354,7 @@ describe('DashboardStatsWidget — wide (recent transitions)', () => {
     );
     renderWidget({ cols: 3, rows: 4 });
 
-    expect(screen.getByText('Recent Transitions')).toBeInTheDocument();
+    expect(screen.getByText('Recent transitions')).toBeInTheDocument();
     expect(screen.getByText('driving')).toBeInTheDocument();
     expect(screen.getByText('charging')).toBeInTheDocument();
     expect(screen.getByText('parked')).toBeInTheDocument();
@@ -394,7 +394,7 @@ describe('DashboardStatsWidget — wide (recent transitions)', () => {
   it('hides the transitions section when the timeline is empty', () => {
     useStateTimelineMock.mockReturnValue(makeQ({ transitions: [] as StateTransition[] }));
     renderWidget({ cols: 3, rows: 4 });
-    expect(screen.queryByText('Recent Transitions')).toBeNull();
+    expect(screen.queryByText('Recent transitions')).toBeNull();
   });
 });
 

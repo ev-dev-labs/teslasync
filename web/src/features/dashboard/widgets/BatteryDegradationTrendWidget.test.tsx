@@ -14,13 +14,13 @@
  *   3. The `current_health_pct ?? current_health` precedence, including the
  *      subtlety that a genuine `0` must win over the legacy field (nullish,
  *      not falsy, coalescing).
- *   4. The conditional Degradation stat (shown only when the rate is > 0).
+ *   4. The Degradation stat distinguishes zero, missing and positive rates.
  *   5. Loading / error / empty branches (never a blank panel). The error
  *      branch surfaces the shared QueryError panel — before the fix the widget
  *      only forwarded `isError` and a fetch failure masqueraded as "no data".
  *   6. Freshness-control refresh → refetch.
  *   7. Null-safety of a malformed / partial payload (no crash; em-dash
- *      placeholders; the chart still coerces bad points to 0).
+ *      placeholders; the chart preserves gaps rather than inventing zeros).
  *   8. Vehicle selection: an explicit `vehicleId` wins, otherwise the first
  *      vehicle from `useVehicles` is used.
  *
@@ -264,11 +264,19 @@ beforeEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('BatteryDegradationTrendWidget', () => {
+  it('preserves the chart and all summaries when its cached refresh fails', () => {
+    degradationMock.mockReturnValue(makeQuery({ data: makeData(), error: new Error('transient'), isError: true }));
+    renderWidget();
+    expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '3');
+    expect(screen.getByText('95.4%')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('renders the titled shell with SoH, Degradation and Cycles stats', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('Battery Degradation')).toBeInTheDocument();
+    expect(screen.getByText('Battery degradation')).toBeInTheDocument();
 
     // SoH prefers current_health_pct (95.4), formatted to one decimal.
     expect(screen.getByText('SoH')).toBeInTheDocument();
@@ -276,7 +284,7 @@ describe('BatteryDegradationTrendWidget', () => {
 
     // Degradation stat is present with its "/mo" unit and rate value.
     expect(screen.getByText('Degradation')).toBeInTheDocument();
-    expect(screen.getByText('/mo')).toBeInTheDocument();
+    expect(screen.getByText('−0.42%/mo')).toBeInTheDocument();
     expect(screen.getByText(/0\.42%/)).toBeInTheDocument();
 
     // Cycles as a plain integer.
@@ -342,14 +350,14 @@ describe('BatteryDegradationTrendWidget', () => {
     expect(screen.getByText('88.0%')).toBeInTheDocument();
   });
 
-  it('hides the Degradation stat when the rate is not positive', () => {
+  it('keeps a genuine zero degradation rate visible', () => {
     degradationMock.mockReturnValue(
       makeQuery({ data: makeData({ degradation_rate_pct_per_month: 0 }) }),
     );
     renderWidget();
 
-    expect(screen.queryByText('Degradation')).not.toBeInTheDocument();
-    expect(screen.queryByText('/mo')).not.toBeInTheDocument();
+    expect(screen.getByText('Degradation')).toBeInTheDocument();
+    expect(screen.getByText('0.00%/mo')).toBeInTheDocument();
     // SoH + Cycles remain.
     expect(screen.getByText('SoH')).toBeInTheDocument();
     expect(screen.getByText('512')).toBeInTheDocument();
@@ -359,11 +367,12 @@ describe('BatteryDegradationTrendWidget', () => {
     degradationMock.mockReturnValue(makeQuery({ data: undefined }));
     renderWidget();
 
-    expect(screen.getByText('Battery Degradation')).toBeInTheDocument();
+    expect(screen.getByText('Battery degradation')).toBeInTheDocument();
     expect(screen.getByText('No degradation data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    // Stats + chart are not rendered while empty.
-    expect(screen.queryByText('SoH')).not.toBeInTheDocument();
+    // Stat sections remain visible with unknown readings.
+    expect(screen.getByText('SoH')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
@@ -389,7 +398,7 @@ describe('BatteryDegradationTrendWidget', () => {
     expect(screen.queryByText('No degradation data')).not.toBeInTheDocument();
     expect(screen.queryByText('SoH')).not.toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('drops the title and chart in the compact 1×1 layout, keeping the stat row', () => {
@@ -398,7 +407,7 @@ describe('BatteryDegradationTrendWidget', () => {
     expect(screen.getByText('SoH')).toBeInTheDocument();
     expect(screen.getByText('512')).toBeInTheDocument();
     // Compact hides the title and the chart.
-    expect(screen.queryByText('Battery Degradation')).not.toBeInTheDocument();
+    expect(screen.queryByText('Battery degradation')).not.toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
@@ -432,11 +441,11 @@ describe('BatteryDegradationTrendWidget', () => {
     expect(() => renderWidget()).not.toThrow();
 
     // SoH + Cycles both collapse to the em-dash placeholder.
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    // Degradation is hidden (rate null).
-    expect(screen.queryByText('Degradation')).not.toBeInTheDocument();
-    // Two (coerced) points still reach the chart without throwing.
-    expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '2');
+    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getByText('Degradation')).toBeInTheDocument();
+    // Missing health samples are not coerced into a zero-health chart.
+    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
+    expect(screen.getByText('More data needed for trend')).toBeInTheDocument();
   });
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {

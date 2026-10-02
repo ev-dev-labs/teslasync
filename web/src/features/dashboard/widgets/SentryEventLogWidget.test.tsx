@@ -127,6 +127,7 @@ interface QueryResult {
   isFetching: boolean;
   isStale: boolean;
   isError: boolean;
+  error?: Error;
   dataUpdatedAt: number;
   refetch: () => void;
 }
@@ -177,6 +178,27 @@ beforeEach(() => {
   requestMock.mockResolvedValue([]);
 });
 
+describe('SentryEventLogWidget retained and unknown evidence', () => {
+  it('does not turn an unknown sentry enum into activated mode', () => {
+    for (const sentry_mode of ['Unknown', 'SentryModeStateUnknown']) {
+      const event = deriveEvent(makeEvent({ sentry_mode, locked: null }), asT(makeT()));
+      expect(event.title).toBe('Security state updated');
+      expect(event.subtitle).toBe('—');
+    }
+  });
+
+  it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }, { cols: 4, rows: 4 }])('retains true false history and warning after refresh failure in %o', (size) => {
+    useQueryMock.mockReturnValue(makeResult({
+      data: [makeEvent({ locked: false, sentry_mode: false })],
+      isError: true, error: new Error('refresh failed'),
+    }));
+    renderWidget(size);
+    expect(screen.getByText('Sentry mode deactivated')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    expect(screen.queryByText('No security events recorded')).toBeNull();
+  });
+});
+
 // ── Pure mapper: deriveEvent ─────────────────────────────────────────────────
 
 describe('deriveEvent', () => {
@@ -201,30 +223,30 @@ describe('deriveEvent', () => {
 
   it('reads a non-Off Tesla enum string as Sentry ON', () => {
     const d = deriveEvent(makeEvent({ sentry_mode: 'Armed' }), asT(makeT()));
-    expect(d.title).toBe('Sentry Mode activated');
+    expect(d.title).toBe('Sentry mode activated');
     expect(d.severity).toBe('info');
     expect(d.color).toBe('#06b6d4');
   });
 
   it('REGRESSION: treats the enum string "Off" as deactivated, not activated', () => {
     const d = deriveEvent(makeEvent({ sentry_mode: 'Off' }), asT(makeT()));
-    expect(d.title).toBe('Sentry Mode deactivated');
+    expect(d.title).toBe('Sentry mode deactivated');
     // The old truthy test rendered "activated" here — this is the bug fix.
-    expect(d.title).not.toBe('Sentry Mode activated');
+    expect(d.title).not.toBe('Sentry mode activated');
     expect(d.color).toBe('#6b7280');
   });
 
   it('treats the full "SentryModeStateOff" enum token as deactivated too', () => {
     const d = deriveEvent(makeEvent({ sentry_mode: 'SentryModeStateOff' }), asT(makeT()));
-    expect(d.title).toBe('Sentry Mode deactivated');
+    expect(d.title).toBe('Sentry mode deactivated');
   });
 
   it('honours a native boolean sentry_mode in both directions', () => {
     expect(deriveEvent(makeEvent({ sentry_mode: true }), asT(makeT())).title).toBe(
-      'Sentry Mode activated',
+      'Sentry mode activated',
     );
     expect(deriveEvent(makeEvent({ sentry_mode: false }), asT(makeT())).title).toBe(
-      'Sentry Mode deactivated',
+      'Sentry mode deactivated',
     );
   });
 
@@ -250,13 +272,13 @@ describe('deriveEvent', () => {
   it('builds a compact lock + sentry subtitle joined with a middot', () => {
     const d = deriveEvent(makeEvent({ locked: true, sentry_mode: 'Armed' }), asT(makeT()));
     expect(d.subtitle).toContain('🔒 Locked');
-    expect(d.subtitle).toContain('🛡️ Sentry On');
+    expect(d.subtitle).toContain('🛡️ Sentry on');
     expect(d.subtitle).toContain('·');
   });
 
   it('REGRESSION: the subtitle chip reads "Sentry Off" for an Off enum string', () => {
     const d = deriveEvent(makeEvent({ locked: false, sentry_mode: 'Off' }), asT(makeT()));
-    expect(d.subtitle).toContain('Sentry Off');
+    expect(d.subtitle).toContain('Sentry off');
     expect(d.subtitle).toContain('🔓 Unlocked');
     expect(d.subtitle).not.toContain('Sentry On');
   });
@@ -330,7 +352,7 @@ describe('SentryEventLogWidget — states', () => {
   it('shows a DISTINCT error message (never the misleading empty copy) on failure', () => {
     useQueryMock.mockReturnValue(makeResult({ isError: true, data: undefined }));
     renderWidget();
-    expect(screen.getByText('Failed to load security events')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('No security events recorded')).toBeNull();
   });
 
@@ -357,7 +379,7 @@ describe('SentryEventLogWidget — populated', () => {
     );
     renderWidget({ cols: 3, rows: 2 });
     expect(screen.getByText('Vehicle unlocked')).toBeInTheDocument();
-    expect(screen.getByText('Sentry Mode activated')).toBeInTheDocument();
+    expect(screen.getByText('Sentry mode activated')).toBeInTheDocument();
   });
 
   it('REGRESSION: an Off sentry event renders "deactivated", not "activated"', () => {
@@ -367,8 +389,8 @@ describe('SentryEventLogWidget — populated', () => {
       }),
     );
     renderWidget({ cols: 3, rows: 2 });
-    expect(screen.getByText('Sentry Mode deactivated')).toBeInTheDocument();
-    expect(screen.queryByText('Sentry Mode activated')).toBeNull();
+    expect(screen.getByText('Sentry mode deactivated')).toBeInTheDocument();
+    expect(screen.queryByText('Sentry mode activated')).toBeNull();
   });
 
   it('shows the subtitle on a wide widget but hides it when narrow', () => {
@@ -378,13 +400,13 @@ describe('SentryEventLogWidget — populated', () => {
     useQueryMock.mockReturnValue(makeResult({ data }));
 
     const wide = renderWidget({ cols: 3, rows: 2 });
-    expect(screen.getByText(/🛡️ Sentry On/)).toBeInTheDocument();
+    expect(screen.getByText(/🛡️ Sentry on/)).toBeInTheDocument();
     wide.unmount();
 
     renderWidget({ cols: 2, rows: 2 });
-    expect(screen.queryByText(/🛡️ Sentry On/)).toBeNull();
+    expect(screen.queryByText(/🛡️ Sentry on/)).toBeNull();
     // The primary title still renders in the narrow variant.
-    expect(screen.getByText('Sentry Mode activated')).toBeInTheDocument();
+    expect(screen.getByText('Sentry mode activated')).toBeInTheDocument();
   });
 
   it('orders the feed newest-first', () => {

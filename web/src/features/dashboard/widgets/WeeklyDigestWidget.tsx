@@ -90,7 +90,7 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.weeklyDigest.title', 'This Week')}
+      title={isCompact ? undefined : t('widget.weeklyDigest.title', 'This week')}
       icon={isCompact ? undefined : <CalendarDays className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       error={error && !data ? String(error) : null}

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Terminal, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge, type BadgeProps } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 import { useCommandHistory } from '@/api/hooks/useCommands';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
@@ -43,25 +45,26 @@ const DEFAULT_STATUS: StatusVisual = {
  */
 export function commandStatusVisual(status: string | null | undefined): StatusVisual {
   if (!status) return DEFAULT_STATUS;
-  return STATUS_MAP[status] ?? DEFAULT_STATUS;
+  return Object.prototype.hasOwnProperty.call(STATUS_MAP, status) ? STATUS_MAP[status] : DEFAULT_STATUS;
 }
 
 /** Badge variant for the compact single-command summary. */
 export function commandBadgeVariant(status: string | null | undefined): BadgeProps['variant'] {
   if (status === 'success') return 'success';
   if (status === 'failed') return 'danger';
-  return 'warning';
+  return status === 'pending' ? 'warning' : 'neutral';
 }
 
 /** Translated status label for the compact single-command summary. */
 export function commandStatusLabel(status: string | null | undefined, t: TranslateFn): string {
   if (status === 'success') return t('widget.commandSuccess', 'Success');
   if (status === 'failed') return t('widget.commandFailed', 'Failed');
-  return t('widget.commandPending', 'Pending');
+  if (status === 'pending') return t('widget.commandPending', 'Pending');
+  return status?.trim() || t('widget.commandUnknown', 'Unknown');
 }
 
 /**
- * Humanise a raw command identifier (`wake_up` → `Wake Up`). Empty, blank, or
+ * Humanise a raw command identifier (`wake_up` → `Wake up`). Empty, blank, or
  * missing names collapse to an em-dash so a null/empty `command` column can
  * never render a void label.
  */
@@ -70,7 +73,7 @@ export function formatCommandName(raw: string | null | undefined): string {
   if (!trimmed) return PLACEHOLDER;
   return trimmed
     .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replace(/^\w/, (c) => c.toUpperCase());
 }
 
 // ── Compact layout (1×2) ─────────────────────────────────────────────
@@ -85,10 +88,10 @@ function CompactView({
   t: TranslateFn;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 min-h-[44px]">
+    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">
-        <Terminal className="h-4 w-4 flex-shrink-0 text-neon-cyan" aria-hidden="true" />
-        <span className="text-sm text-[var(--text-primary)] truncate">{lastCommand}</span>
+        <Terminal className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+        <span className={dashboardTokens.metricLabel}>{lastCommand}</span>
       </div>
       <Badge variant={commandBadgeVariant(lastStatus)}>{commandStatusLabel(lastStatus, t)}</Badge>
     </div>
@@ -99,10 +102,13 @@ function CompactView({
 
 export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const vehicleQuery = useVehicles();
+  const { data: vehicles } = vehicleQuery;
+  const vehicleState = useDataState(vehicleQuery);
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vidStr = vid != null ? String(vid) : undefined;
 
+  const query = useCommandHistory(vidStr);
   const {
     data: commands,
     isLoading,
@@ -111,7 +117,9 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useCommandHistory(vidStr);
+  } = query;
+  const state = useDataState(query, { provenance: 'historical' });
+  const displayState = vid === undefined && (vehicleState.fatalError || vehicleQuery.isLoading) ? vehicleState : state;
 
   const isCompact = size.cols <= 1;
   const list = useMemo(() => commands ?? [], [commands]);
@@ -124,13 +132,13 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
           id: cmd.id,
           icon: mapped.icon,
           title: formatCommandName(cmd.command),
-          subtitle: cmd.status ?? PLACEHOLDER,
-          timestamp: cmd.created_at ?? new Date(0).toISOString(),
+          subtitle: [commandStatusLabel(cmd.status, t), cmd.error?.trim()].filter(Boolean).join(' · '),
+          timestamp: cmd.created_at ?? '',
           color: mapped.color,
           severity: mapped.severity,
         };
       }),
-    [list],
+    [list, t],
   );
 
   const handleRefresh = useCallback(() => {
@@ -141,9 +149,10 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.commandHistory', 'Command History')}
-      icon={<Terminal className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
+      title={t('widget.commandHistory', 'Command history')}
+      icon={<Terminal className="h-3.5 w-3.5" aria-hidden="true" />}
       loading={isLoading}
+      dataState={{ ...displayState, status: displayState.status === 'initial' && !isLoading && !vehicleQuery.isLoading ? 'unavailable' : displayState.status }}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -154,7 +163,7 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
         lastEntry ? (
           <CompactView
             lastCommand={formatCommandName(lastEntry.command)}
-            lastStatus={lastEntry.status ?? PLACEHOLDER}
+            lastStatus={lastEntry.status ?? ''}
             t={t}
           />
         ) : (

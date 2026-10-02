@@ -155,7 +155,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
   // ─── Standard / Wide layout ───
   return (
     <WidgetShell
-      title={t('widget.positionHeatmap.title', 'Position Heatmap')}
+      title={t('widget.positionHeatmap.title', 'Position heatmap')}
       icon={<MapIcon className="h-3.5 w-3.5 text-neon-cyan" />}
       noPadding
       actions={

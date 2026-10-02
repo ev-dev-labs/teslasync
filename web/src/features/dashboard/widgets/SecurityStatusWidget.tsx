@@ -99,7 +99,7 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
         value: !doorKnown
           ? DASH
           : openDoors.length === 0
-            ? t('widget.allClosed', 'All Closed')
+            ? t('widget.allClosed', 'All closed')
             : `${openDoors.length} ${t('widget.open', 'Open')}`,
         icon: <DoorOpen className="h-3.5 w-3.5" />,
       },
@@ -110,7 +110,7 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
         value: !windowsKnown
           ? DASH
           : openWindows.length === 0
-            ? t('widget.allClosed', 'All Closed')
+            ? t('widget.allClosed', 'All closed')
             : `${openWindows.length} ${t('widget.open', 'Open')}`,
         icon: <AppWindow className="h-3.5 w-3.5" />,
       },

@@ -298,10 +298,10 @@ describe('VehicleHeroCardWidget — full view', () => {
   it('renders an em-dash placeholder for every metric when the state is absent (null-safety)', () => {
     // Vehicle known, but its state snapshot has not landed → the query resolves
     // with no `state`. Battery, range and cabin each render the em-dash and the
-    // status falls back to "offline"; nothing throws on the missing readings.
+    // status remains unknown; missing telemetry is not proof of being offline.
     renderWidget(FULL, { state: makeStateQuery({ data: undefined }) });
 
-    expect(screen.getByText('offline')).toBeInTheDocument();
+    expect(screen.getByText('unknown')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(3);
   });
 });
@@ -321,7 +321,7 @@ describe('VehicleHeroCardWidget — battery colour classifier', () => {
       state: makeStateQuery({ data: { state: makeState({ battery_level: level }) } }),
     });
 
-    expect(screen.getByText(`${level}%`).className).toContain(cls);
+    expect(screen.getByText(`${level}%`).closest('[data-print-card]')?.className).toContain(cls);
   });
 });
 
@@ -379,16 +379,15 @@ describe('VehicleHeroCardWidget — size variants', () => {
     expect(screen.queryByText('Outside')).toBeNull();
   });
 
-  it('adds an Outside + Ideal row when the tile is tall (rows >= 2) but not wide', () => {
+  it('adds Outside without repeating the ideal range when the tile is tall', () => {
     renderWidget(TALL, {
       state: makeStateQuery({ data: { state: makeState({ ideal_range: RANGE_300KM_M, outside_temp: 10 }) } }),
     });
 
     expect(screen.getByText('Range')).toBeInTheDocument();
     expect(screen.getByText('Outside')).toBeInTheDocument();
-    expect(screen.getByText('Ideal')).toBeInTheDocument();
-    // The ideal range echoes the top-grid range value, so it appears twice.
-    expect(screen.getAllByText('300 km')).toHaveLength(2);
+    expect(screen.queryByText('Ideal')).toBeNull();
+    expect(screen.getAllByText('300 km')).toHaveLength(1);
   });
 });
 
@@ -412,13 +411,26 @@ describe('VehicleHeroCardWidget — compact view', () => {
     renderWidget(COMPACT, { state: makeStateQuery({ data: undefined }) });
 
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('offline')).toBeInTheDocument();
+    expect(screen.getByText('unknown')).toBeInTheDocument();
   });
 });
 
 // ── Empty / loading / error lifecycle ────────────────────────────────────────
 
 describe('VehicleHeroCardWidget — lifecycle states', () => {
+  it('retains vehicle identity and measurements after a failed cached refresh', () => {
+    renderWidget(FULL, {
+      state: makeStateQuery({
+        data: { state: makeState({ battery_level: 80 }) },
+        isError: true,
+        error: new Error('refresh unavailable'),
+      }),
+    });
+    expect(screen.getByText('My Tesla')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('shows the accessible empty state when the fleet is genuinely empty', () => {
     renderWidget(FULL, {
       vehicles: makeVehiclesQuery({ data: [] }),
@@ -432,10 +444,18 @@ describe('VehicleHeroCardWidget — lifecycle states', () => {
   });
 
   it('renders only a skeleton while the selected vehicle state is loading', () => {
-    const { container } = renderWidget(FULL, { state: makeStateQuery({ isLoading: true }) });
+    const { container } = renderWidget(FULL, { state: makeStateQuery({ isLoading: true, data: undefined }) });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Vehicle')).toBeNull();
+    expect(screen.queryByText('Vehicle')).toBeInTheDocument();
+    expect(screen.queryByText('No vehicle data')).toBeNull();
+  });
+
+  it('does not replace cached metrics with a skeleton while refetching', () => {
+    renderWidget(FULL, {
+      state: makeStateQuery({ isLoading: true, isFetching: true, data: { state: makeState({ battery_level: 80 }) } }),
+    });
+    expect(screen.getByText('80%')).toBeInTheDocument();
     expect(screen.queryByText('No vehicle data')).toBeNull();
   });
 
@@ -461,7 +481,7 @@ describe('VehicleHeroCardWidget — lifecycle states', () => {
     // jsdom reports navigator.onLine === true → QueryError's alert branch.
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The error branch replaces the widget body — the title is suppressed.
-    expect(screen.queryByText('Vehicle')).toBeNull();
+    expect(screen.queryByText('Vehicle')).toBeInTheDocument();
   });
 
   it('surfaces a fleet-load failure as an alert, never the misleading empty state', () => {

@@ -64,35 +64,35 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
     if (!data) return [];
     return [
       {
-        label: t('widget.yearReview.totalDistance', 'Total Miles'),
+        label: t('widget.yearReview.totalDistance', 'Total miles'),
         value: fmtNumber(displayDistance, 0),
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.yearReview.totalDrives', 'Total Drives'),
+        label: t('widget.yearReview.totalDrives', 'Total drives'),
         value: fmtInt(data.total_drives ?? 0),
         icon: <Car className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.yearReview.energyUsed', 'Energy Used'),
+        label: t('widget.yearReview.energyUsed', 'Energy used'),
         value: fmtNumber(data.total_energy_kwh ?? 0, 1),
         unit: 'kWh',
         icon: <Zap className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.yearReview.co2Saved', 'CO₂ Saved'),
+        label: t('widget.yearReview.co2Saved', 'CO₂ saved'),
         value: fmtNumber(data.co2_offset_kg ?? 0, 0),
         unit: 'kg',
         icon: <Leaf className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.yearReview.busiestMonth', 'Best Month'),
+        label: t('widget.yearReview.busiestMonth', 'Best month'),
         value: busiestMonth,
         icon: <Star className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.yearReview.longestDrive', 'Longest Drive'),
+        label: t('widget.yearReview.longestDrive', 'Longest drive'),
         value: fmtNumber(displayLongestDrive, 1),
         unit: distanceUnit,
         icon: <TrendingUp className="h-3.5 w-3.5" />,
@@ -104,13 +104,13 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
     if (!data) return [];
     return [
       {
-        label: t('widget.yearReview.drivingTime', 'Driving Time'),
+        label: t('widget.yearReview.drivingTime', 'Driving time'),
         value: fmtInt(Math.round((data.total_driving_minutes ?? 0) / 60)),
         unit: 'h',
         icon: <Timer className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.yearReview.topSpeed', 'Top Speed'),
+        label: t('widget.yearReview.topSpeed', 'Top speed'),
         value: fmtNumber(displayFastestSpeed, 0),
         unit: speedUnit,
         icon: <TrendingUp className="h-3.5 w-3.5" />,
@@ -141,7 +141,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
               value={displayDistance}
               className="text-2xl font-bold text-[var(--text-primary)]"
             />
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
               {distanceUnit} {t('widget.yearReview.inYear', 'in {year}').replace('{year}', String(currentYear))}
             </span>
           </div>
@@ -159,7 +159,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
   // Standard / Wide
   return (
     <WidgetShell
-      title={t('widget.yearReview.title', 'Year in Review') + ` ${currentYear}`}
+      title={t('widget.yearReview.title', 'Year in review') + ` ${currentYear}`}
       icon={<Calendar className="h-3.5 w-3.5 text-violet-400" />}
       loading={isLoading}
       error={error ? String(error) : null}

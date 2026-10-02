@@ -201,7 +201,7 @@ describe('StateTimelineWidget — standard layout (≥2 col)', () => {
     mockTimeline.mockReturnValue(makeQuery({ data: timelineRows() }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getByRole('heading', { name: 'State Timeline' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'State timeline' })).toBeInTheDocument();
     // State rows: label + human duration + percentage badge.
     expect(screen.getByText('driving')).toBeInTheDocument();
     expect(screen.getByText('idle')).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('StateTimelineWidget — standard layout (≥2 col)', () => {
     expect(screen.getByTitle('driving: 75.0%')).toBeInTheDocument();
     expect(screen.getByTitle('idle: 25.0%')).toBeInTheDocument();
     // The 24h stripe is wide-only — it must NOT appear here even with timeline data.
-    expect(screen.queryByText('24h Timeline')).not.toBeInTheDocument();
+    expect(screen.queryByText('24h timeline')).not.toBeInTheDocument();
   });
 });
 
@@ -223,7 +223,7 @@ describe('StateTimelineWidget — compact layout (≤1 col)', () => {
     renderWidget({ size: { cols: 1, rows: 1 } });
 
     // No shell title in the 1×1 slot.
-    expect(screen.queryByRole('heading', { name: 'State Timeline' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'State timeline' })).not.toBeInTheDocument();
     // Legend: label + integer percentage (no decimals, no duration rows).
     expect(screen.getByText('driving')).toBeInTheDocument();
     expect(screen.getByText('idle')).toBeInTheDocument();
@@ -241,11 +241,11 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     mockTimeline.mockReturnValue(makeQuery({ data: timelineRows() }));
     renderWidget({ size: { cols: 4, rows: 3 } });
 
-    expect(screen.getByRole('heading', { name: 'State Timeline' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'State timeline' })).toBeInTheDocument();
     // Full row list is shared with the standard layout.
     expect(screen.getByText('3h 0m')).toBeInTheDocument();
     // Wide-only stripe: label + per-transition tooltips.
-    expect(screen.getByText('24h Timeline')).toBeInTheDocument();
+    expect(screen.getByText('24h timeline')).toBeInTheDocument();
     expect(screen.getByTitle('driving: 100 min')).toBeInTheDocument();
     expect(screen.getByTitle('idle: 50 min')).toBeInTheDocument();
   });
@@ -259,7 +259,7 @@ describe('StateTimelineWidget — loading / empty / error', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No state data available')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'State Timeline' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'State timeline' })).toBeInTheDocument();
   });
 
   it('shows the empty state (not a blank panel) when no state data has arrived', () => {
@@ -268,7 +268,7 @@ describe('StateTimelineWidget — loading / empty / error', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     // Title still renders; the body degrades to a labelled empty state.
-    expect(screen.getByRole('heading', { name: 'State Timeline' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'State timeline' })).toBeInTheDocument();
     expect(screen.getByText('No state data available')).toBeInTheDocument();
     expect(screen.queryByText('driving')).not.toBeInTheDocument();
   });

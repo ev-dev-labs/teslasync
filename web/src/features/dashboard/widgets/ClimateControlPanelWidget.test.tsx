@@ -185,13 +185,21 @@ beforeEach(() => {
 // ── Loading & empty states ──────────────────────────────────────────────────────
 
 describe('ClimateControlPanelWidget — loading & empty states', () => {
+  it('keeps measured values and heater status during a failed cached refresh', () => {
+    setQuery({ data: makeClimate({ inside_temp: 21, seat_heater_left: 3 }), isError: true });
+    renderWidget(FULL);
+    expect(screen.getByText('21°C')).toBeInTheDocument();
+    expect(screen.getByText('FL 3/3')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('renders only a skeleton (no heading or content) while loading', () => {
     setQuery({ isLoading: true, data: undefined });
     const { container } = renderWidget(FULL);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('heading', { name: /Climate Control/i })).toBeNull();
-    expect(screen.queryByText('Fan Speed')).toBeNull();
+    expect(screen.queryByRole('heading', { name: /Climate control/i })).toBeInTheDocument();
+    expect(screen.queryByText('Fan speed')).toBeNull();
   });
 
   it('shows the empty state (not a temperature row) when there is no climate data', () => {
@@ -199,9 +207,9 @@ describe('ClimateControlPanelWidget — loading & empty states', () => {
     renderWidget(FULL);
 
     expect(screen.getByRole('status')).toHaveTextContent('No climate data');
-    expect(screen.queryByText('Fan Speed')).toBeNull();
-    expect(screen.queryByText('HVAC On')).toBeNull();
-    expect(screen.queryByText('HVAC Off')).toBeNull();
+    expect(screen.queryByText('Fan speed')).toBeNull();
+    expect(screen.queryByText('HVAC on')).toBeNull();
+    expect(screen.queryByText('HVAC off')).toBeNull();
   });
 });
 
@@ -213,7 +221,7 @@ describe('ClimateControlPanelWidget — compact layout', () => {
     renderWidget(COMPACT);
 
     expect(screen.getByText('21°C')).toBeInTheDocument();
-    expect(screen.queryByText('Fan Speed')).toBeNull();
+    expect(screen.queryByText('Fan speed')).toBeNull();
     expect(screen.queryByText('Cabin')).toBeNull();
   });
 
@@ -265,22 +273,22 @@ describe('ClimateControlPanelWidget — HVAC status', () => {
     setQuery({ data: makeClimate({ is_ac_on: true, hvac_power: null }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('HVAC On')).toBeInTheDocument();
-    expect(screen.queryByText('HVAC Off')).toBeNull();
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
+    expect(screen.queryByText('HVAC off')).toBeNull();
   });
 
   it('shows "HVAC On" from the canonical boolean hvac_power field', () => {
     setQuery({ data: makeClimate({ hvac_power: true, is_ac_on: false }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('HVAC On')).toBeInTheDocument();
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
   });
 
   it('shows "HVAC Off" when both HVAC signals are explicitly off', () => {
     setQuery({ data: makeClimate({ is_ac_on: false, hvac_power: false }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('HVAC Off')).toBeInTheDocument();
+    expect(screen.getByText('HVAC off')).toBeInTheDocument();
   });
 });
 
@@ -292,7 +300,7 @@ describe('ClimateControlPanelWidget — fan speed & wheel heat', () => {
     setQuery({ data: makeClimate({ fan_speed: 7 }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('Fan Speed')).toBeInTheDocument();
+    expect(screen.getByText('Fan speed')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
   });
 
@@ -331,10 +339,17 @@ describe('ClimateControlPanelWidget — status chips', () => {
   });
 
   it('shows the "no seat heaters active" caption when none are on', () => {
-    setQuery({ data: makeClimate({ seat_heater_left: 0, seat_heater_rear_center: null }) });
+    setQuery({ data: makeClimate({ seat_heater_left: 0, seat_heater_right: 0, seat_heater_rear_left: 0, seat_heater_rear_center: 0, seat_heater_rear_right: 0 }) });
     renderWidget(FULL);
 
     expect(screen.getByText('No seat heaters active')).toBeInTheDocument();
+  });
+
+  it('does not claim missing seat-heater observations are off', () => {
+    setQuery({ data: makeClimate({ seat_heater_left: null, seat_heater_rear_center: null }) });
+    renderWidget(FULL);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('No seat heaters active')).toBeNull();
   });
 
   it('shows the defrost chip only when defrost_mode is set and not "Off"', () => {
@@ -355,7 +370,7 @@ describe('ClimateControlPanelWidget — status chips', () => {
     // Pins the fix: pre-fix read `battery_heater_on` (never emitted) → chip never showed.
     setQuery({ data: makeClimate({ battery_heater: true }) });
     const { rerender } = renderWidget(FULL);
-    expect(screen.getByText('Bat Heater')).toBeInTheDocument();
+    expect(screen.getByText('Bat heater')).toBeInTheDocument();
 
     setQuery({ data: makeClimate({ battery_heater: false }) });
     rerender(
@@ -363,7 +378,7 @@ describe('ClimateControlPanelWidget — status chips', () => {
         <ClimateControlPanelWidget size={FULL} />
       </MemoryRouter>,
     );
-    expect(screen.queryByText('Bat Heater')).toBeNull();
+    expect(screen.queryByText('Bat heater')).toBeNull();
   });
 });
 
@@ -411,6 +426,6 @@ describe('ClimateControlPanelWidget — interactions & a11y', () => {
     setQuery({ data: makeClimate() });
     renderWidget(FULL);
 
-    expect(screen.getByRole('heading', { name: /Climate Control/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Climate control/i })).toBeInTheDocument();
   });
 });

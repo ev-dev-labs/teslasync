@@ -19,7 +19,7 @@
  *
  * The suite locks, facet by facet:
  *   1. Full view (populated): the SI-on-disk watts / watt-hours are scaled to
- *      kW / kWh at the display boundary, the count × energy string composes, the
+ *      kW / kWh at the display boundary, count and total site capacity compose, the
  *      firmware + timezone render, and the info query is gated on the resolved
  *      `siteId`.
  *   2. Null-safety: every optional field absent → each row degrades to an em
@@ -52,6 +52,9 @@ vi.mock('react-i18next', () => ({
       typeof defaultValue === 'string' ? defaultValue : key,
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
+}));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { unit_of_length: 'km', locale: 'en-US' } }),
 }));
 
 // The two chained query results are injected per-test through these mutable
@@ -125,7 +128,7 @@ function infoResponse(
 const POPULATED = infoResponse({
   nameplate_power: 10500, // W → 10.5 kW
   nameplate_energy: 27000, // Wh → 27.0 kWh
-  battery_count: 2, // → "2 × 27.0 kWh"
+  battery_count: 2, // Count is separate from the site's 27.0 kWh total.
   version: '23.44.30.9',
   installation_time_zone: 'America/Los_Angeles',
 });
@@ -197,16 +200,16 @@ describe('EnergySiteInfoWidget — full view (populated)', () => {
     });
 
     // Full tile shows the header title.
-    expect(screen.getByText('Energy Site')).toBeInTheDocument();
+    expect(screen.getByText('Energy site')).toBeInTheDocument();
 
     // Labels + display-boundary conversions.
-    expect(screen.getByText('Solar System')).toBeInTheDocument();
+    expect(screen.getByText('Solar system')).toBeInTheDocument();
     expect(screen.getByText('10.5 kW')).toBeInTheDocument();
     expect(screen.getByText('Powerwalls')).toBeInTheDocument();
-    expect(screen.getByText('2 × 27.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('Gateway Firmware')).toBeInTheDocument();
+    expect(screen.getByText('2 · 27.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('Gateway firmware')).toBeInTheDocument();
     expect(screen.getByText('23.44.30.9')).toBeInTheDocument();
-    expect(screen.getByText('Installation Timezone')).toBeInTheDocument();
+    expect(screen.getByText('Installation timezone')).toBeInTheDocument();
     expect(screen.getByText('America/Los_Angeles')).toBeInTheDocument();
   });
 
@@ -227,15 +230,15 @@ describe('EnergySiteInfoWidget — null-safety', () => {
   it('degrades every absent field to an em dash (no undefined/NaN artefacts)', () => {
     renderWidget(FULL, {
       sites: sitesQuery({ data: [site(1)] }),
-      // battery_count 0 + every other field missing.
-      info: infoQuery({ data: infoResponse({ battery_count: 0 }) }),
+      // Every field is unmeasured.
+      info: infoQuery({ data: infoResponse({}) }),
     });
 
     // All four rows render their labels …
-    expect(screen.getByText('Solar System')).toBeInTheDocument();
+    expect(screen.getByText('Solar system')).toBeInTheDocument();
     expect(screen.getByText('Powerwalls')).toBeInTheDocument();
-    expect(screen.getByText('Gateway Firmware')).toBeInTheDocument();
-    expect(screen.getByText('Installation Timezone')).toBeInTheDocument();
+    expect(screen.getByText('Gateway firmware')).toBeInTheDocument();
+    expect(screen.getByText('Installation timezone')).toBeInTheDocument();
 
     // … but every value is the em-dash placeholder, never "undefined kW" etc.
     expect(screen.getAllByText('—')).toHaveLength(4);
@@ -256,9 +259,9 @@ describe('EnergySiteInfoWidget — compact view', () => {
     });
 
     expect(screen.getByText('10.5 kW')).toBeInTheDocument();
-    expect(screen.getByText('2 × 27.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('2 · 27.0 kWh')).toBeInTheDocument();
     // A compact (1×1) tile suppresses the header title entirely.
-    expect(screen.queryByText('Energy Site')).toBeNull();
+    expect(screen.queryByText('Energy site')).toBeNull();
   });
 });
 
@@ -271,11 +274,11 @@ describe('EnergySiteInfoWidget — site resolution + gating', () => {
     // siteId is undefined → the info query is called disabled.
     expect(mockUseSiteInfo).toHaveBeenCalledWith(undefined);
     expect(
-      screen.getByText('No Tesla Energy site linked'),
+      screen.getByText('No Tesla energy site linked'),
     ).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // No detail rows.
-    expect(screen.queryByText('Solar System')).toBeNull();
+    expect(screen.queryByText('Solar system')).toBeNull();
   });
 });
 
@@ -290,7 +293,7 @@ describe('EnergySiteInfoWidget — empty (no info data)', () => {
 
     expect(screen.getByText('No site info available')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('Solar System')).toBeNull();
+    expect(screen.queryByText('Solar system')).toBeNull();
   });
 });
 
@@ -303,8 +306,8 @@ describe('EnergySiteInfoWidget — lifecycle', () => {
     });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Energy Site')).toBeNull();
-    expect(screen.queryByText('No Tesla Energy site linked')).toBeNull();
+    expect(screen.queryByText('Energy site')).toBeInTheDocument();
+    expect(screen.queryByText('No Tesla energy site linked')).toBeNull();
   });
 
   it('renders a skeleton while a resolved site’s info is loading', () => {
@@ -315,7 +318,7 @@ describe('EnergySiteInfoWidget — lifecycle', () => {
 
     // isLoading = sitesLoading || (!!siteId && infoLoading) → true here.
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Energy Site')).toBeNull();
+    expect(screen.queryByText('Energy site')).toBeInTheDocument();
   });
 
   it('surfaces the info query error instead of the detail rows', () => {
@@ -326,7 +329,7 @@ describe('EnergySiteInfoWidget — lifecycle', () => {
 
     // jsdom reports navigator.onLine === true → QueryError renders role=alert.
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Solar System')).toBeNull();
+    expect(screen.queryByText('Solar system')).toBeNull();
   });
 });
 
@@ -344,14 +347,55 @@ describe('EnergySiteInfoWidget — sites-fetch error (Bug A regression)', () => 
 
     // A genuine fetch failure must be an error, not a "you have no site" lie.
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('No Tesla Energy site linked')).toBeNull();
-    expect(screen.queryByText('Solar System')).toBeNull();
+    expect(screen.queryByText('No Tesla energy site linked')).toBeNull();
+    expect(screen.queryByText('Solar system')).toBeNull();
   });
 });
 
 // ── Refresh ──────────────────────────────────────────────────────────────────
 
 describe('EnergySiteInfoWidget — refresh', () => {
+  it.each([FULL, COMPACT])('retains every detail on cached refresh failure at %j', (size) => {
+    renderWidget(size, {
+      sites: sitesQuery({ data: [site(7)] }),
+      info: infoQuery({ data: POPULATED, isError: true, error: new Error('refresh failed') }),
+    });
+    expect(screen.getByText('10.5 kW')).toBeInTheDocument();
+    expect(screen.getByText('2 · 27.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('23.44.30.9')).toBeInTheDocument();
+    expect(screen.getByText('America/Los_Angeles')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('preserves a measured zero solar size, battery count, and energy capacity', () => {
+    renderWidget(FULL, {
+      sites: sitesQuery({ data: [site(7)] }),
+      info: infoQuery({ data: infoResponse({ nameplate_power: 0, battery_count: 0, nameplate_energy: 0 }) }),
+    });
+    expect(screen.getByText('0.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('0 · 0.0 kWh')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+  });
+
+  it('retains measured site capacity when the battery count is unknown', () => {
+    renderWidget(FULL, {
+      sites: sitesQuery({ data: [site(7)] }),
+      info: infoQuery({ data: infoResponse({ battery_count: undefined, nameplate_energy: 27_000 }) }),
+    });
+    expect(screen.getByText('— · 27.0 kWh')).toBeInTheDocument();
+  });
+
+  it('retains long firmware and installation timezone values without truncating their content', () => {
+    const firmware = 'gateway-firmware-build-with-a-long-release-identifier';
+    const timezone = 'America/Argentina/ComodRivadavia';
+    renderWidget(COMPACT, {
+      sites: sitesQuery({ data: [site(7)] }),
+      info: infoQuery({ data: infoResponse({ version: firmware, installation_time_zone: timezone }) }),
+    });
+    expect(screen.getByText(firmware)).toBeInTheDocument();
+    expect(screen.getByText(timezone)).toBeInTheDocument();
+  });
   it('refetches BOTH queries when a site is linked', () => {
     const sitesRefetch = vi.fn();
     const infoRefetch = vi.fn();

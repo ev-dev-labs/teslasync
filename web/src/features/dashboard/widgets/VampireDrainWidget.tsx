@@ -131,7 +131,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.vampireDrain.title', 'Vampire Drain')}
+      title={isCompact ? undefined : t('widget.vampireDrain.title', 'Vampire drain')}
       icon={isCompact ? undefined : <BatteryWarning className="h-3.5 w-3.5 text-neon-amber" />}
       help={isCompact ? undefined : {
         i18nKey: 'help.vampireDrain.body',
@@ -169,7 +169,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
           <div className="h-full flex flex-col gap-3 min-h-0">
             {/* Stat card row */}
             <StatCard
-              label={t('widget.vampireDrain.avgDrain', 'Avg Drain')}
+              label={t('widget.vampireDrain.avgDrain', 'Avg drain')}
               value={hasMeasuredAverage ? `${fmtNumber(measuredAverage, 1)}%/day` : '—'}
               icon={<BatteryWarning className="h-4 w-4" style={{ color: drainColor(sparklineColorRate) }} />}
               sublabel={

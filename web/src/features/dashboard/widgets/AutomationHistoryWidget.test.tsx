@@ -237,7 +237,7 @@ describe('AutomationHistoryWidget — loading & error states', () => {
     const { container } = renderWidget(FULL);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('heading', { name: /Automation History/i })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /Automation history/i })).toBeInTheDocument();
     expect(screen.queryByTestId('feed')).toBeNull();
     expect(screen.queryByTestId('feed-empty')).toBeNull();
   });
@@ -269,8 +269,8 @@ describe('AutomationHistoryWidget — full layout', () => {
     setQuery({ data: makeResponse([makeHistory()], { success_rate: 100, total_executions: 2 }) });
     renderWidget(FULL);
 
-    expect(screen.getByRole('heading', { name: /Automation History/i })).toBeInTheDocument();
-    const badge = screen.getByText(/100\.0% Success Rate/);
+    expect(screen.getByRole('heading', { name: /Automation history/i })).toBeInTheDocument();
+    const badge = screen.getByText(/100\.0% Success rate/);
     expect(badge).toHaveClass('bg-green-100');
     expect(screen.getByText('2 runs')).toBeInTheDocument();
   });
@@ -281,7 +281,7 @@ describe('AutomationHistoryWidget — full layout', () => {
     setQuery({ data: undefined });
     renderWidget(FULL);
 
-    const badge = screen.getByText(/0\.0% Success Rate/);
+    const badge = screen.getByText(/0\.0% Success rate/);
     expect(badge).toHaveClass(BADGE_VARIANTS.neutral);
     expect(screen.queryByText(/^\d+ runs$/)).toBeNull();
     expect(screen.getByTestId('feed-empty')).toHaveTextContent('No automation runs yet');
@@ -370,7 +370,7 @@ describe('AutomationHistoryWidget — badge grading', () => {
     });
     renderWidget(FULL);
 
-    const badge = screen.getByText(new RegExp(`${rate}\\.0% Success Rate`));
+    const badge = screen.getByText(new RegExp(`${rate}\\.0% Success rate`));
     expect(badge).toHaveClass(cls);
   });
 
@@ -378,7 +378,7 @@ describe('AutomationHistoryWidget — badge grading', () => {
     setQuery({ data: makeResponse([], { success_rate: 0, total_executions: 0, succeeded: 0 }) });
     renderWidget(FULL);
 
-    const badge = screen.getByText(/0\.0% Success Rate/);
+    const badge = screen.getByText(/0\.0% Success rate/);
     expect(badge).toHaveClass(BADGE_VARIANTS.neutral);
     expect(badge).not.toHaveClass('bg-red-100');
     expect(screen.getByTestId('feed-empty')).toHaveTextContent('No automation runs yet');
@@ -393,7 +393,7 @@ describe('AutomationHistoryWidget — compact layout', () => {
     renderWidget(COMPACT);
 
     expect(screen.getByText('75.0%')).toBeInTheDocument();
-    expect(screen.getByText('Success Rate')).toBeInTheDocument();
+    expect(screen.getByText('Success rate')).toBeInTheDocument();
     expect(screen.queryByTestId('feed')).toBeNull();
     expect(screen.queryByText('No automation runs yet')).toBeNull();
   });
@@ -425,7 +425,7 @@ describe('AutomationHistoryWidget — interactions & a11y', () => {
     renderWidget(FULL);
 
     expect(
-      screen.getByRole('heading', { name: /Automation History/i }),
+      screen.getByRole('heading', { name: /Automation history/i }),
     ).toBeInTheDocument();
   });
 });

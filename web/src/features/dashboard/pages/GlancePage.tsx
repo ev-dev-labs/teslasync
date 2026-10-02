@@ -144,7 +144,7 @@ function StatusRow({ icon: Icon, label, children }: StatusRowProps) {
 
 export default function GlancePage() {
   const { t } = useTranslation();
-  const title = t('glance.title', 'Quick Glance');
+  const title = t('glance.title', 'Quick glance');
   usePageTitle(title);
 
   const {
@@ -568,8 +568,8 @@ export default function GlancePage() {
                     icon={Wind}
                     label={
                       state?.is_climate_on
-                        ? t('glance.action.climateOff', 'Climate Off')
-                        : t('glance.action.climateOn', 'Climate On')
+                        ? t('glance.action.climateOff', 'Climate off')
+                        : t('glance.action.climateOn', 'Climate on')
                     }
                     disabled={!canSendCommands}
                     loading={

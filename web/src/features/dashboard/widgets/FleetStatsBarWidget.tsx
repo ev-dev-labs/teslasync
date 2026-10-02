@@ -62,7 +62,7 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
         trendValue: `${stats.onlineCount} ${t('widget.fleetStatsBar.online', 'online')}`,
       },
       {
-        label: t('widget.fleetStatsBar.onlineNow', 'Online Now'),
+        label: t('widget.fleetStatsBar.onlineNow', 'Online now'),
         value: stats.onlineCount,
         icon: <Wifi className="h-3.5 w-3.5" />,
         trend: 'flat',
@@ -85,7 +85,7 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.fleetStatsBar.title', 'Fleet Stats')}
+      title={t('widget.fleetStatsBar.title', 'Fleet stats')}
       icon={<Car className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       error={error ? String(error) : null}

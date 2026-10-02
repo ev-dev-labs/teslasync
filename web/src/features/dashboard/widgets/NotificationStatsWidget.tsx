@@ -69,14 +69,14 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
     if (!stats) return [];
     return [
       {
-        label: t('widget.notificationStats.totalSent', 'Total Sent (7d)'),
+        label: t('widget.notificationStats.totalSent', 'Total sent (7d)'),
         value: fmtInt(totalSent),
         icon: <Send className="h-3.5 w-3.5" />,
         trend: totalSent > 0 ? 'up' as const : 'flat' as const,
         trendValue: totalSent > 0 ? fmtInt(totalSent) : undefined,
       },
       {
-        label: t('widget.notificationStats.deliveryRate', 'Delivery Rate'),
+        label: t('widget.notificationStats.deliveryRate', 'Delivery rate'),
         value: fmtNumber(deliveryRate, 1),
         unit: '%',
         icon: <CheckCircle className="h-3.5 w-3.5" />,
@@ -92,7 +92,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
         trendValue: failed > 0 ? t('widget.notificationStats.needsAttention', 'Needs attention') : undefined,
       },
       {
-        label: t('widget.notificationStats.activeChannels', 'Active Channels'),
+        label: t('widget.notificationStats.activeChannels', 'Active channels'),
         value: fmtInt(enabledChannels),
         icon: <Radio className="h-3.5 w-3.5" />,
       },
@@ -143,7 +143,8 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
     {
       key: 'time',
       header: t('widget.notificationStats.time', 'Time'),
-      className: 'text-right whitespace-nowrap',
+      align: 'right',
+      className: 'whitespace-nowrap',
       render: (log) => (
         <span className="text-[var(--text-muted)]">
           {formatLogTime(log.created_at)}
@@ -172,8 +173,8 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
         {stats ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(deliveryRate, 1)}%</span>
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-              {t('widget.notificationStats.deliveryRate', 'Delivery Rate')}
+            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
+              {t('widget.notificationStats.deliveryRate', 'Delivery rate')}
             </span>
             {failed > 0 && (
               <span className="text-2xs text-red-400 mt-0.5">
@@ -197,7 +198,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
   // Standard (2×2) and Wide (2×4)
   return (
     <WidgetShell
-      title={t('widget.notificationStats.title', 'Notification Stats')}
+      title={t('widget.notificationStats.title', 'Notification stats')}
       icon={<Bell className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       error={statsError ? String(statsError) : null}

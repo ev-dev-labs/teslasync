@@ -167,7 +167,7 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
 
   return (
     <WidgetShell
-      title={t('widget.liveSparklines', 'Live Signal Sparklines')}
+      title={t('widget.liveSparklines', 'Live signal sparklines')}
       icon={<Activity className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       updatedAt={liveUpdatedAt}

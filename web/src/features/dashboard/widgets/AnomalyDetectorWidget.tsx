@@ -152,7 +152,7 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
 
   return (
     <WidgetShell
-      title={t('widget.anomalyDetector.title', 'Anomaly Detector')}
+      title={t('widget.anomalyDetector.title', 'Anomaly detector')}
       icon={<AlertTriangle className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />}
       {...shellProps}
     >

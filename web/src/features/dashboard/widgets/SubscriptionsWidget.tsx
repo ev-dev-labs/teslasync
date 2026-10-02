@@ -32,8 +32,8 @@ const SUBSCRIPTION_TYPES = [
   { key: 'full_self_driving', labelKey: 'widget.subscriptions.fsd', fallback: 'Full Self-Driving' },
   { key: 'enhanced_autopilot', labelKey: 'widget.subscriptions.enhancedAutopilot', fallback: 'Enhanced Autopilot' },
   { key: 'standard_connectivity', labelKey: 'widget.subscriptions.standardConnectivity', fallback: 'Standard Connectivity' },
-  { key: 'data_sharing', labelKey: 'widget.subscriptions.dataSharing', fallback: 'Data Sharing' },
-  { key: 'satellite_connectivity', labelKey: 'widget.subscriptions.satellite', fallback: 'Satellite Connectivity' },
+  { key: 'data_sharing', labelKey: 'widget.subscriptions.dataSharing', fallback: 'Data sharing' },
+  { key: 'satellite_connectivity', labelKey: 'widget.subscriptions.satellite', fallback: 'Satellite connectivity' },
 ] as const;
 
 export interface ParsedSub {
@@ -186,7 +186,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
               <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {activeCount}
               </span>
-              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+              <span className="text-2xs text-[var(--text-muted)] tracking-wider">
                 {t('widget.subscriptions.activeCount', 'active')}
               </span>
               {nextExpiry && (

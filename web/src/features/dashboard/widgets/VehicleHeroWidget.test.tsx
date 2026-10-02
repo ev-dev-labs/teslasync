@@ -222,6 +222,14 @@ beforeEach(() => {
 });
 
 describe('VehicleHeroWidget — vehicle resolution', () => {
+  it('preserves the hero and firmware during a failed cached refresh', () => {
+    setup({ state: makeQuery({ data: makeStateData({ software_version: '2026.8' }), isError: true, error: new Error('refresh failed') }) });
+    render(<VehicleHeroWidget size={STANDARD} />);
+    expect(screen.getByTestId('hero-name')).toHaveTextContent('My Tesla');
+    expect(screen.getByTestId('hero-firmware')).toHaveTextContent('2026.8');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('resolves the vehicle matching an explicit vehicleId and keys the state query on it', () => {
     setup({
       vehicles: makeQuery({

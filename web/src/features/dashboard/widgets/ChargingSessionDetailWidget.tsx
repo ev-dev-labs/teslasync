@@ -8,14 +8,15 @@ import {
   type ChartDataRow,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
-import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
+import { useUnits } from '@/hooks/useUnits';
 import { useChargingSessions, useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtNumber } from '@/lib/numberFormat';
 import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
 
 interface ChartDatum extends ChartDataRow {
@@ -49,8 +50,10 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const { unitPrefs } = useUnits();
 
-  const { data: sessions } = useChargingSessions(vid > 0 ? String(vid) : undefined);
+  const sessionsQuery = useChargingSessions(vid > 0 ? String(vid) : undefined);
+  const { data: sessions } = sessionsQuery;
 
   const latestSessionId = useMemo(() => {
     const list = sessions ?? [];
@@ -62,19 +65,33 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     return Number.isFinite(id) ? id : null;
   }, [sessions]);
 
+  const detailQuery = useChargingSessionDetail(latestSessionId);
   const {
     data: detail,
     isLoading: detailLoading,
     error: detailError,
-    isFetching, isStale, isError, dataUpdatedAt, refetch,
-  } = useChargingSessionDetail(latestSessionId);
+    isFetching, isStale, isError, dataUpdatedAt,
+  } = detailQuery;
 
+  const telemetryQuery = useChargeTelemetry(latestSessionId);
   const {
     data: telemetry,
     isLoading: telemetryLoading,
-  } = useChargeTelemetry(latestSessionId);
+  } = telemetryQuery;
 
-  const isLoading = detailLoading || telemetryLoading;
+  const isLoading = !detail && (sessionsQuery.isLoading || detailLoading || telemetryLoading);
+  const detailState = deriveDataState(detailQuery, { provenance: 'historical' });
+  const combined = combineDataStates([
+    deriveDataState(sessionsQuery, { provenance: 'historical' }),
+    detailState,
+    deriveDataState(telemetryQuery, { provenance: 'historical' }),
+  ]);
+  const dataState = detail ? { ...detailState, ...combined } : undefined;
+  const refresh = () => {
+    void sessionsQuery.refetch?.();
+    void detailQuery.refetch();
+    void telemetryQuery.refetch?.();
+  };
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
@@ -84,23 +101,26 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   // failure must not blank out otherwise-valid numbers — it is surfaced through
   // the freshness indicator's error state instead (WidgetShell forwards
   // `isError` to <DataFreshness>).
-  const blockingError = !detail && detailError ? String(detailError) : null;
+  const blockingError = !detail && (detailError || sessionsQuery.error)
+    ? String(detailError || sessionsQuery.error) : null;
 
   const chartData = useMemo((): ChartDatum[] => {
     const points = telemetry ?? [];
     return points.map((p) => {
       const ts = new Date(p.created_at);
+      const power = knownNumber(p.power_w);
       return {
         time: `${String(ts.getHours()).padStart(2, '0')}:${String(ts.getMinutes()).padStart(2, '0')}`,
-        power: p.power_w != null ? convertPowerFromSI(p.power_w, 'kW') : null,
-        soc: p.battery_level ?? p.soc ?? null,
+        power: power != null ? convertPowerFromSI(power, unitPrefs.power) : null,
+        soc: knownNumber(p.battery_level) ?? knownNumber(p.soc),
       };
     });
-  }, [telemetry]);
+  }, [telemetry, unitPrefs.power]);
 
   const durationStr = useMemo(() => {
     if (!detail) return '—';
-    const mins = detail.duration_min ?? 0;
+    const mins = knownNumber(detail.duration_min);
+    if (mins == null || mins < 0) return '—';
     if (mins < 60) return `${mins}m`;
     const h = Math.floor(mins / 60);
     const m = mins % 60;
@@ -109,8 +129,9 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
 
   const peakPower = useMemo(() => {
     const points = telemetry ?? [];
-    return convertPowerFromSI(points.reduce((max, p) => Math.max(max, p.power_w ?? 0), 0), 'kW');
-  }, [telemetry]);
+    const powers = points.map(p => knownNumber(p.power_w)).filter((value): value is number => value != null);
+    return powers.length > 0 ? convertPowerFromSI(Math.max(...powers), unitPrefs.power) : null;
+  }, [telemetry, unitPrefs.power]);
 
   const charger = useMemo(
     () => classifyCharger(detail?.charger_type ?? null),
@@ -122,9 +143,9 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       case 'supercharger':
         return t('widget.chargingSessionDetail.chargerSupercharger', 'Supercharger');
       case 'dcFast':
-        return t('widget.chargingSessionDetail.chargerDcFast', 'DC Fast');
+        return t('widget.chargingSessionDetail.chargerDcFast', 'DC fast');
       default:
-        return t('widget.chargingSessionDetail.chargerAcHome', 'AC / Home');
+        return t('widget.chargingSessionDetail.chargerAcHome', 'AC / home');
     }
   }, [charger, t]);
 
@@ -132,32 +153,32 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     if (!detail) return [];
     return [
       {
-        label: t('widget.chargingSessionDetail.energy', 'Energy Added'),
-        value: fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh ?? 0, 'kWh'), 1),
-        unit: 'kWh',
+        label: t('widget.chargingSessionDetail.energy', 'Energy added'),
+        value: knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy), 1),
+        unit: unitPrefs.energy,
       },
       {
         label: t('widget.chargingSessionDetail.duration', 'Duration'),
         value: durationStr,
       },
       {
-        label: t('widget.chargingSessionDetail.peakPower', 'Peak Power'),
-        value: fmtNumber(peakPower, 1),
-        unit: 'kW',
+        label: t('widget.chargingSessionDetail.peakPower', 'Peak power'),
+        value: peakPower == null ? null : fmtNumber(peakPower, 1),
+        unit: unitPrefs.power,
       },
       {
         label: t('widget.chargingSessionDetail.charger', 'Charger'),
         value: chargerLabel,
       },
     ];
-  }, [detail, durationStr, peakPower, chargerLabel, t]);
+  }, [detail, durationStr, peakPower, chargerLabel, t, unitPrefs.energy, unitPrefs.power]);
 
   const tick = isWide ? axisTick : axisTickSm;
 
   const chart = useMemo(() => {
     return (
       <EmbeddedChart
-        title={t('widget.chargingSessionDetail.title', 'Charge Session Detail')}
+        title={t('widget.chargingSessionDetail.title', 'Charge session detail')}
         ariaLabel={t(
           'widget.chargingSessionDetail.chartAria',
           'Charging power and battery state of charge over the latest session',
@@ -170,8 +191,8 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         data={chartData}
         dataColumns={[
           { key: 'time', label: t('widget.chargingSessionDetail.time', 'Time') },
-          { key: 'power', label: t('widget.chargingSessionDetail.powerKw', 'Power (kW)') },
-          { key: 'soc', label: t('widget.chargingSessionDetail.soc', 'SoC %') },
+          { key: 'power', label: `${t('widget.power', 'Power')} (${unitPrefs.power})` },
+          { key: 'soc', label: t('widget.chargingSessionDetail.soc', 'SOC %') },
         ]}
         chartKey="dashboard-charging-session-detail"
       >
@@ -199,7 +220,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             tickLine={false}
             axisLine={false}
             width={36}
-            domain={[0, 'dataMax + 5']}
+            domain={['auto', 'auto']}
             tickFormatter={(v: number) => fmt(v, 0)}
           />
 
@@ -224,7 +245,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             fill="url(#charge-power-grad)"
             fillOpacity={0.3}
             strokeWidth={1.5}
-            name={t('widget.chargingSessionDetail.powerKw', 'Power (kW)')}
+            name={`${t('widget.power', 'Power')} (${unitPrefs.power})`}
             connectNulls={false}
             hide={hiddenSeries?.isHidden('power')}
           />
@@ -236,7 +257,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             strokeWidth={1.5}
             strokeDasharray="4 3"
             dot={false}
-            name={t('widget.chargingSessionDetail.soc', 'SoC %')}
+            name={t('widget.chargingSessionDetail.soc', 'SOC %')}
             connectNulls={false}
             hide={hiddenSeries?.isHidden('soc')}
           />
@@ -245,32 +266,30 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         )}
       </EmbeddedChart>
     );
-  }, [chartData, tick, t]);
+  }, [chartData, tick, t, unitPrefs.power]);
 
   // ── Compact layout: large kWh number + charger badge ──
   if (isCompact) {
     return (
       <WidgetShell
         loading={isLoading}
+        dataState={dataState}
         error={blockingError}
         updatedAt={dataUpdatedAt}
-        isFetching={isFetching}
+        isFetching={isFetching || telemetryQuery.isFetching || sessionsQuery.isFetching}
         isStale={isStale}
-        isError={isError}
-        onRefresh={() => refetch()}
+        isError={isError || telemetryQuery.isError || sessionsQuery.isError}
+        onRefresh={refresh}
       >
         {detail ? (
-          <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
-            <span className="text-2xl font-bold text-emerald-300">
-              {fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh ?? 0, 'kWh'), 1)}
-            </span>
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-              {t('widget.chargingSessionDetail.unitKwh', 'kWh added')}
-            </span>
-            <Badge variant={charger.variant} size="sm">
-              {chargerLabel}
-            </Badge>
-          </div>
+          <WidgetBigNumber
+            value={knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy), 1)}
+            label={unitPrefs.energy === 'kWh' ? t('widget.chargingSessionDetail.unitKwh', 'kWh added') : `${unitPrefs.energy} ${t('widget.energyAdded', 'Added')}`}
+            badge={{ text: chargerLabel, variant: charger.variant }}
+            align="center"
+            animated={false}
+            valueColor="text-emerald-300"
+          />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
@@ -285,15 +304,16 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   // ── Standard / Wide layout ──
   return (
     <WidgetShell
-      title={t('widget.chargingSessionDetail.title', 'Charge Session Detail')}
+      title={t('widget.chargingSessionDetail.title', 'Charge session detail')}
       icon={<Zap className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
+      dataState={dataState}
       error={blockingError}
       updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
+      isFetching={isFetching || telemetryQuery.isFetching || sessionsQuery.isFetching}
       isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
+      isError={isError || telemetryQuery.isError || sessionsQuery.isError}
+      onRefresh={refresh}
     >
       <WidgetChartSummary
         stats={stats}

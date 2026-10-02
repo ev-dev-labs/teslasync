@@ -31,7 +31,7 @@ const ANALYTICS_WINDOW_DAYS = 30;
 
 export default function QuickStatsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('quickStats.title', 'Quick Stats'));
+  usePageTitle(t('quickStats.title', 'Quick stats'));
   const navigate = useNavigate();
 
   const { unitPrefs, formatEnergy } = useUnits();
@@ -122,8 +122,9 @@ export default function QuickStatsPage() {
   );
 
   return (
+    <main>
     <PageContainer
-      title={t('quickStats.title', 'Quick Stats')}
+      title={t('quickStats.title', 'Quick stats')}
       subtitle={t('quickStats.subtitle', 'Fleet snapshot · last 30 days')}
       actions={actions}
       query={[analyticsQuery, vehiclesQuery, stateQuery]}
@@ -147,7 +148,7 @@ export default function QuickStatsPage() {
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
               <MetricCard
-                label={t('quickStats.distanceDriven', 'Distance Driven')}
+                label={t('quickStats.distanceDriven', 'Distance driven')}
                 value={`${fmtInt(fromKm(analytics.totalDistanceKm ?? 0))} ${distanceUnit}`}
                 icon={<MapPin className="h-4 w-4" />}
                 color="cyan"
@@ -159,37 +160,37 @@ export default function QuickStatsPage() {
                 color="green"
               />
               <MetricCard
-                label={t('quickStats.chargingSessions', 'Charging Sessions')}
+                label={t('quickStats.chargingSessions', 'Charging sessions')}
                 value={fmtInt(analytics.totalChargingSessions ?? 0)}
                 icon={<BatteryCharging className="h-4 w-4" />}
                 color="blue"
               />
               <MetricCard
-                label={t('quickStats.energyUsed', 'Energy Used')}
+                label={t('quickStats.energyUsed', 'Energy used')}
                 value={formatEnergy((analytics.totalEnergyKwh ?? 0) * 1000)}
                 icon={<Zap className="h-4 w-4" />}
                 color="amber"
               />
               <MetricCard
-                label={t('quickStats.totalCost', 'Total Cost')}
+                label={t('quickStats.totalCost', 'Total cost')}
                 value={formatCurrency(analytics.totalCost ?? 0, 0)}
                 icon={<DollarSign className="h-4 w-4" />}
                 color="purple"
               />
               <MetricCard
-                label={t('quickStats.avgEfficiency', 'Avg Efficiency')}
+                label={t('quickStats.avgEfficiency', 'Avg efficiency')}
                 value={`${fmtNumber(whPerKmToDisplay(analytics.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`}
                 icon={<Gauge className="h-4 w-4" />}
                 color="green"
               />
               <MetricCard
-                label={t('quickStats.co2Saved', 'CO₂ Saved')}
+                label={t('quickStats.co2Saved', 'CO₂ saved')}
                 value={`${fmtNumber(analytics.co2SavedKg ?? 0)} kg`}
                 icon={<Leaf className="h-4 w-4" />}
                 color="green"
               />
               <MetricCard
-                label={t('quickStats.fleetVehicles', 'Fleet Vehicles')}
+                label={t('quickStats.fleetVehicles', 'Fleet vehicles')}
                 value={fmtInt(analytics.totalVehicles ?? 0)}
                 icon={<Car className="h-4 w-4" />}
                 color="cyan"
@@ -257,7 +258,7 @@ export default function QuickStatsPage() {
                 icon={<LayoutDashboard className="h-4 w-4" aria-hidden="true" />}
                 onClick={() => navigate('/')}
               >
-                {t('quickStats.openDashboard', 'Open Dashboard')}
+                {t('quickStats.openDashboard', 'Open dashboard')}
               </Button>
               {vehicle && (
                 <Button
@@ -266,7 +267,7 @@ export default function QuickStatsPage() {
                   icon={<Car className="h-4 w-4" aria-hidden="true" />}
                   onClick={() => navigate(`/vehicles/${vehicle.id}`)}
                 >
-                  {t('quickStats.vehicleDetails', 'Vehicle Details')}
+                  {t('quickStats.vehicleDetails', 'Vehicle details')}
                 </Button>
               )}
               <Button
@@ -275,7 +276,7 @@ export default function QuickStatsPage() {
                 icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
                 onClick={() => navigate('/statistics')}
               >
-                {t('quickStats.viewAnalytics', 'View Analytics')}
+                {t('quickStats.viewAnalytics', 'View analytics')}
               </Button>
             </div>
             <Caption>{t('quickStats.footer', 'Powered by TeslaSync')}</Caption>
@@ -283,5 +284,6 @@ export default function QuickStatsPage() {
         </GlassPanel>
       </FadeIn>
     </PageContainer>
+    </main>
   );
 }

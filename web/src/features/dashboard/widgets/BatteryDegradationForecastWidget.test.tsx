@@ -227,12 +227,21 @@ describe('formatProjectedMonth', () => {
 });
 
 describe('BatteryDegradationForecastWidget — shell states', () => {
+  it('retains the prediction, outlook, risks and recommendations on a cached refresh failure', () => {
+    mockDegradation.mockReturnValue(qr({ data: makeData(), error: new Error('transient'), isError: true }));
+    renderWidget(STANDARD);
+    expect(screen.getByText('92.0%')).toBeInTheDocument();
+    expect(screen.getByText('High Temperature')).toBeInTheDocument();
+    expect(screen.getByText('Charge to 80% for daily use')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('shows a skeleton (never a blank panel) and no content while loading', () => {
     mockDegradation.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Projected 80% Capacity')).toBeNull();
+    expect(screen.queryByText('Projected 80% capacity')).toBeNull();
     expect(screen.queryByText('No degradation forecast data')).toBeNull();
   });
 
@@ -252,8 +261,10 @@ describe('BatteryDegradationForecastWidget — shell states', () => {
     mockDegradation.mockReturnValue(qr({ data: undefined }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('No degradation forecast data')).toBeInTheDocument();
-    expect(screen.queryByText('Projected 80% Capacity')).toBeNull();
+    expect(screen.getAllByText('No degradation forecast data')).toHaveLength(2);
+    expect(screen.getByText('Projected 80% capacity')).toBeInTheDocument();
+    expect(screen.getByText('Current health')).toBeInTheDocument();
+    expect(screen.queryByText('Healthy')).toBeNull();
   });
 });
 
@@ -288,9 +299,9 @@ describe('BatteryDegradationForecastWidget — populated standard layout', () =>
       month: 'short',
     }).format(new Date('2027-03-15'));
 
-    expect(screen.getByText('Projected 80% Capacity')).toBeInTheDocument();
+    expect(screen.getByText('Projected 80% capacity')).toBeInTheDocument();
     expect(screen.getByText(expectedDate)).toBeInTheDocument();
-    expect(screen.getByText('Current Health')).toBeInTheDocument();
+    expect(screen.getByText('Current health')).toBeInTheDocument();
     expect(screen.getByText('92.0%')).toBeInTheDocument();
     // rate 0.08 → "Normal" tier and a "0.08%/mo" delta.
     expect(screen.getByText('Normal')).toBeInTheDocument();
@@ -300,7 +311,7 @@ describe('BatteryDegradationForecastWidget — populated standard layout', () =>
   it('lists each risk factor with its label, detail, and score', () => {
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Risk Factors')).toBeInTheDocument();
+    expect(screen.getByText('Risk factors')).toBeInTheDocument();
     expect(screen.getByText('High Temperature')).toBeInTheDocument();
     expect(screen.getByText('Frequent heat exposure')).toBeInTheDocument();
     expect(screen.getByText('Fast Charging')).toBeInTheDocument();
@@ -340,8 +351,8 @@ describe('BatteryDegradationForecastWidget — compact layout', () => {
     expect(screen.getByText('92.0%')).toBeInTheDocument();
     expect(screen.getByText('Normal')).toBeInTheDocument();
     // Compact tiles suppress the shell title and the standard-only hero.
-    expect(screen.queryByText('Battery Forecast')).toBeNull();
-    expect(screen.queryByText('Projected 80% Capacity')).toBeNull();
+    expect(screen.queryByText('Battery forecast')).toBeNull();
+    expect(screen.queryByText('Projected 80% capacity')).toBeNull();
   });
 
   it('renders an em dash when the health reading is absent', () => {
@@ -367,7 +378,7 @@ describe('BatteryDegradationForecastWidget — hardening & null-safety', () => {
     renderWidget(STANDARD);
 
     // The hero still renders (no RangeError bubbling out of the widget).
-    expect(screen.getByText('Projected 80% Capacity')).toBeInTheDocument();
+    expect(screen.getByText('Projected 80% capacity')).toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
 
@@ -385,7 +396,8 @@ describe('BatteryDegradationForecastWidget — hardening & null-safety', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('High Temperature')).toBeInTheDocument();
-    expect(screen.queryByText('No degradation forecast data')).toBeNull();
+    expect(screen.getByText('Current health')).toBeInTheDocument();
+    expect(screen.getByText('Recommendations')).toBeInTheDocument();
   });
 
   it('surfaces a recommendations-only payload instead of the empty state', () => {
@@ -403,7 +415,8 @@ describe('BatteryDegradationForecastWidget — hardening & null-safety', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Keep it plugged in overnight')).toBeInTheDocument();
-    expect(screen.queryByText('No degradation forecast data')).toBeNull();
+    expect(screen.getByText('Risk factors')).toBeInTheDocument();
+    expect(screen.getByText('Current health')).toBeInTheDocument();
   });
 
   it('falls back to "—" for a risk factor with no label or detail', () => {
@@ -427,10 +440,10 @@ describe('BatteryDegradationForecastWidget — hardening & null-safety', () => {
     );
     const { container } = renderWidget(STANDARD);
 
-    // Row renders (no throw) and the score defaults to 0 via fmtNumber.
-    expect(screen.getByText('Risk Factors')).toBeInTheDocument();
+    // Missing risk scores remain unknown, never a reassuring numeric zero.
+    expect(screen.getByText('Risk factors')).toBeInTheDocument();
     expect(container.textContent).toContain('—');
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.queryByText('0')).toBeNull();
   });
 });
 
@@ -464,15 +477,16 @@ describe('BatteryDegradationForecastWidget — horizon outlook', () => {
     }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('1 / 3 / 5-Year Outlook')).toBeTruthy();
+    expect(screen.getByText('1 / 3 / 5-year outlook')).toBeTruthy();
     expect(screen.getByText('90.5%')).toBeTruthy();
     expect(screen.getByText('81.7%')).toBeTruthy();
   });
 
-  it('hides the outlook when absent', () => {
+  it('keeps the outlook section visible with an empty placeholder when absent', () => {
     mockDegradation.mockReturnValue(qr({ data: makeData({ horizon_outlook: null }) }));
     renderWidget(STANDARD);
 
-    expect(screen.queryByText('1 / 3 / 5-Year Outlook')).toBeNull();
+    expect(screen.getByText('1 / 3 / 5-year outlook')).toBeInTheDocument();
+    expect(screen.getByText('This widget has no qualifying data yet.')).toBeInTheDocument();
   });
 });

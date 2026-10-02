@@ -122,22 +122,22 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
     });
 
     items.push({
-      label: t('widget.chargePlans.schedStart', 'Scheduled Start'),
+      label: t('widget.chargePlans.schedStart', 'Scheduled start'),
       value: joinDateTime(formatDate(activePlan.scheduled_start), formatTime(activePlan.scheduled_start)),
     });
 
     items.push({
-      label: t('widget.chargePlans.schedEnd', 'Scheduled End'),
+      label: t('widget.chargePlans.schedEnd', 'Scheduled end'),
       value: joinDateTime(formatDate(activePlan.scheduled_end), formatTime(activePlan.scheduled_end)),
     });
 
     items.push({
-      label: t('widget.chargePlans.estEnergy', 'Est. Energy'),
+      label: t('widget.chargePlans.estEnergy', 'Est. energy'),
       value: activePlan.estimated_kwh != null ? `${fmtNumber(activePlan.estimated_kwh, 1)} kWh` : '—',
     });
 
     items.push({
-      label: t('widget.chargePlans.estCost', 'Est. Cost'),
+      label: t('widget.chargePlans.estCost', 'Est. cost'),
       value: activePlan.estimated_cost != null ? formatCurrency(activePlan.estimated_cost) : '—',
     });
 
@@ -150,7 +150,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
     }
 
     items.push({
-      label: t('widget.chargePlans.ratePlan', 'Rate Plan'),
+      label: t('widget.chargePlans.ratePlan', 'Rate plan'),
       value: activePlan.rate_plan ?? '—',
     });
 
@@ -189,7 +189,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
             <span className="text-2xl font-bold text-[var(--text-primary)]">
               {fmtInt(activePlan.target_soc ?? 0)}%
             </span>
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider truncate max-w-full text-center">
+            <span className="text-2xs text-[var(--text-muted)] tracking-wider truncate max-w-full text-center">
               {t('widget.chargePlans.targetSoc', 'Target SOC')}
             </span>
             {activePlan.depart_by && (
@@ -211,7 +211,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.chargePlans.title', 'Charge Plans')}
+      title={t('widget.chargePlans.title', 'Charge plans')}
       icon={<Clock className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       updatedAt={updatedAt}
@@ -264,8 +264,8 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
           {/* Rate plans section */}
           {safeRates.length > 0 && (
             <div className="border-t border-white/[0.06] pt-2">
-              <h4 className="text-2xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">
-                {t('widget.chargePlans.ratePlans', 'Rate Plans')}
+              <h4 className="text-2xs font-medium text-[var(--text-muted)] tracking-wider mb-1">
+                {t('widget.chargePlans.ratePlans', 'Rate plans')}
               </h4>
               <WidgetDetailCard
                 entries={rateEntries}

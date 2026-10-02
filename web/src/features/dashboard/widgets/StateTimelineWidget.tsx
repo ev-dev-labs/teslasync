@@ -93,8 +93,8 @@ function TimelineStripe({
 
   return (
     <div className="space-y-1.5">
-      <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
-        {t('widget.stateTimeline.timeline', '24h Timeline')}
+      <span className="text-2xs tracking-wider text-[var(--text-muted)]">
+        {t('widget.stateTimeline.timeline', '24h timeline')}
       </span>
       <div className="flex h-4 w-full rounded overflow-hidden">
         {transitions.map((tr, i) => {
@@ -129,7 +129,7 @@ function StateRow({
           className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: stateColor(seg.state) }}
         />
-        <span className="text-xs text-[var(--text-primary)] capitalize truncate">
+        <span className="text-xs text-[var(--text-primary)] truncate">
           {t(`widget.stateTimeline.state.${seg.state}`, seg.state)}
         </span>
       </div>
@@ -181,7 +181,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.stateTimeline.title', 'State Timeline')}
+      title={isCompact ? undefined : t('widget.stateTimeline.title', 'State timeline')}
       icon={isCompact ? undefined : <Clock className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       updatedAt={updatedAt}
@@ -207,7 +207,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
                     className="inline-block h-2 w-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: stateColor(seg.state) }}
                   />
-                  <span className="text-2xs text-[var(--text-secondary)] capitalize truncate">
+                  <span className="text-2xs text-[var(--text-secondary)] truncate">
                     {t(`widget.stateTimeline.state.${seg.state}`, seg.state)}
                   </span>
                   <span className="text-2xs text-[var(--text-muted)] tabular-nums">

@@ -60,6 +60,9 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: vi.fn(),
   useVehicleState: vi.fn(),
 }));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { unit_of_length: 'km', locale: 'en-US' } }),
+}));
 
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import EnergyFlowAnimatedWidget from './EnergyFlowAnimatedWidget';
@@ -71,7 +74,7 @@ const mockUseVehicleState = useVehicleState as unknown as ReturnType<typeof vi.f
 const STATE_OPTS = { refetchInterval: 5_000 };
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -129,7 +132,7 @@ function renderWidget(props: Partial<WidgetProps> = {}) {
   );
 }
 
-const diagram = () => screen.queryByRole('img', { name: /energy flow diagram/i });
+const diagram = () => screen.queryByRole('img', { name: /energy flow/i });
 
 beforeEach(() => {
   mockUseVehicles.mockReset();
@@ -224,7 +227,7 @@ describe('EnergyFlowAnimatedWidget — flow diagram (cols ≥ 2)', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25 })));
     renderWidget();
 
-    expect(screen.getByRole('img', { name: /energy flow diagram/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /energy flow/i })).toBeInTheDocument();
     expect(screen.getByText('Battery')).toBeInTheDocument();
     expect(screen.getByText('Charger')).toBeInTheDocument();
     expect(screen.getByText('Drive')).toBeInTheDocument();
@@ -253,7 +256,7 @@ describe('EnergyFlowAnimatedWidget — flow diagram (cols ≥ 2)', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25 })));
     renderWidget();
 
-    expect(screen.getByRole('heading', { name: 'Energy Flow' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Energy flow' })).toBeInTheDocument();
   });
 });
 
@@ -297,14 +300,49 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     expect(screen.getByText('15.0 kW')).toBeInTheDocument();
   });
 
-  it('shows an "Idle" label (and no kW reading) when parked and not charging', () => {
+  it('shows an "Idle" label and preserves measured zero when parked and not charging', () => {
     mockUseVehicleState.mockReturnValue(
       stateQuery(makeState({ is_charging: false, power: 0 })),
     );
     renderWidget(compact);
 
     expect(screen.getByText('Idle')).toBeInTheDocument();
-    expect(screen.queryByText(/kW/)).not.toBeInTheDocument();
+    expect(screen.getByText('0.0 kW')).toBeInTheDocument();
+  });
+});
+
+describe('EnergyFlowAnimatedWidget — unknown and cached values', () => {
+  it('does not promote unverified mapper defaults to measured idle or zero SoC', () => {
+    mockUseVehicleState.mockReturnValue(makeQuery({
+      data: { state: makeState({ power: 0, battery_level: 0 }), live: false, verifiedFields: [] },
+    }));
+    renderWidget({ size: { cols: 1, rows: 2 } });
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Idle')).not.toBeInTheDocument();
+  });
+  it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }])('does not manufacture zero or idle in renderer %j', (size) => {
+    mockUseVehicleState.mockReturnValue(stateQuery(makeState({
+      power: undefined as unknown as number,
+      battery_level: undefined as unknown as number,
+    })));
+    renderWidget({ size });
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Idle')).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0 kW')).not.toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('retains compact measured values and exposes the stale-refresh warning', () => {
+    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: -15 }), {
+      isError: true, error: new Error('refresh failed'),
+    }));
+    renderWidget({ size: { cols: 1, rows: 2 } });
+    expect(screen.getByText('15.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
 

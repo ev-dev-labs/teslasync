@@ -4,7 +4,9 @@ import { ScrollText, Pause, Play } from 'lucide-react';
 import { Badge, Button } from '@/components/ui';
 import { useSignalObservations, useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { safeNumber, isFiniteNumber } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
+import { deriveDataState, knownNumber } from '@/api/dataState';
+import { gaugeTone } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, WidgetBigNumber } from './shared';
 import type { EventFeedItem } from './shared';
@@ -15,10 +17,10 @@ import type { VehicleTelemetry } from '@/types/telemetry';
 // ── Source → visual mapping ──────────────────────────────────────────
 
 const SOURCE_COLORS: Record<string, string> = {
-  fleet_telemetry: '#22c55e',
-  fleet_api: '#06b6d4',
-  manual: '#f59e0b',
-  backfill: '#6b7280',
+  fleet_telemetry: gaugeTone.success,
+  fleet_api: gaugeTone.info,
+  manual: gaugeTone.warning,
+  backfill: gaugeTone.neutral,
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -46,17 +48,20 @@ export function formatSignalValue(obs: SignalObservation): string {
 /**
  * Sum the per-vehicle signal ingest rate across the fleet for the compact
  * "signals/sec" hero. Prefers the camelCase field, falls back to the
- * snake_case alias, and coerces every entry through `safeNumber` so a junk /
- * missing rate on one vehicle cannot poison the total into `NaN`.
+ * snake_case alias. A missing rate on any vehicle makes the aggregate unknown
+ * rather than presenting a partial sample as a complete fleet total.
  */
 export function deriveSignalRate(
   vehicles: VehicleTelemetry[] | null | undefined,
-): number {
-  const list = vehicles ?? [];
-  return list.reduce(
-    (sum, v) => sum + safeNumber(v?.signalsPerSecond ?? v?.signals_per_second),
-    0,
-  );
+): number | null {
+  if (vehicles == null) return null;
+  let total = 0;
+  for (const vehicle of vehicles) {
+    const rate = knownNumber(vehicle.signalsPerSecond ?? vehicle.signals_per_second);
+    if (rate == null) return null;
+    total += rate;
+  }
+  return total;
 }
 
 // ── Compact layout (1×2): big number for signals/sec ─────────────────
@@ -65,13 +70,14 @@ function CompactView({
   rate,
   t,
 }: {
-  rate: number;
+  rate: number | null;
   t: (key: string, fallback: string) => string;
 }) {
   return (
     <WidgetBigNumber
-      value={Math.round(rate)}
-      label={t('widget.signalLog.signalsPerSec', 'signals/sec')}
+      value={rate == null ? null : Math.round(rate)}
+      animated={false}
+      label={t('widget.signalLog.signalsPerSec', 'Signals/sec')}
     />
   );
 }
@@ -86,28 +92,35 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
   const [paused, setPaused] = useState(false);
   const pausedDataRef = useRef<EventFeedItem[]>([]);
 
+  const observationsQuery = useSignalObservations(vid, { limit: 20 });
   const {
     data: observations,
     isLoading,
-    isFetching,
-    isStale,
-    isError,
-    dataUpdatedAt,
-    refetch,
-  } = useSignalObservations(vid, { limit: 20 });
+  } = observationsQuery;
 
-  const { data: mqttData } = useMQTTStatus();
+  const mqttQuery = useMQTTStatus();
+  const { data: mqttData } = mqttQuery;
 
   const isCompact = size.cols <= 1;
+  const query = isCompact ? mqttQuery : observationsQuery;
+  const state = deriveDataState({
+    data: query.data ?? (query.isLoading || query.isError || query.error ? undefined : null),
+    error: query.error,
+    isError: query.isError,
+    isFetching: query.isFetching,
+    dataUpdatedAt: query.dataUpdatedAt,
+    refetch: query.refetch,
+  });
 
   // Map observations → EventFeedItem[]
   const feedItems = useMemo<EventFeedItem[]>(() => {
     const list = observations ?? [];
     return list.map((obs, i) => {
-      const source = obs.source ?? 'backfill';
+      const source = typeof obs.source === 'string' && obs.source.trim() !== ''
+        ? obs.source : 'unknown';
       const sourceLabel = t(
         `widget.signalLog.source.${source}`,
-        SOURCE_LABELS[source] ?? source,
+        SOURCE_LABELS[source] ?? (source === 'unknown' ? t('widget.signalLog.unknownSource', 'Unknown') : source),
       );
       return {
         id: `${obs.ts}-${obs.signal_name}-${i}`,
@@ -121,8 +134,8 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
         ),
         title: obs.signal_name ?? '—',
         subtitle: formatSignalValue(obs),
-        timestamp: obs.ts ?? new Date(0).toISOString(),
-        color: SOURCE_COLORS[source] ?? '#6b7280',
+        timestamp: obs.ts ?? '',
+        color: SOURCE_COLORS[source] ?? 'var(--text-muted)',
         severity: 'info' as const,
       };
     });
@@ -169,14 +182,15 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.signalLog.title', 'Signal Log')}
-      icon={<ScrollText className="h-3.5 w-3.5 text-neon-cyan" />}
+      title={t('widget.signalLog.title', 'Signal log')}
+      icon={<ScrollText className="h-3.5 w-3.5" />}
       loading={isLoading}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => refetch()}
+      dataState={state}
+      updatedAt={query.dataUpdatedAt}
+      isFetching={query.isFetching}
+      isStale={query.isStale}
+      isError={query.isError}
+      onRefresh={() => { void observationsQuery.refetch(); void mqttQuery.refetch(); }}
       actions={!isCompact ? pauseAction : undefined}
     >
       {isCompact ? (

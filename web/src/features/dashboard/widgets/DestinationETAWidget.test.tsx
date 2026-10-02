@@ -297,7 +297,7 @@ describe('DestinationETAWidget — query states', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Destination ETA')).not.toBeInTheDocument();
+    expect(screen.queryByText('Destination ETA')).toBeInTheDocument();
     expect(screen.queryByText('No location data')).not.toBeInTheDocument();
   });
 
@@ -310,7 +310,7 @@ describe('DestinationETAWidget — query states', () => {
 
     // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Destination ETA')).not.toBeInTheDocument();
+    expect(screen.queryByText('Destination ETA')).toBeInTheDocument();
   });
 
   it('renders the titled shell with an EmptyState placeholder when snapshot is absent', () => {

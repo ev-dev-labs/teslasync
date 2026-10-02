@@ -204,7 +204,7 @@ describe('TirePressureVisualWidget — shell states', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No tire pressure data')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('renders an explicit empty state (no car diagram) when no snapshot has arrived', () => {
@@ -233,7 +233,7 @@ describe('TirePressureVisualWidget — layout', () => {
   it('renders the title, four corner labels, values, diagram, unit and All-Normal badge', () => {
     const { container } = renderWidget(STANDARD);
 
-    expect(screen.getByText('Tire Pressure')).toBeInTheDocument();
+    expect(screen.getByText('Tire pressure')).toBeInTheDocument();
     expect(screen.getByText('FL')).toBeInTheDocument();
     expect(screen.getByText('FR')).toBeInTheDocument();
     expect(screen.getByText('RL')).toBeInTheDocument();
@@ -245,14 +245,14 @@ describe('TirePressureVisualWidget — layout', () => {
 
     // Footer shows the user's pressure unit and the aggregate status.
     expect(container.textContent).toContain('bar');
-    expect(screen.getByText('All Normal')).toBeInTheDocument();
-    expect(screen.queryByText('Check Pressure')).toBeNull();
+    expect(screen.getByText('All normal')).toBeInTheDocument();
+    expect(screen.queryByText('Check pressure')).toBeNull();
   });
 
   it('suppresses the title in the compact (cols ≤ 1) tile but still renders the values', () => {
     renderWidget(COMPACT);
 
-    expect(screen.queryByText('Tire Pressure')).toBeNull();
+    expect(screen.queryByText('Tire pressure')).toBeNull();
     expect(screen.getByText('FL')).toBeInTheDocument();
     expect(screen.getAllByText('2.5')).toHaveLength(4);
   });
@@ -303,8 +303,8 @@ describe('TirePressureVisualWidget — Pa-derived status colours', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
 
     // Any non-success corner flips the aggregate badge.
-    expect(screen.getByText('Check Pressure')).toBeInTheDocument();
-    expect(screen.queryByText('All Normal')).toBeNull();
+    expect(screen.getAllByText('Check pressure')).toHaveLength(3);
+    expect(screen.queryByText('All normal')).toBeNull();
   });
 
   it('flags an over-inflated (critical-high) tire as red', () => {
@@ -322,7 +322,7 @@ describe('TirePressureVisualWidget — Pa-derived status colours', () => {
 
     expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(4);
     expect(screen.getAllByText('3.5')).toHaveLength(4);
-    expect(screen.getByText('Check Pressure')).toBeInTheDocument();
+    expect(screen.getAllByText('Check pressure')).toHaveLength(5);
   });
 
   it('colours the value text with the same severity variant as its tire', () => {
@@ -344,6 +344,14 @@ describe('TirePressureVisualWidget — Pa-derived status colours', () => {
 });
 
 describe('TirePressureVisualWidget — null safety', () => {
+  it('keeps tire readings and the diagram during a failed cached refresh', () => {
+    mockLatest.mockReturnValue(qr({ data: makeSnap(), isError: true, error: new Error('refresh failed') }));
+    const { container } = renderWidget(STANDARD);
+    expect(screen.getAllByText('2.5')).toHaveLength(4);
+    expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('renders "—" + a neutral grey tile (never red) when every corner is null', () => {
     mockLatest.mockReturnValue(
       qr({
@@ -362,7 +370,8 @@ describe('TirePressureVisualWidget — null safety', () => {
     expect(container.querySelectorAll(`rect[fill="${GREY}"]`)).toHaveLength(4);
     // Pre-fix this rendered four critical-red tiles; now it's calm neutral grey.
     expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(0);
-    expect(screen.getByText('Check Pressure')).toBeInTheDocument();
+    expect(screen.getAllByText('Unknown')).toHaveLength(5);
+    expect(screen.queryByText('Check pressure')).toBeNull();
   });
 });
 

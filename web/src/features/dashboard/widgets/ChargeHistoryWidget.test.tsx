@@ -147,7 +147,7 @@ describe('ChargeHistoryWidget — full view', () => {
     renderWidget(FULL, 7);
 
     // The full tile shows a header title.
-    expect(await screen.findByText('Charge History')).toBeInTheDocument();
+    expect(await screen.findByText('Charge history')).toBeInTheDocument();
 
     // Snake_case param, no /api/v1 double-prefix, bounded to 10 rows.
     expect(mockedRequest).toHaveBeenCalledWith('/charging?vehicle_id=7&limit=10');
@@ -198,7 +198,7 @@ describe('ChargeHistoryWidget — compact view', () => {
 
     // A compact tile drops both the chart and the header title.
     expect(screen.queryByTestId('area-chart')).toBeNull();
-    expect(screen.queryByText('Charge History')).toBeNull();
+    expect(screen.queryByText('Charge history')).toBeNull();
   });
 });
 
@@ -214,7 +214,7 @@ describe('ChargeHistoryWidget — empty / gated states', () => {
     expect(screen.queryByText('Total')).toBeNull();
   });
 
-  it('treats a lone session as "not enough to chart" (the > 1 gate)', async () => {
+  it('preserves a lone session instead of claiming there are no sessions', async () => {
     mockedRequest.mockResolvedValue([
       makeSession({ id: 9, total_energy_added_wh: 42_000 }),
     ]);
@@ -222,10 +222,10 @@ describe('ChargeHistoryWidget — empty / gated states', () => {
 
     // The request DID resolve with one row — this is the min-points gate, not a
     // still-loading state.
-    expect(await screen.findByText('No charge sessions yet')).toBeInTheDocument();
+    expect(await screen.findAllByText('42.0')).toHaveLength(2);
     expect(mockedRequest).toHaveBeenCalledWith('/charging?vehicle_id=7&limit=10');
-    expect(screen.queryByTestId('area-chart')).toBeNull();
-    expect(screen.queryByText('Total')).toBeNull();
+    expect(screen.getByTestId('area-chart')).toBeInTheDocument();
+    expect(screen.getByText('Total')).toBeInTheDocument();
   });
 });
 
@@ -235,7 +235,7 @@ describe('ChargeHistoryWidget — query lifecycle', () => {
     const { container } = renderWidget(FULL, 7);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Charge History')).toBeNull();
+    expect(screen.queryByText('Charge history')).toBeInTheDocument();
     expect(screen.queryByText('No charge sessions yet')).toBeNull();
     expect(screen.queryByTestId('area-chart')).toBeNull();
   });
@@ -249,13 +249,42 @@ describe('ChargeHistoryWidget — query lifecycle', () => {
     expect(screen.queryByTestId('area-chart')).toBeNull();
   });
 
-  it('degrades to the empty state (no crash) when the request rejects', async () => {
+  it('shows a retryable error when the request rejects without cached data', async () => {
     mockedRequest.mockRejectedValue(new Error('boom'));
     renderWidget(FULL, 7);
 
-    expect(await screen.findByText('No charge sessions yet')).toBeInTheDocument();
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledWith('/charging?vehicle_id=7&limit=10');
     expect(screen.queryByTestId('area-chart')).toBeNull();
+  });
+
+  describe('ChargeHistoryWidget — incomplete readings', () => {
+    it('preserves null gaps, signed energy and real zero without averaging missing rows as zero', async () => {
+      mockedRequest.mockResolvedValue([
+        makeSession({ total_energy_added_wh: null as unknown as number }),
+        makeSession({ total_energy_added_wh: 0 }),
+        makeSession({ total_energy_added_wh: -2000 }),
+      ]);
+      renderWidget(FULL, 7);
+      expect(await screen.findByTestId('area-chart')).toBeInTheDocument();
+      expect(chartCapture.props?.data).toEqual([
+        { i: '0', energy: -2 }, { i: '1', energy: 0 }, { i: '2', energy: null },
+      ]);
+      expect(screen.getByText('-2.0')).toBeInTheDocument();
+      expect(screen.getByText('-1.0')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    });
+
+    it('keeps summaries and charts on screen after a failed refresh', async () => {
+      mockedRequest.mockResolvedValue(THREE_SESSIONS);
+      renderWidget(FULL, 7);
+      expect(await screen.findByTestId('area-chart')).toBeInTheDocument();
+      mockedRequest.mockRejectedValue(new Error('refresh failed'));
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+      expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getByTestId('area-chart')).toBeInTheDocument();
+      expect(screen.getByText('60.0')).toBeInTheDocument();
+    });
   });
 
   it('refetches when the accessible "Refresh" freshness control is activated', async () => {

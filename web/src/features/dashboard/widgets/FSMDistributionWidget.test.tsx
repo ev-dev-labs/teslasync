@@ -255,7 +255,7 @@ function pieData(): Segment[] {
 
 /** The recent-transitions feed container (scopes assertions off the legend). */
 function transitionFeed(): HTMLElement {
-  const heading = screen.getByText('Recent Transitions');
+  const heading = screen.getByText('Recent transitions');
   const feed = heading.closest('div');
   expect(feed).not.toBeNull();
   return feed as HTMLElement;
@@ -279,7 +279,7 @@ describe('FSMDistributionWidget', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('State Distribution')).toBeInTheDocument();
+    expect(screen.getByText('State distribution')).toBeInTheDocument();
 
     // buildDonutData folds the stats map into ordered {state, value, pct}.
     expect(pieData()).toEqual([
@@ -332,9 +332,9 @@ describe('FSMDistributionWidget', () => {
     expect(screen.getByText('1h 0m')).toBeInTheDocument();
 
     // Compact drops the title, the donut and the transition feed.
-    expect(screen.queryByText('State Distribution')).not.toBeInTheDocument();
+    expect(screen.queryByText('State distribution')).not.toBeInTheDocument();
     expect(screen.queryByTestId('pie')).not.toBeInTheDocument();
-    expect(screen.queryByText('Recent Transitions')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent transitions')).not.toBeInTheDocument();
   });
 
   it('renders the recent-transitions feed with from → to states and timestamps', () => {
@@ -379,7 +379,7 @@ describe('FSMDistributionWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     // No header/donut while loading.
-    expect(screen.queryByText('State Distribution')).not.toBeInTheDocument();
+    expect(screen.queryByText('State distribution')).toBeInTheDocument();
     expect(screen.queryByTestId('pie')).not.toBeInTheDocument();
   });
 
@@ -408,8 +408,8 @@ describe('FSMDistributionWidget', () => {
     // The misleading "no data" empty state must NOT appear on a fetch failure,
     // and the error branch replaces the header (so there is no refresh control).
     expect(screen.queryByText('No state data available')).not.toBeInTheDocument();
-    expect(screen.queryByText('State Distribution')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('State distribution')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('shows the empty state (keeping the titled shell) when there is no distribution', () => {
@@ -417,7 +417,7 @@ describe('FSMDistributionWidget', () => {
     transitionsMock.mockReturnValue(makeQuery({ data: makeTransitions([]) }));
     renderWidget();
 
-    expect(screen.getByText('State Distribution')).toBeInTheDocument();
+    expect(screen.getByText('State distribution')).toBeInTheDocument();
     expect(screen.getByText('No state data available')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // The donut is not rendered while empty.
@@ -430,7 +430,7 @@ describe('FSMDistributionWidget', () => {
 
     expect(screen.getByText('No state data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('State Distribution')).not.toBeInTheDocument();
+    expect(screen.queryByText('State distribution')).not.toBeInTheDocument();
   });
 
   it('refetches BOTH sources when the freshness control is activated', () => {
@@ -490,6 +490,6 @@ describe('FSMDistributionWidget', () => {
     expect(screen.getByText('No state data available')).toBeInTheDocument();
     expect(screen.queryByTestId('pie')).not.toBeInTheDocument();
     // The non-array transitions payload never reaches a `.map`/feed render.
-    expect(screen.queryByText('Recent Transitions')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent transitions')).not.toBeInTheDocument();
   });
 });

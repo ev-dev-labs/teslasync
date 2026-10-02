@@ -177,7 +177,7 @@ describe('LocationFavoritesWidget states', () => {
     mockUseLocations.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Favorite Locations')).toBeNull();
+    expect(screen.queryByText('Favorite locations')).toBeInTheDocument();
     expect(screen.queryByText('No favorite locations')).toBeNull();
   });
 
@@ -186,7 +186,7 @@ describe('LocationFavoritesWidget states', () => {
     renderWidget(STANDARD);
     // QueryError's generic (statusless) branch renders the network copy.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Favorite Locations')).toBeNull();
+    expect(screen.queryByText('Favorite locations')).toBeInTheDocument();
   });
 
   it('shows an empty state (never a blank panel) when there are no locations', () => {
@@ -215,7 +215,7 @@ describe('LocationFavoritesWidget standard layout', () => {
     );
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Favorite Locations')).toBeInTheDocument();
+    expect(screen.getByText('Favorite locations')).toBeInTheDocument();
     // Presence badge is driven by the snapshot (home → "Home").
     expect(screen.getByText('Home')).toBeInTheDocument();
     // Active-navigation destination chip.
@@ -247,7 +247,7 @@ describe('LocationFavoritesWidget compact layout', () => {
     mockUseSnapshot.mockReturnValue(qr({ data: { located_at_work: true } }));
     renderWidget(COMPACT);
 
-    expect(screen.queryByText('Favorite Locations')).toBeNull();
+    expect(screen.queryByText('Favorite locations')).toBeNull();
     expect(screen.getByRole('img', { name: 'Work' })).toHaveTextContent('🏢');
     expect(screen.getByText('Work')).toBeInTheDocument();
   });

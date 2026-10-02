@@ -44,7 +44,7 @@ export function FleetStatsBar({
     [recentCharges],
   );
 
-  const sizeLabel = t('fleet.size', 'Fleet Size');
+  const sizeLabel = t('fleet.size', 'Fleet size');
   const distanceLabel = t('fleet.distance', 'Distance (30d)');
   const energyLabel = t('fleet.energy', 'Energy (30d)');
   const efficiencyLabel = t('fleet.efficiency', 'Efficiency');

@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cpu } from 'lucide-react';
-import { StatCard } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
 import { useBatteryCells } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { knownNumber } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatusGrid } from './shared';
+import { WidgetStatusGrid, WidgetStatGrid } from './shared';
 import type { StatusCell } from './shared';
 import type { WidgetProps } from './types';
 
@@ -19,8 +20,8 @@ import type { WidgetProps } from './types';
  * to `unknown` rather than masquerading as a critical `error` — a non-finite
  * value is a dropped/garbled reading, not a genuine cell imbalance.
  */
-export function cellStatus(voltage: number | null, avg: number): StatusCell['status'] {
-  if (voltage == null || !Number.isFinite(voltage)) return 'unknown';
+export function cellStatus(voltage: number | null, avg: number | null): StatusCell['status'] {
+  if (voltage == null || avg == null || !Number.isFinite(voltage) || !Number.isFinite(avg)) return 'unknown';
   const deviationMv = Math.abs(voltage - avg) * 1000;
   if (deviationMv <= 5) return 'ok';
   if (deviationMv <= 15) return 'warning';
@@ -33,17 +34,24 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
   const vid = vehicleId ?? vehicles?.[0]?.id ?? null;
   const vidStr = vid != null ? String(vid) : null;
 
+  const query = useBatteryCells(vidStr);
   const {
     data, isLoading, error,
     isFetching, isStale, isError,
     dataUpdatedAt, refetch,
-  } = useBatteryCells(vidStr);
+  } = query;
+  const trust = useDataState(query, { provenance: 'historical' });
+  const { formatTemperature } = useUnits();
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
   const cells = data?.cells ?? [];
-  const avgV = data?.avg_voltage ?? 0;
+  const avgV = knownNumber(data?.avg_voltage);
+  const reading = (value: number | null | undefined, precision: number, unit: string, scale = 1) => {
+    const number = knownNumber(value);
+    return number == null ? '—' : `${fmtNumber(number * scale, precision)} ${unit}`;
+  };
 
   // Map cells → StatusCell items for the shared grid
   const statusCells = useMemo<StatusCell[]>(() => {
@@ -53,95 +61,57 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
         ? `${t('widget.batteryCells.cell', 'Cell')} ${c.cell_id} · M${c.module}`
         : `C${c.cell_id}`;
       const value = isWide
-        ? `${fmtNumber(c.voltage, 3)} V / ${fmtNumber(c.temperature, 1)}°`
-        : `${fmtNumber(c.voltage, 3)} V`;
+        ? `${knownNumber(c.voltage) != null ? `${fmtNumber(c.voltage, 3)} V` : '—'} / ${formatTemperature(knownNumber(c.temperature), { precision: 1 })}`
+        : knownNumber(c.voltage) != null ? `${fmtNumber(c.voltage, 3)} V` : '—';
 
       return { id: String(c.cell_id), label, status, value };
     });
-  }, [cells, avgV, isWide, t]);
+  }, [cells, avgV, isWide, t, formatTemperature]);
 
   // Summary stats
-  const minV = data?.min_voltage ?? 0;
-  const maxV = data?.max_voltage ?? 0;
-  const spread = data?.voltage_spread ?? 0;
+  const voltageStats = [
+    { label: t('widget.batteryCells.minV', 'Min V'), value: reading(data?.min_voltage, 3, 'V') },
+    { label: t('widget.batteryCells.maxV', 'Max V'), value: reading(data?.max_voltage, 3, 'V') },
+    { label: t('widget.batteryCells.avgV', 'Avg V'), value: reading(avgV, 3, 'V') },
+    { label: t('widget.batteryCells.spread', 'Spread'), value: reading(data?.voltage_spread, 1, 'mV', 1000) },
+  ];
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.batteryCells.title', 'Battery Cells')}
-      icon={<Cpu className="h-3.5 w-3.5 text-neon-cyan" />}
+      title={isCompact ? undefined : t('widget.batteryCells.title', 'Battery cells')}
+      icon={<Cpu className="h-3.5 w-3.5" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={data != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {data ? (
-        <div className="flex flex-col gap-2 h-full">
+        <div className="flex min-w-0 flex-col gap-3">
           {/* Voltage heatmap grid */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="min-w-0">
             <WidgetStatusGrid
               cells={statusCells}
               cols={isWide ? 4 : isCompact ? 2 : 3}
               compact={isCompact}
-              emptyMessage={t('widget.batteryCells.noCells', 'No cell data')}
+              emptyMessage={data ? t('widget.batteryCells.noCells', 'No cell data') : t('widget.batteryCells.noData', 'No battery cell data')}
               emptyIcon={<Cpu className="h-5 w-5" />}
             />
           </div>
 
           {/* Min / Max / Avg / Spread stats */}
-          <div className="flex-shrink-0 grid grid-cols-2 gap-2">
-            <StatCard
-              label={t('widget.batteryCells.minV', 'Min V')}
-              value={`${fmtNumber(minV, 3)} V`}
-              className="!p-2"
-            />
-            <StatCard
-              label={t('widget.batteryCells.maxV', 'Max V')}
-              value={`${fmtNumber(maxV, 3)} V`}
-              className="!p-2"
-            />
-            <StatCard
-              label={t('widget.batteryCells.avgV', 'Avg V')}
-              value={`${fmtNumber(avgV, 3)} V`}
-              className="!p-2"
-            />
-            <StatCard
-              label={t('widget.batteryCells.spread', 'Spread')}
-              value={`${fmtNumber(spread * 1000, 1)} mV`}
-              className="!p-2"
-            />
-          </div>
+          <WidgetStatGrid stats={voltageStats} cols={2} />
 
           {/* Wide layout: temperature summary row */}
           {isWide && (
-            <div className="flex-shrink-0 grid grid-cols-3 gap-2">
-              <StatCard
-                label={t('widget.batteryCells.minTemp', 'Min Temp')}
-                value={`${fmtNumber(data.min_temperature, 1)}°`}
-                className="!p-2"
-              />
-              <StatCard
-                label={t('widget.batteryCells.avgTemp', 'Avg Temp')}
-                value={`${fmtNumber(data.avg_temperature, 1)}°`}
-                className="!p-2"
-              />
-              <StatCard
-                label={t('widget.batteryCells.maxTemp', 'Max Temp')}
-                value={`${fmtNumber(data.max_temperature, 1)}°`}
-                className="!p-2"
-              />
-            </div>
+            <WidgetStatGrid cols={3} stats={[
+              { label: t('widget.batteryCells.minTemp', 'Min temp'), value: formatTemperature(knownNumber(data?.min_temperature), { precision: 1 }) },
+              { label: t('widget.batteryCells.avgTemp', 'Avg temp'), value: formatTemperature(knownNumber(data?.avg_temperature), { precision: 1 }) },
+              { label: t('widget.batteryCells.maxTemp', 'Max temp'), value: formatTemperature(knownNumber(data?.max_temperature), { precision: 1 }) },
+            ]} />
           )}
         </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Cpu className="h-5 w-5" />}
-          message={t('widget.batteryCells.noData', 'No battery cell data')}
-          className="py-4"
-        />
-      )}
     </WidgetShell>
   );
 }

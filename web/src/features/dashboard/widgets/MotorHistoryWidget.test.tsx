@@ -482,6 +482,14 @@ describe('MotorHistoryWidget — summary stats', () => {
 // ── Loading, empty & error ───────────────────────────────────────────────────────
 
 describe('MotorHistoryWidget — loading, empty & error states', () => {
+  it('retains the history chart during a failed background refresh', () => {
+    setHistory({ data: [makeSnapshot(T1, { di_torque: 0 })], isError: true });
+    const { container } = renderWidget();
+    expect(screen.getByTestId('composed-chart')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+  });
+
   it('renders only a skeleton (no chart, no empty state) while loading', () => {
     setHistory({ isLoading: true, data: undefined });
     const { container } = renderWidget();
@@ -495,7 +503,8 @@ describe('MotorHistoryWidget — loading, empty & error states', () => {
     setHistory({ data: [] });
     renderWidget();
 
-    expect(screen.getByRole('status')).toHaveTextContent('No motor history');
+    expect(screen.getByText('No motor history')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
     expect(screen.queryByTestId('composed-chart')).toBeNull();
   });
 
@@ -613,6 +622,6 @@ describe('MotorHistoryWidget — interactions & a11y', () => {
   it('exposes the widget title as a heading in the non-compact layout', () => {
     renderWidget();
 
-    expect(screen.getByRole('heading', { name: /Motor History/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Motor history/i })).toBeInTheDocument();
   });
 });

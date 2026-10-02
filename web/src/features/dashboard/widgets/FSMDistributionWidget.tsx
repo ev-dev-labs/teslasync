@@ -72,7 +72,7 @@ function DonutTooltip({
           className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: stateColor(seg.state) }}
         />
-        <span className="text-[var(--text-primary)] capitalize">
+        <span className="text-[var(--text-primary)]">
           {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
         </span>
       </div>
@@ -98,11 +98,11 @@ function TransitionRow({
   return (
     <div className="flex items-center justify-between min-h-[44px] gap-2">
       <div className="flex items-center gap-1.5 min-w-0">
-        <Badge variant="neutral" className="text-2xs capitalize truncate max-w-[72px]">
+        <Badge variant="neutral" className="text-2xs truncate max-w-[72px]">
           {t(`widget.fsmDistribution.state.${from}`, from)}
         </Badge>
         <span className="text-2xs text-[var(--text-muted)]">→</span>
-        <Badge variant="neutral" className="text-2xs capitalize truncate max-w-[72px]">
+        <Badge variant="neutral" className="text-2xs truncate max-w-[72px]">
           {t(`widget.fsmDistribution.state.${to}`, to)}
         </Badge>
       </div>
@@ -198,7 +198,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               className="inline-block h-3 w-3 rounded-full"
               style={{ backgroundColor: stateColor(currentState) }}
             />
-            <span className="text-sm font-semibold text-[var(--text-primary)] capitalize">
+            <span className="text-sm font-semibold text-[var(--text-primary)]">
               {t(`widget.fsmDistribution.state.${currentState}`, currentState)}
             </span>
             <span className="text-xs text-[var(--text-secondary)]">
@@ -219,7 +219,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
   /* Standard (2×4) view: donut chart + transitions feed */
   return (
     <WidgetShell
-      title={t('widget.fsmDistribution.title', 'State Distribution')}
+      title={t('widget.fsmDistribution.title', 'State distribution')}
       icon={<GitBranch className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       error={shellError}
@@ -233,7 +233,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
         <div className="flex flex-col gap-3 h-full">
           {/* Donut chart */}
           <EmbeddedChart
-            title={t('widget.fsmDistribution.title', 'State Distribution')}
+            title={t('widget.fsmDistribution.title', 'State distribution')}
             ariaLabel={t(
               'widget.fsmDistribution.chartAria',
               'Time spent in each vehicle state',
@@ -287,7 +287,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
                   className="inline-block h-2 w-2 rounded-full flex-shrink-0"
                   style={{ backgroundColor: stateColor(seg.state) }}
                 />
-                <span className="text-2xs text-[var(--text-secondary)] capitalize">
+                <span className="text-2xs text-[var(--text-secondary)]">
                   {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
                 </span>
                 <span className="text-2xs text-[var(--text-muted)] tabular-nums">
@@ -300,8 +300,8 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
           {/* Transitions feed */}
           {transitions.length > 0 && (
             <div className="flex flex-col gap-0.5 overflow-y-auto">
-              <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
-                {t('widget.fsmDistribution.recentTransitions', 'Recent Transitions')}
+              <span className="text-2xs tracking-wider text-[var(--text-muted)]">
+                {t('widget.fsmDistribution.recentTransitions', 'Recent transitions')}
               </span>
               {transitions.map((tr) => (
                 <TransitionRow

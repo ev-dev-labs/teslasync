@@ -11,6 +11,8 @@ import {
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useDataState } from '@/hooks/useDataState';
+import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -91,12 +93,14 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
   const { formatDateShort } = useDateFormat();
 
-  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
+  const query = useQuery({
     queryKey: ['drives', id, 'efficiency-chart-60'],
     queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=60`),
     enabled: id > 0,
     staleTime: 120_000,
   });
+  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+  const trust = useDataState({ ...query, data: drives ?? undefined }, { provenance: 'historical' });
 
   const chartData = useMemo(() => {
     const items = drives ?? [];
@@ -114,10 +118,10 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
     () =>
       chartData.map((d) => ({
         ...d,
-        efficiency: Math.round((unitPrefs.distance === 'mi' ? d.efficiency * 1.609344 : d.efficiency) * 10) / 10,
+        efficiency: Math.round(convertEfficiencyFromSI(d.efficiency, unitPrefs.distance) * 10) / 10,
         rollingAvg:
           d.rollingAvg != null
-            ? Math.round((unitPrefs.distance === 'mi' ? d.rollingAvg * 1.609344 : d.rollingAvg) * 10) / 10
+            ? Math.round(convertEfficiencyFromSI(d.rollingAvg, unitPrefs.distance) * 10) / 10
             : null,
       })),
     [chartData, unitPrefs.distance],
@@ -176,7 +180,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
 
   const chartEl = (
     <EmbeddedChart
-      title={t('widget.driveEfficiencyChart.title', 'Drive Efficiency')}
+      title={t('widget.driveEfficiencyChart.title', 'Drive efficiency')}
       ariaLabel={t(
         'widget.driveEfficiencyChart.chartAria',
         'Daily and seven-day rolling drive efficiency',
@@ -250,16 +254,15 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
 
   return (
     <WidgetShell
-      title={!isCompact ? t('widget.driveEfficiencyChart.title', 'Drive Efficiency') : undefined}
+      title={!isCompact ? t('widget.driveEfficiencyChart.title', 'Drive efficiency') : undefined}
       icon={!isCompact ? <TrendingUp className="h-3.5 w-3.5 text-cyan-300" /> : undefined}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={drives != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
-      noPadding={!isCompact}
     >
       <WidgetChartSummary
         chart={chartEl}

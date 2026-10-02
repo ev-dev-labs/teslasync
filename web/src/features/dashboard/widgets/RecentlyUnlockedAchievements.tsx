@@ -80,7 +80,7 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
     [navigate],
   );
 
-  const title = t('widget.recentlyUnlocked.title', 'Recently Unlocked');
+  const title = t('widget.recentlyUnlocked.title', 'Recently unlocked');
   const icon = <Trophy className="h-3.5 w-3.5 text-amber-400" />;
 
   if (!prefs.showOnDashboard) {

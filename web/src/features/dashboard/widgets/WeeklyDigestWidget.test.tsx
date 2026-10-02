@@ -287,7 +287,7 @@ describe('WeeklyDigestWidget — layout', () => {
   it('full layout shows the title heading and all four metrics', () => {
     renderWidget(FULL);
 
-    expect(screen.getByRole('heading', { name: 'This Week' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'This week' })).toBeInTheDocument();
     expect(deltas()).toHaveLength(4);
     expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
@@ -296,7 +296,7 @@ describe('WeeklyDigestWidget — layout', () => {
   it('compact layout drops the title and clamps to the first two metrics', () => {
     renderWidget(COMPACT);
 
-    expect(screen.queryByRole('heading', { name: 'This Week' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'This week' })).toBeNull();
     expect(deltas()).toHaveLength(2);
     expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.getByText('Drives')).toBeInTheDocument();
@@ -313,7 +313,7 @@ describe('WeeklyDigestWidget — loading, error & empty states', () => {
     const { container } = renderWidget(FULL);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.queryByRole('heading')).toBeInTheDocument();
     expect(screen.queryByTestId('delta')).toBeNull();
   });
 

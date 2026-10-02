@@ -49,7 +49,7 @@ function CompactView({
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(successRate, 1)}%</span>
-      <span className="text-2xs text-[var(--text-muted)]">{t('widget.successRate', 'Success Rate')}</span>
+      <span className="text-2xs text-[var(--text-muted)]">{t('widget.successRate', 'Success rate')}</span>
       {lastRunTime && (
         <TimeStamp value={lastRunTime} className="text-xs text-[var(--text-secondary)]" />
       )}
@@ -113,7 +113,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.automationHistory', 'Automation History')}
+      title={t('widget.automationHistory', 'Automation history')}
       icon={<PlayCircle className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}
@@ -146,7 +146,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
           {/* Success rate header */}
           <div className="flex items-center gap-2 pb-1.5 border-b border-white/[0.06]">
             <Badge variant={rateVariant}>
-              {fmtNumber(successRate, 1)}% {t('widget.successRate', 'Success Rate')}
+              {fmtNumber(successRate, 1)}% {t('widget.successRate', 'Success rate')}
             </Badge>
             {summary && (
               <span className="text-2xs text-[var(--text-muted)]">

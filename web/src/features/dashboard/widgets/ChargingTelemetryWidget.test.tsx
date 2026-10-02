@@ -70,7 +70,7 @@ const mockUseVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockLive = useChargingTelemetryLatest as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -150,11 +150,12 @@ describe('ChargingTelemetryWidget — power unit conversion (1000× regression g
     expect(screen.queryByText('11,000.0 kW')).not.toBeInTheDocument();
   });
 
-  it('coalesces a null charger_power_w to 0.0 kW instead of NaN', () => {
+  it('keeps a null charger_power_w unknown instead of synthesizing zero', () => {
     mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ charger_power_w: null }) }));
     renderWidget({ size: { cols: 1, rows: 1 } });
 
-    expect(screen.getByText('0.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0.0 kW')).not.toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 });
@@ -187,7 +188,7 @@ describe('ChargingTelemetryWidget — standard layout stats', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     expect(screen.getByText('Phases')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
   it('does not render the wide-only efficiency stat in the standard layout', () => {
@@ -219,29 +220,30 @@ describe('ChargingTelemetryWidget — wide layout (efficiency, badge, sparkline)
     expect(screen.queryByText('100')).not.toBeInTheDocument();
   });
 
-  it('omits the efficiency stat when the pilot current is unavailable', () => {
+  it('keeps the efficiency stat visible as unknown when pilot current is unavailable', () => {
     mockLive.mockReturnValue(
       makeQuery({ data: makeTelemetry({ charger_pilot_current: 0 }) }),
     );
     renderWidget({ size: { cols: 4, rows: 2 } });
 
-    expect(screen.queryByText('Efficiency')).not.toBeInTheDocument();
+    expect(screen.getByText('Efficiency')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 
   it('labels an AC charger below the DC voltage threshold', () => {
     mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ charger_voltage: 240 }) }));
     renderWidget({ size: { cols: 4, rows: 2 } });
 
-    expect(screen.getByText('AC Charger')).toBeInTheDocument();
-    expect(screen.queryByText('DC Charger')).not.toBeInTheDocument();
+    expect(screen.getByText('AC charger')).toBeInTheDocument();
+    expect(screen.queryByText('DC charger')).not.toBeInTheDocument();
   });
 
   it('labels a DC charger above the 300 V threshold', () => {
     mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ charger_voltage: 400 }) }));
     renderWidget({ size: { cols: 4, rows: 2 } });
 
-    expect(screen.getByText('DC Charger')).toBeInTheDocument();
-    expect(screen.queryByText('AC Charger')).not.toBeInTheDocument();
+    expect(screen.getByText('DC charger')).toBeInTheDocument();
+    expect(screen.queryByText('AC charger')).not.toBeInTheDocument();
   });
 
   it('accumulates a power sparkline across telemetry updates', () => {
@@ -288,7 +290,7 @@ describe('ChargingTelemetryWidget — not-charging empty state', () => {
     );
     renderWidget({ size: { cols: 1, rows: 1 } });
 
-    expect(screen.getByText('Not currently charging')).toBeInTheDocument();
+    expect(screen.getByText('No charge data')).toBeInTheDocument();
     // The compact power readout is absent when not charging.
     expect(screen.queryByText(/kW$/)).not.toBeInTheDocument();
   });
@@ -300,7 +302,7 @@ describe('ChargingTelemetryWidget — loading / error states', () => {
     const { container } = renderWidget({ size: { cols: 2, rows: 2 } });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Charging Telemetry')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charging telemetry')).toBeInTheDocument();
     expect(screen.queryByText('Not currently charging')).not.toBeInTheDocument();
   });
 
@@ -332,6 +334,23 @@ describe('ChargingTelemetryWidget — loading / error states', () => {
 });
 
 describe('ChargingTelemetryWidget — refresh + vehicle resolution', () => {
+  it('does not carry another vehicle or unknown power samples into the sparkline', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = (vehicleId: number) => (
+      <MemoryRouter><QueryClientProvider client={client}>
+        <ChargingTelemetryWidget vehicleId={vehicleId} size={{ cols: 4, rows: 2 }} />
+      </QueryClientProvider></MemoryRouter>
+    );
+    mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ ts: 't1', charger_power_w: 5000 }) }));
+    const { container, rerender } = render(tree(1));
+    mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ ts: 't2', charger_power_w: null }) }));
+    rerender(tree(1));
+    expect(container.querySelector('svg[role="img"]')).toBeNull();
+    mockLive.mockReturnValue(makeQuery({ data: makeTelemetry({ ts: 't3', charger_power_w: 6000 }) }));
+    rerender(tree(2));
+    expect(container.querySelector('svg[role="img"]')).toBeNull();
+    expect(screen.getByText('6.0')).toBeInTheDocument();
+  });
   it('refetches charging telemetry when the refresh control is activated', () => {
     const refetch = vi.fn();
     mockLive.mockReturnValue(makeQuery({ data: makeTelemetry(), refetch }));

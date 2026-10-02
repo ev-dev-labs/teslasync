@@ -78,19 +78,19 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
 
   const stats = useMemo((): StatGridItem[] => [
     {
-      label: t('widget.analyticsSummary.totalDistance', 'Total Distance'),
+      label: t('widget.analyticsSummary.totalDistance', 'Total distance'),
       value: fmtNumber(displayDist, 0),
       unit: distanceUnit,
       icon: <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />,
     },
     {
-      label: t('widget.analyticsSummary.avgEfficiency', 'Avg Efficiency'),
+      label: t('widget.analyticsSummary.avgEfficiency', 'Avg efficiency'),
       value: fmtNumber(displayEff, 0),
       unit: effUnit,
       icon: <Gauge className="h-3.5 w-3.5 text-emerald-400" />,
     },
     {
-      label: t('widget.analyticsSummary.energyConsumed', 'Energy Consumed'),
+      label: t('widget.analyticsSummary.energyConsumed', 'Energy consumed'),
       value: fmtNumber(energyKwh, 1),
       unit: 'kWh',
       icon: <Zap className="h-3.5 w-3.5 text-amber-400" />,
@@ -121,8 +121,8 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
               suffix={` ${distanceUnit}`}
               className="text-3xl font-bold text-cyan-400"
             />
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-              {t('widget.analyticsSummary.totalDistance', 'Total Distance')}
+            <span className="text-2xs text-[var(--text-muted)] tracking-wider">
+              {t('widget.analyticsSummary.totalDistance', 'Total distance')}
             </span>
           </div>
         ) : (
@@ -139,7 +139,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
   // Standard (2×2) and Wide (4×2)
   return (
     <WidgetShell
-      title={t('widget.analyticsSummary.title', 'Analytics Summary')}
+      title={t('widget.analyticsSummary.title', 'Analytics summary')}
       icon={<BarChart3 className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       error={error ? String(error) : null}

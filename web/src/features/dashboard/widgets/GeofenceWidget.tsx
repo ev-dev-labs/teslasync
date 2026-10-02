@@ -153,7 +153,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.geofence.title', 'Geofence Status')}
+      title={t('widget.geofence.title', 'Geofence status')}
       icon={<Crosshair aria-hidden="true" className="h-3.5 w-3.5 text-neon-cyan" />}
       noPadding={showMap}
       {...shellProps}

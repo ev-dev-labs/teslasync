@@ -335,7 +335,7 @@ describe('SubscriptionsWidget — loading & error states', () => {
     const { container } = renderWidget(FULL);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('heading', { name: /Subscriptions/i })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /Subscriptions/i })).toBeInTheDocument();
     expect(screen.queryByText('No subscriptions')).toBeNull();
   });
 

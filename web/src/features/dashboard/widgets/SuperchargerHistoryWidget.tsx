@@ -98,7 +98,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
   // Standard: list of sessions + totals
   return (
     <WidgetShell
-      title={t('widget.superchargerHistory.title', 'Supercharger History')}
+      title={t('widget.superchargerHistory.title', 'Supercharger history')}
       icon={<Zap className="h-3.5 w-3.5 text-yellow-400" />}
       loading={isLoading}
       error={error ? String(error) : null}

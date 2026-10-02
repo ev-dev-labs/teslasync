@@ -24,8 +24,8 @@ export interface QuickCommand {
 export const COMMANDS: QuickCommand[] = [
   { id: 'lock', command: 'lock', icon: Lock, labelKey: 'widget.quickActions.lock', labelFallback: 'Lock', color: 'text-neon-green' },
   { id: 'unlock', command: 'unlock', icon: Unlock, labelKey: 'widget.quickActions.unlock', labelFallback: 'Unlock', color: 'text-neon-red' },
-  { id: 'climate_on', command: 'climate_on', icon: Thermometer, labelKey: 'widget.quickActions.climateOn', labelFallback: 'Climate On', color: 'text-neon-cyan' },
-  { id: 'climate_off', command: 'climate_off', icon: ThermometerSnowflake, labelKey: 'widget.quickActions.climateOff', labelFallback: 'Climate Off', color: 'text-blue-400' },
+  { id: 'climate_on', command: 'climate_on', icon: Thermometer, labelKey: 'widget.quickActions.climateOn', labelFallback: 'Climate on', color: 'text-neon-cyan' },
+  { id: 'climate_off', command: 'climate_off', icon: ThermometerSnowflake, labelKey: 'widget.quickActions.climateOff', labelFallback: 'Climate off', color: 'text-blue-400' },
   { id: 'frunk', command: 'actuate_frunk', icon: Container, labelKey: 'widget.quickActions.frunk', labelFallback: 'Frunk', color: 'text-purple-400' },
   { id: 'honk', command: 'honk_horn', icon: Volume2, labelKey: 'widget.quickActions.horn', labelFallback: 'Horn', color: 'text-amber-400' },
   { id: 'flash', command: 'flash_lights', icon: Flashlight, labelKey: 'widget.quickActions.flash', labelFallback: 'Flash', color: 'text-yellow-400' },
@@ -89,7 +89,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.quickActions.title', 'Quick Actions')}
+      title={isCompact ? undefined : t('widget.quickActions.title', 'Quick actions')}
       icon={isCompact ? undefined : <Zap className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={showLoading}
       updatedAt={dataUpdatedAt}

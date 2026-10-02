@@ -204,7 +204,7 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.auditLog', 'Audit Log')}
+      title={t('widget.auditLog', 'Audit log')}
       icon={<FileSearch className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       error={error ? String(error) : null}

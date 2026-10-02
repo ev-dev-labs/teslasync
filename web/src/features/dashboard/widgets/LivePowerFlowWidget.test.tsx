@@ -117,6 +117,9 @@ vi.mock('@/hooks/useDateFormat', () => ({
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: false, durationMs: 250 }),
 }));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { unit_of_length: 'km', locale: 'en-US' } }),
+}));
 
 import LivePowerFlowWidget from './LivePowerFlowWidget';
 
@@ -180,6 +183,7 @@ interface QueryOverrides<T> {
   isError?: boolean;
   dataUpdatedAt?: number;
   refetch?: () => void;
+  error?: Error;
 }
 
 function setSites(over: QueryOverrides<TeslaEnergySite[]> = {}) {
@@ -272,7 +276,7 @@ describe('LivePowerFlowWidget — loading & empty states', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByTestId('flow-diagram')).toBeNull();
-    expect(screen.queryByText('No Tesla Energy site linked')).toBeNull();
+    expect(screen.queryByText('No Tesla energy site linked')).toBeNull();
     expect(flowSpy).not.toHaveBeenCalled();
   });
 
@@ -285,13 +289,13 @@ describe('LivePowerFlowWidget — loading & empty states', () => {
     expect(screen.queryByTestId('flow-diagram')).toBeNull();
   });
 
-  it('shows the "No Tesla Energy site linked" empty state (no heading) when no sites exist', () => {
+  it('keeps the title with the no-site empty state when no sites exist', () => {
     setSites({ data: [] });
     setLive({ data: undefined });
     renderWidget();
 
-    expect(screen.getByRole('status')).toHaveTextContent('No Tesla Energy site linked');
-    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('No Tesla energy site linked');
+    expect(screen.getByRole('heading', { name: 'Live power flow' })).toBeInTheDocument();
     expect(screen.queryByTestId('flow-diagram')).toBeNull();
   });
 
@@ -312,7 +316,7 @@ describe('LivePowerFlowWidget — loading & empty states', () => {
     renderWidget();
 
     expect(screen.getByTestId('flow-diagram')).toBeInTheDocument();
-    expect(lastFlowProps().nodes).toHaveLength(4);
+    expect(lastFlowProps().nodes).toHaveLength(5);
   });
 });
 
@@ -345,9 +349,9 @@ describe('LivePowerFlowWidget — node derivation', () => {
     renderWidget();
 
     expect(nodeById('grid')?.value).toBe(1);
-    expect(nodeById('grid')?.formattedValue).toBe('1.0 kW');
+    expect(nodeById('grid')?.formattedValue).toBe('-1.0 kW');
     expect(nodeById('battery')?.value).toBe(2);
-    expect(nodeById('battery')?.formattedValue).toBe('2.0 kW');
+    expect(nodeById('battery')?.formattedValue).toBe('-2.0 kW');
   });
 
   it('gives every node an icon and a localized label', () => {
@@ -367,7 +371,7 @@ describe('LivePowerFlowWidget — battery flow direction (regression)', () => {
     setLive({ data: makeLive({ battery_power: 1500 }) });
     renderWidget();
 
-    const discharge = arrowByEnds('battery', 'home');
+    const discharge = arrowByEnds('battery', 'site');
     expect(discharge?.active).toBe(true);
     expect(discharge?.value).toBe(1.5);
     // Discharging must NOT be misread as charging.
@@ -376,10 +380,10 @@ describe('LivePowerFlowWidget — battery flow direction (regression)', () => {
   });
 
   it('draws Grid → Battery when charging from the grid (battery_power < 0, no solar)', () => {
-    setLive({ data: makeLive({ battery_power: -2000, solar_power: 0 }) });
+    setLive({ data: makeLive({ battery_power: -2000, solar_power: 0, grid_power: 2000 }) });
     renderWidget();
 
-    const gridCharge = arrowByEnds('grid', 'battery');
+    const gridCharge = arrowByEnds('site', 'battery');
     expect(gridCharge?.active).toBe(true);
     expect(gridCharge?.value).toBe(2);
     // A charging pack must NOT be drawn as discharging to the home.
@@ -390,7 +394,7 @@ describe('LivePowerFlowWidget — battery flow direction (regression)', () => {
     setLive({ data: makeLive({ solar_power: 4000, battery_power: -1000 }) });
     renderWidget();
 
-    const solarCharge = arrowByEnds('solar', 'battery');
+    const solarCharge = arrowByEnds('site', 'battery');
     expect(solarCharge?.active).toBe(true);
     expect(solarCharge?.value).toBe(1); // min(solarKw 4, |batteryKw| 1)
     // With solar available the pack charges from solar, not the grid.
@@ -402,11 +406,18 @@ describe('LivePowerFlowWidget — battery flow direction (regression)', () => {
 // ── Arrow derivation — solar & grid direction ────────────────────────────────────
 
 describe('LivePowerFlowWidget — solar & grid flow direction', () => {
+  it('preserves a signed negative solar reading as consumption, not production', () => {
+    setLive({ data: makeLive({ solar_power: -1000 }) });
+    renderWidget();
+    expect(nodeById('solar')?.formattedValue).toBe('-1.0 kW');
+    expect(arrowByEnds('site', 'solar')?.value).toBe(1);
+    expect(arrowByEnds('solar', 'site')).toBeUndefined();
+  });
   it('draws an active Solar → Home arrow while solar is producing', () => {
     setLive({ data: makeLive({ solar_power: 4000 }) });
     renderWidget();
 
-    const solarHome = arrowByEnds('solar', 'home');
+    const solarHome = arrowByEnds('solar', 'site');
     expect(solarHome?.active).toBe(true);
     expect(solarHome?.value).toBe(4);
   });
@@ -415,7 +426,7 @@ describe('LivePowerFlowWidget — solar & grid flow direction', () => {
     setLive({ data: makeLive({ solar_power: 5 }) });
     renderWidget();
 
-    const solarHome = arrowByEnds('solar', 'home');
+    const solarHome = arrowByEnds('solar', 'site');
     expect(solarHome).toBeDefined();
     expect(solarHome?.active).toBe(false); // 0.005 kW ≤ 0.01 kW threshold
   });
@@ -424,7 +435,7 @@ describe('LivePowerFlowWidget — solar & grid flow direction', () => {
     setLive({ data: makeLive({ grid_power: 2000 }) });
     renderWidget();
 
-    const gridHome = arrowByEnds('grid', 'home');
+    const gridHome = arrowByEnds('grid', 'site');
     expect(gridHome?.active).toBe(true);
     expect(gridHome?.value).toBe(2);
     expect(arrowByEnds('home', 'grid')).toBeUndefined();
@@ -434,7 +445,7 @@ describe('LivePowerFlowWidget — solar & grid flow direction', () => {
     setLive({ data: makeLive({ grid_power: -1000 }) });
     renderWidget();
 
-    const homeGrid = arrowByEnds('home', 'grid');
+    const homeGrid = arrowByEnds('site', 'grid');
     expect(homeGrid?.active).toBe(true);
     expect(homeGrid?.value).toBe(1); // |gridKw|
     expect(arrowByEnds('grid', 'home')).toBeUndefined();
@@ -452,7 +463,15 @@ describe('LivePowerFlowWidget — solar & grid flow direction', () => {
 // ── Null safety ──────────────────────────────────────────────────────────────────
 
 describe('LivePowerFlowWidget — null safety', () => {
-  it('collapses null power fields to zeroed nodes and no arrows', () => {
+  it('retains measured power and directions on a failed cached refresh', () => {
+    setLive({ data: makeLive({ solar_power: 4000 }), isError: true });
+    renderWidget();
+    expect(nodeById('solar')?.formattedValue).toBe('4.0 kW');
+    expect(arrowByEnds('solar', 'site')?.active).toBe(true);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+  it('renders unknown null power fields without activating flow arrows', () => {
     setLive({
       data: makeLive({
         solar_power: null,
@@ -463,16 +482,43 @@ describe('LivePowerFlowWidget — null safety', () => {
     });
     renderWidget();
 
-    expect(nodeById('solar')?.formattedValue).toBe('0.0 kW');
+    expect(lastFlowProps().nodes.filter((node) => node.id !== 'site').every((node) => node.formattedValue === '—')).toBe(true);
     expect(nodeById('battery')?.value).toBe(0);
-    expect(lastFlowProps().nodes).toHaveLength(4);
+    expect(lastFlowProps().nodes).toHaveLength(5);
     expect(lastFlowProps().arrows).toHaveLength(0);
+  });
+
+  it('does not invent grid charging when grid or solar direction is unobserved', () => {
+    setLive({ data: makeLive({ battery_power: -2000, solar_power: null, grid_power: null }) });
+    renderWidget();
+    expect(arrowByEnds('grid', 'battery')).toBeUndefined();
+    expect(arrowByEnds('solar', 'battery')).toBeUndefined();
   });
 });
 
 // ── Compact sizing ───────────────────────────────────────────────────────────────
 
 describe('LivePowerFlowWidget — compact sizing', () => {
+  it('preserves all measured connections without attributing battery charging to solar or grid', () => {
+    setLive({ data: makeLive({ solar_power: 1000, grid_power: 3000, battery_power: -2000, load_power: 2000 }) });
+    renderWidget({ cols: 1, rows: 2 });
+    expect(lastFlowProps().arrows).toHaveLength(4);
+    expect(lastFlowProps().compact).toBe(false);
+    expect(arrowByEnds('solar', 'site')?.value).toBe(1);
+    expect(arrowByEnds('grid', 'site')?.value).toBe(3);
+    expect(arrowByEnds('site', 'battery')?.value).toBe(2);
+    expect(arrowByEnds('site', 'home')?.value).toBe(2);
+    expect(arrowByEnds('solar', 'battery')).toBeUndefined();
+    expect(arrowByEnds('grid', 'battery')).toBeUndefined();
+  });
+
+  it('surfaces an initial live-status failure rather than a fabricated empty or zero system', () => {
+    setLive({ data: undefined, isError: true, error: new Error('live unavailable') });
+    renderWidget();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByTestId('flow-diagram')).not.toBeInTheDocument();
+  });
+
   it('passes compact=true to the diagram for a single-column widget', () => {
     renderWidget({ cols: 1, rows: 2 });
 
@@ -515,6 +561,6 @@ describe('LivePowerFlowWidget — interactions & a11y', () => {
   it('exposes the widget title as a heading', () => {
     renderWidget();
 
-    expect(screen.getByRole('heading', { name: /Live Power Flow/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Live power flow/i })).toBeInTheDocument();
   });
 });

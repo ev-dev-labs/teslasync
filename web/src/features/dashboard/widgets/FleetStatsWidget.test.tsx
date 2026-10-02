@@ -213,7 +213,7 @@ describe('FleetStatsWidget — fleet counts & delegation', () => {
     expect(container.querySelectorAll('[role="group"]')).toHaveLength(5);
 
     // Fleet size = data.length (3); online = state === 'online' filter (2 of 3).
-    const size = group('Fleet Size');
+    const size = group('Fleet size');
     expect(within(size).getByText('3')).toBeInTheDocument();
     expect(size).toHaveTextContent('2 online');
 
@@ -289,7 +289,7 @@ describe('FleetStatsWidget — recent drive & charge queries', () => {
     // `enabled: primaryId > 0` keeps both queries idle — request is untouched.
     await waitFor(() => expect(screen.getAllByRole('group')).toHaveLength(5));
     expect(mockRequest).not.toHaveBeenCalled();
-    expect(within(group('Fleet Size')).getByText('0')).toBeInTheDocument();
+    expect(within(group('Fleet size')).getByText('0')).toBeInTheDocument();
   });
 });
 

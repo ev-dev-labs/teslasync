@@ -242,14 +242,14 @@ describe('WeeklySummaryCardWidget — layouts', () => {
     expect(screen.getByText('200')).toBeInTheDocument();
     expect(screen.getByText(/km\s+this week/i)).toBeInTheDocument();
     // No StatCards and no header title in the compact tile.
-    expect(screen.queryByText('Weekly Summary')).toBeNull();
+    expect(screen.queryByText('Weekly summary')).toBeNull();
     expect(screen.queryByText('Distance')).toBeNull();
   });
 
   it('tall (2x2) shows all four StatCards and no inline metric row', () => {
     renderWidget({ size: TALL });
 
-    expect(screen.getByText('Weekly Summary')).toBeInTheDocument();
+    expect(screen.getByText('Weekly summary')).toBeInTheDocument();
     expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.getByText('Energy')).toBeInTheDocument();
     expect(screen.getByText('Cost')).toBeInTheDocument();
@@ -287,7 +287,7 @@ describe('WeeklySummaryCardWidget — lifecycle', () => {
     const { container } = renderWidget({ size: TALL, query: makeQuery({ isLoading: true }) });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Weekly Summary')).toBeNull();
+    expect(screen.queryByText('Weekly summary')).toBeInTheDocument();
     expect(screen.queryByText('No weekly data')).toBeNull();
   });
 

@@ -66,7 +66,7 @@ const mockPool = useConnectionPool as unknown as ReturnType<typeof vi.fn>;
 const t = (_k: string, def: string) => def;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -85,7 +85,7 @@ function comp(status: string) {
 }
 
  
-function makeHealth(over: Record<string, unknown> = {}): any {
+function makeHealth(over: Record<string, unknown> = {}) {
   return {
     status: 'healthy',
     components: {
@@ -101,12 +101,12 @@ function makeHealth(over: Record<string, unknown> = {}): any {
 }
 
  
-function makeDbStats(over: Record<string, unknown> = {}): any {
+function makeDbStats(over: Record<string, unknown> = {}) {
   return { tables: [], tableCount: 42, databaseSize: '2.4 GB', ...over };
 }
 
  
-function makePool(over: Record<string, unknown> = {}): any {
+function makePool(over: Record<string, unknown> = {}) {
   return {
     maxOpen: 25,
     open: 10,
@@ -122,11 +122,11 @@ function makePool(over: Record<string, unknown> = {}): any {
 
 interface SetupOpts {
    
-  health?: any;
+  health?: Record<string, unknown>;
    
-  db?: any;
+  db?: Record<string, unknown>;
    
-  pool?: any;
+  pool?: Record<string, unknown>;
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -200,22 +200,21 @@ describe('SystemHealthWidget — standard layout (2×4)', () => {
     setup();
     renderWidget(STANDARD);
 
-    expect(screen.getByText('System Health')).toBeInTheDocument();
+    expect(screen.getByText('System health')).toBeInTheDocument();
 
     // Service rows carry human labels derived from the service keys.
     expect(screen.getByText('Database')).toBeInTheDocument();
-    expect(screen.getByText('Mqtt')).toBeInTheDocument();
-    expect(screen.getByText('Tesla Api')).toBeInTheDocument();
+    expect(screen.getByText('MQTT')).toBeInTheDocument();
+    expect(screen.getByText('Tesla API')).toBeInTheDocument();
     expect(screen.getByText('Fleet Telemetry')).toBeInTheDocument();
 
     // Each status is exposed to assistive tech, not colour-only.
-    expect(screen.getAllByRole('img')).toHaveLength(4);
-    expect(screen.getByRole('img', { name: 'Database: Healthy' })).toBeInTheDocument();
+    expect(screen.getAllByText('Healthy')).toHaveLength(4);
 
     // Stat grid: DB size, active/max conns, memory, goroutines.
-    expect(screen.getByText('DB Size')).toBeInTheDocument();
+    expect(screen.getByText('DB size')).toBeInTheDocument();
     expect(screen.getByText('2.4 GB')).toBeInTheDocument();
-    expect(screen.getByText('Active Conns')).toBeInTheDocument();
+    expect(screen.getByText('Active conns')).toBeInTheDocument();
     expect(screen.getByText('5/25')).toBeInTheDocument();
     expect(screen.getByText('Memory')).toBeInTheDocument();
     expect(screen.getByText('512 MB')).toBeInTheDocument();
@@ -238,14 +237,14 @@ describe('SystemHealthWidget — standard layout (2×4)', () => {
     });
     renderWidget(STANDARD);
 
-    expect(screen.getByRole('img', { name: 'Database: Healthy' }).className).toContain('bg-green-500');
+    expect(screen.getByText('Database').parentElement?.parentElement?.className).toContain('bg-emerald-500/10');
     // The whole point: `warning` is amber, not red.
-    expect(screen.getByRole('img', { name: 'Mqtt: Degraded' }).className).toContain('bg-amber-400');
-    expect(screen.getByRole('img', { name: 'Tesla Api: Unknown' }).className).toContain('bg-gray-400');
-    expect(screen.getByRole('img', { name: 'Fleet Telemetry: Down' }).className).toContain('bg-red-500');
+    expect(screen.getByText('Degraded')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('Down')).toBeInTheDocument();
   });
 
-  it('defaults a service missing from the components map to the down tier', () => {
+  it('keeps services missing from the components map unknown', () => {
     setup({
       health: makeQuery({
         data: makeHealth({ components: { database: comp('ok') } }),
@@ -254,9 +253,10 @@ describe('SystemHealthWidget — standard layout (2×4)', () => {
     renderWidget(STANDARD);
 
     // 'ok' is a healthy alias → green.
-    expect(screen.getByRole('img', { name: 'Database: Healthy' }).className).toContain('bg-green-500');
+    expect(screen.getByText('Healthy')).toBeInTheDocument();
     // Absent component → default 'unhealthy' → down → red.
-    expect(screen.getByRole('img', { name: 'Mqtt: Down' }).className).toContain('bg-red-500');
+    expect(screen.getAllByText('Unknown')).toHaveLength(3);
+    expect(screen.queryByText('Down')).not.toBeInTheDocument();
   });
 
   it('falls back past an empty databaseSize to the dbStats size', () => {
@@ -316,14 +316,14 @@ describe('SystemHealthWidget — compact layout (1×2)', () => {
     });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('online')).toBeInTheDocument();
     expect(screen.getByText('Healthy')).toBeInTheDocument();
     // 3 of 4 services are in the ok tier.
-    expect(screen.getByText('3/4 services')).toBeInTheDocument();
+    expect(screen.getByText('3/4')).toBeInTheDocument();
+    expect(screen.getByText('Services')).toBeInTheDocument();
 
     // Compact is title-less and omits the dot grid + stat cards.
-    expect(screen.queryByText('System Health')).not.toBeInTheDocument();
-    expect(screen.queryByText('DB Size')).not.toBeInTheDocument();
+    expect(screen.queryByText('System health')).not.toBeInTheDocument();
+    expect(screen.queryByText('DB size')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
@@ -331,7 +331,6 @@ describe('SystemHealthWidget — compact layout (1×2)', () => {
     setup({ health: makeQuery({ data: makeHealth({ status: 'degraded' }) }) });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('away')).toBeInTheDocument();
     expect(screen.getByText('Degraded')).toBeInTheDocument();
   });
 });
@@ -344,27 +343,64 @@ describe('SystemHealthWidget — states & interaction', () => {
     expect(screen.getByText('No system health data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Standard keeps its header, but the stat cards are gated behind data.
-    expect(screen.getByText('System Health')).toBeInTheDocument();
-    expect(screen.queryByText('DB Size')).not.toBeInTheDocument();
+    expect(screen.getByText('System health')).toBeInTheDocument();
+    expect(screen.getByText('DB size')).toBeInTheDocument();
   });
 
-  it('shows a loading skeleton and withholds the header + content while loading', () => {
+  describe('SystemHealthWidget — retained and unknown readings', () => {
+    it('retains service and runtime readings after a failed background refresh', () => {
+      setup({ health: makeQuery({ data: makeHealth(), isError: true, error: new Error('refresh') }) });
+      const { container } = renderWidget({ cols: 3, rows: 4 });
+      expect(screen.getAllByText('Healthy')).toHaveLength(4);
+      expect(screen.getByText('5/25')).toBeInTheDocument();
+      expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    });
+
+    it('does not turn a missing connection reading into zero', () => {
+      setup({ pool: makeQuery({ data: undefined }) });
+      renderWidget(STANDARD);
+      expect(screen.getAllByText('—')).toHaveLength(3);
+      expect(screen.queryByText('0')).not.toBeInTheDocument();
+    });
+
+    it('refreshes health, database, and runtime together', () => {
+      const health = vi.fn(), db = vi.fn(), pool = vi.fn();
+      setup({
+        health: makeQuery({ data: makeHealth(), refetch: health }),
+        db: makeQuery({ data: makeDbStats(), refetch: db }),
+        pool: makeQuery({ data: makePool(), refetch: pool }),
+      });
+      renderWidget(STANDARD);
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+      expect(health).toHaveBeenCalledTimes(1);
+      expect(db).toHaveBeenCalledTimes(1);
+      expect(pool).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('retains available database readings while health is loading', () => {
     setup({ health: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('System Health')).not.toBeInTheDocument();
-    expect(screen.queryByText('No system health data')).not.toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByText('2.4 GB')).toBeInTheDocument();
+    expect(screen.queryByText('System health')).toBeInTheDocument();
+    expect(screen.getByText('No system health data')).toBeInTheDocument();
   });
 
   it('renders the error branch (role="alert") instead of the widget body on failure', () => {
-    setup({ health: makeQuery({ data: undefined, error: new Error('boom'), isError: true }) });
+    setup({
+      health: makeQuery({ data: undefined, error: new Error('boom'), isError: true }),
+      db: makeQuery({ data: undefined, error: new Error('boom'), isError: true }),
+      pool: makeQuery({ data: undefined, error: new Error('boom'), isError: true }),
+    });
     renderWidget(STANDARD);
 
     // A non-ApiError falls through QueryError to the network/unknown branch.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('System Health')).not.toBeInTheDocument();
+    expect(screen.queryByText('System health')).toBeInTheDocument();
   });
 
   it('refetches system health when the accessible Refresh control is clicked', () => {

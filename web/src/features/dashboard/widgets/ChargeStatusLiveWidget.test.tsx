@@ -169,7 +169,7 @@ describe('formatTimeRemaining', () => {
   });
 
   it('returns an em-dash for zero, negative, or non-finite input', () => {
-    expect(formatTimeRemaining(0)).toBe('—');
+    expect(formatTimeRemaining(0)).toBe('0m');
     expect(formatTimeRemaining(-3)).toBe('—');
     expect(formatTimeRemaining(Number.NaN)).toBe('—');
     expect(formatTimeRemaining(Number.POSITIVE_INFINITY)).toBe('—');
@@ -178,11 +178,35 @@ describe('formatTimeRemaining', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('ChargeStatusLiveWidget', () => {
+  it.each([SIZE_COMPACT, SIZE_MEDIUM])('keeps missing charging status unknown at %j size', size => {
+    vehicleStateMock.mockReturnValue(makeStateQuery({
+      ...makeState(), is_charging: undefined, battery_level: 0,
+    } as unknown as LiveState));
+    renderWidget(<ChargeStatusLiveWidget size={size} />);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.queryByText('Not charging')).not.toBeInTheDocument();
+  });
+  it('renders unknown readings as placeholders and keeps cached state if sessions fail', () => {
+    vehicleStateMock.mockReturnValue(makeStateQuery({
+      ...makeState(),
+      charger_power: null,
+      battery_level: null,
+      charge_rate: null,
+    } as unknown as LiveState));
+    sessionsMock.mockReturnValue({ data: undefined, isError: true, error: new Error('sessions failed') });
+    renderWidget(<ChargeStatusLiveWidget size={SIZE_TALL} />);
+    expect(screen.queryByText('0.0 kW')).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.getByText('Time left')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(5);
+  });
   it('renders the full charging view: title, badge, power, energy and time', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
     // Title chrome is visible above compact.
-    expect(screen.getByText('Charge Status')).toBeInTheDocument();
+    expect(screen.getByText('Charge status')).toBeInTheDocument();
     // Charging badge + primary power readout (rounded-motion → final value).
     expect(screen.getByText('Charging')).toBeInTheDocument();
     expect(screen.getByText('48.0 kW')).toBeInTheDocument();
@@ -193,7 +217,7 @@ describe('ChargeStatusLiveWidget', () => {
     // Secondary-metric labels.
     expect(screen.getByText('Voltage')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
-    expect(screen.getByText('Time Left')).toBeInTheDocument();
+    expect(screen.getByText('Time left')).toBeInTheDocument();
     expect(screen.getByText('Added')).toBeInTheDocument();
     // Voltage + current have no live source → both render the em-dash.
     expect(screen.getAllByText('—')).toHaveLength(2);
@@ -217,9 +241,9 @@ describe('ChargeStatusLiveWidget', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_COMPACT} />);
 
     // 1×1 tile suppresses the title + the full badge/label chrome.
-    expect(screen.queryByText('Charge Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge status')).not.toBeInTheDocument();
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
-    expect(screen.queryByText('Time Left')).not.toBeInTheDocument();
+    expect(screen.queryByText('Time left')).not.toBeInTheDocument();
     // ...but still surfaces the power + battery essentials.
     expect(screen.getByText('48.0 kW')).toBeInTheDocument();
     expect(screen.getByText('80%')).toBeInTheDocument();
@@ -232,9 +256,9 @@ describe('ChargeStatusLiveWidget', () => {
 
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
-    expect(screen.getByText('Not Charging')).toBeInTheDocument();
+    expect(screen.getByText('Not charging')).toBeInTheDocument();
     expect(screen.getByText('64%')).toBeInTheDocument();
-    expect(screen.getByText('Last Session')).toBeInTheDocument();
+    expect(screen.getByText('Last session')).toBeInTheDocument();
     expect(screen.getByText('+12.5 kWh')).toBeInTheDocument();
     // The charging badge must not render when idle.
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
@@ -247,10 +271,10 @@ describe('ChargeStatusLiveWidget', () => {
 
     renderWidget(<ChargeStatusLiveWidget size={SIZE_COMPACT} />);
 
-    expect(screen.getByText('Not Charging')).toBeInTheDocument();
+    expect(screen.getByText('Not charging')).toBeInTheDocument();
     expect(screen.getByText('64%')).toBeInTheDocument();
-    expect(screen.queryByText('Last Session')).not.toBeInTheDocument();
-    expect(screen.queryByText('Charge Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Last session')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge status')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (role=status) when no live state has arrived', () => {
@@ -285,12 +309,12 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.getByText('48.0 kW')).toBeInTheDocument();
   });
 
-  it('falls back to the empty state on error when no data is present', () => {
+  it('shows a retryable error when no data is present', () => {
     vehicleStateMock.mockReturnValue(makeStateQuery(undefined, { isError: true }));
 
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
-    expect(screen.getByText('No charge data')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
   });
 
   it('selects the first vehicle when no vehicleId prop is supplied', () => {

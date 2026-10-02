@@ -39,11 +39,11 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
       value: fmtInt(dashStats?.totalTrips ?? 0),
     },
     {
-      label: t('widget.dashboardStats.sessions', 'Charge Sessions'),
+      label: t('widget.dashboardStats.sessions', 'Charge sessions'),
       value: fmtInt(dashStats?.totalChargingSessions ?? 0),
     },
     {
-      label: t('widget.dashboardStats.fsmState', 'FSM State'),
+      label: t('widget.dashboardStats.fsmState', 'FSM state'),
       value: fsmState,
     },
   ], [dashStats, fsmState, t]);
@@ -78,7 +78,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.dashboardStats.title', 'Dashboard Stats')}
+      title={isCompact ? undefined : t('widget.dashboardStats.title', 'Dashboard stats')}
       icon={isCompact ? undefined : <LayoutDashboard aria-hidden="true" className="h-3.5 w-3.5 text-indigo-400" />}
       loading={isLoading}
       updatedAt={updatedAt}
@@ -105,7 +105,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
               {/* FSM badge row */}
               <div className="flex items-center gap-2 min-h-[44px]">
                 <span className="text-xs text-[var(--text-secondary)]">
-                  {t('widget.dashboardStats.currentState', 'Current State')}
+                  {t('widget.dashboardStats.currentState', 'Current state')}
                 </span>
                 <StatusBadge status={fsmState} size="sm" />
               </div>
@@ -115,8 +115,8 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
           {/* Wide: recent state transitions */}
           {isWide && recentTransitions.length > 0 && (
             <div className="space-y-1.5 overflow-y-auto">
-              <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
-                {t('widget.dashboardStats.recentTransitions', 'Recent Transitions')}
+              <span className="text-2xs tracking-wider text-[var(--text-muted)]">
+                {t('widget.dashboardStats.recentTransitions', 'Recent transitions')}
               </span>
               <div className="flex flex-col gap-1">
                 {recentTransitions.map((tr, i) => (
@@ -125,7 +125,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
                     className="flex items-center justify-between min-h-[44px]"
                   >
                     <div className="flex items-center gap-2">
-                      <Badge variant="neutral" className="text-2xs capitalize truncate">
+                      <Badge variant="neutral" className="text-2xs truncate">
                         {tr.state ?? '—'}
                       </Badge>
                     </div>

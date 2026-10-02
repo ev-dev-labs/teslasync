@@ -172,8 +172,8 @@ describe('VersionInfoWidget — key/value list & uptime fix (regression)', () =>
     renderWidget(STANDARD);
 
     expect(kvValue('Version')).toBe('1.4.2');
-    expect(kvValue('Build Date')).toBe('2025-01-15');
-    expect(kvValue('Go Version')).toBe('go1.25.0');
+    expect(kvValue('Build date')).toBe('2025-01-15');
+    expect(kvValue('Go version')).toBe('go1.25.0');
     // The bug: reading a non-existent `uptime` string always rendered "—".
     // The fix formats the real `uptime_seconds` (90,061s) into the ladder.
     expect(kvValue('Uptime')).toBe('1d 1h 1m');
@@ -219,7 +219,7 @@ describe('VersionInfoWidget — null-safety on a realistic payload', () => {
     renderWidget(STANDARD);
 
     expect(kvValue('Version')).toBe('9.9.9');
-    expect(kvValue('Build Date')).toBe('—');
+    expect(kvValue('Build date')).toBe('—');
     expect(kvValue('Git SHA')).toBe('—');
     expect(kvValue('Uptime')).toBe('—');
   });
@@ -230,10 +230,10 @@ describe('VersionInfoWidget — stat grid', () => {
     renderWidget(STANDARD);
 
     expect(statValue('Signals/sec')).toBe('12.5');
-    expect(statValue('Messages Today')).toBe('34,567');
+    expect(statValue('Messages today')).toBe('34,567');
     // Byte + latency tiles are wide-layout only.
-    expect(screen.queryByText('Bytes Processed')).toBeNull();
-    expect(screen.queryByText('Avg Latency')).toBeNull();
+    expect(screen.queryByText('Bytes processed')).toBeNull();
+    expect(screen.queryByText('Avg latency')).toBeNull();
   });
 
   it('adds the OS/arch line and byte + latency tiles in the wide layout', () => {
@@ -241,8 +241,8 @@ describe('VersionInfoWidget — stat grid', () => {
 
     expect(screen.getByText('OS: linux')).toBeInTheDocument();
     expect(screen.getByText('Arch: amd64')).toBeInTheDocument();
-    expect(statValue('Bytes Processed')).toBe('1.5 MB');
-    expect(statValue('Avg Latency')).toBe('3.4 ms');
+    expect(statValue('Bytes processed')).toBe('1.5 MB');
+    expect(statValue('Avg latency')).toBe('3.4 ms');
   });
 
   it('paints every tile with placeholder zeros when the capture payload is undefined', () => {
@@ -252,7 +252,7 @@ describe('VersionInfoWidget — stat grid', () => {
     // Never a blank panel — the tiles degrade to zero, not to nothing.
     expect(screen.getByText('Signals/sec')).toBeInTheDocument();
     expect(statValue('Signals/sec')).toBe('0.0');
-    expect(statValue('Messages Today')).toBe('0');
+    expect(statValue('Messages today')).toBe('0');
   });
 });
 
@@ -266,7 +266,7 @@ describe('VersionInfoWidget — compact layout', () => {
     expect(screen.getByText('3.3.3')).toBeInTheDocument();
     expect(screen.getByText('deadbee')).toBeInTheDocument();
     // The full KV list is not rendered in the compact chip.
-    expect(screen.queryByText('Go Version')).toBeNull();
+    expect(screen.queryByText('Go version')).toBeNull();
     expect(screen.queryByText('Signals/sec')).toBeNull();
   });
 });
@@ -277,7 +277,7 @@ describe('VersionInfoWidget — shell states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Go Version')).toBeNull();
+    expect(screen.queryByText('Go version')).toBeNull();
   });
 
   it('surfaces a QueryError instead of the panel when the version query fails', () => {
@@ -288,7 +288,7 @@ describe('VersionInfoWidget — shell states', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Go Version')).toBeNull();
+    expect(screen.queryByText('Go version')).toBeNull();
   });
 
   it('shows an empty state (never a blank panel) when there is no version data', () => {
@@ -297,7 +297,7 @@ describe('VersionInfoWidget — shell states', () => {
 
     const status = screen.getByRole('status');
     expect(within(status).getByText('No version data available')).toBeInTheDocument();
-    expect(screen.queryByText('Go Version')).toBeNull();
+    expect(screen.queryByText('Go version')).toBeNull();
   });
 
   it('retries the version query when the refresh control is activated', () => {

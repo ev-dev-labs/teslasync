@@ -223,7 +223,7 @@ describe('LiveSignalSparklinesWidget — full view', () => {
     wire();
     renderWidget(FULL, 1);
 
-    expect(await screen.findByText('Live Signal Sparklines')).toBeInTheDocument();
+    expect(await screen.findByText('Live signal sparklines')).toBeInTheDocument();
 
     // Hook URLs are path-based with NO /api/v1 double-prefix.
     await waitFor(() => expect(calledWithUrl('/signals/1/available')).toBe(true));
@@ -331,7 +331,7 @@ describe('LiveSignalSparklinesWidget — empty / lifecycle states', () => {
     const { container } = renderWidget(FULL, 1);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Live Signal Sparklines')).toBeNull();
+    expect(screen.queryByText('Live signal sparklines')).toBeInTheDocument();
     expect(screen.queryByText('Battery Level')).toBeNull();
   });
 

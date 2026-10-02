@@ -1,21 +1,22 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, Calendar, Target, Route } from 'lucide-react';
-import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useMileageStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { knownNumber } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
-/** Round up to the next 10 000-mile milestone above current total. */
-function nextMilestone(totalMi: number): number {
+/** Next 10 000-display-unit milestone, strictly above the current total. */
+function nextMilestone(total: number): number {
   const step = 10_000;
-  return Math.ceil((totalMi + 1) / step) * step;
+  return (Math.floor(total / step) + 1) * step;
 }
 
 export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
@@ -23,8 +24,9 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const {
-    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useMileageStats(id > 0 ? String(id) : '');
+  const query = useMileageStats(id > 0 ? String(id) : '');
+  const { data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+  const trust = useDataState({ ...query, data: data ?? undefined }, { provenance: 'historical' });
 
   const { unitPrefs } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
@@ -33,26 +35,18 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
   const hasData = !!data;
-  // Only swap the whole widget for a full-panel error on the INITIAL load
-  // failure, when there is no cached data to fall back on. Once data is on
-  // screen, a transient background-refetch failure must not blank out
-  // otherwise-valid numbers — it is surfaced through the freshness
-  // indicator's error state instead (WidgetShell forwards `isError` to
-  // <DataFreshness>).
-  const blockingError = !hasData && error ? String(error) : null;
-
   // Backend `/mileage/stats` returns SI kilometres; multiply by 1000
   // so the SI-canonical `convertDistanceFromSI` (meters in) treats it
   // correctly. Daily-avg derives from the last_30d_km rolling window —
   // the legacy endpoint exposed `avgDaily` directly; the restored
   // endpoint exposes `last_30d_km`.
-  const totalMeters = (data?.lifetime_km ?? 0) * 1000;
-  const dailyAvgMeters = ((data?.last_30d_km ?? 0) / 30) * 1000;
-  const totalDisplay = toDistanceDisplay(totalMeters);
-  const dailyAvgDisplay = toDistanceDisplay(dailyAvgMeters);
-  const milestone = nextMilestone(totalDisplay);
-  const remaining = milestone - totalDisplay;
-  const monthsToMilestone = dailyAvgDisplay > 0
+  const lifetime = knownNumber(data?.lifetime_km);
+  const monthly = knownNumber(data?.last_30d_km);
+  const totalDisplay = lifetime == null ? null : toDistanceDisplay(lifetime * 1000);
+  const dailyAvgDisplay = monthly == null ? null : toDistanceDisplay(monthly / 30 * 1000);
+  const milestone = totalDisplay == null ? null : nextMilestone(totalDisplay);
+  const remaining = milestone != null && totalDisplay != null ? milestone - totalDisplay : null;
+  const monthsToMilestone = dailyAvgDisplay != null && dailyAvgDisplay > 0 && remaining != null
     ? Math.max(1, Math.round(remaining / dailyAvgDisplay / 30))
     : 0;
 
@@ -60,26 +54,26 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     if (!data) return [];
     return [
       {
-        label: t('widget.mileageStats.dailyAvg', 'Daily Avg'),
-        value: fmtNumber(dailyAvgDisplay, 1),
+        label: t('widget.mileageStats.dailyAvg', 'Daily avg'),
+        value: dailyAvgDisplay == null ? null : fmtNumber(dailyAvgDisplay, 1),
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.mileageStats.weeklyAvg', 'Weekly Avg'),
-        value: fmtNumber(dailyAvgDisplay * 7, 0),
+        label: t('widget.mileageStats.weeklyAvg', 'Weekly avg'),
+        value: dailyAvgDisplay == null ? null : fmtNumber(dailyAvgDisplay * 7, 0),
         unit: distanceUnit,
         icon: <Calendar className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.mileageStats.monthlyAvg', 'Monthly Avg'),
-        value: fmtNumber(dailyAvgDisplay * 30, 0),
+        label: t('widget.mileageStats.monthlyAvg', 'Monthly avg'),
+        value: dailyAvgDisplay == null ? null : fmtNumber(dailyAvgDisplay * 30, 0),
         unit: distanceUnit,
         icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.mileageStats.nextMilestone', 'Next Milestone'),
-        value: fmtInt(milestone),
+        label: t('widget.mileageStats.nextMilestone', 'Next milestone'),
+        value: milestone == null ? null : fmtInt(milestone),
         unit: distanceUnit,
         trend: 'up' as const,
         trendValue: monthsToMilestone > 0
@@ -92,7 +86,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
 
   const shellProps = {
     loading: isLoading,
-    error: blockingError,
+    dataState: data != null || isLoading || isError || error ? trust : undefined,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -105,15 +99,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell {...shellProps}>
         {hasData ? (
-          <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
-            <AnimatedNumber
-              value={dailyAvgDisplay}
-              className="text-2xl font-bold text-[var(--text-primary)]"
-            />
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-              {distanceUnit}/{t('widget.mileageStats.day', 'day')}
-            </span>
-          </div>
+          <WidgetBigNumber value={dailyAvgDisplay} decimals={0} unit={`${distanceUnit}/${t('widget.mileageStats.day', 'day')}`} />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<TrendingUp className="h-5 w-5" />}
@@ -128,7 +114,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
   // Standard / Wide
   return (
     <WidgetShell
-      title={t('widget.mileageStats.title', 'Mileage Stats')}
+      title={t('widget.mileageStats.title', 'Mileage stats')}
       icon={<TrendingUp className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >

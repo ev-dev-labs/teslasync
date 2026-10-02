@@ -184,7 +184,7 @@ describe('FleetStatsBarWidget', () => {
 
     // Labels — every tile is present.
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
-    expect(screen.getByText('Online Now')).toBeInTheDocument();
+    expect(screen.getByText('Online now')).toBeInTheDocument();
     expect(screen.getByText('Distance (30d)')).toBeInTheDocument();
     expect(screen.getByText('Energy (30d)')).toBeInTheDocument();
 
@@ -285,7 +285,7 @@ describe('FleetStatsBarWidget', () => {
 
     // Compact collapses the grid to one column but drops no tiles.
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
-    expect(screen.getByText('Online Now')).toBeInTheDocument();
+    expect(screen.getByText('Online now')).toBeInTheDocument();
     expect(screen.getByText('Distance (30d)')).toBeInTheDocument();
     expect(screen.getByText('Energy (30d)')).toBeInTheDocument();
     expect(screen.getByText('1,234.0')).toBeInTheDocument();

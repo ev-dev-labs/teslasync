@@ -67,7 +67,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.weatherAtCar', 'Weather at Car')}
+      title={isCompact ? undefined : t('widget.weatherAtCar', 'Weather at car')}
       icon={!isCompact ? <CloudSun className="h-3.5 w-3.5 text-cyan-300" /> : undefined}
       loading={isLoading}
       // Surface a genuine initial-load failure (no usable reading yet) as a real
@@ -97,7 +97,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
                 {fmtInt(toTemperatureDisplay(outsideTemp))}{tempUnit}
               </span>
               <span className="text-xs text-[var(--text-muted)]">
-                {t('widget.outsideTemp', 'Outside Temperature')}
+                {t('widget.outsideTemp', 'Outside temperature')}
               </span>
               {isFiniteNumber(lat) && isFiniteNumber(lon) && (
                 <span className="text-2xs text-[var(--text-muted)] tabular-nums">

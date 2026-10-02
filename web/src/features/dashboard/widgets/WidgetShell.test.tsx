@@ -34,6 +34,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { deriveDataState } from '@/api/dataState';
 
 // ── i18n stub: resolve `t(key, defaultString, opts)` and interpolate {{vars}} ──
 vi.mock('react-i18next', () => ({
@@ -60,11 +61,14 @@ vi.mock('@/components/feedback', () => ({
   Skeleton: ({ className }: { className?: string }) => (
     <div data-testid="skeleton" className={className} />
   ),
-  QueryError: ({ error }: { error: unknown }) => (
+  QueryError: ({ error, onRetry }: { error: unknown; onRetry?: () => void }) => (
     <div data-testid="query-error">
       {error instanceof Error ? error.message : String(error)}
+      {onRetry && <button onClick={onRetry}>Retry query</button>}
     </div>
   ),
+  StaleRefreshWarning: ({ state }: { state: { status: string } }) =>
+    state.status === 'ok' ? null : <div data-testid="trust-warning">{state.status}</div>,
 }));
 
 vi.mock('@/components/ui', () => ({
@@ -153,6 +157,48 @@ afterEach(() => {
 });
 
 describe('WidgetShell — state machine', () => {
+  it('retains content during a failed refresh even when the legacy error prop is supplied', () => {
+    const dataState = deriveDataState({ data: [0], isError: true, error: new Error('offline') });
+    render(
+      <WidgetShell title="Battery" error="offline" dataState={dataState}>
+        <Child />
+      </WidgetShell>,
+    );
+    expect(screen.getByTestId('child')).toBeInTheDocument();
+    expect(screen.getByTestId('trust-warning')).toHaveTextContent('stale');
+    expect(screen.queryByTestId('query-error')).not.toBeInTheDocument();
+  });
+
+  it('offers retry and preserves the header on initial failure', () => {
+    const refetch = vi.fn();
+    const state = deriveDataState({ isError: true, error: new Error('Network unavailable'), refetch });
+    render(<WidgetShell title="Battery" dataState={state}><Child /></WidgetShell>);
+    expect(screen.getByRole('heading')).toHaveTextContent('Battery');
+    expect(screen.getByTestId('query-error')).toHaveTextContent('Network unavailable');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry query' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('child')).not.toBeInTheDocument();
+  });
+
+  it('keeps contextual slots in every state and accepts a content-shaped skeleton', () => {
+    const { container } = render(
+      <WidgetShell
+        title="Battery"
+        description="Current vehicle"
+        status={<span>Unknown</span>}
+        footer={<span>View details</span>}
+        loading
+        loadingContent={<div>Reading battery</div>}
+      ><Child /></WidgetShell>,
+    );
+    expect(screen.getByText('Current vehicle')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('View details')).toBeInTheDocument();
+    expect(screen.getByText('Reading battery')).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('heading')).not.toHaveClass('uppercase');
+  });
+
   it('renders only the skeleton (with its sizing classes) while loading', () => {
     render(
       <WidgetShell title="Battery" loading>
@@ -164,9 +210,9 @@ describe('WidgetShell — state machine', () => {
     expect(skeleton).toBeInTheDocument();
     expect(skeleton.className).toContain('h-full');
     expect(skeleton.className).toContain('rounded-xl');
-    // Content, header, and freshness are all withheld during load.
+    // Keep the widget identity visible while withholding unresolved content.
     expect(screen.queryByTestId('child')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading')).toHaveTextContent('Battery');
   });
 
   it('renders QueryError wrapping a real Error when error is set, hiding content', () => {

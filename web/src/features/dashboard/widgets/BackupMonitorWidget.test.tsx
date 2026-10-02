@@ -212,7 +212,7 @@ describe('BackupMonitorWidget states', () => {
     const { container } = renderWidget(STANDARD);
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No backup data')).toBeNull();
-    expect(screen.queryByText('Backup Monitor')).toBeNull();
+    expect(screen.queryByText('Backup monitor')).toBeInTheDocument();
   });
 
   it('shows an empty state (never a blank panel) when there are no runs — standard', () => {
@@ -239,15 +239,15 @@ describe('BackupMonitorWidget standard layout', () => {
     );
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Backup Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Backup monitor')).toBeInTheDocument();
     expect(screen.getByText('Last backup')).toBeInTheDocument();
-    expect(screen.getByText('Backup Size')).toBeInTheDocument();
+    expect(screen.getByText('Backup size')).toBeInTheDocument();
     expect(screen.getByText('Type')).toBeInTheDocument();
     expect(screen.getByText('5.0 MB')).toBeInTheDocument();
     expect(screen.getByText('full')).toBeInTheDocument();
     expect(screen.getByText('Success')).toBeInTheDocument();
     // Recent-runs list is wide-only.
-    expect(screen.queryByText('Recent Runs')).toBeNull();
+    expect(screen.queryByText('Recent runs')).toBeNull();
   });
 
   it('shows a Failed badge and the danger tint when the latest run failed', () => {
@@ -284,7 +284,7 @@ describe('BackupMonitorWidget compact layout', () => {
     mockUseBackupRuns.mockReturnValue(qr({ data: [makeRun({ status: 'completed' })] }));
     renderWidget(COMPACT);
 
-    expect(screen.queryByText('Backup Monitor')).toBeNull();
+    expect(screen.queryByText('Backup monitor')).toBeNull();
     expect(screen.getByText('Last backup')).toBeInTheDocument();
     // Icon-only status indicator carries its meaning for screen readers.
     const dot = screen.getByRole('img', { name: 'Success' });
@@ -302,7 +302,7 @@ describe('BackupMonitorWidget wide layout', () => {
     mockUseBackupRuns.mockReturnValue(qr({ data: [a, b] }));
     renderWidget(WIDE);
 
-    expect(screen.getByText('Recent Runs')).toBeInTheDocument();
+    expect(screen.getByText('Recent runs')).toBeInTheDocument();
     // Duration is appended for runs that have one.
     expect(screen.getByText(/·\s*4321ms/)).toBeInTheDocument();
     // Per-row status dots are decorative — the sibling Badge conveys status —

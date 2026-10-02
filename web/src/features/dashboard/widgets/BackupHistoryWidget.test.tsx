@@ -152,7 +152,7 @@ describe('BackupHistoryWidget', () => {
     setup({ sites: makeQuery({ data: [] }), events: makeQuery({ data: [] }) });
     render(<BackupHistoryWidget size={STANDARD} />);
 
-    expect(screen.getByText('No Tesla Energy site linked')).toBeInTheDocument();
+    expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
     expect(screen.queryByText('Outages (30d)')).not.toBeInTheDocument();
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
   });
@@ -166,7 +166,7 @@ describe('BackupHistoryWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('Outages (30d)')).not.toBeInTheDocument();
-    expect(screen.queryByText('No Tesla Energy site linked')).not.toBeInTheDocument();
+    expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
   });
 
   it('renders the "no backup events" empty state for a site with no outages', () => {
@@ -188,7 +188,7 @@ describe('BackupHistoryWidget', () => {
     render(<BackupHistoryWidget size={STANDARD} />);
 
     expect(screen.getByText('Outages (30d)')).toBeInTheDocument();
-    expect(screen.getByText('Avg Duration')).toBeInTheDocument();
+    expect(screen.getByText('Avg duration')).toBeInTheDocument();
     // count = 3, avg = (3600 + 90 + 45) / 3 = 1245s → "20m"
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('20m')).toBeInTheDocument();
@@ -217,7 +217,7 @@ describe('BackupHistoryWidget', () => {
     expect(screen.getByText('Outages (30d)')).toBeInTheDocument();
     // Full count still reported even though the list is capped.
     expect(screen.getByText('5')).toBeInTheDocument();
-    expect(screen.queryByText('Avg Duration')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg duration')).not.toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
   });
 

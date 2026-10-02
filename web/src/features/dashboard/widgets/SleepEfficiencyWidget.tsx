@@ -59,16 +59,16 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   const wakeEventsCount = (data?.recent_events ?? []).length;
 
   const stats = useMemo<GaugeHeroStat[]>(() => [
-    { label: t('widget.sleepEfficiency.avgDrain', 'Avg Drain/Day'), value: avgDrainPerDay, unit: '%' },
-    { label: t('widget.sleepEfficiency.totalSleep', 'Total Sleep'), value: fmtNumber(totalSleepHours, 0), unit: t('widget.sleepEfficiency.hours', 'h') },
-    { label: t('widget.sleepEfficiency.wakeEvents', 'Wake Events'), value: wakeEventsCount },
+    { label: t('widget.sleepEfficiency.avgDrain', 'Avg drain/day'), value: avgDrainPerDay, unit: '%' },
+    { label: t('widget.sleepEfficiency.totalSleep', 'Total sleep'), value: fmtNumber(totalSleepHours, 0), unit: t('widget.sleepEfficiency.hours', 'h') },
+    { label: t('widget.sleepEfficiency.wakeEvents', 'Wake events'), value: wakeEventsCount },
   ], [avgDrainPerDay, totalSleepHours, wakeEventsCount, t]);
 
   const hasData = data != null;
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.sleepEfficiency.title', 'Sleep Efficiency')}
+      title={isCompact ? undefined : t('widget.sleepEfficiency.title', 'Sleep efficiency')}
       icon={isCompact ? undefined : <Moon className="h-3.5 w-3.5 text-indigo-400" />}
       help={isCompact ? undefined : {
         i18nKey: 'help.sleepEfficiency.body',

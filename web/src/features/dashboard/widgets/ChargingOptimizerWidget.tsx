@@ -117,7 +117,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
   // ── Standard (2×2) and Wide (2×4+) ──
   return (
     <WidgetShell
-      title={t('widget.chargingOptimizer.title', 'Charging Optimizer')}
+      title={t('widget.chargingOptimizer.title', 'Charging optimizer')}
       icon={<Sparkles className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
@@ -175,13 +175,13 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
           {/* Wide mode: 24h timeline bar */}
           {isWide && (
             <div className="flex flex-col gap-1">
-              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-                {t('widget.chargingOptimizer.rateTimeline', '24h Rate Timeline')}
+              <span className="text-2xs text-[var(--text-muted)] tracking-wider">
+                {t('widget.chargingOptimizer.rateTimeline', '24h rate timeline')}
               </span>
               <div
                 className="flex h-6 rounded-md overflow-hidden border border-white/[0.06]"
                 role="img"
-                aria-label={t('widget.chargingOptimizer.rateTimeline', '24h Rate Timeline')}
+                aria-label={t('widget.chargingOptimizer.rateTimeline', '24h rate timeline')}
               >
                 {Array.from({ length: 24 }, (_, h) => {
                   const isPeak = peakHours.includes(h);

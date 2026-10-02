@@ -93,7 +93,7 @@ function FullscreenOverlay({
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">{def.name}</h2>
         <UiButton variant="ghost" size="sm" onClick={onClose}>
-          <Minimize2 className="h-4 w-4 mr-1" /> {t('dashboard.grid.exitFullscreen', 'Exit Fullscreen')}
+          <Minimize2 className="h-4 w-4 mr-1" /> {t('dashboard.grid.exitFullscreen', 'Exit fullscreen')}
         </UiButton>
       </div>
       <GlassPanel className="flex-1 overflow-hidden">

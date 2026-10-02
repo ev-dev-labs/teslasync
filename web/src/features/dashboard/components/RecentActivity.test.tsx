@@ -247,7 +247,7 @@ describe('RecentActivity — battery trend', () => {
       ],
     });
 
-    expect(screen.getByText('Battery Trend')).toBeInTheDocument();
+    expect(screen.getByText('Battery trend')).toBeInTheDocument();
     expect(screen.queryByTestId('battery-empty')).not.toBeInTheDocument();
   });
 
@@ -281,7 +281,7 @@ describe('RecentActivity — fleet performance', () => {
     // CO₂: 200 kWh * 0.42 = 84 kg.
     expect(screen.getByText('84 kg')).toBeInTheDocument();
 
-    const badge = screen.getByText('Most Efficient').closest('div') as HTMLElement;
+    const badge = screen.getByText('Most efficient').closest('div') as HTMLElement;
     expect(within(badge).getByText('Model 3')).toBeInTheDocument();
     // efficiency 150 → toEfficiencyDisplay(150) → 300, with the passed unit.
     expect(toEfficiencyDisplay).toHaveBeenCalledWith(150);
@@ -291,12 +291,12 @@ describe('RecentActivity — fleet performance', () => {
   it('falls back to zeros and hides the most-efficient badge when analytics is undefined', () => {
     renderActivity({ analytics: undefined });
 
-    expect(screen.getByText('Total Drives (30d)')).toBeInTheDocument();
+    expect(screen.getByText('Total drives (30d)')).toBeInTheDocument();
     // Both count metrics default to 0.
     expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('$0.00')).toBeInTheDocument();
     expect(screen.getByText('0 kg')).toBeInTheDocument();
-    expect(screen.queryByText('Most Efficient')).not.toBeInTheDocument();
+    expect(screen.queryByText('Most efficient')).not.toBeInTheDocument();
   });
 
   it('renders an em-dash for a blank most-efficient vehicle name', () => {
@@ -304,7 +304,7 @@ describe('RecentActivity — fleet performance', () => {
       analytics: makeAnalytics({ most_efficient_vehicle: { name: '', efficiency: 120 } }),
     });
 
-    const badge = screen.getByText('Most Efficient').closest('div') as HTMLElement;
+    const badge = screen.getByText('Most efficient').closest('div') as HTMLElement;
     expect(within(badge).getByText('—')).toBeInTheDocument();
   });
 });

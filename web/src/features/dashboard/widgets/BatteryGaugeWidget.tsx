@@ -1,8 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Battery } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { LinearGauge } from '@/components/charts';
+import { Badge } from '@/components/ui';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { WidgetGaugeHero } from './shared';
+import { knownNumber } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
+import { gaugeTone } from '@/lib/tokens';
+import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -12,54 +17,58 @@ import type { WidgetProps } from './types';
  * neutral grey rather than a misleading "critical" red.
  */
 export function batteryColor(level: number | null | undefined): string {
-  if (level == null) return '#374151'; // no data — neutral grey
-  if (level > 50) return '#10b981'; // green
-  if (level > 20) return '#f59e0b'; // amber
-  return '#ef4444'; // red
+  if (level == null || !Number.isFinite(level)) return gaugeTone.neutral;
+  if (level > 50) return gaugeTone.success;
+  if (level > 20) return gaugeTone.warning;
+  return gaugeTone.danger;
 }
 
 export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
+  const query = useVehicleState(id);
+  const { data: stateData, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
+  const trust = useDataState(query, { provenance: stateData?.live ? 'live' : 'cached', maxAgeMs: 120_000 });
   const state = stateData?.state;
   const isCompact = size.cols === 1 && size.rows === 1;
-  const batteryLevel = state?.battery_level ?? 0;
+  const batteryLevel = knownNumber(state?.battery_level);
 
   return (
     <WidgetShell
       loading={isLoading}
+      dataState={stateData != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {state ? (
-        <WidgetGaugeHero
-          gauge={{
-            value: batteryLevel,
-            max: 100,
-            label: t('widget.battery', 'Battery'),
-            unit: '%',
-            color: batteryColor(batteryLevel),
-          }}
-          compact={isCompact}
-        >
-          {state.is_charging && (
-            <p className="text-2xs text-emerald-300 mt-2 animate-pulse">
-              <span aria-hidden="true">⚡</span> {t('widget.charging', 'Charging')}
-            </p>
-          )}
-        </WidgetGaugeHero>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Battery className="h-6 w-6" />}
-          message={t('widget.noBattery', 'No battery data')}
-          className="py-4"
-        />
-      )}
+      <div className="flex min-w-0 flex-col gap-2">
+        {batteryLevel != null ? (
+          <LinearGauge
+            value={batteryLevel}
+            max={100}
+            label={t('widget.battery', 'Battery')}
+            unit="%"
+            color={batteryColor(batteryLevel)}
+            size={isCompact ? 70 : 110}
+          />
+        ) : state ? (
+          <WidgetBigNumber value={null} label={t('widget.battery', 'Battery')} />
+        ) : (
+          <EmptyState
+            icon={<Battery className="h-6 w-6" />}
+            message={t('widget.noBattery', 'No battery data')}
+            className="py-4"
+          />
+        )}
+        {state?.is_charging && (
+          <Badge variant="success" size="sm" className="self-start">
+            <span aria-hidden="true">⚡</span> {t('widget.charging', 'Charging')}
+          </Badge>
+        )}
+      </div>
     </WidgetShell>
   );
 }

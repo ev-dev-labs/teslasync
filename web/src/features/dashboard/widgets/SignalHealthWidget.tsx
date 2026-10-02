@@ -1,14 +1,16 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
-import { StatCard } from '@/components/data-display';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, PanelTitle } from '@/components/ui';
+import { combineDataStates, deriveDataState } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { useSignalStats, useSignalGaps, useSignals } from '@/api/hooks/useTelemetry';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtInt } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
+import { severityTokens } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -24,25 +26,38 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
+  const statsQuery = useSignalStats(id);
   const {
     data: stats,
     isLoading: statsLoading,
     isFetching: statsFetching,
     isStale: statsStale,
     isError: statsError,
-    dataUpdatedAt: statsUpdatedAt,
-    refetch: refetchStats,
-  } = useSignalStats(id);
+  } = statsQuery;
 
-  const { data: gapData } = useSignalGaps(id);
-  const { data: signals } = useSignals(id);
+  const gapsQuery = useSignalGaps(id);
+  const signalsQuery = useSignals(id);
+  const { data: gapData } = gapsQuery;
+  const { data: signals } = signalsQuery;
+  const sourceStates = [statsQuery, gapsQuery, signalsQuery].map((query) =>
+    deriveDataState({ ...query, data: query.data ?? (statsQuery.isLoading || query.isLoading || query.isError || query.error ? undefined : null) }));
+  const state = { ...sourceStates[0]!, ...combineDataStates(sourceStates) };
+  if (stats == null && gapData == null && signals == null) {
+    const fatal = sourceStates.find((source) => source.fatalError)?.fatalError;
+    if (fatal) { state.status = 'initialFailure'; state.fatalError = fatal; }
+  }
+  const refresh = () => {
+    void statsQuery.refetch();
+    void gapsQuery.refetch?.();
+    void signalsQuery.refetch?.();
+  };
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
   const analysis = useMemo(() => {
     const allSignals = signals ?? [];
-    const totalSignals = allSignals.length;
+    const totalSignals = signals == null ? null : allSignals.length;
     const liveEntries = gapData ?? {};
     const now = Date.now();
 
@@ -107,11 +122,11 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
   }, [analysis]);
 
   const healthColor = healthLevel === 'green'
-    ? 'text-green-400'
+    ? severityTokens.success.fg
     : healthLevel === 'amber'
-      ? 'text-amber-400'
+      ? severityTokens.warn.fg
       : healthLevel === 'red'
-        ? 'text-red-400'
+        ? severityTokens.critical.fg
         : 'text-[var(--text-muted)]';
 
   const healthBadgeVariant = healthLevel === 'green'
@@ -121,6 +136,13 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
       : healthLevel === 'red'
         ? 'danger' as const
         : 'neutral' as const;
+  const healthLabel = healthLevel === 'green'
+    ? t('widget.signalHealth.healthy', 'Healthy')
+    : healthLevel === 'amber'
+      ? t('widget.signalHealth.degraded', 'Degraded')
+      : healthLevel === 'red'
+        ? t('widget.signalHealth.critical', 'Critical')
+        : t('widget.signalHealth.unknown', 'Unknown');
 
   function formatAge(seconds: number | null): string {
     if (seconds == null) return '—';
@@ -133,102 +155,75 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.signalHealth.title', 'Signal Health')}
+      title={isCompact ? undefined : t('widget.signalHealth.title', 'Signal health')}
       icon={<Activity className={`h-3.5 w-3.5 ${healthColor}`} />}
       loading={statsLoading}
-      updatedAt={statsUpdatedAt}
-      isFetching={statsFetching}
-      isStale={statsStale}
-      isError={statsError}
-      onRefresh={() => refetchStats()}
+      dataState={state}
+      updatedAt={state.updatedAt ?? 0}
+      isFetching={statsFetching || gapsQuery.isFetching || signalsQuery.isFetching}
+      isStale={statsStale || gapsQuery.isStale || signalsQuery.isStale}
+      isError={statsError || gapsQuery.isError || signalsQuery.isError}
+      onRefresh={refresh}
     >
-      {!hasData ? (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Activity className="h-5 w-5" />}
-          message={t('widget.signalHealth.noData', 'No signal health data')}
-          className="py-4"
-        />
-      ) : isCompact ? (
+      {isCompact ? (
         /* ── Compact layout (1-col) ── */
         <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
           <Badge variant={healthBadgeVariant} className="text-xs">
-            {analysis.activeCount}/{analysis.activeCount + analysis.staleCount}
+            {gapData == null ? '—' : `${analysis.activeCount}/${analysis.activeCount + analysis.staleCount}`}
           </Badge>
-          <span className="text-lg font-bold text-[var(--text-primary)]">
-            {fmtInt(analysis.totalSignals)}
-          </span>
-          <span className="text-2xs text-[var(--text-secondary)]">
-            {t('widget.signalHealth.signals', 'signals')}
-          </span>
+          <Caption>{healthLabel}</Caption>
+          <WidgetBigNumber value={analysis.totalSignals == null ? null : fmtInt(analysis.totalSignals)} label={t('widget.signalHealth.signals', 'Signals')} />
           {analysis.freshnessAge != null && (
-            <span className={`text-xs ${healthColor}`}>
+            <Caption className={healthColor}>
               {formatAge(analysis.freshnessAge)}
-            </span>
+            </Caption>
           )}
         </div>
       ) : (
         /* ── Standard / Wide layout ── */
         <div className="flex flex-col gap-3 h-full">
           {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-2">
-            <StatCard
-              label={t('widget.signalHealth.totalSignals', 'Total Signals')}
-              value={fmtInt(analysis.totalSignals)}
-              icon={<Activity className="h-3.5 w-3.5 text-neon-cyan" />}
-            />
-            <StatCard
-              label={t('widget.signalHealth.active', 'Active')}
-              value={fmtInt(analysis.activeCount)}
-              icon={<CheckCircle2 className="h-3.5 w-3.5 text-green-400" />}
-            />
-            <StatCard
-              label={t('widget.signalHealth.withGaps', 'With Gaps')}
-              value={fmtInt(analysis.staleCount)}
-              icon={<AlertTriangle className="h-3.5 w-3.5 text-amber-400" />}
-            />
-            <StatCard
-              label={t('widget.signalHealth.freshness', 'Freshness')}
-              value={formatAge(analysis.freshnessAge)}
-              icon={<Clock className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
-            />
-          </div>
+          <WidgetStatGrid cols={isWide ? 4 : 2} stats={[
+            { label: t('widget.signalHealth.totalSignals', 'Total signals'), value: analysis.totalSignals == null ? '—' : fmtInt(analysis.totalSignals), icon: <Activity className="size-3.5" /> },
+            { label: t('widget.signalHealth.active', 'Active'), value: gapData == null ? '—' : fmtInt(analysis.activeCount), icon: <CheckCircle2 className="size-3.5" /> },
+            { label: t('widget.signalHealth.withGaps', 'With gaps'), value: gapData == null ? '—' : fmtInt(analysis.staleCount), icon: <AlertTriangle className="size-3.5" /> },
+            { label: t('widget.signalHealth.freshness', 'Freshness'), value: formatAge(analysis.freshnessAge), icon: <Clock className="size-3.5" /> },
+          ]} />
 
           {/* Health badge */}
           <div className="flex items-center justify-between">
-            <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
+            <Caption>
               {t('widget.signalHealth.status', 'Status')}
-            </span>
+            </Caption>
             <Badge variant={healthBadgeVariant} className="text-2xs">
-              {healthLevel === 'green'
-                ? t('widget.signalHealth.healthy', 'Healthy')
-                : healthLevel === 'amber'
-                  ? t('widget.signalHealth.degraded', 'Degraded')
-                  : healthLevel === 'red'
-                    ? t('widget.signalHealth.critical', 'Critical')
-                    : t('widget.signalHealth.unknown', 'Unknown')}
+              {healthLabel}
             </Badge>
           </div>
 
           {/* Wide view: stale signal list */}
-          {isWide && analysis.gapSignals.length > 0 && (
-            <div className="mt-auto pt-2 border-t border-white/[0.06] flex-1 min-h-0 overflow-y-auto">
-              <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] mb-1.5">
-                {t('widget.signalHealth.staleSignals', 'Stale / Gap Signals')}
-              </h4>
+          {isWide && (
+            <div className="mt-auto pt-2 border-t border-[var(--border-subtle)] flex-1 min-h-0 overflow-y-auto">
+              <PanelTitle className="mb-1.5">
+                {t('widget.signalHealth.staleSignals', 'Stale / gap signals')}
+              </PanelTitle>
               <div className="space-y-1">
                 {analysis.gapSignals.slice(0, isCompact ? 3 : 15).map((sig) => (
                   <div key={sig.name} className="flex items-center justify-between min-h-[28px]">
-                    <span className="text-xs text-[var(--text-secondary)] truncate max-w-[45%]">
+                    <Caption className="truncate max-w-[45%]" title={sig.name}>
                       {sig.name}
-                    </span>
-                    <span className="text-2xs text-[var(--text-muted)] truncate">
+                    </Caption>
+                    <Caption className="truncate">
                       {sig.lastSeen ? formatRelative(sig.lastSeen) : '—'}
-                    </span>
+                    </Caption>
                   </div>
                 ))}
+                {analysis.gapSignals.length === 0 && <EmptyState message={gapData == null
+                  ? t('widget.signalHealth.noData', 'No signal health data')
+                  : t('widget.signalHealth.noGaps', 'No observed signal gaps')} />}
               </div>
             </div>
           )}
+          {!hasData && !isWide && <EmptyState icon={<Activity className="size-5" />} message={t('widget.signalHealth.noData', 'No signal health data')} className="py-4" />}
         </div>
       )}
     </WidgetShell>

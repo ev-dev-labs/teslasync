@@ -7,7 +7,10 @@ import { useDrivingCoach } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetTipCards, type TipItem } from './shared';
+import { WidgetBigNumber, WidgetTipCards, type TipItem } from './shared';
+import { knownNumber } from '@/api/dataState';
+import { safeArray } from '@/lib/safeArray';
+import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 
 /**
@@ -20,8 +23,8 @@ import type { WidgetProps } from './types';
  *   - a non-positive `current` (no drives analysed yet) avoids a
  *     divide-by-zero;
  *   - a non-positive `best` (no baseline captured yet) would otherwise imply a
- *     misleading "100% savings", so it collapses to 0 instead;
- *   - `NaN` / `null` / `undefined` inputs collapse to 0;
+ *     misleading "100% savings", so it remains unknown instead;
+ *   - non-finite / nullish inputs remain unknown;
  *   - the result is clamped to a sane [0, 100] window so a run that already
  *     beats the recorded best reads as "no savings" rather than a negative
  *     percentage.
@@ -29,10 +32,10 @@ import type { WidgetProps } from './types';
 export function computeSavingsPct(
   currentEff: number | null | undefined,
   bestEff: number | null | undefined,
-): number {
-  const current = currentEff ?? 0;
-  const best = bestEff ?? 0;
-  if (!(current > 0) || !(best > 0)) return 0;
+): number | null {
+  const current = knownNumber(currentEff);
+  const best = knownNumber(bestEff);
+  if (current == null || best == null || current <= 0 || best <= 0) return null;
   const pct = Math.round(((current - best) / current) * 100);
   return Math.min(100, Math.max(0, pct));
 }
@@ -49,8 +52,11 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
-  const score = data?.overall_score ?? 0;
-  const recommendations = data?.recommendations ?? [];
+  const score = knownNumber(data?.overall_score);
+  const recommendations = useMemo(() => safeArray(data?.recommendations), [data?.recommendations]);
+  const trust = useDataState({
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch,
+  }, { provenance: 'inferred' });
   const savingsPct = computeSavingsPct(
     data?.efficiency_wh_km,
     data?.best_efficiency_wh_km,
@@ -72,8 +78,9 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
   );
 
   const shellProps = {
+    dataState: trust.hasData ? trust : undefined,
     loading: isLoading,
-    error: error ? String(error) : null,
+    error: trust.fatalError?.message ?? null,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -85,15 +92,13 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell {...shellProps}>
         <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
-          <span className="text-2xl font-bold text-[var(--text-primary)]">
-            {fmtInt(score)}
-          </span>
-          {savingsPct > 0 && (
+          <WidgetBigNumber value={score == null ? null : fmtInt(score)} align="center" animated={false} />
+          {savingsPct != null && savingsPct > 0 && (
             <Badge variant="success" size="sm">
               {t('widget.drivingCoach.potentialSavings', 'Potential savings: {{pct}}%', { pct: savingsPct })}
             </Badge>
           )}
-          {savingsPct <= 0 && recommendations.length === 0 && (
+          {(savingsPct == null || savingsPct <= 0) && recommendations.length === 0 && (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Lightbulb className="h-5 w-5" aria-hidden="true" />}
               message={t('widget.drivingCoach.noTips', 'No tips available')}
@@ -107,22 +112,20 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.drivingCoach.title', 'Driving Coach')}
+      title={t('widget.drivingCoach.title', 'Driving coach')}
       icon={<Lightbulb className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />}
       {...shellProps}
     >
-      <div className="flex flex-col gap-3 h-full">
+      <div className="flex min-h-full min-w-0 flex-col gap-3">
         {/* Score header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-[var(--text-primary)]">
-              {fmtInt(score)}
-            </span>
+            <WidgetBigNumber value={score == null ? null : fmtInt(score)} animated={false} />
             <span className="text-xs text-[var(--text-muted)]">
               {t('widget.drivingCoach.scoreLabel', '/ 100')}
             </span>
           </div>
-          {savingsPct > 0 && (
+          {savingsPct != null && savingsPct > 0 && (
             <Badge variant="success" size="sm">
               {t('widget.drivingCoach.potentialSavings', 'Potential savings: {{pct}}%', { pct: savingsPct })}
             </Badge>

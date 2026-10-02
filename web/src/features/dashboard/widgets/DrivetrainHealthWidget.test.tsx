@@ -119,7 +119,6 @@ import DrivetrainHealthWidget from './DrivetrainHealthWidget';
 import type { WidgetSize } from './types';
 import type { DrivetrainHealthData } from '@/types/driving';
 import type { MotorSnapshot } from '@/api/types';
-import { gaugeColor } from '@/test/gaugeTestUtils';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
@@ -199,11 +198,6 @@ function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: numbe
   );
 }
 
-/** The fill colour the LinearGauge is painted with. */
-function gaugeArc(container: HTMLElement): string | undefined {
-  return gaugeColor(container);
-}
-
 beforeEach(() => {
   healthMock.mockReset();
   motorMock.mockReset();
@@ -219,49 +213,66 @@ beforeEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('DrivetrainHealthWidget', () => {
-  it('renders the titled shell, health gauge and four stats in °C', () => {
-    const { container } = renderWidget();
+  it('never infers health from a motor snapshot without an assessment', () => {
+    healthMock.mockReturnValue(makeQuery({ data: null }));
+    motorMock.mockReturnValue(makeQuery({ data: makeMotor({ di_stator_temp: null }) }));
+    renderWidget();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.getByText('Rear motor temp')).toBeInTheDocument();
+    expect(screen.getByText('52')).toBeInTheDocument();
+  });
 
-    expect(screen.getByText('Drivetrain Health')).toBeInTheDocument();
+  it('keeps a retained categorical assessment visible after a failed refresh', () => {
+    healthMock.mockReturnValue(makeQuery({ data: makeHealth(), isError: true, error: new Error('refresh') }));
+    const { container } = renderWidget();
+    expect(screen.getByText('Healthy')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+  });
+
+  it('renders the titled shell, health gauge and four stats in °C', () => {
+    renderWidget();
+
+    expect(screen.getByText('Drivetrain health')).toBeInTheDocument();
 
     // The gauge status label is descriptive (regression guard: it previously
     // duplicated the numeric score) and the score appears exactly once.
     expect(screen.getByText('Healthy')).toBeInTheDocument();
-    expect(screen.getAllByText('95')).toHaveLength(1);
+    expect(screen.queryByText('95')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
 
     // Stats: health-primary temps + motor-sourced stator + drive state.
-    expect(screen.getByText('Motor Temp')).toBeInTheDocument();
+    expect(screen.getByText('Motor temp')).toBeInTheDocument();
     expect(screen.getByText('55')).toBeInTheDocument();
-    expect(screen.getByText('Stator Temp')).toBeInTheDocument();
+    expect(screen.getByText('Stator temp')).toBeInTheDocument();
     expect(screen.getByText('48')).toBeInTheDocument();
     expect(screen.getByText('Inverter')).toBeInTheDocument();
     expect(screen.getByText('40')).toBeInTheDocument();
-    expect(screen.getByText('Drive State')).toBeInTheDocument();
+    expect(screen.getByText('Drive state')).toBeInTheDocument();
     expect(screen.getByText('Drive')).toBeInTheDocument();
 
     // The three temperature stats carry the °C unit.
-    expect(screen.getAllByText('°C')).toHaveLength(3);
+    expect(screen.getAllByText('°C')).toHaveLength(4);
 
     // Good health → green arc.
-    expect(gaugeArc(container)).toBe('#10b981');
   });
 
-  it('maps warning health to a 60 score, amber arc and "Warning" label', () => {
+  it('reports warning categorically without fabricating a numeric score', () => {
     healthMock.mockReturnValue(makeQuery({ data: makeHealth({ overallHealth: 'warning' }) }));
-    const { container } = renderWidget();
+    renderWidget();
 
     expect(screen.getByText('Warning')).toBeInTheDocument();
-    expect(screen.getByText('60')).toBeInTheDocument();
-    expect(gaugeArc(container)).toBe('#f59e0b');
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
-  it('maps critical health to a 25 score, red arc and "Critical" label', () => {
+  it('reports a critical assessment without inventing a percentage', () => {
     healthMock.mockReturnValue(makeQuery({ data: makeHealth({ overallHealth: 'critical' }) }));
-    const { container } = renderWidget();
+    renderWidget();
 
     expect(screen.getByText('Critical')).toBeInTheDocument();
-    expect(screen.getByText('25')).toBeInTheDocument();
-    expect(gaugeArc(container)).toBe('#ef4444');
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
   it('applies the real SI→°F conversion at the display boundary', () => {
@@ -270,7 +281,7 @@ describe('DrivetrainHealthWidget', () => {
 
     // 55°C → 131°F; every temperature stat now reads in °F.
     expect(screen.getByText('131')).toBeInTheDocument();
-    expect(screen.getAllByText('°F')).toHaveLength(3);
+    expect(screen.getAllByText('°F')).toHaveLength(4);
 
     // The Celsius reading + unit must be gone once converted.
     expect(screen.queryByText('55')).not.toBeInTheDocument();
@@ -307,8 +318,8 @@ describe('DrivetrainHealthWidget', () => {
     expect(screen.getByText('Healthy')).toBeInTheDocument();
 
     // Compact hides the title and the stat row.
-    expect(screen.queryByText('Drivetrain Health')).not.toBeInTheDocument();
-    expect(screen.queryByText('Motor Temp')).not.toBeInTheDocument();
+    expect(screen.queryByText('Drivetrain health')).not.toBeInTheDocument();
+    expect(screen.queryByText('Motor temp')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (keeping the titled shell) when both sources are empty', () => {
@@ -316,13 +327,13 @@ describe('DrivetrainHealthWidget', () => {
     motorMock.mockReturnValue(makeQuery({ data: null }));
     renderWidget();
 
-    expect(screen.getByText('Drivetrain Health')).toBeInTheDocument();
+    expect(screen.getByText('Drivetrain health')).toBeInTheDocument();
     expect(screen.getByText('No drivetrain data')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
 
     // No gauge / stats while empty.
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
-    expect(screen.queryByText('Motor Temp')).not.toBeInTheDocument();
+    expect(screen.getByText('Motor temp')).toBeInTheDocument();
   });
 
   it('shows the empty state without a title in the compact layout', () => {
@@ -331,32 +342,33 @@ describe('DrivetrainHealthWidget', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No drivetrain data')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('Drivetrain Health')).not.toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Drivetrain health')).not.toBeInTheDocument();
   });
 
-  it('renders a skeleton placeholder while a source query is loading', () => {
+  it('keeps motor evidence visible while the assessment is loading', () => {
     healthMock.mockReturnValue(makeQuery({ isLoading: true, data: undefined, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByText('48')).toBeInTheDocument();
     // No header/gauge while loading.
-    expect(screen.queryByText('Drivetrain Health')).not.toBeInTheDocument();
+    expect(screen.queryByText('Drivetrain health')).toBeInTheDocument();
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
   });
 
-  it('surfaces the shared error panel when the health query fails', () => {
+  it('retains motor evidence when the assessment initially fails', () => {
     healthMock.mockReturnValue(
       makeQuery({ error: new Error('boom'), isError: true, data: undefined, dataUpdatedAt: 0 }),
     );
     renderWidget();
 
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(screen.getByText('48')).toBeInTheDocument();
 
     // The error panel replaces the gauge + header (and its refresh control).
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Refresh/i }).length).toBeGreaterThan(0);
   });
 
   it('refetches when the freshness refresh control is activated', () => {
@@ -403,7 +415,7 @@ describe('DrivetrainHealthWidget', () => {
     expect(() => renderWidget()).not.toThrow();
 
     // The three temperature stats collapse to the em-dash placeholder.
-    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getAllByText('—')).toHaveLength(4);
     // Drive State still resolves from the health motorStatus fallback.
     expect(screen.getByText('Nominal')).toBeInTheDocument();
   });

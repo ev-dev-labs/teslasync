@@ -213,7 +213,7 @@ describe('MediaHistoryWidget', () => {
     const { container } = renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('Media History')).toBeInTheDocument();
+    expect(screen.getByText('Media history')).toBeInTheDocument();
 
     // Each history row renders "🎵 {title} — {artist}".
     expect(screen.getByText(`${MUSIC} Bohemian Rhapsody ${EM} Queen`)).toBeInTheDocument();
@@ -246,7 +246,7 @@ describe('MediaHistoryWidget', () => {
     // Newest entry (list[0]) as a single line, WITHOUT the feed's 🎵 prefix.
     expect(screen.getByText(`Bohemian Rhapsody ${EM} Queen`)).toBeInTheDocument();
     // The title still shows in compact (the widget always passes it).
-    expect(screen.getByText('Media History')).toBeInTheDocument();
+    expect(screen.getByText('Media history')).toBeInTheDocument();
 
     // Feed-only artefacts (emoji rows + source subtitles) are gone.
     expect(screen.queryByText(`${MUSIC} Bohemian Rhapsody ${EM} Queen`)).not.toBeInTheDocument();
@@ -290,7 +290,7 @@ describe('MediaHistoryWidget', () => {
     mediaMock.mockReturnValue(makeQuery({ data: [] }));
     renderWidget();
 
-    expect(screen.getByText('Media History')).toBeInTheDocument();
+    expect(screen.getByText('Media history')).toBeInTheDocument();
     expect(screen.getByText('No tracks played')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // No track rows.
@@ -303,7 +303,7 @@ describe('MediaHistoryWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     // No shell content while loading.
-    expect(screen.queryByText('Media History')).not.toBeInTheDocument();
+    expect(screen.queryByText('Media history')).toBeInTheDocument();
     expect(screen.queryByText(new RegExp(MUSIC))).not.toBeInTheDocument();
   });
 
@@ -320,9 +320,9 @@ describe('MediaHistoryWidget', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The misleading empty state must NOT appear on error.
     expect(screen.queryByText('No tracks played')).not.toBeInTheDocument();
-    expect(screen.queryByText('Media History')).not.toBeInTheDocument();
+    expect(screen.queryByText('Media history')).toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('refetches when the freshness control is activated', () => {

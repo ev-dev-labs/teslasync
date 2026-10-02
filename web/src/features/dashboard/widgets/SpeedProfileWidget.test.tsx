@@ -103,6 +103,17 @@ vi.mock('@/components/charts', async (importOriginal) => {
   return { ...actual, ...chartTestDoubles };
 });
 
+vi.mock('@/components/ui/ThemeProvider', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/ui/ThemeProvider')>();
+  return {
+    ...actual,
+    useTheme: () => ({
+      theme: { primary: '#22d3ee', accent: '#a855f7' },
+      mode: { colorScheme: 'dark' },
+    }),
+  };
+});
+
 function makeData(overrides: Partial<SpeedProfileData> = {}): SpeedProfileData {
   return {
     distribution: [],
@@ -182,15 +193,15 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Speed Profile')).toBeInTheDocument();
+    expect(screen.getByText('Speed profile')).toBeInTheDocument();
     // Most common = highest-frequency bucket = '34-67' mph → 54-108 km/h.
-    expect(screen.getByText('Most Common')).toBeInTheDocument();
+    expect(screen.getByText('Most common')).toBeInTheDocument();
     expect(screen.getByText('54-108')).toBeInTheDocument();
     // 30 of 40 readings → 75.0%.
-    expect(screen.getByText('Peak Freq')).toBeInTheDocument();
+    expect(screen.getByText('Peak freq')).toBeInTheDocument();
     expect(screen.getByText('75.0%')).toBeInTheDocument();
     // Sweet spot falls back to the lowest-power bucket '101-134' mph → 162-216 km/h.
-    expect(screen.getByText('Sweet Spot')).toBeInTheDocument();
+    expect(screen.getByText('Lowest power range')).toBeInTheDocument();
     expect(screen.getByText('162-216')).toBeInTheDocument();
     // Speed stats carry the km/h unit chip.
     expect(screen.getAllByText('km/h').length).toBeGreaterThan(0);
@@ -229,7 +240,7 @@ describe('SpeedProfileWidget — standard layout (km/h)', () => {
 
     // optimalSpeedMps 20 m/s → 72 km/h (single number, no range dash).
     expect(screen.getByText('72')).toBeInTheDocument();
-    expect(screen.getByText('Most Common')).toBeInTheDocument();
+    expect(screen.getByText('Most common')).toBeInTheDocument();
     expect(screen.getByText('54-108')).toBeInTheDocument();
   });
 
@@ -313,7 +324,7 @@ describe('SpeedProfileWidget — sweet-spot null safety', () => {
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
 
     // Titled shell still renders; the body is the empty placeholder.
-    expect(screen.getByText('Speed Profile')).toBeInTheDocument();
+    expect(screen.getByText('Speed profile')).toBeInTheDocument();
     expect(screen.getByText('No speed data')).toBeInTheDocument();
   });
 });
@@ -326,12 +337,12 @@ describe('SpeedProfileWidget — compact layout', () => {
 
     renderWidget({ cols: 1, rows: 1 });
 
-    expect(screen.getByText('Most Common')).toBeInTheDocument();
-    expect(screen.getByText('Sweet Spot')).toBeInTheDocument();
+    expect(screen.getByText('Most common')).toBeInTheDocument();
+    expect(screen.getByText('Lowest power range')).toBeInTheDocument();
     expect(screen.getByText('54-108')).toBeInTheDocument();
     // Compact drops the header title and the peak-frequency stat.
-    expect(screen.queryByText('Speed Profile')).not.toBeInTheDocument();
-    expect(screen.queryByText('Peak Freq')).not.toBeInTheDocument();
+    expect(screen.queryByText('Speed profile')).not.toBeInTheDocument();
+    expect(screen.queryByText('Peak freq')).not.toBeInTheDocument();
   });
 
   it('shows an EmptyState (never a blank panel) when compact and data-less', () => {
@@ -342,7 +353,7 @@ describe('SpeedProfileWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No speed data')).toBeInTheDocument();
-    expect(screen.queryByText('Speed Profile')).not.toBeInTheDocument();
+    expect(screen.queryByText('Speed profile')).not.toBeInTheDocument();
   });
 });
 
@@ -354,10 +365,10 @@ describe('SpeedProfileWidget — wide layout', () => {
 
     renderWidget({ cols: 3, rows: 3 });
 
-    expect(screen.getByText('Speed Profile')).toBeInTheDocument();
-    expect(screen.getByText('Most Common')).toBeInTheDocument();
-    expect(screen.getByText('Peak Freq')).toBeInTheDocument();
-    expect(screen.getByText('Sweet Spot')).toBeInTheDocument();
+    expect(screen.getByText('Speed profile')).toBeInTheDocument();
+    expect(screen.getByText('Most common')).toBeInTheDocument();
+    expect(screen.getByText('Peak freq')).toBeInTheDocument();
+    expect(screen.getByText('Lowest power range')).toBeInTheDocument();
   });
 });
 
@@ -370,7 +381,7 @@ describe('SpeedProfileWidget — query states', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Speed Profile')).not.toBeInTheDocument();
+    expect(screen.queryByText('Speed profile')).toBeInTheDocument();
     expect(screen.queryByText('No speed data')).not.toBeInTheDocument();
   });
 
@@ -383,8 +394,8 @@ describe('SpeedProfileWidget — query states', () => {
 
     // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Speed Profile')).not.toBeInTheDocument();
-    expect(screen.queryByText('Most Common')).not.toBeInTheDocument();
+    expect(screen.queryByText('Speed profile')).toBeInTheDocument();
+    expect(screen.queryByText('Most common')).not.toBeInTheDocument();
   });
 
   it('renders the titled shell with an EmptyState placeholder when data is absent', () => {
@@ -394,12 +405,12 @@ describe('SpeedProfileWidget — query states', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Speed Profile')).toBeInTheDocument();
+    expect(screen.getByText('Speed profile')).toBeInTheDocument();
     expect(screen.getByText('No speed data')).toBeInTheDocument();
-    expect(screen.queryByText('Most Common')).not.toBeInTheDocument();
+    expect(screen.queryByText('Most common')).not.toBeInTheDocument();
   });
 
-  it('keeps rendering cached stats and flags the freshness dot on a transient background error', () => {
+  it('keeps measured buckets and flags freshness on a transient background failure', () => {
     useSpeedProfileMock.mockReturnValue(
       makeQuery({
         data: makeData({ distribution: TWO_BUCKETS, optimalSpeedMps: 0 }),
@@ -411,10 +422,10 @@ describe('SpeedProfileWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Speed Profile')).not.toBeInTheDocument();
-    expect(screen.queryByText('54-108')).not.toBeInTheDocument();
-    expect(container.querySelector('.bg-red-400')).toBeNull();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(screen.getByText('Speed profile')).toBeInTheDocument();
+    expect(screen.getByText('54-108')).toBeInTheDocument();
+    expect(container.querySelector('.bg-red-400')).toBeInTheDocument();
   });
 });
 

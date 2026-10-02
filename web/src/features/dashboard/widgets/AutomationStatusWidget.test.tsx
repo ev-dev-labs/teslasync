@@ -165,7 +165,7 @@ describe('AutomationStatusWidget — query states', () => {
     const { container } = renderWidget(FULL, makeQuery({ isLoading: true }));
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
     // The content, title and empty state are all suppressed during load.
-    expect(screen.queryByText('Automation Status')).toBeNull();
+    expect(screen.queryByText('Automation status')).toBeInTheDocument();
     expect(screen.queryByText('No automations configured')).toBeNull();
   });
 
@@ -203,7 +203,7 @@ describe('AutomationStatusWidget — compact view', () => {
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByText('1 Failing')).toBeInTheDocument();
     // A cols<=1 tile suppresses the header title entirely.
-    expect(screen.queryByText('Automation Status')).toBeNull();
+    expect(screen.queryByText('Automation status')).toBeNull();
   });
 
   it('omits the failing chip when nothing is failing', () => {
@@ -234,7 +234,7 @@ describe('AutomationStatusWidget — full view', () => {
         ],
       }),
     );
-    expect(screen.getByText('Automation Status')).toBeInTheDocument();
+    expect(screen.getByText('Automation status')).toBeInTheDocument();
     // 2 enabled → "2 Active"; 1 enabled+failing → "1 Failing" summary.
     expect(screen.getByText('2 Active')).toBeInTheDocument();
     expect(screen.getByText('1 Failing')).toBeInTheDocument();

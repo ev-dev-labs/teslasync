@@ -216,11 +216,10 @@ describe('buildHeatmap', () => {
     expect(grid[day][hour].avgSpeed).toBeCloseTo(convertSpeedFromSI(20, 'mph'), 5);
   });
 
-  it('falls back to max_speed_mps when avg_speed_mps is null', () => {
+  it('does not misrepresent a maximum speed as a measured average', () => {
     const { day, hour } = cellIndex(LOCAL_STAMP);
     const grid = buildHeatmap([makeDrive({ avg_speed_mps: null, max_speed_mps: 25 })], 'mph');
-    expect(grid[day][hour].count).toBe(1);
-    expect(grid[day][hour].avgSpeed).toBeCloseTo(convertSpeedFromSI(25, 'mph'), 5);
+    expect(grid[day][hour].count).toBe(0);
   });
 
   it('skips drives with no start_ts and drives with no usable speed', () => {
@@ -229,12 +228,17 @@ describe('buildHeatmap', () => {
         makeDrive({ start_ts: '' }), // missing timestamp
         makeDrive({ start_ts: null }), // missing timestamp
         makeDrive({ avg_speed_mps: null, max_speed_mps: null }), // no speed
-        makeDrive({ avg_speed_mps: 0, max_speed_mps: null }), // non-positive
         makeDrive({ avg_speed_mps: -5, max_speed_mps: null }), // negative
       ],
       'mph',
     );
     expect(totalCount(grid)).toBe(0);
+  });
+
+  it('retains a measured zero average rather than treating it as missing', () => {
+    const { day, hour } = cellIndex(LOCAL_STAMP);
+    const grid = buildHeatmap([makeDrive({ avg_speed_mps: 0 })], 'km/h');
+    expect(grid[day][hour]).toMatchObject({ count: 1, avgSpeed: 0 });
   });
 
   it('REGRESSION: skips an unparseable start_ts instead of crashing on acc[NaN][NaN]', () => {
@@ -385,6 +389,18 @@ describe('SpeedHeatmapWidget — states', () => {
 // ── Populated (full size) ────────────────────────────────────────────────────
 
 describe('SpeedHeatmapWidget — populated (full size)', () => {
+  it('retains the sampled heatmap after a background error and discloses its bounded scope', () => {
+    useQueryMock.mockReturnValue(makeResult({
+      data: [makeDrive()],
+      error: new Error('background outage'),
+      isError: true,
+    }));
+    renderWidget();
+    expect(screen.getByRole('img', { name: /average speed by day of week/i })).toBeInTheDocument();
+    expect(screen.getByText(/up to 200 drives/)).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+  });
+
   it('renders the drive-count + peak-speed summary and the Slow/Fast legend', () => {
     useQueryMock.mockReturnValue(
       makeResult({
@@ -439,10 +455,11 @@ describe('SpeedHeatmapWidget — compact (1×1)', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText(fmtNumber(convertSpeedFromSI(20, 'mph'), 0))).toBeInTheDocument();
-    expect(screen.getByText(/Peak/)).toHaveTextContent('mph');
+    expect(screen.getByText('Peak')).toBeInTheDocument();
+    expect(screen.getByText('mph')).toBeInTheDocument();
     // No SVG heatmap and no widget title in the compact variant.
     expect(screen.queryByRole('img')).toBeNull();
-    expect(screen.queryByText('Speed Heatmap')).toBeNull();
+    expect(screen.queryByText('Speed heatmap')).toBeNull();
   });
 
   it('shows an em-dash instead of a peak when there is no drive data', () => {

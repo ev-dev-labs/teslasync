@@ -55,7 +55,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
     <Modal
       open={open}
       onClose={onClose}
-      title={t('export.title', 'Export Dashboard')}
+      title={t('export.title', 'Export dashboard')}
       size="md"
       className="bg-[#0f1218] border border-white/[0.08] text-[var(--text-on-accent)]"
     >
@@ -93,7 +93,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
             onClick={handleDownload}
           >
             <Download className="h-4 w-4 mr-2" />
-            {t('export.downloadFile', 'Download JSON File')}
+            {t('export.downloadFile', 'Download JSON file')}
           </Button>
 
           <CopyButton
@@ -101,7 +101,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
             variant="ghost"
             size="md"
             withToast
-            label={t('export.copyClipboard', 'Copy to Clipboard')}
+            label={t('export.copyClipboard', 'Copy to clipboard')}
             className="w-full justify-start"
           />
 
@@ -111,7 +111,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
             size="md"
             withToast
             disabled={shareUrlTooLong}
-            label={t('export.copyShareUrl', 'Copy Shareable URL')}
+            label={t('export.copyShareUrl', 'Copy shareable URL')}
             className="w-full justify-start"
           />
         </div>

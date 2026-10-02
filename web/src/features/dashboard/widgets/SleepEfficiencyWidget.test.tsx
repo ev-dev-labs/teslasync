@@ -197,6 +197,7 @@ describe('SleepEfficiencyWidget vehicle resolution', () => {
     renderWidget();
 
     expect(await screen.findByText('No sleep efficiency data')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(sleepCalls()).toHaveLength(0);
   });
 });
@@ -209,7 +210,7 @@ describe('SleepEfficiencyWidget states', () => {
     const { container } = renderWidget({ vehicleId: 1 });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Sleep Efficiency')).toBeNull();
+    expect(screen.queryByText('Sleep efficiency')).toBeInTheDocument();
     expect(screen.queryByText('No sleep efficiency data')).toBeNull();
   });
 
@@ -218,6 +219,7 @@ describe('SleepEfficiencyWidget states', () => {
     renderWidget({ vehicleId: 1 });
 
     const empty = await screen.findByText('No sleep efficiency data');
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(empty).toBeInTheDocument();
     expect(empty.closest('[role="status"]')).not.toBeNull();
   });
@@ -231,11 +233,12 @@ describe('SleepEfficiencyWidget states', () => {
     renderWidget({ vehicleId: 1 });
 
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // Regression guard: the failure must NOT masquerade as an empty state or
     // silently render the populated widget.
     expect(screen.queryByText('No sleep efficiency data')).toBeNull();
-    expect(screen.queryByText('Sleep Efficiency')).toBeNull();
+    expect(screen.queryByText('Sleep efficiency')).toBeInTheDocument();
   });
 });
 
@@ -245,21 +248,22 @@ describe('SleepEfficiencyWidget populated', () => {
   it('renders the title, gauge value/label and the three derived stat tiles', async () => {
     renderWidget({ vehicleId: 1 });
 
-    expect(await screen.findByText('Sleep Efficiency')).toBeInTheDocument();
+    expect(await screen.findByText('Sleep efficiency')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Gauge: integer efficiency renders without decimals; "Efficiency" label.
     expect(screen.getByText('92')).toBeInTheDocument();
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
 
     // Avg Drain/Day = sentry_off_drain_rate (0.5 %/hr) × 24 → "12.00".
-    expect(screen.getByText('Avg Drain/Day')).toBeInTheDocument();
+    expect(screen.getByText('Avg drain/day')).toBeInTheDocument();
     expect(screen.getByText('12.00')).toBeInTheDocument();
 
     // Total Sleep = (3000 asleep + 600 offline) / 60 → "60".
-    expect(screen.getByText('Total Sleep')).toBeInTheDocument();
+    expect(screen.getByText('Total sleep')).toBeInTheDocument();
     expect(screen.getByText('60')).toBeInTheDocument();
 
     // Wake Events = recent_events.length → 4.
-    expect(screen.getByText('Wake Events')).toBeInTheDocument();
+    expect(screen.getByText('Wake events')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
   });
 
@@ -279,6 +283,7 @@ describe('SleepEfficiencyWidget populated', () => {
 
     // (1200 + 600) / 60 = 30 — NOT (1200+600+5000+4000)/60 = 180.
     expect(await screen.findByText('30')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.queryByText('180')).toBeNull();
   });
 
@@ -310,6 +315,7 @@ describe('SleepEfficiencyWidget populated', () => {
 
     // Avg Drain/Day = (null ?? 0) × 24 → "0.00".
     expect(await screen.findByText('0.00')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Gauge value + Total Sleep + Wake Events all collapse to "0".
     expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText(/NaN|undefined/)).toBeNull();
@@ -324,18 +330,20 @@ describe('SleepEfficiencyWidget layout variants', () => {
 
     // Gauge value still renders in compact mode.
     expect(await screen.findByText('92')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Compact widgets drop the header title and the stat tiles.
-    expect(screen.queryByText('Sleep Efficiency')).toBeNull();
-    expect(screen.queryByText('Avg Drain/Day')).toBeNull();
+    expect(screen.queryByText('Sleep efficiency')).toBeNull();
+    expect(screen.queryByText('Avg drain/day')).toBeNull();
     expect(screen.queryByText('Efficiency')).toBeNull();
   });
 
   it('exposes an accessible help tooltip trigger in the standard layout', async () => {
     renderWidget({ vehicleId: 1 });
 
-    await screen.findByText('Sleep Efficiency');
+    await screen.findByText('Sleep efficiency');
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(
-      screen.getByRole('button', { name: 'More info about Sleep Efficiency' }),
+      screen.getByRole('button', { name: 'More info about Sleep efficiency' }),
     ).toBeInTheDocument();
   });
 });
@@ -347,6 +355,7 @@ describe('SleepEfficiencyWidget refresh', () => {
     renderWidget({ vehicleId: 1 });
 
     const refresh = await screen.findByRole('button', { name: /^Refresh/i });
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     const before = sleepCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

@@ -264,12 +264,12 @@ describe('DigitalTwinWidget — loading & empty states', () => {
     expect(screen.queryByText('Locked')).toBeNull();
   });
 
-  it('renders a skeleton while the vehicle state is loading', () => {
+  it('retains available telemetry while the vehicle state is loading', () => {
     setState({ isLoading: true });
     const { container } = renderWidget(SMALL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByTestId('vehicle-twin')).toBeNull();
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByTestId('vehicle-twin')).toBeInTheDocument();
   });
 
   it('shows the "No vehicle data" empty state (not a twin) when no vehicle exists', () => {
@@ -376,18 +376,25 @@ describe('DigitalTwinWidget — lock badge', () => {
     setState({ state: makeVehicleState({ is_locked: undefined }) });
     renderWidget(SMALL);
 
-    expect(screen.getByText('Lock Unknown')).toBeInTheDocument();
+    expect(screen.getByText('Lock unknown')).toBeInTheDocument();
   });
 });
 
 // ── Window badge ─────────────────────────────────────────────────────────────────
 
 describe('DigitalTwinWidget — window badge', () => {
+  it('does not call partially reported closed windows fully closed', () => {
+    setSecurity(makeSecurity({ fd_window: 'Closed', windows_open: null }));
+    renderWidget(SMALL);
+    expect(screen.queryByText('Windows closed')).not.toBeInTheDocument();
+    expect(screen.getByText('Windows unknown')).toBeInTheDocument();
+  });
+
   it('shows "Windows Closed" when the windows summary reports all closed', () => {
     setSecurity(makeSecurity({ locked: true, windows_open: 'closed' }));
     renderWidget(SMALL);
 
-    expect(screen.getByText('Windows Closed')).toBeInTheDocument();
+    expect(screen.getByText('Windows closed')).toBeInTheDocument();
   });
 
   it('shows the open-window count when a window is open', () => {
@@ -395,14 +402,14 @@ describe('DigitalTwinWidget — window badge', () => {
     renderWidget(SMALL);
 
     expect(screen.getByText('1 Open')).toBeInTheDocument();
-    expect(screen.queryByText('Windows Closed')).toBeNull();
+    expect(screen.queryByText('Windows closed')).toBeNull();
   });
 
   it('shows "Windows Unknown" when the window state is absent', () => {
     setSecurity(makeSecurity({ locked: true, windows_open: null }));
     renderWidget(SMALL);
 
-    expect(screen.getByText('Windows Unknown')).toBeInTheDocument();
+    expect(screen.getAllByText('Windows unknown').length).toBeGreaterThan(0);
   });
 });
 
@@ -435,7 +442,7 @@ describe('DigitalTwinWidget — status chips', () => {
     renderWidget(SMALL);
 
     expect(screen.getByText('Sentry')).toBeInTheDocument();
-    expect(screen.getByText('Lights On')).toBeInTheDocument();
+    expect(screen.getByText('Lights on')).toBeInTheDocument();
     expect(screen.getByText('Hazards')).toBeInTheDocument();
   });
 
@@ -453,9 +460,9 @@ describe('DigitalTwinWidget — status chips', () => {
     );
     renderWidget(SMALL);
 
-    expect(screen.getByText('2 Doors Open')).toBeInTheDocument();
-    expect(screen.getByText('Frunk Open')).toBeInTheDocument();
-    expect(screen.getByText('Trunk Open')).toBeInTheDocument();
+    expect(screen.getByText('2 Doors open')).toBeInTheDocument();
+    expect(screen.getByText('Frunk open')).toBeInTheDocument();
+    expect(screen.getByText('Trunk open')).toBeInTheDocument();
   });
 
   it('hides every optional chip when the vehicle is idle and buttoned up', () => {
@@ -467,11 +474,11 @@ describe('DigitalTwinWidget — status chips', () => {
     expect(screen.queryByText('Driving')).toBeNull();
     expect(screen.queryByText('Charging')).toBeNull();
     expect(screen.queryByText('Sentry')).toBeNull();
-    expect(screen.queryByText('Lights On')).toBeNull();
+    expect(screen.queryByText('Lights on')).toBeNull();
     expect(screen.queryByText('Hazards')).toBeNull();
-    expect(screen.queryByText(/Doors Open$/)).toBeNull();
-    expect(screen.queryByText('Frunk Open')).toBeNull();
-    expect(screen.queryByText('Trunk Open')).toBeNull();
+    expect(screen.queryByText(/^\d+ Doors open$/)).toBeNull();
+    expect(screen.queryByText('Frunk open')).toBeNull();
+    expect(screen.queryByText('Trunk open')).toBeNull();
   });
 });
 
@@ -523,6 +530,6 @@ describe('DigitalTwinWidget — interactions & a11y', () => {
   it('exposes the widget title as a heading', () => {
     renderWidget(SMALL);
 
-    expect(screen.getByRole('heading', { name: /Digital Twin/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Digital twin/i })).toBeInTheDocument();
   });
 });

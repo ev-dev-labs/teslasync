@@ -26,7 +26,7 @@ export default function NextChargeDecisionWidget({ vehicleId }: WidgetProps) {
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const stateQuery = useVehicleState(id);
   const soc = stateQuery.data?.state?.battery_level;
-  const decisionQuery = useNextChargeDecision(id, soc);
+  const decisionQuery = useNextChargeDecision(id, soc ?? undefined);
   const data = decisionQuery.data;
 
   const loading = stateQuery.isLoading || decisionQuery.isLoading;
@@ -34,7 +34,7 @@ export default function NextChargeDecisionWidget({ vehicleId }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('nextCharge.title', 'Next Charge')}
+      title={t('nextCharge.title', 'Next charge')}
       loading={loading}
       isFetching={stateQuery.isFetching || decisionQuery.isFetching}
       isStale={stateQuery.isStale || decisionQuery.isStale}

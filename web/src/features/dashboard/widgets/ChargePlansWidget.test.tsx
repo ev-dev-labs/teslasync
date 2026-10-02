@@ -217,7 +217,7 @@ describe('ChargePlansWidget', () => {
     expect(screen.getByText('Target SOC')).toBeInTheDocument();
     expect(screen.getByText('08:15')).toBeInTheDocument();
     // Compact widgets are title-less — the "Charge Plans" header is standard-only.
-    expect(screen.queryByText('Charge Plans')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge plans')).not.toBeInTheDocument();
   });
 
   it('compact layout renders the no-plan empty state (ignoring rate data)', () => {
@@ -236,7 +236,7 @@ describe('ChargePlansWidget', () => {
 
     expect(screen.getByText('No charge plans or rate data')).toBeInTheDocument();
     // Standard widgets keep their header even when empty.
-    expect(screen.getByText('Charge Plans')).toBeInTheDocument();
+    expect(screen.getByText('Charge plans')).toBeInTheDocument();
   });
 
   it('standard layout renders the rate-plan section + no-plan notice when only rates exist', () => {
@@ -247,7 +247,7 @@ describe('ChargePlansWidget', () => {
     // empty state…
     expect(screen.getByText('No charge plans')).toBeInTheDocument();
     // …and the rate-plans section renders utility, plan name, and id badge.
-    expect(screen.getByText('Rate Plans')).toBeInTheDocument();
+    expect(screen.getByText('Rate plans')).toBeInTheDocument();
     expect(screen.getByText('PG&E')).toBeInTheDocument();
     expect(screen.getByText('EV2-A')).toBeInTheDocument();
     expect(screen.getByText('ev2a')).toBeInTheDocument();
@@ -275,12 +275,14 @@ describe('ChargePlansWidget', () => {
     // Detail rows (slice(2)): schedule start/end combined, energy, cost, savings.
     expect(screen.getByText('2026-06-01 02:00')).toBeInTheDocument();
     expect(screen.getByText('2026-06-01 06:30')).toBeInTheDocument();
+    expect(screen.getByText('Est. energy')).toBeInTheDocument();
+    expect(screen.getByText('Est. cost')).toBeInTheDocument();
     expect(screen.getByText('42.5 kWh')).toBeInTheDocument();
     expect(screen.getByText('$5.10')).toBeInTheDocument();
     expect(screen.getByText('$4.10')).toBeInTheDocument();
     expect(screen.getByText('saved')).toBeInTheDocument();
     // Rate plan appears in both the header and the detail row.
-    expect(screen.getByText('Rate Plan')).toBeInTheDocument();
+    expect(screen.getByText('Rate plan')).toBeInTheDocument();
     expect(screen.getAllByText('Off-Peak Saver').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -323,7 +325,7 @@ describe('ChargePlansWidget', () => {
     const { container } = render(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Charge Plans')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge plans')).toBeInTheDocument();
     expect(screen.queryByText('No charge plans or rate data')).not.toBeInTheDocument();
   });
 

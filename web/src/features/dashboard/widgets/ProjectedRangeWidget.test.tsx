@@ -124,6 +124,8 @@ interface QueryState {
   isFetching: boolean;
   isStale: boolean;
   isError: boolean;
+  error?: unknown;
+  fetchStatus?: 'idle' | 'fetching' | 'paused';
   dataUpdatedAt: number;
   refetch: ReturnType<typeof vi.fn>;
 }
@@ -187,7 +189,7 @@ describe('ProjectedRangeWidget — standard layout (km)', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     // Titled shell + the current range converted straight through in km.
-    expect(screen.getByText('Projected Range')).toBeInTheDocument();
+    expect(screen.getByText('Projected range')).toBeInTheDocument();
     expect(screen.getByText('350')).toBeInTheDocument();
     expect(screen.getAllByText('km').length).toBeGreaterThan(0);
 
@@ -305,11 +307,11 @@ describe('ProjectedRangeWidget — wide layout (range factors)', () => {
     renderWidget({ cols: 4, rows: 2 });
 
     // Section header + the four labels.
-    expect(screen.getByText('Range Factors')).toBeInTheDocument();
-    expect(screen.getByText('Battery Degradation')).toBeInTheDocument();
-    expect(screen.getByText('Avg Daily Usage')).toBeInTheDocument();
-    expect(screen.getByText('Current Capacity')).toBeInTheDocument();
-    expect(screen.getByText('Battery Cycles')).toBeInTheDocument();
+    expect(screen.getByText('Range factors')).toBeInTheDocument();
+    expect(screen.getByText('Battery degradation')).toBeInTheDocument();
+    expect(screen.getByText('Avg daily usage')).toBeInTheDocument();
+    expect(screen.getByText('Current capacity')).toBeInTheDocument();
+    expect(screen.getByText('Battery cycles')).toBeInTheDocument();
 
     // … and their formatted values (avg daily = 40 km converted straight through).
     expect(screen.getByText('8.5%')).toBeInTheDocument();
@@ -340,9 +342,9 @@ describe('ProjectedRangeWidget — compact layout', () => {
     expect(screen.getByText('Excellent')).toBeInTheDocument();
 
     // Compact drops the header title, the comparison bar and the factors list.
-    expect(screen.queryByText('Projected Range')).not.toBeInTheDocument();
+    expect(screen.queryByText('Projected range')).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-    expect(screen.queryByText('Range Factors')).not.toBeInTheDocument();
+    expect(screen.queryByText('Range factors')).not.toBeInTheDocument();
   });
 
   it('shows an EmptyState (never a blank panel) when compact and data-less', () => {
@@ -351,7 +353,7 @@ describe('ProjectedRangeWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('No projected range data')).toBeInTheDocument();
-    expect(screen.queryByText('Projected Range')).not.toBeInTheDocument();
+    expect(screen.queryByText('Projected range')).not.toBeInTheDocument();
   });
 });
 
@@ -379,13 +381,30 @@ describe('ProjectedRangeWidget — unit conversion', () => {
 });
 
 describe('ProjectedRangeWidget — query states', () => {
+  it('shows an initial failure rather than mislabeling it as empty data', () => {
+    useProjectedRangeMock.mockReturnValue(makeQuery({ isError: true, error: new Error('offline'), data: undefined }));
+    renderWidget();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No projected range data')).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('keeps wide range factors unknown without rendering fabricated zero metrics', () => {
+    useProjectedRangeMock.mockReturnValue(makeQuery({ data: {} as ProjectedRangeData }));
+    renderWidget({ cols: 3, rows: 2 });
+    expect(screen.getByText('Range factors')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(screen.queryByText('0')).toBeNull();
+    expect(screen.queryByText('km')).toBeNull();
+    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
+  });
   it('renders a skeleton while loading with no title, range or empty message', () => {
     useProjectedRangeMock.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Projected Range')).not.toBeInTheDocument();
+    expect(screen.queryByText('Projected range')).toBeInTheDocument();
     expect(screen.queryByText('No projected range data')).not.toBeInTheDocument();
   });
 
@@ -396,9 +415,10 @@ describe('ProjectedRangeWidget — query states', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Projected Range')).toBeInTheDocument();
+    expect(screen.getByText('Projected range')).toBeInTheDocument();
     expect(screen.getByText('No projected range data')).toBeInTheDocument();
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 
   it('keeps rendering cached data and flags the freshness dot on a transient background error', () => {
@@ -413,7 +433,7 @@ describe('ProjectedRangeWidget — query states', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
     // Data is still on screen …
-    expect(screen.getByText('Projected Range')).toBeInTheDocument();
+    expect(screen.getByText('Projected range')).toBeInTheDocument();
     expect(screen.getByText('350')).toBeInTheDocument();
     expect(screen.getByText(/Excellent/)).toBeInTheDocument();
     // … and the freshness indicator is in its error state (red dot).
@@ -431,7 +451,7 @@ describe('ProjectedRangeWidget — query states', () => {
     }).not.toThrow();
 
     // Titled shell still renders; the range degrades to a dash and the badge drops.
-    expect(screen.getByText('Projected Range')).toBeInTheDocument();
+    expect(screen.getByText('Projected range')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText(/Excellent|Good|Fair|Poor/)).not.toBeInTheDocument();
     // Progressbar is present but indeterminate.

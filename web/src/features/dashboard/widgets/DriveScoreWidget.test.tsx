@@ -223,7 +223,7 @@ describe('DriveScoreWidget', () => {
 
     expect(screen.getByText('No drive score yet')).toBeInTheDocument();
     expect(screen.queryByText('Score')).not.toBeInTheDocument();
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
   it('treats a non-finite efficiency payload as no score', () => {
@@ -259,12 +259,13 @@ describe('DriveScoreWidget', () => {
     expect(screen.getByText('Score')).toBeInTheDocument();
   });
 
-  it('falls back to the empty state on error when no data is present', () => {
+  it('surfaces a fatal query error with retry when no data is present', () => {
     fleetAnalyticsMock.mockReturnValue(makeQuery(undefined, { isError: true }));
 
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
-    expect(screen.getByText('No drive score yet')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

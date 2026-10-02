@@ -6,6 +6,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 
 /**
@@ -28,6 +30,7 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const query = useVehicleState(id);
   const {
     data: stateData,
     isLoading,
@@ -37,7 +40,8 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useVehicleState(id);
+  } = query;
+  const trust = useDataState(query, { provenance: query.data?.live ? 'live' : 'cached', maxAgeMs: 120_000 });
   /* SI-floor: state.rated_range / state.ideal_range arrive in METERS. */
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -46,34 +50,24 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
   return (
     <WidgetShell
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={stateData != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
     >
-      <div className="h-full flex flex-col justify-center">
-        {state ? (
-          <div className="space-y-3">
-            <div>
-              <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-                {t('widget.ratedRange', 'Rated Range')}
-              </p>
-              <p className="text-xl font-bold text-cyan-300">
-                {formatRange(state.rated_range, distanceUnit)}
-              </p>
-            </div>
-            <div>
-              <p className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-                {t('widget.idealRange', 'Ideal Range')}
-              </p>
-              <p className="text-lg font-semibold text-[var(--text-primary)]">
-                {formatRange(state.ideal_range, distanceUnit)}
-              </p>
-            </div>
-          </div>
-        ) : (
+      <div className="flex min-w-0 flex-col gap-3">
+        <WidgetBigNumber
+          label={t('widget.ratedRange', 'Rated range')}
+          value={isFiniteNumber(state?.rated_range) ? formatRange(state.rated_range, distanceUnit) : null}
+          animated={false}
+        />
+        <WidgetStatGrid stats={[{
+          label: t('widget.idealRange', 'Ideal range'),
+          value: isFiniteNumber(state?.ideal_range) ? formatRange(state.ideal_range, distanceUnit) : null,
+        }]} />
+        {!state && (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Gauge className="h-6 w-6" />}
             message={t('widget.noRange', 'No range data')}

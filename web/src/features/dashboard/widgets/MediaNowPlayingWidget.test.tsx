@@ -230,7 +230,7 @@ describe('MediaNowPlayingWidget — standard (non-tall)', () => {
       makeResult({ data: makeMedia({ now_playing_title: 'Song A', now_playing_artist: 'Artist B' }) }),
     );
     renderWidget(STD);
-    expect(screen.getByText('Now Playing')).toBeInTheDocument();
+    expect(screen.getByText('Now playing')).toBeInTheDocument();
     expect(screen.getByText('Song A')).toBeInTheDocument();
     expect(screen.getByText('Artist B')).toBeInTheDocument();
   });
@@ -348,7 +348,7 @@ describe('MediaNowPlayingWidget — compact', () => {
     renderWidget(CMP);
     expect(screen.getByText('Compact Song')).toBeInTheDocument();
     expect(screen.getByText('CA')).toBeInTheDocument();
-    expect(screen.queryByText('Now Playing')).toBeNull(); // title-less shell
+    expect(screen.queryByText('Now playing')).toBeNull(); // title-less shell
     expect(screen.queryByRole('progressbar')).toBeNull(); // no bars
     expect(screen.queryByText('Playing')).toBeNull(); // no chip
   });

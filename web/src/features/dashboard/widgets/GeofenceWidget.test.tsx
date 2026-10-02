@@ -304,7 +304,7 @@ describe('GeofenceWidget — states', () => {
     const { container } = renderWidget();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('Home')).toBeNull();
-    expect(screen.queryByText('Geofence Status')).toBeNull();
+    expect(screen.queryByText('Geofence status')).toBeInTheDocument();
   });
 
   it('also shows the skeleton while the geofence query is pending', () => {
@@ -379,7 +379,7 @@ describe('GeofenceWidget — compact', () => {
     renderWidget({ cols: 1, rows: 1 });
     // Vehicle is inside "Home"; the compact badge shows the active zone name.
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.queryByText('Geofence Status')).toBeNull();
+    expect(screen.queryByText('Geofence status')).toBeNull();
     expect(screen.queryByText('No zone')).toBeNull();
   });
 

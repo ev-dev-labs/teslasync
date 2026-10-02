@@ -67,7 +67,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.nowPlaying', 'Now Playing')}
+      title={isCompact ? undefined : t('widget.nowPlaying', 'Now playing')}
       icon={<Music className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}

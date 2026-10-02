@@ -1,14 +1,15 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertOctagon, ShieldAlert, AlertTriangle, CarFront, Navigation } from 'lucide-react';
-import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { dashboardTokens } from '../lib/dashboardTokens';
 import { useSafetyHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtInt } from '@/lib/numberFormat';
 import { cleanSafetyEnum, isSafetyEnumActive } from '@/lib/safetyEnum';
 import { WidgetShell } from './WidgetShell';
-import { WidgetEventFeed } from './shared';
+import { WidgetEventFeed, WidgetStatGrid } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 
@@ -31,16 +32,18 @@ export interface SafetyClassification {
 }
 
 /** Classify a raw safety snapshot into its dominant event. Precedence is
- *  highest-severity-first: AEB → FCW → lane departure → blind spot → emergency
+ *  highest-severity-first: AEB disabled → FCW → lane departure → blind spot → emergency
  *  lane departure → generic state update. Pure and i18n-free. */
 export function classifySnapshot(snap: Record<string, unknown>): SafetyClassification {
   if (snap.automatic_emergency_braking_off === true) {
     return { type: 'aeb', icon: <AlertOctagon className="h-3.5 w-3.5" />, color: '#ef4444', severity: 'critical' };
   }
-  if (isSafetyEnumActive(snap.forward_collision_warning, 'forward_collision_warning')) {
+  if (!/unknown$/i.test(cleanSafetyEnum(snap.forward_collision_warning, 'forward_collision_warning')) &&
+    isSafetyEnumActive(snap.forward_collision_warning, 'forward_collision_warning')) {
     return { type: 'fcw', icon: <ShieldAlert className="h-3.5 w-3.5" />, color: '#f59e0b', severity: 'warning' };
   }
-  if (isSafetyEnumActive(snap.lane_departure_avoidance, 'lane_departure_avoidance')) {
+  if (!/unknown$/i.test(cleanSafetyEnum(snap.lane_departure_avoidance, 'lane_departure_avoidance')) &&
+    isSafetyEnumActive(snap.lane_departure_avoidance, 'lane_departure_avoidance')) {
     return { type: 'lane', icon: <Navigation className="h-3.5 w-3.5" />, color: '#3b82f6', severity: 'warning' };
   }
   if (snap.blind_spot_collision_warning === true) {
@@ -62,17 +65,17 @@ export function safetyEventTitle(
 ): string {
   switch (type) {
     case 'aeb':
-      return t('widget.safety.aeb', 'AEB Activation');
+      return t('widget.safety.aebDisabled', 'Automatic emergency braking disabled');
     case 'fcw':
-      return `${t('widget.safety.fcw', 'FCW')}: ${cleanSafetyEnum(snap.forward_collision_warning, 'forward_collision_warning')}`;
+      return `${t('widget.safety.historyFcw', 'FCW')}: ${cleanSafetyEnum(snap.forward_collision_warning, 'forward_collision_warning')}`;
     case 'lane':
-      return `${t('widget.safety.lane', 'Lane Departure')}: ${cleanSafetyEnum(snap.lane_departure_avoidance, 'lane_departure_avoidance')}`;
+      return `${t('widget.safety.lane', 'Lane departure')}: ${cleanSafetyEnum(snap.lane_departure_avoidance, 'lane_departure_avoidance')}`;
     case 'bsw':
-      return t('widget.safety.bsw', 'Blind Spot Warning');
+      return t('widget.safety.bsw', 'Blind spot warning');
     case 'elda':
-      return t('widget.safety.elda', 'Emergency Lane Departure Avoidance');
+      return t('widget.safety.historyElda', 'Emergency lane departure avoidance');
     default:
-      return t('widget.safety.general', 'Safety State Update');
+      return t('widget.safety.general', 'Safety state update');
   }
 }
 
@@ -85,11 +88,11 @@ export function safetyTypeLabel(type: SafetyEventType, t: Translate): string {
     case 'fcw':
       return t('widget.safety.fcwShort', 'FCW');
     case 'lane':
-      return t('widget.safety.laneShort', 'Lane Departure');
+      return t('widget.safety.laneShort', 'Lane departure');
     case 'bsw':
-      return t('widget.safety.bswShort', 'Blind Spot');
+      return t('widget.safety.bswShort', 'Blind spot');
     case 'elda':
-      return t('widget.safety.eldaShort', 'Emergency Lane');
+      return t('widget.safety.eldaShort', 'Emergency lane');
     default:
       return t('widget.safety.generalShort', 'General');
   }
@@ -102,13 +105,13 @@ export function safetyTypeLabel(type: SafetyEventType, t: Translate): string {
 export function buildSubtitle(snap: Record<string, unknown>, t: Translate): string {
   const parts: string[] = [];
   if (snap.speed_limit_warning != null) {
-    parts.push(`${t('widget.safety.speedLimit', 'Speed Limit')}: ${cleanSafetyEnum(snap.speed_limit_warning, 'speed_limit_warning')}`);
+    parts.push(`${t('widget.safety.speedLimit', 'Speed limit')}: ${cleanSafetyEnum(snap.speed_limit_warning, 'speed_limit_warning')}`);
   }
   if (snap.cruise_follow_distance != null) {
     parts.push(`${t('widget.safety.follow', 'Follow')}: ${cleanSafetyEnum(snap.cruise_follow_distance, 'cruise_follow_distance')}`);
   }
   if (snap.pin_to_drive_enabled === true) {
-    parts.push(t('widget.safety.pinToDrive', 'PIN to Drive'));
+    parts.push(t('widget.safety.pinToDrive', 'PIN to drive'));
   }
   return parts.filter(Boolean).join(' · ') || '—';
 }
@@ -131,13 +134,13 @@ function CompactView({
       <div className="flex items-center gap-2 min-h-[44px]">
         <AlertOctagon className="h-4 w-4 flex-shrink-0 text-red-400" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-[var(--text-primary)] truncate">
+          <p className={dashboardTokens.metricLabel}>
             {totalEvents > 0
               ? `${fmtInt(totalEvents)} ${t('widget.safetyEvents', 'events')} (30d)`
               : t('widget.noSafetyEvents', 'No safety events')}
           </p>
           {totalEvents > 0 && (
-            <p className="text-xs text-[var(--text-secondary)] truncate">
+            <p className={dashboardTokens.metricLabel}>
               {mostCommon} {trend}
             </p>
           )}
@@ -151,20 +154,24 @@ function CompactView({
 
 export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const vehicleQuery = useVehicles();
+  const { data: vehicles } = vehicleQuery;
+  const vehicleState = useDataState(vehicleQuery);
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vidStr = vid != null ? String(vid) : undefined;
 
+  const query = useSafetyHistory(vidStr ?? '');
   const {
     data: history,
     isLoading,
-    error,
     isFetching,
     isStale,
     isError,
     dataUpdatedAt,
     refetch,
-  } = useSafetyHistory(vidStr ?? '');
+  } = query;
+  const state = useDataState(query, { provenance: 'historical' });
+  const displayState = vid === undefined && (vehicleState.fatalError || vehicleQuery.isLoading) ? vehicleState : state;
 
   const isCompact = size.cols <= 1;
   const list = useMemo(() => history ?? [], [history]);
@@ -181,7 +188,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
           icon: event.icon,
           title: safetyEventTitle(event.type, rec, t),
           subtitle: buildSubtitle(rec, t),
-          timestamp: snap.created_at ?? new Date(0).toISOString(),
+          timestamp: snap.created_at ?? '',
           color: event.color,
           severity: event.severity,
         };
@@ -228,10 +235,11 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.safetyHistory', 'Safety History')}
-      icon={<AlertOctagon className="h-3.5 w-3.5 text-red-400" />}
+      title={t('widget.safetyHistory', 'Safety history')}
+      description={t('widget.safety.historyScope', 'Summary of returned safety snapshots, not activation counts')}
+      icon={<AlertOctagon className="h-3.5 w-3.5" aria-hidden="true" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={{ ...displayState, status: displayState.status === 'initial' && !isLoading && !vehicleQuery.isLoading ? 'unavailable' : displayState.status }}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -256,27 +264,17 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
       ) : (
         <div className="flex flex-col gap-3 h-full min-h-0">
           {/* Stat cards row */}
-          <div className="grid grid-cols-1 @xs:grid-cols-3 gap-2 flex-shrink-0">
-            <StatCard
-              label={t('widget.safetyTotal', 'Events (30d)')}
-              value={fmtInt(stats.totalEvents)}
-            />
-            <StatCard
-              label={t('widget.safetyMostCommon', 'Most Common')}
-              value={stats.mostCommon}
-            />
-            <StatCard
-              label={t('widget.safetyTrend', 'Trend')}
-              value={stats.trend}
-              sublabel={
-                stats.trend === '↑'
-                  ? t('widget.trendUp', 'Increasing')
-                  : stats.trend === '↓'
-                    ? t('widget.trendDown', 'Decreasing')
-                    : t('widget.trendFlat', 'Stable')
-              }
-            />
-          </div>
+          <WidgetStatGrid cols={3} stats={[
+            { label: t('widget.safetyTotal', 'Events (30d)'), value: history === undefined ? null : stats.totalEvents },
+            { label: t('widget.safetyMostCommon', 'Most common'), value: stats.mostCommon },
+            {
+              label: t('widget.safetyTrend', 'Trend'),
+              value: stats.trend,
+              unit: stats.trend === '↑' ? t('widget.trendUp', 'Increasing')
+                : stats.trend === '↓' ? t('widget.trendDown', 'Decreasing')
+                  : stats.trend === '→' ? t('widget.trendFlat', 'Stable') : undefined,
+            },
+          ]} />
 
           {/* Event feed */}
           <div className="flex-1 min-h-0 overflow-y-auto">

@@ -172,21 +172,21 @@ describe('DigitalTwinMiniWidget — empty state', () => {
 });
 
 describe('DigitalTwinMiniWidget — loading states', () => {
-  it('renders a skeleton (no twin, no empty state) while security is loading', () => {
+  it('retains state evidence while security is loading', () => {
     mockSecurity.mockReturnValue(makeQuery({ data: null, isLoading: true }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
     expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByRole('img')).toBeInTheDocument();
   });
 
-  it('renders a skeleton while the vehicle state is loading', () => {
+  it('retains security evidence while vehicle state is loading', () => {
     mockState.mockReturnValue(makeQuery({ data: null, isLoading: true }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByRole('img')).toBeInTheDocument();
   });
 
   it('renders a skeleton (not the empty state) while the vehicle list itself is loading', () => {
@@ -212,7 +212,7 @@ describe('DigitalTwinMiniWidget — twin + header chrome', () => {
   it('surfaces the widget title and an Open link to the full digital-twin route', () => {
     renderWidget();
 
-    expect(screen.getByRole('heading', { name: 'Digital Twin' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Digital twin' })).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /open/i });
     expect(link).toHaveAttribute('href', '/digital-twin');
   });
@@ -307,6 +307,14 @@ describe('DigitalTwinMiniWidget — responsive badge visibility', () => {
 });
 
 describe('DigitalTwinMiniWidget — refresh + error resilience', () => {
+  it('retains the scene when a security refresh fails with cached lock evidence', () => {
+    mockSecurity.mockReturnValue(makeQuery({ data: makeSecurity({ locked: true }), isError: true, error: new Error('refresh failed') }));
+    const { container } = renderWidget();
+    expect(screen.getByRole('img', { name: /digital twin/i })).toBeInTheDocument();
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+  });
+
   it('refetches the vehicle state when the refresh control is activated', () => {
     const refetch = vi.fn();
     mockState.mockReturnValue(

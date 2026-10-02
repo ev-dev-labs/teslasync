@@ -210,6 +210,7 @@ describe('RouteEfficiencyWidget vehicle resolution', () => {
     renderWidget();
 
     expect(await screen.findByText('No route data')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(routeEffCalls()).toHaveLength(0);
   });
 });
@@ -222,7 +223,7 @@ describe('RouteEfficiencyWidget states', () => {
     const { container } = renderWidget({ vehicleId: 1 });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Route Efficiency')).toBeNull();
+    expect(screen.queryByText('Route efficiency')).toBeInTheDocument();
     expect(screen.queryByText('No route data')).toBeNull();
   });
 
@@ -231,6 +232,7 @@ describe('RouteEfficiencyWidget states', () => {
     renderWidget({ vehicleId: 1 });
 
     const empty = await screen.findByText('No route data');
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(empty).toBeInTheDocument();
     expect(empty.closest('[role="status"]')).not.toBeNull();
   });
@@ -244,9 +246,10 @@ describe('RouteEfficiencyWidget states', () => {
     renderWidget({ vehicleId: 1 });
 
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('No route data')).toBeNull();
-    expect(screen.queryByText('Route Efficiency')).toBeNull();
+    expect(screen.queryByText('Route efficiency')).toBeInTheDocument();
   });
 });
 
@@ -261,7 +264,8 @@ describe('RouteEfficiencyWidget populated list', () => {
     );
     renderWidget({ vehicleId: 1 });
 
-    expect(await screen.findByText('Route Efficiency')).toBeInTheDocument();
+    expect(await screen.findByText('Route efficiency')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('Home → Work')).toBeInTheDocument();
     // km unit → value passes through untouched; trips rendered with the ×.
     expect(screen.getByText(/220 Wh\/km · 12×/)).toBeInTheDocument();
@@ -279,6 +283,7 @@ describe('RouteEfficiencyWidget populated list', () => {
     renderWidget({ vehicleId: 1 });
 
     expect(await screen.findByText('Excellent')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('Good')).toBeInTheDocument();
     expect(screen.getByText('Fair')).toBeInTheDocument();
     expect(screen.getByText('Poor')).toBeInTheDocument();
@@ -294,6 +299,7 @@ describe('RouteEfficiencyWidget populated list', () => {
     const view = renderWidget({ vehicleId: 1 });
 
     await screen.findByText('Best → Trip');
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(view.container.querySelector('.bg-emerald-400')).not.toBeNull();
     expect(view.container.querySelector('.bg-blue-400')).not.toBeNull();
   });
@@ -312,7 +318,9 @@ describe('RouteEfficiencyWidget populated list', () => {
     renderWidget({ vehicleId: 1 });
 
     expect(await screen.findByText('— → —')).toBeInTheDocument();
-    expect(screen.getByText(/0 Wh\/km · 0×/)).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(screen.getByText('— · —×')).toBeInTheDocument();
+    expect(screen.queryByText('Excellent')).not.toBeInTheDocument();
     expect(screen.queryByText(/NaN|undefined/)).toBeNull();
   });
 });
@@ -329,6 +337,7 @@ describe('RouteEfficiencyWidget unit conversion', () => {
 
     // 200 Wh/km × 1.609344 = 321.87 → rounds to 322 Wh/mi.
     expect(await screen.findByText(/322 Wh\/mi · 3×/)).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.queryByText(/Wh\/km/)).toBeNull();
   });
 });
@@ -343,8 +352,9 @@ describe('RouteEfficiencyWidget layout variants', () => {
     renderWidget({ vehicleId: 1, cols: 1 });
 
     expect(await screen.findByText('Home → Gym')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Compact widgets drop the header title.
-    expect(screen.queryByText('Route Efficiency')).toBeNull();
+    expect(screen.queryByText('Route efficiency')).toBeNull();
   });
 
   it('annotates each route with best/worst efficiency in the wide layout', async () => {
@@ -362,6 +372,7 @@ describe('RouteEfficiencyWidget layout variants', () => {
     renderWidget({ vehicleId: 1, cols: 3 });
 
     expect(await screen.findByText(/Home → Lake/)).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText(/best 180 \/ worst 260 Wh\/km/)).toBeInTheDocument();
   });
 });
@@ -369,11 +380,25 @@ describe('RouteEfficiencyWidget layout variants', () => {
 // ── Refresh interaction ─────────────────────────────────────────────────────
 
 describe('RouteEfficiencyWidget refresh', () => {
+  it('retains cached routes when a refresh fails and offers a warning retry', async () => {
+    routeRequest(routeData([makeRoute({ startLocation: 'Home', endLocation: 'Work' })]));
+    renderWidget({ vehicleId: 1 });
+    await screen.findByText('Home → Work');
+    mockRequest.mockRejectedValue(new Error('offline'));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Home → Work')).toBeInTheDocument();
+    const before = routeEffCalls().length;
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(routeEffCalls().length).toBe(before + 1));
+  });
+
   it('re-issues the read when the freshness refresh control is activated', async () => {
     routeRequest(routeData([makeRoute()]));
     renderWidget({ vehicleId: 1 });
 
     const refresh = await screen.findByRole('button', { name: /^Refresh/i });
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     const before = routeEffCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

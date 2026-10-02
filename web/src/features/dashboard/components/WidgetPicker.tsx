@@ -17,7 +17,7 @@ import { WIDGET_DND_MIME, type WidgetCategory, type WidgetDef } from '../widgets
 
 const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   vehicle: 'Vehicle',
-  battery: 'Battery & Range',
+  battery: 'Battery & range',
   energy: 'Energy',
   driving: 'Driving',
   charging: 'Charging',
@@ -378,13 +378,13 @@ export function WidgetPicker({
   return (
     <section
       role="complementary"
-      aria-label={t('dashboard.addWidget', 'Add Widget')}
+      aria-label={t('dashboard.addWidget', 'Add widget')}
       data-testid="widget-picker-dock"
       className="widget-picker-dock flex min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] max-h-[60dvh] xl:sticky xl:top-4 xl:h-[calc(100dvh-8rem)] xl:max-h-none xl:w-[340px]"
     >
       <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--border-default)] px-4 py-3">
         <div className="min-w-0">
-          <Text as="h2" variant="bodySm" className="font-semibold">{t('dashboard.addWidget', 'Add Widget')}</Text>
+          <Text as="h2" variant="bodySm" className="font-semibold">{t('dashboard.addWidget', 'Add widget')}</Text>
           <Text as="p" variant="caption">
             {t('widgets.pickerDescription', 'Choose the operational signals and workflows that belong on this dashboard.')}
           </Text>
@@ -448,9 +448,9 @@ export function WidgetPicker({
         {/* Recently Added — only on the unfiltered, unsearched view */}
         {recentlyAddedVisible.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
+            <h3 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
               <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('widgets.recentlyAdded', 'Recently Added')}
+              {t('widgets.recentlyAdded', 'Recently added')}
             </h3>
             <div className="grid grid-cols-1 gap-2">
               {recentlyAddedVisible.map(renderWidgetCard)}
@@ -499,7 +499,7 @@ export function WidgetPicker({
             return (
               <div key={cat}>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  <h3 className="text-xs font-semibold tracking-wider text-[var(--text-muted)]">
                     {CATEGORY_LABELS[cat]}
                   </h3>
                     <UiButton

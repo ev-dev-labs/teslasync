@@ -52,7 +52,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.liveSignals', 'Live Signals')}
+      title={t('widget.liveSignals', 'Live signals')}
       icon={<Wifi className="h-3.5 w-3.5 text-neon-cyan" />}
       updatedAt={motorUpdatedAt}
       isFetching={motorFetching}
@@ -70,7 +70,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
         <div className="grid grid-cols-2 gap-4 h-full overflow-y-auto">
           {/* Drivetrain */}
           <div className="space-y-1.5">
-            <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
+            <h4 className="text-2xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
               <Cog className="h-3 w-3 text-purple-300" /> {t('widget.motor', 'Motor')}
             </h4>
             {motor ? (
@@ -96,7 +96,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Climate */}
           <div className="space-y-1.5">
-            <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
+            <h4 className="text-2xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
               <Thermometer className="h-3 w-3 text-cyan-300" /> {t('widget.climate', 'Climate')}
             </h4>
             {climate ? (
@@ -133,7 +133,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Tires */}
           <div className="space-y-1.5">
-            <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
+            <h4 className="text-2xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
               <CircleDot className="h-3 w-3 text-cyan-300" /> {t('widget.tires', 'Tires')}
             </h4>
             {tires ? (
@@ -178,7 +178,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Security summary */}
           <div className="space-y-1.5">
-            <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
+            <h4 className="text-2xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
               <span aria-hidden="true">🛡️</span> {t('widget.security', 'Security')}
             </h4>
             {security ? (

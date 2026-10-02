@@ -317,7 +317,7 @@ describe('ExportStatusWidget states', () => {
     mockUseExports.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Export Status')).toBeNull();
+    expect(screen.queryByText('Export status')).toBeInTheDocument();
     expect(screen.queryByText('No export jobs')).toBeNull();
   });
 
@@ -326,7 +326,7 @@ describe('ExportStatusWidget states', () => {
     const empty = screen.getByText('No export jobs');
     expect(empty).toBeInTheDocument();
     expect(empty.closest('[role="status"]')).not.toBeNull();
-    expect(screen.getByText('Export Status')).toBeInTheDocument();
+    expect(screen.getByText('Export status')).toBeInTheDocument();
   });
 
   it('shows an empty state when there are no jobs — compact', () => {
@@ -338,7 +338,7 @@ describe('ExportStatusWidget states', () => {
     mockUseExports.mockReturnValue(qr({ data: undefined, isError: true }));
     mockUseExportJobs.mockReturnValue(qr({ data: undefined, isError: true }));
     renderWidget(STANDARD);
-    expect(screen.getByText('Export Status')).toBeInTheDocument();
+    expect(screen.getByText('Export status')).toBeInTheDocument();
     expect(screen.getByText('No export jobs')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
@@ -353,7 +353,7 @@ describe('ExportStatusWidget standard layout', () => {
     );
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Export Status')).toBeInTheDocument();
+    expect(screen.getByText('Export status')).toBeInTheDocument();
     expect(screen.getByText('CSV')).toBeInTheDocument();
     expect(screen.getByText('2.0 KB')).toBeInTheDocument();
     expect(screen.getByText('Done')).toBeInTheDocument();
@@ -440,7 +440,7 @@ describe('ExportStatusWidget compact layout', () => {
     );
     renderWidget(COMPACT);
 
-    expect(screen.getByText('Active Exports')).toBeInTheDocument();
+    expect(screen.getByText('Active exports')).toBeInTheDocument();
     expect(screen.getByText('Running')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument(); // processing + queued
     // Compact renders the big number, not the per-row format badges.

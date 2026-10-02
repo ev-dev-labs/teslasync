@@ -149,7 +149,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
   // ── Standard (2×2) and Wide (2×4) layouts ──
   return (
     <WidgetShell
-      title={t('widget.backupMonitor.title', 'Backup Monitor')}
+      title={t('widget.backupMonitor.title', 'Backup monitor')}
       icon={<HardDrive className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
@@ -168,7 +168,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
               value={fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null, t)}
             />
             <StatCard
-              label={t('widget.backupMonitor.size', 'Backup Size')}
+              label={t('widget.backupMonitor.size', 'Backup size')}
               value={fmtBytes(latestRun?.fileSize ?? 0)}
             />
             <StatCard
@@ -181,7 +181,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
                 latestStatus === 'failed' && 'bg-red-500/10',
               )}
             >
-              <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)] mb-1">
+              <p className="text-2xs tracking-wider text-[var(--text-muted)] mb-1">
                 {t('widget.backupMonitor.status', 'Status')}
               </p>
               <Badge variant={statusVariant(latestRun?.status ?? 'failed')}>
@@ -193,8 +193,8 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
           {/* Wide layout: last 5 backup runs */}
           {isWide && (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-              <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)] mb-1">
-                {t('widget.backupMonitor.recentRuns', 'Recent Runs')}
+              <p className="text-2xs tracking-wider text-[var(--text-muted)] mb-1">
+                {t('widget.backupMonitor.recentRuns', 'Recent runs')}
               </p>
               {sortedRuns.slice(0, 5).map((run) => (
                 <div

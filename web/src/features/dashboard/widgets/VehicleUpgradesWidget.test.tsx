@@ -286,7 +286,7 @@ describe('VehicleUpgradesWidget — compact tile', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('available')).toBeInTheDocument();
     // The compact tile never renders the section chrome.
-    expect(screen.queryByText('Upgrades & Sharing')).not.toBeInTheDocument();
+    expect(screen.queryByText('Upgrades & sharing')).not.toBeInTheDocument();
   });
 
   it('shows the "Up to date" badge when there are no upgrades', () => {
@@ -302,8 +302,8 @@ describe('VehicleUpgradesWidget — standard feed', () => {
   it('renders the title, each upgrade row with its price + eligibility badge', () => {
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
-    expect(screen.getByText('Upgrades & Sharing')).toBeInTheDocument();
-    expect(screen.getByText('Available Upgrades')).toBeInTheDocument();
+    expect(screen.getByText('Upgrades & sharing')).toBeInTheDocument();
+    expect(screen.getByText('Available upgrades')).toBeInTheDocument();
 
     expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
     expect(screen.getByText('$99')).toBeInTheDocument();
@@ -430,7 +430,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
     const { container } = renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Upgrades & Sharing')).not.toBeInTheDocument();
+    expect(screen.queryByText('Upgrades & sharing')).toBeInTheDocument();
     expect(screen.queryByText('Full Self-Driving')).not.toBeInTheDocument();
   });
 
@@ -441,7 +441,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
 
     // Error is surfaced by the freshness chip; the feed still renders.
     expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
-    expect(screen.getByText('Upgrades & Sharing')).toBeInTheDocument();
+    expect(screen.getByText('Upgrades & sharing')).toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

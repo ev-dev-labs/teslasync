@@ -56,9 +56,12 @@ vi.mock('react-i18next', () => ({
     t: (key: string, fallback?: string, opts?: Record<string, unknown>) => {
       const base = typeof fallback === 'string' ? fallback : key;
       if (opts && typeof opts === 'object') {
-        return base.replace(/{{(\w+)}}/g, (_m, name: string) =>
-          name in opts ? String(opts[name]) : `{{${name}}}`,
-        );
+        const entries = Object.entries(opts.replace != null && typeof opts.replace === 'object'
+          ? opts.replace : opts);
+        return base.replace(/{{(\w+)}}/g, (_m, name: string) => {
+          const entry = entries.find(([key]) => key === name);
+          return entry ? String(entry[1]) : `{{${name}}}`;
+        });
       }
       return base;
     },
@@ -70,14 +73,17 @@ vi.mock('react-i18next', () => ({
 
 // The two data sources become controllable vi.fns. importActual keeps the
 // module's many other telemetry hooks intact for any transitive importer.
+const { mockUseVINs, mockUseErrors } = vi.hoisted(() => ({
+  mockUseVINs: vi.fn(), mockUseErrors: vi.fn(),
+}));
 vi.mock('@/api/hooks/useTelemetry', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useTelemetry')>(
     '@/api/hooks/useTelemetry',
   );
   return {
     ...actual,
-    useFleetTelemetryErrorVINs: vi.fn(),
-    useFleetTelemetryErrors: vi.fn(),
+    useFleetTelemetryErrorVINs: mockUseVINs,
+    useFleetTelemetryErrors: mockUseErrors,
   };
 });
 
@@ -108,15 +114,10 @@ vi.mock('@/components/data-display', async () => {
 
 import TelemetryErrorsWidget from './TelemetryErrorsWidget';
 import {
-  useFleetTelemetryErrorVINs,
-  useFleetTelemetryErrors,
   type FleetTelemetryError,
   type FleetTelemetryErrorVIN,
 } from '@/api/hooks/useTelemetry';
 import type { WidgetSize } from './types';
-
-const mockUseVINs = vi.mocked(useFleetTelemetryErrorVINs);
-const mockUseErrors = vi.mocked(useFleetTelemetryErrors);
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
 // inside <WidgetShell>) reads it.
@@ -134,7 +135,7 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 /** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
-function qr(over: Record<string, unknown> = {}): any {
+function qr(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     isLoading: false,
@@ -209,7 +210,7 @@ describe('TelemetryErrorsWidget — compact layout', () => {
     mockUseVINs.mockReturnValue(qr({ isLoading: true }));
     const { container } = renderWidget(COMPACT);
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('error VINs')).toBeNull();
+    expect(screen.queryByText('Error VINs')).toBeNull();
   });
 
   it('shows an empty state (never a blank panel) when both sources are empty', () => {
@@ -225,7 +226,7 @@ describe('TelemetryErrorsWidget — compact layout', () => {
     mockUseVINs.mockReturnValue(qr({ data: [makeVIN(), makeVIN()] }));
     renderWidget(COMPACT);
     expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('error VINs')).toBeInTheDocument();
+    expect(screen.getByText('Error VINs')).toBeInTheDocument();
     expect(screen.getByText('Errors')).toBeInTheDocument();
     expect(screen.queryByText('Healthy')).toBeNull();
   });
@@ -248,7 +249,7 @@ describe('TelemetryErrorsWidget — standard layout', () => {
     mockUseVINs.mockReturnValue(qr({ data: [makeVIN(), makeVIN()] }));
     mockUseErrors.mockReturnValue(qr({ data: [makeError()] }));
     renderWidget(STANDARD);
-    expect(screen.getByText('Telemetry Errors')).toBeInTheDocument();
+    expect(screen.getByText('Telemetry errors')).toBeInTheDocument();
     expect(screen.getByText('2 VINs with errors')).toBeInTheDocument();
     expect(screen.getByText('Errors')).toBeInTheDocument();
   });
@@ -297,7 +298,7 @@ describe('TelemetryErrorsWidget — standard layout', () => {
     const { container } = renderWidget(STANDARD);
 
     // Exactly one "recent" badge (the 5-minute-old entry).
-    expect(screen.getAllByText('recent')).toHaveLength(1);
+    expect(screen.getAllByText('Recent')).toHaveLength(1);
     // Each row threads its resolved last_seen into <TimeStamp>.
     expect(screen.getByText(recentTs)).toBeInTheDocument();
     expect(screen.getByText(oldTs)).toBeInTheDocument();
@@ -319,12 +320,36 @@ describe('TelemetryErrorsWidget — standard layout', () => {
 // ── Hardening: loading gate, error surfacing, dual-source refresh ────────────
 
 describe('TelemetryErrorsWidget — loading, error & refresh hardening', () => {
-  it('treats a load in the SECONDARY error-rows query as loading too (renders the skeleton)', () => {
+  it('retains the VIN summary while the secondary error feed is loading', () => {
     mockUseVINs.mockReturnValue(qr({ data: [makeVIN()] }));
     mockUseErrors.mockReturnValue(qr({ isLoading: true }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Telemetry Errors')).toBeNull();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByText('1 VINs with errors')).toBeInTheDocument();
+    expect(screen.queryByText('Telemetry errors')).toBeInTheDocument();
+  });
+
+  describe('TelemetryErrorsWidget — source honesty', () => {
+    it('does not infer healthy status when only error rows were fetched', () => {
+      mockUseVINs.mockReturnValue(qr({ data: undefined }));
+      mockUseErrors.mockReturnValue(qr({ data: [makeError()] }));
+      renderWidget({ cols: 3, rows: 4 });
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+      expect(screen.getByText('— VINs with errors')).toBeInTheDocument();
+      expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
+    });
+
+    it('labels fetch time separately and never treats it as a recent observation', () => {
+      const fetched = minsAgo(1);
+      mockUseVINs.mockReturnValue(qr({ data: [] }));
+      mockUseErrors.mockReturnValue(qr({ data: [
+        makeError({ reported_at: null, fetched_at: fetched }),
+      ] }));
+      renderWidget(STANDARD);
+      expect(screen.getByText('Fetched')).toBeInTheDocument();
+      expect(screen.getByText(fetched)).toBeInTheDocument();
+      expect(screen.queryByText('Recent')).not.toBeInTheDocument();
+    });
   });
 
   it('surfaces a QueryError (not the misleading empty state) when a load fails with no data', () => {

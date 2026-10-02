@@ -11,7 +11,7 @@
  *          Avg $/kWh / Trend) + a bar chart, using the *small* axis ticks.
  *        - wide (cols ≥ 3)    → the same, but with the *large* axis ticks.
  *   2. `buildChartData`: it folds historical + forecast rows onto one month
- *      axis, tags each row with `isForecast`, and windows to the trailing 6
+ *      axis, tags each row with its actual/forecast period, and windows to the trailing 6
  *      months (`.slice(-6)`), so a long history + forecast keeps the newest.
  *   3. The trend maths + header icon: `nextCost >= lastCost` flips the icon
  *      between the amber TrendingUp and the emerald TrendingDown glyph, and the
@@ -24,7 +24,7 @@
  *   6. Freshness-control refresh → refetch.
  *   7. Null-safety of a malformed / partial payload: a non-array `historical`
  *      and a `null` forecast entry must degrade cleanly (em-dash placeholders,
- *      zeroed costs) instead of throwing at `.map`.
+ *      unknown readings) instead of throwing at `.map`.
  *   8. a11y: the chart is exposed as a single labelled image.
  *   9. Vehicle selection: an explicit `vehicleId` wins, otherwise the first
  *      vehicle from `useVehicles` is used, otherwise the hook is disabled.
@@ -72,10 +72,12 @@ vi.hoisted(() => {
   }
 });
 
-const { forecastMock, vehiclesMock } = vi.hoisted(() => ({
+const { forecastMock, vehiclesMock, unitsMock } = vi.hoisted(() => ({
   forecastMock: vi.fn(),
   vehiclesMock: vi.fn(),
+  unitsMock: vi.fn(),
 }));
+vi.mock('@/hooks/useUnits', () => ({ useUnits: () => unitsMock() }));
 
 // i18n → return the developer fallback string, interpolating `{{vars}}`.
 vi.mock('react-i18next', async () => {
@@ -136,6 +138,13 @@ vi.mock('@/components/charts', async () => {
   chartAnimation: {},
   axisTick: { size: 'lg' },
   axisTickSm: { size: 'sm' },
+  useThemeChartPalette: () => ({ primary: '#0ea5e9', neutral: '#64748b' }),
+  Cell: ({ fill, strokeDasharray }: { fill?: string; strokeDasharray?: string }) => (
+    <div data-testid="bar-cell" data-fill={fill} data-dash={strokeDasharray} />
+  ),
+  Legend: ({ payload }: { payload?: Array<{ value: string }> }) => (
+    <div data-testid="forecast-legend">{payload?.map((entry) => <span key={entry.value}>{entry.value}</span>)}</div>
+  ),
   fmt: (v: unknown, decimals = 1) =>
     Number((v as number) ?? 0).toFixed(Math.max(0, Math.min(20, decimals))),
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
@@ -146,13 +155,15 @@ vi.mock('@/components/charts', async () => {
       {children}
     </div>
   ),
-  Bar: ({ dataKey, fill, name }: Record<string, unknown>) => (
+  Bar: ({ dataKey, fill, name, children }: {
+    dataKey?: string; fill?: string; name?: string; children?: ReactNode;
+  }) => (
     <div
       data-testid="bar"
       data-key={String(dataKey ?? '')}
       data-fill={String(fill ?? '')}
       data-name={String(name ?? '')}
-    />
+    >{children}</div>
   ),
   XAxis: ({ dataKey, tick }: Record<string, unknown>) => (
     <div
@@ -177,7 +188,7 @@ vi.mock('@/components/charts', async () => {
 });
 
 import CostForecastWidget from './CostForecastWidget';
-import type { WidgetSize } from './types';
+import type { WidgetSize, WidgetConfig } from './types';
 import type { CostForecastData, CostHistoricalMonth, CostForecastMonth } from '@/types/charging';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
@@ -193,15 +204,21 @@ const FORE: CostForecastMonth[] = [
   { month: 'May', cost: 140, cost_low: 115, cost_high: 170, kwh: 580 },
 ];
 
-function makeData(overrides: Record<string, unknown> = {}): CostForecastData {
+function makeData(overrides: Partial<CostForecastData> = {}): CostForecastData {
   return {
     historical: HIST,
     forecast: FORE,
-    breakdown: {},
-    gas_comparison: {},
+    breakdown: {
+      home: { pct: 100, avg_cost_per_kwh: 0.18, monthly_avg: 110 },
+      supercharger: { pct: 0, avg_cost_per_kwh: 0, monthly_avg: 0 },
+    },
+    gas_comparison: {
+      avg_km_per_month: 1000, gas_cost_per_month: 150, ev_cost_per_month: 110,
+      monthly_savings: 40, annual_savings: 480, lifetime_savings: 120,
+    },
     insights: [],
     ...overrides,
-  } as unknown as CostForecastData;
+  };
 }
 
 interface FakeQuery {
@@ -229,18 +246,18 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
   };
 }
 
-function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
+function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number, config?: WidgetConfig) {
   return render(
     <MemoryRouter>
-      <CostForecastWidget size={size} vehicleId={vehicleId} />
+      <CostForecastWidget size={size} vehicleId={vehicleId} config={config} />
     </MemoryRouter>,
   );
 }
 
 interface Row {
   month: string;
-  cost: number;
-  isForecast: boolean;
+  cost: number | null;
+  period: 'actual' | 'forecast';
 }
 
 function chartRows(): Row[] {
@@ -252,6 +269,7 @@ beforeEach(() => {
   vehiclesMock.mockReset();
   forecastMock.mockReturnValue(makeQuery({ data: makeData() }));
   vehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
+  unitsMock.mockReturnValue({ unitPrefs: { energy: 'kWh' } });
 });
 
 /* ── Specs ────────────────────────────────────────────────────────── */
@@ -261,9 +279,9 @@ describe('CostForecastWidget', () => {
     const { container } = renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('Cost Forecast')).toBeInTheDocument();
+    expect(screen.getByText('Cost forecast')).toBeInTheDocument();
 
-    for (const label of ['Next Month', 'Avg $/kWh', 'Trend']) {
+    for (const label of ['Next month', 'Avg $/kWh', 'Trend']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
 
@@ -273,8 +291,8 @@ describe('CostForecastWidget', () => {
 
     // Trend up (130 ≥ 120) → signed delta + the amber TrendingUp header glyph.
     expect(screen.getByText('↑ $10')).toBeInTheDocument();
-    expect(container.querySelector('.text-amber-400')).toBeInTheDocument();
-    expect(container.querySelector('.text-emerald-400')).toBeNull();
+    expect(container.querySelector('.lucide-trending-up.text-amber-400')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-trending-down.text-emerald-400')).toBeNull();
 
     // The bar is wired to the cost series.
     const bar = screen.getByTestId('bar');
@@ -328,8 +346,8 @@ describe('CostForecastWidget', () => {
 
     // nextCost 110 < lastCost 120 → "↓ $10" + emerald TrendingDown glyph.
     expect(screen.getByText('↓ $10')).toBeInTheDocument();
-    expect(container.querySelector('.text-emerald-400')).toBeInTheDocument();
-    expect(container.querySelector('.text-amber-400')).toBeNull();
+    expect(container.querySelector('.lucide-trending-down.text-emerald-400')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-trending-up.text-amber-400')).toBeNull();
   });
 
   it('labels the Y axis and tooltip with the user currency (not a hardcoded literal)', () => {
@@ -369,12 +387,12 @@ describe('CostForecastWidget', () => {
   it('compact layout shows the next-month cost + a bare trend arrow, no title or chart', () => {
     renderWidget({ cols: 1, rows: 1 });
 
-    expect(screen.getByText('Next Month')).toBeInTheDocument();
+    expect(screen.getByText('Next month')).toBeInTheDocument();
     expect(screen.getByText('$130')).toBeInTheDocument();
     expect(screen.getByText('↑')).toBeInTheDocument();
 
     // Compact is title-less and never mounts the chart.
-    expect(screen.queryByText('Cost Forecast')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cost forecast')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
     expect(screen.queryByText('Avg $/kWh')).not.toBeInTheDocument();
   });
@@ -383,11 +401,12 @@ describe('CostForecastWidget', () => {
     forecastMock.mockReturnValue(makeQuery({ data: undefined }));
     renderWidget();
 
-    expect(screen.getByText('Cost Forecast')).toBeInTheDocument();
+    expect(screen.getByText('Cost forecast')).toBeInTheDocument();
     expect(screen.getByText('No forecast data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    // Stats + chart are not rendered while empty.
-    expect(screen.queryByText('Next Month')).not.toBeInTheDocument();
+    // Each section retains its own unknown/empty presentation.
+    expect(screen.getByText('Next month')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
@@ -406,8 +425,8 @@ describe('CostForecastWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     // No content while loading.
-    expect(screen.queryByText('Cost Forecast')).not.toBeInTheDocument();
-    expect(screen.queryByText('Next Month')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cost forecast')).toBeInTheDocument();
+    expect(screen.queryByText('Next month')).not.toBeInTheDocument();
   });
 
   it('surfaces the error panel (not the empty state) when the query fails', () => {
@@ -420,9 +439,9 @@ describe('CostForecastWidget', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The misleading "no data" empty state must NOT appear on error.
     expect(screen.queryByText('No forecast data')).not.toBeInTheDocument();
-    expect(screen.queryByText('Cost Forecast')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cost forecast')).toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: /Refresh data/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Refresh data/ })).toBeInTheDocument();
   });
 
   it('refreshes the forecast when the freshness control is activated', () => {
@@ -445,19 +464,16 @@ describe('CostForecastWidget', () => {
           breakdown: {},
           gas_comparison: {},
           insights: [],
-        } as unknown as CostForecastData,
+        },
       }),
     );
 
     expect(() => renderWidget()).not.toThrow();
 
-    // Non-array history → no last month → em-dash Avg; null forecast → $0 next.
-    expect(screen.getByText('$0')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
-    // The null forecast entry coerces to a single zero-cost em-dash bar.
-    const rows = chartRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toEqual({ month: '—', cost: 0, period: 'forecast' });
+    expect(screen.queryByText('$0')).not.toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getByText('No forecast data')).toBeInTheDocument();
+    expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {
@@ -474,5 +490,85 @@ describe('CostForecastWidget', () => {
     vehiclesMock.mockReturnValue({ data: [] });
     renderWidget();
     expect(forecastMock).toHaveBeenCalledWith(null);
+  });
+
+  it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }, { cols: 4, rows: 4 }])('retains each renderer on cached refresh failure at %j', (size) => {
+    forecastMock.mockReturnValue(makeQuery({ data: makeData(), isError: true, error: new Error('refresh failed') }));
+    renderWidget(size);
+    expect(screen.getByText('$130')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('does not manufacture a next forecast or trend when only history exists', () => {
+    forecastMock.mockReturnValue(makeQuery({ data: makeData({ forecast: [] }) }));
+    renderWidget();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('$0.18')).toBeInTheDocument();
+    expect(chartRows()).toHaveLength(3);
+    expect(screen.queryByText('↑ $120')).not.toBeInTheDocument();
+  });
+
+  it('does not infer a trend or rate from missing history', () => {
+    forecastMock.mockReturnValue(makeQuery({ data: makeData({ historical: [] }) }));
+    renderWidget();
+    expect(screen.getByText('$130')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(chartRows().every((row) => row.period === 'forecast')).toBe(true);
+  });
+
+  it('preserves known zero costs and rates as a flat zero trend', () => {
+    forecastMock.mockReturnValue(makeQuery({ data: makeData({
+      historical: [{ ...HIST[0], cost: 0, cost_per_kwh: 0 }],
+      forecast: [{ ...FORE[0], cost: 0 }],
+    }) }));
+    renderWidget();
+    expect(screen.getByText('$0')).toBeInTheDocument();
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getByText('→ $0')).toBeInTheDocument();
+    expect(chartRows().map((row) => row.cost)).toEqual([0, 0]);
+  });
+
+  it('keeps unknown forecast costs as gaps and does not infer a trend from them', () => {
+    forecastMock.mockReturnValue(makeQuery({ data: {
+      ...makeData(), forecast: [{ ...FORE[0], cost: null }],
+    } }));
+    renderWidget();
+    const rows = chartRows();
+    expect(rows[rows.length - 1]?.cost).toBeNull();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('$0.18')).toBeInTheDocument();
+  });
+
+  it('distinguishes actual and estimated bars with labels and different encodings', () => {
+    renderWidget();
+    expect(screen.getByTestId('forecast-legend')).toHaveTextContent('ActualForecast');
+    expect(screen.getByText('Forecast values are estimates.')).toBeInTheDocument();
+    const cells = screen.getAllByTestId('bar-cell');
+    expect(cells[0]).toHaveAttribute('data-fill', '#0ea5e9');
+    expect(cells[3]).toHaveAttribute('data-fill', '#64748b');
+    expect(cells[3]).toHaveAttribute('data-dash', '3 3');
+  });
+
+  it('converts commercial energy rates at the selected energy display boundary', () => {
+    unitsMock.mockReturnValue({ unitPrefs: { energy: 'Wh' } });
+    renderWidget();
+    expect(screen.getByText('Avg $/Wh')).toBeInTheDocument();
+    expect(screen.getByText('$0.00018')).toBeInTheDocument();
+  });
+
+  it('honors configured vehicle scope', () => {
+    renderWidget({ cols: 2, rows: 4 }, undefined, { vehicleId: 21 });
+    expect(forecastMock).toHaveBeenCalledWith('21');
+  });
+
+  it('surfaces and retries unresolved vehicle discovery failures', () => {
+    const refetch = vi.fn();
+    vehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('vehicles failed'), refetch });
+    forecastMock.mockReturnValue(makeQuery());
+    renderWidget();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

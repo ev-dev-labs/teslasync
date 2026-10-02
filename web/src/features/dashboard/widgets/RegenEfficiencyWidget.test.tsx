@@ -209,19 +209,19 @@ describe('RegenEfficiencyWidget — standard layout', () => {
   it('renders the title, gauge percentage, and all three formatted stat tiles', () => {
     const { container } = renderWidget(STANDARD);
 
-    expect(screen.getByText('Regen Braking')).toBeInTheDocument();
+    expect(screen.getByText('Regen braking')).toBeInTheDocument();
     // Gauge recovery label (rounded percentage) — 24.7 → 25%.
     expect(screen.getByText('25%')).toBeInTheDocument();
     expect(hasGauge(container)).toBe(true);
 
     // Three stat tiles with their formatted values.
-    expect(screen.getByText('Total Recovered')).toBeInTheDocument();
+    expect(screen.getByText('Total recovered')).toBeInTheDocument();
     expect(screen.getByText('1234 Wh')).toBeInTheDocument();
-    expect(screen.getByText('Drive Energy')).toBeInTheDocument();
+    expect(screen.getByText('Drive energy')).toBeInTheDocument();
     expect(screen.getByText('5000 Wh')).toBeInTheDocument();
 
     // Free charges renders through the integer formatter within its own tile.
-    const freeTile = screen.getByText('Free Charges').parentElement as HTMLElement;
+    const freeTile = screen.getByText('Free charges').parentElement?.parentElement as HTMLElement;
     expect(within(freeTile).getByText('7')).toBeInTheDocument();
 
     // Energy formatters receive both SI values + the 1-dp precision override.
@@ -233,7 +233,7 @@ describe('RegenEfficiencyWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(
-      screen.getByRole('button', { name: 'More info about Regen Braking' }),
+      screen.getByRole('button', { name: 'More info about Regen braking' }),
     ).toBeInTheDocument();
   });
 });
@@ -242,12 +242,12 @@ describe('RegenEfficiencyWidget — compact layout', () => {
   it('renders the gauge without a title or the stat tiles', () => {
     const { container } = renderWidget(COMPACT);
 
-    expect(screen.queryByText('Regen Braking')).toBeNull();
+    expect(screen.queryByText('Regen braking')).toBeNull();
     expect(screen.getByText('25%')).toBeInTheDocument();
     expect(hasGauge(container)).toBe(true);
     // Stats are suppressed in the compact gauge hero.
-    expect(screen.queryByText('Total Recovered')).toBeNull();
-    expect(screen.queryByText('Drive Energy')).toBeNull();
+    expect(screen.queryByText('Total recovered')).toBeNull();
+    expect(screen.queryByText('Drive energy')).toBeNull();
   });
 
   it('shows the empty state (never a blank panel) when there is no data', () => {
@@ -333,7 +333,26 @@ describe('RegenEfficiencyWidget — shell states', () => {
 });
 
 describe('RegenEfficiencyWidget — null-safety', () => {
-  it('treats missing regen fields as zero/placeholder without crashing', () => {
+  it('preserves signed recovered energy and a genuine zero recovery ratio', () => {
+    mockRegen.mockReturnValue(qr({ data: makeData({ regenRatio: 0, totalRegenWh: -1234, freeCharges: 0 }) }));
+    renderWidget(STANDARD);
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('-1234 Wh')).toBeInTheDocument();
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  it('retains all readings on refresh failure and exposes a warning retry', () => {
+    const refetch = vi.fn();
+    mockRegen.mockReturnValue(qr({ data: makeData(), error: new Error('offline'), isError: true, refetch }));
+    renderWidget(STANDARD);
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByText('1234 Wh')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps missing regen fields unknown and never renders a zero gauge', () => {
     mockRegen.mockReturnValue(
       qr({
         data: makeData({
@@ -346,18 +365,14 @@ describe('RegenEfficiencyWidget — null-safety', () => {
     );
     const { container } = renderWidget(STANDARD);
 
-    // regenRatio undefined → 0% gauge, red band (0 is not > 15).
-    expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(hasGaugeColor(container, RED)).toBe(true);
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(hasGauge(container)).toBe(false);
 
     // Both energy formatters are still called; missing drive energy returns
     // the placeholder (never a blank tile).
     expect(units.formatEnergy).toHaveBeenCalledWith(undefined, { precision: 1 });
-    expect(screen.getAllByText('—')).toHaveLength(2);
-
-    // freeCharges undefined → integer formatter coalesces to "0".
-    const freeTile = screen.getByText('Free Charges').parentElement as HTMLElement;
-    expect(within(freeTile).getByText('0')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 });
 

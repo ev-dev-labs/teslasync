@@ -28,7 +28,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -102,7 +102,7 @@ if (typeof window.matchMedia !== 'function') {
 const tid = (_key: string, fallback: string): string => fallback;
 
 /** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
-function qr(over: Record<string, unknown> = {}): any {
+function qr(over: Record<string, unknown> = {}): ReturnType<typeof useCommandHistory> {
   return {
     data: [],
     isLoading: false,
@@ -112,7 +112,7 @@ function qr(over: Record<string, unknown> = {}): any {
     dataUpdatedAt: Date.now(),
     refetch: vi.fn(),
     ...over,
-  };
+  } as ReturnType<typeof useCommandHistory>;
 }
 
 let cmdSeq = 0;
@@ -147,7 +147,7 @@ const STANDARD: WidgetSize = { cols: 3, rows: 2 };
 beforeEach(() => {
   cmdSeq = 0;
   vi.clearAllMocks();
-  mockUseVehicles.mockReturnValue({ data: [{ id: 1 }] } as any);
+  mockUseVehicles.mockReturnValue({ data: [{ id: 1 }] } as ReturnType<typeof useVehicles>);
   mockUseCommandHistory.mockReturnValue(qr());
 });
 
@@ -155,9 +155,9 @@ beforeEach(() => {
 
 describe('formatCommandName', () => {
   it('humanises snake_case identifiers and capitalises each word', () => {
-    expect(formatCommandName('wake_up')).toBe('Wake Up');
-    expect(formatCommandName('honk_horn')).toBe('Honk Horn');
-    expect(formatCommandName('set_charge_limit')).toBe('Set Charge Limit');
+    expect(formatCommandName('wake_up')).toBe('Wake up');
+    expect(formatCommandName('honk_horn')).toBe('Honk horn');
+    expect(formatCommandName('set_charge_limit')).toBe('Set charge limit');
     expect(formatCommandName('flash')).toBe('Flash');
   });
 
@@ -197,22 +197,22 @@ describe('commandStatusVisual', () => {
 // ── Pure helpers: commandBadgeVariant / commandStatusLabel ──────────────────
 
 describe('commandBadgeVariant', () => {
-  it('maps success/failed to their variants and everything else to warning', () => {
+  it('keeps unknown statuses neutral rather than claiming pending', () => {
     expect(commandBadgeVariant('success')).toBe('success');
     expect(commandBadgeVariant('failed')).toBe('danger');
     expect(commandBadgeVariant('pending')).toBe('warning');
-    expect(commandBadgeVariant('mystery')).toBe('warning');
-    expect(commandBadgeVariant(null)).toBe('warning');
+    expect(commandBadgeVariant('mystery')).toBe('neutral');
+    expect(commandBadgeVariant(null)).toBe('neutral');
   });
 });
 
 describe('commandStatusLabel', () => {
-  it('translates each status, defaulting unknowns to Pending', () => {
+  it('translates known statuses and preserves unfamiliar source values', () => {
     expect(commandStatusLabel('success', tid)).toBe('Success');
     expect(commandStatusLabel('failed', tid)).toBe('Failed');
     expect(commandStatusLabel('pending', tid)).toBe('Pending');
-    expect(commandStatusLabel('mystery', tid)).toBe('Pending');
-    expect(commandStatusLabel(undefined, tid)).toBe('Pending');
+    expect(commandStatusLabel('mystery', tid)).toBe('mystery');
+    expect(commandStatusLabel(undefined, tid)).toBe('Unknown');
   });
 });
 
@@ -223,7 +223,7 @@ describe('CommandHistoryWidget states', () => {
     mockUseCommandHistory.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Command History')).toBeNull();
+    expect(screen.queryByText('Command history')).toBeInTheDocument();
     expect(screen.queryByText('No commands sent')).toBeNull();
   });
 
@@ -241,12 +241,13 @@ describe('CommandHistoryWidget states', () => {
     expect(screen.getByText('No commands sent')).toBeInTheDocument();
   });
 
-  it('degrades to the empty panel (never blank) but keeps refresh when the query errors', () => {
+  it('shows an initial error, not a successful empty history, and keeps refresh', () => {
     mockUseCommandHistory.mockReturnValue(qr({ data: undefined, isError: true }));
     renderWidget(STANDARD);
     // Title still renders (not gated behind data) and the panel is not blank.
-    expect(screen.getByText('Command History')).toBeInTheDocument();
-    expect(screen.getByText('No commands sent')).toBeInTheDocument();
+    expect(screen.getByText('Command history')).toBeInTheDocument();
+    expect(screen.queryByText('No commands sent')).toBeNull();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 });
@@ -265,12 +266,12 @@ describe('CommandHistoryWidget standard layout', () => {
     );
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Command History')).toBeInTheDocument();
-    expect(screen.getByText('Wake Up')).toBeInTheDocument();
-    expect(screen.getByText('Honk Horn')).toBeInTheDocument();
+    expect(screen.getByText('Command history')).toBeInTheDocument();
+    expect(screen.getByText('Wake up')).toBeInTheDocument();
+    expect(screen.getByText('Honk horn')).toBeInTheDocument();
     // The raw status is threaded through as the row subtitle.
-    expect(screen.getByText('success')).toBeInTheDocument();
-    expect(screen.getByText('failed')).toBeInTheDocument();
+    expect(screen.getByText('Success')).toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
   });
 
   it('renders an unknown status through the neutral fallback without crashing', () => {
@@ -278,7 +279,7 @@ describe('CommandHistoryWidget standard layout', () => {
       qr({ data: [makeCmd({ command: 'flash_lights', status: 'weird' })] }),
     );
     renderWidget(STANDARD);
-    expect(screen.getByText('Flash Lights')).toBeInTheDocument();
+    expect(screen.getByText('Flash lights')).toBeInTheDocument();
     expect(screen.getByText('weird')).toBeInTheDocument();
   });
 
@@ -306,10 +307,10 @@ describe('CommandHistoryWidget compact layout', () => {
     );
     renderWidget(COMPACT);
 
-    expect(screen.getByText('Wake Up')).toBeInTheDocument();
+    expect(screen.getByText('Wake up')).toBeInTheDocument();
     expect(screen.getByText('Success')).toBeInTheDocument();
     // Compact shows a single command — later entries are not listed.
-    expect(screen.queryByText('Honk Horn')).toBeNull();
+    expect(screen.queryByText('Honk horn')).toBeNull();
   });
 
   it('shows the Failed badge when the newest command failed', () => {
@@ -321,13 +322,14 @@ describe('CommandHistoryWidget compact layout', () => {
     expect(screen.getByText('Failed')).toBeInTheDocument();
   });
 
-  it('shows the Pending badge for an unknown newest status', () => {
+  it('preserves an unknown newest status without labelling it pending', () => {
     mockUseCommandHistory.mockReturnValue(
       qr({ data: [makeCmd({ command: 'vent', status: 'queued' })] }),
     );
     renderWidget(COMPACT);
     expect(screen.getByText('Vent')).toBeInTheDocument();
-    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('queued')).toBeInTheDocument();
+    expect(screen.queryByText('Pending')).toBeNull();
   });
 
   it('renders an em-dash for a blank newest command name (hardening)', () => {
@@ -349,15 +351,41 @@ describe('CommandHistoryWidget vehicle resolution', () => {
   });
 
   it('falls back to the first vehicle when no vehicleId prop is given', () => {
-    mockUseVehicles.mockReturnValue({ data: [{ id: 3 }] } as any);
+    mockUseVehicles.mockReturnValue({ data: [{ id: 3 }] } as ReturnType<typeof useVehicles>);
     renderWidget(STANDARD);
     expect(mockUseCommandHistory).toHaveBeenCalledWith('3');
   });
 
   it('passes undefined (disabling the query) when no vehicle resolves', () => {
-    mockUseVehicles.mockReturnValue({ data: [] } as any);
+    mockUseVehicles.mockReturnValue({ data: [] } as ReturnType<typeof useVehicles>);
     renderWidget(STANDARD);
     expect(mockUseCommandHistory).toHaveBeenCalledWith(undefined);
+  });
+
+  describe('CommandHistoryWidget trust and evidence', () => {
+    it.each([COMPACT, STANDARD, { cols: 4, rows: 4 }])('retains cached command evidence after refresh failure in %o', (size) => {
+      const refetch = vi.fn();
+      mockUseCommandHistory.mockReturnValue(qr({
+        data: [makeCmd({ status: 'failed', error: 'Vehicle unavailable' })],
+        isError: true,
+        error: new Error('refresh failed'),
+        refetch,
+      }));
+      renderWidget(size);
+      expect(screen.getByText('Wake up')).toBeInTheDocument();
+      const warning = screen.getByTestId('stale-refresh-warning');
+      expect(warning).toHaveTextContent('Previously loaded data remains visible');
+      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      if (size.cols > 1) expect(screen.getByText('Failed · Vehicle unavailable')).toBeInTheDocument();
+    });
+
+    it('treats prototype-colliding statuses as neutral and missing time as unknown', () => {
+      expect(commandStatusVisual('constructor').color).toBe('#6b7280');
+      mockUseCommandHistory.mockReturnValue(qr({ data: [makeCmd({ created_at: null } as unknown as Partial<CommandLogEntry>)] }));
+      renderWidget(STANDARD);
+      expect(screen.getByText('—')).toBeInTheDocument();
+    });
   });
 });
 

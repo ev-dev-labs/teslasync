@@ -187,7 +187,7 @@ describe('NotificationStatsWidget — compact layout', () => {
     mockUseStats.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(COMPACT);
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Delivery Rate')).toBeNull();
+    expect(screen.queryByText('Delivery rate')).toBeNull();
   });
 
   it('shows an empty state (never a blank panel) when there is no stats data', () => {
@@ -202,7 +202,7 @@ describe('NotificationStatsWidget — compact layout', () => {
     renderWidget(COMPACT);
     // QueryError's generic (status-less) branch renders the network copy.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Delivery Rate')).toBeNull();
+    expect(screen.queryByText('Delivery rate')).toBeNull();
   });
 
   it('renders the delivery-rate hero and the "N failed" line when failures exist', () => {
@@ -210,7 +210,7 @@ describe('NotificationStatsWidget — compact layout', () => {
     renderWidget(COMPACT);
     // 118 / 120 → 98.333… → one decimal.
     expect(screen.getByText('98.3%')).toBeInTheDocument();
-    expect(screen.getByText('Delivery Rate')).toBeInTheDocument();
+    expect(screen.getByText('Delivery rate')).toBeInTheDocument();
     expect(screen.getByText('2 failed')).toBeInTheDocument();
   });
 
@@ -244,11 +244,11 @@ describe('NotificationStatsWidget — standard layout', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Notification Stats')).toBeInTheDocument();
-    expect(screen.getByText('Total Sent (7d)')).toBeInTheDocument();
-    expect(screen.getByText('Delivery Rate')).toBeInTheDocument();
+    expect(screen.getByText('Notification stats')).toBeInTheDocument();
+    expect(screen.getByText('Total sent (7d)')).toBeInTheDocument();
+    expect(screen.getByText('Delivery rate')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
-    expect(screen.getByText('Active Channels')).toBeInTheDocument();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
 
     // Values: total sent (also echoed as its "up" trend), delivery rate,
     // failed, active channels.
@@ -269,15 +269,15 @@ describe('NotificationStatsWidget — standard layout', () => {
     mockUseLogs.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Total Sent (7d)')).toBeNull();
+    expect(screen.queryByText('Total sent (7d)')).toBeNull();
   });
 
   it('shows the title + empty state (not the grid) when stats are absent', () => {
     mockUseLogs.mockReturnValue(qr({ data: [makeLog()] }));
     renderWidget(STANDARD);
-    expect(screen.getByText('Notification Stats')).toBeInTheDocument();
+    expect(screen.getByText('Notification stats')).toBeInTheDocument();
     expect(screen.getByText('No notification data')).toBeInTheDocument();
-    expect(screen.queryByText('Active Channels')).toBeNull();
+    expect(screen.queryByText('Active channels')).toBeNull();
   });
 
   it('does NOT render the recent-log table below the standard breakpoint', () => {
@@ -376,7 +376,7 @@ describe('NotificationStatsWidget — wide layout', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     mockUseLogs.mockReturnValue(qr({ data: [] }));
     renderWidget(WIDE);
-    expect(screen.getByText('Active Channels')).toBeInTheDocument();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
     // No logs → no table headers.
     expect(screen.queryByText('Title')).toBeNull();
     expect(screen.queryByText('Status')).toBeNull();

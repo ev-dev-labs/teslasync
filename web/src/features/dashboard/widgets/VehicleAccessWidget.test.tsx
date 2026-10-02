@@ -92,6 +92,36 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+describe('VehicleAccessWidget independent source trust', () => {
+  it('does not turn missing drivers into zero authorized drivers in compact mode', () => {
+    setDrivers({ data: undefined, isError: true });
+    setMobile({ data: makeMobileEnvelope(false) });
+    renderWidget(COMPACT);
+    expect(screen.getByText('— drivers')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Mobile access disabled' })).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+  });
+
+  it('retains drivers when invitations fail and preserves the invitations error section', () => {
+    setDrivers({ data: [makeDriver()] });
+    setInvitations({ data: undefined, isError: true });
+    renderWidget(FULL);
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Pending invitations')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('No pending invitations')).toBeNull();
+  });
+
+  it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 2 }, { cols: 4, rows: 4 }])('retains driver/mobile evidence and visible refresh warning in %o', (size) => {
+    setDrivers({ data: [makeDriver()], isError: true });
+    setMobile({ data: makeMobileEnvelope(false) });
+    renderWidget(size);
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    if (size.cols === 1) expect(screen.getByText('1 drivers')).toBeInTheDocument();
+    else expect(screen.getByText('Alice')).toBeInTheDocument();
+  });
+});
+
 // Freshness chip display hooks — stubbed so the WidgetShell header renders
 // deterministically without a Settings/QueryClient provider.
 vi.mock('@/hooks/useDateFormat', () => ({
@@ -216,7 +246,7 @@ describe('VehicleAccessWidget — loading / error / empty states', () => {
     const { container } = renderWidget(FULL);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('heading', { name: /Vehicle Access/i })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /Vehicle access/i })).toBeInTheDocument();
     expect(screen.queryByText('No access data available')).toBeNull();
   });
 
@@ -254,9 +284,9 @@ describe('VehicleAccessWidget — loading / error / empty states', () => {
     setMobile({ isError: true, data: makeMobileEnvelope(true) });
     renderWidget(FULL);
 
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
     expect(screen.queryByText("Can't reach server")).toBeNull();
-    expect(screen.getByText('Mobile Access')).toBeInTheDocument();
+    expect(screen.getByText('Mobile access')).toBeInTheDocument();
     expect(screen.getByText('Enabled')).toBeInTheDocument();
   });
 
@@ -266,7 +296,9 @@ describe('VehicleAccessWidget — loading / error / empty states', () => {
     setMobile({ data: makeMobileEnvelope(null) });
     renderWidget(FULL);
 
-    expect(screen.getByText('No access data available')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('No authorized drivers')).toBeInTheDocument();
+    expect(screen.getByText('No pending invitations')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
@@ -284,10 +316,10 @@ describe('VehicleAccessWidget — standard layout', () => {
     });
     renderWidget(FULL);
 
-    expect(screen.getByRole('heading', { name: /Vehicle Access/i })).toBeInTheDocument();
-    expect(screen.getByText('Mobile Access')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Vehicle access/i })).toBeInTheDocument();
+    expect(screen.getByText('Mobile access')).toBeInTheDocument();
     expect(screen.getByText('Enabled')).toBeInTheDocument();
-    expect(screen.getByText('Authorized Drivers')).toBeInTheDocument();
+    expect(screen.getByText('Authorized drivers')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.getByText('Owner')).toBeInTheDocument();
@@ -338,7 +370,7 @@ describe('VehicleAccessWidget — standard layout', () => {
     });
     renderWidget(FULL);
 
-    expect(screen.getByText('Pending Invitations')).toBeInTheDocument();
+    expect(screen.getByText('Pending invitations')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.getByText('Carol')).toBeInTheDocument();
     expect(screen.getByText('Dave')).toBeInTheDocument();
@@ -347,13 +379,14 @@ describe('VehicleAccessWidget — standard layout', () => {
     expect(screen.getByText('Expired')).toBeInTheDocument();
   });
 
-  it('hides the pending-invitations section when there are no invitations', () => {
+  it('preserves the pending-invitations section with an explicit empty state', () => {
     setDrivers({ data: [makeDriver({ driver_name: 'Alice' })] });
     setInvitations({ data: [] });
     setMobile({ data: makeMobileEnvelope(null) });
     renderWidget(FULL);
 
-    expect(screen.queryByText('Pending Invitations')).toBeNull();
+    expect(screen.getByText('Pending invitations')).toBeInTheDocument();
+    expect(screen.getByText('No pending invitations')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
 });
@@ -366,10 +399,10 @@ describe('VehicleAccessWidget — compact layout', () => {
     setDrivers({ data: [makeDriver({ id: 1 }), makeDriver({ id: 2 })] });
     const { container } = renderWidget(COMPACT);
 
-    expect(container.textContent).toContain('2 Drivers');
+    expect(container.textContent).toContain('2 drivers');
     expect(screen.getByRole('img', { name: 'Mobile access enabled' })).toBeInTheDocument();
     // The standard-layout scaffolding must not leak into the compact view.
-    expect(screen.queryByText('Authorized Drivers')).toBeNull();
+    expect(screen.queryByText('Authorized drivers')).toBeNull();
   });
 
   it('labels the mobile-status dot "disabled" when mobile access is off', () => {
@@ -440,6 +473,6 @@ describe('VehicleAccessWidget — interactions & a11y', () => {
   it('exposes the widget title as a heading', () => {
     renderWidget(FULL);
 
-    expect(screen.getByRole('heading', { name: /Vehicle Access/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Vehicle access/i })).toBeInTheDocument();
   });
 });

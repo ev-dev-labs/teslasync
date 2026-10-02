@@ -137,7 +137,7 @@ function CompactView({
   return (
     <WidgetBigNumber
       value={activeCount}
-      label={t('widget.exportActiveJobs', 'Active Exports')}
+      label={t('widget.exportActiveJobs', 'Active exports')}
       badge={{
         text: hasRunning
           ? t('widget.exportRunningBadge', 'Running')
@@ -300,7 +300,7 @@ export default function ExportStatusWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.exportStatus', 'Export Status')}
+      title={t('widget.exportStatus', 'Export status')}
       icon={<Download className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
       updatedAt={updatedAt}

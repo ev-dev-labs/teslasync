@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, BatteryCharging, Leaf, DollarSign, Route, TrendingUp } from 'lucide-react';
 import {
@@ -6,52 +6,62 @@ import {
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
   ChartTooltip, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
-import { AnimatedNumber } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
+import { DataProvenanceBadge } from '@/components/data-display';
+import { Caption } from '@/components/ui';
+import { EmptyState, Skeleton } from '@/components/feedback';
+import { knownNumber } from '@/api/dataState';
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
+import { useDataState } from '@/hooks/useDataState';
+import { convertEfficiencyFromSI, convertEnergyFromSI, type EnergyUnitPref } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatGrid, type StatGridItem } from './shared';
+import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import type { DailyEnergy } from '@/types/energy';
-
-const GRADIENT_ID = 'energy-stats-area-grad';
 
 /** A single point on the daily-energy area chart. */
 export interface EnergyChartPoint extends ChartDataRow {
   date: string;
-  /** Daily energy in kWh, converted from the SI watt-hour source. */
-  energy: number;
+  /** Daily energy converted from Wh to the selected display unit. */
+  energy: number | null;
 }
 
-/**
- * Map the SI watt-hour daily breakdown to chart points in kWh. The chart's
- * axis, tooltip, and series name are all labelled "kWh", so the series values
- * must be in kWh too — plotting raw watt-hours under a kWh label overstated
- * every point by 1000×. Null-safe for a missing breakdown or per-day energy.
- */
+/** Keep chart values and unit labels aligned; missing readings remain gaps. */
 export function buildEnergyChartData(
   breakdown: DailyEnergy[] | null | undefined,
+  unit: EnergyUnitPref = 'kWh',
 ): EnergyChartPoint[] {
-  return (breakdown ?? []).map((d) => ({
-    date: d.date,
-    energy: (d.energy_wh ?? 0) / 1000,
-  }));
+  return (Array.isArray(breakdown) ? breakdown : []).filter((d) => d?.date).map((d) => {
+    const energy = knownNumber(d.energy_wh);
+    return { date: d.date, energy: energy == null ? null : convertEnergyFromSI(energy, unit) };
+  });
 }
 
-export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
+export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
-  const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const gradientId = useId();
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const id = vehicleId ?? config?.vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const {
-    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useEnergyStats(id > 0 ? String(id) : null);
+  const query = useEnergyStats(id > 0 ? String(id) : null);
+  const { data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+  const loading = isLoading || (!id && vehiclesLoading);
+  const queryError = error ?? (!id ? vehiclesError : null);
+  const dataState = useDataState({
+    ...query,
+    data: data ?? (loading || queryError || isError ? undefined : null),
+    error: queryError,
+  }, { provenance: 'historical', partial: !!data && [
+    data.total_energy_used_wh, data.total_energy_charged_wh,
+    data.avg_efficiency_wh_per_m, data.co2_saved_kg,
+  ].some((value) => knownNumber(value) == null) });
 
   const { unitPrefs, formatEnergy } = useUnits();
   const toEfficiencyDisplay = useCallback(
-    (whPerM: number) => (unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000),
+    (whPerM: number) => convertEfficiencyFromSI(whPerM * 1000, unitPrefs.distance),
     [unitPrefs.distance],
   );
 
@@ -63,12 +73,12 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
   const dailyBreakdown = data?.daily_breakdown;
 
   const chartData = useMemo(
-    () => buildEnergyChartData(dailyBreakdown),
-    [dailyBreakdown],
+    () => buildEnergyChartData(dailyBreakdown, unitPrefs.energy),
+    [dailyBreakdown, unitPrefs.energy],
   );
 
   const hasData = !!data;
-  const hasChartData = chartData.length > 0;
+  const hasChartData = chartData.some((point) => point.energy != null);
 
   // Build stat items for the grid
   const stats = useMemo((): StatGridItem[] => {
@@ -76,24 +86,24 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
 
     const items: StatGridItem[] = [
       {
-        label: t('widget.energyStats.totalUsed', 'Total Used'),
-        value: formatEnergy(data.total_energy_used_wh ?? 0, { precision: 1 }),
+        label: t('widget.energyStats.totalUsed', 'Total used'),
+        value: formatEnergy(knownNumber(data.total_energy_used_wh), { precision: 1 }),
         icon: <Zap className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.energyStats.totalCharged', 'Total Charged'),
-        value: formatEnergy(data.total_energy_charged_wh ?? 0, { precision: 1 }),
+        label: t('widget.energyStats.totalCharged', 'Total charged'),
+        value: formatEnergy(knownNumber(data.total_energy_charged_wh), { precision: 1 }),
         icon: <BatteryCharging className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.energyStats.avgEfficiency', 'Avg Efficiency'),
-        value: fmtNumber(toEfficiencyDisplay(data.avg_efficiency_wh_per_m ?? 0), 1),
+        label: t('widget.energyStats.avgEfficiency', 'Avg efficiency'),
+        value: knownNumber(data.avg_efficiency_wh_per_m) == null ? null : fmtNumber(toEfficiencyDisplay(data.avg_efficiency_wh_per_m), 1),
         unit: efficiencyUnit,
         icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
       {
-        label: t('widget.energyStats.co2Saved', 'CO₂ Saved'),
-        value: fmtNumber(data.co2_saved_kg ?? 0, 1),
+        label: t('widget.energyStats.co2Saved', 'CO₂ saved'),
+        value: knownNumber(data.co2_saved_kg) == null ? null : fmtNumber(data.co2_saved_kg, 1),
         unit: 'kg',
         icon: <Leaf className="h-3.5 w-3.5" />,
       },
@@ -102,14 +112,18 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
     if (isWide) {
       items.push(
         {
-          label: t('widget.energyStats.totalCost', 'Total Cost'),
-          value: fmtNumber(data.total_cost ?? 0, 2),
+          label: t('widget.energyStats.totalCost', 'Total cost'),
+          value: knownNumber(data.total_cost) == null ? null : fmtNumber(data.total_cost, 2),
           unit: '$',
           icon: <DollarSign className="h-3.5 w-3.5" />,
         },
         {
-          label: t('widget.energyStats.netBalance', 'Net Energy'),
-          value: formatEnergy((data.total_energy_charged_wh ?? 0) - (data.total_energy_used_wh ?? 0), { precision: 1 }),
+          label: t('widget.energyStats.netBalance', 'Net energy'),
+          value: formatEnergy(
+            knownNumber(data.total_energy_charged_wh) == null || knownNumber(data.total_energy_used_wh) == null
+              ? null : data.total_energy_charged_wh - data.total_energy_used_wh,
+            { precision: 1 },
+          ),
           icon: <Route className="h-3.5 w-3.5" />,
         },
       );
@@ -123,8 +137,9 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
   }, [refetch]);
 
   const shellProps = {
-    loading: isLoading,
-    error: error ? String(error) : null,
+    loading,
+    dataState,
+    loadingContent: <Skeleton className="h-full min-h-16 rounded-shape-sm" />,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -137,15 +152,11 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell {...shellProps}>
         {hasData ? (
-          <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
-            <AnimatedNumber
-              value={(data.total_wh ?? 0) / 1000}
-              className="text-2xl font-bold text-[var(--text-primary)]"
-            />
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-              {unitPrefs.energy}
-            </span>
-          </div>
+          <WidgetBigNumber
+            value={knownNumber(data.total_wh) == null ? null : convertEnergyFromSI(data.total_wh, unitPrefs.energy)}
+            unit={unitPrefs.energy}
+            align="center"
+          />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
@@ -162,16 +173,24 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.energyStats.title', 'Energy Stats')}
+      title={t('widget.energyStats.title', 'Energy stats')}
       icon={<Zap className="h-3.5 w-3.5 text-amber-400" />}
+      status={<DataProvenanceBadge provenance={dataState.provenance} status={dataState.status} />}
+      footer={hasData ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Caption>{t('widget.energyStats.co2Estimate', 'CO₂ savings are estimated.')}</Caption>
+          <DataProvenanceBadge provenance="inferred" />
+        </div>
+      ) : undefined}
       {...shellProps}
     >
       {hasData ? (
-        <div className="flex h-full flex-col gap-3">
+        <div className="flex h-full min-w-0 flex-col gap-3">
           {/* Area chart: daily energy usage */}
-          {hasChartData && (
-            <EmbeddedChart
-              title={t('widget.energyStats.title', 'Energy Stats')}
+          <EmbeddedChart
+              empty={!hasChartData}
+              emptyMessage={t('widget.energyStats.noData', 'No energy data available')}
+              title={t('widget.energyStats.title', 'Energy stats')}
               ariaLabel={t(
                 'widget.energyStats.chartAria',
                 'Daily driving energy usage',
@@ -179,7 +198,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
               data={chartData}
               dataColumns={[
                 { key: 'date', label: t('widget.energyStats.date', 'Date') },
-                { key: 'energy', label: t('widget.energyStats.energyKwh', 'Energy (kWh)') },
+                { key: 'energy', label: `${t('widget.energyStats.dailyUsage', 'Daily usage')} (${unitPrefs.energy})` },
               ]}
               className="min-h-0 flex-1"
             >
@@ -202,29 +221,28 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
                   <Tooltip
                     content={<ChartTooltip />}
                     formatter={(value: number) => [
-                      `${fmtNumber(value, 2)} kWh`,
-                      t('widget.energyStats.dailyUsage', 'Daily Usage'),
+                      `${fmtNumber(value, 2)} ${unitPrefs.energy}`,
+                      t('widget.energyStats.dailyUsage', 'Daily usage'),
                     ]}
-                    cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                    cursor={{ fill: chartTokens.gridStroke }}
                   />
                   <defs>
-                    <linearGradient id={GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={chartTokens.series[2]} stopOpacity={0.2} />
+                      <stop offset="95%" stopColor={chartTokens.series[2]} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <Area
                     type="monotone"
                     dataKey="energy"
-                    stroke="#f59e0b"
+                    stroke={chartTokens.series[2]}
                     strokeWidth={2}
-                    fill={`url(#${GRADIENT_ID})`}
-                    name={t('widget.energyStats.energyKwh', 'Energy (kWh)')}
+                    fill={`url(#${gradientId})`}
+                    name={`${t('widget.energyStats.dailyUsage', 'Daily usage')} (${unitPrefs.energy})`}
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </EmbeddedChart>
-          )}
+          </EmbeddedChart>
 
           {/* Stat cards grid */}
           <WidgetStatGrid stats={stats} cols={isWide ? 3 : 2} />
