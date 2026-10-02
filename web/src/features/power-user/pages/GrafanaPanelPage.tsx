@@ -183,7 +183,7 @@ function persistJson(value: string): void {
 
 export default function GrafanaPanelPage() {
   const { t } = useTranslation();
-  usePageTitle(t('powerGrafana.title', 'Grafana Panel Builder'));
+  usePageTitle(t('powerGrafana.title', 'Grafana panel builder'));
 
   const [panelJson, setPanelJson] = useState<string>(() => loadPersistedJson());
   const [status, setStatus] = useState<{ variant: CalloutVariant; message: string } | null>(
@@ -239,7 +239,7 @@ export default function GrafanaPanelPage() {
         variant: 'warning',
         message: t(
           'powerGrafana.editor.copyUnavailable',
-          'Clipboard access is not available in this browser. Select the text manually and copy with Ctrl+C / Cmd+C.',
+          'Clipboard access is not available in this browser. Select the text manually and copy with ctrl+C / cmd+C.',
         ),
       });
       return;
@@ -250,7 +250,7 @@ export default function GrafanaPanelPage() {
         variant: 'success',
         message: t(
           'powerGrafana.editor.copySuccess',
-          'Copied. Paste the JSON into your Grafana dashboard editor (Add panel → Edit JSON).',
+          'Copied. Paste the JSON into your Grafana dashboard editor (add panel → edit JSON).',
         ),
       });
     } catch {
@@ -258,7 +258,7 @@ export default function GrafanaPanelPage() {
         variant: 'danger',
         message: t(
           'powerGrafana.editor.copyFailed',
-          'Clipboard write failed. Select the text manually and copy with Ctrl+C / Cmd+C.',
+          'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
         ),
       });
     }
@@ -281,7 +281,7 @@ export default function GrafanaPanelPage() {
 
   return (
     <PageContainer
-      title={t('powerGrafana.title', 'Grafana Panel Builder')}
+      title={t('powerGrafana.title', 'Grafana panel builder')}
       subtitle={t(
         'powerGrafana.subtitle',
         'Build a Grafana panel JSON envelope against the curated catalog, then copy it into your own dashboard.',
@@ -395,14 +395,14 @@ export default function GrafanaPanelPage() {
                 </li>
                 <li>
                   <Text as="span" size="sm" color="secondary">
-                    {t('powerGrafana.workflow.step2', 'Click Copy to clipboard to grab the JSON.')}
+                    {t('powerGrafana.workflow.step2', 'Click copy to clipboard to grab the JSON.')}
                   </Text>
                 </li>
                 <li>
                   <Text as="span" size="sm" color="secondary">
                     {t(
                       'powerGrafana.workflow.step3',
-                      'In Grafana, choose Add panel → Edit JSON and paste it in.',
+                      'In Grafana, choose add panel → edit JSON and paste it in.',
                     )}
                   </Text>
                 </li>

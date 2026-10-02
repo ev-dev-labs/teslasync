@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -362,6 +362,26 @@ describe('ScienceLabPage', () => {
     expect(screen.getByTestId('science-tires').textContent).toMatch(/bar/);
   });
 
+  it('preserves notebook parameter identities, values, and intervals in shared semantic tables', async () => {
+    const data = notebook();
+    data.entries[0].parameters = { raw_case_Field: 1.23456, source: 'Tesla API Identity', omitted: null };
+    data.entries[0].ci = { low: -2, high: 0 };
+    scienceMocks.notebook.mockReturnValue(queryState({ data }));
+    const { fireEvent } = await import('@testing-library/react');
+    renderPage();
+    fireEvent.click(screen.getByText(/electrochem · Rest voltage maps SOC/));
+
+    const parameters = screen.getByRole('table', { name: 'Parameters' });
+    expect(within(parameters).getAllByRole('rowheader')).toHaveLength(2);
+    expect(within(parameters).getByRole('rowheader', { name: 'raw_case_Field' })).toBeInTheDocument();
+    expect(parameters).toHaveTextContent('1.235');
+    expect(parameters).toHaveTextContent('Tesla API Identity');
+    const intervals = screen.getByRole('table', { name: 'Confidence intervals' });
+    expect(within(intervals).getAllByRole('rowheader')).toHaveLength(2);
+    expect(within(intervals).getByRole('rowheader', { name: 'high' }).closest('tr')).toHaveTextContent('0');
+    expect(screen.getByTestId('science-notebook')).toHaveTextContent('Fit.');
+  });
+
   it('shows psi pressures in imperial mode', () => {
     settingsMock.unit_of_pressure = 'psi';
     renderPage();
@@ -395,7 +415,7 @@ describe('ScienceLabPage', () => {
     renderPage();
     expect(screen.queryByText(/Something went wrong/i)).not.toBeInTheDocument();
     expect(screen.getByTestId('science-electrochem').textContent).toMatch(/n=0/);
-    expect(screen.getByTestId('science-thermal').textContent).toMatch(/No Park cooldown/);
+    expect(screen.getByTestId('science-thermal').textContent).toMatch(/No park cooldown/);
     expect(screen.getByTestId('science-notebook').textContent).toMatch(/No notebook rows/);
     expect(screen.getByTestId('science-overview')).toHaveTextContent('0 rest points · 0 resistance steps');
   });

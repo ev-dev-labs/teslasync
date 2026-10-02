@@ -133,6 +133,10 @@ describe('ExplorePage — shell', () => {
     expect(
       screen.getByText(`Every feature in TeslaSync — ${ALL_COUNT} in total.`),
     ).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 1, name: 'Explore features' });
+    const header = heading.closest('[data-role="page-header"]');
+    expect(header).toHaveTextContent(`Every feature in TeslaSync — ${ALL_COUNT} in total.`);
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
     // Search input is reachable by its accessible name.
     expect(
       screen.getByRole('searchbox', { name: 'Filter features' }),

@@ -64,7 +64,7 @@ export function AuditTrailPanel({ refreshToken }: AuditTrailPanelProps) {
   return (
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.audit.title', 'Audit Trail')}</PanelTitle>
+        <PanelTitle>{t('resaleVault.audit.title', 'Audit trail')}</PanelTitle>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={() => void load()} icon={<RefreshCw className="h-3.5 w-3.5" />}>
             {t('resaleVault.audit.refresh', 'Refresh')}

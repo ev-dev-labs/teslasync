@@ -120,7 +120,7 @@ describe('DashboardsPage', () => {
 
     expect(screen.getByTestId('power-dashboards-composer-root')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 1, name: /Dashboard Composer/i }),
+      screen.getByRole('heading', { level: 1, name: /Dashboard composer/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('How it works')).toBeInTheDocument();
 

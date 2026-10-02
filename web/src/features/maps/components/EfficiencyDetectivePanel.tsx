@@ -38,7 +38,7 @@ export function EfficiencyDetectivePanel({ vehicleId }: EfficiencyDetectivePanel
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('tempImpact.detective.title', 'Efficiency Detective')}
+          {t('tempImpact.detective.title', 'Efficiency detective')}
         </PanelTitle>
         {data && (
           <Badge variant={verdictBadge(data.verdict, t).variant} size="sm">

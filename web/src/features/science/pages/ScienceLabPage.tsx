@@ -27,7 +27,7 @@ export default function ScienceLabPage() {
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
   const { selected: days, window, pickWindow } = useAnalysisWindow('days', WINDOW_PRESETS, 7);
 
-  const title = t('science.title', 'Science Lab');
+  const title = t('science.title', 'Science lab');
   usePageTitle(title);
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -43,7 +43,7 @@ export default function ScienceLabPage() {
       title={title}
       subtitle={t('science.subtitle', 'Every claim is a fit: n, uncertainty, firmware epoch, holdout.')}
       copyLink
-      contextActions={(
+      metadataActions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <DataProvenanceBadge provenance="historical" />
         </div>

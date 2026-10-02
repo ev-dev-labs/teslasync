@@ -159,7 +159,7 @@ describe('GrafanaPanelPage', () => {
       await screen.findByTestId('power-grafana-panel-builder-root'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 1, name: /Grafana Panel Builder/i }),
+      screen.getByRole('heading', { level: 1, name: /Grafana panel builder/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Build a Grafana panel JSON envelope against the curated catalog/i),

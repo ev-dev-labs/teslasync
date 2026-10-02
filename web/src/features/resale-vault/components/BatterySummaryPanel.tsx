@@ -24,7 +24,7 @@ export function BatterySummaryPanel({ battery }: BatterySummaryPanelProps) {
   return (
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.battery.title', 'Battery Health')}</PanelTitle>
+        <PanelTitle>{t('resaleVault.battery.title', 'Battery health')}</PanelTitle>
         {battery?.health_grade && <Badge variant="info">{battery.health_grade}</Badge>}
       </div>
 

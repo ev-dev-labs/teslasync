@@ -31,16 +31,16 @@ export function ThermalPanel({ window }: { window: ScienceWindow }) {
   const columns: Column<ScienceThermalFit>[] = [
     { key: 'start', header: t('science.thermal.start', 'Park start'), render: (r) => formatDateTime(r.start) },
     { key: 'kind', header: t('science.thermal.kind', 'Fit'), render: (r) => r.kind },
-    { key: 'samples', header: t('science.thermal.samples', 'Samples'), render: (r) => fmtNumber(r.n, 0) },
-    { key: 'tau', header: t('science.thermal.tau', 'Cooldown τ'), render: (r) => r.tau_s != null ? formatDuration(r.tau_s) : unknown(t) },
-    { key: 'interval', header: t('science.thermal.interval', '95% CI for τ'), render: (r) =>
+    { key: 'samples', align: 'right', header: t('science.thermal.samples', 'Samples'), render: (r) => fmtNumber(r.n, 0) },
+    { key: 'tau', align: 'right', header: t('science.thermal.tau', 'Cooldown τ'), render: (r) => r.tau_s != null ? formatDuration(r.tau_s) : unknown(t) },
+    { key: 'interval', align: 'right', header: t('science.thermal.interval', '95% CI for τ'), render: (r) =>
       r.tau_ci95_low != null && r.tau_ci95_high != null
         ? `${formatDuration(r.tau_ci95_low)}…${formatDuration(r.tau_ci95_high)}`
         : unknown(t) },
-    { key: 'r2', header: t('science.thermal.r2', 'R²'), render: (r) => r.r2 != null ? fmtNumber(r.r2, 2) : unknown(t) },
-    { key: 'rmse', header: t('science.thermal.rmse', 'Residual RMSE'), render: (r) =>
+    { key: 'r2', align: 'right', header: t('science.thermal.r2', 'R²'), render: (r) => r.r2 != null ? fmtNumber(r.r2, 2) : unknown(t) },
+    { key: 'rmse', align: 'right', header: t('science.thermal.rmse', 'Residual RMSE'), render: (r) =>
       r.residual_rmse_c != null ? formatTemperatureDelta(r.residual_rmse_c, unitPrefs, { precision: 2 }) : unknown(t) },
-    { key: 'ambient', header: t('science.thermal.ambient', 'Fitted ambient'), render: (r) =>
+    { key: 'ambient', align: 'right', header: t('science.thermal.ambient', 'Fitted ambient'), render: (r) =>
       r.t_inf_c != null ? formatTemperature(r.t_inf_c) : unknown(t) },
     { key: 'solar', header: t('science.thermal.solar', 'Solar input'), render: (r) =>
       r.solar_unknown ? unknown(t) : t('science.thermal.solarKnown', 'Available') },
@@ -67,7 +67,7 @@ export function ThermalPanel({ window }: { window: ScienceWindow }) {
             columns={columns}
             data={asList(data.fits)}
             keyExtractor={(r) => `${r.kind}-${r.start}`}
-            emptyMessage={t('science.thermal.empty', 'No Park cooldown transients with ambient reference in this window.')}
+            emptyMessage={t('science.thermal.empty', 'No park cooldown transients with ambient reference in this window.')}
             pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
             mobileColumns={['kind', 'tau', 'samples']}
           />

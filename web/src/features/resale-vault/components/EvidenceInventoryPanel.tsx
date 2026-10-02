@@ -6,7 +6,7 @@
  * privacy/redaction preview (which shows what would be REMOVED).
  */
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge } from '@/components/ui';
+import { GlassPanel, Badge, Table } from '@/components/ui';
 import { PanelTitle, HelperText } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import { AlertTriangle } from 'lucide-react';
@@ -28,7 +28,7 @@ export function EvidenceInventoryPanel({ evidence, selection, isLoading, hasPart
   return (
     <GlassPanel padding="lg" className="space-y-4">
       <div>
-        <PanelTitle>{t('resaleVault.inventory.title', 'Evidence Inventory')}</PanelTitle>
+        <PanelTitle>{t('resaleVault.inventory.title', 'Evidence inventory')}</PanelTitle>
         <HelperText className="mt-1">
           {t('resaleVault.inventory.subtitle', 'What data is available for this vehicle, and whether the current disclosure profile would include it.')}
         </HelperText>
@@ -43,15 +43,17 @@ export function EvidenceInventoryPanel({ evidence, selection, isLoading, hasPart
         </InlineCallout>
       )}
 
-      <ul className="divide-y divide-white/[0.06]">
+      <Table aria-label={t('resaleVault.inventory.title', 'Evidence inventory')}>
+
+        <tbody>
         {ALL_EVIDENCE_SECTIONS.map((section: EvidenceSectionId) => {
           const labels = SECTION_LABEL_KEYS[section];
           const hasData = evidence[section] != null;
           const isSelected = selectedSet.has(section);
           return (
-            <li key={section} className="flex items-center justify-between gap-3 py-2.5">
-              <span className="text-sm text-[var(--text-primary)]">{t(labels.key, labels.fallback)}</span>
-              <span className="flex items-center gap-2">
+            <tr key={section}>
+              <th scope="row"><span className="text-sm text-[var(--text-primary)]">{t(labels.key, labels.fallback)}</span></th>
+              <td>
                 <Badge variant={hasData ? 'success' : 'neutral'}>
                   {isLoading
                     ? t('resaleVault.inventory.loading', 'Loading…')
@@ -59,16 +61,19 @@ export function EvidenceInventoryPanel({ evidence, selection, isLoading, hasPart
                       ? t('resaleVault.inventory.dataFound', 'Data found')
                       : t('resaleVault.inventory.noData', 'No data')}
                 </Badge>
+              </td>
+              <td>
                 <Badge variant={isSelected ? 'info' : 'neutral'}>
                   {isSelected
                     ? t('resaleVault.inventory.included', 'Included')
                     : t('resaleVault.inventory.excluded', 'Excluded by profile')}
                 </Badge>
-              </span>
-            </li>
+              </td>
+            </tr>
           );
         })}
-      </ul>
+        </tbody>
+      </Table>
     </GlassPanel>
   );
 }

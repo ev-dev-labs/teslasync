@@ -92,7 +92,7 @@ function persistSql(value: string): void {
 
 export default function SqlPlaygroundPage() {
   const { t } = useTranslation();
-  usePageTitle(t('powerSql.title', 'SQL Playground'));
+  usePageTitle(t('powerSql.title', 'SQL playground'));
 
   const [sql, setSql] = useState<string>(() => loadPersistedSql());
   const [runMessage, setRunMessage] = useState<string>('');
@@ -164,7 +164,7 @@ export default function SqlPlaygroundPage() {
 
   return (
     <PageContainer
-      title={t('powerSql.title', 'SQL Playground')}
+      title={t('powerSql.title', 'SQL playground')}
       subtitle={t(
         'powerSql.subtitle',
         'Compose read-only SELECT / WITH queries against the curated schema catalog. Queries never execute in the browser — copy them into your database client.',

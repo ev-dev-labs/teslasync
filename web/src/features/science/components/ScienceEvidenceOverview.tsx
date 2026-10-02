@@ -48,7 +48,7 @@ export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
       state: thermal,
       hasEvidence: thermalCount > 0,
       measure: t('science.overview.thermalMeasure', '{{count}} qualified cooldown fits', { count: fmtNumber(thermalCount, 0) }),
-      meaning: t('science.overview.thermalMeaning', 'Only observed Park cooldowns qualify; inspect uncertainty below.'),
+      meaning: t('science.overview.thermalMeaning', 'Only observed park cooldowns qualify; inspect uncertainty below.'),
     },
     {
       id: 'science-weather',

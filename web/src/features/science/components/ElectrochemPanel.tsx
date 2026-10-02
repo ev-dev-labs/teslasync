@@ -36,36 +36,36 @@ export function ElectrochemPanel({ window }: { window: ScienceWindow }) {
 
   const restColumns: Column<ScienceOCVPoint>[] = [
     { key: 'at', header: t('science.electrochem.observedAt', 'Observed'), render: (r) => formatDateTime(r.at) },
-    { key: 'soc', header: t('science.electrochem.soc', 'SOC'), render: (r) => `${fmtNumber(r.soc_pct, 1)}%` },
-    { key: 'voltage', header: t('science.electrochem.packVoltage', 'Pack voltage'), render: (r) => `${fmtNumber(r.ocv_pack_v, 2)} V` },
-    { key: 'dwell', header: t('science.electrochem.dwell', 'Rest dwell'), render: (r) => formatDuration(r.dwell_s) },
-    { key: 'temperature', header: t('science.electrochem.temperature', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
+    { key: 'soc', align: 'right', header: t('science.electrochem.soc', 'SOC'), render: (r) => `${fmtNumber(r.soc_pct, 1)}%` },
+    { key: 'voltage', align: 'right', header: t('science.electrochem.packVoltage', 'Pack voltage'), render: (r) => `${fmtNumber(r.ocv_pack_v, 2)} V` },
+    { key: 'dwell', align: 'right', header: t('science.electrochem.dwell', 'Rest dwell'), render: (r) => formatDuration(r.dwell_s) },
+    { key: 'temperature', align: 'right', header: t('science.electrochem.temperature', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
     { key: 'direction', header: t('science.electrochem.direction', 'Direction'), render: (r) => r.direction },
   ];
   const irColumns: Column<ScienceIRPoint>[] = [
     { key: 'at', header: t('science.electrochem.observedAt', 'Observed'), render: (r) => formatDateTime(r.at) },
-    { key: 'resistance', header: t('science.electrochem.irMilliohm', 'Pack IR (mΩ)'), render: (r) => `${fmtNumber(r.ir_pack_ohm * 1000, 2)} mΩ` },
-    { key: 'current', header: t('science.electrochem.currentStep', 'Current step'), render: (r) => `${fmtNumber(r.delta_i_a, 1)} A` },
-    { key: 'temperature', header: t('science.electrochem.temperature', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
+    { key: 'resistance', align: 'right', header: t('science.electrochem.irMilliohm', 'Pack IR (mΩ)'), render: (r) => `${fmtNumber(r.ir_pack_ohm * 1000, 2)} mΩ` },
+    { key: 'current', align: 'right', header: t('science.electrochem.currentStep', 'Current step'), render: (r) => `${fmtNumber(r.delta_i_a, 1)} A` },
+    { key: 'temperature', align: 'right', header: t('science.electrochem.temperature', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
     { key: 'context', header: t('science.electrochem.context', 'Context'), render: (r) => r.context },
   ];
 
   const binColumns: Column<ScienceElectrochem['ocv_bins'][number]>[] = [
     { key: 'soc', header: t('science.electrochem.socBin', 'SOC bin'), render: (r) => `${fmtNumber(r.soc_lo_pct, 0)}–${fmtNumber(r.soc_hi_pct, 0)} %` },
     { key: 'temp', header: t('science.electrochem.tempBin', 'Temp bin'), render: (r) => `${formatTemperature(r.temp_lo_c)}…${formatTemperature(r.temp_hi_c)}` },
-    { key: 'n', header: 'n', render: (r) => fmtNumber(r.n, 0) },
-    { key: 'ocv', header: t('science.electrochem.meanOcv', 'Mean OCV (V)'), render: (r) => fmtNumber(r.mean_ocv_v, 2) },
+    { key: 'n', align: 'right', header: 'n', render: (r) => fmtNumber(r.n, 0) },
+    { key: 'ocv', align: 'right', header: t('science.electrochem.meanOcv', 'Mean OCV (V)'), render: (r) => fmtNumber(r.mean_ocv_v, 2) },
     {
-      key: 'slope', header: t('science.electrochem.slope', 'Slope V/%'), render: (r) => (r.slope_v_per_pct != null ? fmtNumber(r.slope_v_per_pct, 4) : unknown(t)),
+      key: 'slope', align: 'right', header: t('science.electrochem.slope', 'Slope V/%'), render: (r) => (r.slope_v_per_pct != null ? fmtNumber(r.slope_v_per_pct, 4) : unknown(t)),
     },
   ];
   const hystColumns: Column<ScienceElectrochem['hysteresis'][number]>[] = [
     { key: 'temp', header: t('science.electrochem.tempBin', 'Temp bin'), render: (r) => `${formatTemperature(r.temp_lo_c)}…${formatTemperature(r.temp_hi_c)}` },
     { key: 'soc', header: t('science.electrochem.socBin', 'SOC bin'), render: (r) => `${fmtNumber(r.soc_lo_pct, 0)}–${fmtNumber(r.soc_hi_pct, 0)} %` },
-    { key: 'nc', header: t('science.electrochem.nCharge', 'n charge'), render: (r) => fmtNumber(r.n_charge, 0) },
-    { key: 'nd', header: t('science.electrochem.nDischarge', 'n discharge'), render: (r) => fmtNumber(r.n_discharge, 0) },
+    { key: 'nc', align: 'right', header: t('science.electrochem.nCharge', 'n charge'), render: (r) => fmtNumber(r.n_charge, 0) },
+    { key: 'nd', align: 'right', header: t('science.electrochem.nDischarge', 'n discharge'), render: (r) => fmtNumber(r.n_discharge, 0) },
     {
-      key: 'dv', header: t('science.electrochem.deltaV', 'ΔV (V)'), render: (r) => (r.delta_v != null ? fmtNumber(r.delta_v, 3) : unknown(t)),
+      key: 'dv', align: 'right', header: t('science.electrochem.deltaV', 'ΔV (V)'), render: (r) => (r.delta_v != null ? fmtNumber(r.delta_v, 3) : unknown(t)),
     },
   ];
 

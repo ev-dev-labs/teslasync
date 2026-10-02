@@ -4,6 +4,7 @@ import type {
 import {
   Badge,
   Caption,
+  Table,
   Text
 } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -12,18 +13,27 @@ import { asList, unknown, useT } from './helpers';
 
 export function EntryDetail({ entry }: { entry: ScienceNotebookEntry }) {
   const t = useT();
-  const kv = (obj?: Record<string, unknown>) => {
+  const kv = (label: string, obj?: Record<string, unknown>) => {
     if (!obj) return null;
     const rows = Object.entries(obj).filter(([, v]) => v != null);
     if (rows.length === 0) return null;
     return (
-      <div className="space-y-0.5">
-        {rows.map(([k, v]) => (
-          <Text key={k} as="p" size="sm" color="secondary" mono>
-            {k}: {typeof v === 'number' ? fmtNumber(v, 3) : String(v)}
-          </Text>
-        ))}
-      </div>
+      <Table aria-label={label}>
+        <tbody>
+          {rows.map(([k, v]) => (
+            <tr key={k}>
+              <th scope="row" className="font-normal">
+                <Text size="sm" color="secondary" mono>{k}</Text>
+              </th>
+              <td className={typeof v === 'number' ? 'text-right tabular-nums' : undefined}>
+                <Text size="sm" color="secondary" mono>
+                  {typeof v === 'number' ? fmtNumber(v, 3) : String(v)}
+                </Text>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
     );
   };
   return (
@@ -54,8 +64,8 @@ export function EntryDetail({ entry }: { entry: ScienceNotebookEntry }) {
       <Text as="p" size="sm" color="secondary">
         {t('science.notebook.recordId', 'Generated record')}: {entry.id}
       </Text>
-      {kv(entry.parameters)}
-      {kv(entry.ci)}
+      {kv(t('science.notebook.parameters', 'Parameters'), entry.parameters)}
+      {kv(t('science.notebook.ci', 'Confidence intervals'), entry.ci)}
       <Caption>{formatDateTime(entry.start)} → {formatDateTime(entry.end)}</Caption>
       <Text as="p" size="sm" color="secondary">{entry.honesty}</Text>
     </div>

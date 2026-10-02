@@ -513,22 +513,22 @@ export default function GeofencesPage() {
       title={t('geofences.title', 'Geofences')}
       subtitle={t('geofences.subtitle', 'Define locations for contextual tracking and automation')}
       query={geofencesQuery}
-      actions={
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            onClick={() => geofencesQuery.refetch()}
-            aria-label={t('common.refresh', 'Refresh')}
-          >
-            <RefreshCw
-              className={cn('h-4 w-4', geofencesQuery.isFetching && 'animate-spin')}
-              aria-hidden="true"
-            />
-          </Button>
-          <Button variant="primary" icon={<Plus className="h-4 w-4" aria-hidden="true" />} onClick={openCreate}>
-            {t('geofences.addGeofence', 'Add Geofence')}
-          </Button>
-        </div>
+      secondaryActions={
+        <Button
+          variant="ghost"
+          onClick={() => geofencesQuery.refetch()}
+          aria-label={t('common.refresh', 'Refresh')}
+        >
+          <RefreshCw
+            className={cn('h-4 w-4', geofencesQuery.isFetching && 'animate-spin')}
+            aria-hidden="true"
+          />
+        </Button>
+      }
+      primaryAction={
+        <Button variant="primary" icon={<Plus className="h-4 w-4" aria-hidden="true" />} onClick={openCreate}>
+          {t('geofences.addGeofence', 'Add geofence')}
+        </Button>
       }
     >
       {/* 1 — KPI band: full-width responsive metric grid. Always visible with a
@@ -545,7 +545,7 @@ export default function GeofencesPage() {
           ) : (
             <>
               <MetricCard
-                label={t('geofences.totalGeofences', 'Total Geofences')}
+                label={t('geofences.totalGeofences', 'Total geofences')}
                 value={stats.total ?? 0}
                 icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
                 color="purple"
@@ -645,7 +645,7 @@ export default function GeofencesPage() {
       <Modal
         open={modalOpen}
         onClose={handleRequestClose}
-        title={editingId ? t('geofences.editTitle', 'Edit Geofence') : t('geofences.createTitle', 'Create Geofence')}
+        title={editingId ? t('geofences.editTitle', 'Edit geofence') : t('geofences.createTitle', 'Create geofence')}
         size="md"
       >
         <div className="space-y-4">
@@ -657,7 +657,7 @@ export default function GeofencesPage() {
             <GlassPanel className="space-y-3 p-4">
               <div className="flex items-center gap-2">
                 <Navigation className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-                <Label>{t('geofences.useCurrentLocation', 'Use Current Location')}</Label>
+                <Label>{t('geofences.useCurrentLocation', 'Use current location')}</Label>
               </div>
 
               <Tabs
@@ -672,7 +672,7 @@ export default function GeofencesPage() {
 
               {locationSource === 'vehicle' && (
                 <Select
-                  label={t('geofences.selectVehicle', 'Select Vehicle')}
+                  label={t('geofences.selectVehicle', 'Select vehicle')}
                   options={[
                     ...(vehicles.length === 0
                       ? [{
@@ -733,7 +733,7 @@ export default function GeofencesPage() {
                 >
                   {locationLoading
                     ? t('geofences.gettingLocation', 'Getting location…')
-                    : t('geofences.getLocation', 'Get Location')}
+                    : t('geofences.getLocation', 'Get location')}
                 </Button>
               )}
             </GlassPanel>
@@ -842,7 +842,7 @@ export default function GeofencesPage() {
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
         open={deleteTarget !== null}
-        title={t('geofences.deleteTitle', 'Delete Geofence')}
+        title={t('geofences.deleteTitle', 'Delete geofence')}
         message={t('geofences.deleteMessage', 'Are you sure you want to delete "{{name}}"? This action cannot be undone.', {
           name: deleteTarget?.name ?? '',
         })}

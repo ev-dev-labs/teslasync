@@ -176,7 +176,7 @@ describe('SqlPlaygroundPage', () => {
 
     // Page chrome.
     expect(
-      await screen.findByRole('heading', { name: 'SQL Playground', level: 1 }),
+      await screen.findByRole('heading', { name: 'SQL playground', level: 1 }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Compose read-only SELECT \/ WITH queries/i),

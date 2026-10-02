@@ -24,7 +24,7 @@ export function PrivacyPreviewPanel({ report }: PrivacyPreviewPanelProps) {
   if (!report) {
     return (
       <GlassPanel padding="lg">
-        <PanelTitle>{t('resaleVault.preview.title', 'Privacy Preview')}</PanelTitle>
+        <PanelTitle>{t('resaleVault.preview.title', 'Privacy preview')}</PanelTitle>
         <HelperText className="mt-2">
           {t('resaleVault.preview.empty', 'Build a report to see exactly what would be included, excluded, and warned about.')}
         </HelperText>
@@ -37,7 +37,7 @@ export function PrivacyPreviewPanel({ report }: PrivacyPreviewPanelProps) {
   return (
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.preview.title', 'Privacy Preview')}</PanelTitle>
+        <PanelTitle>{t('resaleVault.preview.title', 'Privacy preview')}</PanelTitle>
         <Badge variant="neutral">{report.report_id}</Badge>
       </div>
 

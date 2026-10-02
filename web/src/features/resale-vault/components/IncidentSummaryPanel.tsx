@@ -21,7 +21,7 @@ export function IncidentSummaryPanel({ incidents }: IncidentSummaryPanelProps) {
 
   return (
     <GlassPanel padding="lg" className="space-y-4">
-      <PanelTitle>{t('resaleVault.incidents.title', 'Security Incidents')}</PanelTitle>
+      <PanelTitle>{t('resaleVault.incidents.title', 'Security incidents')}</PanelTitle>
 
       {!incidents ? (
         // no-action: mirrors this vehicle's Guard security-event history as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.

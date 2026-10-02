@@ -97,7 +97,7 @@ function bucketLabel(
 
 export default function TemperatureImpactPage() {
   const { t } = useTranslation();
-  usePageTitle(t('tempImpact.title', 'Temperature Impact'));
+  usePageTitle(t('tempImpact.title', 'Temperature impact'));
 
   /* --- unit conversion (SI display) ---
      Backend `/analytics/temperature-impact` emits SI: outside_temp °C,
@@ -215,6 +215,7 @@ export default function TemperatureImpactPage() {
       },
       {
         key: 'outside_temp',
+        align: 'right',
         header: t('tempImpact.temperature', 'Temperature'),
         sortable: true,
         render: (row) => (
@@ -225,6 +226,7 @@ export default function TemperatureImpactPage() {
       },
       {
         key: 'efficiency_wh_km',
+        align: 'right',
         header: t('tempImpact.efficiency', 'Efficiency'),
         sortable: true,
         render: (row) => (
@@ -235,6 +237,7 @@ export default function TemperatureImpactPage() {
       },
       {
         key: 'distance_km',
+        align: 'right',
         header: t('tempImpact.distance', 'Distance'),
         sortable: true,
         render: (row) => (
@@ -325,7 +328,7 @@ export default function TemperatureImpactPage() {
 
   return (
     <PageContainer
-      title={t('tempImpact.title', 'Temperature Impact')}
+      title={t('tempImpact.title', 'Temperature impact')}
       subtitle={t('tempImpact.subtitle', 'How outside temperature affects driving efficiency')}
       query={query}
     >
@@ -342,27 +345,27 @@ export default function TemperatureImpactPage() {
           className="grid grid-cols-2 gap-4 lg:grid-cols-4"
         >
           <MetricCard
-            label={t('tempImpact.avgEfficiency', 'Avg Efficiency')}
+            label={t('tempImpact.avgEfficiency', 'Avg efficiency')}
             value={stats ? `${fmtNumber(stats.avgEff)} ${effLabel}` : '—'}
             icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
-            label={t('tempImpact.bestRange', 'Best Temp Range')}
+            label={t('tempImpact.bestRange', 'Best temp range')}
             value={stats?.best?.label ?? '—'}
             icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
             color="green"
             subtitle={stats?.best ? `${fmtNumber(stats.best.avg)} ${effLabel}` : undefined}
           />
           <MetricCard
-            label={t('tempImpact.worstRange', 'Worst Temp Range')}
+            label={t('tempImpact.worstRange', 'Worst temp range')}
             value={stats?.worst?.label ?? '—'}
             icon={<Sun className="h-4 w-4" aria-hidden="true" />}
             color="purple"
             subtitle={stats?.worst ? `${fmtNumber(stats.worst.avg)} ${effLabel}` : undefined}
           />
           <MetricCard
-            label={t('tempImpact.totalPoints', 'Total Data Points')}
+            label={t('tempImpact.totalPoints', 'Total data points')}
             value={stats?.total ?? 0}
             icon={<Activity className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
@@ -386,7 +389,7 @@ export default function TemperatureImpactPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tempImpact.scatterTitle', 'Temperature vs Efficiency')}
+              {t('tempImpact.scatterTitle', 'Temperature vs efficiency')}
             </PanelTitle>
             {sectionFallback(!hasPoints, {
               skeletonHeight: 288,
@@ -396,7 +399,7 @@ export default function TemperatureImpactPage() {
                 {/* chart-a11y:no-table per-drive scatter cloud — each point is one drive, not meaningful as a table */}
                 <div className="h-72 sm:h-80">
                   <EmbeddedChart
-                    title={t('tempImpact.scatterTitle', 'Temperature vs Efficiency')}
+                    title={t('tempImpact.scatterTitle', 'Temperature vs efficiency')}
                     ariaLabel={t('tempImpact.scatterAria', 'Scatter plot of energy efficiency against outdoor temperature per drive')}
                     fluid
                   >
@@ -453,7 +456,7 @@ export default function TemperatureImpactPage() {
           <GlassPanel glow="green" className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('tempImpact.optimalTitle', 'Optimal Temperature Analysis')}
+              {t('tempImpact.optimalTitle', 'Optimal temperature analysis')}
             </PanelTitle>
             {sectionFallback(!stats?.best, {
               skeletonHeight: 220,
@@ -509,7 +512,7 @@ export default function TemperatureImpactPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tempImpact.bucketTitle', 'Efficiency by Temperature Range')}
+              {t('tempImpact.bucketTitle', 'Efficiency by temperature range')}
             </PanelTitle>
             {sectionFallback(!hasPoints, {
               skeletonHeight: 240,
@@ -518,7 +521,7 @@ export default function TemperatureImpactPage() {
               <div className="h-56 sm:h-64">
                 {/* chart-a11y:no-table efficiency-by-temp buckets — aggregate metric per range, not row-oriented */}
                 <EmbeddedChart
-                  title={t('tempImpact.bucketTitle', 'Efficiency by Temperature Range')}
+                  title={t('tempImpact.bucketTitle', 'Efficiency by temperature range')}
                   ariaLabel={t('tempImpact.bucketAria', 'Average efficiency line chart by temperature range bucket')}
                   fluid
                 >
@@ -535,7 +538,7 @@ export default function TemperatureImpactPage() {
                       <Line
                         {...AREA_DEFAULTS}
                         dataKey="avg"
-                        name={`${t('tempImpact.avgEff', 'Avg Efficiency')} (${effLabel})`}
+                        name={`${t('tempImpact.avgEff', 'Avg efficiency')} (${effLabel})`}
                         stroke={CHART_COLORS[0]}
                         dot={{ r: 5, fill: CHART_COLORS[0] }}
                         activeDot={{ r: 7 }}
@@ -550,7 +553,7 @@ export default function TemperatureImpactPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <CalendarRange className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tempImpact.monthlyTitle', 'Monthly Seasonal Trend')}
+              {t('tempImpact.monthlyTitle', 'Monthly seasonal trend')}
             </PanelTitle>
             {sectionFallback(!hasMonthly, {
               skeletonHeight: 240,
@@ -560,7 +563,7 @@ export default function TemperatureImpactPage() {
                 {/* chart-a11y:no-table dual-axis monthly composite (bars + line) — dual-scale not representable as single table */}
                 <EmbeddedChart
                   chartKey="temp-monthly-trend"
-                  title={t('tempImpact.monthlyTitle', 'Monthly Seasonal Trend')}
+                  title={t('tempImpact.monthlyTitle', 'Monthly seasonal trend')}
                   ariaLabel={t('tempImpact.monthlyAria', 'Monthly drive count bars and average temperature line')}
                   fluid
                 >
@@ -596,7 +599,7 @@ export default function TemperatureImpactPage() {
                           yAxisId="right"
                           {...AREA_DEFAULTS}
                           dataKey="temp"
-                          name={`${t('tempImpact.avgTemp', 'Avg Temp')} (${tempUnit})`}
+                          name={`${t('tempImpact.avgTemp', 'Avg temp')} (${tempUnit})`}
                           stroke={CHART_COLORS[3] ?? CHART_COLORS[1]}
                           dot={false}
                           hide={hiddenSeries?.isHidden('temp') ?? false}
@@ -645,7 +648,7 @@ export default function TemperatureImpactPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tempImpact.recentDrivesTitle', 'Recent Drives')}
+              {t('tempImpact.recentDrivesTitle', 'Recent drives')}
             </PanelTitle>
             {sectionFallback(!hasPoints, {
               skeletonHeight: 260,

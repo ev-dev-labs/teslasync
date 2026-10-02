@@ -62,7 +62,7 @@ beforeEach(() => {
 describe('BatteryCertificatePanel', () => {
   it('renders the certificate snapshot and signature prefix', () => {
     render(<BatteryCertificatePanel vehicleId="7" />);
-    expect(screen.getByText('Battery Certificate')).toBeInTheDocument();
+    expect(screen.getByText('Battery certificate')).toBeInTheDocument();
     expect(screen.getByText('91.5%')).toBeInTheDocument();
     expect(screen.getByText('412')).toBeInTheDocument();
     expect(screen.getByText(/Signature:/)).toBeInTheDocument();

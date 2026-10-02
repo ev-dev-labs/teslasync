@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { EvidenceInventoryPanel } from './EvidenceInventoryPanel';
 import { DISCLOSURE_PROFILE_SECTIONS } from '../lib/constants';
 import type { VaultEvidence, DisclosureSelection } from '../lib/types';
@@ -29,6 +29,7 @@ describe('EvidenceInventoryPanel', () => {
       <EvidenceInventoryPanel evidence={EMPTY_EVIDENCE} selection={selection()} isLoading={false} hasPartialErrors={false} />,
     );
     expect(screen.getAllByText('No data').length).toBe(8);
+    expect(within(screen.getByRole('table')).getAllByRole('rowheader')).toHaveLength(8);
   });
 
   it('shows "Data found" for a populated section', () => {
@@ -64,7 +65,7 @@ describe('EvidenceInventoryPanel', () => {
     render(
       <EvidenceInventoryPanel evidence={EMPTY_EVIDENCE} selection={selection()} isLoading={false} hasPartialErrors={false} />,
     );
-    const row = screen.getByText('Driving History').closest('li')!;
+    const row = screen.getByRole('row', { name: /Driving history/ });
     expect(row).toHaveTextContent('Excluded by profile');
   });
 
@@ -72,7 +73,7 @@ describe('EvidenceInventoryPanel', () => {
     render(
       <EvidenceInventoryPanel evidence={EMPTY_EVIDENCE} selection={selection()} isLoading={false} hasPartialErrors={false} />,
     );
-    const row = screen.getByText('Battery Health').closest('li')!;
+    const row = screen.getByRole('row', { name: /Battery health/ });
     expect(row).toHaveTextContent('Included');
   });
 

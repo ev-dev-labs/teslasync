@@ -124,7 +124,7 @@ interface ComposerStatus {
 
 export default function DashboardsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('powerDashboards.title', 'Dashboard Composer'));
+  usePageTitle(t('powerDashboards.title', 'Dashboard composer'));
 
   const [dashboardJson, setDashboardJson] = useState<string>(() => loadPersistedJson());
   const [status, setStatus] = useState<ComposerStatus | null>(null);
@@ -168,7 +168,7 @@ export default function DashboardsPage() {
         variant: 'warning',
         text: t(
           'powerDashboards.editor.copyUnavailable',
-          'Clipboard access is not available in this browser. Select the text manually and copy with Ctrl+C / Cmd+C.',
+          'Clipboard access is not available in this browser. Select the text manually and copy with ctrl+C / cmd+C.',
         ),
       });
       return;
@@ -179,7 +179,7 @@ export default function DashboardsPage() {
         variant: 'success',
         text: t(
           'powerDashboards.editor.copySuccess',
-          'Copied. Paste the JSON into your Grafana dashboard editor (Dashboard settings → JSON Model).',
+          'Copied. Paste the JSON into your Grafana dashboard editor (dashboard settings → JSON Model).',
         ),
       });
     } catch {
@@ -187,7 +187,7 @@ export default function DashboardsPage() {
         variant: 'warning',
         text: t(
           'powerDashboards.editor.copyFailed',
-          'Clipboard write failed. Select the text manually and copy with Ctrl+C / Cmd+C.',
+          'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
         ),
       });
     }
@@ -224,7 +224,7 @@ export default function DashboardsPage() {
         title: t('powerDashboards.howTo.step3.title', 'Copy to Grafana'),
         body: t(
           'powerDashboards.howTo.step3.body',
-          'Copy the envelope and paste it into Grafana under Dashboard settings → JSON Model.',
+          'Copy the envelope and paste it into Grafana under dashboard settings → JSON Model.',
         ),
       },
     ],
@@ -241,7 +241,7 @@ export default function DashboardsPage() {
   return (
     <div data-testid="power-dashboards-composer-root">
       <PageContainer
-        title={t('powerDashboards.title', 'Dashboard Composer')}
+        title={t('powerDashboards.title', 'Dashboard composer')}
         subtitle={t(
           'powerDashboards.subtitle',
           'Assemble a Grafana dashboard JSON envelope from curated panels, then copy it into Grafana.',

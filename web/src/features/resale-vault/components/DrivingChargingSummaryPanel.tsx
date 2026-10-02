@@ -40,7 +40,7 @@ export function DrivingChargingSummaryPanel({ driving, charging }: DrivingChargi
 
   return (
     <GlassPanel padding="lg" className="space-y-4">
-      <PanelTitle>{t('resaleVault.usage.title', 'Driving & Charging History')}</PanelTitle>
+      <PanelTitle>{t('resaleVault.usage.title', 'Driving & charging history')}</PanelTitle>
 
       {!driving && !charging ? (
         // no-action: mirrors this vehicle's drive/charge history query results as currently cached; the panel receives no refetch handler and the Evidence tab has no manual sync control.

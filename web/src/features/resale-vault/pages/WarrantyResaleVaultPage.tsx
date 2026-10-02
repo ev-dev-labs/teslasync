@@ -54,7 +54,7 @@ type VaultTabKey = 'evidence' | 'disclosure' | 'preview' | 'import' | 'audit';
 
 export default function WarrantyResaleVaultPage() {
   const { t } = useTranslation();
-  const pageTitle = t('resaleVault.page.title', 'Warranty & Resale Vault');
+  const pageTitle = t('resaleVault.page.title', 'Warranty & resale vault');
   usePageTitle(pageTitle);
 
   const { vehicleId: numericVehicleId } = useSelectedVehicle();
@@ -73,10 +73,10 @@ export default function WarrantyResaleVaultPage() {
 
   const tabs: TabItem[] = [
     { key: 'evidence', label: t('resaleVault.tabs.evidence', 'Evidence') },
-    { key: 'disclosure', label: t('resaleVault.tabs.disclosure', 'Disclosure Profile') },
-    { key: 'preview', label: t('resaleVault.tabs.preview', 'Preview & Sign') },
-    { key: 'import', label: t('resaleVault.tabs.import', 'Import & Verify') },
-    { key: 'audit', label: t('resaleVault.tabs.audit', 'Audit Trail') },
+    { key: 'disclosure', label: t('resaleVault.tabs.disclosure', 'Disclosure profile') },
+    { key: 'preview', label: t('resaleVault.tabs.preview', 'Preview & sign') },
+    { key: 'import', label: t('resaleVault.tabs.import', 'Import & verify') },
+    { key: 'audit', label: t('resaleVault.tabs.audit', 'Audit trail') },
   ];
 
   if (numericVehicleId == null) {
@@ -110,7 +110,7 @@ export default function WarrantyResaleVaultPage() {
         tabs={tabs}
         activeTab={activeTab}
         onChange={(key) => setActiveTab(key as VaultTabKey)}
-        ariaLabel={t('resaleVault.tabs.ariaLabel', 'Warranty & Resale Vault sections')}
+        ariaLabel={t('resaleVault.tabs.ariaLabel', 'Warranty & resale vault sections')}
         className="mt-4"
       />
 
@@ -121,7 +121,7 @@ export default function WarrantyResaleVaultPage() {
               <InlineCallout variant="info" icon={<ShieldCheck />}>
                 {t(
                   'resaleVault.evidence.scopeNote',
-                  'This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the Disclosure Profile tab to control what actually leaves your browser.',
+                  'This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the disclosure profile tab to control what actually leaves your browser.',
                 )}
               </InlineCallout>
               <EvidenceInventoryPanel

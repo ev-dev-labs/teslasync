@@ -49,7 +49,7 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <BadgeCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-          {t('resaleVault.certificate.title', 'Battery Certificate')}
+          {t('resaleVault.certificate.title', 'Battery certificate')}
         </PanelTitle>
         {verified && (
           <Badge variant="success" size="sm" className="gap-1">

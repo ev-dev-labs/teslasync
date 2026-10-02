@@ -24,7 +24,7 @@ export function MaintenanceSummaryPanel({ maintenance }: MaintenanceSummaryPanel
 
   return (
     <GlassPanel padding="lg" className="space-y-4">
-      <PanelTitle>{t('resaleVault.maintenance.title', 'Maintenance & Service')}</PanelTitle>
+      <PanelTitle>{t('resaleVault.maintenance.title', 'Maintenance & service')}</PanelTitle>
 
       {!maintenance ? (
         // no-action: mirrors Tesla's account-wide maintenance endpoint (see scope note below); no refetch handler reaches this panel.

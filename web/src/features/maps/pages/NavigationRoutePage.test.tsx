@@ -413,7 +413,7 @@ describe('NavigationRoutePage — shell gating', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /Navigation & Route/i }),
+      screen.getByRole('heading', { level: 1, name: /Navigation & route/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /Loading/ })).toBeInTheDocument();
     // Body regions are gated out behind the spinner.
@@ -492,7 +492,7 @@ describe('NavigationRoutePage — ready state', () => {
     expect(screen.getByText('37.5000, -122.2500')).toBeInTheDocument();
     expect(screen.getByText('locked')).toBeInTheDocument();
     expect(screen.getByText('N (0°)')).toBeInTheDocument();
-    expect(screen.getByText('At Work')).toBeInTheDocument();
+    expect(screen.getByText('At work')).toBeInTheDocument();
     expect(screen.getByText('Away')).toBeInTheDocument();
   });
 

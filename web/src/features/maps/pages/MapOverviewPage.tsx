@@ -93,7 +93,7 @@ function StatusRow({ icon, label, children }: { icon: ReactNode; label: string; 
 
 export default function MapOverviewPage() {
   const { t } = useTranslation('maps');
-  usePageTitle(t('mapOverview.pageTitle', 'Map Overview'));
+  usePageTitle(t('mapOverview.pageTitle', 'Map overview'));
 
   /* ---- unit prefs: format at the display boundary from SI ---- */
   const { formatSpeed, formatDistance } = useUnits();
@@ -209,6 +209,7 @@ export default function MapOverviewPage() {
       },
       {
         key: 'latitude',
+        align: 'right',
         header: t('mapOverview.colLat', 'Lat'),
         render: (r) => (
           <Text variant="code">
@@ -218,6 +219,7 @@ export default function MapOverviewPage() {
       },
       {
         key: 'longitude',
+        align: 'right',
         header: t('mapOverview.colLon', 'Lon'),
         render: (r) => (
           <Text variant="code">
@@ -227,6 +229,7 @@ export default function MapOverviewPage() {
       },
       {
         key: 'speed',
+        align: 'right',
         header: t('mapOverview.colSpeed', 'Speed'),
         render: (r) => (
           <Text variant="bodySm">{formatSpeed(r.speed ?? null, { precision: 1 })}</Text>
@@ -234,6 +237,7 @@ export default function MapOverviewPage() {
       },
       {
         key: 'heading',
+        align: 'right',
         header: t('mapOverview.colHeading', 'Heading'),
         render: (r) => (
           <Text variant="bodySm">{r.heading != null ? `${fmtNumber(r.heading, 0)}°` : '—'}</Text>
@@ -249,13 +253,13 @@ export default function MapOverviewPage() {
   // the user sees a proper loading spinner / error banner instead of a
   // misleading "set up TeslaSync" prompt.
   if (vehicleId == null && !vehiclesLoading && !vehiclesError) {
-    return <NoVehicleSelected pageTitle={t('mapOverview.title', 'Map Overview')} />;
+    return <NoVehicleSelected pageTitle={t('mapOverview.title', 'Map overview')} />;
   }
 
   /* ---- render ---- */
   return (
     <PageContainer
-      title={t('mapOverview.title', 'Map Overview')}
+      title={t('mapOverview.title', 'Map overview')}
       subtitle={t(
         'mapOverview.subtitle',
         'Live vehicle location and recent history',
@@ -286,7 +290,7 @@ export default function MapOverviewPage() {
           ) : (
             <>
               <MetricCard
-                label={t('mapOverview.currentSpeed', 'Current Speed')}
+                label={t('mapOverview.currentSpeed', 'Current speed')}
                 value={formatSpeed(latest?.speed ?? null, { precision: 1 })}
                 icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
                 color="cyan"
@@ -298,13 +302,13 @@ export default function MapOverviewPage() {
                 color="purple"
               />
               <MetricCard
-                label={t('mapOverview.latLon', 'Lat / Lon')}
+                label={t('mapOverview.latLon', 'Lat / lon')}
                 value={hasValidLocation && latest ? `${fmtNumber(latest.latitude, 4)}, ${fmtNumber(latest.longitude, 4)}` : '—'}
                 icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
                 color="green"
               />
               <MetricCard
-                label={t('mapOverview.lastUpdated', 'Last Updated')}
+                label={t('mapOverview.lastUpdated', 'Last updated')}
                 value={latest?.created_at ? formatDateTime(latest.created_at) : '—'}
                 icon={<Clock className="h-4 w-4" aria-hidden="true" />}
                 subtitle={t('mapOverview.autoRefresh', 'Auto-refreshes every 15 s')}
@@ -366,7 +370,7 @@ export default function MapOverviewPage() {
             <GlassPanel className="p-4 sm:p-5">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('mapOverview.locationDetails', 'Location Details')}
+                {t('mapOverview.locationDetails', 'Location details')}
               </PanelTitle>
               {locationLoading ? (
                 <Skeleton lines={4} height={20} />
@@ -377,7 +381,7 @@ export default function MapOverviewPage() {
                   {/* Home */}
                   <StatusRow
                     icon={<Home className={cn('h-5 w-5', atHome ? 'text-emerald-400' : 'text-[var(--text-muted)]')} />}
-                    label={t('mapOverview.atHome', 'At Home')}
+                    label={t('mapOverview.atHome', 'At home')}
                   >
                     <Badge variant={atHome === true ? 'success' : 'neutral'} size="sm" dot>
                       {triLabel(atHome)}
@@ -387,7 +391,7 @@ export default function MapOverviewPage() {
                   {/* Work */}
                   <StatusRow
                     icon={<Briefcase className={cn('h-5 w-5', atWork ? 'text-emerald-400' : 'text-[var(--text-muted)]')} />}
-                    label={t('mapOverview.atWork', 'At Work')}
+                    label={t('mapOverview.atWork', 'At work')}
                   >
                     <Badge variant={atWork === true ? 'success' : 'neutral'} size="sm" dot>
                       {triLabel(atWork)}
@@ -397,7 +401,7 @@ export default function MapOverviewPage() {
                   {/* HomeLink nearby */}
                   <StatusRow
                     icon={<Link2 className={cn('h-5 w-5', homelinkNearby ? 'text-cyan-400' : 'text-[var(--text-muted)]')} />}
-                    label={t('mapOverview.homelinkNearby', 'HomeLink Nearby')}
+                    label={t('mapOverview.homelinkNearby', 'HomeLink nearby')}
                   >
                     <Badge variant={homelinkNearby ? 'info' : 'neutral'} size="sm" dot>
                       {homelinkNearby ? t('mapOverview.yes', 'Yes') : t('mapOverview.no', 'No')}
@@ -424,7 +428,7 @@ export default function MapOverviewPage() {
             <GlassPanel className="p-4 sm:p-5 xl:flex-1">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <ExternalLink className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('mapOverview.quickLinks', 'Quick Links')}
+                {t('mapOverview.quickLinks', 'Quick links')}
               </PanelTitle>
               <div className="flex flex-col gap-2">
                 <Button
@@ -433,7 +437,7 @@ export default function MapOverviewPage() {
                   onClick={() => { window.location.hash = '#/maps/navigation-route'; }}
                   className="min-h-11 w-full justify-start"
                 >
-                  {t('mapOverview.navRoute', 'Navigation Route')}
+                  {t('mapOverview.navRoute', 'Navigation route')}
                 </Button>
                 <Button
                   variant="outline"
@@ -462,7 +466,7 @@ export default function MapOverviewPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Navigation className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('mapOverview.recentPlayback', 'Recent Route Playback')}
+            {t('mapOverview.recentPlayback', 'Recent route playback')}
           </PanelTitle>
           {historyLoading ? (
             <Skeleton height={360} />
@@ -488,7 +492,7 @@ export default function MapOverviewPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('mapOverview.recentHistory', 'Recent Location History')}
+            {t('mapOverview.recentHistory', 'Recent location history')}
           </PanelTitle>
           {historyLoading ? (
             <Skeleton lines={6} height={16} className="mt-2" />

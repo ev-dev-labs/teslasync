@@ -29,7 +29,7 @@ import { useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { PageContainer } from '@/components/layout/PageContainer';
+import { PageContainer } from '@/components/layout';
 import {
   GlassPanel,
   Input,
@@ -156,7 +156,7 @@ export default function ExplorePage() {
   return (
     <PageContainer
       title={t('explore.title', 'Explore features')}
-      subtitle={subtitle}
+      metadataActions={<Text variant="caption">{subtitle}</Text>}
     >
       <div className="space-y-6">
         {/* 1 — KPI overview band: full-width metric grid, derived from the

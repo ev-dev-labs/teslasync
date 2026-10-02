@@ -91,7 +91,7 @@ export function ImportVerifyPanel() {
   return (
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.import.title', 'Import & Verify a Report')}</PanelTitle>
+        <PanelTitle>{t('resaleVault.import.title', 'Import & verify a report')}</PanelTitle>
         <FileCheck2 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
       </div>
 

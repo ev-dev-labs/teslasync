@@ -35,14 +35,14 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
     { key: 'drive', header: t('science.weather.drive', 'Drive'), render: (r) =>
       <Link className="underline underline-offset-4" to={`/drives/${r.drive_id}`}>#{r.drive_id}</Link> },
     { key: 'at', header: t('science.weather.at', 'Start'), render: (r) => formatDateTime(r.at) },
-    { key: 'temp', header: t('science.weather.temp', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
-    { key: 'wind', header: t('science.weather.wind', 'Wind'), render: (r) => (r.wind_mps != null ? formatSpeed(r.wind_mps) : unknown(t)) },
-    { key: 'density', header: t('science.weather.density', 'Air density'), render: (r) => r.density_kg_m3 != null ? `${fmtNumber(r.density_kg_m3, 3)} kg/m³` : unknown(t) },
-    { key: 'rain', header: t('science.weather.rain', 'Precipitation'), render: (r) => r.precip_mm != null ? `${fmtNumber(r.precip_mm, 1)} mm` : unknown(t) },
-    { key: 'session', header: t('science.weather.session', 'Session energy / distance'), render: (r) =>
+    { key: 'temp', align: 'right', header: t('science.weather.temp', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
+    { key: 'wind', align: 'right', header: t('science.weather.wind', 'Wind'), render: (r) => (r.wind_mps != null ? formatSpeed(r.wind_mps) : unknown(t)) },
+    { key: 'density', align: 'right', header: t('science.weather.density', 'Air density'), render: (r) => r.density_kg_m3 != null ? `${fmtNumber(r.density_kg_m3, 3)} kg/m³` : unknown(t) },
+    { key: 'rain', align: 'right', header: t('science.weather.rain', 'Precipitation'), render: (r) => r.precip_mm != null ? `${fmtNumber(r.precip_mm, 1)} mm` : unknown(t) },
+    { key: 'session', align: 'right', header: t('science.weather.session', 'Session energy / distance'), render: (r) =>
       r.session_wh_per_m != null ? formatEnergyPerDistance(r.session_wh_per_m, unitPrefs) : unknown(t) },
     {
-      key: 'res', header: t('science.weather.residual', 'Residual'),
+      key: 'res', align: 'right', header: t('science.weather.residual', 'Residual'),
       render: (r) => r.residual_wh_per_m != null ? formatEnergyPerDistance(r.residual_wh_per_m, unitPrefs) : unknown(t),
     },
   ];

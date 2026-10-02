@@ -68,7 +68,7 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
   return (
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.export.title', 'Export Signed Report')}</PanelTitle>
+        <PanelTitle>{t('resaleVault.export.title', 'Export signed report')}</PanelTitle>
         <FileSignature className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
       </div>
 

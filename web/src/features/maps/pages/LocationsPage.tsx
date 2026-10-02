@@ -101,7 +101,7 @@ export function rankChipClass(index: number): string {
 
 export default function LocationsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('locations.title', 'Visited Locations'));
+  usePageTitle(t('locations.title', 'Visited locations'));
   const { formatDuration } = useUnits();
 
   const { vehicleId } = useSelectedVehicle();
@@ -204,7 +204,7 @@ export default function LocationsPage() {
 
   return (
     <PageContainer
-      title={t('locations.title', 'Visited Locations')}
+      title={t('locations.title', 'Visited locations')}
       subtitle={t('locations.subtitle', "Places you've been — ranked by frequency")}
       query={locationsQuery}
     >
@@ -224,12 +224,12 @@ export default function LocationsPage() {
             </div>
           ) : (
             <>
-              <MetricCard label={t('locations.uniquePlaces', 'Unique Places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
-              <MetricCard label={t('locations.uniqueCities', 'Unique Cities')} value={uniqueCities} icon={<Building2 className="h-4 w-4" />} color="blue" />
-              <MetricCard label={t('locations.totalVisits', 'Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
-              <MetricCard label={t('locations.totalTime', 'Total Time')} value={formatDuration(totalTime)} icon={<Clock className="h-4 w-4" />} color="purple" />
-              <MetricCard label={t('locations.mostVisited', 'Most Visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
-              <MetricCard label={t('locations.avgVisit', 'Avg Visit')} value={formatDuration(avgDurationS)} icon={<Clock className="h-4 w-4" />} color="cyan" />
+              <MetricCard label={t('locations.uniquePlaces', 'Unique places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
+              <MetricCard label={t('locations.uniqueCities', 'Unique cities')} value={uniqueCities} icon={<Building2 className="h-4 w-4" />} color="blue" />
+              <MetricCard label={t('locations.totalVisits', 'Total visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
+              <MetricCard label={t('locations.totalTime', 'Total time')} value={formatDuration(totalTime)} icon={<Clock className="h-4 w-4" />} color="purple" />
+              <MetricCard label={t('locations.mostVisited', 'Most visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
+              <MetricCard label={t('locations.avgVisit', 'Avg visit')} value={formatDuration(avgDurationS)} icon={<Clock className="h-4 w-4" />} color="cyan" />
             </>
           )}
         </section>
@@ -242,7 +242,7 @@ export default function LocationsPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-2"
         >
           <LocationLeaderboardPanel
-            title={t('locations.byVisits', 'Top Locations by Visits')}
+            title={t('locations.byVisits', 'Top locations by visits')}
             icon={<Hash className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
             seriesLabel={t('locations.visits', 'Visits')}
             color="#10b981"
@@ -256,7 +256,7 @@ export default function LocationsPage() {
             ariaLabel={t('locations.byVisits.aria', 'Bar chart of the most-visited locations')}
           />
           <LocationLeaderboardPanel
-            title={t('locations.byTime', 'Top Locations by Time Spent (hours)')}
+            title={t('locations.byTime', 'Top locations by time spent (hours)')}
             icon={<Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
             seriesLabel={t('locations.hours', 'Hours')}
             color="#a855f7"
@@ -277,7 +277,7 @@ export default function LocationsPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('locations.all', 'All Locations')}
+            {t('locations.all', 'All locations')}
           </PanelTitle>
 
           <FilterBar className="mb-3">
@@ -427,17 +427,17 @@ export default function LocationsPage() {
             ? [
                 {
                   key: 'visits',
-                  label: t('locations.totalVisits', 'Total Visits'),
+                  label: t('locations.totalVisits', 'Total visits'),
                   value: previewLocation.visit_count ?? 0,
                 },
                 {
                   key: 'time',
-                  label: t('locations.totalTime', 'Total Time'),
+                  label: t('locations.totalTime', 'Total time'),
                   value: formatDuration(previewLocation.total_duration_s ?? 0),
                 },
                 {
                   key: 'average',
-                  label: t('locations.avgVisit', 'Avg Visit'),
+                  label: t('locations.avgVisit', 'Avg visit'),
                   value: formatDuration(
                     previewLocation.visit_count > 0
                       ? previewLocation.total_duration_s / previewLocation.visit_count

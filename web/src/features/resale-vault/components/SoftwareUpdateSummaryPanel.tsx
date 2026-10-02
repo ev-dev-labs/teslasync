@@ -18,7 +18,7 @@ export function SoftwareUpdateSummaryPanel({ softwareUpdates }: SoftwareUpdateSu
   return (
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.software.title', 'Software Updates')}</PanelTitle>
+        <PanelTitle>{t('resaleVault.software.title', 'Software updates')}</PanelTitle>
         {softwareUpdates?.latest_version && <Badge variant="info">{softwareUpdates.latest_version}</Badge>}
       </div>
 

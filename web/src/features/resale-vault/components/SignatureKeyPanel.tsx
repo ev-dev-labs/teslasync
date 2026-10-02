@@ -27,7 +27,7 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
   return (
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.keys.title', 'Signature & Key Management')}</PanelTitle>
+        <PanelTitle>{t('resaleVault.keys.title', 'Signature & key management')}</PanelTitle>
         <KeyRound className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
       </div>
 
