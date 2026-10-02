@@ -37,7 +37,7 @@ export default function EmergencyResiliencePage() {
     evacuation_reserve_wh: 15000,
     restoration_uncertainty_pct: 25,
   });
-  usePageTitle(t('advancedIntelligence.resilience.title', 'Emergency Resilience'));
+  usePageTitle(t('advancedIntelligence.resilience.title', 'Emergency resilience'));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -54,7 +54,7 @@ export default function EmergencyResiliencePage() {
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.resilience.title', 'Emergency Resilience')}
+      title={t('advancedIntelligence.resilience.title', 'Emergency resilience')}
       subtitle={t(
         'advancedIntelligence.resilience.subtitle',
         'Plan energy survival, load priorities, and risk progression for a modeled outage.',

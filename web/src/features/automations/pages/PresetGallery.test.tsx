@@ -358,9 +358,9 @@ describe('PresetGallery — trigger labels', () => {
     renderGallery();
 
     expect(screen.getByText('Schedule')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle Event')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle event')).toBeInTheDocument();
     expect(screen.getByText('Geofence')).toBeInTheDocument();
-    expect(screen.getByText('Signal Threshold')).toBeInTheDocument();
+    expect(screen.getByText('Signal threshold')).toBeInTheDocument();
   });
 
   it('shows the "no trigger" fallback for an empty triggers array', () => {

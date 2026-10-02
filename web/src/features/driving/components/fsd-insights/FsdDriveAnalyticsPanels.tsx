@@ -333,6 +333,8 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
   const columns = useMemo<Column<DriveFsdInsight>[]>(() => [
     {
       key: 'started_at',
+      filterValue: (row) => row.started_at ?? null,
+      filterValueLabel: (_, row) => formatDateTime(row.started_at),
       header: t('fsd.drives.date', 'Drive'),
       render: (row) => (
         <div>
@@ -349,6 +351,9 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
     },
     {
       key: 'fsd_distance_m',
+      align: 'right',
+      filterValue: (row) => row.fsd_distance_m ?? null,
+      filterValueLabel: (_, row) => `${row.confidence === 'high' ? '' : '~'}${formatDistance(row.fsd_distance_m, { precision: 1 })}`,
       header: t('fsd.drives.distance', 'Reported FSD'),
       render: (row) => (
         <span className="tabular-nums">
@@ -359,6 +364,9 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
     },
     {
       key: 'fsd_share_pct',
+      align: 'right',
+      filterValue: (row) => row.fsd_share_pct ?? null,
+      filterValueLabel: (_, row) => row.fsd_share_pct == null ? '-' : `${row.confidence === 'high' ? '' : '~'}${fmtNumber(row.fsd_share_pct, 1)}%`,
       header: t('fsd.drives.share', 'Drive share'),
       render: (row) => row.fsd_share_pct == null
         ? '-'
@@ -371,6 +379,7 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
     },
     {
       key: 'firmware_version',
+      filterValue: (row) => row.firmware_version ?? null,
       header: t('fsd.drives.firmware', 'Firmware'),
       render: (row) => row.firmware_version ?? '-',
     },
@@ -386,7 +395,7 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
   ], [formatDistance, t]);
 
   return (
-    <GlassPanel className="p-4 sm:p-5" data-testid="fsd-contributing-drives">
+    <GlassPanel className="min-w-0 p-4 sm:p-5" data-testid="fsd-contributing-drives">
       <PanelTitle className="mb-1 flex items-center gap-2">
         <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('fsd.drives.title', 'Contributing drives')}
@@ -425,6 +434,7 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
         {rows.length > 0 ? (
           <DataTable
             tableId="fsd-contributing-drives"
+            enableValueFilters
             name="FsdContributingDrives"
             columns={columns}
             data={rows}
@@ -462,12 +472,14 @@ function GroupTable({
     },
     {
       key: 'drive_count',
+      align: 'right',
       header: t('fsd.groups.drives', 'Drives'),
       render: (row) => <span className="tabular-nums">{row.drive_count}</span>,
     },
     {
       key: 'fsd_distance_m',
       header: t('fsd.groups.distance', 'FSD distance'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">{formatDistance(row.fsd_distance_m, { precision: 1 })}</span>
       ),
@@ -475,6 +487,7 @@ function GroupTable({
     {
       key: 'fsd_share_pct',
       header: t('fsd.groups.share', 'Share'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {row.fsd_share_pct == null ? '-' : `${fmtNumber(row.fsd_share_pct, 1)}%`}

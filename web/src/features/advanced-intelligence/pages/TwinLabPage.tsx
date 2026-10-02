@@ -38,7 +38,7 @@ export default function TwinLabPage() {
     createScenario(0, t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number: 1 })),
     createScenario(1, t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number: 2 })),
   ]);
-  usePageTitle(t('advancedIntelligence.twin.title', 'Twin Lab'));
+  usePageTitle(t('advancedIntelligence.twin.title', 'Twin lab'));
 
   const updateScenario = (index: number, patch: Partial<TwinScenarioInput>) => {
     setScenarios((current) => current.map((scenario, itemIndex) =>
@@ -64,7 +64,7 @@ export default function TwinLabPage() {
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.twin.title', 'Twin Lab')}
+      title={t('advancedIntelligence.twin.title', 'Twin lab')}
       subtitle={t(
         'advancedIntelligence.twin.subtitle',
         'Compare calibrated, vehicle-specific counterfactuals with explicit uncertainty.',

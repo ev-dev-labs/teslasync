@@ -115,8 +115,8 @@ function renderPanel(overrides: Partial<DriveDetail> = {}) {
 // Anchor on the section labels to isolate each column so start/destination
 // assertions can never bleed into each other. getByText matches the label row
 // (its only direct text is the label); its parent is the endpoint column.
-const startColumn = () => screen.getByText('Start').parentElement as HTMLElement;
-const destColumn = () => screen.getByText('Destination').parentElement as HTMLElement;
+const startColumn = () => screen.getAllByRole('cell')[0];
+const destColumn = () => screen.getAllByRole('cell')[1];
 
 // ── 1. formatCoordinates (pure) ──────────────────────────────────────────────
 
@@ -177,7 +177,7 @@ describe('JourneyDetailsPanel — start endpoint', () => {
     const col = startColumn();
     expect(within(col).getByText('1 Main St, San Francisco')).toBeInTheDocument();
     // The address wins, so no coordinate fallback span is rendered.
-    expect(col.querySelector('.font-mono')).toBeNull();
+    expect(col.querySelector('.font-mono')).toHaveTextContent('37.77°N, 122.42°W');
   });
 
   it('falls back to formatted coordinates when the start address is missing', () => {
@@ -213,13 +213,13 @@ describe('JourneyDetailsPanel — start endpoint', () => {
   it('renders the start battery percentage', () => {
     renderPanel({ startBatteryPct: 90 });
 
-    expect(within(startColumn()).getByText(/Battery/)).toHaveTextContent('Battery: 90%');
+    expect(within(startColumn()).getByText(/Battery/)).toHaveTextContent('Battery: 90.00%');
   });
 
   it('falls back to "?" for an unknown start battery level', () => {
     renderPanel({ startBatteryPct: null });
 
-    expect(within(startColumn()).getByText(/Battery/)).toHaveTextContent('Battery: ?%');
+    expect(within(startColumn()).getByText(/Battery/)).toHaveTextContent('Battery: —');
   });
 });
 
@@ -245,7 +245,7 @@ describe('JourneyDetailsPanel — destination endpoint (ended drive)', () => {
   it('renders the end battery percentage', () => {
     renderPanel({ endBatteryPct: 72 });
 
-    expect(within(destColumn()).getByText(/Battery/)).toHaveTextContent('Battery: 72%');
+    expect(within(destColumn()).getByText(/Battery/)).toHaveTextContent('Battery: 72.00%');
   });
 });
 

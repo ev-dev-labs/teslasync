@@ -50,7 +50,7 @@ export default function CausalExperimentationPage() {
   const mutation = useCreateCausalExperiment();
   const experiments = query.data?.items ?? [];
   const latest = experiments[0] ?? mutation.data ?? null;
-  usePageTitle(t('advancedIntelligence.causal.title', 'Causal Experimentation'));
+  usePageTitle(t('advancedIntelligence.causal.title', 'Causal experimentation'));
 
   const formatEfficiency = (value: number | null) => {
     return formatEfficiencyFromSI(value, units.unitPrefs);
@@ -87,7 +87,7 @@ export default function CausalExperimentationPage() {
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.causal.title', 'Causal Experimentation')}
+      title={t('advancedIntelligence.causal.title', 'Causal experimentation')}
       subtitle={t(
         'advancedIntelligence.causal.subtitle',
         'Compare explicit baseline and treatment windows with confounder coverage disclosure.',

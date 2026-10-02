@@ -228,7 +228,7 @@ describe('SocChart — ready state', () => {
   it('renders the titled, labelled chart figure at the fixed 220px drive-detail height', () => {
     render(<SocChart chartData={twoSamples()} />);
 
-    expect(screen.getByRole('heading', { name: 'SOC % Over Time' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'SOC % over time' })).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'State of charge percent over time area chart' }),
     ).toBeInTheDocument();

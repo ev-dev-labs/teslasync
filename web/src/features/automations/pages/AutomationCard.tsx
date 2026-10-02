@@ -25,7 +25,7 @@ function getUIStatus(a: Automation): AutomationUIStatus {
 const statusStyles: Record<AutomationUIStatus, { label: string; variant: 'success' | 'neutral' | 'danger' }> = {
   active: { label: 'Active', variant: 'success' },
   disabled: { label: 'Disabled', variant: 'neutral' },
-  'auto-disabled': { label: 'Auto-Disabled', variant: 'danger' },
+  'auto-disabled': { label: 'Auto-disabled', variant: 'danger' },
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ export function AutomationCard({
                       onClick={() => { onTestRun(a.id); setMenuOpen(false); }}
                     >
                       <Play className="h-3.5 w-3.5" />
-                      {t('automations.testRun', 'Test Run')}
+                      {t('automations.testRun', 'Test run')}
                     </UiButton>
                     {a.auto_disabled && (
                       <UiButton
@@ -292,7 +292,7 @@ export function AutomationCard({
 
       <ConfirmDialog
         open={confirmDelete}
-        title={t('automations.deleteTitle', 'Delete Automation')}
+        title={t('automations.deleteTitle', 'Delete automation')}
         message={t('automations.deleteMessage', { name: a.name, defaultValue: 'Are you sure you want to delete "{{name}}"? This cannot be undone.' })}
         confirmLabel={t('automations.deleteConfirm', 'Delete')}
         cancelLabel={t('common.cancel', 'Cancel')}

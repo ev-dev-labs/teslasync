@@ -59,7 +59,7 @@ export default function JourneyFragmentationPage() {
     <PageContainer
       title={t('journeyFragmentation.title', 'Journey Fragmentation')}
       subtitle={t('journeyFragmentation.subtitle', 'Descriptive continuity analysis of a capped returned drive-history window')}
-      actions={(
+      contextActions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Select
             aria-label={t('journeyFragmentation.maxGap', 'Maximum parking gap')}

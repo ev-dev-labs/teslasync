@@ -9,6 +9,7 @@ const operationalMode = vi.hoisted(() => ({
   canWrite: true,
   writeBlockReason: null as string | null,
 }));
+const fleetPageState = vi.hoisted(() => ({ total: 1 }));
 
 vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => operationalMode,
@@ -63,7 +64,7 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     version: 3,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  }], total: 1, limit: 100, offset: 0 }),
+  }], total: fleetPageState.total, limit: 100, offset: 0 }),
   useFleetAssignments: () => query({ items: [{
     id: 1,
     vehicle_id: 7,
@@ -76,7 +77,7 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     version: 1,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  }], total: 1, limit: 100, offset: 0 }),
+  }], total: fleetPageState.total, limit: 100, offset: 0 }),
   useFleetReservations: () => query({ items: [{
     id: 3,
     vehicle_id: 7,
@@ -93,7 +94,7 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     version: 1,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  }], total: 1, limit: 100, offset: 0 }),
+  }], total: fleetPageState.total, limit: 100, offset: 0 }),
   useFleetCostCenters: () => query({ items: [{
     id: 4,
     code: 'FIELD',
@@ -102,7 +103,7 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     version: 1,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  }], total: 1, limit: 100, offset: 0 }),
+  }], total: fleetPageState.total, limit: 100, offset: 0 }),
   useFleetChargingPolicies: () => query({ items: [{
     id: 5,
     vehicle_id: 7,
@@ -118,7 +119,7 @@ vi.mock('@/api/hooks/useFleetOps', () => ({
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
     windows: [{ day_of_week: 1, start_local_time: '00:00', end_local_time: '06:00' }],
-  }], total: 1, limit: 100, offset: 0 }),
+  }], total: fleetPageState.total, limit: 100, offset: 0 }),
   useFleetWorkOrders: () => query({ items: [{
     id: 6,
     vehicle_id: 7,
@@ -193,6 +194,7 @@ beforeEach(() => {
   reset.mockReset();
   mutate.mockReset();
   operationalMode.canWrite = true;
+  fleetPageState.total = 1;
   operationalMode.writeBlockReason = null;
 });
 
@@ -212,6 +214,21 @@ describe('FleetOperationsPage', () => {
     );
   }
 
+  it('enables loaded-value checklists only when each complete fleet list is loaded', () => {
+    const view = renderPage();
+    for (const column of ['Reference', 'Ends', 'Reservation', 'Max power']) {
+      expect(screen.getByRole('button', { name: `Filter ${column}` })).toBeInTheDocument();
+    }
+    view.unmount();
+    fleetPageState.total = 101;
+    renderPage();
+    for (const column of ['Reference', 'Ends', 'Reservation', 'Max power']) {
+      expect(screen.queryByRole('button', { name: `Filter ${column}` })).not.toBeInTheDocument();
+    }
+    expect(screen.getByText('Fleet drivers')).toBeInTheDocument();
+    expect(screen.getByText('Charging policy matrix')).toBeInTheDocument();
+  });
+
   it('renders every operational panel and opens the reservation workflow', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: 'Fleet operations' })).toBeInTheDocument();
@@ -223,7 +240,12 @@ describe('FleetOperationsPage', () => {
     expect(screen.getByText('Maintenance work-order board')).toBeInTheDocument();
     expect(screen.getByText('Utilization forecast')).toBeInTheDocument();
     expect(screen.getAllByText('Pool Y').length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'New reservation' }));
+    const reservation = screen.getByRole('button', { name: 'New reservation' });
+    expect(reservation.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
+    const heading = screen.getByRole('heading', { level: 1, name: 'Fleet operations' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
+    fireEvent.click(reservation);
     expect(screen.getByRole('dialog', { name: 'Create reservation' })).toBeInTheDocument();
   });
 
@@ -234,7 +256,7 @@ describe('FleetOperationsPage', () => {
     renderPage();
 
     const reservationButton = screen.getByRole('button', { name: 'New reservation' });
-    const noticeTitle = screen.getByText('Fleet Operations is read-only');
+    const noticeTitle = screen.getByText('Fleet operations is read-only');
 
     expect(reservationButton).toBeDisabled();
     expect(reservationButton).toHaveAttribute(

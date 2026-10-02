@@ -41,7 +41,7 @@ export default function JourneyAssurancePage() {
     average_speed_mps: null,
     auxiliary_load_w: null,
   });
-  usePageTitle(t('advancedIntelligence.journey.title', 'Journey Assurance'));
+  usePageTitle(t('advancedIntelligence.journey.title', 'Journey assurance'));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -57,7 +57,7 @@ export default function JourneyAssurancePage() {
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.journey.title', 'Journey Assurance')}
+      title={t('advancedIntelligence.journey.title', 'Journey assurance')}
       subtitle={t(
         'advancedIntelligence.journey.subtitle',
         'Assess departure readiness and arrival reserve from supported vehicle evidence.',

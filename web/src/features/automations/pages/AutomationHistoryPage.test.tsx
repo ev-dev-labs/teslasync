@@ -70,7 +70,7 @@ describe('Automation History', () => {
     }));
     expect(screen.getByRole('region', { name: 'Execution summary' })).toBeInTheDocument();
     expect(screen.getByText('Execution activity')).toBeInTheDocument();
-    expect(screen.getByRole('table', { name: 'Automation History' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Automation history' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Filter.*date|Start date|End date/i)).not.toBeInTheDocument();
   });
 
@@ -102,7 +102,7 @@ describe('Automation History', () => {
   it('opens execution detail from a full-width table row', () => {
     state.data = response([row]);
     render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
-    const table = screen.getByRole('table', { name: 'Automation History' });
+    const table = screen.getByRole('table', { name: 'Automation history' });
     fireEvent.click(within(table).getByRole('button', { name: 'Home arrival' }));
     expect(screen.getByRole('dialog', { name: 'Execution details' })).toBeInTheDocument();
   });

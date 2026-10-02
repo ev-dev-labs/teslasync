@@ -32,22 +32,22 @@ export const ACTION_TYPES: ActionKindOption[] = [
   {
     value: 'action_command',
     labelKey: 'automations.actions.command',
-    fallback: 'Vehicle Command',
+    fallback: 'Vehicle command',
   },
   {
     value: 'action_notify',
     labelKey: 'automations.actions.notify',
-    fallback: 'Send Notification',
+    fallback: 'Send notification',
   },
   {
     value: 'action_set_setting',
     labelKey: 'automations.actions.setSetting',
-    fallback: 'Set Setting',
+    fallback: 'Set setting',
   },
   {
     value: 'action_call_automation',
     labelKey: 'automations.actions.callAutomation',
-    fallback: 'Call Automation',
+    fallback: 'Call automation',
   },
 ];
 
@@ -58,76 +58,76 @@ const COMMAND_GROUPS: {
 }[] = [
   {
     labelKey: 'automations.commandGroups.security',
-    fallback: 'Security & Access',
+    fallback: 'Security & access',
     commands: [
-      { value: 'lock', labelKey: 'automations.commands.lock', fallback: 'Lock Doors' },
-      { value: 'unlock', labelKey: 'automations.commands.unlock', fallback: 'Unlock Doors' },
-      { value: 'sentry_on', labelKey: 'automations.commands.sentryOn', fallback: 'Sentry Mode On' },
-      { value: 'sentry_off', labelKey: 'automations.commands.sentryOff', fallback: 'Sentry Mode Off' },
-      { value: 'valet_on', labelKey: 'automations.commands.valetOn', fallback: 'Valet Mode On' },
-      { value: 'valet_off', labelKey: 'automations.commands.valetOff', fallback: 'Valet Mode Off' },
+      { value: 'lock', labelKey: 'automations.commands.lock', fallback: 'Lock doors' },
+      { value: 'unlock', labelKey: 'automations.commands.unlock', fallback: 'Unlock doors' },
+      { value: 'sentry_on', labelKey: 'automations.commands.sentryOn', fallback: 'Sentry mode on' },
+      { value: 'sentry_off', labelKey: 'automations.commands.sentryOff', fallback: 'Sentry mode off' },
+      { value: 'valet_on', labelKey: 'automations.commands.valetOn', fallback: 'Valet mode on' },
+      { value: 'valet_off', labelKey: 'automations.commands.valetOff', fallback: 'Valet mode off' },
     ],
   },
   {
     labelKey: 'automations.commandGroups.climate',
     fallback: 'Climate',
     commands: [
-      { value: 'climate_on', labelKey: 'automations.commands.climateOn', fallback: 'Climate On' },
-      { value: 'climate_off', labelKey: 'automations.commands.climateOff', fallback: 'Climate Off' },
-      { value: 'set_temps', labelKey: 'automations.commands.setTemps', fallback: 'Set Temperature' },
-      { value: 'seat_heater', labelKey: 'automations.commands.seatHeater', fallback: 'Seat Heater' },
-      { value: 'seat_cooler', labelKey: 'automations.commands.seatCooler', fallback: 'Seat Cooler' },
+      { value: 'climate_on', labelKey: 'automations.commands.climateOn', fallback: 'Climate on' },
+      { value: 'climate_off', labelKey: 'automations.commands.climateOff', fallback: 'Climate off' },
+      { value: 'set_temps', labelKey: 'automations.commands.setTemps', fallback: 'Set temperature' },
+      { value: 'seat_heater', labelKey: 'automations.commands.seatHeater', fallback: 'Seat heater' },
+      { value: 'seat_cooler', labelKey: 'automations.commands.seatCooler', fallback: 'Seat cooler' },
       {
         value: 'steering_wheel_heat',
         labelKey: 'automations.commands.steeringWheelHeat',
-        fallback: 'Steering Wheel Heater',
+        fallback: 'Steering wheel heater',
       },
-      { value: 'dog_mode', labelKey: 'automations.commands.dogMode', fallback: 'Dog Mode' },
-      { value: 'camp_mode', labelKey: 'automations.commands.campMode', fallback: 'Camp Mode' },
+      { value: 'dog_mode', labelKey: 'automations.commands.dogMode', fallback: 'Dog mode' },
+      { value: 'camp_mode', labelKey: 'automations.commands.campMode', fallback: 'Camp mode' },
     ],
   },
   {
     labelKey: 'automations.commandGroups.charging',
     fallback: 'Charging',
     commands: [
-      { value: 'charge_start', labelKey: 'automations.commands.chargeStart', fallback: 'Start Charging' },
-      { value: 'charge_stop', labelKey: 'automations.commands.chargeStop', fallback: 'Stop Charging' },
+      { value: 'charge_start', labelKey: 'automations.commands.chargeStart', fallback: 'Start charging' },
+      { value: 'charge_stop', labelKey: 'automations.commands.chargeStop', fallback: 'Stop charging' },
       {
         value: 'set_charge_limit',
         labelKey: 'automations.commands.setChargeLimit',
-        fallback: 'Set Charge Limit',
+        fallback: 'Set charge limit',
       },
       {
         value: 'set_charging_amps',
         labelKey: 'automations.commands.setChargingAmps',
-        fallback: 'Set Charging Amps',
+        fallback: 'Set charging amps',
       },
       {
         value: 'open_charge_port',
         labelKey: 'automations.commands.openChargePort',
-        fallback: 'Open Charge Port',
+        fallback: 'Open charge port',
       },
       {
         value: 'close_charge_port',
         labelKey: 'automations.commands.closeChargePort',
-        fallback: 'Close Charge Port',
+        fallback: 'Close charge port',
       },
     ],
   },
   {
     labelKey: 'automations.commandGroups.doors',
-    fallback: 'Doors & Trunk',
+    fallback: 'Doors & trunk',
     commands: [
-      { value: 'frunk_open', labelKey: 'automations.commands.frunkOpen', fallback: 'Open Frunk' },
-      { value: 'trunk_open', labelKey: 'automations.commands.trunkOpen', fallback: 'Open Trunk' },
+      { value: 'frunk_open', labelKey: 'automations.commands.frunkOpen', fallback: 'Open frunk' },
+      { value: 'trunk_open', labelKey: 'automations.commands.trunkOpen', fallback: 'Open trunk' },
     ],
   },
   {
     labelKey: 'automations.commandGroups.alerts',
     fallback: 'Alerts',
     commands: [
-      { value: 'honk', labelKey: 'automations.commands.honk', fallback: 'Honk Horn' },
-      { value: 'flash', labelKey: 'automations.commands.flash', fallback: 'Flash Lights' },
+      { value: 'honk', labelKey: 'automations.commands.honk', fallback: 'Honk horn' },
+      { value: 'flash', labelKey: 'automations.commands.flash', fallback: 'Flash lights' },
     ],
   },
   {
@@ -137,7 +137,7 @@ const COMMAND_GROUPS: {
       {
         value: 'navigation_request',
         labelKey: 'automations.commands.navigationRequest',
-        fallback: 'Navigate to Address',
+        fallback: 'Navigate to address',
       },
       {
         value: 'navigation_gps_request',
@@ -153,14 +153,14 @@ const COMMAND_GROUPS: {
   },
   {
     labelKey: 'automations.commandGroups.driveSoftware',
-    fallback: 'Drive & Software',
+    fallback: 'Drive & software',
     commands: [
       {
         value: 'remote_start_drive',
         labelKey: 'automations.commands.remoteStartDrive',
-        fallback: 'Remote Start',
+        fallback: 'Remote start',
       },
-      { value: 'wake_up', labelKey: 'automations.commands.wakeUp', fallback: 'Wake Up' },
+      { value: 'wake_up', labelKey: 'automations.commands.wakeUp', fallback: 'Wake up' },
     ],
   },
 ];
@@ -347,7 +347,7 @@ export function ActionBuilder({ actions = [], channels = [], onChange }: ActionB
               <div className="min-w-0">
                 <UiSelect
                   id={`automation-action-kind-${index}`}
-                  label={t('automations.builder.actionType', 'Action Type')}
+                  label={t('automations.builder.actionType', 'Action type')}
                   options={actionTypeOptions}
                   value={action.kind}
                   onChange={(event) => replaceAction(
@@ -369,7 +369,7 @@ export function ActionBuilder({ actions = [], channels = [], onChange }: ActionB
 
       <UiButton type="button" variant="ghost" size="sm" onClick={addAction}>
         <Plus className="mr-1 h-4 w-4" />
-        {t('automations.builder.addAction', 'Add Action')}
+        {t('automations.builder.addAction', 'Add action')}
       </UiButton>
     </div>
   );
@@ -544,14 +544,14 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
       return (
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiInput
-            label={t('automations.builder.settingKey', 'Setting Key')}
+            label={t('automations.builder.settingKey', 'Setting key')}
             value={action.setting_key}
             onChange={(event) => onChange({ ...action, setting_key: event.target.value })}
             placeholder={t('automations.builder.settingKeyPlaceholder', 'charge_limit')}
             className="w-44"
           />
           <UiSelect
-            label={t('automations.builder.valueType', 'Value Type')}
+            label={t('automations.builder.valueType', 'Value type')}
             options={[
               { value: 'text', label: t('automations.builder.valueText', 'Text') },
               { value: 'number', label: t('automations.builder.valueNumber', 'Number') },
@@ -596,7 +596,7 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
       return (
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiInput
-            label={t('automations.builder.targetAutomationId', 'Target Automation ID')}
+            label={t('automations.builder.targetAutomationId', 'Target automation ID')}
             type="number"
             min={1}
             value={action.target_automation_id || ''}

@@ -143,7 +143,7 @@ export function AutomationActivityFeed({
         <div className="mb-4 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <Activity className="h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-            <SectionTitle>{t('automations.recentActivity', 'Recent Activity')}</SectionTitle>
+            <SectionTitle>{t('automations.recentActivity', 'Recent activity')}</SectionTitle>
             {connectionState === 'connected' ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5">
                 <Wifi className="h-3 w-3 shrink-0 text-emerald-300" aria-hidden="true" />

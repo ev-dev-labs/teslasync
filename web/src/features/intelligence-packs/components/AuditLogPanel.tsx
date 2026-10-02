@@ -35,18 +35,23 @@ export function AuditLogPanel() {
   const columns: Column<AuditLogEntry>[] = [
     {
       key: 'timestamp',
+      filterValue: (r) => r.timestampIso,
+      filterValueLabel: (_value, r) => formatDateTime(r.timestampIso),
       header: t('intelPacks.audit.colWhen', 'When'),
       render: (r) => <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(r.timestampIso)}</span>,
       visibleOnMobile: true,
     },
     {
       key: 'action',
+      filterValue: (r) => r.action,
       header: t('intelPacks.audit.colAction', 'Action'),
       render: (r) => <Badge variant={ACTION_VARIANT[r.action] ?? 'neutral'} size="sm">{r.action}</Badge>,
       visibleOnMobile: true,
     },
     {
       key: 'pack',
+      filterValue: (r) => r.packId,
+      filterValueLabel: (_value, r) => r.packName || r.packId,
       header: t('intelPacks.audit.colPack', 'Pack'),
       render: (r) => <span className="text-sm text-[var(--text-primary)]">{r.packName || r.packId}</span>,
     },
@@ -64,6 +69,7 @@ export function AuditLogPanel() {
 
   return (
     <DataTable
+      enableValueFilters
       tableId="intelligence-packs:audit-log"
       columns={columns}
       data={rows}

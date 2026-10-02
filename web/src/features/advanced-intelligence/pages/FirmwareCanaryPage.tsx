@@ -30,11 +30,11 @@ export default function FirmwareCanaryPage() {
   const query = useFirmwareCanary(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
   const latest = items[0] ?? null;
-  usePageTitle(t('advancedIntelligence.firmware.title', 'Firmware Canary'));
+  usePageTitle(t('advancedIntelligence.firmware.title', 'Firmware canary'));
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.firmware.title', 'Firmware Canary')}
+      title={t('advancedIntelligence.firmware.title', 'Firmware canary')}
       subtitle={t(
         'advancedIntelligence.firmware.subtitle',
         'Compare a target vehicle with matched peer windows before deciding rollout readiness.',

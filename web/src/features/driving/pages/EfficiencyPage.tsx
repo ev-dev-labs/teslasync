@@ -277,12 +277,12 @@ export default function EfficiencyPage() {
   /* ---- Energy insight tiles ---- */
   const insights = stats
     ? [
-        { key: 'regen', label: t('efficiency.totalRegen', 'Total Regen'), value: formatEnergy(stats.regenEnergyWh ?? 0, { precision: 1 }), icon: <Zap className="h-4 w-4" />, color: 'green' as const },
-        { key: 'ratio', label: t('efficiency.regenRatioLabel', 'Regen Ratio'), value: `${fmtNumber((stats.regenRatio ?? 0) * 100)}%`, icon: <TrendingUp className="h-4 w-4" />, color: 'cyan' as const },
-        { key: 'co2', label: t('efficiency.co2Label', 'CO₂ Saved'), value: `${fmtInt(stats.co2SavedKg ?? 0)} ${t('efficiency.kgUnit', 'kg')}`, icon: <Leaf className="h-4 w-4" />, color: 'green' as const },
-        { key: 'dist', label: t('efficiency.totalDistLabel', 'Total Distance'), value: `${fmtInt(toStatsDistanceDisplay(stats.totalDistanceKm ?? 0))} ${distanceUnit}`, icon: <Route className="h-4 w-4" />, color: 'cyan' as const },
-        { key: 'top', label: t('efficiency.topSpeed', 'Top Speed'), value: `${fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh ?? 0))} ${speedUnit}`, icon: <Gauge className="h-4 w-4" />, color: 'purple' as const },
-        { key: 'cost', label: t('efficiency.costPerKmLabel', 'Est. Cost/km'), value: `$${costPerKm}`, icon: <Fuel className="h-4 w-4" />, color: 'amber' as const },
+        { key: 'regen', label: t('efficiency.totalRegen', 'Total regen'), value: formatEnergy(stats.regenEnergyWh ?? 0, { precision: 1 }), icon: <Zap className="h-4 w-4" />, color: 'green' as const },
+        { key: 'ratio', label: t('efficiency.regenRatioLabel', 'Regen ratio'), value: `${fmtNumber((stats.regenRatio ?? 0) * 100)}%`, icon: <TrendingUp className="h-4 w-4" />, color: 'cyan' as const },
+        { key: 'co2', label: t('efficiency.co2Label', 'CO₂ saved'), value: `${fmtInt(stats.co2SavedKg ?? 0)} ${t('efficiency.kgUnit', 'kg')}`, icon: <Leaf className="h-4 w-4" />, color: 'green' as const },
+        { key: 'dist', label: t('efficiency.totalDistLabel', 'Total distance'), value: `${fmtInt(toStatsDistanceDisplay(stats.totalDistanceKm ?? 0))} ${distanceUnit}`, icon: <Route className="h-4 w-4" />, color: 'cyan' as const },
+        { key: 'top', label: t('efficiency.topSpeed', 'Top speed'), value: `${fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh ?? 0))} ${speedUnit}`, icon: <Gauge className="h-4 w-4" />, color: 'purple' as const },
+        { key: 'cost', label: t('efficiency.costPerKmLabel', 'Est. cost/km'), value: `$${costPerKm}`, icon: <Fuel className="h-4 w-4" />, color: 'amber' as const },
       ]
     : [];
 
@@ -292,7 +292,7 @@ export default function EfficiencyPage() {
       subtitle={t('efficiency.subtitle', 'Energy consumption and driving efficiency analysis')}
       query={[statsQuery, drivesQuery]}
       dataSources={dataSources}
-      actions={
+      overflowActions={
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <SavedViewMenu
             route="/efficiency"
@@ -305,7 +305,7 @@ export default function EfficiencyPage() {
       {/* ── A · KPI band ─────────────────────────────────────────── */}
       <FadeIn>
         <section aria-label={t('efficiency.section.kpis', 'Key metrics')} className="space-y-3">
-          <SectionTitle>{t('efficiency.section.kpis', 'Key Metrics')}</SectionTitle>
+          <SectionTitle>{t('efficiency.section.kpis', 'Key metrics')}</SectionTitle>
           {/* HELP-03. "Efficiency" is the most over-assumed word in the
               product: users read a Wh/km figure as a wall-meter cost and then
               cannot reconcile it with their electricity bill. The definition
@@ -338,14 +338,14 @@ export default function EfficiencyPage() {
             </GlassPanel>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
-              <MetricCard label={t('efficiency.avgConsumption', 'Avg Consumption')} value={fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} subtitle={efficiencyUnit} icon={<Zap className="h-5 w-5" />} color="amber" />
+              <MetricCard label={t('efficiency.avgConsumption', 'Avg consumption')} value={fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} subtitle={efficiencyUnit} icon={<Zap className="h-5 w-5" />} color="amber" />
               <MetricCard label={t('efficiency.efficiencyLabel', 'Efficiency')} value={distancePerKwh} subtitle={`${distanceUnit}/kWh`} icon={<Gauge className="h-5 w-5" />} color="cyan" />
-              <MetricCard label={t('efficiency.avgSpeed', 'Avg Speed')} value={fmtNumber(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} subtitle={speedUnit} icon={<TrendingUp className="h-5 w-5" />} color="green" />
-              <MetricCard label={t('efficiency.topSpeed', 'Top Speed')} value={fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh ?? 0))} subtitle={speedUnit} icon={<Gauge className="h-5 w-5" />} color="purple" />
-              <MetricCard label={t('efficiency.co2Label', 'CO₂ Saved')} value={fmtInt(stats.co2SavedKg ?? 0)} subtitle={t('efficiency.kgUnit', 'kg')} icon={<Leaf className="h-5 w-5" />} color="green" />
-              <MetricCard label={t('efficiency.totalDistLabel', 'Total Distance')} value={fmtInt(toStatsDistanceDisplay(stats.totalDistanceKm ?? 0))} subtitle={distanceUnit} icon={<Route className="h-5 w-5" />} color="cyan" />
-              <MetricCard label={t('efficiency.costPerKm', 'Est. Cost/km')} value={`$${costPerKm}`} icon={<Fuel className="h-5 w-5" />} color="amber" />
-              <MetricCard label={t('efficiency.drivesAnalyzed', 'Drives Analyzed')} value={fmtInt(stats.totalDrives ?? 0)} icon={<Car className="h-5 w-5" />} color="blue" />
+              <MetricCard label={t('efficiency.avgSpeed', 'Avg speed')} value={fmtNumber(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} subtitle={speedUnit} icon={<TrendingUp className="h-5 w-5" />} color="green" />
+              <MetricCard label={t('efficiency.topSpeed', 'Top speed')} value={fmtInt(toStatsSpeedDisplay(stats.topSpeedKmh ?? 0))} subtitle={speedUnit} icon={<Gauge className="h-5 w-5" />} color="purple" />
+              <MetricCard label={t('efficiency.co2Label', 'CO₂ saved')} value={fmtInt(stats.co2SavedKg ?? 0)} subtitle={t('efficiency.kgUnit', 'kg')} icon={<Leaf className="h-5 w-5" />} color="green" />
+              <MetricCard label={t('efficiency.totalDistLabel', 'Total distance')} value={fmtInt(toStatsDistanceDisplay(stats.totalDistanceKm ?? 0))} subtitle={distanceUnit} icon={<Route className="h-5 w-5" />} color="cyan" />
+              <MetricCard label={t('efficiency.costPerKm', 'Est. cost/km')} value={`$${costPerKm}`} icon={<Fuel className="h-5 w-5" />} color="amber" />
+              <MetricCard label={t('efficiency.drivesAnalyzed', 'Drives analyzed')} value={fmtInt(stats.totalDrives ?? 0)} icon={<Car className="h-5 w-5" />} color="blue" />
             </div>
           )}
         </section>
@@ -354,13 +354,13 @@ export default function EfficiencyPage() {
       {/* ── B · Overview + primary trend ─────────────────────────── */}
       <FadeIn delay={0.1}>
         <section aria-label={t('efficiency.section.overview', 'Overview and trend')} className="space-y-3">
-          <SectionTitle>{t('efficiency.section.overview', 'Overview & Trend')}</SectionTitle>
+          <SectionTitle>{t('efficiency.section.overview', 'Overview & trend')}</SectionTitle>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
             {/* Hero: gauge + efficiency summary bars */}
             <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-amber-300" aria-hidden="true" />
-                {t('efficiency.overview', 'Efficiency Overview')}
+                {t('efficiency.overview', 'Efficiency overview')}
               </PanelTitle>
               {statsLoading ? (
                 <Skeleton height={260} />
@@ -380,10 +380,10 @@ export default function EfficiencyPage() {
                     />
                   </div>
                   <div className="space-y-4">
-                    <MetricBar label={t('efficiency.avgConsumption', 'Avg Consumption')} value={toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0)} max={toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM)} color="#00f0ff" sublabel={`${fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`} />
-                    <MetricBar label={t('efficiency.avgSpeed', 'Avg Speed')} value={toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0)} max={150} color="#10b981" sublabel={`${fmtInt(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} ${speedUnit}`} />
-                    <MetricBar label={t('efficiency.regenRatio', 'Regen Ratio')} value={(stats.regenRatio ?? 0) * 100} max={100} color="#a855f7" sublabel={`${fmtNumber((stats.regenRatio ?? 0) * 100)}%`} />
-                    <MetricBar label={t('efficiency.totalDriveTime', 'Total Drive Time')} value={stats.totalDurationS ?? 0} max={Math.max(stats.totalDurationS ?? 0, 36000)} color="#f59e0b" sublabel={formatDuration(stats.totalDurationS ?? 0, { precision: 1 })} />
+                    <MetricBar label={t('efficiency.avgConsumption', 'Avg consumption')} value={toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0)} max={toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM)} color="#00f0ff" sublabel={`${fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`} />
+                    <MetricBar label={t('efficiency.avgSpeed', 'Avg speed')} value={toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0)} max={150} color="#10b981" sublabel={`${fmtInt(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} ${speedUnit}`} />
+                    <MetricBar label={t('efficiency.regenRatio', 'Regen ratio')} value={(stats.regenRatio ?? 0) * 100} max={100} color="#a855f7" sublabel={`${fmtNumber((stats.regenRatio ?? 0) * 100)}%`} />
+                    <MetricBar label={t('efficiency.totalDriveTime', 'Total drive time')} value={stats.totalDurationS ?? 0} max={Math.max(stats.totalDurationS ?? 0, 36000)} color="#f59e0b" sublabel={formatDuration(stats.totalDurationS ?? 0, { precision: 1 })} />
                   </div>
                 </div>
               )}
@@ -426,10 +426,10 @@ export default function EfficiencyPage() {
       {/* ── C · Speed & temperature analysis ─────────────────────── */}
       <FadeIn delay={0.2}>
         <section aria-label={t('efficiency.section.analysis', 'Speed and temperature analysis')} className="space-y-3">
-          <SectionTitle>{t('efficiency.section.analysis', 'Speed & Temperature Analysis')}</SectionTitle>
+          <SectionTitle>{t('efficiency.section.analysis', 'Speed & temperature analysis')}</SectionTitle>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3 xl:gap-5">
             <ChartContainer
-              title={t('efficiency.speedDist', 'Efficiency by Speed Range')}
+              title={t('efficiency.speedDist', 'Efficiency by speed range')}
               ariaLabel={t('efficiency.speedDist.aria', 'Efficiency by speed-range bar chart')}
               data={speedDist.map((b) => ({ range: b.range, avgEff: b.avgEff }))}
               dataColumns={[
@@ -457,7 +457,7 @@ export default function EfficiencyPage() {
 
             {/* chart-a11y:no-table per-drive scatter cloud — aggregated stats appear in the KPI band + summary above */}
             <ChartContainer
-              title={t('efficiency.speedVsEfficiency', 'Speed vs Efficiency')}
+              title={t('efficiency.speedVsEfficiency', 'Speed vs efficiency')}
               ariaLabel={t('efficiency.speedVsEfficiency.aria', 'Speed versus efficiency scatter plot')}
               height={260}
               loading={drivesLoading}
@@ -476,7 +476,7 @@ export default function EfficiencyPage() {
 
             {/* chart-a11y:no-table per-drive scatter cloud — bucketed temperature table follows in the breakdown band */}
             <ChartContainer
-              title={t('efficiency.tempVsEfficiency', 'Temperature vs Efficiency')}
+              title={t('efficiency.tempVsEfficiency', 'Temperature vs efficiency')}
               ariaLabel={t('efficiency.tempVsEfficiency.aria', 'Temperature versus efficiency scatter plot')}
               height={260}
               loading={drivesLoading}
@@ -499,13 +499,13 @@ export default function EfficiencyPage() {
       {/* ── D · Breakdown + energy insights ──────────────────────── */}
       <FadeIn delay={0.3}>
         <section aria-label={t('efficiency.section.breakdown', 'Breakdown and insights')} className="space-y-3">
-          <SectionTitle>{t('efficiency.section.breakdown', 'Breakdown & Insights')}</SectionTitle>
+          <SectionTitle>{t('efficiency.section.breakdown', 'Breakdown & insights')}</SectionTitle>
           <div className="grid grid-cols-1 gap-4 2xl:grid-cols-3 xl:gap-5">
             {/* Temperature-bucketed efficiency table */}
             <GlassPanel className="p-4 sm:p-5 2xl:col-span-2">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />
-                {t('efficiency.tempEfficiency', 'Efficiency by Temperature Range')}
+                {t('efficiency.tempEfficiency', 'Efficiency by temperature range')}
               </PanelTitle>
               {drivesLoading ? (
                 <Skeleton height={220} />
@@ -521,19 +521,19 @@ export default function EfficiencyPage() {
                   columns={[
                     {
                       key: 'range',
-                      header: t('efficiency.tempRange', 'Temp Range'),
+                      header: t('efficiency.tempRange', 'Temp range'),
                       render: (b) => <Text weight="medium" color="primary">{b.range}</Text>,
                     },
                     {
                       key: 'count',
                       header: t('efficiency.drives', 'Drives'),
-                      className: 'text-right',
+                      align: 'right',
                       render: (b) => <Text color="secondary">{b.count}</Text>,
                     },
                     {
                       key: 'avgEff',
                       header: `${t('efficiency.avg', 'Avg')} ${efficiencyUnit}`,
-                      className: 'text-right',
+                      align: 'right',
                       render: (b) => (
                         <Text className="tabular-nums" style={{ color: efficiencyColor(b.avgEff) }}>
                           {fmtInt(toEfficiencyDisplay(b.avgEff))}
@@ -543,7 +543,7 @@ export default function EfficiencyPage() {
                     {
                       key: 'kmPerKwh',
                       header: `${distanceUnit}/kWh`,
-                      className: 'text-right',
+                      align: 'right',
                       render: (b) => (
                         <Text color="secondary">{b.avgEff > 0 ? fmtNumber(1000 / toEfficiencyDisplay(b.avgEff)) : '—'}</Text>
                       ),
@@ -551,13 +551,13 @@ export default function EfficiencyPage() {
                     {
                       key: 'totalDist',
                       header: `${t('efficiency.total', 'Total')} ${distanceUnit}`,
-                      className: 'text-right',
+                      align: 'right',
                       render: (b) => <Text color="secondary">{fmtInt(toDistanceDisplay(b.totalDist))}</Text>,
                     },
                     {
                       key: 'avgSpeed',
-                      header: t('efficiency.avgSpeedCol', 'Avg Speed'),
-                      className: 'text-right',
+                      header: t('efficiency.avgSpeedCol', 'Avg speed'),
+                      align: 'right',
                       render: (b) => <Text color="secondary">{fmtInt(toSpeedDisplay(b.avgSpeed))} {speedUnit}</Text>,
                     },
                   ]}
@@ -570,7 +570,7 @@ export default function EfficiencyPage() {
             <GlassPanel className="p-4 sm:p-5 2xl:col-span-1">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <Leaf className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-                {t('efficiency.insights', 'Energy Insights')}
+                {t('efficiency.insights', 'Energy insights')}
               </PanelTitle>
               {statsLoading ? (
                 <Skeleton height={200} />

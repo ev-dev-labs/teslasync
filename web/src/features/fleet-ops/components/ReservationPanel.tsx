@@ -9,6 +9,7 @@ import { ReservationActions } from './ReservationActions';
 
 interface ReservationPanelProps {
   items: FleetReservation[];
+  enableValueFilters?: boolean;
   loading: boolean;
   error: unknown;
   onRetry: () => void;
@@ -29,6 +30,7 @@ const statusColor: Record<FleetReservation['status'], string> = {
 
 export function ReservationPanel({
   items,
+  enableValueFilters = false,
   loading,
   error,
   onRetry,
@@ -52,18 +54,24 @@ export function ReservationPanel({
     {
       key: 'title',
       header: t('fleetOps.reservations.reservation', 'Reservation'),
+      filterValue: (item) => item.id,
+      filterValueLabel: (_value, item) => item.title,
       render: (item) => item.title,
       visibleOnMobile: true,
     },
     {
       key: 'vehicle',
       header: t('fleetOps.reservations.vehicle', 'Vehicle'),
+      filterValue: (item) => item.vehicle_id ?? null,
+      filterValueLabel: (_value, item) => item.vehicle_display_name,
       render: (item) => item.vehicle_display_name,
       visibleOnMobile: true,
     },
     {
       key: 'driver',
       header: t('fleetOps.reservations.driver', 'Driver'),
+      filterValue: (item) => item.driver_id ?? null,
+      filterValueLabel: (_value, item) => item.driver_display_name ?? '—',
       render: (item) => item.driver_display_name ?? '—',
     },
     {
@@ -74,6 +82,8 @@ export function ReservationPanel({
     {
       key: 'status',
       header: t('fleetOps.reservations.status', 'Status'),
+      filterValue: (item) => item.status ?? null,
+      filterValueLabel: (_value, item) => item.status == null ? '—' : statusLabel(item.status),
       render: (item) => (
         <StatusPill color={statusColor[item.status]}>{statusLabel(item.status)}</StatusPill>
       ),
@@ -144,6 +154,7 @@ export function ReservationPanel({
             tableId="fleet-ops:reservations"
             columns={columns}
             data={items}
+            enableValueFilters={enableValueFilters}
             keyExtractor={(item) => item.id}
             mobileColumns={['title', 'vehicle', 'actions']}
             pagination

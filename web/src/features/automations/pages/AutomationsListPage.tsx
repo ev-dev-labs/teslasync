@@ -59,7 +59,7 @@ const statusFilterOptions: { value: StatusFilter; key: string; fallback: string 
   { value: 'all', key: 'automations.filters.all', fallback: 'All' },
   { value: 'active', key: 'automations.filters.active', fallback: 'Active' },
   { value: 'disabled', key: 'automations.filters.disabled', fallback: 'Disabled' },
-  { value: 'auto-disabled', key: 'automations.filters.autoDisabled', fallback: 'Auto-Disabled' },
+  { value: 'auto-disabled', key: 'automations.filters.autoDisabled', fallback: 'Auto-disabled' },
 ];
 
 // ─── Stats computation ────────────────────────────────────────────────────────
@@ -267,8 +267,14 @@ export default function AutomationsListPage() {
     <PageContainer
       title={t('automations.title', 'Automations')}
       subtitle={t('automations.subtitle', 'Automate vehicle actions with typed triggers, conditions, and action chains')}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2">
+      secondaryActions={
+        <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/automations/list')}>
+          <ListFilter className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          {t('automations.manageRules', 'Manage rules')}
+        </Button>
+      }
+      overflowActions={
+        <>
           <Input
             ref={importInputRef}
             type="file"
@@ -290,22 +296,20 @@ export default function AutomationsListPage() {
             <Upload className="mr-1.5 h-4 w-4" aria-hidden="true" />
             {t('automations.import', 'Import')}
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/automations/list')}>
-            <ListFilter className="mr-1.5 h-4 w-4" aria-hidden="true" />
-            {t('automations.manageRules', 'Manage rules')}
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={() => navigate('/automations/new')}
-            disabled={!operationalMode.canWrite}
-            title={operationalMode.writeBlockReason ?? undefined}
-          >
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-            {t('automations.create', 'Create')}
-          </Button>
-        </div>
+        </>
+      }
+      primaryAction={
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          onClick={() => navigate('/automations/new')}
+          disabled={!operationalMode.canWrite}
+          title={operationalMode.writeBlockReason ?? undefined}
+        >
+          <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          {t('automations.create', 'Create')}
+        </Button>
       }
     >
       <OperationalWriteNotice
@@ -340,7 +344,7 @@ export default function AutomationsListPage() {
             color="blue"
           />
           <MetricCard
-            label={t('automations.stats.autoDisabled', 'Auto-Disabled')}
+            label={t('automations.stats.autoDisabled', 'Auto-disabled')}
             value={stats.autoDisabled}
             icon={<ShieldOff className="h-5 w-5" />}
             color="red"
@@ -411,7 +415,7 @@ export default function AutomationsListPage() {
               />
               <Sparkles className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
               <Text variant="body" className="font-semibold">
-                {t('automations.presets.title', 'Quick Start Templates')}
+                {t('automations.presets.title', 'Quick start templates')}
               </Text>
               <Caption className="ml-1 hidden sm:inline">
                 {t('automations.presets.hint', 'One-click install')}
@@ -443,7 +447,7 @@ export default function AutomationsListPage() {
         <section>
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <SectionTitle>{t('automations.yourAutomations', 'Your Automations')}</SectionTitle>
+              <SectionTitle>{t('automations.yourAutomations', 'Your automations')}</SectionTitle>
               <Caption>
                 {t('automations.showingCount', 'Showing {{count}}', { count: sortedItems.length })}
               </Caption>

@@ -33,11 +33,11 @@ export default function BehavioralSentinelPage() {
   const [page, setPage] = useState(1);
   const query = useBehavioralSentinel(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const findings = query.data?.items ?? [];
-  usePageTitle(t('advancedIntelligence.sentinel.title', 'Behavioral Sentinel'));
+  usePageTitle(t('advancedIntelligence.sentinel.title', 'Behavioral sentinel'));
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.sentinel.title', 'Behavioral Sentinel')}
+      title={t('advancedIntelligence.sentinel.title', 'Behavioral sentinel')}
       subtitle={t(
         'advancedIntelligence.sentinel.subtitle',
         'Explainable command, identity, and telemetry-integrity signals without personal attribution.',

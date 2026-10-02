@@ -344,8 +344,8 @@ describe('ElevationChart — gain / loss / net summary', () => {
     const { container } = renderChart(POINTS, makeStats({ elevGain: 120, elevLoss: 45 }));
 
     const text = container.textContent ?? '';
-    expect(text).toContain('gain');
-    expect(text).toContain('loss');
+    expect(text).toContain('Gain');
+    expect(text).toContain('Loss');
     expect(text).toContain('Net');
     expect(text).toContain('120');
     expect(text).toContain('45');
@@ -353,11 +353,10 @@ describe('ElevationChart — gain / loss / net summary', () => {
     expect(text).toContain('75');
   });
 
-  it('marks the gain / loss arrow glyphs decorative (aria-hidden) so only the values are announced', () => {
-    const { container } = renderChart();
-
-    // ArrowUpRight + ArrowDownRight — both hidden from assistive tech.
-    expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(2);
+  it('exposes gain and loss as semantic row headers instead of color-only arrows', () => {
+    renderChart();
+    expect(screen.getByRole('rowheader', { name: 'Gain' })).toBeInTheDocument();
+    expect(screen.getByRole('rowheader', { name: 'Loss' })).toBeInTheDocument();
   });
 });
 

@@ -158,7 +158,7 @@ export default function DriveComparePage() {
       title={t('driveCompare.title', 'Drive Compare')}
       subtitle={t('driveCompare.subtitle', 'Compare context, efficiency, and telemetry from any two drives')}
       query={[drivesQuery, driveAQuery, driveBQuery]}
-      actions={
+      contextActions={
         <div className="flex max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
           {driveOptions.length > 0 ? (
             <>

@@ -35,7 +35,7 @@ export default function ChargingSiteTwinPage() {
     storage_energy_wh: null,
     fleet_growth_pct: 10,
   });
-  usePageTitle(t('advancedIntelligence.site.title', 'Charging Site Twin'));
+  usePageTitle(t('advancedIntelligence.site.title', 'Charging site twin'));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -46,7 +46,7 @@ export default function ChargingSiteTwinPage() {
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.site.title', 'Charging Site Twin')}
+      title={t('advancedIntelligence.site.title', 'Charging site twin')}
       subtitle={t(
         'advancedIntelligence.site.subtitle',
         'Test queue, utilization, peak demand, and panel constraints before infrastructure changes.',
@@ -244,7 +244,7 @@ export default function ChargingSiteTwinPage() {
                   <Text as="h3" variant="label">{item.mitigation}</Text>
                 </div>
                 <Text as="p" variant="bodySm" className="mt-2">
-                  {t('advancedIntelligence.site.mitigation.effect', 'Queue {{queue}}% · Peak {{peak}}', {
+                  {t('advancedIntelligence.site.mitigation.effect', 'Queue {{queue}}% · peak {{peak}}', {
                     queue: fmtNumber(item.queue_delta_pct, 1),
                     peak: units.formatPower(item.peak_delta_w),
                   })}

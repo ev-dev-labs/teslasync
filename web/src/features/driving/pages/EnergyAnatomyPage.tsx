@@ -4,7 +4,7 @@ import { Wind, Zap, Recycle, Waypoints } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, HelpTooltip } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -92,9 +92,8 @@ export default function EnergyAnatomyPage() {
       title={t('energyAnatomy.title', 'Energy Anatomy')}
       subtitle={t('energyAnatomy.subtitle', 'Where a period of traction energy physically went')}
       query={drivesQuery}
-      actions={
+      contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={setRange}

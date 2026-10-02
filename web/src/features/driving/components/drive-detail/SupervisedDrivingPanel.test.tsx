@@ -61,7 +61,7 @@ describe('SupervisedDrivingPanel', () => {
       '/fsd#fsd-firmware-spotlight',
     );
     expect(screen.getByText(/correlation, not proof the update caused a change/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Open FSD Insights/ })).toHaveAttribute('href', '/fsd');
+    expect(screen.getByRole('link', { name: /Open FSD insights/ })).toHaveAttribute('href', '/fsd');
   });
 
   it('keeps missing evidence unknown instead of rendering zero', () => {

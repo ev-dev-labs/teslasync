@@ -158,7 +158,7 @@ describe('TriggerConfigurator — schedule (simple mode)', () => {
   it('renders the time picker seeded from the cron and 7 day toggles', () => {
     renderConfig(createDefaultTrigger('trigger_schedule'));
     expect(screen.getByLabelText('Time')).toHaveValue('08:00');
-    expect(screen.queryByLabelText('Cron Expression')).toBeNull();
+    expect(screen.queryByLabelText('Cron expression')).toBeNull();
     // Every day is "on" when the cron day-of-week field is '*'.
     for (const day of ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) {
       expect(screen.getByRole('button', { name: day })).toHaveAttribute('aria-pressed', 'true');
@@ -256,7 +256,7 @@ describe('TriggerConfigurator — schedule (advanced cron)', () => {
 
     // The bug this guards: the button previously re-emitted the same cron and
     // never actually switched modes. It must now surface the raw editor.
-    expect(screen.getByLabelText('Cron Expression')).toHaveValue('0 8 * * *');
+    expect(screen.getByLabelText('Cron expression')).toHaveValue('0 8 * * *');
     expect(screen.queryByLabelText('Time')).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -264,7 +264,7 @@ describe('TriggerConfigurator — schedule (advanced cron)', () => {
   it('edits the cron expression directly in advanced mode', () => {
     const { onChange } = renderConfig(createDefaultTrigger('trigger_schedule'));
     fireEvent.click(screen.getByRole('button', { name: 'Use advanced cron expression' }));
-    fireEvent.change(screen.getByLabelText('Cron Expression'), {
+    fireEvent.change(screen.getByLabelText('Cron expression'), {
       target: { value: '*/15 * * * *' },
     });
     expect(onChange).toHaveBeenCalledWith({
@@ -278,14 +278,14 @@ describe('TriggerConfigurator — schedule (advanced cron)', () => {
     // Regression: parseCronExpr used to accept "1-5", producing days=[] which
     // the simple UI shows as "every day" — silently changing the schedule.
     renderConfig({ kind: 'trigger_schedule', cron_expr: '0 8 * * 1-5', timezone: 'UTC' });
-    expect(screen.getByLabelText('Cron Expression')).toHaveValue('0 8 * * 1-5');
+    expect(screen.getByLabelText('Cron expression')).toHaveValue('0 8 * * 1-5');
     expect(screen.queryByLabelText('Time')).toBeNull();
     expect(screen.getByRole('button', { name: 'Switch to simple mode' })).toBeInTheDocument();
   });
 
   it('keeps a step-based minute cron in the raw editor', () => {
     renderConfig({ kind: 'trigger_schedule', cron_expr: '*/15 9 * * *', timezone: 'UTC' });
-    expect(screen.getByLabelText('Cron Expression')).toHaveValue('*/15 9 * * *');
+    expect(screen.getByLabelText('Cron expression')).toHaveValue('*/15 9 * * *');
     expect(screen.queryByLabelText('Time')).toBeNull();
   });
 
@@ -311,7 +311,7 @@ describe('TriggerConfigurator — event', () => {
   it('renders the event select seeded from the trigger', () => {
     renderConfig({ kind: 'trigger_event', event_type: 'online' });
     expect(screen.getByLabelText('Event')).toHaveValue('online');
-    expect(screen.getByRole('option', { name: 'Charging Starts' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Charging starts' })).toBeInTheDocument();
   });
 
   it('emits the chosen event type', () => {
@@ -345,7 +345,7 @@ describe('TriggerConfigurator — geofence', () => {
 
   it('defaults dwell minutes when the event switches to dwell', () => {
     const { onChange } = renderConfig({ kind: 'trigger_geofence', place_id: 10, event: 'enter' });
-    expect(screen.queryByLabelText('Dwell Minutes')).toBeNull();
+    expect(screen.queryByLabelText('Dwell minutes')).toBeNull();
     fireEvent.change(screen.getByLabelText('Event'), { target: { value: 'dwell' } });
     expect(onChange).toHaveBeenCalledWith({
       kind: 'trigger_geofence',
@@ -362,7 +362,7 @@ describe('TriggerConfigurator — geofence', () => {
       event: 'dwell',
       dwell_minutes: 15,
     });
-    const dwell = screen.getByLabelText('Dwell Minutes');
+    const dwell = screen.getByLabelText('Dwell minutes');
     expect(dwell).toHaveValue(15);
     fireEvent.change(dwell, { target: { value: '30' } });
     expect(onChange).toHaveBeenCalledWith({
@@ -380,7 +380,7 @@ describe('TriggerConfigurator — geofence', () => {
       event: 'dwell',
       dwell_minutes: 15,
     });
-    fireEvent.change(screen.getByLabelText('Dwell Minutes'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Dwell minutes'), { target: { value: '' } });
     expect(onChange).toHaveBeenCalledWith({
       kind: 'trigger_geofence',
       place_id: 10,

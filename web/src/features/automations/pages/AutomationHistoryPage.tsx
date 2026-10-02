@@ -22,7 +22,7 @@ const STATUSES: AutomationHistoryStatus[] = [
 
 export default function AutomationHistoryPage() {
   const { t } = useTranslation();
-  usePageTitle(t('automations.historyPage.title', 'Automation History'));
+  usePageTitle(t('automations.historyPage.title', 'Automation history'));
   const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'automations.history.range',
   });
@@ -80,10 +80,10 @@ export default function AutomationHistoryPage() {
 
   return (
     <PageContainer
-      title={t('automations.historyPage.title', 'Automation History')}
+      title={t('automations.historyPage.title', 'Automation history')}
       subtitle={t('automations.historyPage.subtitle', 'Review every execution and its outcome across the selected period.')}
       copyLink
-      actions={
+      primaryAction={
         <Link to="/automations/new" className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[var(--control-border)] bg-[var(--control-bg)] px-3 text-sm text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]">
           <Plus className="h-4 w-4" aria-hidden="true" />
           {t('automations.historyPage.new', 'New automation')}

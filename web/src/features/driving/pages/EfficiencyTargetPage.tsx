@@ -89,7 +89,7 @@ export default function EfficiencyTargetPage() {
         'A completed-week goal workspace built from the observed history window',
       )}
       query={historyQuery}
-      actions={
+      contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Input
             key={`efficiency-target-${distanceUnit}`}

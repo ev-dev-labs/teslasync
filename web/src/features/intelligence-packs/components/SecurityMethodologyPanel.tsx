@@ -6,7 +6,7 @@
  */
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, Table } from '@/components/ui';
 import { Text } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import { PACK_CAPABILITY_CATALOG, MANIFEST_LIMITS } from '../lib/manifestTypes';
@@ -33,7 +33,7 @@ export function SecurityMethodologyPanel() {
     t('intelPacks.security.ng2', 'Canonicalization is a documented, internally-consistent subset of RFC 8785 (JCS) — not a certified, byte-for-byte-interoperable implementation with arbitrary third-party tooling.'),
     t('intelPacks.security.ng3', 'Unsigned packs are unverified by definition. They can be previewed but cannot be enabled without the explicit, clearly-labeled local-development trust flow — a convenience for experimentation, not a security boundary.'),
     t('intelPacks.security.ng4', 'The sandbox proves computational safety, not real-world analytical correctness. A formula can look reasonable against sample data and still be a poor model of real behavior.'),
-    t('intelPacks.security.ng5', 'Automation recommendations never execute anything. They are plain strings a human reviews and manually recreates in the Automation Builder.'),
+    t('intelPacks.security.ng5', 'Automation recommendations never execute anything. They are plain strings a human reviews and manually recreates in the automation builder.'),
     t('intelPacks.security.ng6', 'Ed25519 support in Web Crypto is a newer browser feature than SHA-256. Older or locked-down browsers, or any non-secure-context origin, cannot install signed packs by design.'),
     t('intelPacks.security.ng7', 'The IndexedDB → localStorage storage fallback is about persistence reliability only; it has no bearing on cryptographic verification.'),
     t('intelPacks.security.ng8', 'Multi-table writes (e.g. install + audit log append) are not cross-table transactional — each table is written atomically on its own.'),
@@ -71,16 +71,19 @@ export function SecurityMethodologyPanel() {
         <Text variant="bodySm" className="font-semibold mb-2">
           {t('intelPacks.security.limitsTitle', 'Resource ceilings & budgets in this build')}
         </Text>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)]">
-          <div className="flex justify-between border-b border-[var(--border-subtle)] py-1"><dt>{t('intelPacks.security.maxBytes', 'Max envelope size')}</dt><dd>{MANIFEST_LIMITS.maxEnvelopeJsonBytes.toLocaleString()} B</dd></div>
-          <div className="flex justify-between border-b border-[var(--border-subtle)] py-1"><dt>{t('intelPacks.security.maxDepth', 'Max JSON depth')}</dt><dd>{MANIFEST_LIMITS.maxJsonDepth}</dd></div>
-          <div className="flex justify-between border-b border-[var(--border-subtle)] py-1"><dt>{t('intelPacks.security.maxNodes', 'Max JSON node count')}</dt><dd>{MANIFEST_LIMITS.maxJsonNodeCount.toLocaleString()}</dd></div>
-          <div className="flex justify-between border-b border-[var(--border-subtle)] py-1"><dt>{t('intelPacks.security.maxExprNodes', 'Max AST nodes per formula')}</dt><dd>{MANIFEST_LIMITS.maxExprNodesPerFormula}</dd></div>
-          <div className="flex justify-between border-b border-[var(--border-subtle)] py-1"><dt>{t('intelPacks.security.maxExprDepth', 'Max AST depth per formula')}</dt><dd>{MANIFEST_LIMITS.maxExprDepth}</dd></div>
-          <div className="flex justify-between border-b border-[var(--border-subtle)] py-1"><dt>{t('intelPacks.security.sandboxSteps', 'Max sandbox evaluation steps')}</dt><dd>{SANDBOX_BUDGETS.maxTotalSteps.toLocaleString()}</dd></div>
-          <div className="flex justify-between border-b border-[var(--border-subtle)] py-1"><dt>{t('intelPacks.security.sandboxDuration', 'Max sandbox wall-clock time')}</dt><dd>{SANDBOX_BUDGETS.maxDurationMs} ms</dd></div>
-          <div className="flex justify-between py-1"><dt>{t('intelPacks.security.sandboxRows', 'Max sandbox sample rows')}</dt><dd>{SANDBOX_BUDGETS.maxRows}</dd></div>
-        </dl>
+        <Table aria-label={t('intelPacks.security.limitsTitle', 'Resource ceilings & budgets in this build')}>
+
+          <tbody>
+            <tr><th scope="row">{t('intelPacks.security.maxBytes', 'Max envelope size')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxEnvelopeJsonBytes.toLocaleString()} B</td></tr>
+            <tr><th scope="row">{t('intelPacks.security.maxDepth', 'Max JSON depth')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxJsonDepth}</td></tr>
+            <tr><th scope="row">{t('intelPacks.security.maxNodes', 'Max JSON node count')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxJsonNodeCount.toLocaleString()}</td></tr>
+            <tr><th scope="row">{t('intelPacks.security.maxExprNodes', 'Max AST nodes per formula')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxExprNodesPerFormula}</td></tr>
+            <tr><th scope="row">{t('intelPacks.security.maxExprDepth', 'Max AST depth per formula')}</th><td className="text-right tabular-nums">{MANIFEST_LIMITS.maxExprDepth}</td></tr>
+            <tr><th scope="row">{t('intelPacks.security.sandboxSteps', 'Max sandbox evaluation steps')}</th><td className="text-right tabular-nums">{SANDBOX_BUDGETS.maxTotalSteps.toLocaleString()}</td></tr>
+            <tr><th scope="row">{t('intelPacks.security.sandboxDuration', 'Max sandbox wall-clock time')}</th><td className="text-right tabular-nums">{SANDBOX_BUDGETS.maxDurationMs} ms</td></tr>
+            <tr><th scope="row">{t('intelPacks.security.sandboxRows', 'Max sandbox sample rows')}</th><td className="text-right tabular-nums">{SANDBOX_BUDGETS.maxRows}</td></tr>
+          </tbody>
+        </Table>
       </GlassPanel>
 
       <GlassPanel padding="md">

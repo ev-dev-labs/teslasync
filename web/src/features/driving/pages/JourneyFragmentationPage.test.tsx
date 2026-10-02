@@ -84,11 +84,11 @@ vi.mock('@/components/forms', () => ({
 vi.mock('@/components/layout', () => ({
   PageContainer: ({
     children,
-    actions,
+    contextActions,
     query,
   }: {
     children: ReactNode;
-    actions?: ReactNode;
+    contextActions?: ReactNode;
     query?: { refetch: () => Promise<unknown> };
   }) => (
     <main>
@@ -101,7 +101,7 @@ vi.mock('@/components/layout', () => ({
           Page refresh
         </button>
       )}
-      {actions}
+      {contextActions}
       {children}
     </main>
   ),

@@ -148,18 +148,18 @@ beforeEach(() => {
 
 describe('advanced intelligence page routes', () => {
   const pages: Array<[string, ComponentType]> = [
-    ['Twin Lab', TwinLabPage],
-    ['Firmware Canary', FirmwareCanaryPage],
-    ['Component Survival', ComponentSurvivalPage],
-    ['Road Hazard Mesh', RoadHazardMeshPage],
-    ['Behavioral Sentinel', BehavioralSentinelPage],
-    ['Charging Forensics', ChargingForensicsPage],
-    ['Journey Assurance', JourneyAssurancePage],
-    ['Charging Site Twin', ChargingSiteTwinPage],
-    ['Federated Learning Studio', FederatedLearningStudioPage],
-    ['Emergency Resilience', EmergencyResiliencePage],
-    ['Causal Experimentation', CausalExperimentationPage],
-    ['TCO Optimizer', TCOOptimizerPage],
+    ['Twin lab', TwinLabPage],
+    ['Firmware canary', FirmwareCanaryPage],
+    ['Component survival', ComponentSurvivalPage],
+    ['Road hazard mesh', RoadHazardMeshPage],
+    ['Behavioral sentinel', BehavioralSentinelPage],
+    ['Charging forensics', ChargingForensicsPage],
+    ['Journey assurance', JourneyAssurancePage],
+    ['Charging site twin', ChargingSiteTwinPage],
+    ['Federated learning studio', FederatedLearningStudioPage],
+    ['Emergency resilience', EmergencyResiliencePage],
+    ['Causal experimentation', CausalExperimentationPage],
+    ['TCO optimizer', TCOOptimizerPage],
   ];
 
   it.each(pages)('smoke-renders the %s route shell', (title, Page) => {

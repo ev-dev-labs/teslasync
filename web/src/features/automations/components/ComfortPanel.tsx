@@ -94,7 +94,7 @@ export function ComfortPanel() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Icons.climateHot className="h-4 w-4 text-orange-300" aria-hidden="true" />
-          {t('comfort.title', 'Cabin Comfort Autopilot')}
+          {t('comfort.title', 'Cabin comfort Autopilot')}
         </PanelTitle>
         {stored && (
           <Badge variant={enabled ? 'success' : 'neutral'} size="sm">

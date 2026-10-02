@@ -36,10 +36,10 @@ function MarketplaceTabs() {
   const tabs: TabItem[] = [
     { key: 'catalog', label: t('intelPacks.tabs.catalog', 'Catalog') },
     { key: 'installed', label: t('intelPacks.tabs.installed', 'Installed') },
-    { key: 'sandbox', label: t('intelPacks.tabs.sandbox', 'Sandbox Preview') },
-    { key: 'audit', label: t('intelPacks.tabs.audit', 'Audit Log') },
-    { key: 'importExport', label: t('intelPacks.tabs.importExport', 'Import / Export') },
-    { key: 'security', label: t('intelPacks.tabs.security', 'Security & Methodology') },
+    { key: 'sandbox', label: t('intelPacks.tabs.sandbox', 'Sandbox preview') },
+    { key: 'audit', label: t('intelPacks.tabs.audit', 'Audit log') },
+    { key: 'importExport', label: t('intelPacks.tabs.importExport', 'Import / export') },
+    { key: 'security', label: t('intelPacks.tabs.security', 'Security & methodology') },
   ];
 
   return (
@@ -48,7 +48,7 @@ function MarketplaceTabs() {
         tabs={tabs}
         activeTab={activeTab}
         onChange={(key) => setActiveTab(key as TabKey)}
-        ariaLabel={t('intelPacks.tabs.ariaLabel', 'Intelligence-Pack Marketplace sections')}
+        ariaLabel={t('intelPacks.tabs.ariaLabel', 'Intelligence-pack marketplace sections')}
       />
       <FadeIn key={activeTab}>
         <GlassPanel padding="lg">
@@ -66,11 +66,11 @@ function MarketplaceTabs() {
 
 export default function IntelligencePackMarketplacePage() {
   const { t } = useTranslation();
-  usePageTitle(t('intelPacks.page.title', 'Intelligence-Pack Marketplace'));
+  usePageTitle(t('intelPacks.page.title', 'Intelligence-pack marketplace'));
 
   return (
     <PageContainer
-      title={t('intelPacks.page.title', 'Intelligence-Pack Marketplace')}
+      title={t('intelPacks.page.title', 'Intelligence-pack marketplace')}
       subtitle={t(
         'intelPacks.page.subtitle',
         'Signed, sandboxed, local-first analytics packs — declarative data only, never executable code, never a network request.',

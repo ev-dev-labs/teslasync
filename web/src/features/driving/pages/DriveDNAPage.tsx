@@ -152,7 +152,7 @@ export default function DriveDNAPage() {
         'driveDna.subtitle',
         'Deterministic artwork and sampled evidence from one selected drive’s telemetry emissions',
       )}
-      actions={
+      contextActions={
         <div className="flex flex-wrap items-start justify-end gap-2 sm:gap-3">
           <Select
             aria-label={t('driveDna.selector.aria', 'Choose a drive')}

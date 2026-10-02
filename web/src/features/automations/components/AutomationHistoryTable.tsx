@@ -19,14 +19,14 @@ export function AutomationHistoryTable({ rows, onOpen }: {
     { key: 'status', header: t('automations.historyPage.outcome', 'Outcome'), visibleOnMobile: true, render: (row) =>
       t(`automations.historyPage.status.${row.status}`, row.status) },
     { key: 'trigger', header: t('automations.historyPage.trigger', 'Trigger'), render: (row) => row.trigger_type || '—' },
-    { key: 'actions', header: t('automations.historyPage.actions', 'Actions'), render: (row) => `${row.actions_succeeded}/${row.actions_total}` },
-    { key: 'duration', header: t('automations.historyPage.durationColumn', 'Duration'), render: (row) => row.duration_ms != null ? formatDurationMs(row.duration_ms) : '—' },
+    { key: 'actions', header: t('automations.historyPage.actions', 'Actions'), align: 'right', render: (row) => `${row.actions_succeeded}/${row.actions_total}` },
+    { key: 'duration', header: t('automations.historyPage.durationColumn', 'Duration'), align: 'right', render: (row) => row.duration_ms != null ? formatDurationMs(row.duration_ms) : '—' },
     { key: 'error', header: t('automations.historyPage.error', 'Error'), render: (row) => row.error || '—' },
   ], [t, onOpen]);
   return (
     <DataTable
       tableId="automations:history"
-      caption={t('automations.historyPage.title', 'Automation History')}
+      caption={t('automations.historyPage.title', 'Automation history')}
       columns={columns}
       data={rows}
       keyExtractor={(row) => row.id}

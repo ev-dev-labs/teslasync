@@ -149,7 +149,7 @@ function renderFeed(overrides: Partial<Props> = {}) {
 describe('AutomationActivityFeed — header & connection state', () => {
   it('renders the section title and a Live indicator when connected', () => {
     renderFeed({ connectionState: 'connected' });
-    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
+    expect(screen.getByText('Recent activity')).toBeInTheDocument();
     expect(screen.getByText('Live')).toBeInTheDocument();
     expect(screen.queryByText('Reconnecting')).toBeNull();
   });

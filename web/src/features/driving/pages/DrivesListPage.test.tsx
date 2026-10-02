@@ -178,12 +178,14 @@ vi.mock('@/api/hooks/useAnalytics', () => ({
   useFsdInsightsRange: vi.fn(),
 }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
+vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: vi.fn(() => false) }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useCrossTabRefresh', () => ({ useCrossTabRefresh: vi.fn() }));
 
 import { useDrives, useBulkDeleteDrives } from '@/api/hooks/useDriving';
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useUnits } from '@/hooks/useUnits';
 import { useCrossTabRefresh } from '@/hooks/useCrossTabRefresh';
 import DrivesListPage from './DrivesListPage';
@@ -192,6 +194,7 @@ const mockDrives = useDrives as unknown as ReturnType<typeof vi.fn>;
 const mockBulkDelete = useBulkDeleteDrives as unknown as ReturnType<typeof vi.fn>;
 const mockFsdInsights = useFsdInsightsRange as unknown as ReturnType<typeof vi.fn>;
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
+const mockMediaQuery = useMediaQuery as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 const mockCrossTabRefresh = useCrossTabRefresh as unknown as ReturnType<typeof vi.fn>;
 
@@ -336,8 +339,7 @@ function renderPage(initialEntries: string[] = [DEFAULT_RANGE]) {
 const kpiRegion = () => screen.getByTestId('drives-overview-kpis');
 const listRegion = () => screen.getByRole('region', { name: 'Drive list' });
 const analysisRegion = () => screen.getByRole('region', { name: 'Trends and highlights' });
-const collectionsBar = () => screen.getByRole('tablist', { name: 'Filter drives by collection' });
-const fsdFilterBar = () => screen.getByRole('tablist', { name: 'Filter drives by FSD evidence' });
+const filtersBar = () => screen.getByRole('tablist', { name: 'Filter drives by collection · Filter drives by FSD evidence' });
 
 /** Value <p> that immediately follows a MetricCard's label span. */
 function cardValue(region: HTMLElement, label: string): string {
@@ -350,6 +352,7 @@ beforeEach(() => {
   mockDrives.mockReset();
   mockBulkDelete.mockReset();
   mockSelected.mockReset();
+  mockMediaQuery.mockReturnValue(false);
   mockUnits.mockReset();
   mockFsdInsights.mockReset();
   mockCrossTabRefresh.mockReset();
@@ -450,6 +453,17 @@ describe('DrivesListPage — populated (km)', () => {
     expect(cardValue(kpi, 'Measured energy / cost')).toBe(
       `${fmtNumber(TOTAL_WH / 1000)} kWh · $${fmtNumber((TOTAL_WH / 1000) * COST_PER_KWH, 2)}`,
     );
+  });
+
+  it('renders every overview label and value in a compact, non-interactive metric grid', () => {
+    renderPage();
+    const grid = screen.getByTestId('drives-overview-kpis');
+    expect(grid).toHaveClass('gap-px', 'grid-cols-2', 'lg:grid-cols-3');
+    const cards = grid.querySelectorAll('[data-role="metric-card"]');
+    expect(cards).toHaveLength(6);
+    expect(cards[4].querySelector('[data-role="metric-label"] span')).toHaveClass('break-words');
+    expect(cards[5].querySelector('[data-role="metric-value"]')).toHaveClass('break-words');
+    expect(within(grid).queryByRole('button')).toBeNull();
   });
 
   it('presents a six-signal decision brief with freshness and evidence coverage', () => {
@@ -601,9 +615,21 @@ describe('DrivesListPage — unit boundary (miles)', () => {
 });
 
 describe('DrivesListPage — collections', () => {
+  it('presents one filter list with one active selection', async () => {
+    renderPage();
+    const list = filtersBar();
+    expect(screen.getAllByRole('tablist')).toHaveLength(1);
+    expect(within(list).getByRole('tab', { name: /All/ })).toHaveAttribute('aria-selected', 'true');
+    expect(within(list).queryByRole('tab', { name: /All FSD data/ })).toBeNull();
+    fireEvent.click(within(list).getByRole('tab', { name: /Notable/ }));
+    expect(screen.getByTestId('location')).toHaveTextContent('coll=notable');
+    await waitFor(() => expect(within(filtersBar()).getByRole('tab', { name: /Notable/ })).toHaveAttribute('aria-selected', 'true'));
+    expect(within(filtersBar()).getAllByRole('tab', { selected: true })).toHaveLength(1);
+  });
+
   it('counts each collection and filters the list when one is chosen', async () => {
     renderPage();
-    const bar = collectionsBar();
+    const bar = filtersBar();
 
     expect(within(bar).getByRole('tab', { name: /All/ })).toHaveTextContent('(4)');
     expect(within(bar).getByRole('tab', { name: /Anomalies/ })).toHaveTextContent('(1)');
@@ -622,6 +648,217 @@ describe('DrivesListPage — collections', () => {
 
     // Only the three commute drives remain.
     expect(within(listRegion()).getAllByText('40.00 km')).toHaveLength(3);
+  });
+});
+
+describe('DrivesListPage — desktop evidence grid', () => {
+  it('filters Start and Destination independently before pagination', () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage([`${DEFAULT_RANGE}&grid_start=HOME&grid_destination=office&size=1&page=2`]);
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
+    expect(within(table).getByRole('link', { name: /Apr 22/ })).toHaveAttribute('href', '/drives/3');
+    expect(table.querySelector('[data-column-key="start"]')).toBeInTheDocument();
+    expect(table.querySelector('[data-column-key="destination"]')).toBeInTheDocument();
+  });
+
+  it('splits battery readings and sorts consumed percentage points in both directions', () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage([`${DEFAULT_RANGE}&grid_start_battery=85&sort=batteryUsed`]);
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    expect(within(table).getAllByRole('link', { name: /Apr/ })[0]).toHaveAttribute('href', '/drives/4');
+    const row = table.querySelector('tbody tr');
+    expect(row?.querySelector('[data-column-key="startBattery"]')).toHaveTextContent('90.00');
+    expect(row?.querySelector('[data-column-key="battery"]')).toHaveTextContent('55.00');
+    expect(row?.querySelector('[data-column-key="batteryUsed"]')).toHaveTextContent('35.00');
+    fireEvent.click(within(table).getByRole('button', { name: 'Battery used (pp)', exact: true }));
+    expect(within(table).getAllByRole('link', { name: /Apr/ })[0]).toHaveAttribute('href', '/drives/3');
+  });
+
+  it('filters power in display units and accepts negative outdoor temperatures', () => {
+    mockMediaQuery.mockReturnValue(true);
+    mockDrives.mockReturnValue(makeQuery({ data: [
+      { ...DRIVES[0], avgPowerW: 12000, outsideTempAvgC: -5, regenEnergyWh: 1000 },
+      { ...DRIVES[1], avgPowerW: 9000, outsideTempAvgC: -10, regenEnergyWh: 500 },
+    ] }));
+    renderPage([`${DEFAULT_RANGE}&grid_avg_power=10&grid_outside_temp=-7&grid_regen=0.75`]);
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
+    expect(within(table).getByRole('link', { name: /Apr 24/ })).toHaveAttribute('href', '/drives/1');
+    expect(table.querySelector('tbody [data-column-key="avgPower"]')).toHaveTextContent('12.00');
+    expect(table.querySelector('tbody [data-column-key="outsideTemp"]')).toHaveTextContent('-5.00');
+  });
+
+  it('accepts battery gains in the numeric condition without treating them as invalid', () => {
+    mockMediaQuery.mockReturnValue(true);
+    mockDrives.mockReturnValue(makeQuery({ data: [
+      { ...DRIVES[0], endBatteryPct: 85 },
+      { ...DRIVES[1], endBatteryPct: 80 },
+    ] }));
+    renderPage([`${DEFAULT_RANGE}&grid_battery_used=-5`]);
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
+    expect(table.querySelector('tbody [data-column-key="batteryUsed"]')).toHaveTextContent('-5.00');
+    fireEvent.click(within(table).getByRole('button', { name: 'Filter Battery used (pp)' }));
+    expect(within(screen.getByRole('dialog', { name: 'Filter Battery used (pp)' })).getByRole('spinbutton')).not.toHaveAttribute('min');
+  });
+
+  it('keeps column filters hidden until opened and filters the whole result before pagination', async () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage();
+
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.queryByPlaceholderText('Min')).toBeNull();
+    expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
+    fireEvent.click(within(table).getByRole('button', { name: 'Filter Distance (km)' }));
+    const filter = screen.getByRole('dialog', { name: 'Filter Distance (km)' });
+    fireEvent.click(within(filter).getByRole('button', { name: 'Number condition' }));
+    fireEvent.change(within(filter).getByRole('spinbutton', { name: 'Minimum Distance (km)' }), { target: { value: '50' } });
+
+    await waitFor(() => {
+      expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
+      expect(within(table).getByRole('link', { name: /Apr 20/ })).toHaveAttribute('href', '/drives/4');
+    });
+    expect(within(table).getByRole('button', { name: 'Filter Distance (km)' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.change(within(filter).getByRole('spinbutton', { name: 'Minimum Distance (km)' }), { target: { value: '500' } });
+    expect(within(table).getByText('No drives match these filters')).toBeInTheDocument();
+    fireEvent.change(within(filter).getByRole('spinbutton', { name: 'Minimum Distance (km)' }), { target: { value: '' } });
+    expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Filter Distance (km)' })).toBeNull();
+  });
+
+  it('sorts from column headers in both directions and keeps selection and preview', async () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage();
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    const distance = within(table).getByRole('columnheader', { name: /Distance/ });
+    fireEvent.click(within(distance).getByRole('button', { name: 'Distance (km)', exact: true }));
+    expect(distance).toHaveAttribute('aria-sort', 'descending');
+    expect(within(table).getAllByRole('link', { name: /Apr/ })[0]).toHaveAttribute('href', '/drives/4');
+    fireEvent.click(within(distance).getByRole('button', { name: 'Distance (km)', exact: true }));
+    expect(distance).toHaveAttribute('aria-sort', 'ascending');
+    expect(within(table).getAllByRole('link', { name: /Apr/ })[3]).toHaveAttribute('href', '/drives/4');
+
+    fireEvent.click(within(table).getByRole('checkbox', { name: /Select Apr 24/ }));
+    fireEvent.click(within(table).getByRole('checkbox', { name: /Select Apr 23/ }));
+    expect(await screen.findByRole('button', { name: 'Compare selected' })).toBeEnabled();
+    fireEvent.click(within(table).getAllByRole('button', { name: 'Quick view drive' })[0]);
+    expect(screen.getByText('Open drive details')).toBeInTheDocument();
+  });
+
+  it('selects collections and FSD confidence from header filters without another filter rail', async () => {
+    mockMediaQuery.mockReturnValue(true);
+    mockFsdInsights.mockReturnValue(makeQuery({
+      data: { drive_analytics: { contributing_drives: [
+        { drive_id: 1, fsd_distance_m: 28_800, fsd_share_pct: 72, confidence: 'high', reset_affected: false },
+      ] } },
+    }));
+    renderPage();
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    fireEvent.click(within(table).getByRole('button', { name: 'Filter Date / time' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Filter Date / time' })).getByRole('button', { name: 'Other conditions' }));
+    fireEvent.change(within(screen.getByRole('dialog', { name: 'Filter Date / time' })).getByRole('combobox', { name: 'Filter drives by collection' }), { target: { value: 'anomalies' } });
+    expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
+    expect(within(table).getByRole('link', { name: /Apr 20/ })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(within(table).getByRole('button', { name: 'Filter FSD', exact: true }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Filter FSD' })).getByRole('button', { name: 'Conditions' }));
+    fireEvent.change(within(screen.getByRole('dialog', { name: 'Filter FSD' })).getByRole('combobox', { name: 'Filter drives by FSD evidence' }), { target: { value: 'high' } });
+    expect(screen.getByTestId('location')).toHaveTextContent('fsd=high');
+    expect(screen.getByTestId('location')).not.toHaveTextContent('coll=anomalies');
+    expect(within(table).getByRole('link', { name: /Apr 24/ })).toBeInTheDocument();
+  });
+
+  it('uses concise headings and only meaningful indicators', () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage();
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    for (const label of ['Energy', 'Regen', 'FSD']) {
+      expect(within(table).getByRole('button', { name: `Filter ${label}`, exact: true })).toBeInTheDocument();
+    }
+    for (const key of ['distance', 'duration', 'speed', 'maxSpeed', 'avgPower', 'outsideTemp', 'energy', 'regen', 'batteryUsed']) {
+      expect(table.querySelector(`tbody [data-column-key="${key}"] [data-indicator]`)).toBeNull();
+    }
+    expect(table.querySelector('tbody [data-column-key="startBattery"] [data-indicator="battery"]')).toBeInTheDocument();
+    expect(table.querySelector('tbody [data-column-key="efficiency"] [data-indicator="efficiency"]')).toBeInTheDocument();
+  });
+
+  it('lists and counts values across pages, supports none and clears atomically', () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage([`${DEFAULT_RANGE}&size=1&page=2`]);
+    const table = () => screen.getByRole('table', { name: 'Drive evidence' });
+    const filter = () => screen.getByRole('dialog', { name: 'Filter Distance (km)' });
+    fireEvent.click(within(table()).getByRole('button', { name: 'Filter Distance (km)' }));
+    expect(within(filter()).getByRole('checkbox', { name: '40.00 km' })).toBeChecked();
+    expect(within(filter()).getByRole('checkbox', { name: '100.00 km' })).toBeChecked();
+    expect(within(filter()).getByRole('checkbox', { name: '40.00 km' }).closest('label')).toHaveTextContent('3');
+    expect(within(filter()).queryByRole('spinbutton')).toBeNull();
+    fireEvent.click(within(filter()).getByRole('checkbox', { name: 'Select all shown values' }));
+    expect(within(table()).getByText('No drives match these filters')).toBeInTheDocument();
+    expect(screen.getByTestId('location')).not.toHaveTextContent('page=2');
+    fireEvent.click(within(filter()).getByRole('checkbox', { name: '100.00 km' }));
+    expect(within(table()).getByRole('link', { name: /Apr 20/ })).toHaveAttribute('href', '/drives/4');
+    expect(within(filter()).getByRole('checkbox', { name: 'Select all shown values' })).toBePartiallyChecked();
+    fireEvent.click(within(filter()).getByRole('button', { name: 'Number condition' }));
+    fireEvent.change(within(filter()).getByRole('spinbutton'), { target: { value: '500' } });
+    expect(within(table()).getByText('No drives match these filters')).toBeInTheDocument();
+    fireEvent.click(within(filter()).getByRole('button', { name: 'Clear', exact: true }));
+    expect(screen.getByTestId('location')).not.toHaveTextContent('grid_values');
+    expect(screen.getByTestId('location')).not.toHaveTextContent('grid_distance');
+    expect(within(table()).getByRole('button', { name: 'Filter Distance (km)' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(table()).getByRole('link', { name: /Apr 24/ })).toBeInTheDocument();
+  });
+
+  it('combines value selections and preserves another column when clearing', () => {
+    mockMediaQuery.mockReturnValue(true);
+    const values = encodeURIComponent(JSON.stringify({ start: ['"Home"'], destination: ['"Beach"'] }));
+    renderPage([`${DEFAULT_RANGE}&grid_values=${values}`]);
+    const table = () => screen.getByRole('table', { name: 'Drive evidence' });
+    expect(within(table()).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
+    expect(within(table()).getByRole('link', { name: /Apr 20/ })).toBeInTheDocument();
+    fireEvent.click(within(table()).getByRole('button', { name: 'Filter Destination' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Filter Destination' })).getByRole('button', { name: 'Clear', exact: true }));
+    expect(within(table()).getAllByRole('link', { name: /Apr/ })).toHaveLength(3);
+    expect(within(table()).getByRole('button', { name: 'Filter Start' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it.each(['km', 'mi'] as const)('keeps canonical distance selections with %s display units', (unit) => {
+    mockMediaQuery.mockReturnValue(true);
+    mockUnits.mockReturnValue(makeUnits(unit));
+    const values = encodeURIComponent(JSON.stringify({ distance: ['100000'] }));
+    renderPage([`${DEFAULT_RANGE}&grid_values=${values}`]);
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    expect(within(table).getByRole('link', { name: /Apr 20/ })).toHaveAttribute('href', '/drives/4');
+    fireEvent.click(within(table).getByRole('button', { name: `Filter Distance (${unit})` }));
+    const filter = screen.getByRole('dialog', { name: `Filter Distance (${unit})` });
+    expect(within(filter).getByRole('checkbox', { name: `${fmtNumber(convertDistanceFromSI(100000, unit))} ${unit}` })).toBeChecked();
+  });
+
+  it('shows an explicit error for malformed saved filters and recovers', () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage([`${DEFAULT_RANGE}&grid_values=${encodeURIComponent('{broken')}`]);
+    expect(screen.getAllByText('This saved value filter is invalid. Clear it to reset.').length).toBeGreaterThan(0);
+    const table = () => screen.getByRole('table', { name: 'Drive evidence' });
+    expect(within(table()).queryByRole('link', { name: /Apr/ })).toBeNull();
+    fireEvent.click(within(table()).getByRole('button', { name: 'Filter Start' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Filter Start' })).getByRole('button', { name: 'Clear', exact: true }));
+    expect(within(table()).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
+  });
+
+  it('keeps stale saved selections explicit and recoverable', () => {
+    mockMediaQuery.mockReturnValue(true);
+    const values = encodeURIComponent(JSON.stringify({ distance: ['999999'] }));
+    renderPage([`${DEFAULT_RANGE}&grid_values=${values}`]);
+    const table = () => screen.getByRole('table', { name: 'Drive evidence' });
+    expect(within(table()).getByText('No drives match these filters')).toBeInTheDocument();
+    fireEvent.click(within(table()).getByRole('button', { name: 'Filter Distance (km)' }));
+    const filter = screen.getByRole('dialog', { name: 'Filter Distance (km)' });
+    expect(within(filter).getByText(/Some saved selections are not present/)).toBeInTheDocument();
+    fireEvent.click(within(filter).getByRole('button', { name: 'Clear', exact: true }));
+    expect(within(table()).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
   });
 });
 
@@ -644,8 +881,8 @@ describe('DrivesListPage — FSD evidence', () => {
     expect(within(listRegion()).getByText('FSD 72%')).toBeInTheDocument();
     expect(within(listRegion()).queryByText('FSD data unknown')).toBeNull();
 
-    const bar = fsdFilterBar();
-    expect(within(bar).getByRole('tab', { name: /All FSD data/ })).toHaveClass('bg-[var(--theme-primary)]');
+    const bar = filtersBar();
+    expect(within(bar).getByRole('tab', { name: /^All/ })).toHaveClass('bg-[var(--theme-primary)]');
     expect(within(bar).getByRole('tab', { name: /High confidence/ })).toHaveTextContent('(1)');
     expect(within(bar).getByRole('tab', { name: /Unknown/ })).toHaveTextContent('(1)');
     fireEvent.click(within(bar).getByRole('tab', { name: /High confidence/ }));
@@ -656,6 +893,10 @@ describe('DrivesListPage — FSD evidence', () => {
       expect(listRegion().querySelector('a[href="/drives/3"]')).toBeNull();
       expect(listRegion().querySelector('a[href="/drives/4"]')).toBeNull();
     });
+    expect(within(filtersBar()).getAllByRole('tab', { selected: true })).toHaveLength(1);
+    fireEvent.click(within(filtersBar()).getByRole('tab', { name: /Anomalies/ }));
+    await waitFor(() => expect(within(filtersBar()).getByRole('tab', { name: /Anomalies/ })).toHaveAttribute('aria-selected', 'true'));
+    expect(within(filtersBar()).getByRole('tab', { name: /High confidence/ })).toHaveAttribute('aria-selected', 'false');
   });
 
   it('keeps drive rows visible and does not classify missing query data as unknown', () => {
@@ -675,7 +916,7 @@ describe('DrivesListPage — FSD evidence', () => {
         .map((link) => link.getAttribute('href')),
     );
     expect(ids).toEqual(new Set(['/drives/1', '/drives/2', '/drives/3', '/drives/4']));
-    const unknown = within(fsdFilterBar()).getByRole('tab', { name: /Unknown/ });
+    const unknown = within(filtersBar()).getByRole('tab', { name: /Unknown/ });
     expect(unknown).toHaveTextContent('(0)');
     expect(unknown).toBeDisabled();
 
@@ -698,7 +939,7 @@ describe('DrivesListPage — FSD evidence', () => {
         .map((link) => link.getAttribute('href')),
     );
     expect(ids).toEqual(new Set(['/drives/1', '/drives/2', '/drives/3', '/drives/4']));
-    expect(within(fsdFilterBar()).getByRole('tab', { name: /Unknown/ })).toBeDisabled();
+    expect(within(filtersBar()).getByRole('tab', { name: /Unknown/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toBeDisabled();
   });
 
@@ -736,7 +977,7 @@ describe('DrivesListPage — FSD evidence', () => {
       'UTC',
     );
     expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toBeDisabled();
-    expect(within(fsdFilterBar()).getByRole('tab', { name: /High confidence/ })).toBeDisabled();
+    expect(within(filtersBar()).getByRole('tab', { name: /High confidence/ })).toBeDisabled();
   });
 });
 

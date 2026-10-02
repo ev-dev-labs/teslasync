@@ -140,7 +140,7 @@ export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionPr
                     <div key={key} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <span className={cn('inline-block h-2 w-2 rounded-full', color)} />
-                        <Text as="span" color="secondary" className="capitalize">{t(`dynamics.coach.style.${key}`, key)}</Text>
+                        <Text as="span" color="secondary">{t(`dynamics.coach.style.${key}`, key)}</Text>
                       </div>
                       <Text as="span" weight="bold" className={cn('tabular-nums', text)}>
                         {coachData.style_breakdown?.[key] ?? 0}

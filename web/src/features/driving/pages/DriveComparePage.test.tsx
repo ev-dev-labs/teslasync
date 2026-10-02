@@ -74,18 +74,18 @@ vi.mock('@/components/layout', () => ({
   PageContainer: ({
     title,
     subtitle,
-    actions,
+    contextActions,
     children,
   }: {
     title: string;
     subtitle: string;
-    actions: ReactNode;
+    contextActions: ReactNode;
     children: ReactNode;
   }) => (
     <main>
       <h1>{title}</h1>
       <p>{subtitle}</p>
-      {actions}
+      {contextActions}
       {children}
     </main>
   ),

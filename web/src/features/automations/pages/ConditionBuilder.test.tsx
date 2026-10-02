@@ -169,14 +169,14 @@ describe('createDefaultCondition', () => {
 describe('ConditionBuilder — empty + add', () => {
   it('renders only the Add button when there are no conditions', () => {
     renderBuilder([]);
-    expect(screen.getByRole('button', { name: 'Add Condition' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add condition' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Signal')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Remove condition' })).not.toBeInTheDocument();
   });
 
   it('appends a default signal condition when Add is clicked', () => {
     const { onChange } = renderBuilder([]);
-    fireEvent.click(screen.getByRole('button', { name: 'Add Condition' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add condition' }));
     expect(onChange).toHaveBeenCalledWith([
       { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: 20 },
     ]);
@@ -206,7 +206,7 @@ describe('ConditionBuilder — remove + kind switch', () => {
 
   it('replaces a signal row with a fresh time-window default on kind change', () => {
     const { onChange } = renderBuilder([signalCondition]);
-    fireEvent.change(screen.getByLabelText('Condition Type'), {
+    fireEvent.change(screen.getByLabelText('Condition type'), {
       target: { value: 'condition_time_window' },
     });
     expect(lastArg(onChange)).toEqual([

@@ -47,7 +47,7 @@ export function ExportKpiBand({ stats, isLoading }: ExportKpiBandProps) {
       className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-5"
     >
       <MetricCard
-        label={t('exportsList.kpi.total', 'Total Exports')}
+        label={t('exportsList.kpi.total', 'Total exports')}
         value={fmtInt(stats.total)}
         icon={<Icons.package className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
@@ -59,7 +59,7 @@ export function ExportKpiBand({ stats, isLoading }: ExportKpiBandProps) {
         color="green"
       />
       <MetricCard
-        label={t('exportsList.kpi.inProgress', 'In Progress')}
+        label={t('exportsList.kpi.inProgress', 'In progress')}
         value={fmtInt(stats.inProgress)}
         icon={<Icons.clock className="h-5 w-5" aria-hidden="true" />}
         color="amber"
@@ -71,7 +71,7 @@ export function ExportKpiBand({ stats, isLoading }: ExportKpiBandProps) {
         color="red"
       />
       <MetricCard
-        label={t('exportsList.kpi.storage', 'Total Size')}
+        label={t('exportsList.kpi.storage', 'Total size')}
         value={formatBytes(stats.totalBytes, { zeroAsEmpty: true })}
         icon={<Icons.hardDrive className="h-5 w-5" aria-hidden="true" />}
         color="purple"

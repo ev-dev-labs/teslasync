@@ -42,7 +42,7 @@ export const TRIGGER_TYPES: TriggerTypeOption[] = [
   {
     value: 'trigger_event',
     labelKey: 'automations.builder.triggerEvent',
-    fallback: 'Vehicle Event',
+    fallback: 'Vehicle event',
     icon: Zap,
   },
   {
@@ -54,21 +54,21 @@ export const TRIGGER_TYPES: TriggerTypeOption[] = [
   {
     value: 'trigger_signal',
     labelKey: 'automations.builder.triggerSignal',
-    fallback: 'Signal Threshold',
+    fallback: 'Signal threshold',
     icon: Activity,
   },
 ];
 
 const VEHICLE_EVENTS: { value: AutomationEventType; labelKey: string; fallback: string }[] = [
-  { value: 'drive_start', labelKey: 'automations.events.driveStart', fallback: 'Drive Starts' },
-  { value: 'drive_end', labelKey: 'automations.events.driveEnd', fallback: 'Drive Ends' },
-  { value: 'charge_start', labelKey: 'automations.events.chargeStart', fallback: 'Charging Starts' },
-  { value: 'charge_end', labelKey: 'automations.events.chargeEnd', fallback: 'Charging Ends' },
-  { value: 'sleep_start', labelKey: 'automations.events.sleepStart', fallback: 'Sleep Starts' },
-  { value: 'sleep_end', labelKey: 'automations.events.sleepEnd', fallback: 'Sleep Ends' },
-  { value: 'online', labelKey: 'automations.events.online', fallback: 'Comes Online' },
-  { value: 'offline', labelKey: 'automations.events.offline', fallback: 'Goes Offline' },
-  { value: 'sentry_alert', labelKey: 'automations.events.sentryAlert', fallback: 'Sentry Alert' },
+  { value: 'drive_start', labelKey: 'automations.events.driveStart', fallback: 'Drive starts' },
+  { value: 'drive_end', labelKey: 'automations.events.driveEnd', fallback: 'Drive ends' },
+  { value: 'charge_start', labelKey: 'automations.events.chargeStart', fallback: 'Charging starts' },
+  { value: 'charge_end', labelKey: 'automations.events.chargeEnd', fallback: 'Charging ends' },
+  { value: 'sleep_start', labelKey: 'automations.events.sleepStart', fallback: 'Sleep starts' },
+  { value: 'sleep_end', labelKey: 'automations.events.sleepEnd', fallback: 'Sleep ends' },
+  { value: 'online', labelKey: 'automations.events.online', fallback: 'Comes online' },
+  { value: 'offline', labelKey: 'automations.events.offline', fallback: 'Goes offline' },
+  { value: 'sentry_alert', labelKey: 'automations.events.sentryAlert', fallback: 'Sentry alert' },
 ];
 
 const GEOFENCE_EVENTS: { value: AutomationGeofenceEvent; labelKey: string; fallback: string }[] = [
@@ -89,8 +89,8 @@ const SIGNAL_OPERATORS: {
   { value: '>', labelKey: 'automations.operators.greaterThan', fallback: '>' },
   { value: '>=', labelKey: 'automations.operators.greaterThanOrEqual', fallback: '>=' },
   { value: 'changed', labelKey: 'automations.operators.changed', fallback: 'Changed' },
-  { value: 'crossed_above', labelKey: 'automations.operators.crossedAbove', fallback: 'Crossed Above' },
-  { value: 'crossed_below', labelKey: 'automations.operators.crossedBelow', fallback: 'Crossed Below' },
+  { value: 'crossed_above', labelKey: 'automations.operators.crossedAbove', fallback: 'Crossed above' },
+  { value: 'crossed_below', labelKey: 'automations.operators.crossedBelow', fallback: 'Crossed below' },
 ];
 
 interface TriggerConfiguratorProps {
@@ -290,7 +290,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
             </>
           ) : (
             <UiInput
-              label={t('automations.builder.cronExpr', 'Cron Expression')}
+              label={t('automations.builder.cronExpr', 'Cron expression')}
               help={{
                 i18nKey: 'help.fields.automations.cronExpr',
                 content: 'Standard 5-field cron syntax (minute hour day-of-month month day-of-week). Use the simple mode above for the most common schedules.',
@@ -398,7 +398,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
           />
           {trigger.event === 'dwell' && (
             <UiInput
-              label={t('automations.builder.dwellMinutes', 'Dwell Minutes')}
+              label={t('automations.builder.dwellMinutes', 'Dwell minutes')}
               help={{
                 i18nKey: 'help.fields.automations.dwellMinutes',
                 content: 'How many minutes the vehicle must stay inside the geofence before this dwell trigger fires.',

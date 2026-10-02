@@ -47,7 +47,7 @@ beforeEach(() => {
 describe('StormGuardPanel', () => {
   it('renders the live assessment with warning badge and battery state', () => {
     render(<StormGuardPanel vehicleId={7} />);
-    expect(screen.getByText('Storm Guardian')).toBeInTheDocument();
+    expect(screen.getByText('Storm guardian')).toBeInTheDocument();
     expect(screen.getByText('Storm warning')).toBeInTheDocument();
     expect(screen.getByText(/thunderstorm \(WMO 95\)/)).toBeInTheDocument();
     expect(screen.getByText(/Battery 60%/)).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('StormGuardPanel', () => {
 
     expect(screen.getByLabelText('Home latitude')).toHaveProperty('value', '37.7');
     fireEvent.change(screen.getByLabelText('Home latitude'), { target: { value: '38.1' } });
-    fireEvent.click(screen.getByText('Save Guard'));
+    fireEvent.click(screen.getByText('Save guard'));
 
     expect(mutate).toHaveBeenCalledTimes(1);
     expect(mutate.mock.calls[0][0]).toMatchObject({

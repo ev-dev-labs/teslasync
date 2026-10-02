@@ -333,7 +333,7 @@ describe('AutomationListPage', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Automation Rules' }),
+      screen.getByRole('heading', { level: 1, name: 'Automation rules' }),
     ).toBeInTheDocument();
 
     // KPI band present with all six tiles (scoped so the "Active"/"Disabled"
@@ -360,7 +360,15 @@ describe('AutomationListPage', () => {
       screen.getByRole('combobox', { name: 'Filter automations by status' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search automations' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search automations' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'context');
+    expect(screen.getByRole('combobox', { name: 'Filter automations by status' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'context');
+    expect(screen.getByRole('button', { name: 'New' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
+    const heading = screen.getByRole('heading', { level: 1, name: 'Automation rules' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
   });
 
   it('renders the read-only explanation outside the disabled create action', () => {

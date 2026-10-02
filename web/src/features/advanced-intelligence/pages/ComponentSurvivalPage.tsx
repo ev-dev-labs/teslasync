@@ -25,11 +25,11 @@ export default function ComponentSurvivalPage() {
   const query = useComponentSurvival(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
   const representative = items[0] ?? null;
-  usePageTitle(t('advancedIntelligence.survival.title', 'Component Survival'));
+  usePageTitle(t('advancedIntelligence.survival.title', 'Component survival'));
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.survival.title', 'Component Survival')}
+      title={t('advancedIntelligence.survival.title', 'Component survival')}
       subtitle={t(
         'advancedIntelligence.survival.subtitle',
         'Review probabilistic service horizons, competing risks, and intervention sensitivity.',

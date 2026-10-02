@@ -1,7 +1,7 @@
 import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
-import { Badge, Text } from '@/components/ui';
+import { Table, Badge, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DataQuality, Evidence } from '@/types/advancedIntelligence';
@@ -50,30 +50,30 @@ export function EvidencePanel({
           {quality ? (
             <>
               <Badge variant={qualityVariant(quality.status)} dot>{quality.status}</Badge>
-              <dl className="space-y-2 text-sm">
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">
+              <Table aria-label={t('advancedIntelligence.evidence.title', 'Evidence, quality, and limitations')}><tbody>
+                <tr>
+                  <th scope="row" className="text-[var(--text-muted)]">
                     {t('advancedIntelligence.quality.samples', 'Samples')}
-                  </dt>
-                  <dd>{fmtNumber(quality.sample_count, 0)}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">
+                  </th>
+                  <td className="text-right">{fmtNumber(quality.sample_count, 0)}</td>
+                </tr>
+                <tr>
+                  <th scope="row" className="text-[var(--text-muted)]">
                     {t('advancedIntelligence.quality.coverage', 'Coverage')}
-                  </dt>
-                  <dd>{quality.coverage_pct != null ? `${fmtNumber(quality.coverage_pct, 1)}%` : '—'}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">
+                  </th>
+                  <td className="text-right">{quality.coverage_pct != null ? `${fmtNumber(quality.coverage_pct, 1)}%` : '—'}</td>
+                </tr>
+                <tr>
+                  <th scope="row" className="text-[var(--text-muted)]">
                     {t('advancedIntelligence.quality.window', 'Observation window')}
-                  </dt>
-                  <dd className="text-right">
+                  </th>
+                  <td className="text-right">
                     {quality.window_start || quality.window_end
                       ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}`
                       : '—'}
-                  </dd>
-                </div>
-              </dl>
+                  </td>
+                </tr>
+              </tbody></Table>
               {(quality.reasons ?? []).map((reason) => (
                 <Text as="p" variant="caption" key={reason}>• {reason}</Text>
               ))}

@@ -183,7 +183,7 @@ describe('SpeedHistogramChart — populated bars', () => {
     expect(bar).toHaveAttribute('data-fill', '#a855f7');
     const name = bar.getAttribute('data-name') ?? '';
     expect(name).toContain('%');
-    expect(name).toContain('of drive');
+    expect(name).toContain('of speed samples');
   });
 
   it('binds the x-axis to the bucket range label', () => {
@@ -208,7 +208,7 @@ describe('SpeedHistogramChart — populated bars', () => {
     );
     expect(columns).toEqual([
       { key: 'range', label: 'Speed range' },
-      { key: 'pct', label: '% of drive' },
+      { key: 'pct', label: '% of speed samples' },
     ]);
   });
 

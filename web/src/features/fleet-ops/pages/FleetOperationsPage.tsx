@@ -100,7 +100,7 @@ export default function FleetOperationsPage() {
     <PageContainer
       title={t('fleetOps.title', 'Fleet operations')}
       subtitle={t('fleetOps.subtitle', 'Coordinate drivers, bookings, charging, costs, maintenance, and capacity.')}
-      actions={(
+      primaryAction={(
         <Button
           type="button"
           icon={<CalendarPlus className="h-4 w-4" />}
@@ -126,7 +126,7 @@ export default function FleetOperationsPage() {
       ]}
     >
       <OperationalWriteNotice
-        title={t('fleetOps.readOnly.title', 'Fleet Operations is read-only')}
+        title={t('fleetOps.readOnly.title', 'Fleet operations is read-only')}
       />
 
       <FadeIn>
@@ -142,6 +142,7 @@ export default function FleetOperationsPage() {
       <FadeIn delay={0.03}>
         <ReservationPanel
           items={reservations}
+          enableValueFilters={reservationsQuery.data?.offset === 0 && reservationsQuery.data.total === reservations.length}
           loading={reservationsQuery.isLoading}
           error={reservationsQuery.error}
           onRetry={() => void reservationsQuery.refetch()}
@@ -158,6 +159,7 @@ export default function FleetOperationsPage() {
         <FadeIn delay={0.05}>
           <DriverRoster
             items={drivers}
+            enableValueFilters={driversQuery.data?.offset === 0 && driversQuery.data.total === drivers.length}
             loading={driversQuery.isLoading}
             error={driversQuery.error}
             onRetry={() => void driversQuery.refetch()}
@@ -171,6 +173,7 @@ export default function FleetOperationsPage() {
         <FadeIn delay={0.06}>
           <AssignmentRoster
             items={assignments}
+            enableValueFilters={assignmentsQuery.data?.offset === 0 && assignmentsQuery.data.total === assignments.length}
             loading={assignmentsQuery.isLoading}
             error={assignmentsQuery.error}
             onRetry={() => void assignmentsQuery.refetch()}
@@ -205,6 +208,7 @@ export default function FleetOperationsPage() {
       <FadeIn delay={0.09}>
         <ChargingPolicyMatrix
           items={policies}
+          enableValueFilters={policiesQuery.data?.offset === 0 && policiesQuery.data.total === policies.length}
           loading={policiesQuery.isLoading}
           error={policiesQuery.error}
           onRetry={() => void policiesQuery.refetch()}

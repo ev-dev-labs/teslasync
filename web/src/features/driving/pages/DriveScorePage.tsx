@@ -1024,7 +1024,7 @@ export default function DriveScorePage() {
     <PageContainer
       title={t('driveScore.title', 'Drive Score')}
       subtitle={t('driveScore.subtitle', 'Your driving rating and breakdown')}
-      actions={actions}
+      secondaryActions={actions}
       query={[drivesQuery, scoreQuery]}
     >
       {!drivesLoading && unscoredDriveCount > 0 && (

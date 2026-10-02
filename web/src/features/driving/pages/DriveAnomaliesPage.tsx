@@ -4,7 +4,7 @@ import { Microscope, AlertTriangle, Sigma, Sparkles } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -110,9 +110,8 @@ export default function DriveAnomaliesPage() {
       title={t('anomalies.title', 'Anomaly Detective')}
       subtitle={t('anomalies.subtitle', 'Drives that break your own consumption law, explained')}
       query={drivesQuery}
-      actions={
+      contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={setRange}

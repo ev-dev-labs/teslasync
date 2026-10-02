@@ -88,6 +88,7 @@ export default function ExportsPage() {
     () => [
       {
         key: 'type',
+        filterValue: (j) => j.type || null,
         header: t('exportsList.col.type', 'Type'),
         sortable: true,
         visibleOnMobile: true,
@@ -99,16 +100,21 @@ export default function ExportsPage() {
       },
       {
         key: 'format',
+        filterValue: (j) => j.format || null,
+        filterValueLabel: (_value, j) => j.format?.toUpperCase() || '—',
         header: t('exportsList.col.format', 'Format'),
         sortable: true,
         render: (j) => (
-          <Text color="secondary" className="uppercase">
+          <Text color="secondary" className="">
             {j.format || '—'}
           </Text>
         ),
       },
       {
         key: 'file_size',
+        filterValue: (j) => j.file_size ?? null,
+        filterValueLabel: (_value, j) => j.file_size == null ? '—' : formatBytes(j.file_size),
+        groupStart: true,
         header: t('exportsList.col.size', 'Size'),
         align: 'right',
         sortable: true,
@@ -120,6 +126,8 @@ export default function ExportsPage() {
       },
       {
         key: 'created_at',
+        filterValue: (j) => j.created_at ?? null,
+        filterValueLabel: (_value, j) => formatDateTime(j.created_at),
         header: t('exportsList.col.created', 'Created'),
         sortable: true,
         render: (j) => (
@@ -128,6 +136,8 @@ export default function ExportsPage() {
       },
       {
         key: 'status',
+        filterValue: (j) => j.status ?? null,
+        filterValueLabel: (_value, j) => t(`exportsList.status.${j.status}`, j.status),
         header: t('exportsList.col.status', 'Status'),
         sortable: true,
         visibleOnMobile: true,
@@ -180,7 +190,7 @@ export default function ExportsPage() {
         'exportsList.subtitle',
         'Manage your past export jobs. Select rows to delete in bulk.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={jobsQuery}
     >
       <div className="space-y-6">
@@ -195,11 +205,11 @@ export default function ExportsPage() {
 
         {/* 3 — Detail bento: jobs table (hero, spans 2 cols) + status breakdown. */}
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-          <FadeIn delay={0.1} className="xl:col-span-2">
-            <GlassPanel className="flex h-full flex-col overflow-hidden p-4 sm:p-5">
+          <FadeIn delay={0.1} className="min-w-0 xl:col-span-2">
+            <GlassPanel className="flex h-full min-w-0 flex-col overflow-hidden p-4 sm:p-5">
               <PanelTitle className="mb-3 flex items-center gap-2">
                 <Icons.package className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('exportsList.jobs.title', 'Export Jobs')}
+                {t('exportsList.jobs.title', 'Export jobs')}
               </PanelTitle>
 
               {isLoading ? (
@@ -228,6 +238,7 @@ export default function ExportsPage() {
                   tableId="exports:jobs"
                   columns={columns}
                   data={jobs}
+                  enableValueFilters
                   keyExtractor={(j) => j.id}
                   mobileColumns={['type', 'status', 'actions']}
                   pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}

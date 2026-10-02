@@ -121,7 +121,7 @@ describe('ACTION_TYPES', () => {
     expect(ACTION_TYPES[0]).toEqual({
       value: 'action_command',
       labelKey: 'automations.actions.command',
-      fallback: 'Vehicle Command',
+      fallback: 'Vehicle command',
     });
     expect(
       ACTION_TYPES.every((a) => typeof a.labelKey === 'string' && a.fallback.length > 0),
@@ -205,7 +205,7 @@ describe('ActionBuilder — action type switching', () => {
       [command('lock')],
       [discordChannel(5, 'Disabled', false), discordChannel(9, 'Enabled', true)],
     );
-    fireEvent.change(screen.getByLabelText('Action Type'), {
+    fireEvent.change(screen.getByLabelText('Action type'), {
       target: { value: 'action_notify' },
     });
     expect(lastAction(onChange)).toEqual({
@@ -219,7 +219,7 @@ describe('ActionBuilder — action type switching', () => {
 
   it('gives every action-type select an accessible name (aria-label on rows > 0)', () => {
     renderBuilder([command('lock'), notify(0)]);
-    expect(screen.getAllByRole('combobox', { name: 'Action Type' })).toHaveLength(2);
+    expect(screen.getAllByRole('combobox', { name: 'Action type' })).toHaveLength(2);
   });
 });
 
@@ -334,9 +334,9 @@ describe('ActionFields — set_setting', () => {
     const { onChange } = renderBuilder([
       { kind: 'action_set_setting', setting_key: '', value_text: '' },
     ]);
-    expect(screen.getByLabelText('Setting Key')).toBeInTheDocument();
-    expect(screen.getByLabelText('Value Type')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Setting Key'), {
+    expect(screen.getByLabelText('Setting key')).toBeInTheDocument();
+    expect(screen.getByLabelText('Value type')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Setting key'), {
       target: { value: 'charge_limit' },
     });
     expect(lastAction(onChange).setting_key).toBe('charge_limit');
@@ -346,7 +346,7 @@ describe('ActionFields — set_setting', () => {
     const { onChange } = renderBuilder([
       { kind: 'action_set_setting', setting_key: 'charge_limit', value_text: '' },
     ]);
-    fireEvent.change(screen.getByLabelText('Value Type'), { target: { value: 'number' } });
+    fireEvent.change(screen.getByLabelText('Value type'), { target: { value: 'number' } });
     expect(lastAction(onChange)).toEqual({
       kind: 'action_set_setting',
       setting_key: 'charge_limit',
@@ -360,7 +360,7 @@ describe('ActionFields — set_setting', () => {
     const { onChange } = renderBuilder([
       { kind: 'action_set_setting', setting_key: 'sentry', value_text: '' },
     ]);
-    fireEvent.change(screen.getByLabelText('Value Type'), { target: { value: 'boolean' } });
+    fireEvent.change(screen.getByLabelText('Value type'), { target: { value: 'boolean' } });
     expect(lastAction(onChange).value_bool).toBe(false);
     const valueSelect = screen.getByLabelText('Value');
     expect(valueSelect.tagName).toBe('SELECT');
@@ -370,13 +370,13 @@ describe('ActionFields — set_setting', () => {
 
   it('derives the "number" value type from an existing numeric value', () => {
     renderBuilder([{ kind: 'action_set_setting', setting_key: 'x', value_num: 42 }]);
-    expect((screen.getByLabelText('Value Type') as HTMLSelectElement).value).toBe('number');
+    expect((screen.getByLabelText('Value type') as HTMLSelectElement).value).toBe('number');
     expect((screen.getByLabelText('Value') as HTMLInputElement).value).toBe('42');
   });
 
   it('derives the "boolean" value type + label from an existing boolean value', () => {
     renderBuilder([{ kind: 'action_set_setting', setting_key: 'x', value_bool: true }]);
-    expect((screen.getByLabelText('Value Type') as HTMLSelectElement).value).toBe('boolean');
+    expect((screen.getByLabelText('Value type') as HTMLSelectElement).value).toBe('boolean');
     expect((screen.getByLabelText('Value') as HTMLSelectElement).value).toBe('true');
   });
 });
@@ -387,7 +387,7 @@ describe('ActionFields — call_automation', () => {
     const { onChange } = renderBuilder([
       { kind: 'action_call_automation', target_automation_id: 0 },
     ]);
-    const input = screen.getByLabelText('Target Automation ID') as HTMLInputElement;
+    const input = screen.getByLabelText('Target automation ID') as HTMLInputElement;
     expect(input.value).toBe('');
     fireEvent.change(input, { target: { value: '5' } });
     expect(lastAction(onChange).target_automation_id).toBe(5);
@@ -395,6 +395,6 @@ describe('ActionFields — call_automation', () => {
 
   it('renders an existing target automation id', () => {
     renderBuilder([{ kind: 'action_call_automation', target_automation_id: 7 }]);
-    expect((screen.getByLabelText('Target Automation ID') as HTMLInputElement).value).toBe('7');
+    expect((screen.getByLabelText('Target automation ID') as HTMLInputElement).value).toBe('7');
   });
 });

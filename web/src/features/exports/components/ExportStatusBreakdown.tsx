@@ -46,7 +46,7 @@ export function ExportStatusBreakdown({
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Icons.analytics className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('exportsList.breakdown.title', 'Status Breakdown')}
+        {t('exportsList.breakdown.title', 'Status breakdown')}
       </PanelTitle>
 
       {isLoading ? (
@@ -101,7 +101,7 @@ export function ExportStatusBreakdown({
           <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3">
             <Caption className="flex items-center gap-1.5">
               <Icons.hardDrive className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('exportsList.breakdown.storage', 'Storage Used')}
+              {t('exportsList.breakdown.storage', 'Storage used')}
             </Caption>
             <Text variant="body" mono className="tabular-nums">
               {formatBytes(stats.totalBytes, { zeroAsEmpty: true })}

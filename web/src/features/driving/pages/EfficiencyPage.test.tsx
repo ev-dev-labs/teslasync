@@ -316,7 +316,7 @@ describe('EfficiencyPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Efficiency' })).toBeInTheDocument();
     // Loading takes precedence over both the empty state and the metric cards.
     expect(screen.queryByText('No efficiency data available yet')).toBeNull();
-    expect(screen.queryByText('Avg Consumption')).toBeNull();
+    expect(screen.queryByText('Avg consumption')).toBeNull();
   });
 
   it('identifies the failed source and still renders the empty KPI placeholder', () => {

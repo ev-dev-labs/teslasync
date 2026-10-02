@@ -490,7 +490,7 @@ describe('AutomationBuilderPage — create mode', () => {
   it('renders the KPI band, form sections and a not-ready readiness badge', () => {
     renderPage('/automations/new');
 
-    expect(screen.getByRole('heading', { name: 'Create Automation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create automation' })).toBeInTheDocument();
     // KPI band: trigger label defaults to "Not set", status starts Enabled.
     expect(screen.getByText('Not set')).toBeInTheDocument();
     expect(screen.getByText('conditions:0')).toBeInTheDocument();
@@ -620,7 +620,7 @@ describe('AutomationBuilderPage — edit mode', () => {
     H.automationState = { data: undefined, isLoading: true, error: null };
     renderPage('/automations/5/edit');
 
-    expect(screen.getByRole('heading', { name: 'Edit Automation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit automation' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/name/i)).not.toBeInTheDocument();
   });
 

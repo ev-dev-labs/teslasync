@@ -217,13 +217,13 @@ describe('ExportsPage — loading', () => {
     const { container } = renderPage();
 
     // Panel scaffolding is always present…
-    expect(screen.getByText('Export Jobs')).toBeInTheDocument();
-    expect(screen.getByText('Status Breakdown')).toBeInTheDocument();
+    expect(screen.getByText('Export jobs')).toBeInTheDocument();
+    expect(screen.getByText('Status breakdown')).toBeInTheDocument();
     // …but the data surfaces are withheld while loading.
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByText('No exports yet')).toBeNull();
     // KPI cards are replaced by skeletons (no card label rendered).
-    expect(screen.queryByText('Total Exports')).toBeNull();
+    expect(screen.queryByText('Total exports')).toBeNull();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 });
@@ -258,18 +258,18 @@ describe('ExportsPage — empty', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
     // Post-load the KPI band shows honest zeros, not skeletons.
-    expect(kpiValue('Total Exports')).toBe('0');
+    expect(kpiValue('Total exports')).toBe('0');
   });
 });
 
 describe('ExportsPage — populated', () => {
   it('derives honest KPI tiles from the fixture', () => {
     renderPage();
-    expect(kpiValue('Total Exports')).toBe('6');
+    expect(kpiValue('Total exports')).toBe('6');
     expect(kpiValue('Ready')).toBe('2');
-    expect(kpiValue('In Progress')).toBe('2');
+    expect(kpiValue('In progress')).toBe('2');
     expect(kpiValue('Failed')).toBe('1');
-    expect(kpiValue('Total Size')).toBe('5.0 MB');
+    expect(kpiValue('Total size')).toBe('5.0 MB');
   });
 
   it('renders a selectable row per job with a download link ONLY for ready jobs', () => {
@@ -298,7 +298,7 @@ describe('ExportsPage — populated', () => {
     renderPage();
     expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
     // Storage footprint appears in the breakdown panel's "Storage Used" row.
-    expect(screen.getByText('Storage Used')).toBeInTheDocument();
+    expect(screen.getByText('Storage used')).toBeInTheDocument();
     // 5.0 MB shows in BOTH the KPI card and the breakdown footer.
     expect(screen.getAllByText('5.0 MB').length).toBeGreaterThanOrEqual(2);
   });

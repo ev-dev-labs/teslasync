@@ -24,7 +24,7 @@ export default function ChargingForensicsPage() {
   const [page, setPage] = useState(1);
   const query = useChargingForensics(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
-  usePageTitle(t('advancedIntelligence.forensics.title', 'Charging Forensics'));
+  usePageTitle(t('advancedIntelligence.forensics.title', 'Charging forensics'));
 
   const money = (minor: number | null, currency: string | null) => {
     if (minor == null || !currency) return '—';
@@ -34,6 +34,7 @@ export default function ChargingForensicsPage() {
   const columns = useMemo<Column<ChargingForensicsItem>[]>(() => [
     {
       key: 'session',
+      align: 'right',
       header: t('advancedIntelligence.forensics.session', 'Session'),
       visibleOnMobile: true,
       render: (row) => `#${row.session_id}`,
@@ -46,11 +47,13 @@ export default function ChargingForensicsPage() {
     },
     {
       key: 'vehicle_energy',
+      align: 'right',
       header: t('advancedIntelligence.forensics.vehicleEnergy', 'Vehicle energy'),
       render: (row) => units.formatEnergy(row.vehicle_energy_wh),
     },
     {
       key: 'meter_energy',
+      align: 'right',
       header: t('advancedIntelligence.forensics.meterEnergy', 'Meter energy'),
       render: (row) => row.meter_energy_wh != null
         ? units.formatEnergy(row.meter_energy_wh)
@@ -58,6 +61,7 @@ export default function ChargingForensicsPage() {
     },
     {
       key: 'loss',
+      align: 'right',
       header: t('advancedIntelligence.forensics.loss', 'Estimated loss'),
       render: (row) => row.estimated_loss_wh != null
         ? `${units.formatEnergy(row.estimated_loss_wh)} (${units.formatEnergy(row.estimated_loss_low_wh)}–${units.formatEnergy(row.estimated_loss_high_wh)})`
@@ -65,6 +69,7 @@ export default function ChargingForensicsPage() {
     },
     {
       key: 'recorded_cost',
+      align: 'right',
       header: t('advancedIntelligence.forensics.recordedCost', 'Recorded cost'),
       render: (row) => row.recorded_cost_minor != null && row.currency
         ? money(row.recorded_cost_minor, row.currency)
@@ -72,6 +77,7 @@ export default function ChargingForensicsPage() {
     },
     {
       key: 'expected_cost',
+      align: 'right',
       header: t('advancedIntelligence.forensics.expectedCost', 'Expected cost'),
       render: (row) => row.expected_cost_minor != null && row.currency
         ? money(row.expected_cost_minor, row.currency)
@@ -79,6 +85,7 @@ export default function ChargingForensicsPage() {
     },
     {
       key: 'discrepancy',
+      align: 'right',
       header: t('advancedIntelligence.forensics.discrepancy', 'Cost discrepancy'),
       render: (row) => row.cost_discrepancy_minor != null && row.currency
         ? money(row.cost_discrepancy_minor, row.currency)
@@ -94,7 +101,7 @@ export default function ChargingForensicsPage() {
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.forensics.title', 'Charging Forensics')}
+      title={t('advancedIntelligence.forensics.title', 'Charging forensics')}
       subtitle={t(
         'advancedIntelligence.forensics.subtitle',
         'Reconcile vehicle, meter, energy-loss, and cost records without filling unsupported fields.',

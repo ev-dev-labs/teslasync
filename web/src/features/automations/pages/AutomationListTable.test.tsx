@@ -25,7 +25,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { type ComponentProps } from 'react';
 
@@ -151,6 +151,57 @@ const nameOrder = () => screen.getAllByRole('link').map((a) => a.textContent);
 
 beforeEach(() => {
   window.localStorage.clear();
+});
+
+describe('AutomationListTable — shared loaded-value filters', () => {
+  it('filters the complete client list before pagination, including a match beyond page one', () => {
+    const rows = Array.from({ length: 60 }, (_, index) => makeAutomation({
+      id: index + 1,
+      name: `Automation ${String(index).padStart(2, '0')}`,
+      execution_count: index === 59 ? 999 : 1,
+    }));
+    renderTable({ automations: rows, totalCount: rows.length });
+    expect(screen.queryByRole('link', { name: 'Automation 59' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter Runs' }));
+    const dialog = screen.getByRole('dialog', { name: 'Filter Runs' });
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: '999' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(nameOrder()).toEqual(['Automation 59']);
+  });
+
+  it('preserves known, unknown, and fleet-wide vehicle labels when filtering identities', () => {
+    renderTable({
+      automations: [
+        makeAutomation({ id: 1, name: 'Known pool', vehicle_id: 10 }),
+        makeAutomation({ id: 2, name: 'Other pool', vehicle_id: 99 }),
+        makeAutomation({ id: 3, name: 'Fleet-wide', vehicle_id: null }),
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Filter Vehicle' }));
+    const dialog = screen.getByRole('dialog', { name: 'Filter Vehicle' });
+    expect(within(dialog).getByRole('checkbox', { name: 'Model 3' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('checkbox', { name: 'Vehicle #99' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('checkbox', { name: 'All vehicles' })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Vehicle #99' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(nameOrder()).toEqual(['Fleet-wide', 'Known pool']);
+  });
+
+  it('does not merge unknown run counts with measured zero values', () => {
+    renderTable({
+      automations: [
+        makeAutomation({ id: 1, name: 'Measured zero', execution_count: 0 }),
+        makeAutomation({ id: 2, name: 'Unknown runs', execution_count: null } as unknown as Partial<Automation>),
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Filter Runs' }));
+    const dialog = screen.getByRole('dialog', { name: 'Filter Runs' });
+    expect(within(dialog).getByRole('checkbox', { name: '—' })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: '0' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(nameOrder()).toEqual(['Unknown runs']);
+  });
 });
 
 // ── Data rendering ──────────────────────────────────────────────────────────

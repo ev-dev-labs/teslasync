@@ -53,16 +53,16 @@ describe('IntelligencePackMarketplacePage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Installed' }));
     expect(await screen.findByText(/No packs are installed yet/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Sandbox Preview' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sandbox preview' }));
     expect(await screen.findByLabelText(/Pack to preview/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Audit Log' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Audit log' }));
     expect(await screen.findByText(/No actions have been recorded yet/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Import / Export' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Import / export' }));
     expect(await screen.findByText('Import a manifest')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Security & Methodology' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Security & methodology' }));
     expect(await screen.findByText('Guarantees')).toBeInTheDocument();
 
     // Install the signed sample pack from the Catalog tab, then confirm the

@@ -6,7 +6,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Pagination, Text } from '@/components/ui';
+import { Table, Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatRelative } from '@/lib/dateFormat';
@@ -27,11 +27,11 @@ export default function RoadHazardMeshPage() {
   const [page, setPage] = useState(1);
   const query = useRoadHazards(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
-  usePageTitle(t('advancedIntelligence.hazards.title', 'Road Hazard Mesh'));
+  usePageTitle(t('advancedIntelligence.hazards.title', 'Road hazard mesh'));
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.hazards.title', 'Road Hazard Mesh')}
+      title={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}
       subtitle={t(
         'advancedIntelligence.hazards.subtitle',
         'Privacy-preserving hazard clusters shown only at coarse-cell resolution.',
@@ -75,33 +75,33 @@ export default function RoadHazardMeshPage() {
                   </div>
                   <Badge variant={severityVariant(cluster.severity)}>{cluster.severity}</Badge>
                 </div>
-                <dl className="mt-4 space-y-3 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">
+                <Table aria-label={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}><tbody>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.hazards.cell', 'Coarse cell')}
-                    </dt>
-                    <dd className="font-mono">{cluster.coarse_cell}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">
+                    </th>
+                    <td className="font-mono">{cluster.coarse_cell}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.hazards.confidence', 'Confidence')}
-                    </dt>
-                    <dd>{fmtNumber(cluster.confidence_pct, 1)}%</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">
+                    </th>
+                    <td className="text-right">{fmtNumber(cluster.confidence_pct, 1)}%</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.hazards.coverage', 'Observations')}
-                    </dt>
-                    <dd>{fmtNumber(cluster.observation_count, 0)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="flex items-center gap-1 text-[var(--text-muted)]">
+                    </th>
+                    <td className="text-right">{fmtNumber(cluster.observation_count, 0)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="flex items-center gap-1 text-[var(--text-muted)]">
                       <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
                       {t('advancedIntelligence.hazards.recency', 'Last seen')}
-                    </dt>
-                    <dd>{formatRelative(cluster.last_seen)}</dd>
-                  </div>
-                </dl>
+                    </th>
+                    <td>{formatRelative(cluster.last_seen)}</td>
+                  </tr>
+                </tbody></Table>
               </article>
             ))}
           </div>

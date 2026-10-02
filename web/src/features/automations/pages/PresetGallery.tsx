@@ -53,9 +53,9 @@ const iconMap: Record<string, ElementType> = {
 
 const triggerLabels: Record<AutomationTriggerKind, { key: string; fallback: string }> = {
   trigger_schedule: { key: 'automations.builder.triggerSchedule', fallback: 'Schedule' },
-  trigger_event: { key: 'automations.builder.triggerEvent', fallback: 'Vehicle Event' },
+  trigger_event: { key: 'automations.builder.triggerEvent', fallback: 'Vehicle event' },
   trigger_geofence: { key: 'automations.builder.triggerGeofence', fallback: 'Geofence' },
-  trigger_signal: { key: 'automations.builder.triggerSignal', fallback: 'Signal Threshold' },
+  trigger_signal: { key: 'automations.builder.triggerSignal', fallback: 'Signal threshold' },
 };
 
 function PresetCard({

@@ -73,6 +73,7 @@ vi.mock('react-i18next', () => {
 
 // ── Shared component doubles — surface props as testable DOM. ──
 vi.mock('@/components/ui', () => ({
+  PanelTitle: ({ children }: { children: ReactNode }) => <h3>{children}</h3>,
   GlassPanel: ({ children, className }: any) => (
     <section className={className}>{children}</section>
   ),
@@ -210,7 +211,9 @@ function makeResponse(overrides: Partial<DriveDiagnosticResponse> = {}): DriveDi
 }
 
 const toggleBtn = () => screen.getByRole('button', { name: /why did this drive end/i });
-const expand = () => fireEvent.click(toggleBtn());
+const expand = () => {
+  if (toggleBtn().getAttribute('aria-expanded') !== 'true') fireEvent.click(toggleBtn());
+};
 
 beforeEach(() => {
   useDriveWhyEnded.mockReset();
@@ -237,18 +240,18 @@ describe('formatTransitionTime', () => {
   });
 });
 
-// ── 2. Collapsed / lazy ──────────────────────────────────────────────────────
+// ── 2. Inline evidence / independent disclosure ──────────────────────────────
 
-describe('WhyEndedPanel — collapsed / lazy', () => {
-  it('starts collapsed: aria-expanded=false, no region, query disabled', () => {
+describe('WhyEndedPanel — inline evidence', () => {
+  it('starts expanded with its selector and query enabled, without tabs', () => {
     render(<WhyEndedPanel driveId="42" />);
 
-    expect(toggleBtn()).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByTestId('timeline')).toBeNull();
-    expect(screen.queryByTestId('signal-table')).toBeNull();
-    expect(screen.queryByLabelText('Diagnostic window')).toBeNull();
-    // 3rd arg (enabled) is false while collapsed — the lazy contract.
-    expect(useDriveWhyEnded).toHaveBeenCalledWith('42', '60s', false);
+    expect(toggleBtn()).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('Diagnostic window')).toBeVisible();
+    expect(useDriveWhyEnded).toHaveBeenCalledWith('42', '60s', true);
+    for (const role of ['tab', 'tablist', 'tabpanel']) {
+      expect(screen.queryByRole(role, { hidden: true })).toBeNull();
+    }
   });
 
   it('does not leak content while collapsed even when data is already cached', () => {
@@ -257,8 +260,9 @@ describe('WhyEndedPanel — collapsed / lazy', () => {
     );
 
     render(<WhyEndedPanel driveId="42" />);
+    fireEvent.click(toggleBtn());
 
-    // The `{expanded && …}` gate keeps everything hidden until expand.
+    expect(toggleBtn()).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByTestId('timeline')).toBeNull();
     expect(screen.queryByTestId('signal-row')).toBeNull();
     expect(useDriveWhyEnded).toHaveBeenLastCalledWith('42', '60s', false);
@@ -270,6 +274,7 @@ describe('WhyEndedPanel — collapsed / lazy', () => {
 describe('WhyEndedPanel — expand', () => {
   it('reveals the region + selector and enables the query on expand', () => {
     render(<WhyEndedPanel driveId="42" />);
+    fireEvent.click(toggleBtn());
     expand();
 
     expect(toggleBtn()).toHaveAttribute('aria-expanded', 'true');

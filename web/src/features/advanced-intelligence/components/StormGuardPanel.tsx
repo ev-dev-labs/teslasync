@@ -104,7 +104,7 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Icons.cloudLightning className="h-4 w-4 text-amber-300" aria-hidden="true" />
-          {t('stormguard.title', 'Storm Guardian')}
+          {t('stormguard.title', 'Storm guardian')}
         </PanelTitle>
         {assessment && (
           <Badge variant={levelVariant(assessment.level)} size="sm" className="gap-1">
@@ -179,7 +179,7 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
               disabled={!vehicleId || saveMutation.isPending}
               loading={saveMutation.isPending}
             >
-              {t('stormguard.save', 'Save Guard')}
+              {t('stormguard.save', 'Save guard')}
             </Button>
             {saveError && <ErrorText>{saveError}</ErrorText>}
           </div>

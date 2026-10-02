@@ -29,22 +29,22 @@ export const CONDITION_TYPES: ConditionKindOption[] = [
   {
     value: 'condition_signal',
     labelKey: 'automations.conditions.signal',
-    fallback: 'Signal Check',
+    fallback: 'Signal check',
   },
   {
     value: 'condition_time_window',
     labelKey: 'automations.conditions.timeWindow',
-    fallback: 'Time Window',
+    fallback: 'Time window',
   },
   {
     value: 'condition_geofence',
     labelKey: 'automations.conditions.geofence',
-    fallback: 'Geofence State',
+    fallback: 'Geofence state',
   },
   {
     value: 'condition_other_automation',
     labelKey: 'automations.conditions.otherAutomation',
-    fallback: 'Other Automation',
+    fallback: 'Other automation',
   },
 ];
 
@@ -80,7 +80,7 @@ const OTHER_AUTOMATION_STATES: {
   {
     value: 'recently_triggered',
     labelKey: 'automations.otherAutomation.recentlyTriggered',
-    fallback: 'Recently Triggered',
+    fallback: 'Recently triggered',
   },
 ];
 
@@ -199,7 +199,7 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
               <div className="flex flex-wrap items-end gap-3">
                 <UiSelect
                   label={index === 0
-                    ? t('automations.builder.conditionType', 'Condition Type')
+                    ? t('automations.builder.conditionType', 'Condition type')
                     : undefined}
                   options={conditionTypeOptions}
                   value={condition.kind}
@@ -232,7 +232,7 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
 
       <UiButton type="button" variant="ghost" size="sm" onClick={addCondition}>
         <Plus className="mr-1 h-4 w-4" />
-        {t('automations.builder.addCondition', 'Add Condition')}
+        {t('automations.builder.addCondition', 'Add condition')}
       </UiButton>
     </div>
   );

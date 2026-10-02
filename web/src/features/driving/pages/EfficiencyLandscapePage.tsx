@@ -4,7 +4,7 @@ import { Mountain, Snowflake, Trophy, Thermometer } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, HelpTooltip } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -100,9 +100,8 @@ export default function EfficiencyLandscapePage() {
       title={t('landscape.title', 'Efficiency Landscape')}
       subtitle={t('landscape.subtitle', 'Your car’s real consumption across speed and temperature')}
       query={drivesQuery}
-      actions={
+      contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={setRange}

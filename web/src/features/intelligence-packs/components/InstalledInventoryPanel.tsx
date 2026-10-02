@@ -88,6 +88,8 @@ export function InstalledInventoryPanel() {
   const columns: Column<InstalledPackRecord>[] = [
     {
       key: 'name',
+      filterValue: (r) => r.packId,
+      filterValueLabel: (_value, r) => r.envelope.manifest.name,
       header: t('intelPacks.installed.colName', 'Pack'),
       render: (r) => (
         <div className="min-w-0">
@@ -117,8 +119,8 @@ export function InstalledInventoryPanel() {
         return (
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             {canUpgrade && (
-              <Badge variant="warning" size="sm" title={t('intelPacks.installed.upgradeHint', 'Open the Catalog tab to review and upgrade')}>
-                {t('intelPacks.installed.upgradeAvailable', 'v{{version}} available — see Catalog', { version: catalogEntry!.envelope.manifest.version })}
+              <Badge variant="warning" size="sm" title={t('intelPacks.installed.upgradeHint', 'Open the catalog tab to review and upgrade')}>
+                {t('intelPacks.installed.upgradeAvailable', 'v{{version}} available — see catalog', { version: catalogEntry!.envelope.manifest.version })}
               </Badge>
             )}
             {r.previousVersions.length > 0 && (
@@ -151,7 +153,7 @@ export function InstalledInventoryPanel() {
       // no-action: the install control lives in the adjacent Catalog tab of this same marketplace page, not in this Installed tab.
       <EmptyState
         icon={<PackageOpen className="h-10 w-10" />}
-        message={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the Catalog tab.')}
+        message={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the catalog tab.')}
       />
     );
   }
@@ -159,6 +161,7 @@ export function InstalledInventoryPanel() {
   return (
     <div className="space-y-3">
       <DataTable
+        enableValueFilters
         tableId="intelligence-packs:installed"
         columns={columns}
         data={rows}
@@ -167,7 +170,7 @@ export function InstalledInventoryPanel() {
         expandedKeys={expandedKeys}
         onExpandedChange={setExpandedKeys}
         renderExpanded={(r) => <ExpandedDetail record={r} />}
-        emptyMessage={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the Catalog tab.')}
+        emptyMessage={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the catalog tab.')}
         mobileColumns={['name', 'enabled']}
         name="IntelligencePacksInstalled"
       />

@@ -6,7 +6,7 @@ import { useDriveRoadAnomalies } from '@/api/hooks/useDriving';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Button, DataTable, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { MapContainer, MapTileLayer, MapInvalidator, MarkerCluster } from '@/components/maps';
 
@@ -17,7 +17,7 @@ interface RoadAnomalyPanelProps {
 export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
   const { t } = useTranslation();
   const { formatSpeed } = useUnits();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const regionId = useId();
   const query = useDriveRoadAnomalies(driveId, expanded);
@@ -73,7 +73,9 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
           </Text>
           <StaleRefreshWarning state={state} label={t('driveDetail.road.title', 'Possible road-surface anomalies')} />
           {state.status === 'initial' ? (
-            <Skeleton height={140} className="rounded-xl" />
+            <div role="status" aria-label={t('common.loading', 'Loading…')}>
+              <Skeleton height={140} className="rounded-xl" />
+            </div>
           ) : state.fatalError ? (
             <QueryError error={state.fatalError} onRetry={() => query.refetch()} />
           ) : state.data?.status === 'insufficient_data' ? (
@@ -132,23 +134,17 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
                   {' · '}{selectedCandidate.latitude.toFixed(5)}, {selectedCandidate.longitude.toFixed(5)}
                 </Text>
               )}
-              <div className="grid gap-3 md:grid-cols-2">
-                {candidates.map((candidate, index) => (
-                  <div key={`${candidate.ts}-${index}`} className="rounded-xl border border-[var(--border-default)] p-4">
-                    <Text as="p" variant="bodySm" weight="semibold">
-                      {t('driveDetail.road.possibleJolt', 'Possible jolt')}
-                      {' · '}
-                      {formatDateTime(candidate.ts)}
-                    </Text>
-                    <Text as="p" variant="caption">
-                      {t('driveDetail.road.speed', 'Recorded speed')}: {formatSpeed(candidate.speed_mps)}
-                    </Text>
-                    <Text as="p" variant="caption">
-                      {t('driveDetail.road.position', 'Approximate location')}: {candidate.latitude.toFixed(5)}, {candidate.longitude.toFixed(5)}
-                    </Text>
-                  </div>
-                ))}
-              </div>
+              <DataTable
+                tableId="drive-detail:road-candidates" name="drive-road-candidates"
+                data={candidates.map((candidate, index) => ({ ...candidate, index }))}
+                keyExtractor={(candidate) => `${candidate.ts}-${candidate.index}`}
+                columns={[
+                  { key: 'time', header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'), render: (candidate) => <Button variant="ghost" size="sm" onClick={() => setSelectedCandidateId(`${candidate.ts}-${candidate.index}`)}>{formatDateTime(candidate.ts)}</Button>, visibleOnMobile: true },
+                  { key: 'speed', header: t('driveDetail.road.speed', 'Recorded speed'), render: (candidate) => formatSpeed(candidate.speed_mps), visibleOnMobile: true },
+                  { key: 'location', header: t('driveDetail.road.position', 'Approximate location'), render: (candidate) => `${candidate.latitude.toFixed(5)}, ${candidate.longitude.toFixed(5)}`, visibleOnMobile: true },
+                ]}
+                pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
+              />
             </>
           )}
         </div>

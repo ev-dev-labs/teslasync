@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import {
   ChartContainer, ChartLegend, ChartTooltip,
   ComposedChart, Area, Line, ReferenceLine,
@@ -9,6 +9,7 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
+import { Table } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { ChartDataPoint, DriveStats } from './types';
@@ -35,23 +36,24 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const elevNet = elevGain - elevLoss;
 
   return (
-    <FadeIn className="h-full">
+    <FadeIn className="space-y-3">
+      <Table aria-label={t('driveDetail.elevSummary', 'Elevation summary')}>
+        <tbody>
+          <tr><th scope="row">{t('driveDetail.gain', 'Gain')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevGain)} m` : '—'}</td></tr>
+          <tr><th scope="row">{t('driveDetail.loss', 'Loss')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevLoss)} m` : '—'}</td></tr>
+          <tr><th scope="row">{t('driveDetail.net', 'Net')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevNet)} m` : '—'}</td></tr>
+        </tbody>
+      </Table>
       {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
       <ChartContainer
-        title={t('driveDetail.elevProfile', 'Elevation Profile')}
+        title={t('driveDetail.elevProfile', 'Elevation profile')}
         ariaLabel={t('driveDetail.elevProfile.aria', 'Elevation and speed area+line chart over the drive timeline')}
         chartKey="drive-detail-elevation"
         height={220}
-        className="h-full"
       >
         {({ hiddenSeries }) => (
-          points.length > 1 ? (
+          points.filter((point) => point.elevation != null).length > 1 ? (
             <>
-            <div className="flex items-center gap-4 mb-2 text-xs">
-              <span className="flex items-center gap-1 text-green-400"><ArrowUpRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevGain)} m {t('driveDetail.gain', 'gain')}</span>
-              <span className="flex items-center gap-1 text-red-400"><ArrowDownRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevLoss)} m {t('driveDetail.loss', 'loss')}</span>
-              <span className="text-[var(--text-muted)]">{t('driveDetail.net', 'Net')}: {fmtNumber(elevNet)} m</span>
-            </div>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={points}

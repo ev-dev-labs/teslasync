@@ -6,7 +6,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, Input, Text } from '@/components/ui';
+import { Table, Badge, Button, Input, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -32,7 +32,7 @@ export default function TCOOptimizerPage() {
     budget_minor: 1800000,
     currency: 'USD',
   });
-  usePageTitle(t('advancedIntelligence.tco.title', 'TCO Optimizer'));
+  usePageTitle(t('advancedIntelligence.tco.title', 'TCO optimizer'));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -47,7 +47,7 @@ export default function TCOOptimizerPage() {
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.tco.title', 'TCO Optimizer')}
+      title={t('advancedIntelligence.tco.title', 'TCO optimizer')}
       subtitle={t(
         'advancedIntelligence.tco.subtitle',
         'Compare constrained cost, risk, and convenience alternatives on a Pareto-like frontier.',
@@ -189,34 +189,34 @@ export default function TCOOptimizerPage() {
                     </Badge>
                   ) : null}
                 </div>
-                <dl className="mt-4 space-y-3 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.cost', 'Projected cost')}</dt>
-                    <dd>{strategy.projected_cost_minor != null
+                <Table aria-label={t('advancedIntelligence.tco.title', 'TCO optimizer')}><tbody>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.cost', 'Projected cost')}</th>
+                    <td>{strategy.projected_cost_minor != null
                       ? money(strategy.projected_cost_minor)
-                      : t('advancedIntelligence.unsupported.short', 'Unsupported')}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.risk', 'Risk score')}</dt>
-                    <dd>{strategy.risk_score_pct != null ? `${fmtNumber(strategy.risk_score_pct, 1)}%` : '—'}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.convenience', 'Convenience')}</dt>
-                    <dd>{fmtNumber(strategy.convenience_score_pct, 1)}%</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.mix', 'Home / public mix')}</dt>
-                    <dd>{fmtNumber(strategy.home_charging_pct, 0)}% / {fmtNumber(strategy.public_charging_pct, 0)}%</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.budgetStatus', 'Budget status')}</dt>
-                    <dd>{strategy.within_budget == null
+                      : t('advancedIntelligence.unsupported.short', 'Unsupported')}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.risk', 'Risk score')}</th>
+                    <td className="text-right">{strategy.risk_score_pct != null ? `${fmtNumber(strategy.risk_score_pct, 1)}%` : '—'}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.convenience', 'Convenience')}</th>
+                    <td className="text-right">{fmtNumber(strategy.convenience_score_pct, 1)}%</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.mix', 'Home / public mix')}</th>
+                    <td className="text-right">{fmtNumber(strategy.home_charging_pct, 0)}% / {fmtNumber(strategy.public_charging_pct, 0)}%</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.budgetStatus', 'Budget status')}</th>
+                    <td>{strategy.within_budget == null
                       ? t('advancedIntelligence.unsupported.short', 'Unsupported')
                       : strategy.within_budget
                         ? t('advancedIntelligence.tco.withinBudget', 'Within budget')
-                        : t('advancedIntelligence.tco.overBudget', 'Over budget')}</dd>
-                  </div>
-                </dl>
+                        : t('advancedIntelligence.tco.overBudget', 'Over budget')}</td>
+                  </tr>
+                </tbody></Table>
                 {(strategy.constraints ?? []).map((constraint) => (
                   <Text as="p" variant="caption" className="mt-2" key={constraint}>• {constraint}</Text>
                 ))}

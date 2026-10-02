@@ -10,7 +10,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
+import { Table, Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -46,7 +46,7 @@ export default function FederatedLearningStudioPage() {
   const query = useFederatedModelCards(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const mutation = useStartFederatedRound();
   const cards = query.data?.items ?? [];
-  usePageTitle(t('advancedIntelligence.federated.title', 'Federated Learning Studio'));
+  usePageTitle(t('advancedIntelligence.federated.title', 'Federated learning studio'));
 
   const requestConfirmation = (event: FormEvent) => {
     event.preventDefault();
@@ -63,7 +63,7 @@ export default function FederatedLearningStudioPage() {
 
   return (
     <PageContainer
-      title={t('advancedIntelligence.federated.title', 'Federated Learning Studio')}
+      title={t('advancedIntelligence.federated.title', 'Federated learning studio')}
       subtitle={t(
         'advancedIntelligence.federated.subtitle',
         'Manage subject-scoped local aggregate model rounds within explicit privacy budgets.',
@@ -131,32 +131,32 @@ export default function FederatedLearningStudioPage() {
                     {card.latest_status ?? t('advancedIntelligence.federated.status.none', 'No round')}
                   </Badge>
                 </div>
-                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <dt className="text-[var(--text-muted)]">
+                <Table aria-label={t('advancedIntelligence.federated.title', 'Federated learning studio')}><tbody>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.epsilon', 'Epsilon')}
-                    </dt>
-                    <dd>{fmtNumber(card.epsilon_spent, 2)} / {fmtNumber(card.epsilon_budget, 2)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[var(--text-muted)]">
+                    </th>
+                    <td className="text-right">{fmtNumber(card.epsilon_spent, 2)} / {fmtNumber(card.epsilon_budget, 2)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.rounds', 'Rounds')}
-                    </dt>
-                    <dd>{fmtNumber(card.round_count, 0)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[var(--text-muted)]">
+                    </th>
+                    <td className="text-right">{fmtNumber(card.round_count, 0)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.samples', 'Latest local samples')}
-                    </dt>
-                    <dd>{card.latest_sample_count != null ? fmtNumber(card.latest_sample_count, 0) : '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[var(--text-muted)]">
+                    </th>
+                    <td className="text-right">{card.latest_sample_count != null ? fmtNumber(card.latest_sample_count, 0) : '—'}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.aggregate', 'Local aggregate')}
-                    </dt>
-                    <dd>{formatEfficiencyFromSI(card.latest_metric_wh_per_m, units.unitPrefs)}</dd>
-                  </div>
-                </dl>
+                    </th>
+                    <td className="text-right">{formatEfficiencyFromSI(card.latest_metric_wh_per_m, units.unitPrefs)}</td>
+                  </tr>
+                </tbody></Table>
                 <Button
                   type="button"
                   variant="secondary"

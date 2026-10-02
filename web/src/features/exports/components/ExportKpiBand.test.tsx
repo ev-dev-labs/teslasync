@@ -90,7 +90,7 @@ function renderBand(over: Partial<ExportStats> = {}, isLoading = false) {
 }
 
 /** All five card labels, in render order. */
-const LABELS = ['Total Exports', 'Ready', 'In Progress', 'Failed', 'Total Size'] as const;
+const LABELS = ['Total exports', 'Ready', 'In progress', 'Failed', 'Total size'] as const;
 
 describe('ExportKpiBand', () => {
   it('renders every one of the five KPI cards with its label', () => {
@@ -127,7 +127,7 @@ describe('ExportKpiBand', () => {
     renderBand({ totalBytes: 0 });
 
     // The four counts still render; only the storage cell degrades to "—".
-    expect(screen.getByText('Total Size')).toBeInTheDocument();
+    expect(screen.getByText('Total size')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 

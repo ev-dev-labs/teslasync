@@ -86,7 +86,7 @@ vi.mock('@/hooks/useUnits', async () => {
 const DASH = '\u2014'; // —
 const DEGC = '\u00B0C';
 const DEGF = '\u00B0F';
-const CO2_SAVED = 'CO\u2082 Saved'; // "CO₂ Saved"
+const CO2_SAVED = 'CO₂ Saved'; // "CO₂ Saved"
 
 /* ── Fixtures ─────────────────────────────────────────────────────────────── */
 function makeHealth(overrides: Partial<DrivetrainHealthData> = {}): DrivetrainHealthData {

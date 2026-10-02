@@ -35,7 +35,7 @@ type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
 export default function AutomationListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  usePageTitle(t('automationList.title', 'Automation Rules'));
+  usePageTitle(t('automationList.title', 'Automation rules'));
 
   const automationsQuery = useAutomations();
   const { data: rowsRaw, isLoading, error, refetch } = automationsQuery;
@@ -134,8 +134,7 @@ export default function AutomationListPage() {
     [bulkUpdate],
   );
 
-  // ── Header toolbar (status filter + search + create) ─────────────────────────
-  const actions = (
+  const contextActions = (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
       <Select
         options={statusOptions}
@@ -153,26 +152,28 @@ export default function AutomationListPage() {
         icon={<Icons.search className="h-4 w-4" aria-hidden="true" />}
         className="w-full sm:w-56"
       />
-      <Button
-        variant="primary"
-        icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
-        onClick={() => navigate('/automations/new')}
-        disabled={!operationalMode.canWrite}
-        title={operationalMode.writeBlockReason ?? undefined}
-      >
-        {t('automationList.new', 'New')}
-      </Button>
     </div>
   );
 
   return (
     <PageContainer
-      title={t('automationList.title', 'Automation Rules')}
+      title={t('automationList.title', 'Automation rules')}
       subtitle={t(
         'automationList.subtitle',
         'Bulk-manage automations. Click an automation to edit it in the builder.',
       )}
-      actions={actions}
+      contextActions={contextActions}
+      primaryAction={
+        <Button
+          variant="primary"
+          icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
+          onClick={() => navigate('/automations/new')}
+          disabled={!operationalMode.canWrite}
+          title={operationalMode.writeBlockReason ?? undefined}
+        >
+          {t('automationList.new', 'New')}
+        </Button>
+      }
       query={automationsQuery}
     >
       <OperationalWriteNotice

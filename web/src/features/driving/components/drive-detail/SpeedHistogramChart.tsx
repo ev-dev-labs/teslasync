@@ -30,12 +30,12 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
   return (
     <FadeIn className="h-full">
       <ChartContainer
-        title={t('driveDetail.speedHistogram', 'Speed Histogram')}
+        title={t('driveDetail.speedHistogram', 'Speed histogram')}
         ariaLabel={t('driveDetail.speedHistogram.aria', 'Speed-bucket distribution histogram')}
         data={tableData}
         dataColumns={[
           { key: 'range', label: t('driveDetail.col.range', 'Speed range') },
-          { key: 'pct', label: t('driveDetail.col.pct', '% of drive') },
+          { key: 'pct', label: t('driveDetail.report.sampleShare', '% of speed samples') },
         ]}
         height={220}
         className="h-full"
@@ -45,9 +45,9 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
             <BarChart data={buckets}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+              <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
               <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="pct" fill="#a855f7" name={`% ${t('driveDetail.ofDrive', 'of drive')}`} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="pct" fill="#a855f7" name={t('driveDetail.report.sampleShare', '% of speed samples')} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (

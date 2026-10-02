@@ -14,6 +14,7 @@ import type { FleetDriver } from '@/api/hooks/useFleetOps';
 
 interface DriverRosterProps {
   items: FleetDriver[];
+  enableValueFilters?: boolean;
   loading: boolean;
   error: unknown;
   onRetry: () => void;
@@ -26,6 +27,7 @@ interface DriverRosterProps {
 
 export function DriverRoster({
   items,
+  enableValueFilters = false,
   loading,
   error,
   onRetry,
@@ -40,18 +42,24 @@ export function DriverRoster({
     {
       key: 'name',
       header: t('fleetOps.drivers.name', 'Driver'),
+      filterValue: (item) => item.id,
+      filterValueLabel: (_value, item) => item.display_name,
       render: (item) => item.display_name,
       visibleOnMobile: true,
     },
     {
       key: 'reference',
       header: t('fleetOps.drivers.reference', 'Reference'),
+      filterValue: (item) => item.reference_code ?? null,
       render: (item) => item.reference_code,
       visibleOnMobile: true,
     },
     {
       key: 'status',
       header: t('fleetOps.drivers.status', 'Status'),
+      filterValue: (item) => item.status ?? null,
+      filterValueLabel: (_value, item) => item.status == null ? '—' : item.status === 'active'
+        ? t('fleetOps.drivers.active', 'Active') : t('fleetOps.drivers.inactive', 'Inactive'),
       render: (item) => (
         <StatusPill color={item.status === 'active' ? 'bg-emerald-500' : 'bg-slate-500'}>
           {item.status === 'active'
@@ -107,7 +115,7 @@ export function DriverRoster({
 
   return (
     <GlassPanel className="p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <PanelTitle>{t('fleetOps.drivers.title', 'Fleet drivers')}</PanelTitle>
         <Button
           type="button"
@@ -135,6 +143,7 @@ export function DriverRoster({
           tableId="fleet-ops:drivers"
           columns={columns}
           data={items}
+          enableValueFilters={enableValueFilters}
           keyExtractor={(item) => item.id}
           mobileColumns={['name', 'reference', 'actions']}
           pagination

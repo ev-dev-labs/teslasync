@@ -315,10 +315,10 @@ export default function AutomationBuilderPage() {
 
   usePageTitle(
     isEdit
-      ? t('automations.builder.editTitle', 'Edit Automation')
+      ? t('automations.builder.editTitle', 'Edit automation')
       : presetId
-        ? t('automations.builder.presetTitle', 'Install Preset')
-        : t('automations.builder.createTitle', 'Create Automation'),
+        ? t('automations.builder.presetTitle', 'Install preset')
+        : t('automations.builder.createTitle', 'Create automation'),
   );
 
   const {
@@ -469,7 +469,7 @@ export default function AutomationBuilderPage() {
       }),
     }));
     return [
-      { value: '', label: t('automations.builder.allVehicles', 'All Vehicles') },
+      { value: '', label: t('automations.builder.allVehicles', 'All vehicles') },
       ...options,
     ];
   }, [t, vehicles]);
@@ -627,7 +627,7 @@ export default function AutomationBuilderPage() {
   if (isEdit && isLoadingAutomation) {
     return (
       <PageContainer
-        title={t('automations.builder.editTitle', 'Edit Automation')}
+        title={t('automations.builder.editTitle', 'Edit automation')}
         loading
         breadcrumbLabels={breadcrumbLabels}
       >
@@ -639,7 +639,7 @@ export default function AutomationBuilderPage() {
   if (isEdit && loadError) {
     return (
       <PageContainer
-        title={t('automations.builder.editTitle', 'Edit Automation')}
+        title={t('automations.builder.editTitle', 'Edit automation')}
         error={loadError instanceof Error ? loadError : new Error(String(loadError))}
         breadcrumbLabels={breadcrumbLabels}
       >
@@ -651,7 +651,7 @@ export default function AutomationBuilderPage() {
   if (isEdit && !existingAutomation && !isLoadingAutomation) {
     return (
       <PageContainer
-        title={t('automations.builder.editTitle', 'Edit Automation')}
+        title={t('automations.builder.editTitle', 'Edit automation')}
         breadcrumbLabels={breadcrumbLabels}
       >
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -665,14 +665,14 @@ export default function AutomationBuilderPage() {
   return (
     <PageContainer
       title={isEdit
-        ? t('automations.builder.editTitle', 'Edit Automation')
-        : t('automations.builder.createTitle', 'Create Automation')}
+        ? t('automations.builder.editTitle', 'Edit automation')
+        : t('automations.builder.createTitle', 'Create automation')}
       subtitle={t(
         'automations.builder.subtitle',
         'Configure supported typed triggers, conditions, and actions for your automation.',
       )}
       breadcrumbLabels={breadcrumbLabels}
-      actions={(
+      secondaryActions={(
         <UiButton
           type="button"
           variant="ghost"
@@ -680,9 +680,9 @@ export default function AutomationBuilderPage() {
           onClick={handleBackToList}
           className="min-h-11 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           icon={<ArrowLeft className="h-4 w-4" />}
-          aria-label={t('automations.builder.backToList', 'Back to Automations')}
+          aria-label={t('automations.builder.backToList', 'Back to automations')}
         >
-          {t('automations.builder.backToList', 'Back to Automations')}
+          {t('automations.builder.backToList', 'Back to automations')}
         </UiButton>
       )}
     >
@@ -763,7 +763,7 @@ export default function AutomationBuilderPage() {
                   label={t('automations.builder.name', 'Name')}
                   value={form.name}
                   onChange={(event) => update('name', event.target.value)}
-                  placeholder={t('automations.builder.namePlaceholder', 'Morning Commute Prep')}
+                  placeholder={t('automations.builder.namePlaceholder', 'Morning commute prep')}
                   required
                 />
                 <UiTextarea
@@ -798,14 +798,14 @@ export default function AutomationBuilderPage() {
             <FadeIn delay={0.05}>
               <div data-tour="automation-builder">
                 <FormSection
-                  title={t('automations.builder.when', 'When (Trigger)')}
+                  title={t('automations.builder.when', 'When (trigger)')}
                   description={t(
                     'automations.builder.whenDesc',
                     'Choose the supported typed contract that starts this automation.',
                   )}
                 >
                   <UiSelect
-                    label={t('automations.builder.triggerType', 'Trigger Type')}
+                    label={t('automations.builder.triggerType', 'Trigger type')}
                     help={{
                       i18nKey: 'help.fields.automations.triggerType',
                       content: 'Decides when this automation starts: signal change, geofence enter/exit, time of day, charging event, or another automation completing.',
@@ -838,7 +838,7 @@ export default function AutomationBuilderPage() {
             <FadeIn delay={0.1}>
               <div data-tour="automation-conditions">
                 <FormSection
-                  title={t('automations.builder.onlyIf', 'Only If (Conditions)')}
+                  title={t('automations.builder.onlyIf', 'Only if (conditions)')}
                   description={t(
                     'automations.builder.onlyIfDesc',
                     'Optional checks that must pass before actions run.',
@@ -855,7 +855,7 @@ export default function AutomationBuilderPage() {
             <FadeIn delay={0.15}>
               <div data-tour="automation-actions">
                 <FormSection
-                  title={t('automations.builder.then', 'Then (Actions)')}
+                  title={t('automations.builder.then', 'Then (actions)')}
                   description={t(
                     'automations.builder.thenDesc',
                     'Actions are executed in order.',
@@ -967,7 +967,7 @@ export default function AutomationBuilderPage() {
           <AlertBanner
             variant="danger"
             icon={<AlertTriangle className="h-4 w-4" />}
-            title={t('automations.builder.saveError', 'Save Error')}
+            title={t('automations.builder.saveError', 'Save error')}
           >
             {saveError}
           </AlertBanner>
@@ -1000,7 +1000,7 @@ export default function AutomationBuilderPage() {
                   className="min-h-11"
                 >
                   <PlayCircle className="mr-2 h-4 w-4" />
-                  {t('automations.builder.testRun', 'Test Run')}
+                  {t('automations.builder.testRun', 'Test run')}
                 </UiButton>
               )}
               <UiButton

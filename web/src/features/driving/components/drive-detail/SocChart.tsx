@@ -24,13 +24,13 @@ export function SocChart({ chartData }: SocChartProps) {
   // down `undefined` transiently (drive still loading) — guard before `.length`
   // so a mid-fetch render never throws on the missing array.
   const points = chartData ?? [];
-  const hasSeries = points.length > 1;
+  const hasSeries = points.filter((row) => row.battery != null).length > 1;
 
   return (
     <FadeIn className="h-full">
       {/* chart-a11y:no-table dense per-sample SOC trace; start/end SOC visible in the drive summary tiles */}
       <ChartContainer
-        title={t('driveDetail.socOverTime', 'SOC % Over Time')}
+        title={t('driveDetail.socOverTime', 'SOC % over time')}
         ariaLabel={t('driveDetail.socOverTime.aria', 'State of charge percent over time area chart')}
         height={220}
         className="h-full"

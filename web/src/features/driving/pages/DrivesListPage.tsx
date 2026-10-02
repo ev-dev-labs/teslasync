@@ -7,7 +7,7 @@ import {
   Trash2, AlertTriangle,
   BatteryCharging, Bell, Car, GitCompareArrows, MapPin, Wrench,
 } from 'lucide-react';
-import { PageContainer, PageHeaderSticky } from '@/components/layout';
+import { CopyLinkButton, PageContainer, PageHeaderSticky } from '@/components/layout';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge, PanelTitle, SectionTitle, Text } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +16,7 @@ import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
   BulkActionsToolbar, type BulkAction,
   KpiOverviewCard, MetricCard, DateGroupedList, OperationalBrief,
-  DataProvenanceBadge, EntityPreviewDrawer,
+  DataProvenanceBadge, EntityPreviewDrawer, endpointLabel,
   type DateGroupedListGroup, type OperationalAttention,
 } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
@@ -46,6 +46,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useCrossTabRefresh } from '@/hooks/useCrossTabRefresh';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
@@ -59,7 +60,7 @@ import { calendarRangeToInstants } from '@/lib/dateRange';
 import type { Drive } from '@/types/driving';
 import type { DriveFsdInsight } from '@/types/fsd';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
-import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import {
   getEfficiency, gradeFromEfficiency, gradeFromNumeric,
   computePeriodStats, priorPeriod, detectAnomalies, detectNotable, detectCommutes,
@@ -67,6 +68,9 @@ import {
   type TrendMetric, type PeriodStats,
 } from '@/lib/drivesAggregation';
 import { DriveCard } from '../components/DriveCard';
+import { DRIVE_GRID_SORT_KEYS, DrivesEvidenceTable, type DriveGridFilters, type DriveGridFilterKey, type DriveGridSortKey } from '../components/DrivesEvidenceTable';
+import { driveAverageSpeed, driveBattery } from '../components/driveGridMetrics';
+import { DRIVE_VALUE_COLUMNS, compactDriveValueSelection, driveColumnValue, driveValueKey, parseDriveValueSelections, type DriveValueColumn } from '../components/driveGridValues';
 
 
 /* ------------------------------------------------------------------ */
@@ -97,6 +101,7 @@ export default function DrivesListPage() {
   const navigate = useNavigate();
   usePageTitle(t('drives.title', 'Drive History'));
   const savedView = useSavedViewUrl();
+  const desktopEvidence = useMediaQuery('(min-width: 1024px)');
 
   /* Data hooks */
   const { vehicleId } = useSelectedVehicle();
@@ -214,6 +219,14 @@ export default function DrivesListPage() {
     (v: number) => convertSpeedFromSI(v, unitPrefs.speed),
     [unitPrefs.speed],
   );
+  const toTemperatureDisplay = useCallback(
+    (value: number) => convertTempFromSI(value, unitPrefs.temperature),
+    [unitPrefs.temperature],
+  );
+  const toPowerDisplay = useCallback(
+    (value: number) => convertPowerFromSI(value, unitPrefs.power),
+    [unitPrefs.power],
+  );
   const toEfficiencyDisplay = useCallback(
     (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm,
     [unitPrefs.distance],
@@ -221,9 +234,13 @@ export default function DrivesListPage() {
   const { formatEnergyCost, costPerKwh, formatCurrency } = useFormatting();
 
   /* URL-persisted UI state */
-  const [sortBy, setSortBy] = useUrlEnum<'date' | 'distance' | 'efficiency' | 'fsd'>(
-    'sort', ['date', 'distance', 'efficiency', 'fsd'] as const, 'date',
+  const [sortBy] = useUrlEnum<DriveGridSortKey>(
+    'sort', DRIVE_GRID_SORT_KEYS, 'date',
   );
+  const [sortDirection] = useUrlEnum('sortdir', ['auto', 'asc', 'desc'] as const, 'auto');
+  const effectiveSortDirection = sortDirection === 'auto'
+    ? sortBy === 'efficiency' || sortBy === 'grade' || sortBy === 'route' || sortBy === 'start' || sortBy === 'destination' ? 'asc' : 'desc'
+    : sortDirection;
   const [page, setPage] = useUrlNumber('page', 1);
   const [pageSize] = useUrlNumber('size', 50);
   const [search] = useUrlString('q', '');
@@ -231,6 +248,65 @@ export default function DrivesListPage() {
   const [fsdFilter] = useUrlEnum<FsdFilter>('fsd', FSD_FILTERS, 'all');
   const [trendMetric, setTrendMetric] = useUrlEnum<TrendMetric>('trend', TREND_METRICS, 'drives');
   const setUrlBatch = useUrlBatch();
+  const [gridValues] = useUrlString('grid_values');
+  const valueFilter = useMemo(() => parseDriveValueSelections(gridValues), [gridValues]);
+  const hasValueFilters = valueFilter.invalid || Object.keys(valueFilter.selections).length > 0;
+  const valuePredicates = useMemo(() => DRIVE_VALUE_COLUMNS.flatMap((column) => {
+    const selection = valueFilter.selections[column];
+    return selection == null ? [] : [{
+      column,
+      excluded: !Array.isArray(selection),
+      values: new Set(Array.isArray(selection) ? selection : selection.excluded),
+    }];
+  }), [valueFilter.selections]);
+  const [gridDistance] = useUrlString('grid_distance');
+  const [gridDuration] = useUrlString('grid_duration');
+  const [gridSpeed] = useUrlString('grid_speed');
+  const [gridGrade] = useUrlString('grid_grade');
+  const [gridBattery] = useUrlString('grid_battery');
+  const [gridEnergy] = useUrlString('grid_energy');
+  const [gridStart] = useUrlString('grid_start');
+  const [gridDestination] = useUrlString('grid_destination');
+  const [gridStartBattery] = useUrlString('grid_start_battery');
+  const [gridBatteryUsed] = useUrlString('grid_battery_used');
+  const [gridMaxSpeed] = useUrlString('grid_max_speed');
+  const [gridAvgPower] = useUrlString('grid_avg_power');
+  const [gridOutsideTemp] = useUrlString('grid_outside_temp');
+  const [gridInsideTemp] = useUrlString('grid_inside_temp');
+  const [gridRegen] = useUrlString('grid_regen');
+  const [gridScore] = useUrlString('grid_score');
+  const gridFilters = useMemo<DriveGridFilters>(() => ({
+    distance: gridDistance, duration: gridDuration, speed: gridSpeed,
+    grade: gridGrade, battery: gridBattery, energy: gridEnergy,
+    start: gridStart, destination: gridDestination,
+    startBattery: gridStartBattery, batteryUsed: gridBatteryUsed,
+    maxSpeed: gridMaxSpeed, avgPower: gridAvgPower, outsideTemp: gridOutsideTemp,
+    insideTemp: gridInsideTemp, regen: gridRegen, score: gridScore,
+  }), [gridDistance, gridDuration, gridSpeed, gridGrade, gridBattery, gridEnergy, gridStart, gridDestination, gridStartBattery, gridBatteryUsed, gridMaxSpeed, gridAvgPower, gridOutsideTemp, gridInsideTemp, gridRegen, gridScore]);
+  const changeGridFilter = useCallback((key: DriveGridFilterKey, value: string) => {
+    const parameter = `grid_${key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)}`;
+    setUrlBatch({ [parameter]: value || null, page: null });
+  }, [setUrlBatch]);
+  const clearValueFilter = useCallback((column: DriveValueColumn) => {
+    const next = { ...valueFilter.selections };
+    delete next[column];
+    const updates: Record<string, string | null> = {
+      grid_values: Object.keys(next).length ? JSON.stringify(next) : null,
+      page: null,
+    };
+    if (column === 'date') { updates.q = null; updates.coll = null; }
+    else if (column === 'fsd') updates.fsd = null;
+    else if (column === 'efficiency' || column === 'grade') updates.grid_grade = null;
+    else if (column in gridFilters) updates[`grid_${column.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)}`] = null;
+    setUrlBatch(updates);
+  }, [valueFilter.selections, gridFilters, setUrlBatch]);
+  const sortGrid = useCallback((key: DriveGridSortKey) => {
+    if (key === 'fsd' && !fsdDataAvailable) return;
+    const direction = key === sortBy
+      ? effectiveSortDirection === 'desc' ? 'asc' : 'desc'
+      : key === 'efficiency' || key === 'grade' || key === 'route' || key === 'start' || key === 'destination' ? 'asc' : 'desc';
+    setUrlBatch({ sort: key === 'date' ? null : key, sortdir: direction, page: null });
+  }, [sortBy, effectiveSortDirection, fsdDataAvailable, setUrlBatch]);
   const previousRange = useRef(`${startDate}:${endDate}`);
   useEffect(() => {
     const currentRange = `${startDate}:${endDate}`;
@@ -274,6 +350,17 @@ export default function DrivesListPage() {
   const anomalyDriveIds = useMemo(
     () => new Set(anomalyDrives.map((d) => d.id)), [anomalyDrives],
   );
+  const changeValueSelection = useCallback((column: DriveValueColumn, values: string[] | null) => {
+    const next = { ...valueFilter.selections };
+    if (values == null) delete next[column];
+    else {
+      const available = Array.from(new Set(dateFilteredDrives.map((drive) =>
+        driveValueKey(driveColumnValue(drive, column, fsdByDriveID, anomalyDriveIds, fsdDataAvailable)),
+      )));
+      next[column] = compactDriveValueSelection(values, available);
+    }
+    setUrlBatch({ grid_values: Object.keys(next).length ? JSON.stringify(next) : null, page: null });
+  }, [valueFilter.selections, dateFilteredDrives, fsdByDriveID, anomalyDriveIds, fsdDataAvailable, setUrlBatch]);
   const notableDrives = useMemo(
     () => detectNotable(dateFilteredDrives), [dateFilteredDrives],
   );
@@ -323,9 +410,45 @@ export default function DrivesListPage() {
     [deferredSearch],
   );
   const filteredDrives = useMemo(() => {
-    if (searchTokens.length === 0) return fsdFiltered;
-    return fsdFiltered.filter((d) =>
-      matchesTokens(d, searchTokens, {
+    return fsdFiltered.filter((d) => {
+      if (valueFilter.invalid) return false;
+      for (const predicate of valuePredicates) {
+        const key = driveValueKey(driveColumnValue(d, predicate.column, fsdByDriveID, anomalyDriveIds, fsdDataAvailable));
+        if (predicate.values.has(key) === predicate.excluded) return false;
+      }
+      if (desktopEvidence) {
+        for (const key of ['start', 'destination'] as const) {
+          const label = endpointLabel(key === 'start'
+            ? { address: d.startAddress, lat: d.startLat, lon: d.startLon }
+            : { address: d.endAddress, lat: d.endLat, lon: d.endLon });
+          if (gridFilters[key].trim() && !label?.toLocaleLowerCase().includes(gridFilters[key].trim().toLocaleLowerCase())) return false;
+        }
+        const speed = driveAverageSpeed(d);
+        const battery = driveBattery(d);
+        const thresholds: Array<[DriveGridFilterKey, number | null]> = [
+          ['distance', toDistanceDisplay(d.distanceM)],
+          ['duration', d.durationS / 60],
+          ['speed', speed != null ? toSpeedDisplay(speed) : null],
+          ['maxSpeed', d.maxSpeedMps != null ? toSpeedDisplay(d.maxSpeedMps) : null],
+          ['avgPower', d.avgPowerW != null ? convertPowerFromSI(d.avgPowerW, unitPrefs.power) : null],
+          ['outsideTemp', d.outsideTempAvgC != null ? convertTempFromSI(d.outsideTempAvgC, unitPrefs.temperature) : null],
+          ['insideTemp', d.insideTempAvgC != null ? convertTempFromSI(d.insideTempAvgC, unitPrefs.temperature) : null],
+          ['battery', battery.end],
+          ['startBattery', battery.start],
+          ['batteryUsed', battery.used],
+          ['energy', d.energyUsedWh != null ? d.energyUsedWh / 1000 : null],
+          ['regen', d.regenEnergyWh != null ? d.regenEnergyWh / 1000 : null],
+          ['score', d.score],
+        ];
+        if (thresholds.some(([key, value]) => {
+          const raw = gridFilters[key];
+          const signed = key === 'outsideTemp' || key === 'insideTemp' || key === 'avgPower' || key === 'batteryUsed';
+          return raw !== '' && (!Number.isFinite(Number(raw)) || (!signed && Number(raw) < 0) || value == null || value < Number(raw));
+        })) return false;
+        if (gridFilters.grade && gradeFromEfficiency(getEfficiency(d)).label !== gridFilters.grade) return false;
+      }
+      if (searchTokens.length === 0) return true;
+      return matchesTokens(d, searchTokens, {
         text: (drive) => [
           drive.startAddress,
           drive.endAddress,
@@ -358,31 +481,60 @@ export default function DrivesListPage() {
             return compareNumeric(display, token.op, target);
           },
         },
-      }),
-    );
-  }, [fsdFiltered, searchTokens, toDistanceDisplay, tz]);
+      });
+    });
+  }, [fsdFiltered, searchTokens, toDistanceDisplay, toSpeedDisplay, tz, desktopEvidence, gridFilters, unitPrefs.power, unitPrefs.temperature,
+    valueFilter.invalid, valuePredicates, fsdByDriveID, fsdDataAvailable, anomalyDriveIds]);
 
   /* ---- Sort ---- */
   const sortedDrives = useMemo(() => {
-    const sorted = [...filteredDrives];
-    switch (sortBy) {
-      case 'distance':   return sorted.sort((a, b) => (b.distanceM ?? 0) - (a.distanceM ?? 0));
-      case 'efficiency': return sorted.sort((a, b) => (getEfficiency(a) ?? 999) - (getEfficiency(b) ?? 999));
-      case 'fsd':        return sorted.sort((a, b) => {
-        const left = fsdByDriveID.get(a.id);
-        const right = fsdByDriveID.get(b.id);
-        const leftHasShare = left?.fsd_share_pct != null;
-        const rightHasShare = right?.fsd_share_pct != null;
-        if (leftHasShare !== rightHasShare) return leftHasShare ? -1 : 1;
-        if (leftHasShare && rightHasShare) {
-          const shareDifference = (right?.fsd_share_pct ?? 0) - (left?.fsd_share_pct ?? 0);
-          if (shareDifference !== 0) return shareDifference;
+    const direction = effectiveSortDirection === 'asc' ? 1 : -1;
+    const compare = (left: number | null | undefined, right: number | null | undefined) => {
+      if (left == null) return right == null ? 0 : 1;
+      if (right == null) return -1;
+      return (left - right) * direction;
+    };
+    return [...filteredDrives].sort((a, b) => {
+      switch (sortBy) {
+        case 'distance': return compare(a.distanceM, b.distanceM);
+        case 'duration': return compare(a.durationS, b.durationS);
+        case 'speed': return compare(driveAverageSpeed(a), driveAverageSpeed(b));
+        case 'maxSpeed': return compare(a.maxSpeedMps, b.maxSpeedMps);
+        case 'avgPower': return compare(a.avgPowerW, b.avgPowerW);
+        case 'outsideTemp': return compare(a.outsideTempAvgC, b.outsideTempAvgC);
+        case 'insideTemp': return compare(a.insideTempAvgC, b.insideTempAvgC);
+        case 'regen': return compare(a.regenEnergyWh, b.regenEnergyWh);
+        case 'score': return compare(a.score, b.score);
+        case 'startBattery': return compare(driveBattery(a).start, driveBattery(b).start);
+        case 'batteryUsed': return compare(driveBattery(a).used, driveBattery(b).used);
+        case 'battery': return compare(driveBattery(a).end, driveBattery(b).end);
+        case 'cost':
+        case 'energy': return compare(a.energyUsedWh, b.energyUsedWh);
+        case 'grade':
+        case 'efficiency': return compare(getEfficiency(a), getEfficiency(b));
+        case 'start':
+        case 'destination':
+        case 'route': {
+          const route = (drive: Drive) => [
+            sortBy !== 'destination' ? endpointLabel({ address: drive.startAddress, lat: drive.startLat, lon: drive.startLon }) : null,
+            sortBy !== 'start' ? endpointLabel({ address: drive.endAddress, lat: drive.endLat, lon: drive.endLon }) : null,
+          ].filter(Boolean).join(' → ');
+          const left = route(a);
+          const right = route(b);
+          if (!left) return !right ? 0 : 1;
+          if (!right) return -1;
+          return left.localeCompare(right, undefined, { numeric: true }) * direction;
         }
-        return (right?.fsd_distance_m ?? -1) - (left?.fsd_distance_m ?? -1);
-      });
-      default:           return sorted.sort((a, b) => (b.startTs ?? '').localeCompare(a.startTs ?? ''));
-    }
-  }, [filteredDrives, fsdByDriveID, sortBy]);
+        case 'fsd': {
+          const left = fsdByDriveID.get(a.id);
+          const right = fsdByDriveID.get(b.id);
+          const shareDifference = compare(left?.fsd_share_pct, right?.fsd_share_pct);
+          return shareDifference || compare(left?.fsd_distance_m, right?.fsd_distance_m);
+        }
+        default: return (a.startTs ?? '').localeCompare(b.startTs ?? '') * direction;
+      }
+    });
+  }, [filteredDrives, fsdByDriveID, sortBy, effectiveSortDirection]);
 
   /* ---- Pagination ---- */
   // Clamp the URL-provided page into the valid range. A stale `?page=N`
@@ -742,7 +894,7 @@ export default function DrivesListPage() {
 
   const fsdPills: PillItem[] = useMemo(() => {
     const count = (predicate: (insight: DriveFsdInsight | undefined) => boolean) =>
-      collectionFiltered.reduce(
+      dateFilteredDrives.reduce(
         (total, drive) => total + (predicate(fsdByDriveID.get(drive.id)) ? 1 : 0),
         0,
       );
@@ -750,11 +902,11 @@ export default function DrivesListPage() {
       {
         key: 'all',
         label: t('drives.fsdFilter.all', 'All FSD data'),
-        count: collectionFiltered.length,
+        count: dateFilteredDrives.length,
       },
       {
         key: 'reported',
-        label: t('drives.fsdFilter.reported', 'FSD reported'),
+        label: t('drives.fsdFilter.reported', 'FSD'),
         count: count((insight) => insight != null
           && insight.confidence !== 'unknown'
           && insight.fsd_distance_m != null),
@@ -785,11 +937,25 @@ export default function DrivesListPage() {
         disabled: !fsdDataAvailable,
       },
     ];
-  }, [collectionFiltered, fsdByDriveID, fsdDataAvailable, t]);
+  }, [dateFilteredDrives, fsdByDriveID, fsdDataAvailable, t]);
 
   /* ---- Compact summary for the sticky bar ---- */
   const collectionLabel = collectionPills.find(p => p.key === collection)?.label ?? 'All';
   const fsdFilterLabel = fsdPills.find(p => p.key === fsdFilter)?.label ?? 'All FSD data';
+  const combinedFilters = collection !== 'all' && fsdFilter !== 'all';
+  const filterPills: PillItem[] = [
+    collectionPills[0],
+    ...collectionPills.slice(1).map((pill) => ({ ...pill, key: `coll:${pill.key}` })),
+    ...fsdPills.slice(1).map((pill) => ({ ...pill, key: `fsd:${pill.key}` })),
+    ...(combinedFilters
+      ? [{ key: 'combined', label: `${collectionLabel} + ${fsdFilterLabel}`, count: filteredDrives.length }]
+      : []),
+  ];
+  const activeFilterKey = combinedFilters
+    ? 'combined'
+    : fsdFilter !== 'all'
+      ? `fsd:${fsdFilter}`
+      : collection === 'all' ? 'all' : `coll:${collection}`;
   const stickySummary = (
     <>
       <Text as="span" color="secondary" className="truncate">
@@ -959,21 +1125,25 @@ export default function DrivesListPage() {
         'drives.subtitle',
         'Measured energy intensity, route evidence, and comparable drive history',
       )}
+      compactHeader
       error={drivesState.fatalError}
-      copyLink
       query={drivesQuery}
       overflowActions={
-        <div data-tour="drives-saved-views">
-          <SavedViewMenu
-            route="/drives"
-            currentQuery={savedView.currentQuery}
-            onApply={savedView.apply}
-          />
-        </div>
+        <>
+          <div data-tour="drives-saved-views">
+            <SavedViewMenu
+              route="/drives"
+              currentQuery={savedView.currentQuery}
+              onApply={savedView.apply}
+              iconOnly
+            />
+          </div>
+          <CopyLinkButton iconOnly />
+        </>
       }
     >
       <PullToRefresh onRefresh={handlePullToRefresh}>
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-3 sm:space-y-4">
         {/* Sticky bar that appears once the overview scrolls out */}
         <PageHeaderSticky
           targetId="drives-overview"
@@ -985,6 +1155,7 @@ export default function DrivesListPage() {
 
         <OperationalBrief
           testId="drives-operational-brief"
+          compact
           eyebrow={t('operations.drives.eyebrow', 'Driving posture')}
           title={t('operations.drives.title', 'Activity, efficiency, and exceptions in context')}
           description={t(
@@ -1187,7 +1358,7 @@ export default function DrivesListPage() {
         </FadeIn>
 
         {/* Search + active filter chips */}
-        <FadeIn>
+        {!desktopEvidence && <FadeIn>
           <FilterBar>
             <div className="relative w-full sm:w-96">
               <SearchInput
@@ -1248,7 +1419,7 @@ export default function DrivesListPage() {
               setUrlBatch({ q: null, coll: null, fsd: null, page: null });
             }}
           />
-        </FadeIn>
+        </FadeIn>}
 
         {/* Overview KPI card */}
         <FadeIn>
@@ -1260,6 +1431,8 @@ export default function DrivesListPage() {
             <KpiOverviewCard
               id="drives-overview"
               testId="drives-overview"
+              compact
+              gridClassName="grid-cols-2 lg:grid-cols-3"
               header={{
                 title: t('drives.overview', 'Overview'),
                 currentLabel: periodLabel,
@@ -1268,6 +1441,7 @@ export default function DrivesListPage() {
               kpis={
                 <>
                   <MetricCard
+                    compact
                     label={t('drives.totalDrives', 'Drives')}
                     value={fmtCompact(currentStats.count)}
                     color="cyan"
@@ -1279,6 +1453,7 @@ export default function DrivesListPage() {
                     } : undefined}
                   />
                   <MetricCard
+                    compact
                     label={`${t('drives.distance', 'Distance')} (${distanceUnit})`}
                     value={fmtCompact(distMi, 10000)}
                     color="green"
@@ -1290,6 +1465,7 @@ export default function DrivesListPage() {
                     } : undefined}
                   />
                   <MetricCard
+                    compact
                     label={t('drives.driveTime', 'Drive time')}
                     value={formatDurationMinutes(driveTimeMin)}
                     color="blue"
@@ -1301,11 +1477,13 @@ export default function DrivesListPage() {
                     } : undefined}
                   />
                   <MetricCard
+                    compact
                     label={t('drives.avgGrade', 'Efficiency grade')}
                     value={avgGrade.label}
                     color="purple"
                   />
                   <MetricCard
+                    compact
                     label={`${t('drives.efficiency', 'Energy intensity')} (${efficiencyUnit})`}
                     value={avgEffDisp != null ? fmtInt(avgEffDisp) : '—'}
                     color="amber"
@@ -1317,6 +1495,7 @@ export default function DrivesListPage() {
                     } : undefined}
                   />
                   <MetricCard
+                    compact
                     label={t('drives.energyAndCost', 'Measured energy / cost')}
                     value={currentStats.energyMeasuredCount > 0
                       ? `${formatEnergy(currentStats.totalEnergyWh)} · ${formatEnergyCost(currentStats.totalEnergyWh / 1_000)}`
@@ -1409,25 +1588,23 @@ export default function DrivesListPage() {
           </section>
         </FadeIn>
 
-        {/* Collections pill row */}
-        <FadeIn>
+        {!desktopEvidence && <FadeIn>
           <PillFilterBar
-            items={collectionPills}
-            activeKey={collection}
-            onChange={(k) => setUrlBatch({ coll: k === 'all' ? null : k, page: null })}
-            ariaLabel={t('drives.collections.aria', 'Filter drives by collection')}
-            testId="drives-collections"
+            items={filterPills}
+            activeKey={activeFilterKey}
+            onChange={(key) => {
+              if (key === 'combined') return;
+              setUrlBatch({
+                coll: key.startsWith('coll:') ? key.slice(5) : null,
+                fsd: key.startsWith('fsd:') ? key.slice(4) : null,
+                page: null,
+              });
+            }}
+            ariaLabel={`${t('drives.collections.aria', 'Filter drives by collection')} · ${t('drives.fsdFilter.aria', 'Filter drives by FSD evidence')}`}
+            testId="drives-filters"
+            className="py-1 [&_[role=tab]]:h-11 sm:[&_[role=tab]]:h-9 sm:[&_[role=tab]]:px-2"
           />
-        </FadeIn>
-        <FadeIn>
-          <PillFilterBar
-            items={fsdPills}
-            activeKey={fsdFilter}
-            onChange={(key) => setUrlBatch({ fsd: key === 'all' ? null : key, page: null })}
-            ariaLabel={t('drives.fsdFilter.aria', 'Filter drives by FSD evidence')}
-            testId="drives-fsd-filter"
-          />
-        </FadeIn>
+        </FadeIn>}
 
         {/* Detail band — full-width drive list */}
         <section
@@ -1435,9 +1612,9 @@ export default function DrivesListPage() {
           className="space-y-3"
           data-tour="drives-list"
         >
-          <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
+          {(!desktopEvidence || isDrivesLoading || dateFilteredDrives.length === 0) && <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
             <SectionTitle className="flex items-center gap-2">
-              <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Route className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {t('drives.driveEvidence', 'Drive evidence')}
               <Text as="span" size="xs" weight="regular" color="muted">
                 ({fmtCompact(sortedDrives.length)})
@@ -1445,62 +1622,76 @@ export default function DrivesListPage() {
             </SectionTitle>
             {sortedDrives.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-                {(['date', 'distance', 'efficiency', 'fsd'] as const).map((s) => (
-                  <Button
-                    key={s}
-                    variant="ghost"
-                    size="sm"
-                    disabled={s === 'fsd' && !fsdDataAvailable}
-                    onClick={() => setSortBy(s)}
-                    className={cn(
-                      sortBy === s
-                        ? 'bg-cyan-500/10 text-cyan-300'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
-                    )}
-                    aria-label={t('drives.sortByAria', 'Sort by {{field}}', {
-                      field: s === 'date'
-                        ? t('drives.sortRecent', 'Recent')
-                        : s === 'distance'
-                          ? t('drives.sortDistance', 'Distance')
-                          : s === 'efficiency'
-                            ? t('drives.sortEfficiency', 'Efficiency')
-                            : t('drives.sortFsd', 'FSD share'),
-                    })}
-                    aria-pressed={sortBy === s}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {s === 'date'
-                        ? t('drives.sortRecent', 'Recent')
-                        : s === 'distance'
-                          ? t('drives.sortDistance', 'Distance')
-                          : s === 'efficiency'
-                            ? t('drives.sortEfficiency', 'Efficiency')
-                            : t('drives.sortFsd', 'FSD share')}
-                      {sortBy === s && (
-                        <ArrowDown className="h-3 w-3 opacity-80" aria-hidden />
-                      )}
-                    </span>
-                  </Button>
-                ))}
-                <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
-                <a
+                {!desktopEvidence && (
+                  <>
+                    <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+                    {(['date', 'distance', 'efficiency', 'fsd'] as const).map((s) => (
+                      <Button
+                        key={s}
+                        variant="ghost"
+                        size="sm"
+                        disabled={s === 'fsd' && !fsdDataAvailable}
+                        onClick={() => setUrlBatch({ sort: s === 'date' ? null : s, sortdir: null, page: null })}
+                        className={cn(
+                          sortBy === s
+                            ? 'bg-cyan-500/10 text-cyan-300'
+                            : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
+                        )}
+                        aria-label={t('drives.sortByAria', 'Sort by {{field}}', {
+                          field: s === 'date'
+                            ? t('drives.sortRecent', 'Recent')
+                            : s === 'distance'
+                              ? t('drives.sortDistance', 'Distance')
+                              : s === 'efficiency'
+                                ? t('drives.sortEfficiency', 'Efficiency')
+                                : t('drives.sortFsd', 'FSD share'),
+                        })}
+                        aria-pressed={sortBy === s}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {s === 'date'
+                            ? t('drives.sortRecent', 'Recent')
+                            : s === 'distance'
+                              ? t('drives.sortDistance', 'Distance')
+                              : s === 'efficiency'
+                                ? t('drives.sortEfficiency', 'Efficiency')
+                                : t('drives.sortFsd', 'FSD share')}
+                          {sortBy === s && (
+                            <ArrowDown className="h-3 w-3 opacity-80" aria-hidden />
+                          )}
+                        </span>
+                      </Button>
+                    ))}
+                    <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
+                  </>
+                )}
+                {!desktopEvidence && <a
                   href={apiUrl(scopedPath('/export/drives', exportScope))}
                   download="teslasync-drives.csv"
                 >
                   <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
-                </a>
-                <a
+                </a>}
+                {!desktopEvidence && <a
                   href={apiUrl(scopedPath('/export/drives', { ...exportScope, filters: { format: 'json' } }))}
                   download="teslasync-drives.json"
                 >
                   <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
-                </a>
+                </a>}
               </div>
             )}
-          </div>
+          </div>}
 
         {/* Drive list */}
+        {(valueFilter.invalid || (!desktopEvidence && hasValueFilters)) && (
+          <InlineCallout
+            variant={valueFilter.invalid ? 'warning' : 'info'}
+            action={{ label: t('table.filter.clear', 'Clear'), onClick: () => setUrlBatch({ grid_values: null, page: null }) }}
+          >
+            {valueFilter.invalid
+              ? t('table.filter.invalidValues', 'This saved value filter is invalid. Clear it to reset.')
+              : t('table.filter.mobileValues', 'Column value filters are active. Open the desktop grid to edit them, or clear them here.')}
+          </InlineCallout>
+        )}
         {truncated && (
           <InlineCallout variant="warning" icon={<AlertTriangle className="h-4 w-4" />}>
             {t(
@@ -1514,9 +1705,9 @@ export default function DrivesListPage() {
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)}
           </div>
-        ) : paginatedDrives.length > 0 ? (
+        ) : paginatedDrives.length > 0 || (desktopEvidence && dateFilteredDrives.length > 0) ? (
           <>
-            <BulkActionsToolbar
+            {bulkSelected.size > 0 && <BulkActionsToolbar
               selectedIds={Array.from(bulkSelected)}
               total={filteredDrives.length}
               onClear={clearBulk}
@@ -1525,52 +1716,113 @@ export default function DrivesListPage() {
                 one: t('bulk.noun.drive_one', 'drive'),
                 other: t('bulk.noun.drive_other', 'drives'),
               }}
-            />
-            <StaggerContainer>
-              <DateGroupedList
-                groups={groupedDrives}
-                itemKey={(d) => d.id}
-                renderItem={(d) => (
-                  <StaggerItem>
-                    <DriveCard
-                      drive={d}
-                      toDistanceDisplay={toDistanceDisplay}
-                      toSpeedDisplay={toSpeedDisplay}
-                      toEfficiencyDisplay={toEfficiencyDisplay}
-                      distanceUnit={distanceUnit}
-                      speedUnit={speedUnit}
-                      efficiencyUnit={efficiencyUnit}
-                      formatEnergyCost={formatEnergyCost}
-                      tz={tz}
-                      isAnomaly={anomalyDriveIds.has(d.id)}
-                      fsdInsight={fsdByDriveID.get(d.id)}
-                      selected={bulkSelected.has(d.id)}
-                      onToggleSelect={toggleDriveSelected}
-                      onPreview={setPreviewDrive}
-                    />
-                  </StaggerItem>
+            />}
+            {desktopEvidence ? (
+              <DrivesEvidenceTable
+                drives={paginatedDrives}
+                availableDrives={dateFilteredDrives}
+                valueSelections={valueFilter.selections}
+                invalidValueSelection={valueFilter.invalid}
+                onValueSelectionChange={changeValueSelection}
+                onValueFilterClear={clearValueFilter}
+                selectedIds={bulkSelected}
+                onSelectionChange={setBulkSelected}
+                onPreview={setPreviewDrive}
+                sortBy={sortBy}
+                sortDir={effectiveSortDirection}
+                onSort={sortGrid}
+                search={search}
+                onSearchChange={(value) => setUrlBatch({ q: value || null, page: null })}
+                collection={collection}
+                onCollectionChange={(value) => setUrlBatch({ coll: value === 'all' ? null : value, fsd: null, page: null })}
+                onDriveFilterClear={() => setUrlBatch({ q: null, coll: null, page: null })}
+                fsdFilter={fsdFilter}
+                onFsdFilterChange={(value) => setUrlBatch({ fsd: value === 'all' ? null : value, coll: null, page: null })}
+                filters={gridFilters}
+                onFilterChange={changeGridFilter}
+                toDistanceDisplay={toDistanceDisplay}
+                toSpeedDisplay={toSpeedDisplay}
+                toEfficiencyDisplay={toEfficiencyDisplay}
+                toTemperatureDisplay={toTemperatureDisplay}
+                toPowerDisplay={toPowerDisplay}
+                formatEnergy={formatEnergy}
+                formatEnergyCost={formatEnergyCost}
+                distanceUnit={distanceUnit}
+                speedUnit={speedUnit}
+                efficiencyUnit={efficiencyUnit}
+                temperatureUnit={unitPrefs.temperature}
+                powerUnit={unitPrefs.power}
+                timezone={tz}
+                fsdAvailable={fsdDataAvailable}
+                fsdByDriveID={fsdByDriveID}
+                anomalyDriveIds={anomalyDriveIds}
+                toolbarHeading={(
+                  <SectionTitle className="flex items-center gap-2">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)]">
+                      <Route className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+                    </span>
+                    {t('drives.driveEvidence', 'Drive evidence')}
+                    <Badge variant="neutral" size="sm" className="tabular-nums">{fmtCompact(sortedDrives.length)}</Badge>
+                  </SectionTitle>
+                )}
+                toolbarActions={(
+                  <>
+                    <a href={apiUrl(scopedPath('/export/drives', exportScope))} download="teslasync-drives.csv">
+                      <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
+                    </a>
+                    <a href={apiUrl(scopedPath('/export/drives', { ...exportScope, filters: { format: 'json' } }))} download="teslasync-drives.json">
+                      <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
+                    </a>
+                  </>
                 )}
               />
-            </StaggerContainer>
-            <Pagination
+            ) : (
+              <StaggerContainer>
+                <DateGroupedList
+                  groups={groupedDrives}
+                  itemKey={(d) => d.id}
+                  renderItem={(d) => (
+                    <StaggerItem>
+                      <DriveCard
+                        drive={d}
+                        toDistanceDisplay={toDistanceDisplay}
+                        toSpeedDisplay={toSpeedDisplay}
+                        toEfficiencyDisplay={toEfficiencyDisplay}
+                        distanceUnit={distanceUnit}
+                        speedUnit={speedUnit}
+                        efficiencyUnit={efficiencyUnit}
+                        formatEnergyCost={formatEnergyCost}
+                        tz={tz}
+                        isAnomaly={anomalyDriveIds.has(d.id)}
+                        fsdInsight={fsdByDriveID.get(d.id)}
+                        selected={bulkSelected.has(d.id)}
+                        onToggleSelect={toggleDriveSelected}
+                        onPreview={setPreviewDrive}
+                      />
+                    </StaggerItem>
+                  )}
+                />
+              </StaggerContainer>
+            )}
+            {sortedDrives.length > 0 && <Pagination
               page={safePage}
               pageSize={pageSize}
               total={sortedDrives.length}
               onPageChange={setPage}
               onPageSizeChange={(s) => { setUrlBatch({ size: String(s), page: null }); }}
-            />
+            />}
           </>
         ) : (
           <>
             <EmptyState
               icon={<Route className="h-8 w-8" />}
               title={
-                collection !== 'all' || fsdFilter !== 'all'
+                collection !== 'all' || fsdFilter !== 'all' || hasValueFilters
                   ? t('drives.emptyForCollection', 'No drives in this view')
                   : t('drives.emptyTitle', 'No drives recorded yet')
               }
               message={
-                collection !== 'all' || fsdFilter !== 'all'
+                collection !== 'all' || fsdFilter !== 'all' || hasValueFilters
                   ? t('drives.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
                   : t('drives.emptyMessage', 'Drive data will appear here once your vehicle records trips.')
               }
@@ -1583,6 +1835,7 @@ export default function DrivesListPage() {
                     to: null,
                     coll: null,
                     fsd: null,
+                    grid_values: null,
                     sort: null,
                     page: null,
                   });
@@ -1595,7 +1848,7 @@ export default function DrivesListPage() {
                 filtered every row out — that case is already answered by the
                 message above. One CTA is preserved; this adds explanation,
                 not another action. */}
-            {collection === 'all' && (
+            {collection === 'all' && !hasValueFilters && (
               <EmptyStateGuidanceDetails guidanceId="drives.list" className="mx-auto" />
             )}
           </>
