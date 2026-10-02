@@ -29,19 +29,19 @@
     "realizedValue": "{{total}} across {{runs}} runs"
   },
   "chargeDepartureAlignment": {
-    "title": "Charge → Departure Alignment",
+    "title": "Charge → Departure alignment",
     "subtitle": "How well each charge matched the very next drive — a temporal pairing, never proof of intent",
     "kpis": "Charge departure alignment metrics",
-    "avgDwell": "Avg. Dwell Time",
+    "avgDwell": "Avg. dwell time",
     "avgDwellHint": "from charge end to next drive",
-    "avgMargin": "Avg. Readiness Margin",
+    "avgMargin": "Avg. readiness margin",
     "avgMarginHint": "SoC left once that drive ended",
-    "misaligned": "Misaligned Rate",
+    "misaligned": "Misaligned rate",
     "misalignedHint": "{{n}} of {{total}} paired sessions",
-    "paired": "Paired Sessions",
+    "paired": "Paired sessions",
     "pairedHint": "of {{n}} ended charges within 24h of a drive",
     "noData": "No charge could be paired with a following drive within 24 hours yet.",
-    "chart": "Dwell Time vs. Readiness Margin",
+    "chart": "Dwell time vs. readiness margin",
     "chartHint": "Bars are minutes parked after charging; the line is SoC left after that drive",
     "chartAria": "Bar chart of post-charge dwell minutes with a line showing the readiness margin left after the paired drive",
     "col": {
@@ -49,7 +49,7 @@
       "dwell": "Dwell (min)",
       "margin": "Readiness margin (%)"
     },
-    "detail": "Recent Pairs",
+    "detail": "Recent pairs",
     "noPairs": "No paired sessions to show yet.",
     "dwellSuffix": "dwell",
     "margin": "Readiness margin",
@@ -57,19 +57,19 @@
     "wellMatched": "Well matched"
   },
   "chargeInterruption": {
-    "title": "Charge Interruption Risk",
+    "title": "Charge interruption risk",
     "subtitle": "Sessions that may have been cut short or under-delivered, estimated from indirect evidence — never a hardware diagnosis",
     "kpis": "Charge interruption metrics",
-    "overallRisk": "Overall Risk",
+    "overallRisk": "Overall risk",
     "overallRiskHint": "pooled across {{n}} evaluable sessions",
-    "suspected": "Suspected Sessions",
+    "suspected": "Suspected sessions",
     "suspectedHint": "of {{n}} scoreable sessions",
-    "highestRisk": "Highest-Risk Site",
+    "highestRisk": "Highest-risk site",
     "none": "None yet",
-    "sitesTracked": "Sites Tracked",
+    "sitesTracked": "Sites tracked",
     "sitesTrackedHint": "{{n}} sessions total",
     "noData": "No charging location has enough history yet to estimate an interruption risk.",
-    "chart": "Posterior Risk by Site",
+    "chart": "Posterior risk by site",
     "chartHint": "Bars are risk; the line is how much evidence backs it",
     "chartAria": "Bar chart of posterior interruption risk per charging site, with a line showing the evidence count behind each estimate",
     "col": {
@@ -95,42 +95,42 @@
       "emptyHint": "Select a vehicle and a rate plan to draft a schedule."
     },
     "noRateData": "No rate data available",
-    "offPeak": "Off-Peak",
-    "midPeak": "Mid-Peak",
-    "onPeak": "On-Peak",
-    "chargeWindow": "Charge Window",
-    "title": "Smart Charge",
+    "offPeak": "Off-peak",
+    "midPeak": "Mid-peak",
+    "onPeak": "On-peak",
+    "chargeWindow": "Charge window",
+    "title": "Smart charge",
     "subtitle": "Optimize charging schedule for the cheapest TOU rates",
-    "settings": "Charge Settings",
+    "settings": "Charge settings",
     "vehicle": "Vehicle",
     "selectVehicle": "Select vehicle...",
-    "ratePlan": "Rate Plan",
+    "ratePlan": "Rate plan",
     "targetSoc": "Target SOC",
-    "departBy": "Depart By",
-    "maxAmps": "Max Amps",
-    "batteryCapacity": "Battery Capacity (kWh)",
-    "optimize": "Find Cheapest Window",
+    "departBy": "Depart by",
+    "maxAmps": "Max amps",
+    "batteryCapacity": "Battery capacity (kWh)",
+    "optimize": "Find cheapest window",
     "optimizeError": "Optimization failed",
     "invalidDepartBy": "Enter a valid departure date and time.",
     "invalidMaxAmps": "Enter an amperage between 8 and 80.",
     "invalidCapacity": "Enter a battery capacity greater than 0.",
     "ratePlansResource": "rate plans",
-    "rateTimeline": "24-Hour Rate Timeline",
+    "rateTimeline": "24-Hour rate timeline",
     "windowInfo": "Optimal window: {{start}} — {{end}}",
-    "chargeNowCost": "Charge Now",
+    "chargeNowCost": "Charge now",
     "currentRate": "At current rates",
-    "optimizedCost": "Optimized Cost",
+    "optimizedCost": "Optimized cost",
     "savings": "Savings",
-    "schedule": "Recommended Schedule",
-    "applySchedule": "Apply Schedule",
-    "applied": "Schedule Applied!",
+    "schedule": "Recommended schedule",
+    "applySchedule": "Apply schedule",
+    "applied": "Schedule applied!",
     "applyError": "Failed to apply schedule",
     "currentSoc": "Current SOC",
     "targetSocLabel": "Target SOC",
-    "startTime": "Start Time",
-    "endTime": "End Time",
-    "alternatives": "Alternative Windows",
-    "history": "Plan History",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "alternatives": "Alternative windows",
+    "history": "Plan history",
     "date": "Date",
     "window": "Window",
     "plan": "Plan",
@@ -139,21 +139,21 @@
     "status": "Status",
     "noHistory": "No charge plans yet. Optimize a schedule above to get started.",
     "costComparison": "Cost comparison",
-    "energyNeeded": "Energy Needed",
+    "energyNeeded": "Energy needed",
     "estDuration": "~{{hours}}h",
     "selectVehiclePrompt": "Select a vehicle to optimize a charge schedule.",
     "runToSeeTimeline": "Run an optimization to see the 24-hour rate timeline and the cheapest charge window.",
     "runToSeeSchedule": "Optimize a schedule to see the recommended charge window and apply it to your vehicle.",
     "runToSeeAlternatives": "Optimize a schedule to compare alternative charge windows.",
     "noAlternatives": "No alternative windows for this plan.",
-    "superOffPeak": "Super Off-Peak",
+    "superOffPeak": "Super off-peak",
     "unknownTier": "Unknown",
     "rateTimelineChart": "24-hour electricity rate timeline",
     "rateBarLabel": "{{hour}}: {{rate}}¢ per kWh, {{tier}}",
     "rateBarLabelInWindow": "{{hour}}: {{rate}}¢ per kWh, {{tier}}, in charge window"
   },
   "chargeQueue": {
-    "title": "Shared-Charger Queue",
+    "title": "Shared-charger queue",
     "feasible": "All cars ready on time",
     "tight": "Queue overruns a ready-by",
     "singleCar": "Add a second vehicle to plan a shared-charger queue.",
@@ -166,19 +166,19 @@
     "slot": "{{start}}–{{end}} · {{kwh}} kWh · ready {{ready}}"
   },
   "chargerResilience": {
-    "title": "Charger Resilience",
+    "title": "Charger resilience",
     "subtitle": "How much charging depends on a single location, and what would happen if it disappeared",
     "kpis": "Charger resilience metrics",
-    "score": "Resilience Score",
+    "score": "Resilience score",
     "scoreHint": "out of 100",
-    "effectiveSites": "Effective Site Count",
+    "effectiveSites": "Effective site count",
     "effectiveSitesHint": "{{n}} locations seen",
-    "topDependency": "Top-Site Dependency",
+    "topDependency": "Top-site dependency",
     "none": "None yet",
-    "fallback": "Fallback Coverage",
+    "fallback": "Fallback coverage",
     "fallbackHint": "sessions charged elsewhere",
     "noData": "No charging locations recorded yet.",
-    "chart": "Energy Share by Site",
+    "chart": "Energy share by site",
     "chartHint": "The top site is highlighted; a taller bar means more dependency",
     "chartAria": "Bar chart of the percentage of total charging energy delivered at each site",
     "col": {
@@ -186,7 +186,7 @@
       "share": "Energy share (%)",
       "sessions": "Sessions"
     },
-    "whatIf": "What If the Top Site Disappeared?",
+    "whatIf": "What if the Top site disappeared?",
     "noWhatIf": "Not enough data to model a loss scenario yet.",
     "atRisk": "Energy at risk",
     "newTop": "New top site",
@@ -198,12 +198,12 @@
   },
   "chargerTypes": {
     "supercharger": "Supercharger",
-    "dc": "DC Fast",
+    "dc": "DC fast",
     "home": "Home / AC"
   },
   "charging": {
     "list": {
-      "title": "Charging Sessions",
+      "title": "Charging sessions",
       "subtitle": "Live readiness, cost exposure, charger behavior, and charging history",
       "empty": "No charging sessions yet",
       "emptyDescription": "Charging data will appear here once your vehicle records a session.",
@@ -219,15 +219,15 @@
     },
     "aiMlClustering": {
       "title": "Learn per-vehicle charging-curve clusters",
-      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging Curve page today.",
+      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "badge": "Helix",
       "generateButton": "Train charging-curve clusters"
     },
     "gauges": {
       "sessions": "Sessions",
       "energy": "Energy",
-      "totalCost": "Total Cost",
-      "avgPower": "Avg Power",
+      "totalCost": "Total cost",
+      "avgPower": "Avg power",
       "avgCostPerKwh": "Avg cost",
       "perKwh": "/kWh",
       "band": {
@@ -239,15 +239,15 @@
     "metrics": {
       "home": "Home",
       "supercharger": "Supercharger",
-      "dcFast": "DC Fast",
-      "totalTime": "Total Time",
-      "monthlyAvg": "Monthly Avg",
-      "perSession": "Per Session"
+      "dcFast": "DC fast",
+      "totalTime": "Total time",
+      "monthlyAvg": "Monthly avg",
+      "perSession": "Per session"
     },
     "charts": {
-      "energyCostTrend": "Energy & Cost Trend",
-      "chargerBreakdown": "Charger Breakdown",
-      "batteryLevelAtStart": "Battery Level at Charge Start",
+      "energyCostTrend": "Energy & cost trend",
+      "chargerBreakdown": "Charger breakdown",
+      "batteryLevelAtStart": "Battery level at charge start",
       "batteryLevelHint": "How low do you typically go before charging?",
       "energyKwh": "Energy (kWh)",
       "costUsd": "Cost ($)",
@@ -259,14 +259,14 @@
       "date": "Date"
     },
     "stats": {
-      "chargingByType": "Charging Stats by Type",
-      "energySplitLabel": "Energy Split (AC vs DC)",
-      "detailedStatistics": "Detailed Statistics",
-      "totalSessions": "Total Sessions",
-      "avgDuration": "Avg Duration",
-      "avgPower": "Avg Power",
-      "topCharger": "Top Charger",
-      "totalCost": "Total Cost",
+      "chargingByType": "Charging stats by type",
+      "energySplitLabel": "Energy split (AC vs DC)",
+      "detailedStatistics": "Detailed statistics",
+      "totalSessions": "Total sessions",
+      "avgDuration": "Avg duration",
+      "avgPower": "Avg power",
+      "topCharger": "Top charger",
+      "totalCost": "Total cost",
       "avgCostPerKwh": "Avg $/kWh"
     },
     "deliveryRate": {
@@ -280,11 +280,11 @@
       "observedDetail": "{{duration}} across {{count}} sessions"
     },
     "specs": {
-      "title": "Charger Specs Breakdown",
-      "byVoltage": "By Voltage",
-      "byPhase": "By Phase",
-      "byCable": "By Cable",
-      "byBrand": "By Brand",
+      "title": "Charger specs breakdown",
+      "byVoltage": "By voltage",
+      "byPhase": "By phase",
+      "byCable": "By cable",
+      "byBrand": "By brand",
       "noVoltage": "No voltage data",
       "noPhase": "No phase data",
       "noCable": "No cable data",
@@ -294,7 +294,7 @@
       "kwAvg": "{{value}} kW avg"
     },
     "sessions": {
-      "allSessions": "All Sessions",
+      "allSessions": "All sessions",
       "filterAll": "All",
       "filterHome": "Home",
       "filterSC": "SC",
@@ -318,69 +318,69 @@
       "energy": "Energy",
       "cost": "Cost",
       "costPerKwh": "$/kWh",
-      "avgEnergy": "Avg Energy",
-      "avgTime": "Avg Time",
+      "avgEnergy": "Avg energy",
+      "avgTime": "Avg time",
       "free": "Free",
-      "acCharging": "AC Charging",
-      "dcCharging": "DC Charging",
+      "acCharging": "AC charging",
+      "dcCharging": "DC charging",
       "freeCharged": "Free charged",
       "freeEnergy": "Free energy"
     },
     "chargerTypes": {
       "supercharger": "Supercharger",
-      "dc": "DC Fast",
+      "dc": "DC fast",
       "home": "Home / AC"
     },
     "curve": {
-      "chargerType": "Charge Rate by Charger Type",
-      "avgPower": "Avg Power",
-      "avgEnergy": "Avg Energy",
+      "chargerType": "Charge rate by charger type",
+      "avgPower": "Avg power",
+      "avgEnergy": "Avg energy",
       "sessions": "sessions",
       "minAvg": "min avg",
-      "sessionComparison": "Session Comparison",
+      "sessionComparison": "Session comparison",
       "socPercent": "SOC (%)",
       "powerKw": "Power (kW)",
       "powerVsSoc": "Power vs SOC",
       "power": "Power",
-      "sessionDetails": "Session Details",
+      "sessionDetails": "Session details",
       "date": "Date",
-      "socRange": "SOC Range",
-      "energyAdded": "Energy Added",
-      "peakPower": "Peak Power",
+      "socRange": "SOC range",
+      "energyAdded": "Energy added",
+      "peakPower": "Peak power",
       "duration": "Duration",
       "cost": "Cost",
       "location": "Location",
-      "speedTrend": "Charging Speed Trend",
+      "speedTrend": "Charging speed trend",
       "avgKw": "Avg kW",
-      "dcAvg": "DC Avg",
-      "acAvg": "AC Avg",
-      "dcFast": "DC Fast",
-      "acHome": "AC / Home",
-      "totalSessions": "Total Sessions",
-      "totalEnergy": "Total Energy",
-      "avgChargeRate": "Avg Charge Rate",
-      "peakRate": "Peak Rate",
-      "avgDuration": "Avg Duration",
-      "totalCost": "Total Cost",
-      "timeToCharge": "Time-to-Charge Analysis",
+      "dcAvg": "DC avg",
+      "acAvg": "AC avg",
+      "dcFast": "DC fast",
+      "acHome": "AC / home",
+      "totalSessions": "Total sessions",
+      "totalEnergy": "Total energy",
+      "avgChargeRate": "Avg charge rate",
+      "peakRate": "Peak rate",
+      "avgDuration": "Avg duration",
+      "totalCost": "Total cost",
+      "timeToCharge": "Time-to-charge analysis",
       "avg10to80": "10% → 80%",
       "avg20to80": "20% → 80%",
-      "fastest": "Fastest Session",
+      "fastest": "Fastest session",
       "sessionId": "Session #{{id}}",
-      "slowest": "Slowest Session",
-      "yearlyTrend": "Yearly Charging Speed Trend",
+      "slowest": "Slowest session",
+      "yearlyTrend": "Yearly charging speed trend",
       "minutes": "Minutes",
       "sessionCount": "Sessions",
-      "dcSessions": "DC Sessions",
+      "dcSessions": "DC sessions",
       "avg10to80Line": "10→80% avg",
       "avg20to80Line": "20→80% avg",
-      "title": "Charging Curve",
+      "title": "Charging curve",
       "subtitle": "Power vs state-of-charge across sessions",
       "empty": "No charging sessions to plot a curve.",
       "resetRange": "Reset date range",
       "selectSession": "Select a session to inspect",
       "col": {
-        "charger": "Charger Type",
+        "charger": "Charger type",
         "sessions": "Sessions",
         "avgKw": "Avg kW",
         "avgKwh": "Avg kWh",
@@ -388,38 +388,38 @@
         "soc": "SOC %",
         "power": "Power (kW)",
         "month": "Month",
-        "dcAvgKw": "DC Avg kW",
-        "acAvgKw": "AC Avg kW",
+        "dcAvgKw": "DC avg kW",
+        "acAvgKw": "AC avg kW",
         "year": "Year",
         "avg10to80": "10→80% avg min",
         "avg20to80": "20→80% avg min",
-        "dcSessions": "DC Sessions"
+        "dcSessions": "DC sessions"
       },
       "noCurve": "No curve data for this session."
     },
     "optimizer": {
-      "heatmap": "Charging Cost Heatmap",
+      "heatmap": "Charging cost heatmap",
       "cheap": "Cheap",
       "expensive": "Expensive",
       "savingsBanner": "Save ~${{amount}}/month by adjusting your charging schedule",
       "savingsDetail": "Based on your charging patterns, shifting to off-peak hours could reduce your monthly costs.",
-      "habits": "Charging Habits",
+      "habits": "Charging habits",
       "sessionsWeek": "Sessions/week",
       "homePct": "Home charging",
       "avgTarget": "Avg charge target",
       "commonHour": "Common start hour",
       "commonDay": "Most common",
-      "batteryScore": "Battery-Friendly Score",
+      "batteryScore": "Battery-friendly score",
       "scoreGood": "Your habits are battery-friendly",
       "scoreFair": "Room for improvement",
       "scorePoor": "Consider adjusting your habits",
-      "costAnalysis": "Cost Analysis",
+      "costAnalysis": "Cost analysis",
       "peakRate": "Peak rate",
       "offpeakRate": "Off-peak rate",
       "peakSessions": "Sessions during peak",
       "peakHours": "Peak hours",
       "offpeakHours": "Off-peak hours",
-      "recommendations": "Optimization Recommendations",
+      "recommendations": "Optimization recommendations",
       "noRecs": "Recommendations will appear after more charging sessions.",
       "sessionsWord": "sessions",
       "heatmapAlt": "Average charging cost per kWh by weekday and hour of day",
@@ -428,65 +428,65 @@
     "noStats": "No charging statistics available yet",
     "noMetrics": "No charging metrics available yet",
     "insights": {
-      "title": "Charging Insights",
+      "title": "Charging insights",
       "emptyMessage": "Charging insights need completed sessions in the selected range.",
       "emptyDescription": "Battery-start patterns, charger comparisons, and scheduling guidance appear as session history accumulates."
     },
     "selectVehicle": "Select vehicle",
     "detail": {
-      "title": "Charge Session",
-      "energyAdded": "Energy Added",
+      "title": "Charge session",
+      "energyAdded": "Energy added",
       "endSoc": "End SoC",
-      "peakPower": "Peak Power",
+      "peakPower": "Peak power",
       "duration": "Duration",
-      "avgPower": "Avg Power",
-      "batteryProgress": "Battery Progress",
+      "avgPower": "Avg power",
+      "batteryProgress": "Battery progress",
       "startSoc": "Start SoC",
-      "socGained": "SoC Gained",
-      "rangeGained": "Range Gained",
+      "socGained": "SoC gained",
+      "rangeGained": "Range gained",
       "energy": "Energy",
       "vehicleMeasured": "Vehicle measured {{energy}} {{unit}}",
       "billedEnergyHelp": "Tesla Supercharger invoices meter energy at the cabinet. Vehicle telemetry is energy into the pack and is often a few percent lower.",
       "teslaInvoice": "Tesla invoice",
-      "socRange": "SoC Range",
-      "totalCost": "Total Cost",
-      "estCost": "Est. Cost",
+      "socRange": "SoC range",
+      "totalCost": "Total cost",
+      "estCost": "Est. cost",
       "atRate": "at {{currencySymbol}}{{costPerKwh}}/kWh",
       "perKwh": "Per kWh",
       "fromSettings": "from settings",
-      "milesAdded": "Miles Added",
-      "avgRate": "kWh/h Avg",
-      "moreDetails": "More Details",
+      "milesAdded": "Miles added",
+      "avgRate": "kWh/h avg",
+      "moreDetails": "More details",
       "status": "Status",
       "currency": "Currency",
-      "chargerType": "Charger Type",
+      "chargerType": "Charger type",
       "location": "Location",
       "vehicle": "Vehicle",
-      "chargeCurve": "Charge Curve",
+      "chargeCurve": "Charge curve",
       "estimated": "estimated",
       "power": "Power",
-      "socOverTime": "SoC, Energy & Range over Time",
+      "socOverTime": "SoC, energy & range over time",
       "soc": "SoC",
       "range": "Range",
       "temperature": "Temperature",
       "batteryTemp": "Battery",
       "insideTemp": "Inside",
       "outsideTemp": "Outside",
-      "voltageCurrent": "Voltage & Current",
+      "voltageCurrent": "Voltage & current",
       "voltage": "Voltage",
       "current": "Current",
-      "advanced": "Advanced Charging Parameters",
+      "advanced": "Advanced charging parameters",
       "advancedHint": "Latest reported values from the vehicle.",
-      "chargingState": "Charging State",
-      "chargerVoltage": "Charger Voltage",
-      "chargerActualCurrent": "Active Charge Current",
-      "chargerPilotCurrent": "Pilot Current",
-      "chargerPowerKw": "Charger Power",
+      "chargingState": "Charging state",
+      "chargerVoltage": "Charger voltage",
+      "chargerActualCurrent": "Active charge current",
+      "chargerPilotCurrent": "Pilot current",
+      "chargerPowerKw": "Charger power",
       "chargerPhases": "Phases",
-      "batteryRange": "Battery Range",
-      "chargeRate": "Charge Rate",
-      "chargeEnergyAdded": "Energy Added",
-      "chargeMilesAdded": "Range Added",
+      "batteryRange": "Battery range",
+      "chargeRate": "Charge rate",
+      "chargeEnergyAdded": "Energy added",
+      "chargeMilesAdded": "Range added",
       "closedTelemetryDescription": "This closed session cannot recover missing samples; future sessions will populate when telemetry is available.",
       "noCurveData": "A charge curve cannot be plotted because this session has no paired battery-level and power samples.",
       "noTimelineData": "No battery level, energy, or range samples were recorded for this session.",
@@ -502,12 +502,12 @@
       "dc": "DC",
       "ac": "AC",
       "kpis": "Key metrics",
-      "batteryPower": "Battery & Power",
-      "liveGauges": "Live Gauges",
-      "chargeAnalysis": "Charge Analysis",
-      "chargeSummary": "Charge Summary",
-      "sessionDetails": "Session Details",
-      "sessionInfo": "Session Info",
+      "batteryPower": "Battery & power",
+      "liveGauges": "Live gauges",
+      "chargeAnalysis": "Charge analysis",
+      "chargeSummary": "Charge summary",
+      "sessionDetails": "Session details",
+      "sessionInfo": "Session info",
       "noLocation": "No location recorded for this session.",
       "timestamps": "Timestamps",
       "aiDiagnosis": {
@@ -522,26 +522,26 @@
       "fullResolutionTableOmitted": "Full-resolution data: {{samples}} samples from {{start}} to {{end}}. The screen-reader data table is omitted for very long sessions; every sample is drawn in the chart."
     },
     "heatmap": {
-      "title": "Charging Patterns",
+      "title": "Charging patterns",
       "subtitle": "When and where you charge",
-      "totalSessions": "Total Sessions",
-      "totalEnergy": "Total Energy",
-      "totalCost": "Total Cost",
-      "avgDuration": "Avg Duration",
-      "favorite": "Favorite Charging Time",
+      "totalSessions": "Total sessions",
+      "totalEnergy": "Total energy",
+      "totalCost": "Total cost",
+      "avgDuration": "Avg duration",
+      "favorite": "Favorite charging time",
       "favoriteValue": "{{day}}s at {{hour}}",
       "favoriteSessions": "{{count}} sessions",
-      "gridTitle": "Weekly Charging Heatmap",
+      "gridTitle": "Weekly charging heatmap",
       "gridAria": "Charging sessions by weekday and hour of day",
       "sessionsWord": "sessions",
       "unknownPlace": "Unknown",
       "kpis": "Charging summary",
-      "whenSection": "When You Charge",
-      "insights": "Charging Insights",
-      "breakdowns": "Charging Breakdowns",
-      "byDayOfWeek": "Sessions by Day of Week",
-      "busiestDay": "Busiest Day",
-      "busiestHour": "Busiest Hour",
+      "whenSection": "When you charge",
+      "insights": "Charging insights",
+      "breakdowns": "Charging breakdowns",
+      "byDayOfWeek": "Sessions by day of week",
+      "busiestDay": "Busiest day",
+      "busiestHour": "Busiest hour",
       "weekdays": "Weekdays",
       "weekends": "Weekends",
       "noData": "No charging sessions in this range",
@@ -549,7 +549,7 @@
       "noLocations": "No repeat charging locations yet",
       "less": "Less",
       "more": "More",
-      "topLocations": "Top Charging Locations",
+      "topLocations": "Top charging locations",
       "day": "Day",
       "location": "Location"
     },
@@ -571,8 +571,8 @@
       "title": "Charge physics",
       "atLimit": "at limit",
       "stillPlugged": "At limit, still plugged {{duration}}.",
-      "etiquettePending": "DC session reached Complete; unplug not observed yet.",
-      "etiquette": "Supercharger dwell after Complete: {{duration}}.",
+      "etiquettePending": "DC session reached complete; unplug not observed yet.",
+      "etiquette": "Supercharger dwell after complete: {{duration}}.",
       "chargedAnyway": "Charged before the scheduled window",
       "scheduledAt": "Scheduled start {{when}}",
       "waited": "Stopped waited for the scheduled window.",
@@ -604,24 +604,24 @@
     }
   },
   "chargingThermalTax": {
-    "title": "Charging Thermal Tax",
+    "title": "Charging thermal tax",
     "unknownCharger": "Unknown charger",
     "subtitle": "How much of a charge went into warming the battery instead of into range",
     "selectSession": "Inspect session",
     "selectPlaceholder": "Select a session to analyze",
     "kpis": "Charging thermal tax metrics",
-    "heaterEnergy": "Heater Energy",
+    "heaterEnergy": "Heater energy",
     "heaterEnergyHint": "trapezoidal integral over the session",
-    "heaterShare": "Heater Share",
+    "heaterShare": "Heater share",
     "heaterShareHint": "of energy the charger delivered",
-    "heaterOnTime": "Heater On Time",
+    "heaterOnTime": "Heater on time",
     "heaterOnPct": "{{pct}}% of the session",
     "noSession": "no session selected",
-    "peakHeater": "Peak Heater Power",
+    "peakHeater": "Peak heater power",
     "peakHeaterHint": "highest single reading",
     "noSelection": "Select a charging session above to see its thermal breakdown.",
     "noTelemetry": "No telemetry samples were recorded for this session.",
-    "chart": "Heater vs. Charge Power",
+    "chart": "Heater vs. charge power",
     "chartHint": "The shaded area is heater draw; the line is total charger power",
     "chartAria": "Chart of battery heater power and total charging power over the session timeline",
     "col": {
@@ -629,7 +629,7 @@
       "heater": "Heater (W)",
       "charge": "Charge power (W)"
     },
-    "detail": "Thermal Phases",
+    "detail": "Thermal phases",
     "noSelectionShort": "No session selected.",
     "noPhases": "No usable telemetry to segment into phases.",
     "coverage": "Coverage {{pct}}%",
@@ -644,7 +644,7 @@
       "generateButton": "Narrate forecast"
     },
     "chargerType": {
-      "title": "Cost by Charger Type",
+      "title": "Cost by charger type",
       "sessions": "sessions",
       "cost": "Cost",
       "energy": "Energy (kWh)",
@@ -652,9 +652,9 @@
     },
     "charts": {
       "noData": "Not enough data",
-      "costPerKwh": "Cost per kWh Trend",
+      "costPerKwh": "Cost per kWh trend",
       "rateLabel": "$/kWh",
-      "monthlyCost": "Monthly Cost Trend",
+      "monthlyCost": "Monthly cost trend",
       "cost": "Cost ($)",
       "col": {
         "month": "Month",
@@ -662,18 +662,18 @@
       }
     },
     "forecast": {
-      "title": "Cost Forecast",
+      "title": "Cost forecast",
       "confidence": "95% Confidence",
-      "actual": "Actual Cost",
-      "projected": "Projected Cost",
+      "actual": "Actual cost",
+      "projected": "Projected cost",
       "needData": "Need at least 3 months of charging data for cost forecasting.",
-      "costPerKwhTrend": "Cost per kWh Trend",
+      "costPerKwhTrend": "Cost per kWh trend",
       "costPerKwh": "$/kWh",
       "needTrendData": "Need at least 2 months of charging data to show the cost per kWh trend.",
-      "breakdown": "Charging Breakdown",
+      "breakdown": "Charging breakdown",
       "noBreakdown": "Breakdown will appear once charging data is available.",
-      "savings": "Gas vs EV Savings",
-      "monthlySavings": "Monthly Savings",
+      "savings": "Gas vs EV savings",
+      "monthlySavings": "Monthly savings",
       "annual": "Annual",
       "lifetime": "Lifetime",
       "gasCost": "Gas cost/mo",
@@ -690,19 +690,19 @@
       "home": "Home"
     },
     "stats": {
-      "totalCost": "Total Cost",
+      "totalCost": "Total cost",
       "sessions": "sessions",
       "avgPerKwh": "Avg $/kWh",
       "blendedRate": "blended rate",
-      "costPerDist": "Cost Per {{unit}}",
-      "totalEnergy": "Total Energy",
-      "gasSavings": "Gas Savings $",
+      "costPerDist": "Cost per {{unit}}",
+      "totalEnergy": "Total energy",
+      "gasSavings": "Gas savings $",
       "savingsPercent": "Savings %",
       "vsGasoline": "vs gasoline",
       "resetRange": "Reset date range"
     },
     "environment": {
-      "title": "Environmental Impact",
+      "title": "Environmental impact",
       "kgCo2": "kg CO₂ saved",
       "treeEquiv": "tree-years equivalent",
       "ofCo2": "of CO₂ emissions.",
@@ -713,14 +713,14 @@
       "noData": "No data"
     },
     "lifetime": {
-      "title": "Lifetime Summary",
-      "totalSpent": "Total Spent",
-      "totalEnergy": "Total Energy",
-      "totalSessions": "Total Sessions",
-      "avgSessionCost": "Avg Session Cost",
-      "avgEnergy": "Avg Energy / Session",
-      "avgDuration": "Avg Duration",
-      "freeSessions": "Free Sessions",
+      "title": "Lifetime summary",
+      "totalSpent": "Total spent",
+      "totalEnergy": "Total energy",
+      "totalSessions": "Total sessions",
+      "avgSessionCost": "Avg session cost",
+      "avgEnergy": "Avg energy / session",
+      "avgDuration": "Avg duration",
+      "freeSessions": "Free sessions",
       "noData": "No data"
     },
     "table": {
@@ -729,49 +729,49 @@
       "energy": "Energy",
       "cost": "Cost",
       "avgRate": "Avg $/kWh",
-      "gasEquiv": "Gas Equiv",
+      "gasEquiv": "Gas equiv",
       "savings": "Savings",
-      "title": "Monthly Cost Breakdown",
+      "title": "Monthly cost breakdown",
       "noData": "No monthly data available"
     },
     "calculator": {
-      "title": "Gas vs Electric Savings Calculator",
-      "inputs": "Your Assumptions",
-      "gasPrice": "Gas Price ($/gal)",
-      "mpg": "Gas Car MPG",
-      "elecRate": "Electricity Rate ($/kWh)",
-      "reset": "Reset Defaults",
+      "title": "Gas vs electric savings calculator",
+      "inputs": "Your assumptions",
+      "gasPrice": "Gas price ($/gal)",
+      "mpg": "Gas car MPG",
+      "elecRate": "Electricity rate ($/kWh)",
+      "reset": "Reset defaults",
       "comparison": "Comparison",
-      "gasCost": "Gas Cost (equivalent)",
-      "evCost": "EV Cost (actual)",
-      "totalSavings": "Total Savings",
+      "gasCost": "Gas cost (equivalent)",
+      "evCost": "EV cost (actual)",
+      "totalSavings": "Total savings",
       "overPeriod": "over selected period",
-      "monthlySavings": "Monthly Savings",
+      "monthlySavings": "Monthly savings",
       "perYear": "/ year",
       "noData": "Not enough data for comparison"
     },
     "tou": {
-      "title": "Electricity Rate Analysis (Time-of-Use)",
+      "title": "Electricity rate analysis (time-of-use)",
       "sessions": "Sessions",
       "peak": "Peak (2–7 PM)",
       "midPeak": "Mid-peak",
       "offPeak": "Off-peak (10 PM–6 AM)",
       "insights": "Insights",
-      "cheapestHour": "Cheapest Hour",
+      "cheapestHour": "Cheapest hour",
       "avgCost": "avg",
       "perSession": "/ session",
-      "priciestHour": "Priciest Hour",
-      "busiestHour": "Busiest Hour",
-      "offPeakRatio": "Off-Peak Charging",
+      "priciestHour": "Priciest hour",
+      "busiestHour": "Busiest hour",
+      "offPeakRatio": "Off-peak charging",
       "offPeakDesc": "of sessions between 10 PM–6 AM",
       "noInsights": "No insights available",
       "hour": "Hour",
       "hourlyDistribution": "Hourly charging distribution",
       "ratePeriod": "Rate period"
     },
-    "title": "Cost Analysis",
+    "title": "Cost analysis",
     "empty": {
-      "title": "No Charging Data"
+      "title": "No charging data"
     },
     "subtitle": "Electricity cost trends, gas savings, and charging economics"
   },
@@ -779,7 +779,7 @@
     "pending": "Filtering…"
   },
   "ocpp": {
-    "title": "OCPP Charge Points",
+    "title": "OCPP charge points",
     "lastSeen": "last seen {{when}}",
     "connector": "#{{id}} {{status}}",
     "activeSessions": "{{count}} active",
@@ -789,13 +789,13 @@
   "powershare": {
     "title": "Powershare",
     "selectVehicle": "Select vehicle",
-    "statusSection": "Powershare Status",
+    "statusSection": "Powershare status",
     "type": "Type",
     "typeSub": "Powershare destination",
-    "outputPower": "Output Power",
+    "outputPower": "Output power",
     "outputPowerSub": "Instantaneous power draw",
-    "hoursLeft": "Hours Remaining",
-    "stopReasonSection": "Stop Reason",
+    "hoursLeft": "Hours remaining",
+    "stopReasonSection": "Stop reason",
     "subtitle": "Monitor your vehicle’s bidirectional power sharing — status, output, remaining runtime, and stop conditions.",
     "refresh": "Refresh Powershare data",
     "noVehicle": "Select a vehicle to view its Powershare telemetry.",
@@ -805,35 +805,35 @@
       "statusSub": "Current sharing state",
       "type": "Type",
       "typeSub": "Powershare destination",
-      "outputPower": "Output Power",
+      "outputPower": "Output power",
       "outputPowerSub": "Instantaneous power draw",
-      "hoursRemaining": "Hours Remaining",
+      "hoursRemaining": "Hours remaining",
       "hoursRemainingSub": "Runtime at current output"
     },
     "powerTrend": {
-      "title": "Output Power Trend",
+      "title": "Output power trend",
       "noData": "No power readings yet. The chart fills in as your vehicle streams Powershare telemetry."
     },
     "hoursTrend": {
-      "title": "Remaining Runtime Trend",
+      "title": "Remaining runtime trend",
       "noData": "No runtime readings yet. Estimated hours appear once Powershare reports telemetry."
     },
     "runtime": {
-      "title": "Live Session",
+      "title": "Live session",
       "statusLabel": "Status",
       "statusUnknown": "Unknown",
       "typeLabel": "Destination",
-      "outputPower": "Output Power",
-      "hoursRemaining": "Hours Remaining",
+      "outputPower": "Output power",
+      "hoursRemaining": "Hours remaining",
       "noData": "No live Powershare session. Details appear when your vehicle starts sharing power."
     },
     "stopReason": {
-      "title": "Stop Reason",
+      "title": "Stop reason",
       "help": "Last recorded reason Powershare was halted.",
       "noData": "No stop reason recorded. Powershare has not been halted, or the signal has not yet been reported."
     },
     "snapshot": {
-      "title": "Signal Snapshot",
+      "title": "Signal snapshot",
       "subtitle": "Latest raw Powershare telemetry",
       "signal": "Signal",
       "value": "Value",
@@ -843,8 +843,8 @@
     "time": "Time"
   },
   "tesla_charging": {
-    "title": "Tesla Charging History",
-    "allVehicles": "All Vehicles",
+    "title": "Tesla charging history",
+    "allVehicles": "All vehicles",
     "col": {
       "date": "Date",
       "location": "Location",
@@ -862,14 +862,14 @@
     "refresh": "Refresh from Tesla",
     "lastSync": "Last synced",
     "stats": {
-      "sessions": "Total Sessions",
-      "energy": "Total Energy",
-      "spend": "Total Spend",
-      "avgCost": "Avg Cost/kWh"
+      "sessions": "Total sessions",
+      "energy": "Total energy",
+      "spend": "Total spend",
+      "avgCost": "Avg cost/kWh"
     },
-    "monthlySpending": "Monthly Spending",
+    "monthlySpending": "Monthly spending",
     "noChartData": "No spending data yet. Click \"Refresh from Tesla\" to sync.",
-    "sessions": "Charging Sessions",
+    "sessions": "Charging sessions",
     "searchPlaceholder": "Search by location…",
     "noMatches": "No sessions match your search.",
     "noData": "No Tesla charging history yet. Click \"Refresh from Tesla\" to import your Supercharger sessions.",
@@ -880,8 +880,8 @@
     "spending": "Spending"
   },
   "tesla_sessions": {
-    "title": "Fleet Charging Sessions",
-    "allVehicles": "All Vehicles",
+    "title": "Fleet charging sessions",
+    "allVehicles": "All vehicles",
     "col": {
       "date": "Date",
       "location": "Location",
@@ -902,18 +902,18 @@
     "businessOnly": "Business account required",
     "lastSync": "Last synced",
     "stats": {
-      "sessions": "Total Sessions",
-      "energy": "Total Energy",
-      "cost": "Total Cost",
-      "cost_decimal": "Total Cost",
-      "avgCost": "Avg Cost/kWh",
-      "peakPower": "Peak Power"
+      "sessions": "Total sessions",
+      "energy": "Total energy",
+      "cost": "Total cost",
+      "cost_decimal": "Total cost",
+      "avgCost": "Avg cost/kWh",
+      "peakPower": "Peak power"
     },
-    "monthlyCost": "Monthly Charging Cost",
+    "monthlyCost": "Monthly charging cost",
     "noChartData": "No cost data yet. Click \"Refresh from Tesla\" to sync.",
-    "map": "Session Locations",
+    "map": "Session locations",
     "noMapData": "No location data available yet.",
-    "table": "Charging Sessions",
+    "table": "Charging sessions",
     "noData": "No fleet charging sessions yet. Click \"Refresh from Tesla\" to import data.",
     "unknown": "Unknown",
     "unknownType": "Unknown",
@@ -926,13 +926,13 @@
     "costSection": "Cost analysis",
     "locationsSection": "Session locations",
     "tableSection": "Charging sessions table",
-    "chargerType": "Energy by Charger Type",
+    "chargerType": "Energy by charger type",
     "noChargerData": "No charger breakdown yet.",
-    "topLocations": "Top Locations by Cost",
+    "topLocations": "Top locations by cost",
     "noLocationData": "No location breakdown yet."
   },
   "wait_oracle": {
-    "title": "Supercharger Wait Oracle",
+    "title": "Supercharger wait oracle",
     "subtitle": "Expected queue wait per site and arrival time, predicted from your fleet charging history. All hours UTC.",
     "site": "Site",
     "sessions": "{{count}} sessions",
@@ -956,5 +956,932 @@
         "wait": "Expected wait (min)"
       }
     }
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "activity": {
+    "action": {
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleDelete": "Alert rule deleted",
+      "alertRuleUpdate": "Alert rule updated",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyDelete": "API key revoked",
+      "apiKeyUpdate": "API key updated",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automation": "Automation change",
+      "automationAutoDisabled": "Automation auto-disabled",
+      "automationCreate": "Automation created",
+      "automationCreated": "Automation created",
+      "automationDelete": "Automation deleted",
+      "automationDeleted": "Automation deleted",
+      "automationDisabled": "Automation disabled",
+      "automationEnabled": "Automation enabled",
+      "automationExecuted": "Automation ran",
+      "automationExported": "Automations exported",
+      "automationFailed": "Automation failed",
+      "automationImported": "Automations imported",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationUpdate": "Automation updated",
+      "automationUpdated": "Automation updated",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandCharge": "Charging command",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandWake": "Wake vehicle"
+    },
+    "myActivity": {
+      "empty": "No recent activity in this window."
+    }
+  },
+  "annotation": {
+    "add": "Add annotation",
+    "addTitle": "Add annotation",
+    "cat": {
+      "custom": "Custom",
+      "issue": "Issue",
+      "maintenance": "Maintenance",
+      "milestone": "Milestone",
+      "trip": "Trip",
+      "upgrade": "Upgrade"
+    },
+    "category": "Category",
+    "date": "Date",
+    "descPlaceholder": "Optional description...",
+    "description": "Description",
+    "label": "Label",
+    "labelPlaceholder": "e.g., battery replaced",
+    "listTitle": "Annotations",
+    "removeNamed": "Remove annotation: {{label}}"
+  },
+  "bulk": {
+    "actions": {
+      "delete": "Delete"
+    },
+    "clear": "Clear selection",
+    "deleteConfirmDescription": "This cannot be undone.",
+    "deleteConfirmTitle": "Delete {{count}} {{noun}}?",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "noun": {
+      "session_one": "charging session",
+      "session_other": "charging sessions"
+    },
+    "ofTotal": "of {{total}}",
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "toolbarLabel": "Bulk actions for selected items"
+  },
+  "calculationDetails": {
+    "coverage": "Data coverage",
+    "exclusions": "Exclusions and limitations",
+    "method": "Method",
+    "noExclusions": "No additional exclusions were supplied.",
+    "period": "Analysis period",
+    "provenance": "Provenance",
+    "sources": "Data sources",
+    "title": "How this was calculated",
+    "unavailable": "Not provided",
+    "version": "Calculation version"
+  },
+  "chart": {
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
+    },
+    "col": {
+      "date": "Date",
+      "value": "Value"
+    },
+    "export": {
+      "copy": "Copy image to clipboard",
+      "copyFailed": "Failed to copy chart image",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copySuccess": "Chart image copied to clipboard",
+      "csv": "Download data as CSV",
+      "disabledTooltip": "Chart not ready to export",
+      "failed": "Could not prepare the {{format}} export.",
+      "menuLabel": "Export chart",
+      "png": "Save as PNG",
+      "preparing": "Preparing chart export…",
+      "svg": "Save as SVG"
+    },
+    "loading": "Loading chart…",
+    "noData": "No data available",
+    "noDataDescription": "No chartable observations are available for the current selection yet."
+  },
+  "combobox": {
+    "maxReached": "Maximum reached",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}"
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "label": "Quick date range",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    },
+    "range": {
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "compare": "Compare to previous period",
+      "end": "End date",
+      "newRange": "New range",
+      "pickRange": "Custom range",
+      "popoverLabel": "Date range picker",
+      "start": "Start date",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "trigger": "Date range"
+    }
+  },
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}"
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "entityContext": {
+    "alerts": "Alerts",
+    "drives": "Drive history",
+    "location": "Charge location",
+    "service": "Service history",
+    "telemetry": "Telemetry evidence",
+    "title": "Related context",
+    "vehicle": "Vehicle"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "freshness": {
+    "noData": "No recent data",
+    "offline": "Offline",
+    "seconds": "{{s}}s ago"
+  },
+  "fsm": {
+    "typeLabel": {
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "driveSession": "Drive",
+      "notification": "Notify",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—",
+      "vehicle": "Vehicle"
+    }
+  },
+  "helix": {
+    "ariaLabel": "Helix",
+    "badge": "Helix",
+    "evidence": {
+      "gathering": "Gathering",
+      "grounded": "Grounded in",
+      "limited": "Limited evidence",
+      "reading": "Reading",
+      "source": "TeslaSync source",
+      "sources": "TeslaSync sources",
+      "successful": "successful",
+      "title": "Evidence trail",
+      "tokens": "tokens",
+      "unavailable": "Unavailable",
+      "used": "Used"
+    },
+    "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
+  },
+  "help": {
+    "charging": {
+      "chargeCurve": "Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.",
+      "socRange": "The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper."
+    }
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "unlocked": "✓ Unlocked"
+  },
+  "listExport": {
+    "button": "Export",
+    "csv": "Download as CSV",
+    "disabledTooltip": "No data to export",
+    "exporting": "Preparing {{format}} export…",
+    "failed": "Could not prepare the {{format}} export.",
+    "json": "Download as JSON",
+    "menuLabel": "Export list",
+    "scopeLegend": "Export scope",
+    "selectedWithCount": "Selected ({{count}})",
+    "visible": "Visible",
+    "visibleWithCount": "Visible ({{count}})"
+  },
+  "live": {
+    "connected": "Live",
+    "disconnected": "Offline",
+    "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
+    "unknown": "Unknown"
+  },
+  "maps": {
+    "animatedMarker": {
+      "label": "Vehicle position"
+    },
+    "layerSwitcher": {
+      "dark": "Dark",
+      "label": "Map style",
+      "satellite": "Satellite",
+      "streets": "Streets",
+      "terrain": "Terrain"
+    },
+    "routePlayback": {
+      "empty": "No GPS points to replay for this route.",
+      "mapLabel": "Route playback map"
+    }
+  },
+  "notifications": {
+    "alertStudio": {
+      "editor": {
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownBadge": "Unknown",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}"
+      }
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "attention": "Attention",
+    "charging": {
+      "anomalyDescription": "Review the session evidence and charger conditions before the pattern repeats.",
+      "chargingNow": "Charging",
+      "checkingLiveState": "Checking",
+      "costDetail": "Recorded charging spend in the active period.",
+      "costExposure": "Cost exposure",
+      "costExposureDetail": "{{rate}}/kWh blended across recorded charging energy.",
+      "costExposureUnavailable": "A blended rate requires both recorded energy and cost.",
+      "currentPosture": "Current posture",
+      "currentPostureCharging": "Battery is at {{battery}}%{{eta}}.",
+      "currentPostureEta": " with {{duration}} to target",
+      "currentPostureIdle": "Latest battery state is {{battery}}%; the vehicle is not drawing charge.",
+      "currentPostureMissing": "Live state has not arrived; session history remains available.",
+      "currentPostureUnavailable": "Live state could not be resolved; session history remains available.",
+      "deliveredEnergy": "Delivered energy",
+      "departureAttentionDescription": "Charge before the next departure or confirm that the planned route is within the available range.",
+      "departureAttentionTitle": "Departure charge is below 20%",
+      "departureEta": "Estimated {{duration}} to the configured charge target.",
+      "departureLow": "Additional charging is recommended before the next departure.",
+      "departureReadiness": "Departure readiness",
+      "departureReady": "Battery state supports near-term departure; confirm route range before leaving.",
+      "departureUnavailable": "Current battery state is required to assess near-term departure readiness.",
+      "description": "Current charging state, departure readiness, cost exposure, and charger behavior are paired with the selected session history.",
+      "efficiency": "Charging efficiency",
+      "efficiencyNotMeasured": "Not measured",
+      "efficiencyNotMeasuredDetail": "Independent wall-input and battery-retained energy are not present in the session contract; delivery rate is shown below instead.",
+      "energyDetail": "Total energy added across the selected sessions.",
+      "eyebrow": "Charging posture",
+      "fleetNarrative": {
+        "accountLimitation": "This source is available only to eligible Tesla business accounts.",
+        "causeLimitation": "Session records show observed energy and fees but do not diagnose the cause of charging behavior.",
+        "costBasis": "Every matching session includes a recorded cost.",
+        "costLimitedBasis": "{{count}} matching session lacks recorded cost.",
+        "costMissing": "no",
+        "evidenceLimit": "Supporting evidence is limited to the five most recent sessions matching the active filters.",
+        "impact": "Business-account session records provide auditable site, energy, fee, and charger evidence for fleet cost review.",
+        "missingCostLimitation": "Cost totals exclude sessions without a fee supplied by Tesla.",
+        "monitorResponse": "No immediate response is indicated; continue reviewing site costs and newly synchronized sessions.",
+        "sessionBasis": "{{count}} direct fleet charging sessions match the active filters.",
+        "sessionMethod": "Direct business-account charging session returned by Tesla fleet charging.",
+        "sessionSummary": "{{date}} at {{site}}: {{energy}} added with {{cost}} recorded cost.",
+        "source": "Tesla fleet charging sessions",
+        "sourceMethod": "Aggregates energy, direct Tesla fee fields, charger type, and site from synchronized business-account sessions.",
+        "unknownSite": "unrecorded site",
+        "whatChanged": "{{sessions}} fleet charging sessions delivered {{energy}} with {{cost}} in recorded fees."
+      },
+      "interruptions": "Potential interruptions",
+      "interruptionsDetail": "Sessions with a telemetry gap or sustained unexpectedly low DC power.",
+      "liveStateSource": "Live vehicle state",
+      "liveStateUnavailableDescription": "Charging history and cost analysis remain available, but current battery and charging posture could not be resolved.",
+      "liveStateUnavailableTitle": "Live charging and departure state are unavailable",
+      "narrative": {
+        "anomalyMethod": "Session matched a deterministic telemetry, power, duration, or cost exception rule.",
+        "causeLimitation": "Session patterns do not establish whether the vehicle, charger, site, or network caused an exception.",
+        "historyMethod": "Evaluates recorded sessions for energy, cost, duration, power, and telemetry exceptions.",
+        "impact": "Current charge posture and repeated session exceptions affect departure readiness, cost visibility, and charger confidence.",
+        "liveBasis": "Current charging and battery state comes from the live vehicle-state record.",
+        "liveLimitation": "Departure readiness is incomplete while live vehicle state is unavailable.",
+        "liveLimitedBasis": "Live charging and battery state could not be resolved.",
+        "liveMethod": "Provides current battery level, charging state, and estimated time to target.",
+        "monitorResponse": "No immediate response is indicated; continue monitoring departure readiness and session exceptions.",
+        "reliabilityLimitation": "The clear-session ratio is an exception heuristic, not a charger-uptime service level.",
+        "sessionBasis": "{{count}} sessions were evaluated in the active period.",
+        "sessionMethod": "Direct charging-session energy, time, and location record.",
+        "sessionSummary": "{{date}}: {{energy}} added at {{place}}.",
+        "unknownPlace": "an unrecorded location",
+        "whatChanged": "{{sessions}} sessions delivered {{energy}} in the selected window; {{exceptions}} require review."
+      },
+      "noDataDescription": "Choose a wider analysis window or complete a charging session.",
+      "noDataTitle": "No charging activity in this window",
+      "notCharging": "Not charging",
+      "provenance": "Derived from live vehicle state, charging-session telemetry, configured cost data, and vehicle-local day boundaries.",
+      "reliability": "Charger reliability",
+      "reliabilityDetail": "Share of sessions without telemetry gaps, sustained low power, or prolonged trickle behavior; not a charger-uptime SLA.",
+      "reliabilityValue": "{{value}}% clear",
+      "sessionsDetail": "Completed and active sessions in the selected period.",
+      "sessionsSource": "Charging sessions",
+      "statusCharging": "Charging now",
+      "title": "Cost, reliability, and battery-friendly behavior"
+    },
+    "detailTitle": "{{title}} details",
+    "metrics": "Operational metrics",
+    "narrative": {
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "confidence": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "not_scored": "Not scored",
+        "title": "Confidence",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "evidence": "Supporting evidence",
+      "likelyCause": "Likely cause",
+      "limitations": "Limitations",
+      "noEvidence": "No supporting records were supplied.",
+      "noLimitations": "No additional limitations were supplied.",
+      "recommendedResponse": "Recommended response",
+      "record": "Record",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available."
+    },
+    "noAttention": "No current attention items.",
+    "reviewAll": "Review all",
+    "reviewDetails": "Review details",
+    "status": {
+      "awaitingData": "Awaiting data",
+      "loading": "Resolving live state",
+      "onTrack": "On track",
+      "review": "Review recommended"
+    }
+  },
+  "physicsLedger": {
+    "blackBox": {
+      "chartLabel": "Force, power, and speed in the last 90 seconds",
+      "empty": "Fewer than two samples in the last 90 seconds.",
+      "force": "Force (N)",
+      "honesty": "Force, pack power, and speed before the window end, from signal_log only.",
+      "title": "Black box: last 90 s"
+    },
+    "charge": {
+      "added": "Energy added",
+      "dwell": "Complete dwell",
+      "efficiency": "Efficiency",
+      "precondition": "Preconditioning",
+      "stillPlugged": "Still plugged / unknown",
+      "title": "Charge physics",
+      "unplugged": "Unplugged",
+      "wall": "Wall energy"
+    },
+    "drive": {
+      "accessory": "Accessory / HVAC",
+      "aero": "Aero",
+      "drivetrainLoss": "Drivetrain loss (model)",
+      "grade": "Grade",
+      "inertial": "Inertial",
+      "measured": "Measured pack energy",
+      "predicted": "Predicted (known terms)",
+      "reconcile": "reconcile",
+      "rolling": "Rolling",
+      "session": "Session",
+      "title": "Drive energy ledger",
+      "unexplained": "Unexplained residual"
+    },
+    "dynamics": {
+      "chartLabel": "Pack power and speed over the window",
+      "empty": "No motion samples were recorded in this window.",
+      "friction": "Friction brake",
+      "packKw": "Pack power",
+      "regen": "Regen",
+      "speed": "Speed",
+      "speedNote": "Speed shown in display units",
+      "title": "Longitudinal dynamics"
+    },
+    "epochs": {
+      "empty": "No firmware-labelled samples in this window.",
+      "firmware": "Firmware",
+      "honesty": "Each software version is a physics baseline for this VIN. Residual changes are correlation, not proof of a fix.",
+      "measured": "Measured",
+      "predicted": "Predicted",
+      "samples": "Samples",
+      "title": "Firmware epochs",
+      "unexplained": "Unexplained"
+    },
+    "markers": {
+      "empty": "No drive or charge boundaries in this window.",
+      "title": "Chapter markers"
+    },
+    "massSource": "mass",
+    "missing": "missing",
+    "park": {
+      "avgWatts": "Average drain",
+      "cabin": "Cabin overheat",
+      "energy": "Park energy",
+      "pluggedAtLimit": "Plugged at limit",
+      "precondition": "Preconditioning",
+      "quiet": "Quiet pack",
+      "sentry": "Sentry",
+      "title": "Park / vampire physics",
+      "trusted": "Park trusted",
+      "untrusted": "Park untrusted"
+    },
+    "range": {
+      "energy": "Energy remaining",
+      "est": "Typical",
+      "ideal": "Ideal",
+      "implied": "Implied",
+      "rated": "Rated",
+      "spread": "Spread",
+      "title": "Range disagreement"
+    },
+    "thermal": {
+      "empty": "No pack temperature sensors reported in this window.",
+      "heatVsPower": "Heat vs power correlation",
+      "inside": "Cabin",
+      "outside": "Ambient",
+      "packMax": "Pack max",
+      "packMin": "Pack min",
+      "title": "Thermal"
+    },
+    "tires": {
+      "empty": "No TPMS corners reported in this window.",
+      "fl": "Front left",
+      "fr": "Front right",
+      "imbalance": "Imbalance (max − min)",
+      "rl": "Rear left",
+      "rr": "Rear right",
+      "title": "Tires"
+    },
+    "truncated": "Sample cap hit — oldest prefix solved",
+    "unknown": {
+      "duration": "Duration",
+      "empty": "Full coverage: no gaps in this window.",
+      "end": "End",
+      "hours": "Unknown hours",
+      "reason": "Reason",
+      "start": "Start",
+      "title": "Unknown budget"
+    }
+  },
+  "productPreferences": {
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "administrator": {
+        "description": "Prioritize system administration and operational controls.",
+        "label": "Administrator"
+      },
+      "analyst": {
+        "description": "Prioritize trends, reports, and historical analysis.",
+        "label": "Analyst"
+      },
+      "fleetOperator": {
+        "description": "Prioritize active fleet operations and current vehicle state.",
+        "label": "Fleet operator"
+      },
+      "owner": {
+        "description": "Keep the most useful everyday vehicle information close at hand.",
+        "label": "Owner"
+      }
+    }
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "replay": {
+    "elevation": {
+      "aria": "Elevation profile chart — no data available yet",
+      "label": "Elevation",
+      "noData": "No elevation data available",
+      "title": "Elevation profile"
+    }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "savedViews": {
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "defaultBadge": "Default",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "deleteTitle": "Delete saved view",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "error": "Unable to load saved views",
+    "loading": "Loading saved views…",
+    "makeDefault": "Apply automatically when I open this page",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "pin": "Pin",
+    "renamePrompt": "Rename view",
+    "saveCurrent": "Save current view…",
+    "setDefault": "Set as default",
+    "title": "Saved views",
+    "unpin": "Unpin",
+    "unsetDefault": "Clear default"
+  },
+  "search": {
+    "history": {
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history",
+      "title": "Recent searches"
+    }
+  },
+  "share": {
+    "copy": "Copy link",
+    "copyLink": "Copy link",
+    "createAnother": "Create another link",
+    "created": "Share link created!",
+    "existing": "Active share links",
+    "expired": "Expired",
+    "expiresOn": "Expires {{date}}",
+    "expiry": "Link expires after",
+    "expiry30d": "30 days",
+    "expiry7d": "7 days",
+    "expiry90d": "90 days",
+    "expiryNever": "Never",
+    "generate": "Generate link",
+    "noExpiry": "No expiry",
+    "revoke": "Revoke",
+    "toast": {
+      "created": "Share link created",
+      "revoked": "Share link revoked"
+    },
+    "untitled": "Untitled share",
+    "views": "views"
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "sourceLayer": {
+    "age": "age",
+    "l1": {
+      "desc": "Read from the in-process SignalStore (hot path, freshest)."
+    },
+    "l2": {
+      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
+    },
+    "log": {
+      "desc": "Replayed from signal_log (durable history).",
+      "label": "Log"
+    },
+    "stale": {
+      "desc": "Redis-backed value older than the 2-minute freshness window.",
+      "label": "Stale"
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  },
+  "table": {
+    "bulkActions": {
+      "exportCsv": "Export CSV"
+    }
+  },
+  "tagInput": {
+    "added": "{{count}} tags added",
+    "addedOne": "Tag added",
+    "duplicate": "{{tag}} is already added",
+    "maxReached": "Tag limit reached",
+    "maxReachedAnnounce": "Tag limit reached",
+    "maxReachedHint": "Maximum {{count}} tags",
+    "placeholder": "Add a tag…",
+    "removeTag": "Remove {{tag}}",
+    "removed": "Removed {{tag}}",
+    "tagsList": "Tags: {{tags}}",
+    "tagsNone": "No tags yet"
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "created": {
+        "success": "Annotation added"
+      },
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
+      }
+    },
+    "channels": {
+      "delete": {
+        "success": "Channel deleted"
+      },
+      "test": {
+        "success": "Test notification sent"
+      },
+      "toggle": {
+        "success": "Channel toggled"
+      }
+    },
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "delete": {
+        "success": "Quiet hours window removed"
+      }
+    },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created"
+      },
+      "delete": {
+        "success": "View deleted"
+      },
+      "update": {
+        "success": "View updated"
+      }
+    },
+    "settings": {
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        },
+        "poll": {
+          "success": "Gas prices updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

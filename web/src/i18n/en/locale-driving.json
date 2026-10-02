@@ -186,7 +186,7 @@
       "thinSupport": "{{band}}: interpret route timing summaries as limited historical evidence."
     },
     "subtitle": "Observed timing consistency and evidence coverage for directional routes in the vehicle timezone",
-    "title": "Arrival Reliability",
+    "title": "Arrival reliability",
     "windows": {
       "allowance": "Observed within-allowance share",
       "consistency": "Timing consistency",
@@ -204,20 +204,20 @@
       "windowValue": "{{start}}–{{end}}"
     },
     "colLabel": "Category",
-    "profileTitle": "Arrival Reliability Profile"
+    "profileTitle": "Arrival reliability profile"
   },
   "coldStart": {
-    "title": "Cold Start Cost",
+    "title": "Cold start cost",
     "subtitle": "What the first kilometres after a long park really cost",
     "kpis": "Cold start summary metrics",
-    "penalty": "Cold Penalty",
+    "penalty": "Cold penalty",
     "penaltyShare": "+{{pct}}% vs warm starts",
-    "totalEnergy": "Extra Energy",
-    "coldShare": "Cold Starts",
+    "totalEnergy": "Extra energy",
+    "coldShare": "Cold starts",
     "gapDef": "parked {{h}}h or more",
     "analyzed": "Analyzed",
     "driveCount": "drives with a known gap",
-    "duel": "Cold vs Warm Starts",
+    "duel": "Cold vs warm starts",
     "coldGroup": "Cold starts ({{count}} drives)",
     "warmGroup": "Warm starts ({{count}} drives)",
     "takeawayCost": "Warm-up overhead added {{energy}} across this period — about {{cost}} at your electricity rate. Preconditioning while plugged in shifts that energy to the wall.",
@@ -533,12 +533,12 @@
         "strong": "Stronger evidence"
       }
     },
-    "title": "Departure Forecast",
+    "title": "Departure forecast",
     "subtitle": "Vehicle-timezone departure patterns from returned drive starts, expressed as modeled likelihood estimates"
   },
   "departureForecast": {
     "colSlot": "Time",
-    "next24Title": "Next-24h Departure Forecast"
+    "next24Title": "Next-24h departure forecast"
   },
   "destinationTransitions": {
     "bands": {
@@ -763,7 +763,7 @@
       "thinSupport": "Accepted transitions are descriptive, but no origin has the three outgoing observations required for supported evidence."
     },
     "subtitle": "Continuity-safe historical destination flows, support, temporal profiles, and complete returned-row accounting",
-    "title": "Destination Transitions",
+    "title": "Destination transitions",
     "twoHour": {
       "aria": "Twelve-bin vehicle-local profile of accepted transition counts and concentration",
       "column": {
@@ -817,10 +817,10 @@
       "title": "Vehicle-timezone weekday profile"
     },
     "colLabel": "Category",
-    "profileTitle": "Destination Transition Profile"
+    "profileTitle": "Destination transition profile"
   },
   "driveCompare": {
-    "title": "Drive Compare",
+    "title": "Drive compare",
     "subtitle": "Compare context, efficiency, and telemetry from any two drives",
     "pickA": "Choose drive A",
     "pickB": "Choose drive B",
@@ -835,7 +835,7 @@
     "detailsUnavailable": "Drive details are not available for this comparison.",
     "browseDrives": "Browse drives",
     "noMetrics": "No comparison metrics are available.",
-    "gridAria": "Drive A and Drive B metric comparison",
+    "gridAria": "Drive A and drive B metric comparison",
     "sections": {
       "verdict": "Comparison verdict and advantages",
       "context": "Drive identity and context",
@@ -851,7 +851,7 @@
       "tieBody": "The fair score is level at {{wins}}–{{wins}}, with {{ties}} tied metrics.",
       "insufficientBody": "Both drives need valid consumption, regen, or drive-score data before a fair verdict is possible.",
       "neutralNote": "Distance, duration, total energy, and absolute battery use stay neutral because trip size changes those totals.",
-      "scoreAria": "Fair metric score: Drive A {{a}}, Drive B {{b}}"
+      "scoreAria": "Fair metric score: drive A {{a}}, drive B {{b}}"
     },
     "identity": {
       "title": "Drive {{side}} context",
@@ -876,10 +876,10 @@
     "chart": {
       "speedTitle": "Speed through trip progress",
       "speedSubtitle": "Each drive is normalized from start to finish",
-      "speedAria": "Drive A and Drive B speed compared over normalized trip progress",
+      "speedAria": "Drive A and drive B speed compared over normalized trip progress",
       "batteryTitle": "Battery through trip progress",
       "batterySubtitle": "State of charge from start to finish",
-      "batteryAria": "Drive A and Drive B battery state of charge over normalized trip progress",
+      "batteryAria": "Drive A and drive B battery state of charge over normalized trip progress",
       "progress": "Trip progress",
       "progressValue": "{{value}}% complete",
       "driveASpeed": "Drive A speed",
@@ -925,15 +925,15 @@
     "vsAverage": "vs your average",
     "vsRecord": "vs your record",
     "minutesShort": "min",
-    "costSavings": "Cost & Savings",
-    "tripCost": "Trip Cost",
+    "costSavings": "Cost & savings",
+    "tripCost": "Trip cost",
     "atRate": "at {{currencySymbol}}{{costPerKwh}}/kWh",
     "costPerUnit": "Cost / {{unit}}",
-    "gasCostEquiv": "Gas Cost (equiv)",
+    "gasCostEquiv": "Gas cost (equiv)",
     "atMpg": "at {{mpg}} MPG",
-    "gasSavings": "vs Gas Savings",
+    "gasSavings": "vs gas savings",
     "savingsPct": "Savings %",
-    "title": "Drive Details",
+    "title": "Drive details",
     "debrief": {
       "title": "Post-drive physics",
       "subtitle": "One story after the drive: launch vs regen vs pads vs thermal vs FSD km. Not more gauges.",
@@ -951,7 +951,7 @@
     },
     "replay": "Replay",
     "share": "Share",
-    "driveChart": "Drive Overview",
+    "driveChart": "Drive overview",
     "speed": "Speed",
     "rangeIdeal": "Range ideal",
     "rangeEst": "Range est.",
@@ -963,67 +963,67 @@
     "noTelemetryBody": "Only the start/end timestamps and battery levels are available. Distance, speed, energy and route data require live telemetry samples — none were captured during this drive.",
     "distance": "Distance",
     "duration": "Duration",
-    "maxSpeed": "Max Speed",
-    "avgSpeed": "Avg Speed",
-    "maxPower": "Max Power",
+    "maxSpeed": "Max speed",
+    "avgSpeed": "Avg speed",
+    "maxPower": "Max power",
     "elevGain": "Elev. Gain",
     "elevLoss": "Elev. Loss",
     "inProgress": "In progress",
-    "elevProfile": "Elevation Profile",
+    "elevProfile": "Elevation profile",
     "gain": "gain",
     "loss": "loss",
     "net": "Net",
     "elevation": "Elevation",
-    "energySummary": "Energy Summary",
-    "energyConsumed": "Energy Consumed",
-    "energyRecovered": "Energy Recovered",
-    "netConsumption": "Net Consumption",
+    "energySummary": "Energy summary",
+    "energyConsumed": "Energy consumed",
+    "energyRecovered": "Energy recovered",
+    "netConsumption": "Net consumption",
     "efficiency": "Efficiency",
-    "batteryUsed": "Battery Used",
-    "rangeUsed": "Range Used",
+    "batteryUsed": "Battery used",
+    "rangeUsed": "Range used",
     "consumption": "Consumption",
-    "journeyDetails": "Journey Details",
+    "journeyDetails": "Journey details",
     "start": "Start",
     "noAddress": "No address data",
     "battery": "Battery",
     "destination": "Destination",
-    "moreDetails": "More Details",
-    "odometer": "Odometer (From → To)",
-    "rangeStartEnd": "Range (Start → End)",
-    "elevSummary": "Elevation Summary",
+    "moreDetails": "More details",
+    "odometer": "Odometer (from → To)",
+    "rangeStartEnd": "Range (start → End)",
+    "elevSummary": "Elevation summary",
     "consumptionRate": "Consumption",
-    "avgPower": "Avg Power",
-    "avgOutsideTemp": "Avg Outside Temp",
-    "avgInsideTemp": "Avg Inside Temp",
-    "minSpeed": "Min Speed",
-    "netEnergy": "Net Consumption",
-    "powerProfile": "Power Profile",
-    "maxRegen": "Max Regen",
+    "avgPower": "Avg power",
+    "avgOutsideTemp": "Avg outside temp",
+    "avgInsideTemp": "Avg inside temp",
+    "minSpeed": "Min speed",
+    "netEnergy": "Net consumption",
+    "powerProfile": "Power profile",
+    "maxRegen": "Max regen",
     "avgLabel": "Avg",
     "route": "Route",
     "end": "End",
     "noRouteData": "No route data available for this drive",
-    "socOverTime": "SOC % Over Time",
-    "speedHistogram": "Speed Histogram",
+    "socOverTime": "SOC % over time",
+    "speedHistogram": "Speed histogram",
     "ofDrive": "of drive",
     "temperatures": "Temperatures",
-    "outsideTemp": "Outside Temperature",
-    "insideTemp": "Inside Temperature",
-    "driverTemp": "Driver Temperature",
-    "passengerTemp": "Passenger Temperature",
+    "outsideTemp": "Outside temperature",
+    "insideTemp": "Inside temperature",
+    "driverTemp": "Driver temperature",
+    "passengerTemp": "Passenger temperature",
     "climate": "Climate",
-    "fanStatus": "Fan Status",
+    "fanStatus": "Fan status",
     "avg": "Avg",
     "noTemperatureData": "No temperature telemetry is available for this drive.",
     "outside": "Outside",
     "inside": "Inside",
     "driver": "Driver",
     "passenger": "Passenger",
-    "frontLeft": "Front Left",
-    "frontRight": "Front Right",
-    "rearLeft": "Rear Left",
-    "rearRight": "Rear Right",
-    "tirePressure": "Tire Pressure During Drive",
+    "frontLeft": "Front left",
+    "frontRight": "Front right",
+    "rearLeft": "Rear left",
+    "rearRight": "Rear right",
+    "tirePressure": "Tire pressure during drive",
     "section": {
       "headerFailed": "Drive header failed to load",
       "heroGaugesFailed": "Hero gauges failed to load",
@@ -1059,7 +1059,7 @@
       "title": "Counter silent while moving",
       "unknown": "The FSD trip meter did not report on this drive. Absence is not a disengagement.",
       "none": "No moving interval had a frozen FSD trip meter.",
-      "fsd": "Open FSD Insights"
+      "fsd": "Open FSD insights"
     },
     "aiCoaching": {
       "title": "Drive coaching",
@@ -1277,7 +1277,7 @@
       "aria": "Bar chart of drive DNA signal distribution",
       "colCount": "Count",
       "colLabel": "Signal",
-      "title": "Drive DNA Distribution"
+      "title": "Drive DNA distribution"
     },
     "coverage": {
       "returnedRows": "Rows returned",
@@ -1340,12 +1340,59 @@
       "noClaim": "Traits are deterministic artistic heuristics—not a score, diagnosis, stable personality assessment, efficiency verdict, or causal claim."
     },
     "socElevationAria": "State of charge and elevation over elapsed drive time",
-    "socElevationTitle": "SoC & Elevation",
+    "socElevationTitle": "SoC & elevation",
     "speedPowerAria": "Speed and motor power over elapsed drive time",
-    "speedPowerTitle": "Speed & Power"
+    "speedPowerTitle": "Speed & power"
   },
   "drives": {
     "score": "score",
+    "date": "Drive",
+    "speed": "Speed",
+    "grid": {
+      "minFilter": "Minimum {{label}} ({{unit}})",
+      "min": "Min",
+      "minutes": "minutes",
+      "search": "Search drive or route",
+      "searchPlaceholder": "Search route or grade",
+      "gradeFilter": "Filter by efficiency grade",
+      "allGrades": "All grades",
+      "endBattery": "End battery",
+      "dateTime": "Date / time",
+      "start": "Start",
+      "destination": "Destination",
+      "locationFilter": "Filter {{location}}",
+      "contains": "Contains",
+      "avgSpeed": "Avg speed",
+      "maxSpeed": "Max speed",
+      "efficiency": "Efficiency",
+      "grade": "Grade",
+      "startBattery": "Battery start (%)",
+      "endBatteryColumn": "Battery end (%)",
+      "batteryUsed": "Battery used (pp)",
+      "percentagePoints": "percentage points",
+      "batteryScale": "Battery level out of 100%",
+      "batteryUsedScale": "Battery used in percentage points; negative values indicate a gain",
+      "avgPower": "Avg power",
+      "outsideTemp": "Outside temp",
+      "insideTemp": "Cabin temp",
+      "regen": "Regen",
+      "energy": "Energy",
+      "fsd": "FSD",
+      "noFlags": "No flags",
+      "usedValue": "{{value}} pp",
+      "score": "Drive score",
+      "points": "points",
+      "scoreScale": "Drive score out of 100",
+      "efficiencyScale": "Segments represent the efficiency grade thresholds in Wh/km",
+      "bandGood": "Good range",
+      "bandInfo": "Typical range",
+      "bandWarning": "Caution range",
+      "bandCritical": "Outside preferred range",
+      "estimatedCost": "Est. cost",
+      "status": "Status",
+      "preview": "Preview",
+      "empty": "No drives match these filters"
+    },
     "efficiencyGrade": "Efficiency grade",
     "efficiencyGradeAria": "Efficiency grade {{grade}}",
     "highEnergyUse": "High energy use",
@@ -1354,7 +1401,7 @@
     "highSpeed": "High speed",
     "avg": "Avg",
     "max": "Max",
-    "title": "Drive History",
+    "title": "Drive history",
     "subtitle": "Measured energy intensity, route evidence, and comparable drive history",
     "duration": "Duration",
     "energyUsed": "Energy used",
@@ -1378,24 +1425,24 @@
     },
     "noPriorData": "No drives in prior period: {{start}} – {{end}}",
     "priorPeriod": "prior period: {{start}} – {{end}}",
-    "totalDrives": "Total Drives",
+    "totalDrives": "Total drives",
     "total": "Total",
     "best": "Best",
-    "topSpeed": "Top Speed",
+    "topSpeed": "Top speed",
     "noStats": "No driving statistics available yet",
-    "totalDriveTime": "Total Drive Time",
-    "avgTripDistance": "Avg Trip Distance",
-    "longestDrive": "Longest Drive",
-    "avgDuration": "Avg Duration",
-    "recentDrives": "Recent Drives",
+    "totalDriveTime": "Total drive time",
+    "avgTripDistance": "Avg trip distance",
+    "longestDrive": "Longest drive",
+    "avgDuration": "Avg duration",
+    "recentDrives": "Recent drives",
     "driveEvidence": "Drive evidence",
     "distance": "Distance",
-    "distanceDistribution": "Trip Distance Distribution",
+    "distanceDistribution": "Trip distance distribution",
     "drives": "Drives",
-    "speedVsEfficiency": "Speed vs Efficiency",
+    "speedVsEfficiency": "Speed vs efficiency",
     "lower": "Lower",
     "better": "better",
-    "avgSpeed": "Avg Speed",
+    "avgSpeed": "Avg speed",
     "efficiency": "Energy intensity",
     "avgGrade": "Efficiency grade",
     "energyAndCost": "Measured energy / cost",
@@ -1421,7 +1468,7 @@
       "efficiency": "Energy intensity",
       "cost": "Cost"
     },
-    "allDrives": "All Drives",
+    "allDrives": "All drives",
     "truncated": "Showing the {{limit}} most recent drives in this range — the range holds more than one request can return. Narrow the dates, or use the CSV/JSON export for the full set.",
     "sortRecent": "Recent",
     "sortDistance": "Distance",
@@ -1444,64 +1491,64 @@
     }
   },
   "drivetrain": {
-    "temperatures": "Temperature Details",
-    "frontMotorTemp": "Front Motor Temp",
-    "rearMotorTemp": "Rear Motor Temp",
-    "inverterTemp": "Inverter Temp",
-    "batteryTemp": "Battery Temp",
-    "powerSummary": "Power Summary",
-    "peakPowerLabel": "Peak Power",
-    "avgPowerLabel": "Avg Peak Power",
-    "maxRegenLabel": "Max Regen",
-    "regenLabel": "Total Regen",
-    "co2Label": "CO₂ Saved",
-    "healthScore": "Health Score",
+    "temperatures": "Temperature details",
+    "frontMotorTemp": "Front motor temp",
+    "rearMotorTemp": "Rear motor temp",
+    "inverterTemp": "Inverter temp",
+    "batteryTemp": "Battery temp",
+    "powerSummary": "Power summary",
+    "peakPowerLabel": "Peak power",
+    "avgPowerLabel": "Avg peak power",
+    "maxRegenLabel": "Max regen",
+    "regenLabel": "Total regen",
+    "co2Label": "CO₂ saved",
+    "healthScore": "Health score",
     "healthScoreDesc": "Overall drivetrain condition rating",
-    "motorDetails": "Motor Details",
-    "motorStatus": "Motor Status",
-    "overallHealth": "Overall Health",
-    "healthScoreLabel": "Health Score",
-    "sensorCount": "Active Sensors",
+    "motorDetails": "Motor details",
+    "motorStatus": "Motor status",
+    "overallHealth": "Overall health",
+    "healthScoreLabel": "Health score",
+    "sensorCount": "Active sensors",
     "realTime": "Real-time telemetry active",
-    "driveStats": "Drive Statistics",
-    "totalDrives": "Total Drives",
-    "totalDistance": "Total Distance",
-    "avgSpeed": "Avg Speed",
-    "topSpeed": "Top Speed",
+    "driveStats": "Drive statistics",
+    "totalDrives": "Total drives",
+    "totalDistance": "Total distance",
+    "avgSpeed": "Avg speed",
+    "topSpeed": "Top speed",
     "alert": {
-      "criticalTitle": "Critical Temperature Warning",
-      "warningTitle": "Elevated Temperatures Detected"
+      "criticalTitle": "Critical temperature warning",
+      "warningTitle": "Elevated temperatures detected"
     },
-    "healthGood": "Drivetrain Healthy",
-    "healthWarn": "Drivetrain Running Warm",
-    "healthCrit": "Drivetrain Overheating",
-    "motorState": "Motor State",
-    "recommendations": "Health Recommendations",
-    "liveMotor": "Live Motor Status",
-    "shiftState": "Shift State",
+    "healthGood": "Drivetrain healthy",
+    "healthWarn": "Drivetrain running warm",
+    "healthCrit": "Drivetrain overheating",
+    "motorState": "Motor state",
+    "recommendations": "Health recommendations",
+    "liveMotor": "Live motor status",
+    "shiftState": "Shift state",
     "power": "Power",
     "regen": "Regen",
     "source": "Source",
-    "rpmFront": "Front Motor RPM",
-    "rpmRear": "Rear Motor RPM",
-    "torqueFront": "Front Torque",
-    "torqueRear": "Rear Torque",
-    "motorTempFront": "Front Motor Temp",
-    "motorTempRear": "Rear Motor Temp",
+    "rpmFront": "Front motor RPM",
+    "rpmRear": "Rear motor RPM",
+    "torqueFront": "Front torque",
+    "torqueRear": "Rear torque",
+    "motorTempFront": "Front motor temp",
+    "motorTempRear": "Rear motor temp",
     "isolationResistance": "HV Isolation",
     "noLiveMotor": "No live motor telemetry yet",
-    "powerOutput": "Power Output History",
+    "powerOutput": "Power output history",
     "powerOutputSub": "Peak and regen power per drive over time",
-    "powerMax": "Peak Power (kW)",
-    "powerMin": "Regen Power (kW)",
-    "statorTempHistory": "Stator Temperature History",
+    "powerMax": "Peak power (kW)",
+    "powerMin": "Regen power (kW)",
+    "statorTempHistory": "Stator temperature history",
     "statorTempSub": "Motor stator temperature over recent snapshots",
-    "statorTemp": "Stator Temp",
-    "statorTempRearLeft": "Rear-Left Stator Temp",
-    "statorTempRearRight": "Rear-Right Stator Temp",
+    "statorTemp": "Stator temp",
+    "statorTempRearLeft": "Rear-left stator temp",
+    "statorTempRearRight": "Rear-right stator temp",
     "normal": "Normal",
     "warm": "Warm",
-    "tempGauges": "Temperature Gauges",
+    "tempGauges": "Temperature gauges",
     "maxLabel": "Max",
     "ofMax": "of max",
     "noData": "No data",
@@ -1510,71 +1557,71 @@
     "noSensors": "No temperature sensor data available yet",
     "noStats": "No drive statistics available yet",
     "noMotorHistory": "No motor telemetry history yet",
-    "peakPower": "Peak Power",
-    "tempHistory": "Temperature Trend",
+    "peakPower": "Peak power",
+    "tempHistory": "Temperature trend",
     "tempHistorySub": "Outside temperature recorded during recent drives",
-    "outsideTemp": "Outside Temp",
-    "warmZone": "Warm Zone",
+    "outsideTemp": "Outside temp",
+    "warmZone": "Warm zone",
     "freezing": "Freezing",
-    "thermalMetrics": "Thermal Load Indicators",
-    "avgPower": "Avg Power",
+    "thermalMetrics": "Thermal load indicators",
+    "avgPower": "Avg power",
     "drivesLabel": "Drives",
-    "regenRatio": "Regen Ratio",
-    "torqueHistory": "Motor Torque",
+    "regenRatio": "Regen ratio",
+    "torqueHistory": "Motor torque",
     "torqueHistorySub": "Drive inverter torque output over time",
     "torque": "Torque",
-    "title": "Drivetrain Health",
+    "title": "Drivetrain health",
     "subtitle": "Motor, inverter, and battery thermal status",
-    "allVehicles": "All Vehicles",
+    "allVehicles": "All vehicles",
     "col": {
       "date": "Date",
       "powerMax": "Peak (kW)",
       "powerMin": "Regen (kW)",
       "time": "Time",
       "stator": "Stator",
-      "statorRel": "Rear-Left",
-      "statorRer": "Rear-Right",
+      "statorRel": "Rear-left",
+      "statorRer": "Rear-right",
       "outside": "Outside",
       "torque": "Torque (Nm)"
     }
   },
   "dynamics": {
-    "autopilot": "Autopilot & Cruise",
-    "currentSpeed": "Current Speed",
-    "cruiseSetSpeed": "Cruise Set Speed",
-    "followDistance": "Follow Distance",
-    "driveAnalytics": "Drive Analytics",
-    "speedDistribution": "Speed Distribution",
+    "autopilot": "Autopilot & cruise",
+    "currentSpeed": "Current speed",
+    "cruiseSetSpeed": "Cruise set speed",
+    "followDistance": "Follow distance",
+    "driveAnalytics": "Drive analytics",
+    "speedDistribution": "Speed distribution",
     "speedDistDesc": "Drives grouped by average speed",
     "drives": "Drives",
-    "accelPatterns": "Acceleration Patterns",
+    "accelPatterns": "Acceleration patterns",
     "accelPatternsDesc": "Peak power vs trip distance",
     "distance": "Distance",
-    "peakPower": "Peak Power",
+    "peakPower": "Peak power",
     "avg": "Avg",
-    "powerProfile": "Power Profile",
+    "powerProfile": "Power profile",
     "powerProfileDesc": "Peak & regen power for recent drives",
-    "maxPower": "Max Power (kW)",
-    "regenPower": "Regen Power (kW)",
+    "maxPower": "Max power (kW)",
+    "regenPower": "Regen power (kW)",
     "coach": {
-      "hardAccel": "Hard Acceleration",
-      "hardBrake": "Hard Braking",
-      "highway": "Highway Driving",
-      "shortTrips": "Short Trips (<5 km)",
-      "coldStarts": "Cold Starts",
-      "title": "Driving Coach",
-      "overallScore": "Driving Score",
+      "hardAccel": "Hard acceleration",
+      "hardBrake": "Hard braking",
+      "highway": "Highway driving",
+      "shortTrips": "Short trips (<5 km)",
+      "coldStarts": "Cold starts",
+      "title": "Driving coach",
+      "overallScore": "Driving score",
       "drivesAnalyzed": "{{count}} drives analyzed",
-      "styleBreakdown": "Style Breakdown",
+      "styleBreakdown": "Style breakdown",
       "noData": "Drive more to see your style breakdown.",
-      "avgEfficiency": "Avg Efficiency",
-      "bestEfficiency": "Best Efficiency",
-      "weeklyTrend": "Weekly Score Trend",
+      "avgEfficiency": "Avg efficiency",
+      "bestEfficiency": "Best efficiency",
+      "weeklyTrend": "Weekly score trend",
       "needWeeks": "Need at least 2 weeks of data for trend analysis.",
-      "patterns": "Driving Patterns",
+      "patterns": "Driving patterns",
       "recommendations": "Recommendations",
       "noRecs": "Recommendations will appear after more drives.",
-      "perDriveScores": "Per-Drive Scores",
+      "perDriveScores": "Per-drive scores",
       "noDrives": "No drives found.",
       "weeklyTrendAria": "Line chart of weekly driving score over time",
       "score": "Score",
@@ -1589,64 +1636,64 @@
     "tipGreat": "Excellent driving style! Maintaining this maximizes range and comfort.",
     "tipKeep": "Keep monitoring your scores — consistency is key.",
     "tipThermal": "Motor temps are running high — consider easing off sustained high power.",
-    "recommendations": "Driving Style Recommendations",
-    "gForce": "Acceleration G-Force",
+    "recommendations": "Driving style recommendations",
+    "gForce": "Acceleration G-force",
     "lateral": "Lateral",
     "longitudinal": "Longitudinal",
     "combined": "Combined",
     "gForceNoData": "No G-force telemetry received yet",
-    "liveMotor": "Live Motor Status",
+    "liveMotor": "Live motor status",
     "torque": "Torque",
     "rpmFront": "Front RPM",
     "motorTemp": "Motor",
     "awaiting": "Awaiting data",
     "unknown": "Unknown",
-    "shiftState": "Shift State",
+    "shiftState": "Shift state",
     "noLiveMotor": "Awaiting live motor data",
     "noMotorData": "No motor data recorded yet",
-    "torqueDistribution": "Torque Distribution",
-    "avgTorque": "Avg Torque",
-    "maxTorque": "Max Torque",
-    "highTorqueTime": "High Torque Time",
-    "throttleBehavior": "Throttle Behavior",
-    "avgPower": "Avg Power",
+    "torqueDistribution": "Torque distribution",
+    "avgTorque": "Avg torque",
+    "maxTorque": "Max torque",
+    "highTorqueTime": "High torque time",
+    "throttleBehavior": "Throttle behavior",
+    "avgPower": "Avg power",
     "drivingStyle": "Style",
     "conservative": "Conservative",
     "moderate": "Moderate",
     "aggressive": "Aggressive",
-    "motorThermal": "Motor Thermal",
-    "avgMotorTemp": "Avg Motor Temp",
-    "maxMotorTemp": "Max Motor Temp",
-    "thermalGood": "Thermal: Good",
-    "thermalWarm": "Thermal: Warm",
+    "motorThermal": "Motor thermal",
+    "avgMotorTemp": "Avg motor temp",
+    "maxMotorTemp": "Max motor temp",
+    "thermalGood": "Thermal: good",
+    "thermalWarm": "Thermal: warm",
     "thermalHot": "Thermal: Hot",
     "awaitingData": "Awaiting motor telemetry data...",
-    "powerOverTime": "Motor Power Over Time",
+    "powerOverTime": "Motor power over time",
     "powerOverTimeDesc": "Drive and regen power from motor telemetry",
     "power": "Power",
     "regen": "Regen",
-    "torqueHistory": "Motor Torque History",
+    "torqueHistory": "Motor torque history",
     "torqueHistoryDesc": "Front and rear motor torque over time",
-    "torqueFront": "Front Torque",
-    "torqueRear": "Rear Torque",
-    "rpmHistory": "Motor RPM History",
+    "torqueFront": "Front torque",
+    "torqueRear": "Rear torque",
+    "rpmHistory": "Motor RPM history",
     "rpmHistoryDesc": "Front and rear motor RPM over time",
     "rpmRear": "Rear RPM",
-    "pedalUsage": "Pedal Usage",
+    "pedalUsage": "Pedal usage",
     "throttle": "Throttle",
-    "throttlePosition": "Throttle Position",
+    "throttlePosition": "Throttle position",
     "brake": "Brake",
-    "brakePedalPosition": "Brake Pedal Position",
-    "brakeActive": "Brake Active",
-    "brakeInactive": "Brake Inactive",
-    "brakePedal": "Brake Pedal Status",
+    "brakePedalPosition": "Brake pedal position",
+    "brakeActive": "Brake active",
+    "brakeInactive": "Brake inactive",
+    "brakePedal": "Brake pedal status",
     "pedalNoData": "No pedal telemetry received yet",
-    "speedGear": "Speed & Gear",
-    "avgDriveSpeed": "Avg Drive Speed",
-    "topDriveSpeed": "Top Drive Speed",
-    "totalReadings": "Total Readings",
-    "peakRegen": "Peak Regen",
-    "title": "Driving Dynamics",
+    "speedGear": "Speed & gear",
+    "avgDriveSpeed": "Avg drive speed",
+    "topDriveSpeed": "Top drive speed",
+    "totalReadings": "Total readings",
+    "peakRegen": "Peak regen",
+    "title": "Driving dynamics",
     "subtitle": "Live motor telemetry, G-forces & driving analysis",
     "selectVehicle": "Select vehicle",
     "section": {
@@ -1663,12 +1710,12 @@
       "maxKw": "Max kW",
       "regenKw": "Regen kW"
     },
-    "brakeUnknown": "Brake Unknown",
+    "brakeUnknown": "Brake unknown",
     "pedalLoading": "Loading pedal telemetry…",
     "pedalResource": "Pedal telemetry"
   },
   "effTarget": {
-    "title": "Efficiency Target",
+    "title": "Efficiency target",
     "subtitle": "A completed-week goal workspace built from the observed history window",
     "kpis": "Efficiency target summary metrics",
     "targetInput": "Weekly consumption target",
@@ -1681,7 +1728,7 @@
     "overall": "Observed overall",
     "analyzed": "{{eligible}} of {{observed}} drives eligible",
     "loading": "Loading efficiency target analysis",
-    "chart": "Weekly Consumption vs Target",
+    "chart": "Weekly consumption vs target",
     "chartHint": "Green weeks beat the target; the dashed line is your goal",
     "consumption": "Consumption",
     "methodNote": "Weeks run Monday to Sunday in your local time. A week hits the target when its distance-weighted consumption lands at or below your goal.",
@@ -1802,47 +1849,47 @@
     "subtitle": "Energy consumption and driving efficiency analysis",
     "avg": "Avg",
     "kmPerKwh": "km/kWh",
-    "co2Saved": "CO₂ Saved (kg)",
+    "co2Saved": "CO₂ saved (kg)",
     "totalDistance": "Total",
     "noStats": "No efficiency data available yet",
     "avgConsumption": "Avg",
-    "avgSpeed": "Avg Speed",
-    "costPerKm": "Est. Cost/km",
-    "drivesAnalyzed": "Drives Analyzed",
+    "avgSpeed": "Avg speed",
+    "costPerKm": "Est. cost/km",
+    "drivesAnalyzed": "Drives analyzed",
     "noStatCards": "No driving statistics available yet",
-    "dailyTrend": "Daily Efficiency ({{unit}})",
-    "speedDist": "Efficiency by Speed Range",
-    "speedVsEfficiency": "Speed vs Efficiency",
+    "dailyTrend": "Daily efficiency ({{unit}})",
+    "speedDist": "Efficiency by speed range",
+    "speedVsEfficiency": "Speed vs efficiency",
     "speed": "Speed",
-    "tempVsEfficiency": "Temperature vs Efficiency",
+    "tempVsEfficiency": "Temperature vs efficiency",
     "temp": "Temp",
-    "tempEfficiency": "Efficiency by Temperature Range",
-    "tempRange": "Temp Range",
+    "tempEfficiency": "Efficiency by temperature range",
+    "tempRange": "Temp range",
     "drives": "Drives",
     "total": "Total",
-    "avgSpeedCol": "Avg Speed",
+    "avgSpeedCol": "Avg speed",
     "noTempData": "Not enough data for temperature breakdown",
-    "summary": "Efficiency Summary",
-    "regenRatio": "Regen Ratio",
-    "totalDriveTime": "Total Drive Time",
+    "summary": "Efficiency summary",
+    "regenRatio": "Regen ratio",
+    "totalDriveTime": "Total drive time",
     "hours": "h",
     "noSummary": "No efficiency summary available yet",
-    "insights": "Energy Insights",
-    "totalRegen": "Total Regen",
-    "regenRatioLabel": "Regen Ratio",
-    "co2Label": "CO₂ Saved",
-    "totalDistLabel": "Total Distance",
-    "topSpeed": "Top Speed",
-    "costPerKmLabel": "Est. Cost/km",
+    "insights": "Energy insights",
+    "totalRegen": "Total regen",
+    "regenRatioLabel": "Regen ratio",
+    "co2Label": "CO₂ saved",
+    "totalDistLabel": "Total distance",
+    "topSpeed": "Top speed",
+    "costPerKmLabel": "Est. cost/km",
     "noInsights": "No energy insights available yet",
-    "overview": "Efficiency Overview",
+    "overview": "Efficiency overview",
     "efficiencyLabel": "Efficiency",
     "kgUnit": "kg",
     "section": {
-      "kpis": "Key Metrics",
-      "overview": "Overview & Trend",
-      "analysis": "Speed & Temperature Analysis",
-      "breakdown": "Breakdown & Insights"
+      "kpis": "Key metrics",
+      "overview": "Overview & trend",
+      "analysis": "Speed & temperature analysis",
+      "breakdown": "Breakdown & insights"
     },
     "col": {
       "date": "Date",
@@ -1853,21 +1900,21 @@
     "title": "Explorer",
     "subtitle": "How far and how wide your car actually roams",
     "kpis": "Explorer summary metrics",
-    "uniquePlaces": "Unique Places",
+    "uniquePlaces": "Unique places",
     "arrivals": "{{count}} located arrivals",
-    "radius": "Roaming Radius",
+    "radius": "Roaming radius",
     "radiusHint": "90% of arrivals within",
-    "farthest": "Farthest Point",
-    "home": "Home Base",
+    "farthest": "Farthest point",
+    "home": "Home base",
     "located": "Located",
     "homeHint": "most frequent arrival",
     "destinations": "Destinations",
     "place": "Place",
     "unnamed": "Unnamed spot ({{cell}})",
     "visits": "Visits",
-    "fromHome": "From Home",
-    "firstVisit": "First Visit",
-    "discoveries": "New Places per Month",
+    "fromHome": "From home",
+    "firstVisit": "First visit",
+    "discoveries": "New places per month",
     "newPlaces": "New places",
     "noData": "No located drives yet — GPS end positions are required.",
     "browseDrives": "Browse drives",
@@ -2013,7 +2060,7 @@
     }
   },
   "fsd": {
-    "title": "FSD Insights",
+    "title": "FSD insights",
     "subtitle": "Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.",
     "noVehicle": "Select a vehicle to see supervised self-driving telemetry.",
     "chooseVehicle": "Choose a vehicle",
@@ -2182,7 +2229,7 @@
     }
   },
   "journeyFragmentation": {
-    "title": "Journey Fragmentation",
+    "title": "Journey fragmentation",
     "subtitle": "Descriptive continuity analysis of a capped returned drive-history window",
     "maxGap": "Maximum parking gap",
     "gapMinutes": "{{count}} min",
@@ -2353,7 +2400,7 @@
     }
   },
   "logbook": {
-    "title": "Trip Logbook",
+    "title": "Trip logbook",
     "subtitle": "Classify drives for tax deduction and expense reimbursement",
     "kpis": "Logbook summary metrics",
     "business": "Business",
@@ -2384,10 +2431,10 @@
   },
   "originConcentration": {
     "colOrigin": "Origin",
-    "title": "Origin Concentration"
+    "title": "Origin concentration"
   },
   "rangeBuffer": {
-    "title": "Range Buffer",
+    "title": "Range buffer",
     "subtitle": "Observed arrival SoC distribution, context, and evidence coverage in the vehicle timezone",
     "bands": {
       "strong": "Strong",
@@ -2604,31 +2651,31 @@
       "notice": "Use this page only to inspect returned historical arrival evidence; it does not predict whether a future trip will have enough range."
     },
     "colLabel": "Category",
-    "percentileTitle": "Range Buffer Percentile"
+    "percentileTitle": "Range buffer percentile"
   },
   "regen": {
-    "title": "Regenerative Braking",
+    "title": "Regenerative braking",
     "subtitle": "Descriptive energy-recovery evidence for the selected date window",
-    "regenRatio": "Regen Ratio",
+    "regenRatio": "Regen ratio",
     "recoveredInfo": "The complete aggregate reports {{recovered}} recovered from {{driveEnergy}} of drive energy.",
-    "totalRegen": "Total Regen kWh",
-    "ratioLabel": "Recovery Rate",
-    "monthlyAvg": "Monthly Avg kW",
-    "freeCharges": "Free Charges",
-    "lifetimeRegen": "Lifetime Regen kWh",
-    "lifetimeDrive": "Lifetime Drive kWh",
-    "monthlyTrend": "Monthly Regen Trend",
+    "totalRegen": "Total regen kWh",
+    "ratioLabel": "Recovery rate",
+    "monthlyAvg": "Monthly avg kW",
+    "freeCharges": "Free charges",
+    "lifetimeRegen": "Lifetime regen kWh",
+    "lifetimeDrive": "Lifetime drive kWh",
+    "monthlyTrend": "Monthly regen trend",
     "drives": "Drives",
     "regenKwh": "Regen kWh",
-    "metrics": "Regen Metrics",
-    "totalRegenLabel": "Total Regen",
-    "regenRatioBar": "Regen Ratio",
-    "monthlyAvgBar": "Monthly Avg",
-    "freeChargesBar": "Free Charges",
-    "recentDrives": "Recent Regen Drives",
+    "metrics": "Regen metrics",
+    "totalRegenLabel": "Total regen",
+    "regenRatioBar": "Regen ratio",
+    "monthlyAvgBar": "Monthly avg",
+    "freeChargesBar": "Free charges",
+    "recentDrives": "Recent regen drives",
     "date": "Date",
     "distanceCol": "Distance",
-    "maxRegenCol": "Max Regen",
+    "maxRegenCol": "Max regen",
     "ratioCol": "Ratio",
     "noData": "No regen efficiency data available yet",
     "browseDrives": "Browse drives",
@@ -2677,7 +2724,7 @@
       "capacityBasis": "Estimated usable pack basis",
       "capacitySource": "Capacity source",
       "sampleTitle": "Detailed returned sample",
-      "sampleScope": "Measured canonical Drive rows returned by the capped detailed request.",
+      "sampleScope": "Measured canonical drive rows returned by the capped detailed request.",
       "sampleEmpty": "No detailed drives were returned for this window.",
       "sampleIneligible": "Returned drives lack an eligible regen and drive-energy pair.",
       "sampleRecovered": "Sample recovered",
@@ -2800,18 +2847,18 @@
     }
   },
   "rhythm": {
-    "title": "Driving Rhythm",
+    "title": "Driving rhythm",
     "subtitle": "When your car actually gets driven",
     "kpis": "Driving rhythm summary metrics",
     "totalDrives": "Drives",
-    "favoriteSlot": "Favorite Slot",
+    "favoriteSlot": "Favorite slot",
     "driveCount": "{{count}} drives",
-    "weekdayShare": "Weekday Share",
+    "weekdayShare": "Weekday share",
     "weekendCount": "{{count}} weekend drives",
     "predictability": "Predictability",
     "of100": "of 100",
-    "punchcard": "Weekly Punchcard",
-    "departures": "Typical Departure",
+    "punchcard": "Weekly punchcard",
+    "departures": "Typical departure",
     "noDrives": "No drives in this period yet.",
     "browseDrives": "Browse drives",
     "day": {
@@ -2933,17 +2980,17 @@
     "best": "Best",
     "avgLabel": "Avg",
     "worst": "Worst",
-    "title": "Route Efficiency",
+    "title": "Route efficiency",
     "subtitle": "Compare efficiency across your most-driven routes",
     "routes": "Routes",
-    "totalTrips": "Total Trips",
+    "totalTrips": "Total trips",
     "bestEfficiency": "Best",
     "avgEfficiency": "Avg",
-    "comparison": "Route Efficiency Comparison",
-    "metrics": "Route Metrics",
-    "bestLabel": "Best Efficiency",
-    "worstLabel": "Worst Efficiency",
-    "mostDrivenLabel": "Most Driven Route",
+    "comparison": "Route efficiency comparison",
+    "metrics": "Route metrics",
+    "bestLabel": "Best efficiency",
+    "worstLabel": "Worst efficiency",
+    "mostDrivenLabel": "Most driven route",
     "col": {
       "route": "Route"
     },
@@ -2964,7 +3011,7 @@
     "comparisonAria": "Per-route best, average, and worst efficiency comparison bar chart"
   },
   "seasonalEfficiency": {
-    "title": "Seasonal Efficiency",
+    "title": "Seasonal efficiency",
     "efficiencyValue": "{{energy}} / {{distance}}",
     "trendValue": "{{sign}}{{energy}} / {{distance}} / yr",
     "subtitle": "Vehicle-local calendar normalization with explicit evidence accounting and descriptive support",
@@ -2990,21 +3037,21 @@
       "capReached": "Latest returned 1,000-row window reached",
       "capNotReached": "Returned window below the 1,000-row cap"
     },
-    "analyzed": "Drives Modeled",
-    "actual": "Actual Intensity",
+    "analyzed": "Drives modeled",
+    "actual": "Actual intensity",
     "expectedValue": "expected: {{value}}",
     "rSquared": "Model R²",
     "fitHint": "annual + semiannual + trend",
-    "trend": "Deseasonalized Trend",
+    "trend": "Deseasonalized trend",
     "perYear": "{{days}} days of observed history",
     "noFit": "Annual seasonality needs at least nine months of valid drive history. Current coverage: {{days}} days.",
-    "monthly": "Monthly Seasonal Index",
+    "monthly": "Monthly seasonal index",
     "monthlyHint": "100 is the fitted year-round baseline; trend is held constant",
     "monthlyAria": "Fitted monthly seasonal efficiency index",
     "colMonth": "Month",
     "colIndex": "Seasonal index",
     "seasonalIndex": "Seasonal index",
-    "observed": "Expected vs Actual",
+    "observed": "Expected vs actual",
     "observedHint": "Actual, fitted, and seasonally adjusted intensity as an index",
     "observedAria": "Actual, expected, and deseasonalized efficiency indices over time",
     "colDate": "Date",
@@ -3014,7 +3061,7 @@
     "actualShort": "Actual",
     "expectedShort": "Expected",
     "adjustedShort": "Deseasonalized",
-    "limitsTitle": "Residual Band and Interpretation Limits",
+    "limitsTitle": "Residual band and interpretation limits",
     "noResiduals": "No fitted residual band is available yet.",
     "residualBand": "Central residual band: {{lower}} to {{upper}}",
     "limits": "The harmonic curve normalizes recurring calendar timing only. Route mix, weather, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.",
@@ -3191,32 +3238,32 @@
     }
   },
   "speedProfile": {
-    "title": "Speed Profile",
+    "title": "Speed profile",
     "subtitle": "Speed distribution and driving pattern analysis",
-    "avgSpeed": "Avg Speed",
-    "peakSpeed": "Peak Speed",
-    "optimalSpeed": "Optimal Speed",
-    "distribution": "Speed Distribution",
+    "avgSpeed": "Avg speed",
+    "peakSpeed": "Peak speed",
+    "optimalSpeed": "Optimal speed",
+    "distribution": "Speed distribution",
     "timeSpent": "time",
     "timeShare": "Time share",
     "drives": "Drives",
-    "effVsSpeed": "Efficiency vs Speed",
+    "effVsSpeed": "Efficiency vs speed",
     "lower": "Lower",
     "better": "better",
     "speed": "Speed",
     "efficient": "Efficient",
     "moderate": "Moderate",
     "highConsumption": "High consumption",
-    "insightTitle": "Efficiency Insight",
+    "insightTitle": "Efficiency insight",
     "insightText": "Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.",
     "noData": "No speed profile data available yet",
     "readings": "Readings",
     "samples": "Samples",
     "drivesAnalyzed": "{{count}} drives analysed",
     "summaryAria": "Speed summary metrics",
-    "envelope": "Speed Envelope",
+    "envelope": "Speed envelope",
     "envelopeHint": "Average, peak and most-efficient speed",
-    "buckets": "Speed Buckets",
+    "buckets": "Speed buckets",
     "distributionAria": "Speed-bucket time-share distribution bar chart",
     "effVsSpeedAria": "Per-drive efficiency versus speed scatter plot",
     "noDistribution": "No speed distribution available yet",
@@ -3228,12 +3275,12 @@
   "speedSweetSpot": {
     "colBand": "Speed band",
     "consumptionAria": "Qualified and unqualified energy consumption across speed bands",
-    "consumptionTitle": "Consumption vs Speed",
+    "consumptionTitle": "Consumption vs speed",
     "evidenceAria": "Individual drive evidence scatter plot across speed and energy consumption",
-    "evidenceTitle": "Drive Evidence"
+    "evidenceTitle": "Drive evidence"
   },
   "sweetSpot": {
-    "title": "Speed Sweet Spot",
+    "title": "Speed sweet spot",
     "subtitle": "Observed efficiency by whole-drive average speed — not instantaneous cruising speed or a recommended road speed",
     "loading": "Loading speed sweet spot evidence",
     "kpis": "Sweet spot summary metrics",
@@ -3378,7 +3425,7 @@
       "noDestination": "Set a destination for Helix to plan the route to."
     },
     "socChart": {
-      "title": "Battery Along Route",
+      "title": "Battery along route",
       "empty": "Plan a trip to see the SOC curve",
       "aria": "Planned route battery state-of-charge area chart",
       "col": {
@@ -3391,7 +3438,7 @@
       "stopLabel": "⚡ Stop {{n}}"
     },
     "legs": {
-      "title": "Route Breakdown",
+      "title": "Route breakdown",
       "empty": "Plan a trip to see the route breakdown",
       "distance": "Distance",
       "duration": "Duration",
@@ -3407,7 +3454,7 @@
       "chargeStop": "Charge stop",
       "chargeSummary": "{{from}}% → {{to}}% ({{min}} min)"
     },
-    "title": "Trip Planner",
+    "title": "Trip planner",
     "share": {
       "title": "Shared destination",
       "loading": "Importing the destination shared with TeslaSync…",
@@ -3424,36 +3471,36 @@
     },
     "subtitle": "Plan your route with range estimation and charging stops",
     "form": {
-      "title": "Plan Your Trip",
+      "title": "Plan your trip",
       "origin": "Enter starting location...",
       "from": "From",
       "destination": "Enter destination...",
       "to": "To",
       "vehicle": "Vehicle",
       "currentSOC": "Current SOC",
-      "minArrival": "Min Arrival SOC",
-      "drivingSpeed": "Driving Speed",
+      "minArrival": "Min arrival SOC",
+      "drivingSpeed": "Driving speed",
       "planning": "Planning...",
-      "planTrip": "Plan Trip",
-      "sendToCar": "Send to Car",
+      "planTrip": "Plan trip",
+      "sendToCar": "Send to car",
       "vehicleBattery": "Vehicle at {{level}}%",
       "error": "Failed to compute trip plan. Please try again."
     },
     "stats": {
       "distance": "Distance",
-      "totalTime": "Total Time",
+      "totalTime": "Total time",
       "drivingTime": "Driving",
       "chargingTime": "Charging",
       "energy": "Energy",
-      "cost": "Est. Cost"
+      "cost": "Est. cost"
     },
     "weather": {
-      "title": "Weather Impact",
+      "title": "Weather impact",
       "factor": "Efficiency factor: {{factor}}×"
     }
   },
   "whatIf": {
-    "title": "What-If Simulator",
+    "title": "What-if simulator",
     "subtitle": "Replay a real drive under different conditions",
     "blurb": "Take a real drive and change how it was driven. The engine decomposes the energy you actually used and recomputes it — no guesswork, anchored to your data.",
     "pickDrive": "Choose a drive",
@@ -3488,5 +3535,980 @@
     "compOther": "Other",
     "takeawaySave": "This would save {{wh}} — arriving with {{soc}} more battery.",
     "takeawayCost": "This would cost an extra {{wh}} — arriving with {{soc}} less battery."
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "activity": {
+    "action": {
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleDelete": "Alert rule deleted",
+      "alertRuleUpdate": "Alert rule updated",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyDelete": "API key revoked",
+      "apiKeyUpdate": "API key updated",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automation": "Automation change",
+      "automationAutoDisabled": "Automation auto-disabled",
+      "automationCreate": "Automation created",
+      "automationCreated": "Automation created",
+      "automationDelete": "Automation deleted",
+      "automationDeleted": "Automation deleted",
+      "automationDisabled": "Automation disabled",
+      "automationEnabled": "Automation enabled",
+      "automationExecuted": "Automation ran",
+      "automationExported": "Automations exported",
+      "automationFailed": "Automation failed",
+      "automationImported": "Automations imported",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationUpdate": "Automation updated",
+      "automationUpdated": "Automation updated",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandCharge": "Charging command",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandWake": "Wake vehicle"
+    },
+    "myActivity": {
+      "empty": "No recent activity in this window."
+    }
+  },
+  "annotation": {
+    "add": "Add annotation",
+    "addTitle": "Add annotation",
+    "cat": {
+      "custom": "Custom",
+      "issue": "Issue",
+      "maintenance": "Maintenance",
+      "milestone": "Milestone",
+      "trip": "Trip",
+      "upgrade": "Upgrade"
+    },
+    "category": "Category",
+    "date": "Date",
+    "descPlaceholder": "Optional description...",
+    "description": "Description",
+    "label": "Label",
+    "labelPlaceholder": "e.g., battery replaced",
+    "listTitle": "Annotations",
+    "removeNamed": "Remove annotation: {{label}}"
+  },
+  "bulk": {
+    "actions": {
+      "delete": "Delete"
+    },
+    "clear": "Clear selection",
+    "deleteConfirmDescription": "This cannot be undone.",
+    "deleteConfirmTitle": "Delete {{count}} {{noun}}?",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "noun": {
+      "drive_one": "drive",
+      "drive_other": "drives"
+    },
+    "ofTotal": "of {{total}}",
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "toolbarLabel": "Bulk actions for selected items"
+  },
+  "calculationDetails": {
+    "coverage": "Data coverage",
+    "exclusions": "Exclusions and limitations",
+    "method": "Method",
+    "noExclusions": "No additional exclusions were supplied.",
+    "period": "Analysis period",
+    "provenance": "Provenance",
+    "sources": "Data sources",
+    "title": "How this was calculated",
+    "unavailable": "Not provided",
+    "version": "Calculation version"
+  },
+  "chart": {
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
+    },
+    "col": {
+      "date": "Date",
+      "value": "Value"
+    },
+    "export": {
+      "copy": "Copy image to clipboard",
+      "copyFailed": "Failed to copy chart image",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copySuccess": "Chart image copied to clipboard",
+      "csv": "Download data as CSV",
+      "disabledTooltip": "Chart not ready to export",
+      "failed": "Could not prepare the {{format}} export.",
+      "menuLabel": "Export chart",
+      "png": "Save as PNG",
+      "preparing": "Preparing chart export…",
+      "svg": "Save as SVG"
+    },
+    "loading": "Loading chart…",
+    "noData": "No data available",
+    "noDataDescription": "No chartable observations are available for the current selection yet."
+  },
+  "combobox": {
+    "maxReached": "Maximum reached",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}"
+  },
+  "commands": {
+    "toast": {
+      "error": "Command failed: {{message}}",
+      "failed": "Command failed",
+      "success": "Command sent successfully"
+    }
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "label": "Quick date range",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    },
+    "range": {
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "compare": "Compare to previous period",
+      "end": "End date",
+      "newRange": "New range",
+      "pickRange": "Custom range",
+      "popoverLabel": "Date range picker",
+      "start": "Start date",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "trigger": "Date range"
+    }
+  },
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}"
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "driveScore": {
+    "aPlusCount": "A+ drives",
+    "achievements": {
+      "aPlusStreak": "A+ streak",
+      "efficiencyMaster": "Efficiency master",
+      "fiftyDrives": "Highway hero",
+      "firstDrive": "First drive",
+      "perfectScore": "Perfect score",
+      "smoothOperator": "Smooth operator",
+      "speedSaint": "Speed saint",
+      "tenDrives": "Road regular",
+      "title": "Achievements",
+      "unlocked": "Unlocked"
+    },
+    "avgConsumption": "Avg consumption",
+    "avgDistance": "Avg distance/drive",
+    "avgEffLabel": "Avg efficiency",
+    "avgMaxSpeed": "Avg max speed",
+    "avgScore": "Avg score",
+    "basedOn": "Based on {{count}} drives",
+    "bestDrive": "Best drive",
+    "bestMonth": "Best month",
+    "bestScore": "Best score",
+    "bestWeek": "Best week",
+    "breakdown": "Score breakdown",
+    "categoryBreakdown": "Category breakdown",
+    "col": {
+      "category": "Category",
+      "date": "Date",
+      "drives": "Drives",
+      "efficiency": "Efficiency",
+      "max": "Max",
+      "range": "Score range",
+      "score": "Score",
+      "smoothness": "Smoothness",
+      "speed": "Speed",
+      "value": "Value"
+    },
+    "colConsumption": "Consumption",
+    "colDate": "Date",
+    "colDistance": "Distance",
+    "colDuration": "Duration",
+    "colGrade": "Grade",
+    "colRoute": "Route",
+    "colScore": "Score",
+    "consumption": "Consumption",
+    "distance": "Distance",
+    "driveHistory": "Drive history",
+    "drives": "Drives",
+    "drivesInPeriod": "{{count}} drives in period",
+    "drivesScored": "drives scored",
+    "durationLabel": "Duration",
+    "efficiency": "Efficiency",
+    "gradeALine": "A",
+    "gradeLabel": "Grade: {{grade}}",
+    "highestSpeed": "Highest max speed",
+    "noDrives": "No drives available",
+    "noPeriodStats": "No weekly/monthly averages available yet",
+    "ofDrives": "of drives",
+    "overall": "Overall score",
+    "partial": {
+      "message_one": "1 drive is excluded because measured energy, average power, or maximum speed is unavailable.",
+      "message_other": "{{count}} drives are excluded because measured energy, average power, or maximum speed is unavailable.",
+      "title": "Score evidence is partial"
+    },
+    "periodStats": "Period statistics",
+    "powerRange": "Power range",
+    "ratedAPlus": "Rated A+/A",
+    "score": "Score",
+    "scoreDistribution": "Score distribution",
+    "scoreTrend": "Score trend",
+    "smoothness": "Smoothness",
+    "speedDiscipline": "Speed discipline",
+    "speedLabel": "Speed discipline",
+    "subtitle": "Your driving rating and breakdown",
+    "thisMonth": "This month",
+    "thisWeek": "This week",
+    "tipBestEff": "Outstanding energy efficiency — minimal energy wasted!",
+    "tipBestSmooth": "Exceptionally smooth driving with controlled acceleration.",
+    "tipBestSpeed": "Great speed discipline, staying in the optimal range.",
+    "tipWorstEff": "High energy consumption — possibly high speeds or cold weather.",
+    "tipWorstSmooth": "Aggressive acceleration and braking detected.",
+    "tipWorstSpeed": "Excessive highway speed reduced the overall score.",
+    "tipsSubtitle": "Based on your weakest category: {{category}}",
+    "tipsTitle": "Improvement tips",
+    "title": "Drive score",
+    "totalDistance": "Total distance",
+    "totalDrivesLabel": "Total drives",
+    "totalDuration": "Total duration",
+    "totalLabel": "Total",
+    "totalScore": "Total score",
+    "trendDown": "Declining",
+    "trendFlat": "Stable",
+    "trendUp": "Improving",
+    "unknownRoute": "Unknown",
+    "vsLastMonth": "vs {{val}} last month",
+    "vsLastWeek": "vs {{val}} last week",
+    "worstDrive": "Worst drive"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "entityContext": {
+    "alerts": "Alerts",
+    "charging": "Charging sessions",
+    "endLocation": "Destination",
+    "service": "Service history",
+    "startLocation": "Start location",
+    "telemetry": "Telemetry evidence",
+    "title": "Related context",
+    "vehicle": "Vehicle"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "filter": {
+    "pending": "Filtering…"
+  },
+  "freshness": {
+    "noData": "No recent data",
+    "offline": "Offline",
+    "seconds": "{{s}}s ago"
+  },
+  "fsm": {
+    "typeLabel": {
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "driveSession": "Drive",
+      "notification": "Notify",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—",
+      "vehicle": "Vehicle"
+    }
+  },
+  "helix": {
+    "ariaLabel": "Helix",
+    "badge": "Helix",
+    "evidence": {
+      "gathering": "Gathering",
+      "grounded": "Grounded in",
+      "limited": "Limited evidence",
+      "reading": "Reading",
+      "source": "TeslaSync source",
+      "sources": "TeslaSync sources",
+      "successful": "successful",
+      "title": "Evidence trail",
+      "tokens": "tokens",
+      "unavailable": "Unavailable",
+      "used": "Used"
+    },
+    "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
+  },
+  "help": {
+    "coldStart": {
+      "iconLabel": "More info about cold start math"
+    },
+    "driveCompare": {
+      "body": "Consumption, regen share, and drive score can decide the verdict when both drives have enough data. Trip totals remain neutral context.",
+      "iconLabel": "More info about drive compare"
+    },
+    "driveScore": {
+      "body": "0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving.",
+      "iconLabel": "More info about drive score"
+    },
+    "drivingRhythm": {
+      "body": "Each cell counts drives starting in that weekday-hour slot (your local time). Darker cells are busier. The predictability score rises the more your departures concentrate into a few slots.",
+      "iconLabel": "More info about the punchcard"
+    },
+    "efficiencyTarget": {
+      "body": "Weekly consumption is total measured energy divided by total eligible distance. The active local week is descriptive until Sunday ends.",
+      "iconLabel": "More info about the target math"
+    },
+    "explorerWorkspace": {
+      "iconLabel": "More information about destination clustering"
+    },
+    "replay": {
+      "battery": "State-of-charge percentage at this point. Drops indicate energy use; rises indicate regen or DC-fast-charging during a drive.",
+      "power": "Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.",
+      "range": "Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load."
+    },
+    "tripLogbook": {
+      "body": "Set the rate your employer or tax authority reimburses per distance driven in each category. Rates are stored per kilometre and converted to your display unit; amounts are rate × drive distance.",
+      "iconLabel": "More info about reimbursement rates"
+    }
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "unlocked": "✓ Unlocked"
+  },
+  "listExport": {
+    "button": "Export",
+    "csv": "Download as CSV",
+    "disabledTooltip": "No data to export",
+    "exporting": "Preparing {{format}} export…",
+    "failed": "Could not prepare the {{format}} export.",
+    "json": "Download as JSON",
+    "menuLabel": "Export list",
+    "scopeLegend": "Export scope",
+    "selectedWithCount": "Selected ({{count}})",
+    "visible": "Visible",
+    "visibleWithCount": "Visible ({{count}})"
+  },
+  "live": {
+    "connected": "Live",
+    "disconnected": "Offline",
+    "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
+    "unknown": "Unknown"
+  },
+  "maps": {
+    "animatedMarker": {
+      "label": "Vehicle position"
+    },
+    "layerSwitcher": {
+      "dark": "Dark",
+      "label": "Map style",
+      "satellite": "Satellite",
+      "streets": "Streets",
+      "terrain": "Terrain"
+    },
+    "routePlayback": {
+      "empty": "No GPS points to replay for this route.",
+      "mapLabel": "Route playback map"
+    }
+  },
+  "notifications": {
+    "alertStudio": {
+      "editor": {
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownBadge": "Unknown",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}"
+      }
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "attention": "Attention",
+    "detailTitle": "{{title}} details",
+    "drives": {
+      "anomalyDescription": "Review measured high-energy drives against route, speed, temperature, and battery context.",
+      "anomalyTitle_one": "1 energy-intensity exception",
+      "anomalyTitle_other": "{{count}} energy-intensity exceptions",
+      "countDetail": "Completed drives in the selected analysis window.",
+      "description": "Measured energy, route context, and exceptions use one vehicle-aware period with direct access to supporting evidence.",
+      "distanceDetail": "Total distance traveled using the current display unit.",
+      "efficiencyDetail": "{{measured}} of {{total}} drives have measured energy and sufficient distance.",
+      "exceptionDetail": "Measured drives in the high energy-intensity grade.",
+      "eyebrow": "Driving posture",
+      "historySource": "Drive history",
+      "movementDetail": "Distance-weighted energy intensity compared with the prior period.",
+      "narrative": {
+        "causeLimitation": "Drive records do not isolate weather, traffic, payload, HVAC use, or road grade as a cause.",
+        "comparisonBasis": "The immediately preceding period provides a measured comparison baseline.",
+        "comparisonLimitedBasis": "A comparable preceding-period energy baseline is unavailable.",
+        "driveMethod": "Direct completed-drive distance, energy, and route record.",
+        "driveSummary": "{{date}}: {{distance}} at {{efficiency}}; {{route}}.",
+        "efficiencyMissing": "efficiency unavailable",
+        "energyBasis": "{{measured}} of {{total}} drives include measured energy and sufficient distance.",
+        "energyLimitation": "{{count}} drive records are excluded from efficiency because measured energy or sufficient distance is missing.",
+        "evidenceLimit": "Supporting evidence is limited to five exception or recent-drive records.",
+        "exceptionMethod": "Measured energy intensity matched the deterministic exception grade.",
+        "historyMethod": "Aggregates completed-drive distance and measured energy in canonical units, excluding incomplete efficiency records.",
+        "impact": "Measured energy intensity and route coverage reveal operational exceptions without guessing at their cause.",
+        "monitorResponse": "No immediate response is indicated; continue monitoring energy intensity as more drives complete.",
+        "routeLimitation": "{{count}} drive records lack complete origin and destination evidence.",
+        "routeMissing": "route context incomplete",
+        "whatChanged": "{{drives}} drives covered {{distance}} at {{efficiency}} average energy intensity; {{exceptions}} records were flagged."
+      },
+      "noDataDescription": "Choose a wider window or complete a drive to build an operating baseline.",
+      "noDataTitle": "No drives in this analysis window",
+      "partialEnergyDescription": "Activity remains visible, but efficiency requires measured energy and at least 1 km of distance.",
+      "partialEnergyTitle": "{{count}} drives excluded from efficiency",
+      "provenance": "Measured energy and distance stay canonical until display; missing evidence is excluded rather than estimated.",
+      "routeCoverageDetail": "{{covered}} of {{total}} drives include both origin and destination evidence.",
+      "title": "Activity, efficiency, and exceptions in context"
+    },
+    "metrics": "Operational metrics",
+    "narrative": {
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "confidence": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "not_scored": "Not scored",
+        "title": "Confidence",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "evidence": "Supporting evidence",
+      "likelyCause": "Likely cause",
+      "limitations": "Limitations",
+      "noEvidence": "No supporting records were supplied.",
+      "noLimitations": "No additional limitations were supplied.",
+      "recommendedResponse": "Recommended response",
+      "record": "Record",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available."
+    },
+    "noAttention": "No current attention items.",
+    "reviewAll": "Review all",
+    "reviewDetails": "Review details",
+    "status": {
+      "awaitingData": "Awaiting data",
+      "onTrack": "On track",
+      "review": "Review recommended"
+    }
+  },
+  "physicsLedger": {
+    "drive": {
+      "accessory": "Accessory / HVAC",
+      "aero": "Aero",
+      "drivetrainLoss": "Drivetrain loss (model)",
+      "grade": "Grade",
+      "inertial": "Inertial",
+      "measured": "Measured pack energy",
+      "predicted": "Predicted (known terms)",
+      "reconcile": "reconcile",
+      "rolling": "Rolling",
+      "session": "Session",
+      "title": "Drive energy ledger",
+      "unexplained": "Unexplained residual"
+    },
+    "missing": "missing",
+    "truncated": "Sample cap hit — oldest prefix solved"
+  },
+  "productPreferences": {
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "administrator": {
+        "description": "Prioritize system administration and operational controls.",
+        "label": "Administrator"
+      },
+      "analyst": {
+        "description": "Prioritize trends, reports, and historical analysis.",
+        "label": "Analyst"
+      },
+      "fleetOperator": {
+        "description": "Prioritize active fleet operations and current vehicle state.",
+        "label": "Fleet operator"
+      },
+      "owner": {
+        "description": "Keep the most useful everyday vehicle information close at hand.",
+        "label": "Owner"
+      }
+    }
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "replay": {
+    "backToDrive": "Back to drive",
+    "currentStats": "Current position stats",
+    "drive": "Drive",
+    "elevation": {
+      "aria": "Elevation profile chart — no data available yet",
+      "label": "Elevation",
+      "noData": "No elevation data available",
+      "title": "Elevation profile"
+    },
+    "map": {
+      "noPositions": "No position data available for this drive"
+    },
+    "noGps": "No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.",
+    "stat": {
+      "battery": "Battery",
+      "elevation": "Elevation",
+      "power": "Power",
+      "range": "Range",
+      "speed": "Speed",
+      "temp": "Temperature"
+    },
+    "summary": {
+      "avgSpeed": "Avg speed",
+      "battery": "Battery",
+      "distance": "Distance",
+      "duration": "Duration",
+      "efficiency": "Efficiency",
+      "elevGain": "Elevation gain",
+      "elevLoss": "Elevation loss",
+      "maxSpeed": "Max speed",
+      "title": "Drive summary"
+    },
+    "timeline": {
+      "aria": "Trip replay speed and power timeline area chart",
+      "noData": "No telemetry data available",
+      "power": "Power",
+      "speed": "Speed",
+      "subtitle": "Click to seek replay position",
+      "title": "Speed & power timeline"
+    },
+    "title": "Trip replay"
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "savedViews": {
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "defaultBadge": "Default",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "deleteTitle": "Delete saved view",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "error": "Unable to load saved views",
+    "loading": "Loading saved views…",
+    "makeDefault": "Apply automatically when I open this page",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "pin": "Pin",
+    "renamePrompt": "Rename view",
+    "saveCurrent": "Save current view…",
+    "setDefault": "Set as default",
+    "title": "Saved views",
+    "unpin": "Unpin",
+    "unsetDefault": "Clear default"
+  },
+  "search": {
+    "history": {
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history",
+      "title": "Recent searches"
+    }
+  },
+  "share": {
+    "copy": "Copy link",
+    "copyLink": "Copy link",
+    "createAnother": "Create another link",
+    "created": "Share link created!",
+    "description": "Generate a public link to share this drive report. Anyone with the link can view the map, stats, and charts — no login required.",
+    "existing": "Active share links",
+    "expired": "Expired",
+    "expiresOn": "Expires {{date}}",
+    "expiry": "Link expires after",
+    "expiry30d": "30 days",
+    "expiry7d": "7 days",
+    "expiry90d": "90 days",
+    "expiryNever": "Never",
+    "generate": "Generate link",
+    "includeSpeed": "Include speed data",
+    "includeTelemetry": "Include detailed telemetry (battery, power)",
+    "noExpiry": "No expiry",
+    "revoke": "Revoke",
+    "title": "Share drive",
+    "titlePlaceholder": "Optional title (e.g., \"SF to LA road trip\")",
+    "toast": {
+      "created": "Share link created",
+      "revoked": "Share link revoked"
+    },
+    "untitled": "Untitled share",
+    "views": "views"
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "sourceLayer": {
+    "age": "age",
+    "l1": {
+      "desc": "Read from the in-process SignalStore (hot path, freshest)."
+    },
+    "l2": {
+      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
+    },
+    "log": {
+      "desc": "Replayed from signal_log (durable history).",
+      "label": "Log"
+    },
+    "stale": {
+      "desc": "Redis-backed value older than the 2-minute freshness window.",
+      "label": "Stale"
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  },
+  "table": {
+    "filter": {
+      "mobileValues": "Column value filters are active. Open the desktop grid to edit them, or clear them here.",
+      "noValue": "(Not recorded)",
+      "numberCondition": "Number condition",
+      "otherConditions": "Other conditions",
+      "textCondition": "Text condition"
+    }
+  },
+  "tagInput": {
+    "added": "{{count}} tags added",
+    "addedOne": "Tag added",
+    "duplicate": "{{tag}} is already added",
+    "maxReached": "Tag limit reached",
+    "maxReachedAnnounce": "Tag limit reached",
+    "maxReachedHint": "Maximum {{count}} tags",
+    "placeholder": "Add a tag…",
+    "removeTag": "Remove {{tag}}",
+    "removed": "Removed {{tag}}",
+    "tagsList": "Tags: {{tags}}",
+    "tagsNone": "No tags yet"
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "created": {
+        "success": "Annotation added"
+      },
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
+      }
+    },
+    "channels": {
+      "delete": {
+        "success": "Channel deleted"
+      },
+      "test": {
+        "success": "Test notification sent"
+      },
+      "toggle": {
+        "success": "Channel toggled"
+      }
+    },
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "delete": {
+        "success": "Quiet hours window removed"
+      }
+    },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created"
+      },
+      "delete": {
+        "success": "View deleted"
+      },
+      "update": {
+        "success": "View updated"
+      }
+    },
+    "settings": {
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        },
+        "poll": {
+          "success": "Gas prices updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

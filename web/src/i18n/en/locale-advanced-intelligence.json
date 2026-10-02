@@ -42,7 +42,7 @@
       },
       "samples": "{{count}} samples",
       "subtitle": "Compare explicit baseline and treatment windows with confounder coverage disclosure.",
-      "title": "Causal Experimentation",
+      "title": "Causal experimentation",
       "toast": "Experiment estimate created",
       "treatment": "Treatment",
       "unsupported": {
@@ -107,7 +107,7 @@
       "task": {
         "efficiency": "Efficiency"
       },
-      "title": "Federated Learning Studio",
+      "title": "Federated learning studio",
       "toast": "Privacy-preserving local round completed",
       "unsupported": {
         "global": "A centralized fleet model or cross-subject access",
@@ -134,7 +134,7 @@
       },
       "subtitle": "Compare a target vehicle with matched peer windows before deciding rollout readiness.",
       "targetDelta": "Target regression",
-      "title": "Firmware Canary",
+      "title": "Firmware canary",
       "unsupported": {
         "causality": "Proof that firmware caused a measured change",
         "deployment": "Firmware deployment or rollback commands"
@@ -161,7 +161,7 @@
       "started": "Started",
       "status": "Status",
       "subtitle": "Reconcile vehicle, meter, energy-loss, and cost records without filling unsupported fields.",
-      "title": "Charging Forensics",
+      "title": "Charging forensics",
       "unsupported": {
         "cost": "Expected cost without supported tariff and currency data",
         "meter": "Meter energy when no meter source is recorded"
@@ -186,7 +186,7 @@
       },
       "recency": "Last seen",
       "subtitle": "Privacy-preserving hazard clusters shown only at coarse-cell resolution.",
-      "title": "Road Hazard Mesh",
+      "title": "Road hazard mesh",
       "unsupported": {
         "coordinates": "Exact coordinates or route reconstruction",
         "navigation": "Automatic rerouting or vehicle commands"
@@ -221,7 +221,7 @@
         "empty": "Submit a journey scenario to calculate readiness.",
         "title": "Readiness and arrival range"
       },
-      "title": "Journey Assurance",
+      "title": "Journey assurance",
       "toast": "Journey assessment completed",
       "unsupported": {
         "commands": "Navigation, charging, or climate commands",
@@ -274,7 +274,7 @@
         "title": "Outage risk timeline"
       },
       "timelinePoints": "Risk checkpoints",
-      "title": "Emergency Resilience",
+      "title": "Emergency resilience",
       "toast": "Resilience plan created",
       "unsupported": {
         "dispatch": "Automatic load shedding or energy dispatch",
@@ -296,7 +296,7 @@
         "title": "Explainable findings"
       },
       "subtitle": "Explainable command, identity, and telemetry-integrity signals without personal attribution.",
-      "title": "Behavioral Sentinel",
+      "title": "Behavioral sentinel",
       "unsupported": {
         "identity": "Attribution to a specific person or identity",
         "intent": "Proof of malicious intent or compromise"
@@ -346,7 +346,7 @@
       "stable": "Stable",
       "status": "Projection status",
       "subtitle": "Test queue, utilization, peak demand, and panel constraints before infrastructure changes.",
-      "title": "Charging Site Twin",
+      "title": "Charging site twin",
       "toast": "Site scenario completed",
       "unstable": "Unstable",
       "unsupported": {
@@ -377,7 +377,7 @@
         "title": "Competing risks"
       },
       "subtitle": "Review probabilistic service horizons, competing risks, and intervention sensitivity.",
-      "title": "Component Survival",
+      "title": "Component survival",
       "unsupported": {
         "failureDate": "A guaranteed failure date",
         "repair": "Automatic diagnosis or repair authorization"
@@ -412,7 +412,7 @@
       "pareto": "Pareto-efficient",
       "risk": "Risk score",
       "subtitle": "Compare constrained cost, risk, and convenience alternatives on a Pareto-like frontier.",
-      "title": "TCO Optimizer",
+      "title": "TCO optimizer",
       "toast": "TCO alternatives generated",
       "unsupported": {
         "cost": "Cost projections without complete charging and maintenance evidence",
@@ -455,7 +455,7 @@
         "title": "Sensitivity drivers"
       },
       "subtitle": "Compare calibrated, vehicle-specific counterfactuals with explicit uncertainty.",
-      "title": "Twin Lab",
+      "title": "Twin lab",
       "toast": "Twin scenarios completed",
       "uncertainty": {
         "aria": "Comparison of modeled range uncertainty across twin scenarios",
@@ -480,7 +480,7 @@
     }
   },
   "stormguard": {
-    "title": "Storm Guardian",
+    "title": "Storm guardian",
     "warning": "Storm warning",
     "watch": "Storm watch",
     "clear": "Clear",
@@ -492,9 +492,565 @@
     "lat": "Home latitude",
     "lng": "Home longitude",
     "target": "Pre-storm charge target",
-    "save": "Save Guard",
+    "save": "Save guard",
     "saveError": "Save failed",
     "recent": "Recent activity",
     "acted": "acted"
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "activity": {
+    "action": {
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleDelete": "Alert rule deleted",
+      "alertRuleUpdate": "Alert rule updated",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyDelete": "API key revoked",
+      "apiKeyUpdate": "API key updated",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automation": "Automation change",
+      "automationAutoDisabled": "Automation auto-disabled",
+      "automationCreate": "Automation created",
+      "automationCreated": "Automation created",
+      "automationDelete": "Automation deleted",
+      "automationDeleted": "Automation deleted",
+      "automationDisabled": "Automation disabled",
+      "automationEnabled": "Automation enabled",
+      "automationExecuted": "Automation ran",
+      "automationExported": "Automations exported",
+      "automationFailed": "Automation failed",
+      "automationImported": "Automations imported",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationUpdate": "Automation updated",
+      "automationUpdated": "Automation updated",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandCharge": "Charging command",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandWake": "Wake vehicle"
+    },
+    "myActivity": {
+      "empty": "No recent activity in this window."
+    }
+  },
+  "annotation": {
+    "add": "Add annotation",
+    "addTitle": "Add annotation",
+    "cat": {
+      "custom": "Custom",
+      "issue": "Issue",
+      "maintenance": "Maintenance",
+      "milestone": "Milestone",
+      "trip": "Trip",
+      "upgrade": "Upgrade"
+    },
+    "category": "Category",
+    "date": "Date",
+    "descPlaceholder": "Optional description...",
+    "description": "Description",
+    "label": "Label",
+    "labelPlaceholder": "e.g., battery replaced",
+    "listTitle": "Annotations",
+    "removeNamed": "Remove annotation: {{label}}"
+  },
+  "bulk": {
+    "clear": "Clear selection",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "ofTotal": "of {{total}}",
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "toolbarLabel": "Bulk actions for selected items"
+  },
+  "calculationDetails": {
+    "coverage": "Data coverage",
+    "exclusions": "Exclusions and limitations",
+    "method": "Method",
+    "noExclusions": "No additional exclusions were supplied.",
+    "period": "Analysis period",
+    "provenance": "Provenance",
+    "sources": "Data sources",
+    "title": "How this was calculated",
+    "unavailable": "Not provided",
+    "version": "Calculation version"
+  },
+  "chart": {
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
+    },
+    "col": {
+      "date": "Date",
+      "value": "Value"
+    },
+    "export": {
+      "copy": "Copy image to clipboard",
+      "copyFailed": "Failed to copy chart image",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copySuccess": "Chart image copied to clipboard",
+      "csv": "Download data as CSV",
+      "disabledTooltip": "Chart not ready to export",
+      "failed": "Could not prepare the {{format}} export.",
+      "menuLabel": "Export chart",
+      "png": "Save as PNG",
+      "preparing": "Preparing chart export…",
+      "svg": "Save as SVG"
+    },
+    "loading": "Loading chart…",
+    "noData": "No data available",
+    "noDataDescription": "No chartable observations are available for the current selection yet."
+  },
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}"
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "entityContext": {
+    "title": "Related context"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "freshness": {
+    "noData": "No recent data",
+    "offline": "Offline",
+    "seconds": "{{s}}s ago"
+  },
+  "fsm": {
+    "typeLabel": {
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "driveSession": "Drive",
+      "notification": "Notify",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—",
+      "vehicle": "Vehicle"
+    }
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "unlocked": "✓ Unlocked"
+  },
+  "live": {
+    "connected": "Live",
+    "disconnected": "Offline",
+    "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
+    "unknown": "Unknown"
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "attention": "Attention",
+    "detailTitle": "{{title}} details",
+    "metrics": "Operational metrics",
+    "narrative": {
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "confidence": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "not_scored": "Not scored",
+        "title": "Confidence",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "evidence": "Supporting evidence",
+      "likelyCause": "Likely cause",
+      "limitations": "Limitations",
+      "noEvidence": "No supporting records were supplied.",
+      "noLimitations": "No additional limitations were supplied.",
+      "recommendedResponse": "Recommended response",
+      "record": "Record",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available."
+    },
+    "noAttention": "No current attention items.",
+    "reviewAll": "Review all",
+    "reviewDetails": "Review details"
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "replay": {
+    "elevation": {
+      "aria": "Elevation profile chart — no data available yet",
+      "label": "Elevation",
+      "noData": "No elevation data available",
+      "title": "Elevation profile"
+    }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "savedViews": {
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "defaultBadge": "Default",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "deleteTitle": "Delete saved view",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "error": "Unable to load saved views",
+    "loading": "Loading saved views…",
+    "makeDefault": "Apply automatically when I open this page",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "pin": "Pin",
+    "renamePrompt": "Rename view",
+    "saveCurrent": "Save current view…",
+    "setDefault": "Set as default",
+    "title": "Saved views",
+    "unpin": "Unpin",
+    "unsetDefault": "Clear default"
+  },
+  "search": {
+    "history": {
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history",
+      "title": "Recent searches"
+    }
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "sourceLayer": {
+    "age": "age",
+    "l1": {
+      "desc": "Read from the in-process SignalStore (hot path, freshest)."
+    },
+    "l2": {
+      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
+    },
+    "log": {
+      "desc": "Replayed from signal_log (durable history).",
+      "label": "Log"
+    },
+    "stale": {
+      "desc": "Redis-backed value older than the 2-minute freshness window.",
+      "label": "Stale"
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "created": {
+        "success": "Annotation added"
+      },
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
+      }
+    },
+    "channels": {
+      "delete": {
+        "success": "Channel deleted"
+      },
+      "test": {
+        "success": "Test notification sent"
+      },
+      "toggle": {
+        "success": "Channel toggled"
+      }
+    },
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "delete": {
+        "success": "Quiet hours window removed"
+      }
+    },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created"
+      },
+      "delete": {
+        "success": "View deleted"
+      },
+      "update": {
+        "success": "View updated"
+      }
+    },
+    "settings": {
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        },
+        "poll": {
+          "success": "Gas prices updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "stormguard": {
+      "save": {
+        "success": "Storm guard saved"
+      }
+    },
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

@@ -185,7 +185,7 @@
   "Query": "Query",
   "Range": "Range",
   "Read": "Read",
-  "Read-Write": "Read-Write",
+  "Read-Write": "Read-write",
   "Ready": "Ready",
   "Records": "Records",
   "Refresh": "Refresh",
@@ -245,7 +245,7 @@
   "Ventilation": "Ventilation",
   "Version": "Version",
   "View": "View",
-  "Vin": "Vin",
+  "Vin": "VIN",
   "Visits": "Visits",
   "Voltage": "Voltage",
   "Volume": "Volume",
@@ -273,7 +273,7 @@
   "online": "online",
   "physicsCockpit": {
     "title": "Tesla physics cockpit",
-    "subtitle": "Live Gear, charge state, port latch, BMS, and trip meters.",
+    "subtitle": "Live gear, charge state, port latch, BMS, and trip meters.",
     "certificate": "Session certificate",
     "gear": "Gear",
     "charge": "Charge state",
@@ -290,8 +290,8 @@
     "valet": "Valet",
     "service": "Service",
     "park": "Park truth",
-    "confirmedPark": "Confirmed Park",
-    "notPark": "Not confirmed Park",
+    "confirmedPark": "Confirmed park",
+    "notPark": "Not confirmed park",
     "neutral": "Neutral is rolling",
     "sentry": "Sentry",
     "sentryIgnored": "Sentry reported, not counted",
@@ -332,7 +332,7 @@
   "selectSession": "Select charging session",
   "sessions": "sessions",
   "settingsBackup": {
-    "title": "Backup & Restore",
+    "title": "Backup & restore",
     "subtitle": "Export your TeslaSync configuration as a JSON file you can stash in a backup folder or git repo, and import it on a fresh install.",
     "export": {
       "title": "Export settings",
@@ -414,9 +414,9 @@
   "streaming": "streaming",
   "subtitle": "Real-time fleet intelligence and control",
   "temperature": {
-    "title": "Temperature Impact"
+    "title": "Temperature impact"
   },
-  "title": "Command Center",
+  "title": "Command center",
   "total": "total",
   "units": {
     "km": "km",
@@ -432,7 +432,7 @@
   },
   "unread": "unread",
   "vampire": {
-    "title": "Vampire Drain"
+    "title": "Vampire drain"
   },
   "visits": "visits",
   "workspaceContext": {

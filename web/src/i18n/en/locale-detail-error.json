@@ -29,7 +29,7 @@
       "message": "We're pausing requests briefly. Data will refresh automatically."
     },
     "chunkLoad": {
-      "body": "A new version was deployed. Click Reload to load the latest assets."
+      "body": "A new version was deployed. Click reload to load the latest assets."
     }
   }
 }

@@ -40,7 +40,7 @@
         "subtitle": "Sealing a period snapshots the distance, energy and charge behind a digest, so a later dispute can be settled against the exact figures you filed.",
         "title": "Sealed filings"
       },
-      "navTitle": "Jurisdictional Compliance",
+      "navTitle": "Jurisdictional compliance",
       "notice": {
         "body": "Rates are the ones you enter; boundaries are simple bounding boxes. A drive that starts in one jurisdiction and ends in another is split evenly and flagged at reduced confidence. Use this to prepare and cross-check a filing — never as the filing itself.",
         "title": "A worksheet, not a tax return"
@@ -97,7 +97,7 @@
       "summary": {
         "title": "Period liability"
       },
-      "title": "Jurisdictional Compliance & Road-Usage Charge",
+      "title": "Jurisdictional compliance & road-usage charge",
       "unsupported": {
         "polygon": "True polygon boundaries — jurisdictions are approximated by bounding boxes",
         "submit": "Submitting to a tax authority, and any legal interpretation of what is owed"
@@ -174,7 +174,7 @@
         "empty": "Record a part below and its lifecycle projection appears here.",
         "title": "Part-by-part projection"
       },
-      "navTitle": "Consumables Lifecycle",
+      "navTitle": "Consumables lifecycle",
       "notice": {
         "body": "The wear multiplier is derived from your own drives, clamped to a defensible range. It is a projection, not a measurement of physical wear — always inspect before relying on it for a safety-critical part.",
         "title": "Duty cycle beats the manual"
@@ -201,7 +201,7 @@
       "summary": {
         "title": "Fleet wear posture"
       },
-      "title": "Consumables & Wear-Parts Lifecycle",
+      "title": "Consumables & wear-parts lifecycle",
       "unsupported": {
         "physical": "Measuring physical wear — no tread-depth or pad-thickness sensor exists on the vehicle",
         "recall": "Manufacturer service bulletins and recalls affecting a part"
@@ -267,7 +267,7 @@
         "labelled": "confirmed",
         "margin": "Separation margin"
       },
-      "navTitle": "Driver Fingerprinting",
+      "navTitle": "Driver fingerprinting",
       "notice": {
         "body": "Clusters are derived only from drive dynamics already stored on this server. No cameras, no seat sensors, no accounts. A cluster stays anonymous until you choose to name it.",
         "title": "Behavioural, never biometric"
@@ -295,7 +295,7 @@
       "summary": {
         "title": "Separation quality"
       },
-      "title": "Driver Fingerprinting & Attribution",
+      "title": "Driver fingerprinting & attribution",
       "unnamed": "Cluster {{id}}",
       "unsupported": {
         "identity": "Proving who was physically in the seat — this infers behaviour, not identity",
@@ -378,7 +378,7 @@
         "title": "Dataset inventory",
         "ungoverned": "no policy"
       },
-      "navTitle": "Data Retention Governance",
+      "navTitle": "Data retention governance",
       "notice": {
         "body": "Every run on this page is a read-only dry run. TeslaSync computes what a policy would remove and records the plan in the ledger; it never issues a delete. Enforcement remains a deliberate, separate operator action outside this screen.",
         "title": "Plan only — nothing is ever deleted here"
@@ -425,7 +425,7 @@
       "summary": {
         "title": "Storage posture"
       },
-      "title": "Data Retention & Lifecycle Governance",
+      "title": "Data retention & lifecycle governance",
       "unsupported": {
         "delete": "Actually deleting rows — this screen is deliberately read-only",
         "index": "Index and TOAST overhead attribution below table granularity"
@@ -533,7 +533,7 @@
         "subtitle": "Exposure-normalised risk over the selected window.",
         "title": "Underwriting position"
       },
-      "title": "Insurance Telematics Studio",
+      "title": "Insurance telematics studio",
       "trend": {
         "chart": "Rolling risk score",
         "chartAria": "Area chart of rolling insurance risk score over the analysis window",
@@ -656,7 +656,7 @@
         "variance": "Net variance"
       },
       "subtitle": "Match every billed line against the session your car actually recorded, attribute the variance to a cause, and assemble a dispute packet you can send to the provider.",
-      "title": "Charging Invoice Reconciliation",
+      "title": "Charging invoice reconciliation",
       "uninvoiced": {
         "empty": "Every measured session in this period appears on the statement.",
         "energy": "Measured energy",
@@ -752,7 +752,7 @@
       "summary": {
         "title": "Portfolio economics"
       },
-      "title": "Subscription & Feature ROI",
+      "title": "Subscription & feature ROI",
       "unsupported": {
         "cancel": "Cancelling a subscription with the provider — this measures, it does not transact",
         "intangible": "Convenience and enjoyment, which have real value but no measurable unit here"
@@ -849,7 +849,7 @@
         "empty": "Run a replay to see how much your plan choice is worth.",
         "title": "Arbitrage summary"
       },
-      "title": "Utility Tariff Arbitrage Lab",
+      "title": "Utility tariff arbitrage lab",
       "delete": {
         "title": "Delete this tariff?",
         "message": "“{{name}}” and its rate bands will be removed permanently. This cannot be undone."
@@ -900,7 +900,7 @@
         "unitHint": "Derived from the target so stored predictions stay SI-canonical.",
         "value": "Predicted value"
       },
-      "navTitle": "Prediction Accuracy Lab",
+      "navTitle": "Prediction accuracy lab",
       "notice": {
         "body": "A prediction only counts once its outcome is recorded. Skill is measured against a naive persistence baseline, so a model that merely repeats the last value scores zero — not high.",
         "title": "Scored against reality, not against itself"
@@ -939,7 +939,7 @@
       "summary": {
         "title": "Portfolio trust"
       },
-      "title": "Prediction Accuracy & Model Trust Lab",
+      "title": "Prediction accuracy & Model trust lab",
       "unsupported": {
         "cause": "Explaining why a model drifted; it reports that it did",
         "retrain": "Retraining or auto-correcting a model — this lab measures, it does not tune"
@@ -1020,7 +1020,7 @@
         "empty": "No warranties recorded yet.",
         "title": "Recorded coverages"
       },
-      "navTitle": "Warranty Command",
+      "navTitle": "Warranty command",
       "notice": {
         "body": "TeslaSync does not know your contract. Enter the term as written on your paperwork; every projection below is then computed from your own driving and battery data.",
         "title": "Terms come from your documents"
@@ -1057,7 +1057,7 @@
       "summary": {
         "title": "Coverage posture"
       },
-      "title": "Warranty Coverage & Claim Readiness",
+      "title": "Warranty coverage & claim readiness",
       "unsupported": {
         "legal": "Interpreting contract exclusions — readiness is factual, not legal advice",
         "submit": "Filing the claim with the provider on your behalf"
@@ -1090,5 +1090,368 @@
         "body": "Valet, teen, thief — or just an unusual trip. Label the drive if you recognise it; the cluster learns from every label."
       }
     }
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "annotation": {
+    "add": "Add annotation",
+    "addTitle": "Add annotation",
+    "cat": {
+      "custom": "Custom",
+      "issue": "Issue",
+      "maintenance": "Maintenance",
+      "milestone": "Milestone",
+      "trip": "Trip",
+      "upgrade": "Upgrade"
+    },
+    "category": "Category",
+    "date": "Date",
+    "descPlaceholder": "Optional description...",
+    "description": "Description",
+    "label": "Label",
+    "labelPlaceholder": "e.g., battery replaced",
+    "listTitle": "Annotations",
+    "removeNamed": "Remove annotation: {{label}}"
+  },
+  "chart": {
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
+    },
+    "col": {
+      "date": "Date",
+      "value": "Value"
+    },
+    "export": {
+      "copy": "Copy image to clipboard",
+      "copyFailed": "Failed to copy chart image",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copySuccess": "Chart image copied to clipboard",
+      "csv": "Download data as CSV",
+      "disabledTooltip": "Chart not ready to export",
+      "failed": "Could not prepare the {{format}} export.",
+      "menuLabel": "Export chart",
+      "png": "Save as PNG",
+      "preparing": "Preparing chart export…",
+      "svg": "Save as SVG"
+    },
+    "loading": "Loading chart…",
+    "noData": "No data available",
+    "noDataDescription": "No chartable observations are available for the current selection yet."
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "unlocked": "✓ Unlocked"
+  },
+  "live": {
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "replay": {
+    "elevation": {
+      "aria": "Elevation profile chart — no data available yet",
+      "label": "Elevation",
+      "noData": "No elevation data available",
+      "title": "Elevation profile"
+    }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "search": {
+    "history": {
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history",
+      "title": "Recent searches"
+    }
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "created": {
+        "success": "Annotation added"
+      },
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
+      }
+    },
+    "channels": {
+      "delete": {
+        "success": "Channel deleted"
+      },
+      "test": {
+        "success": "Test notification sent"
+      },
+      "toggle": {
+        "success": "Channel toggled"
+      }
+    },
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "delete": {
+        "success": "Quiet hours window removed"
+      }
+    },
+    "settings": {
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        },
+        "poll": {
+          "success": "Gas prices updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

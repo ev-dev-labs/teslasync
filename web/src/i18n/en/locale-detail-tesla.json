@@ -1,18 +1,18 @@
 {
   "tesla": {
-    "disconnectTitle": "Disconnect Tesla Account?",
+    "disconnectTitle": "Disconnect Tesla account?",
     "disconnectConfirm": "Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.",
     "disconnect": "Disconnect",
-    "title": "Tesla Account",
+    "title": "Tesla account",
     "subtitle": "Connect your Tesla account to sync vehicles and data",
     "connected": "Connected",
     "disconnected": "Disconnected",
     "tokenExpires": "Token expires",
     "expiringSoon": "Expires in {{days}}d",
     "notConnected": "Not connected",
-    "connect": "Connect Tesla Account",
-    "refreshToken": "Refresh Token",
-    "syncVehicles": "Sync Vehicles",
+    "connect": "Connect Tesla account",
+    "refreshToken": "Refresh token",
+    "syncVehicles": "Sync vehicles",
     "reauthorize": "Re-authorize",
     "synced": "Synced {{count}} vehicle(s).",
     "reauth": {

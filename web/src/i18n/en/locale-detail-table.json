@@ -1,5 +1,27 @@
 {
   "table": {
+    "filter": {
+      "loadedRowCount": "{{filtered}} matching / {{loaded}} loaded rows",
+      "unavailableLoadedValues": "Some saved selections are not present in the loaded rows. Clear the filter to reset them.",
+      "column": "Filter {{column}}",
+      "clear": "Clear",
+      "done": "Done",
+      "active": "Active",
+      "searchValues": "Search values",
+      "selectShown": "Select all shown values",
+      "values": "Available values",
+      "noValues": "No matching values",
+      "noValue": "(Not recorded)",
+      "resetSearch": "Clear search",
+      "valueCount": "{{selected}} of {{total}} loaded values selected",
+      "unavailableValues": "Some saved selections are not present in the loaded rows. Clear the filter to reset them.",
+      "invalidValues": "This saved value filter is invalid. Clear it to reset.",
+      "conditions": "Conditions",
+      "otherConditions": "Other conditions",
+      "textCondition": "Text condition",
+      "numberCondition": "Number condition",
+      "mobileValues": "Column value filters are active. Open the desktop grid to edit them, or clear them here."
+    },
     "selection": {
       "selectAll": "Select all rows",
       "deselectAll": "Deselect all rows",

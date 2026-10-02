@@ -5,13 +5,13 @@
     "value": "Value",
     "type": "Type",
     "freshness": "Freshness",
-    "title": "Live Monitor",
+    "title": "Live monitor",
     "subtitle": "Real-time scrolling view of incoming vehicle signals",
     "connected": "Connected",
     "disconnected": "Disconnected",
     "sigPerSec": "Signals / sec",
-    "bufferSize": "Buffer Size",
-    "uniqueSignals": "Unique Signals",
+    "bufferSize": "Buffer size",
+    "uniqueSignals": "Unique signals",
     "filtered": "Filtered",
     "filterPlaceholder": "Filter by signal name...",
     "filterLabel": "Filter signals",
@@ -26,20 +26,20 @@
     "numeric": "Numeric",
     "categorical": "Categorical",
     "analytics": "Live analytics",
-    "throughputTitle": "Signal Throughput",
+    "throughputTitle": "Signal throughput",
     "throughputNow": "Now",
     "throughputPeak": "Peak",
     "throughputAria": "Live signals per second over the recent window",
     "throughputWaiting": "Waiting for live throughput…",
     "throughputOffline": "Stream disconnected — no live throughput",
-    "typeBreakdown": "Value Types",
+    "typeBreakdown": "Value types",
     "typeNumber": "Numeric",
     "typeBoolean": "Boolean",
     "typeString": "String",
     "noBuffer": "No signals buffered yet",
-    "topSignals": "Most Active Signals",
+    "topSignals": "Most active signals",
     "latest": "Latest",
-    "tailTitle": "Live Signal Tail",
+    "tailTitle": "Live signal tail",
     "disconnectedBanner": "Live stream disconnected — attempting to reconnect. Figures below reflect the last buffered signals."
   },
   "mqtt": {
@@ -48,55 +48,55 @@
     "signals": "Signals",
     "batches": "Batches",
     "sigPerSec": "Sig/sec",
-    "lastReceived": "Last Received",
+    "lastReceived": "Last received",
     "status": "Status",
     "stale": "Stale",
     "live": "Live",
-    "title": "MQTT Inspector",
+    "title": "MQTT inspector",
     "subtitle": "MQTT connection status and streaming telemetry",
     "refreshInterval": "Refreshes every 5s",
     "connected": "Connected",
     "disconnected": "Disconnected",
     "fetchError": "Unable to load MQTT status",
-    "streamingVehicles": "Streaming Vehicles",
-    "totalSignals": "Total Signals",
-    "totalBatches": "Total Batches",
+    "streamingVehicles": "Streaming vehicles",
+    "totalSignals": "Total signals",
+    "totalBatches": "Total batches",
     "signalsPerSec": "Signals / sec",
     "broker": "Broker",
     "uptime": "Uptime",
-    "topicPatterns": "Topic Patterns",
+    "topicPatterns": "Topic patterns",
     "noTopics": "No MQTT topics detected",
     "noStatus": "MQTT broker status not available",
-    "signalThroughput": "Signal Throughput",
+    "signalThroughput": "Signal throughput",
     "collectingData": "Collecting throughput data…",
-    "vehicleBreakdown": "Vehicle Breakdown",
+    "vehicleBreakdown": "Vehicle breakdown",
     "vehicles": "vehicles",
     "noVehicles": "No vehicles currently streaming",
     "throughputAria": "MQTT signal throughput over time",
     "time": "Time"
   },
   "signalChangePoints": {
-    "title": "Signal Change Points",
-    "subtitle": "Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (Signal Trend) and drive-week regime clustering",
-    "pick": "Choose a Signal",
+    "title": "Signal change points",
+    "subtitle": "Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (Signal trend) and drive-week regime clustering",
+    "pick": "Choose a signal",
     "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
     "signal": "Signal",
     "choose": "Choose a signal",
     "kpis": "Change-point metrics",
-    "count": "Change Points",
+    "count": "Change points",
     "minSegment": "min segment {{n}} samples",
-    "biggest": "Biggest Shift",
+    "biggest": "Biggest shift",
     "biggestHint": "{{dir}} · confidence {{conf}}",
     "up": "up",
     "down": "down",
     "noShift": "no shift detected",
     "segments": "Segments",
     "segmentsHint": "stable stretches between shifts",
-    "samples": "Samples Analyzed",
+    "samples": "Samples analyzed",
     "noiseScale": "noise scale {{n}}",
     "notEnough": "Not enough history yet for this signal.",
     "pickOne": "Choose a signal above to detect its change points.",
-    "timeline": "Regime Timeline",
+    "timeline": "Regime timeline",
     "timelineHint": "Raw values against each segment’s mean; dashed markers are detected change points",
     "timelineAria": "Line chart of raw signal values overlaid with segment mean levels and detected abrupt change points",
     "col": {
@@ -120,16 +120,16 @@
     "emptyRangeDescription": "Expand the range or select another signal to inspect available history.",
     "histAria": "Historical signal chart",
     "liveAria": "Live signal stream chart",
-    "liveTitle": "Live Signal Stream",
-    "histTitle": "Signal Chart",
+    "liveTitle": "Live signal stream",
+    "histTitle": "Signal chart",
     "loading": "Loading chart…",
     "pointsLoaded": "points loaded"
   },
   "signalDeadband": {
-    "title": "Signal Deadband",
+    "title": "Signal deadband",
     "subtitle": "Estimate a robust numeric noise floor and retain material telemetry changes with fewer redundant emissions",
     "selection": {
-      "title": "Signal Under Test",
+      "title": "Signal under test",
       "empty": "No telemetry signals have been recorded for this vehicle yet.",
       "label": "Numeric signal",
       "placeholder": "Choose a signal",
@@ -137,17 +137,17 @@
     },
     "kpis": {
       "label": "Deadband metrics",
-      "noise": "MAD Noise Band",
+      "noise": "MAD noise band",
       "siUnits": "canonical SI signal units",
-      "redundant": "Redundant Emissions",
+      "redundant": "Redundant emissions",
       "unchanged": "{{value}} exactly unchanged",
-      "threshold": "Recommended Deadband",
+      "threshold": "Recommended deadband",
       "suppression": "{{value}} noise suppressed",
-      "reduction": "Projected Reduction",
+      "reduction": "Projected reduction",
       "fidelity": "{{value}} reconstruction fidelity"
     },
     "curve": {
-      "title": "Cumulative Retained Updates",
+      "title": "Cumulative retained updates",
       "subtitle": "Each candidate is simulated against the last retained value, not filtered as isolated adjacent deltas",
       "aria": "Line chart of retained telemetry updates across candidate deadband thresholds"
     },
@@ -160,7 +160,7 @@
       "fidelity": "Fidelity (%)"
     },
     "recommendation": {
-      "title": "Retention Audit",
+      "title": "Retention audit",
       "noNumeric": "This signal needs at least three numeric history points.",
       "empty": "Choose a signal to audit candidate deadbands."
     },
@@ -176,23 +176,23 @@
     "rangeA": "Range A",
     "rangeB": "Range B",
     "diff": "Diff",
-    "title": "Signal Diff",
+    "title": "Signal diff",
     "min": "Min",
     "max": "Max",
     "average": "Average",
-    "dataPoints": "Data Points",
+    "dataPoints": "Data points",
     "subtitle": "Compare signal values between two snapshots in time",
     "signal": "Signal",
     "selectSignal": "Select a signal…",
     "todayVsYesterday": "Today vs Yesterday",
-    "thisWeekVsLast": "This Week vs Last Week",
-    "rangeAPoints": "Range A Points",
-    "rangeBPoints": "Range B Points",
-    "avgDiff": "Avg Diff",
-    "maxDiff": "Max Diff",
-    "noDataA": "No data in Range A",
-    "noDataB": "No data in Range B",
-    "comparisonSummary": "Comparison Summary",
+    "thisWeekVsLast": "This week vs last week",
+    "rangeAPoints": "Range A points",
+    "rangeBPoints": "Range B points",
+    "avgDiff": "Avg diff",
+    "maxDiff": "Max diff",
+    "noDataA": "No data in range A",
+    "noDataB": "No data in range B",
+    "comparisonSummary": "Comparison summary",
     "selectPrompt": "Select a signal to compare",
     "selectHint": "Choose a signal and configure two time ranges to compare",
     "vehicle": "Vehicle",
@@ -266,29 +266,29 @@
       "l1": "L1 · In-process",
       "l2": "L2 · Redis",
       "log": "LOG · History",
-      "stale": "STALE",
+      "stale": "Stale",
       "unknown": "Unknown"
     }
   },
   "signalEntropy": {
-    "title": "Signal Entropy",
+    "title": "Signal entropy",
     "subtitle": "Quantile-bins a numeric signal and measures how much genuine information it carries, in bits — distinct from gap detection or cross-signal correlation",
-    "pick": "Choose a Signal",
+    "pick": "Choose a signal",
     "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
     "signal": "Signal",
     "choose": "Choose a signal",
     "kpis": "Entropy metrics",
-    "entropy": "Shannon Entropy",
+    "entropy": "Shannon entropy",
     "normalized": "{{n}} normalized",
-    "effectiveStates": "Effective States",
+    "effectiveStates": "Effective states",
     "effectiveBins": "{{n}} of {{r}} bins populated",
-    "stuck": "Dominant-State Fraction",
+    "stuck": "Dominant-state fraction",
     "stuckHint": "occupancy of the single most common bin",
-    "changeRate": "Change Rate",
+    "changeRate": "Change rate",
     "changeRateHint": "{{n}} samples analyzed",
     "notEnough": "Not enough samples yet for a rolling entropy window on this signal.",
     "pickOne": "Choose a signal above to compute its entropy.",
-    "rolling": "Rolling Information Density",
+    "rolling": "Rolling information density",
     "rollingHint": "Entropy recomputed over a sliding window using the same global bin edges, so spikes reflect genuinely eventful stretches",
     "rollingAria": "Line chart of rolling Shannon entropy in bits over time for the selected signal",
     "col": {
@@ -297,7 +297,7 @@
       "bin": "Bin range",
       "count": "Samples"
     },
-    "distribution": "Quantile Bin Distribution",
+    "distribution": "Quantile bin distribution",
     "distributionHint": "Sample counts per equal-frequency bin — a lopsided distribution here explains a low entropy score",
     "distributionAria": "Bar chart of sample counts across quantile bins for the selected signal",
     "reading": "Reading the Result",
@@ -311,14 +311,14 @@
   },
   "signalExplorer": {
     "start": {
-      "title": "Pick signals and click Explore",
-      "message": "Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.",
-      "description": "Historical queries use the selected range; Live begins streaming new samples without changing it."
+      "title": "Pick signals and click explore",
+      "message": "Choose up to 5 signals, set a date range, then hit explore — or toggle live to stream in real time.",
+      "description": "Historical queries use the selected range; live begins streaming new samples without changing it."
     },
-    "title": "Signal Explorer",
+    "title": "Signal explorer",
     "subtitle": "Visualise signal history with chart and stats — or stream live",
-    "timeRange": "Time Range",
-    "perPage": "Per Page",
+    "timeRange": "Time range",
+    "perPage": "Per page",
     "explore": "Explore",
     "signals": "Signals",
     "searchSignals": "Search signals…"
@@ -326,22 +326,22 @@
   "signalGap": {
     "status": "Status",
     "signal": "Signal",
-    "lastValue": "Last Value",
-    "lastUpdated": "Last Updated",
-    "timeSince": "Time Since",
-    "title": "Signal Gaps",
+    "lastValue": "Last value",
+    "lastUpdated": "Last updated",
+    "timeSince": "Time since",
+    "title": "Signal gaps",
     "subtitle": "Identify signals that have stopped arriving or have gaps",
     "refreshInterval": "Refreshes every 5s",
-    "totalSignals": "Total Signals",
+    "totalSignals": "Total signals",
     "active": "Active (<30s)",
     "stale": "Stale (>5min)",
-    "neverReceived": "Never Received",
+    "neverReceived": "Never received",
     "filterPlaceholder": "Filter by signal name...",
     "filterLabel": "Filter signals",
     "all": "All",
-    "staleOnly": "Stale Only",
-    "activeOnly": "Active Only",
-    "mostStale": "Most Stale",
+    "staleOnly": "Stale only",
+    "activeOnly": "Active only",
+    "mostStale": "Most stale",
     "az": "A-Z",
     "category": "Category",
     "noMatch": "No signals match current filters",
@@ -352,7 +352,7 @@
     "freshness": "Freshness",
     "freshnessTitle": "Freshness",
     "fresh": "fresh",
-    "distributionTitle": "Signal Health Distribution",
+    "distributionTitle": "Signal health distribution",
     "healthSection": "Signal health",
     "selectVehiclePrompt": "Select a vehicle to inspect its signal freshness.",
     "manageVehicles": "Manage vehicles",
@@ -361,7 +361,7 @@
     "receivingSummary": "{{receiving}} of {{total}} signals arriving",
     "topStaleTitle": "Top stale signals",
     "allFresh": "All signals are arriving on time.",
-    "catalogTitle": "Signal Catalog",
+    "catalogTitle": "Signal catalog",
     "refresh": "Refresh signals",
     "neverReported": "{{never}} signals have never reported.",
     "chartAria": "Signal staleness bucket counts by category",
@@ -371,7 +371,7 @@
     "emptyTitle": "No signal samples",
     "emptyMessage": "No signal data matches the selected signals and time range.",
     "emptyDescription": "Expand the time range or choose another signal, then run the query again.",
-    "title": "Signal Data",
+    "title": "Signal data",
     "signal": "Signal",
     "value": "Value",
     "type": "Type",
@@ -382,10 +382,10 @@
     "records": "records"
   },
   "signalMutualInformation": {
-    "title": "Signal Mutual Information",
+    "title": "Signal mutual information",
     "heatmap": {
       "pair": "A{{a}} / B{{b}}",
-      "title": "Contribution Heatmap",
+      "title": "Contribution heatmap",
       "noOverlap": "At least 20 aligned numeric samples are required.",
       "empty": "Choose two signals to build the joint-state heatmap.",
       "cellAria": "Signal A bin {{a}}, signal B bin {{b}}, {{count}} samples, {{bits}} bits",
@@ -394,7 +394,7 @@
     },
     "subtitle": "Detect nonlinear dependence between quantile states after robust cadence alignment — not linear signal correlation",
     "selection": {
-      "title": "Signals to Compare",
+      "title": "Signals to compare",
       "empty": "No telemetry signals have been recorded for this vehicle yet.",
       "signalA": "Signal A",
       "placeholder": "Choose a signal",
@@ -403,19 +403,19 @@
     },
     "kpis": {
       "label": "Mutual information metrics",
-      "samples": "Aligned Samples",
+      "samples": "Aligned samples",
       "cadence": "{{seconds}} s robust cadence",
-      "mi": "Mutual Information",
+      "mi": "Mutual information",
       "bits": "bits of shared state information",
       "normalized": "Normalized MI",
       "range": "0% independent · 100% determined",
-      "signal": "Permutation Test",
+      "signal": "Permutation test",
       "detected": "Detected",
       "null": "Null-like",
       "threshold": "95% null threshold {{value}}"
     },
     "contributions": {
-      "title": "Top Joint-State Contributions",
+      "title": "Top joint-state contributions",
       "subtitle": "Positive cells occur more often together than their marginal frequencies predict",
       "aria": "Bar chart of quantile-pair contributions to mutual information"
     },
@@ -433,7 +433,7 @@
     "max": "Max",
     "avg": "Avg",
     "count": "Count",
-    "title": "Stats Summary"
+    "title": "Stats summary"
   },
   "signalTransportAgreement": {
     "title": "HTTP / MQTT Agreement",
@@ -465,20 +465,20 @@
     "noFields": "No eligible per-signal evidence is available."
   },
   "signalTrend": {
-    "title": "Signal Trend",
+    "title": "Signal trend",
     "subtitle": "Robust slope and significance for slow, monotonic drift in a numeric signal — distinct from abrupt change points, anomaly scoring, or cross-signal correlation",
-    "pick": "Choose a Signal",
+    "pick": "Choose a signal",
     "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
     "signal": "Signal",
     "choose": "Choose a signal",
     "kpis": "Trend metrics",
-    "slope": "Drift Rate",
+    "slope": "Drift rate",
     "slopePerHour": "{{v}}/hour",
     "significance": "Significance",
     "real": "Real",
     "noise": "Not significant",
     "tau": "tau {{tau}} · p {{p}}",
-    "spread": "Residual Spread",
+    "spread": "Residual spread",
     "spreadHint": "robust MAD around the fitted line",
     "samples": "Samples",
     "span": "{{h}}h span · {{ev}}",
@@ -486,7 +486,7 @@
     "sufficient": "Sufficient evidence",
     "notEnough": "Not enough history yet for this signal.",
     "pickOne": "Choose a signal above to compute its trend.",
-    "chart": "Robust Baseline & Forecast Band",
+    "chart": "Robust baseline & forecast band",
     "chartHint": "The forecast is never projected further ahead than the signal has actually been observed, and only appears when the trend is significant",
     "chartAria": "Composed chart of actual signal values, the fitted robust baseline, and an evidence-limited forecast band",
     "col": {
@@ -502,5 +502,695 @@
     "noiseText": "The observed ordering does not clear the significance bar, so any apparent slope here is best treated as noise rather than a real trend.",
     "limitedText": "Too few samples or too short a time span to trust significance or a forecast — the slope alone is shown, withheld from projection.",
     "sufficientText": "The forecast band is capped at the observed time span itself, never projected further into the future than the signal has actually been watched."
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "activity": {
+    "action": {
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleDelete": "Alert rule deleted",
+      "alertRuleUpdate": "Alert rule updated",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyDelete": "API key revoked",
+      "apiKeyUpdate": "API key updated",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automation": "Automation change",
+      "automationAutoDisabled": "Automation auto-disabled",
+      "automationCreate": "Automation created",
+      "automationCreated": "Automation created",
+      "automationDelete": "Automation deleted",
+      "automationDeleted": "Automation deleted",
+      "automationDisabled": "Automation disabled",
+      "automationEnabled": "Automation enabled",
+      "automationExecuted": "Automation ran",
+      "automationExported": "Automations exported",
+      "automationFailed": "Automation failed",
+      "automationImported": "Automations imported",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationUpdate": "Automation updated",
+      "automationUpdated": "Automation updated",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandCharge": "Charging command",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandWake": "Wake vehicle"
+    },
+    "myActivity": {
+      "empty": "No recent activity in this window."
+    }
+  },
+  "annotation": {
+    "add": "Add annotation",
+    "addTitle": "Add annotation",
+    "cat": {
+      "custom": "Custom",
+      "issue": "Issue",
+      "maintenance": "Maintenance",
+      "milestone": "Milestone",
+      "trip": "Trip",
+      "upgrade": "Upgrade"
+    },
+    "category": "Category",
+    "date": "Date",
+    "descPlaceholder": "Optional description...",
+    "description": "Description",
+    "label": "Label",
+    "labelPlaceholder": "e.g., battery replaced",
+    "listTitle": "Annotations",
+    "removeNamed": "Remove annotation: {{label}}"
+  },
+  "bulk": {
+    "clear": "Clear selection",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "ofTotal": "of {{total}}",
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "toolbarLabel": "Bulk actions for selected items"
+  },
+  "calculationDetails": {
+    "coverage": "Data coverage",
+    "exclusions": "Exclusions and limitations",
+    "method": "Method",
+    "noExclusions": "No additional exclusions were supplied.",
+    "period": "Analysis period",
+    "provenance": "Provenance",
+    "sources": "Data sources",
+    "title": "How this was calculated",
+    "unavailable": "Not provided",
+    "version": "Calculation version"
+  },
+  "chart": {
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
+    },
+    "col": {
+      "date": "Date",
+      "value": "Value"
+    },
+    "export": {
+      "copy": "Copy image to clipboard",
+      "copyFailed": "Failed to copy chart image",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copySuccess": "Chart image copied to clipboard",
+      "csv": "Download data as CSV",
+      "disabledTooltip": "Chart not ready to export",
+      "failed": "Could not prepare the {{format}} export.",
+      "menuLabel": "Export chart",
+      "png": "Save as PNG",
+      "preparing": "Preparing chart export…",
+      "svg": "Save as SVG"
+    },
+    "loading": "Loading chart…",
+    "noData": "No data available",
+    "noDataDescription": "No chartable observations are available for the current selection yet."
+  },
+  "combobox": {
+    "maxReached": "Maximum reached",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}"
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "label": "Quick date range",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    },
+    "range": {
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "compare": "Compare to previous period",
+      "end": "End date",
+      "newRange": "New range",
+      "pickRange": "Custom range",
+      "popoverLabel": "Date range picker",
+      "start": "Start date",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "trigger": "Date range"
+    }
+  },
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}"
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "entityContext": {
+    "title": "Related context"
+  },
+  "error": {
+    "loadFailed": "Failed to load data"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "freshness": {
+    "noData": "No recent data",
+    "offline": "Offline",
+    "seconds": "{{s}}s ago"
+  },
+  "fsm": {
+    "typeLabel": {
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "driveSession": "Drive",
+      "notification": "Notify",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—",
+      "vehicle": "Vehicle"
+    }
+  },
+  "helix": {
+    "ariaLabel": "Helix",
+    "badge": "Helix",
+    "evidence": {
+      "gathering": "Gathering",
+      "grounded": "Grounded in",
+      "limited": "Limited evidence",
+      "reading": "Reading",
+      "source": "TeslaSync source",
+      "sources": "TeslaSync sources",
+      "successful": "successful",
+      "title": "Evidence trail",
+      "tokens": "tokens",
+      "unavailable": "Unavailable",
+      "used": "Used"
+    },
+    "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
+  },
+  "help": {
+    "signal": {
+      "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ.",
+      "diff": "Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise.",
+      "layers": "TeslaSync exposes three live-state layers: L1 — in-process signal store on the API pod that ingested the telemetry (lowest latency, scope-limited to that pod). L2 — Redis-backed shared cache of latest values, visible to every pod, used for cross-pod live reads and SSE fanout. log — TimescaleDB signal_log history, authoritative for analytics, charts, and point-in-time reconstruction.",
+      "live": "Live mode streams real-time signal values via Server-Sent Events (SSE). The chart maintains a rolling 5-minute window throttled to 2 Hz updates.",
+      "snapshot": "A snapshot is a point-in-time view of every signal value at a single timestamp. The diff falls back to signal_log within the last 30 days when the live layer doesn't have it.",
+      "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), Log (TimescaleDB history), or Stale (older than 2 minutes)."
+    }
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "unlocked": "✓ Unlocked"
+  },
+  "listExport": {
+    "button": "Export",
+    "csv": "Download as CSV",
+    "disabledTooltip": "No data to export",
+    "exporting": "Preparing {{format}} export…",
+    "failed": "Could not prepare the {{format}} export.",
+    "json": "Download as JSON",
+    "menuLabel": "Export list",
+    "scopeLegend": "Export scope",
+    "selectedWithCount": "Selected ({{count}})",
+    "visible": "Visible",
+    "visibleWithCount": "Visible ({{count}})"
+  },
+  "live": {
+    "connected": "Live",
+    "disconnected": "Offline",
+    "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
+    "unknown": "Unknown"
+  },
+  "mqttSseInspector": {
+    "aiExplainer": {
+      "badge": "Helix",
+      "button": "Explain streams",
+      "description": "Get a 3-6 sentence factual explanation of the current MQTT broker, SSE hub, and background-job state. The explainer reads only the deterministic broker-status envelope (broker connectivity, per-vehicle stream stats, SSE client counts, job freshness) — broker hostnames, ports, SSE client identifiers, and VINs are redacted before the message reaches the provider. The explanation is informational; the broker-status snapshot above remains the canonical raw view.",
+      "emptyHint": "A valid time window is required.",
+      "title": "Helix stream explainer"
+    }
+  },
+  "notifications": {
+    "alertStudio": {
+      "editor": {
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownBadge": "Unknown",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}"
+      }
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "attention": "Attention",
+    "detailTitle": "{{title}} details",
+    "metrics": "Operational metrics",
+    "narrative": {
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "confidence": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "not_scored": "Not scored",
+        "title": "Confidence",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "evidence": "Supporting evidence",
+      "likelyCause": "Likely cause",
+      "limitations": "Limitations",
+      "noEvidence": "No supporting records were supplied.",
+      "noLimitations": "No additional limitations were supplied.",
+      "recommendedResponse": "Recommended response",
+      "record": "Record",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available."
+    },
+    "noAttention": "No current attention items.",
+    "reviewAll": "Review all",
+    "reviewDetails": "Review details"
+  },
+  "productPreferences": {
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "administrator": {
+        "description": "Prioritize system administration and operational controls.",
+        "label": "Administrator"
+      },
+      "analyst": {
+        "description": "Prioritize trends, reports, and historical analysis.",
+        "label": "Analyst"
+      },
+      "fleetOperator": {
+        "description": "Prioritize active fleet operations and current vehicle state.",
+        "label": "Fleet operator"
+      },
+      "owner": {
+        "description": "Keep the most useful everyday vehicle information close at hand.",
+        "label": "Owner"
+      }
+    }
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "replay": {
+    "elevation": {
+      "aria": "Elevation profile chart — no data available yet",
+      "label": "Elevation",
+      "noData": "No elevation data available",
+      "title": "Elevation profile"
+    }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "savedViews": {
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "defaultBadge": "Default",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "deleteTitle": "Delete saved view",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "error": "Unable to load saved views",
+    "loading": "Loading saved views…",
+    "makeDefault": "Apply automatically when I open this page",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "pin": "Pin",
+    "renamePrompt": "Rename view",
+    "saveCurrent": "Save current view…",
+    "setDefault": "Set as default",
+    "title": "Saved views",
+    "unpin": "Unpin",
+    "unsetDefault": "Clear default"
+  },
+  "search": {
+    "history": {
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history",
+      "title": "Recent searches"
+    }
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "sourceLayer": {
+    "age": "age",
+    "l1": {
+      "desc": "Read from the in-process SignalStore (hot path, freshest)."
+    },
+    "l2": {
+      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
+    },
+    "log": {
+      "desc": "Replayed from signal_log (durable history).",
+      "label": "Log"
+    },
+    "stale": {
+      "desc": "Redis-backed value older than the 2-minute freshness window.",
+      "label": "Stale"
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  },
+  "tagInput": {
+    "added": "{{count}} tags added",
+    "addedOne": "Tag added",
+    "duplicate": "{{tag}} is already added",
+    "maxReached": "Tag limit reached",
+    "maxReachedAnnounce": "Tag limit reached",
+    "maxReachedHint": "Maximum {{count}} tags",
+    "placeholder": "Add a tag…",
+    "removeTag": "Remove {{tag}}",
+    "removed": "Removed {{tag}}",
+    "tagsList": "Tags: {{tags}}",
+    "tagsNone": "No tags yet"
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "created": {
+        "success": "Annotation added"
+      },
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
+      }
+    },
+    "channels": {
+      "delete": {
+        "success": "Channel deleted"
+      },
+      "test": {
+        "success": "Test notification sent"
+      },
+      "toggle": {
+        "success": "Channel toggled"
+      }
+    },
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "delete": {
+        "success": "Quiet hours window removed"
+      }
+    },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created"
+      },
+      "delete": {
+        "success": "View deleted"
+      },
+      "update": {
+        "success": "View updated"
+      }
+    },
+    "settings": {
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        },
+        "poll": {
+          "success": "Gas prices updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

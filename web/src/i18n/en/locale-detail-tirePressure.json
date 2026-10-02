@@ -1,6 +1,6 @@
 {
   "tirePressure": {
-    "title": "Tire Pressure",
+    "title": "Tire pressure",
     "subtitle": "Monitor tire pressure readings and history",
     "aiTrendReasoning": {
       "title": "Narrate the 30-day tire-pressure trend",

@@ -60,7 +60,7 @@
     },
     "driveScore": {
       "body": "0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving.",
-      "iconLabel": "More info about Drive Score"
+      "iconLabel": "More info about drive score"
     },
     "tripLogbook": {
       "body": "Set the rate your employer or tax authority reimburses per distance driven in each category. Rates are stored per kilometre and converted to your display unit; amounts are rate × drive distance.",
@@ -98,7 +98,7 @@
       "stale": "A signal is marked stale when its last-seen value in Redis is older than 2 minutes — treat with caution; the vehicle may be offline or the pipeline may be backed up.",
       "snapshot": "A snapshot is a point-in-time view of every signal value at a single timestamp. The diff falls back to signal_log within the last 30 days when the live layer doesn't have it.",
       "diff": "Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise.",
-      "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), LOG (TimescaleDB history), or STALE (older than 2 minutes).",
+      "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), Log (TimescaleDB history), or Stale (older than 2 minutes).",
       "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ."
     },
     "fsm": {
@@ -111,7 +111,7 @@
       "range": "Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load."
     },
     "battery": {
-      "soh": "State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.",
+      "soh": "State of health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.",
       "capacity": "Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.",
       "degradationRate": "Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).",
       "totalCycles": "Cumulative full-pack equivalent cycles. One cycle = one full discharge + one full charge worth of energy (partial cycles add up over time).",

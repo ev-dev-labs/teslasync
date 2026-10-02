@@ -11,13 +11,13 @@
       "cancel": "Cancel",
       "inputLabel": "Date and time"
     },
-    "title": "Vehicle Time Machine",
+    "title": "Vehicle time machine",
     "subtitle": "Scrub the DVR of your car's mind — reconstruct every signal at any past instant",
     "noVehicles": "No vehicles found. Add a vehicle to travel through its signal history.",
     "timeline": "Timeline",
     "scrubberLabel": "Reconstruction instant",
     "overview": "Overview",
-    "signalState": "Reconstructed Signal State",
+    "signalState": "Reconstructed signal state",
     "now": "Now",
     "presetHour": "−1h",
     "presetDay": "−1d",
@@ -38,12 +38,12 @@
     "ageHours": "{{value}}h",
     "ageDays": "{{value}}d",
     "category": {
-      "battery": "Battery & Charge",
+      "battery": "Battery & charge",
       "climate": "Climate",
-      "motion": "Motion & Drive",
+      "motion": "Motion & drive",
       "tires": "Tires",
-      "security": "Security & Access",
-      "other": "Other Signals"
+      "security": "Security & access",
+      "other": "Other signals"
     }
   }
 }

@@ -1,17 +1,17 @@
 {
   "batteryCare": {
-    "title": "Battery Care",
+    "title": "Battery care",
     "subtitle": "How gently your charging habits treat the pack",
     "kpis": "Battery care summary metrics",
-    "score": "Care Score",
+    "score": "Care score",
     "of100": "of 100",
     "fullCharges": "Charges to {{pct}}%+",
     "ofSessions": "of {{count}} sessions",
-    "deepDischarges": "Deep Discharges",
+    "deepDischarges": "Deep discharges",
     "below10": "arrivals below 10%",
-    "dcShare": "DC Fast Energy",
+    "dcShare": "DC fast energy",
     "ofEnergy": "of charged energy",
-    "habits": "Habit Breakdown",
+    "habits": "Habit breakdown",
     "barBand": "Sessions finishing inside 20–80%",
     "barFull": "Sessions charged to {{pct}}%+",
     "barDeep": "Drives arriving below 10%",
@@ -106,7 +106,7 @@
       "drives": "Eligible drives",
       "month": "Month",
       "scoreValue": "{{score}} / 100",
-      "region": "Monthly Battery Care trend",
+      "region": "Monthly battery care trend",
       "title": "Monthly care trend",
       "description": "Monthly scores require at least 3 eligible sessions, 3 eligible drives, and 2 classified-energy sessions",
       "aria": "Monthly descriptive care index with eligible charging-session and drive sample counts",
@@ -402,7 +402,7 @@
       "empty": "The endpoint returned no certificate for this vehicle.",
       "emptyPassive": "The endpoint returned no certificate for this vehicle.",
       "errorPassive": "Certificate evidence is unavailable; retry from the certificate header.",
-      "loadingAria": "Loading Battery Passport evidence",
+      "loadingAria": "Loading battery passport evidence",
       "noVehicle": "Select a vehicle above to request its current certificate.",
       "noVehiclePassive": "Select a vehicle to make its certificate evidence available.",
       "noVehicleTitle": "No vehicle selected",
@@ -427,7 +427,7 @@
       "sumHint": "cold + nominal + hot",
       "title": "Thermal exposure profile"
     },
-    "title": "Battery Passport",
+    "title": "Battery passport",
     "trend": {
       "aria": "Certificate-reported state of health by qualifying UTC date",
       "chartAria": "Certificate-reported state of health timeline in UTC",
@@ -472,7 +472,7 @@
     }
   },
   "chargeAdvisor": {
-    "title": "Charge Advisor",
+    "title": "Charge advisor",
     "subtitle": "Historical-use evidence for planning the next complete local day.",
     "reserveLabel": "Reserve floor",
     "reserveOption": "{{value}}% planning threshold",
@@ -708,7 +708,7 @@
     }
   },
   "cycleStress": {
-    "title": "Cycle Stress",
+    "title": "Cycle stress",
     "subtitle": "Continuity-bounded SoC cycle reconstruction, sensitivity, source coverage, and accounting",
     "accounting": {
       "included": "Included",
@@ -864,7 +864,7 @@
       "errorKpi": "Source histories are unavailable; use the status below to retry.",
       "pendingKpi": "Source availability has not resolved.",
       "noVehicle": "Select a vehicle to analyze its returned charge and drive history.",
-      "loadingAria": "Loading Cycle Stress evidence",
+      "loadingAria": "Loading cycle stress evidence",
       "loading": "Loading up to 1,000 completed drives and 1,000 completed charging sessions...",
       "refreshError": "One or more histories could not refresh. Showing the most recently loaded evidence.",
       "retry": "Retry",
@@ -883,7 +883,7 @@
       "sourceUnavailable": "Source unavailable or pending"
     },
     "kpis": {
-      "aria": "Reconstructed Cycle Stress evidence summary",
+      "aria": "Reconstructed cycle stress evidence summary",
       "title": "Reconstructed cycle evidence",
       "subtitle": "Descriptive rainflow ranges from continuity-bounded SoC endpoints; not a battery-health or remaining-life estimate.",
       "intervals": "Accepted intervals",
@@ -983,32 +983,32 @@
   },
   "energy": {
     "tou": {
-      "tabPreset": "Preset Tariff",
+      "tabPreset": "Preset tariff",
       "tabCustom": "Custom JSON",
       "errorNoPreset": "Please select a rate plan",
       "errorEmptyJSON": "Please enter the TOU settings JSON",
       "errorNotObject": "JSON must be an object",
       "errorInvalidJSON": "Invalid JSON — please check syntax",
-      "title": "Update Rate Plan",
-      "selectPlan": "Rate Plan",
+      "title": "Update rate plan",
+      "selectPlan": "Rate plan",
       "selectPlaceholder": "Choose a rate plan…",
       "previewLabel": "Preview",
-      "customLabel": "TOU Settings JSON",
-      "submit": "Update Rate Plan",
-      "sectionTitle": "Rate Plan",
+      "customLabel": "TOU settings JSON",
+      "submit": "Update rate plan",
+      "sectionTitle": "Rate plan",
       "noPlan": "No rate plan configured",
       "editPlan": "Update rate plan",
       "updateButton": "Update"
     },
     "cost": {
-      "evCost": "EV Cost",
-      "gasEquivalent": "Gas Equivalent",
+      "evCost": "EV cost",
+      "gasEquivalent": "Gas equivalent",
       "saving": "Saving",
       "higherBy": "Higher by",
       "less": "less",
       "more": "more",
-      "projectedAnnual": "Projected Annual",
-      "periodTotal": "{{days}}-Day Total",
+      "projectedAnnual": "Projected annual",
+      "periodTotal": "{{days}}-day total",
       "incomplete": "Complete charging-cost coverage is required before savings are modeled."
     },
     "title": "Energy",
@@ -1027,13 +1027,13 @@
       "cost": "Cost",
       "perKwh": "$/kWh"
     },
-    "pageTitle": "Energy Intelligence",
+    "pageTitle": "Energy intelligence",
     "pageSubtitle": "Deep cost analytics, efficiency trends, savings projections, and consumption patterns",
     "gauge": {
-      "energyUsed": "Energy Used",
+      "energyUsed": "Energy used",
       "efficiency": "Efficiency",
-      "co2Saved": "CO₂ Saved",
-      "totalCost": "Total Cost",
+      "co2Saved": "CO₂ saved",
+      "totalCost": "Total cost",
       "band": {
         "excellent": "Excellent",
         "good": "Good",
@@ -1043,21 +1043,21 @@
     },
     "metric": {
       "costPerKwh": "Cost per kWh",
-      "totalDistance": "Total Distance",
+      "totalDistance": "Total distance",
       "sessions": "Sessions",
-      "monthlyEst": "Monthly Est.",
-      "yearlyEst": "Yearly Est.",
+      "monthlyEst": "Monthly est.",
+      "yearlyEst": "Yearly est.",
       "costPerDist": "Cost per {{unit}}"
     },
     "lifetime": {
-      "title": "Lifetime Metrics",
-      "energyUsed": "Lifetime Energy Used",
+      "title": "Lifetime metrics",
+      "energyUsed": "Lifetime energy used",
       "energyUsedDesc": "Total energy consumed since vehicle delivery",
       "periodEnergyDesc": "Energy added during selected date range",
-      "periodEnergy": "Last {{days}} Days"
+      "periodEnergy": "Last {{days}} days"
     },
     "chart": {
-      "energyCostDaily": "Energy & Cost Daily",
+      "energyCostDaily": "Energy & cost daily",
       "energyCostDailyAria": "Daily drive consumption and recorded charging cost chart",
       "driveConsumption": "Drive consumption",
       "recordedCost": "Recorded charging cost",
@@ -1065,15 +1065,15 @@
       "energyKwh": "Energy (kWh)",
       "energyDisplay": "Energy ({{unit}})",
       "noEnergyData": "Connect vehicle to see energy data",
-      "efficiencyTrend": "Efficiency Trend",
+      "efficiencyTrend": "Efficiency trend",
       "efficiencyTrendAria": "Daily efficiency and distance area chart",
       "noEfficiencyData": "No efficiency data yet",
-      "chargingByTime": "Charging by Time of Day",
+      "chargingByTime": "Charging by time of day",
       "chargingByTimeAria": "Charging energy and session count by time of day bar chart",
       "noTimeOfDayData": "No charging sessions fall within the selected analysis window.",
       "noTimeOfDayDataDescription": "Session timing patterns appear after completed charges are recorded in this period.",
       "sessions": "Sessions",
-      "chargerBreakdown": "Charger Type Breakdown",
+      "chargerBreakdown": "Charger type breakdown",
       "chargerBreakdownAria": "Charger type share pie chart",
       "noChargerBreakdownData": "No charger-type energy is available for the selected analysis window.",
       "noChargerBreakdownDataDescription": "Home, AC, and DC shares appear after completed sessions include charger classification.",
@@ -1112,22 +1112,22 @@
       "sessions": "sessions"
     },
     "sessions": {
-      "title": "Recent Charging Sessions",
+      "title": "Recent charging sessions",
       "empty": "No charging sessions recorded"
     },
     "siteInfo": {
-      "title": "Site Configuration",
+      "title": "Site configuration",
       "refresh": "Refresh site info",
-      "operationMode": "Operation Mode",
-      "backupReserve": "Backup Reserve",
+      "operationMode": "Operation mode",
+      "backupReserve": "Backup reserve",
       "batteryCount": "Powerwalls",
-      "ratedPower": "Rated Power",
-      "ratedEnergy": "Rated Energy",
+      "ratedPower": "Rated power",
+      "ratedEnergy": "Rated energy",
       "firmware": "Firmware",
       "lastFetched": "Site info fetched"
     },
     "products": {
-      "unnamed": "Unnamed Site",
+      "unnamed": "Unnamed site",
       "charge": "Charge",
       "capacity": "Capacity",
       "type": "Type",
@@ -1136,15 +1136,15 @@
       "grid": "Grid",
       "backup": "Backup",
       "stormWatch": "Storm Watch",
-      "stormActive": "Storm Mode Active",
+      "stormActive": "Storm mode active",
       "lastFetched": "Last fetched",
-      "title": "Energy Products",
-      "subtitle": "Powerwalls, Solar Panels & Wall Connectors discovered from Tesla",
+      "title": "Energy products",
+      "subtitle": "Powerwalls, solar panels & Wall Connectors discovered from Tesla",
       "refresh": "Refresh from Tesla",
-      "totalSites": "Energy Sites",
-      "withSolar": "With Solar",
-      "withBattery": "With Battery",
-      "backupCapable": "Backup Capable"
+      "totalSites": "Energy sites",
+      "withSolar": "With solar",
+      "withBattery": "With battery",
+      "backupCapable": "Backup capable"
     }
   },
   "energyFlow": {
@@ -1159,12 +1159,12 @@
     }
   },
   "packCapacity": {
-    "title": "Pack Capacity",
+    "title": "Pack capacity",
     "subtitle": "Charging-derived capacity evidence, uncertainty, sensitivity, diagnostics, and exact row accounting",
     "states": {
       "noVehicle": "Select a vehicle to analyze its returned charging history.",
       "noVehiclePassive": "Select a vehicle to make its returned charging evidence available.",
-      "loadingAria": "Loading Pack Capacity evidence",
+      "loadingAria": "Loading pack capacity evidence",
       "loading": "Loading up to 1,000 charging sessions for deterministic analysis...",
       "errorPassive": "Charging history is unavailable; retry from the evidence status above.",
       "pendingPassive": "Charging-history availability has not resolved.",
@@ -1397,36 +1397,36 @@
     }
   },
   "powerFlow": {
-    "title": "Power Flow",
+    "title": "Power flow",
     "subtitle": "Real-time power flow from your Tesla Energy system",
     "refresh": "Refresh from Tesla",
     "grid": "Grid",
-    "stormMode": "Storm Mode Active",
-    "backupCapable": "Backup Capable",
+    "stormMode": "Storm mode active",
+    "backupCapable": "Backup capable",
     "lastUpdate": "Updated",
-    "solarPower": "Solar Production",
+    "solarPower": "Solar production",
     "batteryPower": "Battery",
     "charging": "Charging",
     "discharging": "Discharging",
-    "homeConsumption": "Home Consumption",
+    "homeConsumption": "Home consumption",
     "gridPower": "Grid",
     "importing": "Importing",
     "exporting": "Exporting",
-    "batteryState": "Battery State",
-    "stateOfCharge": "State of Charge",
-    "energyLeft": "Energy Remaining",
-    "totalCapacity": "Total Capacity",
+    "batteryState": "Battery state",
+    "stateOfCharge": "State of charge",
+    "energyLeft": "Energy remaining",
+    "totalCapacity": "Total capacity",
     "noBatteryData": "No battery data — refresh to fetch",
-    "flowDiagram": "Power Flow",
+    "flowDiagram": "Power flow",
     "solar": "Solar",
     "home": "Home",
     "batteryLabel": "Battery",
-    "gridServices": "Grid Services",
+    "gridServices": "Grid services",
     "noFlowData": "No power flow data yet",
-    "history": "Power History",
-    "powerOverTime": "Power Over Time",
+    "history": "Power history",
+    "powerOverTime": "Power over time",
     "powerOverTimeDesc": "Solar, battery, and grid power flow",
-    "socOverTime": "Battery State of Charge",
+    "socOverTime": "Battery state of charge",
     "socOverTimeDesc": "Battery percentage over time",
     "powerOverTimeAria": "Solar, battery, grid, and home power flow stacked area chart over time",
     "socOverTimeAria": "Battery state of charge percentage over time line chart",
@@ -1435,18 +1435,18 @@
     "unknown": "Unknown",
     "currentPower": "Current power",
     "liveOverview": "Live system overview",
-    "siteDetails": "Site Details",
+    "siteDetails": "Site details",
     "noSiteData": "No site data — refresh to fetch",
-    "gridStatus": "Grid Status",
-    "stormModeLabel": "Storm Mode",
-    "backupCapableLabel": "Backup Capable",
+    "gridStatus": "Grid status",
+    "stormModeLabel": "Storm mode",
+    "backupCapableLabel": "Backup capable",
     "on": "On",
     "off": "Off",
     "yes": "Yes",
     "no": "No"
   },
   "range": {
-    "title": "Projected Range",
+    "title": "Projected range",
     "aiPredict": {
       "title": "Learn per-vehicle range model",
       "description": "Compute per-bucket (temperature × speed) learned Wh/km from this vehicle's recent drives and walk through how each bucket compares to the static heuristic curve the projection uses today.",
@@ -1460,27 +1460,27 @@
       "elevation": "Plan routes to minimize elevation changes."
     },
     "subtitle": "Personalized range estimates based on your driving patterns, weather, and conditions",
-    "yourEstimate": "Your Estimate",
-    "teslaEstimate": "Tesla Estimate",
+    "yourEstimate": "Your estimate",
+    "teslaEstimate": "Tesla estimate",
     "battery": "Battery",
-    "usableCapacity": "Usable Capacity",
-    "healthFactor": "Health Factor",
+    "usableCapacity": "Usable capacity",
+    "healthFactor": "Health factor",
     "efficiency": "Efficiency",
-    "projectionCurve": "Range Projection Curve",
+    "projectionCurve": "Range projection curve",
     "current": "Current",
-    "rated": "Rated Range",
-    "projected": "Projected Range",
-    "scenarios": "Range Scenarios",
+    "rated": "Rated range",
+    "projected": "Projected range",
+    "scenarios": "Range scenarios",
     "noScenarios": "Drive more to see personalized scenario projections.",
-    "efficiencyMatrix": "Personal Efficiency Matrix",
+    "efficiencyMatrix": "Personal efficiency matrix",
     "noMatrix": "Efficiency data requires drives in different conditions.",
-    "whatIf": "What If Calculator",
+    "whatIf": "What if calculator",
     "speed": "Speed",
     "temperature": "Temperature",
     "whatIfConditions": "at {{speed}}, {{temp}}",
     "noWhatIf": "Adjust sliders to calculate projected range.",
-    "factors": "Range Factors",
-    "tips": "Tips to Maximize Range",
+    "factors": "Range factors",
+    "tips": "Tips to maximize range",
     "kpis": "Range summary metrics",
     "selectVehicle": "Select a vehicle to see its projected range.",
     "noEfficiency": "Efficiency data unavailable yet.",
@@ -1726,25 +1726,25 @@
       "utcDates": "Date-only start and end bounds represent inclusive UTC calendar days."
     },
     "analysis": "Sleep and sentry analysis",
-    "avgBatteryLost": "Avg Battery Lost (%)",
-    "avgTimeToSleep": "Avg Time to Sleep",
-    "batteryLost": "Battery Lost",
+    "avgBatteryLost": "Avg battery lost (%)",
+    "avgTimeToSleep": "Avg time to sleep",
+    "batteryLost": "Battery lost",
     "date": "Date",
-    "drainRate": "Drain Rate (%/hr)",
-    "drainRateCol": "Drain Rate",
+    "drainRate": "Drain rate (%/hr)",
+    "drainRateCol": "Drain rate",
     "duration": "Duration",
-    "efficiency": "Sleep Efficiency",
+    "efficiency": "Sleep efficiency",
     "extraCostMo": "Extra cost/mo",
     "extraDrainHr": "Extra drain/hr",
     "extraMonthly": "Extra monthly",
     "kpis": "Sleep efficiency metrics",
     "loadError": "Failed to load sleep efficiency data",
-    "monthlySentryImpact": "Monthly Sentry Mode Impact",
+    "monthlySentryImpact": "Monthly Sentry Mode impact",
     "noData": "No sleep data available. Data will appear after your vehicle records sleep/wake events.",
     "noDrainEvents": "No drain events recorded yet",
     "noSentryData": "No sentry comparison data available",
     "noStateData": "No state distribution data available",
-    "recentDrainEvents": "Recent Drain Events",
+    "recentDrainEvents": "Recent drain events",
     "selectVehicle": "Select vehicle",
     "sentry": "Sentry",
     "sentryChart": {
@@ -1787,13 +1787,13 @@
       "title": "Sentry projection and context",
       "unavailable": "Monthly drain and cost remain unavailable because no count-bearing Sentry on/off comparison exists."
     },
-    "sentryComparison": "Sentry vs No-Sentry",
-    "sentryDrainRate": "Sentry Drain Rate",
-    "sentryMonthlyCost": "Sentry Monthly Cost",
-    "sentryMonthlyKwh": "Sentry Monthly kWh",
-    "sentryOff": "Sentry Off",
-    "sentryOffDrainRate": "Sentry-Off Drain Rate",
-    "sentryOn": "Sentry On",
+    "sentryComparison": "Sentry vs no-Sentry",
+    "sentryDrainRate": "Sentry drain rate",
+    "sentryMonthlyCost": "Sentry monthly cost",
+    "sentryMonthlyKwh": "Sentry monthly kWh",
+    "sentryOff": "Sentry off",
+    "sentryOffDrainRate": "Sentry-off drain rate",
+    "sentryOn": "Sentry on",
     "state": {
       "asleep": "Asleep",
       "charging": "Charging",
@@ -1819,7 +1819,7 @@
       "unknown": "Unknown",
       "validZero": "Valid zero"
     },
-    "stateDistribution": "State Distribution",
+    "stateDistribution": "State distribution",
     "states": {
       "errorPassive": "Sleep evidence is unavailable; retry from the evidence band.",
       "loadingAria": "Loading sleep evidence",
@@ -1830,7 +1830,7 @@
     },
     "subtitle": "Inspect transition counts, withheld duration derivations, Sentry evidence, and exact source accounting",
     "temp": "Temp",
-    "title": "Sleep Efficiency",
+    "title": "Sleep efficiency",
     "transitionChart": {
       "aria": "Bar chart of valid vehicle FSM transition destination counts by state",
       "count": "Transition count",
@@ -1849,17 +1849,17 @@
       "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
       "generateButton": "Narrate drain"
     },
-    "title": "Vampire Drain",
+    "title": "Vampire drain",
     "subtitle": "Analyze phantom energy loss while your vehicle is parked",
     "kpis": "Drain summary",
     "selectVehicle": "Select a vehicle to view its vampire drain.",
     "noEvents": "No parked-drain sessions recorded in this window yet.",
     "refresh": "Refresh",
     "kpi": {
-      "avg": "Avg Drain / day",
-      "median": "Median Drain / day",
-      "p95": "P95 Drain / day",
-      "observed": "Observed Hours",
+      "avg": "Avg drain / day",
+      "median": "Median drain / day",
+      "p95": "P95 drain / day",
+      "observed": "Observed hours",
       "sessions": "{{count}} sessions"
     },
     "help": {
@@ -1869,23 +1869,23 @@
       "observed": "Total parked, non-charging hours sampled for the drain statistics."
     },
     "trend": {
-      "title": "Drain Rate Trend",
-      "series": "Drain Rate (%/day)",
+      "title": "Drain rate trend",
+      "series": "Drain rate (%/day)",
       "aria": "Daily vampire drain rate over parked sessions"
     },
     "gauge": {
-      "title": "Drain Rate",
+      "title": "Drain rate",
       "label": "Avg %/day",
       "caption": "Reference: ~5 %/day is a high phantom-drain rate. Lower is better."
     },
     "daily": {
-      "title": "Daily Drain While Parked",
-      "loss": "Battery Loss %",
-      "parked": "Parked Hours",
+      "title": "Daily drain while parked",
+      "loss": "Battery loss %",
+      "parked": "Parked hours",
       "aria": "Daily battery loss and parked hours"
     },
     "sessions": {
-      "title": "Drain Sessions",
+      "title": "Drain sessions",
       "count": "{{count}} sessions"
     },
     "columns": {
@@ -1898,7 +1898,7 @@
       "temp": "Ambient"
     },
     "tips": {
-      "title": "Tips to Reduce Vampire Drain",
+      "title": "Tips to reduce vampire drain",
       "sentry": "Disable Sentry Mode when parked at home to save 1–2 % per day.",
       "polling": "Reduce third-party app polling intervals to let the car sleep faster.",
       "wake": "Avoid opening the app frequently — each wake cycle costs battery.",
@@ -1928,13 +1928,963 @@
       "unplugged_leak": "Unplugged leak",
       "unknown": "Unknown",
       "action": {
-        "sentry": "Turn Sentry off at home tonight. It is counted only because the car is in Park.",
-        "overheat": "Cabin Overheat is HVAC, not a pack leak. Turn it off if the car sits in shade.",
+        "sentry": "Turn Sentry off at home tonight. It is counted only because the car is in park.",
+        "overheat": "Cabin overheat is HVAC, not a pack leak. Turn it off if the car sits in shade.",
         "precondition": "Preconditioning is warming the pack/cabin on purpose. Leave it on only before a drive.",
-        "plugged": "Charge reached Complete and stayed plugged. Unplug after DC Complete to stop idle draw.",
+        "plugged": "Charge reached complete and stayed plugged. Unplug after DC complete to stop idle draw.",
         "leak": "Unplugged parked drain remains after Sentry/HVAC. That is 12V upkeep or a genuine leak.",
-        "unknown": "No confirmed Park culprit yet. Missing is not zero watts."
+        "unknown": "No confirmed park culprit yet. Missing is not zero watts."
       }
     }
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "activity": {
+    "action": {
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleDelete": "Alert rule deleted",
+      "alertRuleUpdate": "Alert rule updated",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyDelete": "API key revoked",
+      "apiKeyUpdate": "API key updated",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automation": "Automation change",
+      "automationAutoDisabled": "Automation auto-disabled",
+      "automationCreate": "Automation created",
+      "automationCreated": "Automation created",
+      "automationDelete": "Automation deleted",
+      "automationDeleted": "Automation deleted",
+      "automationDisabled": "Automation disabled",
+      "automationEnabled": "Automation enabled",
+      "automationExecuted": "Automation ran",
+      "automationExported": "Automations exported",
+      "automationFailed": "Automation failed",
+      "automationImported": "Automations imported",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationUpdate": "Automation updated",
+      "automationUpdated": "Automation updated",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandCharge": "Charging command",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandWake": "Wake vehicle"
+    },
+    "myActivity": {
+      "empty": "No recent activity in this window."
+    }
+  },
+  "annotation": {
+    "add": "Add annotation",
+    "addTitle": "Add annotation",
+    "cat": {
+      "custom": "Custom",
+      "issue": "Issue",
+      "maintenance": "Maintenance",
+      "milestone": "Milestone",
+      "trip": "Trip",
+      "upgrade": "Upgrade"
+    },
+    "category": "Category",
+    "date": "Date",
+    "descPlaceholder": "Optional description...",
+    "description": "Description",
+    "label": "Label",
+    "labelPlaceholder": "e.g., battery replaced",
+    "listTitle": "Annotations",
+    "removeNamed": "Remove annotation: {{label}}"
+  },
+  "battery": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
+      "generateButton": "Narrate forecast",
+      "title": "Explain the battery health forecast"
+    },
+    "bar": {
+      "capacity": "Current capacity",
+      "cycles": "Charge cycles",
+      "degradation": "Degradation"
+    },
+    "cells": {
+      "chart": {
+        "noSpreadTrend": "Not enough history for spread trend",
+        "spreadTrend": "Voltage spread trend",
+        "voltageSpread": "Voltage spread (mV)"
+      },
+      "distribution": {
+        "range": "Voltage range"
+      },
+      "insight": {
+        "balanced": "Cells well balanced",
+        "balancedDesc": "Voltage spread is within healthy range. Battery cells are operating normally.",
+        "criticalCells": "Critical cells detected",
+        "criticalCellsDesc": "{{count}} cell(s) show significant deviation. Consider scheduling a service appointment.",
+        "goodTemp": "Thermal balance good",
+        "goodTempDesc": "Module temperatures are consistent. Thermal management system is performing well.",
+        "healthy": "All cells healthy",
+        "healthyDesc": "No critical cells detected. Continue current charging habits for long-term health.",
+        "highSpread": "High voltage spread",
+        "highSpreadDesc": "Cell imbalance is significant. Consider a full charge to 100% to allow BMS balancing, then discharge to 90%.",
+        "highTemp": "High temperature spread",
+        "highTempDesc": "Avoid fast charging in extreme temperatures. Allow the battery to precondition before supercharging.",
+        "watchSpread": "Voltage spread increasing",
+        "watchSpreadDesc": "Cell balance is slightly off. Periodic full charges can help the BMS equalize cells.",
+        "watchTemp": "Module temperature variation",
+        "watchTempDesc": "Some temperature variation is normal. Monitor during fast charging sessions."
+      },
+      "noInsights": "Not enough data for recommendations",
+      "recommendations": "Health recommendations",
+      "stat": {
+        "avgVoltage": "Avg cell V",
+        "normalCells": "Normal cells",
+        "packVoltage": "Pack voltage",
+        "tempSpread": "Temp spread",
+        "totalCells": "Total cells",
+        "voltageSpread": "V spread"
+      },
+      "temp": {
+        "avg": "Avg temperature",
+        "empty": "No temperature data available",
+        "max": "Max temperature",
+        "min": "Min temperature",
+        "spread": "Temp spread",
+        "title": "Temperature summary"
+      },
+      "time": "Time",
+      "title": "Battery cells"
+    },
+    "chart": {
+      "acdc": "AC / DC energy breakdown",
+      "acdcAria": "AC versus DC energy share pie chart",
+      "actual": "Actual %",
+      "capacityTrend": "Capacity trend & prediction",
+      "capacityTrendAria": "Battery capacity trend with dashed projection line over time",
+      "chargeBand": "Battery level",
+      "chargeDist": "Charge level distribution",
+      "chargeDistAria": "Distribution of charging-session start and end battery levels",
+      "chargeDistSub": "Recent 100 sessions",
+      "chargeEnded": "Charge ended",
+      "chargeStarted": "Charge started",
+      "chargingType": "Charging type",
+      "dashedProjected": "Dashed = projected",
+      "energyKwh": "Energy (kWh)",
+      "noBreakdown": "No charging data for breakdown",
+      "noRange": "No range data yet",
+      "noSessions": "No charging session data yet",
+      "noTrend": "Not enough snapshots for trend analysis",
+      "predicted": "Predicted %",
+      "range": "Range",
+      "rangeTrend": "Estimated range over time",
+      "rangeTrendAria": "Estimated battery range over time area chart"
+    },
+    "degradation": {
+      "actualHealth": "Actual health %",
+      "avgDoD": "Avg depth of discharge",
+      "avgDoDLabel": "Avg DoD",
+      "batteryAge": "Battery age",
+      "capacity": "Capacity",
+      "chargeHabits": "Charge habits",
+      "chargingImpact": "Charging habits impact",
+      "confidence": "95% Confidence",
+      "currentRange": "Current range",
+      "currentSoh": "Current SOH",
+      "cycleDepth": "Cycle depth",
+      "date": "Date",
+      "deepDischarges": "deep discharges",
+      "estimatedCapacity": "Estimated capacity",
+      "fastCharge": "Fast charge",
+      "fastCharges": "fast charges",
+      "fullCharge": "Full charge",
+      "inApprox": "in approximately",
+      "lowerBetter": "Lower is better for longevity",
+      "monthsCount": "{{count}} months",
+      "needMore": "Need more data points to generate prediction (minimum 3 snapshots required)",
+      "noHistory": "No degradation records found.",
+      "noHistoryDescription": "Capacity estimates appear after enough charging, range, and odometer snapshots have accumulated.",
+      "noRange": "Range data will appear once history is available.",
+      "noRecommendations": "Recommendations will appear based on your usage patterns.",
+      "noRecords": "No degradation records found.",
+      "noRiskData": "Risk data will appear once charging history is available.",
+      "odometer": "Odometer",
+      "originalRange": "Original range",
+      "prediction": "Prediction",
+      "predictionDesc": "At current rate, battery reaches",
+      "projected": "Projected %",
+      "range": "Range",
+      "rangeLoss": "Range loss over time",
+      "rate": "Degradation rate",
+      "recommendations": "Recommendations",
+      "riskFactors": "Risk factors",
+      "sohPct": "SOH %",
+      "stress": "Stress level",
+      "stressHigh": "High stress detected. Reducing fast charges and deep discharges can improve battery lifespan.",
+      "stressLabel": "stress",
+      "stressLow": "Your charging habits are optimal for battery longevity.",
+      "stressMedium": "Consider reducing fast charging frequency and avoiding full charges when possible.",
+      "tempExposure": "Temperature exposure",
+      "title": "Battery degradation",
+      "totalCycles": "Total cycles",
+      "trendTitle": "Health trend & projection",
+      "warranty": "80% Warranty",
+      "years": "years",
+      "yearsCount": "{{y}} years",
+      "yearsMonthsShort": "{{y}}y {{m}}m"
+    },
+    "empty": "No battery health data available yet.",
+    "gauge": {
+      "capacity": "Capacity",
+      "cycles": "Cycles",
+      "degradation": "Degradation",
+      "health": "Health score"
+    },
+    "habit": {
+      "avgEnd": "Avg end level",
+      "avgStart": "Avg start level",
+      "home": "Home charges",
+      "supercharger": "Supercharger sessions"
+    },
+    "health": {
+      "degraded": "Degraded",
+      "excellent": "Excellent",
+      "good": "Good"
+    },
+    "insight": {
+      "concernDesc": "Battery health dropped to {{soh}}/100 — consider service check.",
+      "concernTitle": "Health concern",
+      "deepDischargeDesc": "{{count}} recent sessions started below 10%. Avoid deep discharges when possible.",
+      "deepDischargeTitle": "Deep discharges detected",
+      "excellentDesc": "Battery health is {{soh}}/100 — performing above average.",
+      "excellentTitle": "Excellent health",
+      "goodDesc": "Battery health is {{soh}}/100 — normal degradation for age.",
+      "goodHabitsDesc": "Most charges are slow/AC — ideal for battery longevity.",
+      "goodHabitsTitle": "Good charging habits",
+      "goodTitle": "Good health",
+      "highFastChargeDesc": "{{pct}} of sessions are fast-charging. Mix in slow charging for longevity.",
+      "highFastChargeTitle": "High fast-charge usage",
+      "highSuperchargerDesc": "{{count}} Supercharger sessions. Occasional slow charging helps battery health.",
+      "highSuperchargerTitle": "High Supercharger usage",
+      "lowDegDesc": "{{rate}}% per year — well below industry average of 3–5%.",
+      "lowDegTitle": "Low degradation rate"
+    },
+    "insights": {
+      "empty": "Not enough data for insights yet",
+      "title": "Smart insights"
+    },
+    "metric": {
+      "age": "Battery age",
+      "currentCap": "Current capacity",
+      "cycles": "Total cycles",
+      "degradation": "Degradation rate",
+      "fullChargeComplete": "Full charge complete",
+      "originalCap": "Original capacity",
+      "soh": "State of health"
+    },
+    "months": "months",
+    "newVsNow": {
+      "capNew": "Capacity when new",
+      "capNow": "Capacity now",
+      "lost": "lost",
+      "rangeNew": "Range when new",
+      "rangeNow": "Range now",
+      "title": "Capacity & range: new vs now"
+    },
+    "perYear": "per year",
+    "recommendations": {
+      "title": "Recommendations"
+    },
+    "section": {
+      "acdcFailed": "AC/DC energy breakdown failed to load",
+      "capacityRangeFailed": "Capacity & range comparison failed to load",
+      "chargeDistFailed": "Charge level distribution failed to load",
+      "heroFailed": "Health score panel failed to load",
+      "insightsFailed": "Smart insights failed to load",
+      "metricBarsFailed": "Metric bars failed to load",
+      "quickLinksFailed": "Quick links failed to load",
+      "recommendationsFailed": "Recommendations failed to load",
+      "summaryCardsFailed": "Summary metrics failed to load",
+      "thermalFailed": "Thermal monitoring failed to load"
+    },
+    "stats": {
+      "acSessions": "AC sessions",
+      "cycles": "Charge cycles",
+      "dcSessions": "DC / Supercharger",
+      "empty": "No charging statistics yet",
+      "title": "Charging statistics",
+      "totalEnergy": "Total energy added",
+      "totalSessions": "Total sessions"
+    },
+    "subtitle": "Degradation tracking, prediction, charging habits & longevity insights",
+    "thermal": {
+      "heater": "Battery heater",
+      "moduleNumber": "Module #{{n}}",
+      "moduleTempMax": "Module temp (max)",
+      "moduleTempMin": "Module temp (min)",
+      "tempSpread": "Temperature spread",
+      "title": "Thermal monitoring"
+    },
+    "tip": {
+      "aboveAvg": "Your degradation rate is above average — review charging habits.",
+      "avoid100": "Avoid charging to 100% regularly — keep the limit at 80–90%.",
+      "avoidDeep": "Try to avoid deep discharges below 20%.",
+      "great": "Your battery health looks great — keep up the good habits!",
+      "reduceFast": "Reduce fast charging frequency to slow degradation."
+    },
+    "title": "Battery health",
+    "warrantyLimit": "Tesla warranty: 1,500 cycles / 70%",
+    "warrantyNote": "warranty threshold",
+    "yearsTo80": "Years to 80%",
+    "yr": "yr"
+  },
+  "bulk": {
+    "clear": "Clear selection",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "ofTotal": "of {{total}}",
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "toolbarLabel": "Bulk actions for selected items"
+  },
+  "calculationDetails": {
+    "coverage": "Data coverage",
+    "exclusions": "Exclusions and limitations",
+    "method": "Method",
+    "noExclusions": "No additional exclusions were supplied.",
+    "period": "Analysis period",
+    "provenance": "Provenance",
+    "sources": "Data sources",
+    "title": "How this was calculated",
+    "unavailable": "Not provided",
+    "version": "Calculation version"
+  },
+  "chart": {
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
+    },
+    "col": {
+      "date": "Date",
+      "value": "Value"
+    },
+    "export": {
+      "copy": "Copy image to clipboard",
+      "copyFailed": "Failed to copy chart image",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copySuccess": "Chart image copied to clipboard",
+      "csv": "Download data as CSV",
+      "disabledTooltip": "Chart not ready to export",
+      "failed": "Could not prepare the {{format}} export.",
+      "menuLabel": "Export chart",
+      "png": "Save as PNG",
+      "preparing": "Preparing chart export…",
+      "svg": "Save as SVG"
+    },
+    "loading": "Loading chart…",
+    "noData": "No data available",
+    "noDataDescription": "No chartable observations are available for the current selection yet."
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    }
+  },
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}"
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "entityContext": {
+    "title": "Related context"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "freshness": {
+    "noData": "No recent data",
+    "offline": "Offline",
+    "seconds": "{{s}}s ago"
+  },
+  "fsm": {
+    "typeLabel": {
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "driveSession": "Drive",
+      "notification": "Notify",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—",
+      "vehicle": "Vehicle"
+    }
+  },
+  "helix": {
+    "ariaLabel": "Helix",
+    "badge": "Helix",
+    "evidence": {
+      "gathering": "Gathering",
+      "grounded": "Grounded in",
+      "limited": "Limited evidence",
+      "reading": "Reading",
+      "source": "TeslaSync source",
+      "sources": "TeslaSync sources",
+      "successful": "successful",
+      "title": "Evidence trail",
+      "tokens": "tokens",
+      "unavailable": "Unavailable",
+      "used": "Used"
+    },
+    "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
+  },
+  "help": {
+    "battery": {
+      "avgDoD": "Average Depth of Discharge per cycle — how deeply the pack is typically discharged before being recharged. Shallower cycles cause less wear.",
+      "capacity": "Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.",
+      "totalCycles": "Cumulative full-pack equivalent cycles. One cycle = one full discharge + one full charge worth of energy (partial cycles add up over time)."
+    }
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "unlocked": "✓ Unlocked"
+  },
+  "live": {
+    "connected": "Live",
+    "disconnected": "Offline",
+    "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
+    "unknown": "Unknown"
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "attention": "Attention",
+    "battery": {
+      "analyticsSource": "Battery analytics",
+      "chargingStress": "Charging stress",
+      "chargingStressDetail": "{{fast}} fast-charge sessions; {{depth}} average depth of discharge.",
+      "chargingStressHigh": "High",
+      "chargingStressLow": "Low",
+      "chargingStressMedium": "Medium",
+      "cycleExposure": "Cycle exposure",
+      "cyclesDetail": "Equivalent full cycles accumulated across charging activity.",
+      "degradationDetail": "Annualized capacity change inferred from available history.",
+      "degradationPace": "Degradation pace",
+      "description": "Health, degradation, range confidence, charging stress, thermal impact, and cycle exposure are summarized before the deeper evidence.",
+      "eyebrow": "Battery posture",
+      "healthDetail": "Current modeled health relative to the original usable pack.",
+      "narrative": {
+        "analyticsMethod": "Models state of health and degradation from retained battery snapshots.",
+        "causeLimitation": "Capacity history can identify a trend but does not diagnose the physical cause of degradation.",
+        "chargingMethod": "Measures fast-charge, depth-of-discharge, and cycle exposure from recorded sessions.",
+        "chargingResponse": "Review repeated fast charging and deep discharge exposure before the pattern continues.",
+        "chargingSource": "Charging history",
+        "evidenceLimit": "Supporting evidence is limited to the five most recent retained snapshots.",
+        "healthyImpact": "Stable capacity preserves usable range and reduces near-term service uncertainty.",
+        "historySource": "Battery health history",
+        "monitorResponse": "Continue monitoring capacity, thermal exposure, and charging stress as new snapshots arrive.",
+        "projectionBasis": "The degradation projection passed the page stability bounds.",
+        "projectionLimitation": "Time-to-threshold projections remain directional until a stable trend is available.",
+        "projectionLimitedBasis": "The projection is withheld because the available trend did not pass stability bounds.",
+        "serviceResponse": "Arrange an independent battery-health review and preserve the supporting snapshots.",
+        "snapshotBasis": "{{count}} retained battery-health snapshots support this assessment.",
+        "snapshotMethod": "Direct capacity and range snapshot retained by battery analytics.",
+        "snapshotSummary": "{{date}}: {{health}} state of health with {{capacity}} estimated usable capacity.",
+        "temperatureLimitation": "Temperature history is insufficient to score thermal exposure.",
+        "whatChanged": "Modeled pack health is {{health}}, with {{rate}} annualized degradation across the available history."
+      },
+      "packScore": "Pack score",
+      "provenance": "Calculated from battery-health snapshots, charging history, and the latest available BMS telemetry.",
+      "rangeConfidence": "Range confidence",
+      "rangeConfidenceDeveloping": "Developing",
+      "rangeConfidenceDevelopingDetail": "{{count}} historical range samples are available; more history will tighten the forecast.",
+      "rangeConfidenceHigh": "High",
+      "rangeConfidenceHighDetail": "{{count}} historical range samples support a stable {{years}}-year threshold forecast.",
+      "rangeConfidenceLimited": "Limited",
+      "rangeConfidenceLimitedDetail": "Only {{count}} usable range samples are available; treat projections as directional.",
+      "signalTitle": "Signal: {{title}}",
+      "statusHealthy": "Healthy",
+      "statusMonitor": "Monitor",
+      "statusService": "Service review",
+      "thermalImpact": "Thermal impact",
+      "thermalImpactDetail": "Lower exposure is better; sustained high temperatures increase pack wear.",
+      "thermalImpactUnavailable": "More temperature history is required to estimate thermal exposure.",
+      "title": "Long-term pack health remains measurable and actionable"
+    },
+    "detailTitle": "{{title}} details",
+    "energy": {
+      "chargingLoss": "Charging losses",
+      "chargingLossDetail": "Wall input and battery-retained energy are not independently available.",
+      "consumption": "Drive consumption",
+      "consumptionDetail": "Measured traction energy in the selected drive aggregate.",
+      "consumptionSource": "Drive consumption",
+      "costCoverageDescription": "{{priced}} of {{total}} returned sessions include recorded cost; savings and cost projections are withheld.",
+      "costCoverageTitle": "Cost coverage is partial",
+      "costDetail": "{{priced}} of {{total}} returned sessions include cost.",
+      "costPremiumDescription": "Recorded charging cost is {{value}} above the configured gas-equivalent model for this distance.",
+      "costPremiumTitle": "Recorded electric cost exceeds the gas model",
+      "description": "The selected window combines measured drive consumption, charging cost coverage, idle drain, and projected usage.",
+      "efficiencyAttention": "Efficiency is outside the preferred band",
+      "efficiencyAttentionDescription": "Compare the linked temperature, speed, and route evidence; this page does not attribute a cause.",
+      "efficiencyDetail": "Average energy consumed per display-distance unit.",
+      "eyebrow": "Energy posture",
+      "idleDrain": "Idle drain",
+      "idleDrainAttention": "Parked drain needs review",
+      "idleDrainAttentionDescription": "The 90-day parked, non-charging average is {{value}} per day.",
+      "idleDrainDetail": "Average parked, non-charging loss across the separate 90-day source window.",
+      "lossUnavailableDescription": "Independent wall-input and battery-retained energy are absent from the session contract, so no loss percentage is fabricated.",
+      "lossUnavailableTitle": "Charging losses are not measured",
+      "narrative": {
+        "chargingSource": "Charging history",
+        "costBasis": "{{priced}} of {{total}} returned charging sessions include recorded cost.",
+        "costLimitation": "Cost totals exclude sessions without a recorded price.",
+        "costMethod": "Sums only cost values persisted on returned charging sessions.",
+        "costMissing": "not recorded",
+        "dailyBasis": "{{count}} daily drive aggregates contain measured energy.",
+        "dailyMethod": "Daily aggregate of measured drive energy and distance.",
+        "dailySummary": "{{date}}: {{energy}} consumed across {{distance}}.",
+        "driveMethod": "Sums canonical measured drive energy and distance in the active analysis window.",
+        "idleMethod": "Computes parked, non-charging battery change over the separate 90-day source window.",
+        "idleSource": "Parked-state history",
+        "impact": "Energy intensity and cost coverage determine operating exposure and whether projections are decision-ready.",
+        "monitorResponse": "No immediate response is indicated; continue collecting drive and charging evidence.",
+        "sessionMethod": "Direct charging-session energy and recorded cost.",
+        "sessionSummary": "{{date}} charging: {{energy}} added; recorded cost {{cost}}.",
+        "sourceLimitation": "{{count}} supporting data source is unavailable, so this assessment is partial.",
+        "whatChanged": "{{energy}} of measured drive energy across {{days}} daily records, with {{cost}} in recorded charging cost.",
+        "windowLimitation": "Idle drain uses a separate 90-day source window and is not attributed to a specific cause."
+      },
+      "noDataDescription": "Complete a drive or charging session to establish efficiency and cost baselines.",
+      "noDataTitle": "Energy evidence is still building",
+      "notMeasured": "Not measured",
+      "projectedUsage": "Projected 30-day use",
+      "projectedUsageDetail": "Straight-line projection from measured consumption in the selected window.",
+      "provenance": "Drive consumption comes from SI daily aggregates; costs from returned charging sessions; idle drain from 90-day FSM and signal history. Charging loss remains unsupported.",
+      "recordedCost": "Recorded cost",
+      "savingsDescription": "Estimated savings versus the configured gas-equivalent model are {{value}}.",
+      "savingsTitle": "Electric operation remains cost-favorable",
+      "sessionCapDescription": "The latest 100 sessions are shown; older sessions may be outside cost and pattern analysis.",
+      "sessionCapTitle": "Charging history reached the analysis cap",
+      "title": "Consumption, efficiency, and cost in one operating view"
+    },
+    "metrics": "Operational metrics",
+    "narrative": {
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "confidence": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "not_scored": "Not scored",
+        "title": "Confidence",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "evidence": "Supporting evidence",
+      "likelyCause": "Likely cause",
+      "limitations": "Limitations",
+      "noEvidence": "No supporting records were supplied.",
+      "noLimitations": "No additional limitations were supplied.",
+      "recommendedResponse": "Recommended response",
+      "record": "Record",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available."
+    },
+    "noAttention": "No current attention items.",
+    "reviewAll": "Review all",
+    "reviewDetails": "Review details",
+    "scope": {
+      "days": "{{count}} days",
+      "lifetime": "Lifetime model"
+    },
+    "status": {
+      "awaitingData": "Awaiting data",
+      "onTrack": "On track",
+      "review": "Review recommended"
+    }
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "replay": {
+    "elevation": {
+      "aria": "Elevation profile chart — no data available yet",
+      "label": "Elevation",
+      "noData": "No elevation data available",
+      "title": "Elevation profile"
+    }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "savedViews": {
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "defaultBadge": "Default",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "deleteTitle": "Delete saved view",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "error": "Unable to load saved views",
+    "loading": "Loading saved views…",
+    "makeDefault": "Apply automatically when I open this page",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "pin": "Pin",
+    "renamePrompt": "Rename view",
+    "saveCurrent": "Save current view…",
+    "setDefault": "Set as default",
+    "title": "Saved views",
+    "unpin": "Unpin",
+    "unsetDefault": "Clear default"
+  },
+  "search": {
+    "history": {
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history",
+      "title": "Recent searches"
+    }
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "sourceLayer": {
+    "age": "age",
+    "l1": {
+      "desc": "Read from the in-process SignalStore (hot path, freshest)."
+    },
+    "l2": {
+      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
+    },
+    "log": {
+      "desc": "Replayed from signal_log (durable history).",
+      "label": "Log"
+    },
+    "stale": {
+      "desc": "Redis-backed value older than the 2-minute freshness window.",
+      "label": "Stale"
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "created": {
+        "success": "Annotation added"
+      },
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
+      }
+    },
+    "channels": {
+      "delete": {
+        "success": "Channel deleted"
+      },
+      "test": {
+        "success": "Test notification sent"
+      },
+      "toggle": {
+        "success": "Channel toggled"
+      }
+    },
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "delete": {
+        "success": "Quiet hours window removed"
+      }
+    },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created"
+      },
+      "delete": {
+        "success": "View deleted"
+      },
+      "update": {
+        "success": "View updated"
+      }
+    },
+    "settings": {
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        },
+        "poll": {
+          "success": "Gas prices updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
   }
 }

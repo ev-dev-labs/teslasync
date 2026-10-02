@@ -18,14 +18,17 @@ const englishNamespaceModules = import.meta.glob<{ default: Record<string, unkno
  * `missing` lists keys the source references that the catalog provably cannot
  * answer, `detail` lists namespaces that own a
  * `locale-detail-<namespace>.json` chunk, and `grouped` maps a feature bundle
- * to the namespaces it carries. The full manifest is ~50 KB gzipped and stays
- * out of the startup chunk — only this resolution table ships.
+ * to its authoritative namespaces. `routes` and `composed` select the current
+ * route's packed shared keys without eager loading. Source-key inventories
+ * stay in the full manifest, outside the startup chunk.
  */
 interface LocaleRuntimeManifest {
   complete: string[]
   missing: string[]
   detail: string[]
   grouped: Record<string, string[]>
+  routes: Record<string, string>
+  composed: Record<string, string[]>
 }
 
 const manifest = runtimeManifest as LocaleRuntimeManifest
@@ -53,16 +56,16 @@ function fallbackBundleFor(namespace: string): string | undefined {
 }
 
 /**
- * True when the statically embedded shell can already answer `key`.
+ * True when a resource can already answer `key`, including plural peers.
  *
  * i18next reports a plural lookup under its base key, so a shell that ships
  * `count_one` / `count_other` must not be treated as missing `count`.
  */
-function shellResolves(key: string): boolean {
+function resourceResolves(resource: unknown, key: string): boolean {
   const segments = key.split('.')
   const leaf = segments.pop()
   if (!leaf) return false
-  let node: unknown = englishShell
+  let node: unknown = resource
   for (const segment of segments) {
     if (!node || typeof node !== 'object') return false
     node = (node as Record<string, unknown>)[segment]
@@ -74,6 +77,30 @@ function shellResolves(key: string): boolean {
   return Object.keys(parent).some(
     (candidate) => candidate === base || candidate.startsWith(`${base}_`),
   )
+}
+
+const routeBundles = Object.entries(manifest.routes)
+  .sort(([a], [b]) =>
+    b.split('/').filter(segment => !segment.startsWith(':')).length
+      - a.split('/').filter(segment => !segment.startsWith(':')).length || b.length - a.length,
+  )
+  .map(([route, bundle]) => {
+    const pattern = route.split('/').map(segment =>
+      segment.startsWith(':') ? '[^/]+'
+        : segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+    ).join('/')
+    return { pattern: new RegExp(`^${pattern}$`, 'i'), bundle }
+  })
+
+function routeBundleFor(namespace: string): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  const path = window.location.pathname.replace(/\/+$/, '') || '/'
+  for (const { pattern, bundle } of routeBundles) {
+    if (!pattern.test(path)) continue
+    return (manifest.grouped[bundle]?.includes(namespace) || manifest.composed[bundle]?.includes(namespace))
+      ? bundle : undefined
+  }
+  return undefined
 }
 
 /**
@@ -125,9 +152,9 @@ i18n.use(initReactI18next).init({
     // a slot in the route's deferred-locale budget for nothing.
     if (isKnownMissing(keyPath)) return
     // Already answerable offline: a genuine typo, not a deferred namespace.
-    if (shellResolves(keyPath)) return
+    if (resourceResolves(englishShell, keyPath)) return
     recordProbeMissingKey(keyPath)
-    void requestEnglishNamespace(topLevelNamespace)
+    void requestEnglishNamespace(topLevelNamespace, keyPath)
   },
 })
 
@@ -239,8 +266,15 @@ function loadEnglishBundle(bundle: string): Promise<void> {
   return promise
 }
 
-function requestEnglishNamespace(namespace: string) {
-  return loadEnglishNamespace(namespace).catch((error: unknown) => {
+function requestEnglishNamespace(namespace: string, key: string) {
+  const routeBundle = routeBundleFor(namespace)
+  const request = routeBundle
+    ? loadEnglishBundle(routeBundle).then(() => {
+      if (resourceResolves(i18n.getResourceBundle('en', 'translation'), key)) return
+      return loadEnglishNamespace(namespace)
+    })
+    : loadEnglishNamespace(namespace)
+  return request.catch((error: unknown) => {
     if (!reportedUnknownNamespaces.has(namespace)) {
       reportedUnknownNamespaces.add(namespace)
       console.error(`[i18n] Failed to load English namespace "${namespace}":`, error)

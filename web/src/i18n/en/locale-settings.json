@@ -35,7 +35,7 @@
         "azureProtocolHint": "Auto tries Responses only when Chat Completions is unavailable. Explicit protocols never fall back. Responses output is buffered until completion; embeddings always use v1.",
         "azureEmbeddingModel": "Embedding deployment name (optional)",
         "azureModelLabel": "Deployment name",
-        "azureModelHint": "Use the exact deployment name from your Foundry portal, not the underlying model family.",
+        "azureModelHint": "Use the exact deployment name from your foundry portal, not the underlying model family.",
         "azureBaseUrl": "Resource endpoint URL",
         "azureBaseUrlHint": "Foundry OpenAI v1 only: https://{resource}.services.ai.azure.com/openai/v1. Resource roots also work; other API paths are rejected.",
         "apiKey": "API key",
@@ -63,7 +63,7 @@
         "searchHint": "Try chat, charging, alerts…",
         "filters": "Feature categories",
         "showing": "{{count}} of {{total}} features",
-        "noMatches": "No features match. Try another term or choose All.",
+        "noMatches": "No features match. Try another term or choose all.",
         "more": "More detail",
         "less": "Less detail",
         "category": {
@@ -130,35 +130,35 @@
         },
         "route-efficiency-suggestions": {
           "label": "Route-efficiency suggestions",
-          "description": "Opt-in LLM that suggests lower-consumption habits and route choices grounded in your own route history — dominant route, kWh/100mi figure, and one or two concrete, non-mutating ideas to try yourself. The deterministic route comparison cards and kWh/100mi metrics on the Route Efficiency page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM that suggests lower-consumption habits and route choices grounded in your own route history — dominant route, kWh/100mi figure, and one or two concrete, non-mutating ideas to try yourself. The deterministic route comparison cards and kWh/100mi metrics on the Route efficiency page remain the canonical baseline when Helix is off."
         },
         "trip-planner-llm-agent": {
           "label": "Trip-planner LLM agent",
-          "description": "Opt-in LLM agent that drafts a trip plan grounded in your own charging history along the corridor — origin and destination, current state of charge, minimum arrival state of charge, and one or two suggested stops drawn from places you have already charged at. The deterministic heuristic trip planner, manual form, map, and Plan button on the Trip Planner page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM agent that drafts a trip plan grounded in your own charging history along the corridor — origin and destination, current state of charge, minimum arrival state of charge, and one or two suggested stops drawn from places you have already charged at. The deterministic heuristic trip planner, manual form, map, and Plan button on the Trip planner page remain the canonical baseline when Helix is off."
         },
         "smart-charge-schedule-suggestion": {
           "label": "Smart-charge schedule suggestion",
-          "description": "Opt-in LLM agent that proposes a time-of-use-optimized charge schedule by delegating to the canonical charge-planner optimizer — target state of charge, departure time, rate plan, and a one or two sentence narration of the proposed window. The manual schedule form, deterministic optimizer, rate timeline, and Schedule button on the Smart Charge page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM agent that proposes a time-of-use-optimized charge schedule by delegating to the canonical charge-planner optimizer — target state of charge, departure time, rate plan, and a one or two sentence narration of the proposed window. The manual schedule form, deterministic optimizer, rate timeline, and Schedule button on the Smart charge page remain the canonical baseline when Helix is off."
         },
         "battery-health-forecast-narrative": {
           "label": "Battery health forecast narrative",
-          "description": "Opt-in LLM narrator that explains the deterministic battery-health forecast — current state of health, projected degradation slope, dominant charging-habit drivers, and the top one or two risk factors — grounded in the same numeric envelope the chart renders. The deterministic Capacity Trend & Prediction chart, hero metric cards, insights, and recommendations on the Battery Health page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM narrator that explains the deterministic battery-health forecast — current state of health, projected degradation slope, dominant charging-habit drivers, and the top one or two risk factors — grounded in the same numeric envelope the chart renders. The deterministic Capacity trend & prediction chart, hero metric cards, insights, and recommendations on the Battery health page remain the canonical baseline when Helix is off."
         },
         "charging-curve-fingerprint-clustering": {
           "label": "Charging-curve fingerprint clustering",
-          "description": "Opt-in LLM narrator that names and explains each deterministic charging-curve cluster fingerprint — peak power tier (L1 / L2 / DC fast), session count per cluster, ramp shape, dominant charger type, and total energy per session — grounded in the same per-cluster envelope the curves render. The deterministic charging-curve charts, per-session labels, and distribution panel on the Charging Curve page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM narrator that names and explains each deterministic charging-curve cluster fingerprint — peak power tier (L1 / L2 / DC fast), session count per cluster, ramp shape, dominant charger type, and total energy per session — grounded in the same per-cluster envelope the curves render. The deterministic charging-curve charts, per-session labels, and distribution panel on the Charging curve page remain the canonical baseline when Helix is off."
         },
         "cost-forecast-narration": {
           "label": "Cost forecast narration",
-          "description": "Opt-in LLM narrator that explains the deterministic charging-cost forecast — historical monthly trend, projected cost / cost_low / cost_high band, home-vs-supercharger split, and the top deterministic insight — grounded in the same numeric envelope the chart renders, and honest that the band is an APPROXIMATE prediction interval rather than a strict 95% confidence interval. The deterministic cost forecast chart, summary cards, breakdown, savings calculator, monthly cost table, time-of-use analysis, lifetime summary, and environmental impact card on the Cost Analysis page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM narrator that explains the deterministic charging-cost forecast — historical monthly trend, projected cost / cost_low / cost_high band, home-vs-supercharger split, and the top deterministic insight — grounded in the same numeric envelope the chart renders, and honest that the band is an APPROXIMATE prediction interval rather than a strict 95% confidence interval. The deterministic cost forecast chart, summary cards, breakdown, savings calculator, monthly cost table, time-of-use analysis, lifetime summary, and environmental impact card on the Cost analysis page remain the canonical baseline when Helix is off."
         },
         "period-compare-narration": {
           "label": "Period compare narration",
-          "description": "Opt-in LLM narrator that explains the deterministic period-over-period analytics on the Period Compare page — which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign, and explicit honesty about zero-baseline windows and best-effort cost figures. The deterministic Period A vs Period B metric cards, side-by-side bar chart, comparison table, and insights panel remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM narrator that explains the deterministic period-over-period analytics on the Period compare page — which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign, and explicit honesty about zero-baseline windows and best-effort cost figures. The deterministic Period A vs Period B metric cards, side-by-side bar chart, comparison table, and insights panel remain the canonical baseline when Helix is off."
         },
         "lifetime-stats-qa": {
           "label": "Lifetime stats Q&A",
-          "description": "Opt-in LLM Q&A surface that answers natural-language questions about your all-time stats — total drives, total distance, charging savings, achievements, personal records, ownership timeline — by routing through two read-only tools that quote the same deterministic envelope the Lifetime Stats dashboard renders. The narrator never invents numbers and is honest about zero-data vehicles. The deterministic Lifetime Stats hero card, key-stats grid, achievements gallery, fun-facts cards, personal-records panel, and ownership timeline remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM Q&A surface that answers natural-language questions about your all-time stats — total drives, total distance, charging savings, achievements, personal records, ownership timeline — by routing through two read-only tools that quote the same deterministic envelope the Lifetime stats dashboard renders. The narrator never invents numbers and is honest about zero-data vehicles. The deterministic Lifetime stats hero card, key-stats grid, achievements gallery, fun-facts cards, personal-records panel, and ownership timeline remain the canonical baseline when Helix is off."
         },
         "incident-timeline-summarizer": {
           "label": "Incident timeline summarizer",
@@ -166,27 +166,27 @@
         },
         "data-repair-suggestions": {
           "label": "Data repair suggestions",
-          "description": "Opt-in LLM that proposes a typed RepairPlan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory shown on the Data Repair page. PROPOSE-ONLY: the LLM routes through two propose-only tools that share the same per-kind update_fields allowlist used by the canonical handler, and the user reviews the typed proposal in the Helix panel and clicks the canonical Save / Close / Quarantine button on the baseline form to apply it. The LLM never writes. Per-request scope binding rejects any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields. The deterministic stale-session list and per-row repair forms on the Data Repair page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM that proposes a typed RepairPlan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory shown on the Data repair page. PROPOSE-ONLY: the LLM routes through two propose-only tools that share the same per-kind update_fields allowlist used by the canonical handler, and the user reviews the typed proposal in the Helix panel and clicks the canonical Save / Close / Quarantine button on the baseline form to apply it. The LLM never writes. Per-request scope binding rejects any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields. The deterministic stale-session list and per-row repair forms on the Data repair page remain the canonical baseline when Helix is off."
         },
         "signal-explorer-nl-filter": {
           "label": "Signal explorer NL filter",
-          "description": "Opt-in LLM that translates a natural-language filter request (e.g. \"battery level for yesterday\") into a typed SignalFilter draft the Signal Explorer page can apply with one click. PROPOSE-ONLY: the LLM routes through two propose-only tools that enforce the same per-vehicle signal catalog and range/per-page enumerations the deterministic SignalSelector + RangePicker + PER_PAGE Select honour, and the user reviews the typed proposal in the Helix panel and clicks Apply to copy it into the form. The LLM never edits filter state directly. Per-request scope binding rejects any signal name not in the in-scope per-vehicle catalog and any vehicle_id mismatch to defend against prompt-injection. The deterministic SignalSelector, RangePicker, page-size Select, and Explore / Live buttons on /signals/explorer remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM that translates a natural-language filter request (e.g. \"battery level for yesterday\") into a typed SignalFilter draft the Signal explorer page can apply with one click. PROPOSE-ONLY: the LLM routes through two propose-only tools that enforce the same per-vehicle signal catalog and range/per-page enumerations the deterministic SignalSelector + RangePicker + PER_PAGE Select honour, and the user reviews the typed proposal in the Helix panel and clicks Apply to copy it into the form. The LLM never edits filter state directly. Per-request scope binding rejects any signal name not in the in-scope per-vehicle catalog and any vehicle_id mismatch to defend against prompt-injection. The deterministic SignalSelector, RangePicker, page-size Select, and Explore / Live buttons on /signals/explorer remain the canonical baseline when Helix is off."
         },
         "vampire-drain-explanation": {
           "label": "Vampire-drain explanation",
-          "description": "Opt-in LLM narrator that explains the deterministic vampire-drain (idle energy loss) signal — recent average / median / p95 idle drain rate per day, the worst recent idle window (start, duration, drain %, ambient temperature), and the per-event driver (Sentry on, climate on, very long parked window) most strongly correlated with elevated drain — grounded in the same numeric envelope the cards render, and honest that the per-event driver attribution is correlational rather than causal. The deterministic vampire-drain stats, per-event timeline, and typical-vs-worst cards on the Vampire Drain page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM narrator that explains the deterministic vampire-drain (idle energy loss) signal — recent average / median / p95 idle drain rate per day, the worst recent idle window (start, duration, drain %, ambient temperature), and the per-event driver (Sentry on, climate on, very long parked window) most strongly correlated with elevated drain — grounded in the same numeric envelope the cards render, and honest that the per-event driver attribution is correlational rather than causal. The deterministic vampire-drain stats, per-event timeline, and typical-vs-worst cards on the Vampire drain page remain the canonical baseline when Helix is off."
         },
         "preheat-precool-recommender": {
           "label": "Preheat and precool recommender",
-          "description": "Opt-in LLM agent that proposes a preheat or precool window — start time, end time, target cabin temperature, mode (preheat | precool) — by combining your typical departure timestamp with the vehicle's current cabin and outside temperatures. The proposal is structured and propose-only: review the typed draft in the Helix panel and click Apply on the existing climate-controls UI to save it; Helix never creates a schedule directly. The deterministic Climate Control page (HVAC banner, status cards, efficiency panel, history table, seat-heater controls, manual departure-time heuristic) remains the canonical baseline when Helix is off."
+          "description": "Opt-in LLM agent that proposes a preheat or precool window — start time, end time, target cabin temperature, mode (preheat | precool) — by combining your typical departure timestamp with the vehicle's current cabin and outside temperatures. The proposal is structured and propose-only: review the typed draft in the Helix panel and click Apply on the existing climate-controls UI to save it; Helix never creates a schedule directly. The deterministic Climate control page (HVAC banner, status cards, efficiency panel, history table, seat-heater controls, manual departure-time heuristic) remains the canonical baseline when Helix is off."
         },
         "cabin-temperature-impact-narrative": {
           "label": "Cabin temperature impact narrative",
-          "description": "Opt-in LLM narrator that explains how outside ambient temperature affects this vehicle's driving efficiency — which temperature bucket runs most efficiently, the relative consumption gap between the best and worst bucket, and the 12-month seasonal trend (cold-weather dip vs mild-weather recovery) — grounded strictly in the same bucketed-efficiency aggregates and monthly seasonal trend the chart renders, and honest that the surface is a descriptive aggregate of recent drives rather than a forecast or regression model. The deterministic Temperature Impact page (bucketed-efficiency chart, monthly seasonal trend, summary metric cards, recent drives table) remains the canonical baseline when Helix is off."
+          "description": "Opt-in LLM narrator that explains how outside ambient temperature affects this vehicle's driving efficiency — which temperature bucket runs most efficiently, the relative consumption gap between the best and worst bucket, and the 12-month seasonal trend (cold-weather dip vs mild-weather recovery) — grounded strictly in the same bucketed-efficiency aggregates and monthly seasonal trend the chart renders, and honest that the surface is a descriptive aggregate of recent drives rather than a forecast or regression model. The deterministic Temperature impact page (bucketed-efficiency chart, monthly seasonal trend, summary metric cards, recent drives table) remains the canonical baseline when Helix is off."
         },
         "tire-pressure-trend-reasoning": {
           "label": "Tire-pressure trend reasoning",
-          "description": "Opt-in LLM narrator that explains the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation when all four corners trend together with a parallel ambient-temperature drop, single-corner slow-leak signature when one corner's rate is materially worse), and any actionable threshold crossing — grounded strictly in the same TpmsPressure* and OutsideTemp signal-log change feed the gauges render, and honest that the per-corner slope is a descriptive linear extrapolation rather than a forecast. The deterministic Tire Pressure page (four-corner gauges, soft-low/normal/soft-high threshold bands, warning banner, summary metric cards, pressure history chart, history table) remains the canonical baseline when Helix is off."
+          "description": "Opt-in LLM narrator that explains the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation when all four corners trend together with a parallel ambient-temperature drop, single-corner slow-leak signature when one corner's rate is materially worse), and any actionable threshold crossing — grounded strictly in the same TpmsPressure* and OutsideTemp signal-log change feed the gauges render, and honest that the per-corner slope is a descriptive linear extrapolation rather than a forecast. The deterministic Tire pressure page (four-corner gauges, soft-low/normal/soft-high threshold bands, warning banner, summary metric cards, pressure history chart, history table) remains the canonical baseline when Helix is off."
         },
         "alert-tuning-suggestions": {
           "label": "Alert-rule tuning suggestions",
@@ -238,11 +238,11 @@
         },
         "tco-narration": {
           "label": "TCO narration",
-          "description": "Opt-in Helix narrator that explains the deterministic Total-Cost-of-Ownership envelope on the True Cost of Ownership page — the EV charging cost, the equivalent gas cost, the cumulative savings, and the cost-per-kilometre comparison — by routing through one read-only tool that quotes the same numbers the chart shows. The narrator is honest about the four limiting assumptions: operating cost only (no depreciation, resale, insurance, registration, or financing); a flat $50/month maintenance heuristic; equivalent gas cost estimated from charged energy not real-world distance; and gas-price / efficiency / electricity-rate defaults from your editable Settings. When the deterministic envelope reports negative savings the narrator states that fact honestly rather than cheerlead. The deterministic hero stat cards, cumulative-savings area chart, cost-per-km bar chart, monthly EV-vs-gas bar chart, and savings-breakdown summary remain the canonical baseline when Helix is off."
+          "description": "Opt-in Helix narrator that explains the deterministic Total-Cost-of-Ownership envelope on the True Cost of ownership page — the EV charging cost, the equivalent gas cost, the cumulative savings, and the cost-per-kilometre comparison — by routing through one read-only tool that quotes the same numbers the chart shows. The narrator is honest about the four limiting assumptions: operating cost only (no depreciation, resale, insurance, registration, or financing); a flat $50/month maintenance heuristic; equivalent gas cost estimated from charged energy not real-world distance; and gas-price / efficiency / electricity-rate defaults from your editable Settings. When the deterministic envelope reports negative savings the narrator states that fact honestly rather than cheerlead. The deterministic hero stat cards, cumulative-savings area chart, cost-per-km bar chart, monthly EV-vs-gas bar chart, and savings-breakdown summary remain the canonical baseline when Helix is off."
         },
         "software-update-changelog-summarizer": {
           "label": "Software update changelog summarizer",
-          "description": "Opt-in Helix narrator that summarizes one in-scope vehicle's firmware update history on the Software Updates page — the current installed version, the install cadence (days between recent versions), and the headline release-note themes for the versions you have actually installed — by routing through two read-only tools that quote the same deterministic update events the timeline shows plus the public Tesla release-note chunks the retrieval layer surfaces. The narrator never invents firmware versions and never claims features your installed build does not have; when no release notes are available for a version it states that fact honestly. Per-request scope binding rejects any cross-vehicle tool call to defend against prompt-injection exfiltration via release-note text. The deterministic current-version metric card, install-count metric card, total-update count, the per-version timeline with status chips, and the public release-notes external links remain the canonical baseline when Helix is off."
+          "description": "Opt-in Helix narrator that summarizes one in-scope vehicle's firmware update history on the Software updates page — the current installed version, the install cadence (days between recent versions), and the headline release-note themes for the versions you have actually installed — by routing through two read-only tools that quote the same deterministic update events the timeline shows plus the public Tesla release-note chunks the retrieval layer surfaces. The narrator never invents firmware versions and never claims features your installed build does not have; when no release notes are available for a version it states that fact honestly. Per-request scope binding rejects any cross-vehicle tool call to defend against prompt-injection exfiltration via release-note text. The deterministic current-version metric card, install-count metric card, total-update count, the per-version timeline with status chips, and the public release-notes external links remain the canonical baseline when Helix is off."
         },
         "pii-redaction-shared-exports": {
           "label": "PII redaction in shared exports",
@@ -305,24 +305,24 @@
     }
   },
   "fleetSetup": {
-    "title": "Fleet Setup"
+    "title": "Fleet setup"
   },
   "orders": {
-    "title": "Active Orders",
+    "title": "Active orders",
     "subtitle": "Vehicle orders and delivery tracking from Tesla",
     "lastSynced": "Synced",
     "refresh": "Refresh",
     "orderId": "Order ID",
     "vin": "VIN",
-    "deliveryDate": "Delivery Date",
+    "deliveryDate": "Delivery date",
     "upgradable": "Upgradable",
     "noOrders": "No active orders found.",
-    "noData": "No order data yet. Click Refresh to fetch from Tesla.",
+    "noData": "No order data yet. Click refresh to fetch from Tesla.",
     "loading": "Loading orders…",
     "resourceName": "Orders"
   },
   "quietHours": {
-    "title": "Quiet hours / Do-Not-Disturb",
+    "title": "Quiet hours / do-not-disturb",
     "subtitle": "Defer non-critical notifications during sleep, meetings, or other time-of-day windows.",
     "addWindow": "Add window",
     "edit": "Edit",
@@ -426,7 +426,7 @@
       "tokenLabel": "Access token",
       "tokenOptional": "optional",
       "tokenPlaceholder": "ts_…",
-      "tokenHint": "Only needed when your server uses forward-auth login. Create one under Admin → API Keys.",
+      "tokenHint": "Only needed when your server uses forward-auth login. Create one under admin → API keys.",
       "submit": "Connect",
       "connecting": "Connecting…",
       "errorEmpty": "Enter a server address, e.g. https://teslasync.example.com.",
@@ -519,7 +519,7 @@
     },
     "confirm": {
       "sectionTitle": "Reset {{name}}?",
-      "sectionMessage": "{{description}} This action is permanent.",
+      "sectionMessage": "{{description}} this action is permanent.",
       "allTitle": "Reset every user-discoverable setting?",
       "allMessage": "Every alert rule, geofence, channel, automation, dashboard layout preset, and preference row will be permanently deleted. This cannot be undone.",
       "confirmLabel": "Reset",
@@ -574,6 +574,1236 @@
       "title": "Save your backup codes",
       "download": "Download .txt",
       "done": "I saved them"
+    }
+  },
+  "achievements": {
+    "celebrationSettings": "Celebration",
+    "dismiss": "Dismiss achievement notification",
+    "playSound": "Play sound on unlock",
+    "playSoundHelp": "Play a short chime alongside the celebration toast. Off by default.",
+    "pushOnUnlock": "Send push notifications for achievements",
+    "pushOnUnlockHelp": "Deliver a web push notification when an achievement unlocks while the tab is closed.",
+    "showOnDashboard": "Show recently unlocked on dashboard",
+    "showOnDashboardHelp": "Surface your latest unlocks in the dashboard's recently-unlocked widget.",
+    "showToasts": "Show celebration toasts",
+    "showToastsHelp": "Pop a celebratory toast with confetti when you unlock an achievement.",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "activity": {
+    "action": {
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleDelete": "Alert rule deleted",
+      "alertRuleUpdate": "Alert rule updated",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyDelete": "API key revoked",
+      "apiKeyUpdate": "API key updated",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automation": "Automation change",
+      "automationAutoDisabled": "Automation auto-disabled",
+      "automationCreate": "Automation created",
+      "automationCreated": "Automation created",
+      "automationDelete": "Automation deleted",
+      "automationDeleted": "Automation deleted",
+      "automationDisabled": "Automation disabled",
+      "automationEnabled": "Automation enabled",
+      "automationExecuted": "Automation ran",
+      "automationExported": "Automations exported",
+      "automationFailed": "Automation failed",
+      "automationImported": "Automations imported",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationUpdate": "Automation updated",
+      "automationUpdated": "Automation updated",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandCharge": "Charging command",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandWake": "Wake vehicle"
+    },
+    "myActivity": {
+      "empty": "No recent activity in this window."
+    }
+  },
+  "app": {
+    "bar": "Bar",
+    "carClockFormat": "Car clock format",
+    "carUses": "Car uses",
+    "celsius": "Celsius",
+    "clock12h": "12-hour",
+    "clock24h": "24-hour",
+    "clockFormatHint": "Your vehicle's time display preference (read-only)",
+    "comparisonMPG": "Comparison vehicle MPG",
+    "currency": "Currency",
+    "decimalPrecision": "Decimal precision",
+    "decimalPrecisionPlaceholder": "e.g. 2",
+    "distanceUnit": "Distance unit",
+    "electricityCost": "Electricity cost (per kWh)",
+    "fahrenheit": "Fahrenheit",
+    "gasPrice": "Gas price (for EV vs ICE comparison)",
+    "gasVolumeUnit": "Fuel volume unit",
+    "ideal": "Ideal",
+    "kilometers": "Kilometers",
+    "language": "Language",
+    "locale": "Number & date locale",
+    "miles": "Miles",
+    "mpgPlaceholder": "Average MPG of equivalent gas car",
+    "perGallon": "/ gallon",
+    "perLiter": "/ liter",
+    "preferredRange": "Preferred range",
+    "pressureUnit": "Pressure unit",
+    "preview": "Preview",
+    "psi": "PSI",
+    "rated": "Rated",
+    "save": "Save settings",
+    "settingsSaved": "Settings saved",
+    "subtitle": "Units, language, and cost preferences",
+    "syncFromCar": "Sync from car",
+    "syncHint": "Sync your app's units to match your vehicle's display settings",
+    "temperatureUnit": "Temperature unit",
+    "timezoneUser": "My time zone override",
+    "timezoneUserHint": "IANA tz name. Useful when travelling but you'd rather see times in your home zone.",
+    "timezoneUserPlaceholder": "e.g. America/Los_Angeles (leave blank for browser default)",
+    "title": "Application",
+    "tzDisplayDefault": "Time zone display",
+    "tzUser": "My local time",
+    "tzUtc": "UTC",
+    "tzVehicle": "Vehicle's local time (recommended)"
+  },
+  "backup": {
+    "export": {
+      "busy": "Exporting…",
+      "cta": "Export JSON",
+      "successDetail": "Saved to your downloads folder.",
+      "successTitle": "Settings exported",
+      "title": "Export settings"
+    },
+    "import": {
+      "appliedDetail": "{{added}} added, {{updated}} updated, {{skipped}} skipped.",
+      "appliedHeader": "Import complete",
+      "appliedTitle": "Settings imported",
+      "applyCount": "Apply {{count}} change(s)",
+      "applyNoChanges": "Nothing to apply",
+      "applying": "Applying…",
+      "cancel": "Cancel",
+      "changeFile": "Change file",
+      "choose": "Choose a file",
+      "done": "Done",
+      "dropPrompt": "Drag a JSON bundle here, or",
+      "errorJson": "File is not valid JSON: {{detail}}",
+      "errorPreview": "Failed to preview import.",
+      "errorRead": "Failed to read the file.",
+      "errorTooLarge": "File is too large (max 1 MB).",
+      "parsing": "Reading…",
+      "previewHeader": "Previewing {{name}} ({{size}} bytes)",
+      "title": "Import settings"
+    },
+    "section": {
+      "alertRules": "Alert rules",
+      "geofences": "Geofences",
+      "quietHours": "Quiet hours",
+      "settings": "General settings"
+    },
+    "subtitle": "Manage automated backups and restore points",
+    "title": "Backup & restore"
+  },
+  "bulk": {
+    "clear": "Clear selection",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "ofTotal": "of {{total}}",
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "toolbarLabel": "Bulk actions for selected items"
+  },
+  "calculationDetails": {
+    "coverage": "Data coverage",
+    "exclusions": "Exclusions and limitations",
+    "method": "Method",
+    "noExclusions": "No additional exclusions were supplied.",
+    "period": "Analysis period",
+    "provenance": "Provenance",
+    "sources": "Data sources",
+    "title": "How this was calculated",
+    "unavailable": "Not provided",
+    "version": "Calculation version"
+  },
+  "checklist": {
+    "settings": {
+      "description": "Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup checklist” widget from the dashboard customizer.",
+      "restart": "Restart checklist",
+      "restarted": "Setup checklist restarted — re-add the widget from the dashboard customizer if needed.",
+      "title": "Setup checklist"
+    },
+    "tasks": {
+      "commandPalette": {
+        "cta": "Open",
+        "description": "Press Ctrl+K (or ⌘K) to jump anywhere instantly.",
+        "title": "Try the command palette"
+      },
+      "connectVehicle": {
+        "cta": "Connect",
+        "description": "Link your Tesla account to start syncing data.",
+        "title": "Connect your Tesla"
+      },
+      "customizeDashboard": {
+        "cta": "Open",
+        "description": "Add widgets that match how you use TeslaSync.",
+        "title": "Customize your dashboard"
+      },
+      "enablePush": {
+        "cta": "Enable",
+        "description": "Get alerts in your browser even when TeslaSync is closed.",
+        "title": "Enable web push notifications"
+      },
+      "firstAlert": {
+        "cta": "Create",
+        "description": "Get notified when something changes — battery low, charge complete, etc.",
+        "title": "Create your first alert rule"
+      },
+      "notify": {
+        "cta": "Configure",
+        "description": "Without a channel (Discord, ntfy, email, …) your alerts go to /dev/null.",
+        "title": "Add a notification channel"
+      },
+      "pickTheme": {
+        "cta": "Open",
+        "description": "Choose an accent color that fits your style.",
+        "title": "Pick a theme"
+      }
+    }
+  },
+  "combobox": {
+    "maxReached": "Maximum reached",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}"
+  },
+  "consent": {
+    "action": {
+      "accept": "Re-grant consent",
+      "decline": "Withdraw consent",
+      "reset": "Reset"
+    },
+    "section": {
+      "bodyOff": "This deployment does not require consent collection — these controls let you preview the user-facing flow.",
+      "bodyOn": "This deployment collects anonymous performance and error reports with your consent. Strictly necessary storage (auth, settings) is always on.",
+      "title": "Cookies & analytics consent"
+    },
+    "toast": {
+      "accepted": "Consent granted",
+      "declined": "Consent withdrawn",
+      "reset": "Consent reset — banner will reappear"
+    }
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "label": "Quick date range",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    },
+    "range": {
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "compare": "Compare to previous period",
+      "end": "End date",
+      "newRange": "New range",
+      "pickRange": "Custom range",
+      "popoverLabel": "Date range picker",
+      "start": "Start date",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "trigger": "Date range"
+    }
+  },
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}"
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "noun": {
+      "settings": "Settings"
+    },
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    },
+    "resource": {
+      "settings": "Your settings"
+    }
+  },
+  "entityContext": {
+    "title": "Related context"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "subtitle": "Export drives, charging, analytics, or full backup as CSV/JSON",
+    "title": "Export dashboard",
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "featureConfig": {
+    "details": "Details",
+    "disabled": "Disabled",
+    "enabled": "Enabled",
+    "feature": "Feature",
+    "lastSynced": "Synced",
+    "noData": "No feature config data yet. Click refresh to fetch from Tesla.",
+    "noMatch": "No features match your filters.",
+    "refresh": "Refresh",
+    "status": "Status",
+    "subtitle": "Tesla account feature configuration",
+    "title": "Feature flags"
+  },
+  "forms": {
+    "unsavedSettings": "You have unsaved settings."
+  },
+  "freshness": {
+    "noData": "No recent data",
+    "offline": "Offline",
+    "seconds": "{{s}}s ago"
+  },
+  "fsm": {
+    "typeLabel": {
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "driveSession": "Drive",
+      "notification": "Notify",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—",
+      "vehicle": "Vehicle"
+    }
+  },
+  "helix": {
+    "ariaLabel": "Helix",
+    "badge": "Helix",
+    "evidence": {
+      "gathering": "Gathering",
+      "grounded": "Grounded in",
+      "limited": "Limited evidence",
+      "reading": "Reading",
+      "source": "TeslaSync source",
+      "sources": "TeslaSync sources",
+      "successful": "successful",
+      "title": "Evidence trail",
+      "tokens": "tokens",
+      "unavailable": "Unavailable",
+      "used": "Used"
+    },
+    "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
+  },
+  "help": {
+    "fields": {
+      "settings": {
+        "appearanceDensity": "Controls row height, padding, and font sizes across tables and dashboards. Compact fits more on screen; comfortable is easier to read on large displays.",
+        "chartPalette": "Colour scheme used for chart series. Vivid is the default high-contrast palette; muted reduces visual noise; print is grayscale-friendly for exports.",
+        "electricityCost": "Cost per kWh used to compute charging spend across drives, charging sessions, and TCO analytics. Currency follows the Currency setting above.",
+        "timeFormat": "12-hour (1:30 PM) vs 24-hour (13:30) display across timestamps. Affects all surfaces — drives, charging, alerts, telemetry charts."
+      }
+    }
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "unlocked": "✓ Unlocked"
+  },
+  "listExport": {
+    "button": "Export",
+    "csv": "Download as CSV",
+    "disabledTooltip": "No data to export",
+    "exporting": "Preparing {{format}} export…",
+    "failed": "Could not prepare the {{format}} export.",
+    "json": "Download as JSON",
+    "menuLabel": "Export list",
+    "scopeLegend": "Export scope",
+    "selectedWithCount": "Selected ({{count}})",
+    "visible": "Visible",
+    "visibleWithCount": "Visible ({{count}})"
+  },
+  "live": {
+    "connected": "Live",
+    "disconnected": "Offline",
+    "reconnecting": "Reconnecting…",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
+    "unknown": "Unknown"
+  },
+  "notifications": {
+    "alertStudio": {
+      "editor": {
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownBadge": "Unknown",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}"
+      }
+    }
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "attention": "Attention",
+    "detailTitle": "{{title}} details",
+    "metrics": "Operational metrics",
+    "narrative": {
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "confidence": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "not_scored": "Not scored",
+        "title": "Confidence",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "evidence": "Supporting evidence",
+      "likelyCause": "Likely cause",
+      "limitations": "Limitations",
+      "noEvidence": "No supporting records were supplied.",
+      "noLimitations": "No additional limitations were supplied.",
+      "recommendedResponse": "Recommended response",
+      "record": "Record",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available."
+    },
+    "noAttention": "No current attention items.",
+    "reviewAll": "Review all",
+    "reviewDetails": "Review details"
+  },
+  "productPreferences": {
+    "contextualHelp": {
+      "hint": "Show helpful guidance in workspace controls.",
+      "label": "Contextual help"
+    },
+    "defaultRange": {
+      "hint": "Choose the time range used for new analysis views.",
+      "label": "Default analysis range"
+    },
+    "defaultVehicle": {
+      "hint": "Choose the vehicle selected when TeslaSync opens.",
+      "label": "Default vehicle",
+      "lastActive": "Use the last active vehicle",
+      "unavailable": "Unavailable vehicle {{id}}",
+      "unnamed": "Vehicle {{id}}"
+    },
+    "description": "Choose how TeslaSync prioritizes information when this browser opens. These presentation preferences never change permissions or backend authorization.",
+    "deviceLocal": "This browser",
+    "landing": {
+      "hint": "Choose the page shown when TeslaSync opens.",
+      "label": "Landing page",
+      "options": {
+        "actionCenter": "Action center",
+        "analytics": "Analytics",
+        "battery": "Battery",
+        "charging": "Charging",
+        "dashboard": "Dashboard",
+        "drives": "Drives",
+        "vehicles": "Vehicles"
+      }
+    },
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "administrator": {
+        "description": "Prioritize system administration and operational controls.",
+        "label": "Administrator"
+      },
+      "analyst": {
+        "description": "Prioritize trends, reports, and historical analysis.",
+        "label": "Analyst"
+      },
+      "fleetOperator": {
+        "description": "Prioritize active fleet operations and current vehicle state.",
+        "label": "Fleet operator"
+      },
+      "owner": {
+        "description": "Keep the most useful everyday vehicle information close at hand.",
+        "label": "Owner"
+      }
+    },
+    "releaseHighlights": {
+      "hint": "Show recently released capabilities.",
+      "label": "Release highlights"
+    },
+    "reset": {
+      "done": "Workspace preferences restored to defaults.",
+      "label": "Reset defaults"
+    },
+    "title": "Workspace preferences"
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "recentPages": {
+    "clearBody": "Wipe the list of pages used by the status bar and the recent section in the command palette.",
+    "clearButton": "Clear recent pages",
+    "clearConfirmBody": "This will wipe the list immediately. The status bar and palette Recent section will be empty until you visit new pages.",
+    "clearConfirmCta": "Clear pages",
+    "clearConfirmTitle": "Clear recent pages?",
+    "clearTitle": "Recently viewed pages",
+    "cleared": "Recent pages cleared",
+    "empty": "Pages you visit will appear here for quick access.",
+    "storedCount": "{{count}} entries stored",
+    "storedCount_one": "{{count}} entry stored",
+    "storedCount_other": "{{count}} entries stored"
+  },
+  "region": {
+    "fleetApiUrl": "Fleet API base URL",
+    "lastSynced": "Synced",
+    "noData": "No region data yet. Click refresh to fetch from Tesla.",
+    "refresh": "Refresh",
+    "regionCode": "Region code",
+    "subtitle": "Tesla account region and Fleet API endpoint",
+    "title": "Region & API"
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "savedViews": {
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "defaultBadge": "Default",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "deleteTitle": "Delete saved view",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "error": "Unable to load saved views",
+    "loading": "Loading saved views…",
+    "makeDefault": "Apply automatically when I open this page",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "pin": "Pin",
+    "renamePrompt": "Rename view",
+    "saveCurrent": "Save current view…",
+    "setDefault": "Set as default",
+    "title": "Saved views",
+    "unpin": "Unpin",
+    "unsetDefault": "Clear default"
+  },
+  "search": {
+    "entries": {
+      "advanced": {
+        "restoreConfirms": {
+          "desc": "Re-enable “Don’t ask again” prompts you previously silenced.",
+          "title": "Restore confirmation prompts"
+        }
+      },
+      "appearance": {
+        "celebrations": {
+          "desc": "Celebration toasts and sound when an achievement unlocks.",
+          "title": "Achievement celebrations"
+        },
+        "chartPalette": {
+          "desc": "Color-blind safe (Okabe-Ito) or stylistic neon chart colors.",
+          "title": "Chart palette"
+        },
+        "density": {
+          "desc": "Compact, comfortable, or spacious row sizing across tables and cards.",
+          "title": "Information density"
+        },
+        "statusBar": {
+          "desc": "Show or hide the always-on footer status bar.",
+          "title": "Status bar"
+        },
+        "theme": {
+          "desc": "Choose light, dark, or system mode and pick an accent color.",
+          "title": "Theme"
+        },
+        "timeFormat": {
+          "desc": "Show timestamps as relative (\"2h ago\") or absolute (\"Nov 12, 13:42\").",
+          "title": "Default time format"
+        }
+      },
+      "backup": {
+        "export": {
+          "desc": "Download a portable bundle of general settings, alert rules, geofences, and quiet-hours windows.",
+          "title": "Export settings as JSON"
+        },
+        "import": {
+          "desc": "Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle.",
+          "title": "Import settings from JSON"
+        }
+      },
+      "features": {
+        "desc": "Tesla account feature configuration synced from the Fleet API.",
+        "title": "Feature flags"
+      },
+      "gasPrice": {
+        "desc": "Automatically fetch US average gas prices from EIA.",
+        "title": "Gas price auto-poll"
+      },
+      "general": {
+        "currency": {
+          "desc": "Currency symbol used in cost and savings displays.",
+          "title": "Currency"
+        },
+        "distance": {
+          "desc": "Show distances in kilometers or miles.",
+          "title": "Distance unit"
+        },
+        "electricityCost": {
+          "desc": "Per-kWh price used in charging cost calculations.",
+          "title": "Electricity cost (per kWh)"
+        },
+        "gasPriceManual": {
+          "desc": "Manual gas price used in EV-vs-ICE savings comparisons.",
+          "title": "Comparison gas price"
+        },
+        "language": {
+          "desc": "Application interface language.",
+          "title": "Language"
+        },
+        "locale": {
+          "desc": "Locale used for number, date, and time formatting.",
+          "title": "Number & date locale"
+        },
+        "mpg": {
+          "desc": "Average MPG of the equivalent gas car for savings calculations.",
+          "title": "Comparison vehicle MPG"
+        },
+        "precision": {
+          "desc": "Number of decimal places shown on numeric metrics.",
+          "title": "Decimal precision"
+        },
+        "pressure": {
+          "desc": "Show tire pressure in Bar or PSI.",
+          "title": "Tire pressure unit"
+        },
+        "range": {
+          "desc": "Display rated or ideal range for the battery.",
+          "title": "Preferred range"
+        },
+        "temperature": {
+          "desc": "Show temperatures in Celsius or Fahrenheit.",
+          "title": "Temperature unit"
+        },
+        "timezone": {
+          "desc": "Whether timestamps follow the vehicle, your local time, or UTC.",
+          "title": "Time zone"
+        }
+      },
+      "notifications": {
+        "alerts": {
+          "desc": "Get notified when an alert rule fires.",
+          "title": "Alert notifications"
+        },
+        "browser": {
+          "desc": "Enable browser notifications when the tab is in the background.",
+          "title": "Browser notifications"
+        },
+        "criticalFlash": {
+          "desc": "Flash the browser tab title on critical alerts.",
+          "title": "Critical alert tab flash"
+        },
+        "exportStatus": {
+          "desc": "Get notified when a CSV/JSON export finishes.",
+          "title": "Export completion notifications"
+        },
+        "soundChannels": {
+          "desc": "Toggle sound separately for critical, warning, and info alerts plus charge/drive/automation completions.",
+          "title": "Per-channel notification sounds"
+        },
+        "soundMaster": {
+          "desc": "Play short audio cues when alerts and completion events arrive.",
+          "title": "Notification sounds"
+        },
+        "soundVolume": {
+          "desc": "Adjust how loud notification cues play.",
+          "title": "Notification sound volume"
+        },
+        "tabBadge": {
+          "desc": "Show unread count in the browser tab title and favicon.",
+          "title": "Browser tab unread badge"
+        }
+      },
+      "orders": {
+        "desc": "Vehicle orders and delivery tracking from Tesla.",
+        "title": "Active orders"
+      },
+      "quietHours": {
+        "bypass": {
+          "desc": "Choose which severities (e.g. critical) still ring through during quiet hours.",
+          "title": "Quiet hours bypass severities"
+        },
+        "timezone": {
+          "desc": "Pick the IANA timezone the start/end times are evaluated against.",
+          "title": "Quiet hours timezone"
+        },
+        "windows": {
+          "desc": "Defer non-critical notifications during sleep, work meetings, or any time-of-day window.",
+          "title": "Quiet hours windows"
+        }
+      },
+      "region": {
+        "desc": "Tesla account region and the resolved Fleet API base URL.",
+        "title": "Region & Fleet API endpoint"
+      },
+      "reset": {
+        "all": {
+          "title": "Reset ALL settings"
+        },
+        "section": {
+          "title": "Reset a section to defaults"
+        }
+      },
+      "security": {
+        "sessionsList": {
+          "title": "Active sessions"
+        },
+        "sessionsRevokeAll": {
+          "title": "Sign out all other devices"
+        },
+        "totpBackupCodes": {
+          "title": "TOTP backup codes"
+        },
+        "totpDisable": {
+          "title": "Disable two-factor authentication"
+        },
+        "totpEnroll": {
+          "title": "Enable two-factor authentication"
+        }
+      },
+      "tesla": {
+        "connect": {
+          "desc": "Authorize TeslaSync to access your Tesla account.",
+          "title": "Connect Tesla account"
+        },
+        "disconnect": {
+          "desc": "Sign out and remove the cached OAuth token.",
+          "title": "Disconnect Tesla account"
+        },
+        "refreshToken": {
+          "desc": "Manually refresh the cached Tesla OAuth token.",
+          "title": "Tesla refresh token"
+        },
+        "syncVehicles": {
+          "desc": "Pull the current vehicle list from the Tesla Fleet API.",
+          "title": "Sync vehicles from Tesla"
+        }
+      },
+      "webhooks": {
+        "list": {
+          "title": "Webhook channels"
+        },
+        "signing": {
+          "title": "Webhook HMAC signing"
+        },
+        "test": {
+          "title": "Test a webhook channel"
+        }
+      }
+    },
+    "history": {
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history",
+      "title": "Recent searches"
+    }
+  },
+  "settings": {
+    "advanced": {
+      "restoreConfirms": {
+        "keys": {
+          "discardDraft": "Discard unsaved draft",
+          "unsavedNavigation": "Leave page with unsaved changes"
+        }
+      }
+    },
+    "appearance": {
+      "kioskBody": "Full-screen rotation for shared screens. Layout, dwell time, and idle behavior are configured on the dashboard.",
+      "kioskLabel": "Kiosk mode",
+      "kioskLink": "Open kiosk settings",
+      "kioskTitle": "Wall-display dashboard"
+    },
+    "organization": {
+      "advanced": "Confirmation prompts",
+      "advancedDescription": "Restore confirmations you previously silenced",
+      "appearance": "Appearance & experience",
+      "appearanceDescription": "Theme, layout, status bar and celebrations",
+      "costs": "Energy & comparison costs",
+      "general": "Units, language & costs",
+      "generalDescription": "Measurements, regional formats and comparison costs",
+      "navigation": "Settings categories",
+      "overview": "Overview",
+      "overviewDescription": "Current preferences and useful shortcuts",
+      "region": "Language, region & currency",
+      "reset": "Reset & recovery",
+      "resetDescription": "Restore defaults and review destructive actions",
+      "saveHint": "Each section keeps its existing save controls. Switching categories keeps your unsaved edits.",
+      "subtitle": "Find a category, adjust your preferences, and keep TeslaSync working your way.",
+      "typography": "Fonts & readability",
+      "typographyDescription": "Explore fonts, preview your own text, and fine-tune readability",
+      "units": "Units & measurements",
+      "workspace": "Workspace",
+      "workspaceDescription": "Landing page, default vehicle and analysis window"
+    },
+    "search": {
+      "label": "Search settings",
+      "noResults": "No matching settings.",
+      "placeholder": "Search settings…"
+    },
+    "totp": {
+      "toasts": {
+        "backupRegenerated": "Backup codes regenerated.",
+        "disabled": "TOTP disabled.",
+        "verified": "TOTP enabled. Save your backup codes!"
+      }
+    },
+    "tours": {
+      "body": "Re-run the guided walkthroughs that introduce major sections.",
+      "label": "Product tours",
+      "replayAutomations": "Automations tour",
+      "replayDebugger": "Debugger tour",
+      "replayMain": "Replay dashboard tour",
+      "resetAll": "Reset all tours",
+      "resetDone": "All tours reset — they will play next time you open the matching page",
+      "title": "Product tours"
+    },
+    "typographyAgent": {
+      "loopPending": "Loop calibrating…",
+      "loopStatus": "Loop verified · score {{score}}/100",
+      "openHud": "Open ambient HUD",
+      "sectionSubtitle": "A modular-ratio fluid scale compiled to live tokens. Same store as the ambient HUD (Ctrl/⌘+shift+T).",
+      "sectionTitle": "Harmonic scale"
+    }
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "sourceLayer": {
+    "age": "age",
+    "l1": {
+      "desc": "Read from the in-process SignalStore (hot path, freshest)."
+    },
+    "l2": {
+      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
+    },
+    "log": {
+      "desc": "Replayed from signal_log (durable history).",
+      "label": "Log"
+    },
+    "stale": {
+      "desc": "Redis-backed value older than the 2-minute freshness window.",
+      "label": "Stale"
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  },
+  "tagInput": {
+    "added": "{{count}} tags added",
+    "addedOne": "Tag added",
+    "duplicate": "{{tag}} is already added",
+    "maxReached": "Tag limit reached",
+    "maxReachedAnnounce": "Tag limit reached",
+    "maxReachedHint": "Maximum {{count}} tags",
+    "placeholder": "Add a tag…",
+    "removeTag": "Remove {{tag}}",
+    "removed": "Removed {{tag}}",
+    "tagsList": "Tags: {{tags}}",
+    "tagsNone": "No tags yet"
+  },
+  "tesla": {
+    "connect": "Connect Tesla account",
+    "connected": "Connected",
+    "disconnect": "Disconnect",
+    "disconnectConfirm": "Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.",
+    "disconnectTitle": "Disconnect Tesla account?",
+    "disconnected": "Disconnected",
+    "expiringSoon": "Expires in {{days}}d",
+    "notConnected": "Not connected",
+    "reauthorize": "Re-authorize",
+    "refreshToken": "Refresh token",
+    "subtitle": "Connect your Tesla account to sync vehicles and data",
+    "syncVehicles": "Sync vehicles",
+    "synced": "Synced {{count}} vehicle(s).",
+    "title": "Tesla account",
+    "tokenExpires": "Token expires"
+  },
+  "theme": {
+    "chartPalette": {
+      "cbSafe": "Color-blind safe",
+      "help": "Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency.",
+      "label": "Chart palette",
+      "neon": "Stylistic neon"
+    },
+    "density": {
+      "comfortable": "Comfortable",
+      "comfortableHelp": "Default sizing",
+      "compact": "Compact",
+      "compactHelp": "Tight rows — fits more on screen",
+      "help": "Affects table rows, cards, and dashboard widgets across the app.",
+      "label": "Information density",
+      "previewRow1": "Sample row — Tesla Model 3",
+      "previewRow2": "Sample row — Tesla Model Y",
+      "previewRow3": "Sample row — Tesla Model S",
+      "previewTitle": "Preview",
+      "spacious": "Spacious",
+      "spaciousHelp": "Roomy — easier to read at distance"
+    },
+    "moreOptions": "More appearance options",
+    "statusBar": {
+      "hiddenToast": "Status bar hidden",
+      "iconOnly": "Always icon-only",
+      "iconOnlyHelp": "Hide labels at all widths. Lower-priority tools move into more on constrained screens.",
+      "label": "Status bar",
+      "show": "Show status bar",
+      "showHelp": "Always-on footer with connection health, live freshness, priority alerts, recent pages, and operational activity.",
+      "shownToast": "Status bar shown"
+    },
+    "subtitle": "Customize colors and display mode",
+    "timeFormat": {
+      "absolute": "Absolute (Nov 12, 13:42)",
+      "absoluteHelp": "Best for trip planning and event correlation",
+      "help": "Hover any timestamp to see the alternate format. Override per-surface with the format prop where needed.",
+      "label": "Default time format",
+      "relative": "Relative (2h ago)",
+      "relativeHelp": "Best for recent activity feeds"
+    },
+    "title": "Appearance"
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "channels": {
+      "delete": {
+        "success": "Channel deleted"
+      },
+      "test": {
+        "success": "Test notification sent"
+      },
+      "toggle": {
+        "success": "Channel toggled"
+      }
+    },
+    "disconnectFailed": "Disconnect failed",
+    "disconnected": "Tesla account disconnected",
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "noChanges": "No changes",
+    "noChangesDesc": "Could not detect car unit preferences",
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "ordersFailed": "Failed to refresh orders",
+    "ordersRefreshed": "Orders refreshed",
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "created": "Quiet hours window created",
+      "delete": {
+        "success": "Quiet hours window removed"
+      },
+      "deleteError": "Failed to delete quiet hours window",
+      "deleted": "Quiet hours window removed",
+      "saveError": "Failed to save quiet hours window",
+      "updated": "Quiet hours window updated"
+    },
+    "regionFailed": "Failed to refresh region",
+    "regionRefreshed": "Region info refreshed",
+    "saveFailed": "Failed to save",
+    "saveFailedDesc": "Could not update settings",
+    "saved": "Settings saved",
+    "savedDesc": "Your preferences have been updated",
+    "savedViews": {
+      "create": {
+        "success": "Saved view created"
+      },
+      "delete": {
+        "success": "View deleted"
+      },
+      "update": {
+        "success": "View updated"
+      }
+    },
+    "settings": {
+      "ai": {
+        "save": {
+          "success": "Helix settings saved"
+        }
+      },
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        },
+        "poll": {
+          "success": "Gas prices updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "syncFailed": "Vehicle sync failed",
+    "tokenRefreshFailed": "Token refresh failed",
+    "tokenRefreshed": "Token refreshed",
+    "unitsSynced": "Units synced from car",
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "description": "Re-run the guided walkthrough of TeslaSync features",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "restart": "Restart tour",
+    "skip": "Skip tour",
+    "title": "Onboarding tour"
+  },
+  "workspaceContext": {
+    "ranges": {
+      "1y": "Last year",
+      "24h": "Last 24 hours",
+      "30d": "Last 30 days",
+      "7d": "Last 7 days",
+      "90d": "Last 90 days",
+      "all": "All time",
+      "live": "Live",
+      "today": "Today"
     }
   }
 }
