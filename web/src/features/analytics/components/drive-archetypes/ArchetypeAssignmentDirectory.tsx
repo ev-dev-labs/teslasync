@@ -6,6 +6,7 @@ import {
   GlassPanel,
   MetricLabel,
   PanelTitle,
+  Table,
   Text,
 } from '@/components/ui';
 import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
@@ -123,14 +124,16 @@ export function ArchetypeAssignmentDirectory({
                       ? archetypeIdentity(t, cluster.index, cluster.label)
                       : t('archetypes.directory.clusterUnavailable', 'Cluster identity unavailable')}
                   </Text>
-                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-9">
+                  <Table className="mt-3" aria-label={t('archetypes.directory.driveTitle', 'Drive {{id}}', { id: fmtInt(assignment.driveId) })}>
+                    <tbody>
                     {metrics.map(([label, value]) => (
-                      <div key={label}>
-                        <MetricLabel>{label}</MetricLabel>
-                        <Text as="p" variant="bodySm" className="mt-1">{value}</Text>
-                      </div>
+                      <tr key={label}>
+                        <th scope="row"><MetricLabel>{label}</MetricLabel></th>
+                        <td className="text-right"><Text as="p" variant="bodySm">{value}</Text></td>
+                      </tr>
                     ))}
-                  </div>
+                    </tbody>
+                  </Table>
                 </li>
               );
             })}

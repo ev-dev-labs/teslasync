@@ -15,7 +15,7 @@ import {
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('analytics.title', 'Fleet Analytics'));
+  usePageTitle(t('analytics.title', 'Fleet analytics'));
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
@@ -38,7 +38,7 @@ export default function AnalyticsPage() {
 
   return (
     <PageContainer
-      title={t('analytics.title', 'Fleet Analytics')}
+      title={t('analytics.title', 'Fleet analytics')}
       subtitle={t('analytics.subtitle', 'Comprehensive fleet performance insights')}
       query={fleetQuery}
     >

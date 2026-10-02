@@ -70,12 +70,12 @@ import { DrivingPerformanceCards } from './DrivingPerformanceCards';
 const EM_DASH = '\u2014';
 
 const LABELS = {
-  topSpeed: 'Top Speed',
-  avgSpeed: 'Avg Speed',
-  peakPower: 'Peak Power',
-  peakRegen: 'Peak Regen',
-  avgDriveDist: 'Avg Drive Distance',
-  longestDrive: 'Longest Drive',
+  topSpeed: 'Top speed',
+  avgSpeed: 'Avg speed',
+  peakPower: 'Peak power',
+  peakRegen: 'Peak regen',
+  avgDriveDist: 'Avg drive distance',
+  longestDrive: 'Longest drive',
 } as const;
 
 /** Minimal settings bag — `useUnits()` only reads these five fields. */

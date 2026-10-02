@@ -55,7 +55,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
       >
         {/* Distance by Vehicle */}
         <AnalyticsChartPanel
-          title={t('analytics.overview.distByVehicle', 'Distance by Vehicle')}
+          title={t('analytics.overview.distByVehicle', 'Distance by vehicle')}
           icon={<MapPin className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -86,7 +86,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Day of Week Pattern */}
         <AnalyticsChartPanel
-          title={t('analytics.overview.dayOfWeek', 'Day of Week Pattern')}
+          title={t('analytics.overview.dayOfWeek', 'Day of week pattern')}
           icon={<CalendarDays className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -98,7 +98,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
           dataColumns={[
             { key: 'day', label: t('analytics.overview.day', 'Day') },
             { key: 'drives', label: t('analytics.overview.drives', 'Drives') },
-            { key: 'avg_distance', label: `${t('analytics.overview.avgDist', 'Avg Distance')} (${distanceUnit})` },
+            { key: 'avg_distance', label: `${t('analytics.overview.avgDist', 'Avg distance')} (${distanceUnit})` },
           ]}
           exportFilename="fleet-day-of-week"
           chartKey="analytics-day-of-week"
@@ -113,7 +113,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend />
                 <Bar yAxisId="left" dataKey="drives" name={t('analytics.overview.drives', 'Drives')} fill={CHART_COLORS[2]} radius={[3, 3, 0, 0]} hide={hiddenSeries?.isHidden('drives')} />
-                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_distance" name={`${t('analytics.overview.avgDist', 'Avg Distance')} (${distanceUnit})`} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('avg_distance')} />
+                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_distance" name={`${t('analytics.overview.avgDist', 'Avg distance')} (${distanceUnit})`} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('avg_distance')} />
               </ComposedChart>
             </ResponsiveContainer>
           )}
@@ -122,7 +122,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
         {/* Monthly Cost Comparison — hero band */}
         <AnalyticsChartPanel
           className="md:col-span-2 2xl:col-span-3"
-          title={t('analytics.overview.monthlyCost', 'Monthly Cost Comparison')}
+          title={t('analytics.overview.monthlyCost', 'Monthly cost comparison')}
           icon={<DollarSign className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -137,8 +137,8 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
           data={monthlyTrend}
           dataColumns={[
             { key: 'month', label: t('analytics.charging.month', 'Month') },
-            { key: 'cost', label: t('analytics.overview.electricCost', 'Electric Cost'), format: (value) => formatCurrency(safe(value), 2) },
-            { key: 'gas_cost', label: t('analytics.overview.gasCost', 'Gas Cost'), format: (value) => formatCurrency(safe(value), 2) },
+            { key: 'cost', label: t('analytics.overview.electricCost', 'Electric cost'), format: (value) => formatCurrency(safe(value), 2) },
+            { key: 'gas_cost', label: t('analytics.overview.gasCost', 'Gas cost'), format: (value) => formatCurrency(safe(value), 2) },
             { key: 'savings', label: t('analytics.overview.savings', 'Savings'), format: (value) => formatCurrency(safe(value), 2) },
           ]}
           exportFilename="fleet-monthly-cost-comparison"
@@ -153,8 +153,8 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
                 <YAxis yAxisId="right" orientation="right" tick={axisTick} />
                 <Tooltip content={<ChartTooltip />} formatter={(value: number) => formatCurrency(value, 2)} />
                 <ChartLegend />
-                <Bar yAxisId="left" dataKey="cost" name={t('analytics.overview.electricCost', 'Electric Cost')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} hide={hiddenSeries?.isHidden('cost')} />
-                <Bar yAxisId="left" dataKey="gas_cost" name={t('analytics.overview.gasCost', 'Gas Cost')} fill={CHART_COLORS[5]} radius={[3, 3, 0, 0]} hide={hiddenSeries?.isHidden('gas_cost')} />
+                <Bar yAxisId="left" dataKey="cost" name={t('analytics.overview.electricCost', 'Electric cost')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} hide={hiddenSeries?.isHidden('cost')} />
+                <Bar yAxisId="left" dataKey="gas_cost" name={t('analytics.overview.gasCost', 'Gas cost')} fill={CHART_COLORS[5]} radius={[3, 3, 0, 0]} hide={hiddenSeries?.isHidden('gas_cost')} />
                 <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="savings" name={t('analytics.overview.savings', 'Savings')} stroke={CHART_COLORS[1]} hide={hiddenSeries?.isHidden('savings')} />
               </ComposedChart>
             </ResponsiveContainer>
@@ -164,7 +164,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
 
       {/* Quick Links — full-width band */}
       <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-3">{t('analytics.overview.quickLinks', 'Quick Links')}</PanelTitle>
+        <PanelTitle className="mb-3">{t('analytics.overview.quickLinks', 'Quick links')}</PanelTitle>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
           {QUICK_LINKS.map((link) => (
             <Link key={link.href} to={link.href} className="block">

@@ -1,7 +1,7 @@
 import { ListOrdered } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, Badge, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, Badge, PanelTitle, Table, Text } from '@/components/ui';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonIntensityBand } from '../../lib/carbonIntelligence';
 import type { CarbonSectionProps } from './types';
@@ -107,30 +107,31 @@ export function CarbonHourlyDirectory({
               </div>
             ))}
           </div>
-          <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <Table aria-label={t('carbon.directory.title', 'Ranked hourly directory and bands')}>
+            <tbody>
             {analysis.curve.rankedRows.map((row) => {
               const band = bandPresentation(row.band, t);
               return (
-                <li
+                <tr
                   key={row.hour}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <div>
+                  <th scope="row">
                     <Text as="p" variant="label">
                       {t('carbon.directory.rank', 'Rank {{rank}} · {{hour}}', {
                         rank: row.rank,
                         hour: display.formatHour(row.hour),
                       })}
                     </Text>
-                    <Text as="p" variant="caption" mono>
+                  </th>
+                  <td className="text-right"><Text as="p" variant="caption" mono>
                       {display.formatIntensity(row.intensityGPerKwh)}
-                    </Text>
-                  </div>
-                  <Badge variant={band.variant}>{band.label}</Badge>
-                </li>
+                    </Text></td>
+                  <td><Badge variant={band.variant}>{band.label}</Badge></td>
+                </tr>
               );
             })}
-          </ol>
+            </tbody>
+          </Table>
         </CarbonSectionBody>
       </GlassPanel>
     </section>

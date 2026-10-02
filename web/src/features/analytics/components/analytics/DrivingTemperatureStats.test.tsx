@@ -166,7 +166,7 @@ describe('DrivingTemperatureStats — populated (metric °C)', () => {
   it('mounts the panel heading as a level-3 heading', () => {
     renderPanel(makeQuery({ data: FULL }));
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Temperature Stats' }),
+      screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
     ).toBeInTheDocument();
   });
 
@@ -174,7 +174,7 @@ describe('DrivingTemperatureStats — populated (metric °C)', () => {
     renderPanel(makeQuery({ data: FULL }));
 
     // Labels for every card.
-    for (const label of ['Inside Min', 'Inside Avg', 'Inside Max', 'Outside Min', 'Outside Avg', 'Outside Max']) {
+    for (const label of ['Inside min', 'Inside avg', 'Inside max', 'Outside min', 'Outside avg', 'Outside max']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
 
@@ -218,7 +218,7 @@ describe('DrivingTemperatureStats — partial data', () => {
     expect(screen.getAllByText(DASH)).toHaveLength(3);
     // Panel stays mounted, not gated to the empty state.
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Temperature Stats' }),
+      screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('No temperature stats')).toBeNull();
   });
@@ -239,7 +239,7 @@ describe('DrivingTemperatureStats — loading', () => {
 
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Temperature Stats' }),
+      screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
     ).toBeInTheDocument();
     // Data must not bleed through the skeleton.
     expect(screen.queryByText('18.4')).toBeNull();
@@ -274,14 +274,14 @@ describe('DrivingTemperatureStats — empty states (count-aware)', () => {
     // Regression guard: zeroed StatsSummary (count 0) is treated as "no data".
     expect(screen.getByText('No temperature stats')).toBeInTheDocument();
     expect(screen.queryByText('0.0')).toBeNull();
-    expect(screen.queryByText('Inside Min')).toBeNull();
+    expect(screen.queryByText('Inside min')).toBeNull();
   });
 
   it('shows the empty state when the query produced no analytics payload', () => {
     renderPanel(makeQuery({ data: undefined }));
 
     expect(screen.getByText('No temperature stats')).toBeInTheDocument();
-    expect(screen.queryByText('Inside Min')).toBeNull();
+    expect(screen.queryByText('Inside min')).toBeNull();
   });
 });
 
@@ -296,7 +296,7 @@ describe('DrivingTemperatureStats — null safety', () => {
     // Outside is entirely absent → three "—" fallbacks.
     expect(screen.getAllByText(DASH)).toHaveLength(3);
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Temperature Stats' }),
+      screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
     ).toBeInTheDocument();
   });
 });

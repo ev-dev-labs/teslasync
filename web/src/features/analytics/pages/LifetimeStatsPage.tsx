@@ -49,7 +49,7 @@ type SectionState = 'loading' | 'error' | 'empty' | 'ready';
 export default function LifetimeStatsPage() {
   const { t } = useTranslation();
   const { formatDate: fmtDate } = useDateFormat();
-  usePageTitle(t('lifetime.title', 'Lifetime Stats'));
+  usePageTitle(t('lifetime.title', 'Lifetime stats'));
   const { unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
   const distanceUnit = unitPrefs.distance;
@@ -122,9 +122,9 @@ export default function LifetimeStatsPage() {
 
   return (
     <PageContainer
-      title={t('lifetime.title', 'Lifetime Stats')}
+      title={t('lifetime.title', 'Lifetime stats')}
       subtitle={t('lifetime.subtitle', 'Your all-time driving achievements and milestones')}
-      actions={
+      metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {/* Lifetime stats are cagg-driven; force amber after 6h. */}
           <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
@@ -133,7 +133,7 @@ export default function LifetimeStatsPage() {
     >
       {/* ── Hero — headline lifetime distance ────────────────────── */}
       <FadeIn>
-        <section aria-label={t('lifetime.title', 'Lifetime Stats')}>
+        <section aria-label={t('lifetime.title', 'Lifetime stats')}>
           <GlassPanel className="p-6 sm:p-8">
             {isError ? (
               <QueryError error={error} onRetry={retry} />
@@ -202,21 +202,21 @@ export default function LifetimeStatsPage() {
             <>
               <StatCard
                 loading={isLoading}
-                label={t('lifetime.totalDrives', 'Total Drives')}
+                label={t('lifetime.totalDrives', 'Total drives')}
                 value={fmtInt(stats?.total_drives ?? 0)}
                 icon={<Car className="h-4 w-4" aria-hidden="true" />}
                 sublabel={`${fmtNumber(stats?.total_driving_hours ?? 0, 1)} ${t('lifetime.hours', 'hrs')}`}
               />
               <StatCard
                 loading={isLoading}
-                label={t('lifetime.totalDistance', 'Total Distance')}
+                label={t('lifetime.totalDistance', 'Total distance')}
                 value={fmtNumber(heroDistance, 0)}
                 unit={distanceUnit}
                 icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
               />
               <StatCard
                 loading={isLoading}
-                label={t('lifetime.totalEnergy', 'Total Energy')}
+                label={t('lifetime.totalEnergy', 'Total energy')}
                 value={fmtNumber(stats?.total_energy_kwh ?? 0, 1)}
                 unit="kWh"
                 icon={<Zap className="h-4 w-4" aria-hidden="true" />}
@@ -224,7 +224,7 @@ export default function LifetimeStatsPage() {
               />
               <StatCard
                 loading={isLoading}
-                label={t('lifetime.totalSavings', 'Total Savings')}
+                label={t('lifetime.totalSavings', 'Total savings')}
                 value={formatCurrency(stats?.total_savings ?? 0, 0)}
                 icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
                 sublabel={t('lifetime.vsGas', 'vs gasoline')}
@@ -246,7 +246,7 @@ export default function LifetimeStatsPage() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <SectionCard
             className="xl:col-span-2"
-            title={t('lifetime.funFacts', 'Fun Facts')}
+            title={t('lifetime.funFacts', 'Fun facts')}
             icon={<Flame className="h-5 w-5 text-amber-300" aria-hidden="true" />}
             state={sectionState(!stats)}
             error={error}
@@ -283,7 +283,7 @@ export default function LifetimeStatsPage() {
           </SectionCard>
 
           <SectionCard
-            title={t('lifetime.savingsComparison', 'Savings vs Gasoline')}
+            title={t('lifetime.savingsComparison', 'Savings vs gasoline')}
             icon={<DollarSign className="h-5 w-5 text-emerald-300" aria-hidden="true" />}
             state={sectionState(!stats || (stats.gas_equivalent_cost ?? 0) <= 0)}
             error={error}
@@ -305,7 +305,7 @@ export default function LifetimeStatsPage() {
       <FadeIn delay={0.2}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3 xl:gap-5">
           <SectionCard
-            title={t('lifetime.environmentalImpact', 'Environmental Impact')}
+            title={t('lifetime.environmentalImpact', 'Environmental impact')}
             icon={<Leaf className="h-5 w-5 text-emerald-300" aria-hidden="true" />}
             state={sectionState(!stats)}
             error={error}
@@ -340,7 +340,7 @@ export default function LifetimeStatsPage() {
           </SectionCard>
 
           <SectionCard
-            title={t('lifetime.personalRecords', 'Personal Records')}
+            title={t('lifetime.personalRecords', 'Personal records')}
             icon={<Award className="h-5 w-5 text-amber-300" aria-hidden="true" />}
             state={sectionState(!stats)}
             error={error}
@@ -350,19 +350,19 @@ export default function LifetimeStatsPage() {
           >
             <Grid minItemWidth="standard" gap={3}>
               <RecordCard
-                title={t('lifetime.longestDrive', 'Longest Drive')}
+                title={t('lifetime.longestDrive', 'Longest drive')}
                 value={`${fmtNumber(fromKm(stats?.longest_drive_record?.value ?? 0), 1)} ${distanceUnit}`}
                 date={stats?.longest_drive_record?.date}
                 icon={<Car className="h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />}
               />
               <RecordCard
-                title={t('lifetime.highestSpeed', 'Highest Speed')}
+                title={t('lifetime.highestSpeed', 'Highest speed')}
                 value={`${fmtNumber(fromKmh(stats?.highest_speed_record?.value ?? 0), 0)} ${speedUnit}`}
                 date={stats?.highest_speed_record?.date}
                 icon={<Gauge className="h-5 w-5 shrink-0 text-rose-300" aria-hidden="true" />}
               />
               <RecordCard
-                title={t('lifetime.biggestCharge', 'Biggest Charge')}
+                title={t('lifetime.biggestCharge', 'Biggest charge')}
                 value={`${fmtNumber(stats?.max_charge_record?.value ?? 0, 1)} kWh`}
                 date={stats?.max_charge_record?.date}
                 icon={<BatteryCharging className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />}
@@ -371,7 +371,7 @@ export default function LifetimeStatsPage() {
           </SectionCard>
 
           <SectionCard
-            title={t('lifetime.activitySummary', 'Activity Summary')}
+            title={t('lifetime.activitySummary', 'Activity summary')}
             icon={<Clock className="h-5 w-5 text-sky-300" aria-hidden="true" />}
             state={sectionState(!stats)}
             error={error}
@@ -381,19 +381,19 @@ export default function LifetimeStatsPage() {
           >
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:grid-cols-2">
               <MiniStat
-                label={t('lifetime.mostActiveDay', 'Most Active Day')}
+                label={t('lifetime.mostActiveDay', 'Most active day')}
                 value={stats?.most_active_day_of_week || '—'}
               />
               <MiniStat
-                label={t('lifetime.mostActiveHour', 'Peak Hour')}
+                label={t('lifetime.mostActiveHour', 'Peak hour')}
                 value={stats?.most_active_hour != null ? `${stats.most_active_hour}:00` : '—'}
               />
               <MiniStat
-                label={t('lifetime.daysOnRoad', 'Days on Road')}
+                label={t('lifetime.daysOnRoad', 'Days on road')}
                 value={fmtNumber(stats?.days_on_road ?? 0, 1)}
               />
               <MiniStat
-                label={t('lifetime.avgEfficiency', 'Avg Efficiency')}
+                label={t('lifetime.avgEfficiency', 'Avg efficiency')}
                 value={(stats?.avg_efficiency_wh_km ?? 0) > 0
                   ? `${fmtNumber(stats?.avg_efficiency_wh_km ?? 0, 0)} Wh/km`
                   : '—'}
@@ -541,14 +541,14 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
   return (
     <div className="space-y-4">
       <MetricBar
-        label={t('lifetime.electricCost', 'Electric Cost')}
+        label={t('lifetime.electricCost', 'Electric cost')}
         value={evCost}
         max={maxCost}
         color={EV_COLOR}
         sublabel={formatCurrency(evCost, 0)}
       />
       <MetricBar
-        label={t('lifetime.gasCost', 'Gasoline Equivalent')}
+        label={t('lifetime.gasCost', 'Gasoline equivalent')}
         value={gasCost}
         max={maxCost}
         color={GAS_COLOR}

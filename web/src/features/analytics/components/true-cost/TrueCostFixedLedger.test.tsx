@@ -5,7 +5,7 @@
  * ConfirmDialog render for real so the wiring is exercised.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { TcoLedgerResponse } from '@/types/analytics';
@@ -71,6 +71,28 @@ beforeEach(() => {
 });
 
 describe('TrueCostFixedLedger', () => {
+  it('filters the loaded ledger without changing accounting totals or available categories', () => {
+    render(<TrueCostFixedLedger vehicleId={3} totalKm={10000} totalChargingCost={700} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Filter Category' }));
+    const filter = screen.getByRole('dialog', { name: 'Filter Category' });
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'insurance' }));
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+
+    const table = screen.getByRole('table');
+    expect(within(table).queryByText('insurance')).not.toBeInTheDocument();
+    expect(within(table).getByText('winter set')).toBeInTheDocument();
+    expect(screen.getByText('All-in: $2000.00 ($0.20/km)')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Filter Category' }));
+    const reopened = screen.getByRole('dialog', { name: 'Filter Category' });
+    expect(within(reopened).getByRole('checkbox', { name: 'insurance' })).not.toBeChecked();
+    expect(within(reopened).getByRole('checkbox', { name: 'tires' })).toBeChecked();
+    fireEvent.click(within(reopened).getByRole('button', { name: 'Clear' }));
+    fireEvent.click(within(reopened).getByRole('button', { name: 'Done' }));
+    expect(within(table).getByText('insurance')).toBeInTheDocument();
+  });
+
   it('shows the all-in total combining charging and fixed costs', () => {
     render(<TrueCostFixedLedger vehicleId={3} totalKm={10000} totalChargingCost={700} />);
     expect(screen.getByText('All-in: $2000.00 ($0.20/km)')).toBeTruthy();

@@ -280,7 +280,8 @@ export default function TimelinePage() {
       },
       {
         key: 'from_state',
-        header: t('timeline.fromState', 'From State'),
+        filterValue: (row) => row.from_state,
+        header: t('timeline.fromState', 'From state'),
         sortable: true,
         render: (row) => (
           <Badge variant={STATE_BADGE[row.from_state] ?? 'neutral'} size="sm">
@@ -290,7 +291,8 @@ export default function TimelinePage() {
       },
       {
         key: 'to_state',
-        header: t('timeline.toState', 'To State'),
+        filterValue: (row) => row.to_state,
+        header: t('timeline.toState', 'To state'),
         sortable: true,
         render: (row) => (
           <Badge variant={STATE_BADGE[row.to_state] ?? 'neutral'} size="sm">
@@ -300,6 +302,7 @@ export default function TimelinePage() {
       },
       {
         key: 'duration',
+        align: 'right',
         header: t('timeline.duration', 'Duration'),
         sortable: false,
         render: (row) => {
@@ -314,6 +317,7 @@ export default function TimelinePage() {
       },
       {
         key: 'trigger_field',
+        filterValue: (row) => row.trigger_field ?? null,
         header: t('timeline.trigger', 'Trigger'),
         sortable: true,
         render: (row) => (
@@ -346,11 +350,9 @@ export default function TimelinePage() {
     [t],
   );
 
-  /* ─── Actions (vehicle selector + refresh) ─── */
+  /* ─── Refresh action ─── */
 
   const actions = (
-    <div className="flex items-center gap-3">
-      <DataFreshnessAuto query={timelineQuery} />
       <Button
         variant="ghost"
         onClick={() => refetch()}
@@ -358,14 +360,14 @@ export default function TimelinePage() {
       >
         <RefreshCw className="h-4 w-4" aria-hidden="true" />
       </Button>
-    </div>
   );
 
   return (
     <PageContainer
       title={t('timeline.title', 'Timeline')}
       subtitle={t('timeline.subtitle', 'Vehicle state history and transitions')}
-      actions={actions}
+      metadataActions={<DataFreshnessAuto query={timelineQuery} />}
+      secondaryActions={actions}
       loading={isLoading && transitions.length === 0}
     >
       {anyError && (
@@ -377,24 +379,24 @@ export default function TimelinePage() {
       <FadeIn>
         <section aria-label={t('timeline.kpis', 'Summary metrics')} className="mb-4 grid grid-cols-2 gap-4 sm:mb-6 lg:grid-cols-4">
           <MetricCard
-            label={t('timeline.totalTransitions', 'Total Transitions')}
+            label={t('timeline.totalTransitions', 'Total transitions')}
             value={totalTransitions}
             icon={<ArrowRightLeft className="h-5 w-5" />}
           />
           <MetricCard
-            label={t('timeline.drivingTime', 'Driving Time')}
+            label={t('timeline.drivingTime', 'Driving time')}
             value={formatHoursFromSeconds(drivingSec)}
             icon={<Car className="h-5 w-5" />}
             color="green"
           />
           <MetricCard
-            label={t('timeline.chargingTime', 'Charging Time')}
+            label={t('timeline.chargingTime', 'Charging time')}
             value={formatHoursFromSeconds(chargingSec)}
             icon={<BatteryCharging className="h-5 w-5" />}
             color="cyan"
           />
           <MetricCard
-            label={t('timeline.idleSleepTime', 'Idle / Sleep Time')}
+            label={t('timeline.idleSleepTime', 'Idle / sleep time')}
             value={formatHoursFromSeconds(idleSec + sleepingSec)}
             icon={<Moon className="h-5 w-5" />}
           />
@@ -405,7 +407,7 @@ export default function TimelinePage() {
       <FadeIn delay={0.1}>
         <GlassPanel className="mb-4 p-4 sm:mb-6 sm:p-5">
           <PanelTitle className="mb-3">
-            {t('timeline.stateTimeline', 'State Distribution')}
+            {t('timeline.stateTimeline', 'State distribution')}
           </PanelTitle>
           {summaryRows.length === 0 || totalSeconds === 0 ? (
             sumLoading ? (
@@ -445,7 +447,7 @@ export default function TimelinePage() {
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: color }}
                 />
-                <Text variant="bodySm" className="capitalize">
+                <Text variant="bodySm">
                   {state}
                 </Text>
               </div>
@@ -461,7 +463,7 @@ export default function TimelinePage() {
         <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('timeline.dailyBreakdown', 'Daily Breakdown')}
+            {t('timeline.dailyBreakdown', 'Daily breakdown')}
           </PanelTitle>
           {dailyBreakdown.length === 0 ? (
             tlLoading ? (
@@ -474,7 +476,7 @@ export default function TimelinePage() {
             )
           ) : (
             <EmbeddedChart
-              title={t('timeline.dailyBreakdown', 'Daily Breakdown')}
+              title={t('timeline.dailyBreakdown', 'Daily breakdown')}
               ariaLabel={t('timeline.dailyBreakdownAria', 'Daily transition counts by vehicle state')}
               data={dailyBreakdown}
               dataColumns={[
@@ -512,7 +514,7 @@ export default function TimelinePage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('timeline.timeByState', 'Time by State')}
+            {t('timeline.timeByState', 'Time by state')}
           </PanelTitle>
           {timeByState.length === 0 ? (
             sumLoading ? (
@@ -545,9 +547,10 @@ export default function TimelinePage() {
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3">
-            {t('timeline.stateTransitions', 'State Transitions')}
+            {t('timeline.stateTransitions', 'State transitions')}
           </PanelTitle>
           <DataTable
+            enableValueFilters
             tableId="analytics:timeline-transitions"
             columns={columns}
             mobileColumns={['ts', 'from_state', 'to_state']}
@@ -595,12 +598,12 @@ export default function TimelinePage() {
             ? [
                 {
                   key: 'from-state',
-                  label: t('timeline.fromState', 'From State'),
+                  label: t('timeline.fromState', 'From state'),
                   value: previewTransition.from_state,
                 },
                 {
                   key: 'to-state',
-                  label: t('timeline.toState', 'To State'),
+                  label: t('timeline.toState', 'To state'),
                   value: previewTransition.to_state,
                 },
                 {

@@ -33,7 +33,7 @@ import { summarizeArchetypes } from '../lib/driveArchetypes';
 
 export default function DriveArchetypesPage() {
   const { t } = useTranslation();
-  usePageTitle(t('archetypes.title', 'Drive Archetypes'));
+  usePageTitle(t('archetypes.title', 'Drive archetypes'));
   const { vehicleId } = useSelectedVehicle();
   const timeZone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -94,13 +94,13 @@ export default function DriveArchetypesPage() {
 
   return (
     <PageContainer
-      title={t('archetypes.title', 'Drive Archetypes')}
+      title={t('archetypes.title', 'Drive archetypes')}
       subtitle={t(
         'archetypes.subtitle',
         'A dense observational workspace for source eligibility, deterministic clustering, assignments, and interpretation limits',
       )}
       query={vehicleId != null ? historyQuery : undefined}
-      actions={(
+      secondaryActions={(
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"

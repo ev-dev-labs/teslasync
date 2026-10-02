@@ -56,18 +56,18 @@ vi.mock('@/components/layout', () => ({
   PageContainer: ({
     title,
     subtitle,
-    actions,
+    contextActions,
     children,
   }: {
     title: string;
     subtitle: string;
-    actions: ReactNode;
+    contextActions: ReactNode;
     children: ReactNode;
   }) => (
     <main>
       <h1>{title}</h1>
       <p>{subtitle}</p>
-      {actions}
+      {contextActions}
       {children}
     </main>
   ),
@@ -235,13 +235,13 @@ describe('MilestonesPage', () => {
     render(<MilestonesPage />);
 
     expect(
-      screen.getByRole('heading', { name: 'Odometer Milestones' }),
+      screen.getByRole('heading', { name: 'Odometer milestones' }),
     ).toBeInTheDocument();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(historyMock).toHaveBeenCalledWith('42', 1_000);
-    expect(pageTitleMock).toHaveBeenCalledWith('Odometer Milestones');
+    expect(pageTitleMock).toHaveBeenCalledWith('Odometer milestones');
   });
 
   it('threads loading, error, and empty states to every mounted section', () => {
@@ -271,7 +271,7 @@ describe('MilestonesPage', () => {
     render(<MilestonesPage />);
 
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent(
-      'Odometer Milestones',
+      'Odometer milestones',
     );
     expect(historyMock).toHaveBeenCalledWith(undefined, 1_000);
     expect(screen.queryByTestId('milestone-progress')).not.toBeInTheDocument();

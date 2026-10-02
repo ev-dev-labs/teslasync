@@ -213,29 +213,32 @@ describe('PeriodComparePage — happy path', () => {
     await screen.findByText(/Distance traveled was -50\.0% less/);
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Period Comparison' }),
+      screen.getByRole('heading', { level: 1, name: 'Period comparison' }),
     ).toBeInTheDocument();
 
     // All six KPI labels are present — no section is gutted.
     for (const label of [
-      /Total Distance/,
-      /Total Drives/,
-      /Energy Used/,
-      /Avg Efficiency/,
-      /Total Cost/,
-      /Saved/,
+      /Total distance/,
+      /Total drives/,
+      /Energy used/,
+      /Avg efficiency/,
+      /Total cost/,
+      /saved/,
     ]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
 
     // The three lower panels each render their title (mounted, not hidden).
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Change vs Period B (%)' }),
+      screen.getByRole('heading', { level: 3, name: 'Change vs period B (%)' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: 'Insights' })).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Comparison Details' }),
+      screen.getByRole('heading', { level: 3, name: 'Comparison details' }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reorder or hide columns' })).not.toBeInTheDocument();
+    const comparisonTable = screen.getByRole('table');
+    expect(comparisonTable.querySelectorAll('[role="separator"], [draggable="true"]')).toHaveLength(0);
   });
 
   it('derives deterministic percent-change insight sentences from both feeds', async () => {
@@ -244,16 +247,16 @@ describe('PeriodComparePage — happy path', () => {
 
     // fmtNumber(pct, 1) → always one decimal, independent of the global precision.
     expect(
-      await screen.findByText(/Distance traveled was -50\.0% less in Period A vs Period B\./),
+      await screen.findByText(/Distance traveled was -50\.0% less in period A vs period B\./),
     ).toBeInTheDocument();
     // Fixture: A=200 Wh/km beats B=210 Wh/km, so efficiency IMPROVED — lower
     // consumption is better (the old "declined by -4.8%" expectation had the
     // direction inverted). Magnitude is unsigned so the sentence reads naturally.
     expect(
-      screen.getByText(/Efficiency improved by 4\.8% compared to Period B\./),
+      screen.getByText(/Efficiency improved by 4\.8% compared to period B\./),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Costs were -54\.5% lower in Period A\./),
+      screen.getByText(/Costs were -54\.5% lower in period A\./),
     ).toBeInTheDocument();
   });
 
@@ -298,10 +301,10 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
     });
     renderPage();
 
-    expect(await screen.findByText(/Percent change requires a nonzero Period B baseline/)).toBeInTheDocument();
-    expect(screen.getByText('Distance change is unavailable: Period B has no baseline.')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency change is unavailable: Period B has no baseline.')).toBeInTheDocument();
-    expect(screen.getByText('Cost change is unavailable: Period B has no baseline.')).toBeInTheDocument();
+    expect(await screen.findByText(/Percent change requires a nonzero period B baseline/)).toBeInTheDocument();
+    expect(screen.getByText('Distance change is unavailable: period B has no baseline.')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency change is unavailable: period B has no baseline.')).toBeInTheDocument();
+    expect(screen.getByText('Cost change is unavailable: period B has no baseline.')).toBeInTheDocument();
     expect(screen.queryByText(/Distance traveled was — more/)).not.toBeInTheDocument();
   });
 
@@ -317,9 +320,9 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
     });
     renderPage();
 
-    expect(await screen.findByText('One metric with no Period B baseline is omitted from the chart.')).toBeInTheDocument();
-    expect(screen.getByText('Distance change is unavailable: Period B has no baseline.')).toBeInTheDocument();
-    expect(screen.queryByText(/Percent change requires a nonzero Period B baseline/)).not.toBeInTheDocument();
+    expect(await screen.findByText('One metric with no period B baseline is omitted from the chart.')).toBeInTheDocument();
+    expect(screen.getByText('Distance change is unavailable: period B has no baseline.')).toBeInTheDocument();
+    expect(screen.queryByText(/Percent change requires a nonzero period B baseline/)).not.toBeInTheDocument();
   });
 
   it('shows skeleton placeholders (never a blank panel) while the feeds are in flight', async () => {
@@ -332,10 +335,10 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
     );
     // The chart panel is still mounted (title present) — only its body is a skeleton.
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Change vs Period B (%)' }),
+      screen.getByRole('heading', { level: 3, name: 'Change vs period B (%)' }),
     ).toBeInTheDocument();
     // No KPI card content leaks while loading.
-    expect(screen.queryByText(/Total Distance/)).toBeNull();
+    expect(screen.queryByText(/Total distance/)).toBeNull();
   });
 
   it('renders per-section error states with a working Retry that refetches both feeds', async () => {
@@ -387,7 +390,7 @@ describe('PeriodComparePage — disambiguation banner', () => {
     expect(
       screen.getByText(/Looking to compare two vehicles instead\?/),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Open Fleet comparison/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open fleet comparison/ })).toBeInTheDocument();
   });
 
   it('hides the banner for a single-vehicle account (cross-navigation is pointless)', async () => {
@@ -398,7 +401,7 @@ describe('PeriodComparePage — disambiguation banner', () => {
     await waitFor(() =>
       expect(screen.queryByText(/Looking to compare two vehicles instead\?/)).toBeNull(),
     );
-    expect(screen.queryByRole('link', { name: /Open Fleet comparison/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Open fleet comparison/ })).toBeNull();
   });
 
   it('dismisses the banner on close and persists the choice to localStorage', async () => {

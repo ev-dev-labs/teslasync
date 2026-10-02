@@ -15,7 +15,7 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
-import { Badge, MetricLabel, Text } from '@/components/ui';
+import { Badge, MetricLabel, Table, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
@@ -121,8 +121,9 @@ export function ArchetypeCandidateModels({
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
-            <div className="grid min-w-[760px] grid-cols-7 gap-2 bg-[var(--surface-2)] px-3 py-2">
+          <Table className="min-w-[760px]" aria-label={t('archetypes.candidates.title', 'Candidate-k model selection')}>
+
+            <thead><tr>
               {[
                 t('archetypes.candidates.model', 'Candidate'),
                 silhouetteName,
@@ -131,28 +132,35 @@ export function ArchetypeCandidateModels({
                 t('archetypes.candidates.realized', 'Realized clusters'),
                 t('archetypes.candidates.clusterRange', 'Smallest / largest'),
                 t('archetypes.candidates.decision', 'Decision'),
-              ].map((label) => <MetricLabel key={label}>{label}</MetricLabel>)}
-            </div>
+              ].map((label, index) => (
+                <th key={label} scope="col" className={index > 0 && index < 6 ? 'text-right' : undefined}>
+                  <MetricLabel>{label}</MetricLabel>
+                </th>
+              ))}
+            </tr></thead>
+            <tbody>
             {rows.map((row) => (
-              <div
+              <tr
                 key={row.k}
                 className={cn(
-                  'grid min-w-[760px] grid-cols-7 gap-2 border-t border-[var(--border-subtle)] px-3 py-2',
                   row.selected === t('archetypes.common.selected', 'Selected') && 'bg-cyan-500/5',
                 )}
               >
-                <Text variant="bodySm">{row.model}</Text>
-                <Text variant="bodySm">{fmtNumber(row.silhouette, 3)}</Text>
-                <Text variant="bodySm">{fmtNumber(row.agreement, 3)}</Text>
-                <Text variant="bodySm">{fmtNumber(row.inertia, 2)}</Text>
-                <Text variant="bodySm">{fmtInt(row.realized)}</Text>
-                <Text variant="bodySm">{fmtInt(row.smallest)} / {fmtInt(row.largest)}</Text>
+                <th scope="row"><Text variant="bodySm">{row.model}</Text></th>
+                <td className="text-right"><Text variant="bodySm">{fmtNumber(row.silhouette, 3)}</Text></td>
+                <td className="text-right"><Text variant="bodySm">{fmtNumber(row.agreement, 3)}</Text></td>
+                <td className="text-right"><Text variant="bodySm">{fmtNumber(row.inertia, 2)}</Text></td>
+                <td className="text-right"><Text variant="bodySm">{fmtInt(row.realized)}</Text></td>
+                <td className="text-right"><Text variant="bodySm">{fmtInt(row.smallest)} / {fmtInt(row.largest)}</Text></td>
+                <td>
                 <Badge variant={row.selected === t('archetypes.common.selected', 'Selected') ? 'success' : 'neutral'}>
                   {row.selected}
                 </Badge>
-              </div>
+                </td>
+              </tr>
             ))}
-          </div>
+            </tbody>
+          </Table>
           </ArchetypeSectionBody>
         )}
       </ChartContainer>

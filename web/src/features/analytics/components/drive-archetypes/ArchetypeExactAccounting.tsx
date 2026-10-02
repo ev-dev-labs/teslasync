@@ -1,12 +1,12 @@
 import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
 import {
   Badge,
   GlassPanel,
   MetricLabel,
   PanelTitle,
+  Table,
   Text,
 } from '@/components/ui';
 import { fmtInt } from '@/lib/numberFormat';
@@ -150,26 +150,29 @@ export function ArchetypeExactAccounting({
           )}
         </Text>
         <ArchetypeSectionBody summary={summary} state={state} requirement="resolved">
-          <Grid cols={{ default: 1, xl: 2 }} gap={3}>
+          <Table aria-label={t('archetypes.accounting.title', 'Exact accounting identities')}>
+            <tbody>
             {identities.map((identity) => (
-              <div
+              <tr
                 key={identity.label}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <MetricLabel>{identity.label}</MetricLabel>
+                <th scope="row"><MetricLabel>{identity.label}</MetricLabel></th>
+                <td>
+                  <Text as="p" variant="bodySm">
+                    {identity.equation}
+                  </Text>
+                </td>
+                <td>
                   <Badge variant={identity.balanced ? 'success' : 'danger'}>
                     {identity.balanced
                       ? t('archetypes.common.balanced', 'Balances')
                       : t('archetypes.common.mismatch', 'Mismatch')}
                   </Badge>
-                </div>
-                <Text as="p" variant="bodySm" className="mt-2">
-                  {identity.equation}
-                </Text>
-              </div>
+                </td>
+              </tr>
             ))}
-          </Grid>
+            </tbody>
+          </Table>
         </ArchetypeSectionBody>
       </GlassPanel>
     </section>

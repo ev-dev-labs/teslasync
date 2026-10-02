@@ -70,7 +70,7 @@ describe('AnalyticsPanel', () => {
 
     // Title renders as an h3 (PanelTitle → Heading level="panel").
     expect(
-      screen.getByRole('heading', { level: 3, name: /Distance by Vehicle/i }),
+      screen.getByRole('heading', { level: 3, name: /Distance by vehicle/i }),
     ).toBeInTheDocument();
 
     // Children render in the idle branch.

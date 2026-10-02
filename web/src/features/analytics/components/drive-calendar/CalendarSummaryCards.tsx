@@ -43,7 +43,7 @@ export function CalendarSummaryCards({
         ) : (
           <>
             <MetricCard
-              label={t('driveCalendar.activeDays', 'Active Days')}
+              label={t('driveCalendar.activeDays', 'Active days')}
               value={calendar.activeDays}
               subtitle={t('driveCalendar.inRange', 'in the selected period')}
               icon={<CalendarDays className="h-5 w-5" aria-hidden="true" />}
@@ -51,8 +51,8 @@ export function CalendarSummaryCards({
             />
             <MetricCard
               label={rangeEnd < calendarDayKey(new Date())
-                ? t('driveCalendar.rangeEndStreak', 'End-of-period Streak')
-                : t('driveCalendar.currentStreak', 'Current Streak')}
+                ? t('driveCalendar.rangeEndStreak', 'End-of-period streak')
+                : t('driveCalendar.currentStreak', 'Current streak')}
               value={t('driveCalendar.days', '{{count}} days', {
                 count: calendar.currentStreak,
               })}
@@ -72,7 +72,7 @@ export function CalendarSummaryCards({
               color="green"
             />
             <MetricCard
-              label={t('driveCalendar.busiestDay', 'Busiest Day')}
+              label={t('driveCalendar.busiestDay', 'Busiest day')}
               value={
                 calendar.busiestDay
                   ? formatDistance(calendar.busiestDay.distanceM, { precision: 0 })

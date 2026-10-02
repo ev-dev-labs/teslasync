@@ -1,7 +1,7 @@
 import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import type { TcoIdentity } from '../../lib/trueCost';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
@@ -48,7 +48,7 @@ export function TrueCostAccountingIdentities({
   return (
     <section
       data-testid="tco-accounting"
-      aria-label={t('tco.accounting.aria', 'Exact True Cost accounting identities and tolerances')}
+      aria-label={t('tco.accounting.aria', 'Exact true cost accounting identities and tolerances')}
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-2 flex items-center gap-2">
@@ -75,16 +75,22 @@ export function TrueCostAccountingIdentities({
                     <Text as="p" variant="label">{identityLabel(check.id, t)}</Text>
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </div>
-                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                    <Text variant="caption">{t('tco.accounting.expected', 'Expected')}</Text>
-                    <Text variant="caption" mono>{value(check.expected, check, display, t)}</Text>
-                    <Text variant="caption">{t('tco.accounting.observed', 'Observed')}</Text>
-                    <Text variant="caption" mono>{value(check.observed, check, display, t)}</Text>
-                    <Text variant="caption">{t('tco.accounting.residual', 'Residual')}</Text>
-                    <Text variant="caption" mono>{value(check.residual, check, display, t)}</Text>
-                    <Text variant="caption">{t('tco.accounting.tolerance', 'Tolerance')}</Text>
-                    <Text variant="caption" mono>{value(check.tolerance, check, display, t)}</Text>
-                  </div>
+                  <Table className="mt-2" aria-label={identityLabel(check.id, t)}>
+
+                    <tbody>
+                      {([
+                        [t('tco.accounting.expected', 'Expected'), check.expected],
+                        [t('tco.accounting.observed', 'Observed'), check.observed],
+                        [t('tco.accounting.residual', 'Residual'), check.residual],
+                        [t('tco.accounting.tolerance', 'Tolerance'), check.tolerance],
+                      ] as const).map(([label, amount]) => (
+                        <tr key={label}>
+                          <th scope="row"><Text variant="caption">{label}</Text></th>
+                          <td className="text-right"><Text variant="caption" mono>{value(amount, check, display, t)}</Text></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
                 </li>
               );
             })}

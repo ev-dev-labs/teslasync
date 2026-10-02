@@ -28,7 +28,7 @@ const COMPACT_HEATMAP_MAX_WEEKS = 16;
 
 function DriveCalendarContent() {
   const { t } = useTranslation();
-  usePageTitle(t('driveCalendar.title', 'Drive Calendar'));
+  usePageTitle(t('driveCalendar.title', 'Drive calendar'));
   const { start, end, startInstant, endInstantExclusive } = useRangeState();
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -41,7 +41,7 @@ function DriveCalendarContent() {
   const compactHeatmap = calendar.weeks.length <= COMPACT_HEATMAP_MAX_WEEKS;
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('driveCalendar.title', 'Drive Calendar')} />;
+    return <NoVehicleSelected pageTitle={t('driveCalendar.title', 'Drive calendar')} />;
   }
 
   const sectionState: DriveCalendarSectionState = {
@@ -54,7 +54,7 @@ function DriveCalendarContent() {
 
   return (
     <PageContainer
-      title={t('driveCalendar.title', 'Drive Calendar')}
+      title={t('driveCalendar.title', 'Drive calendar')}
       subtitle={t('driveCalendar.subtitle', 'Driving activity and streaks in the selected period')}
     >
       <FadeIn>
@@ -126,11 +126,11 @@ export default function DriveCalendarPage() {
     const year = Number(rawYear);
     if (!/^\d{4}$/.test(rawYear) || year < 1900 || year > currentYear) {
       return (
-        <PageContainer title={t('driveCalendar.title', 'Drive Calendar')}>
+        <PageContainer title={t('driveCalendar.title', 'Drive calendar')}>
           <EmptyState
             message={t('driveCalendar.invalidYear', 'Choose a year from 1900 through {{year}}.', { year: currentYear })}
             actionTo={{
-              label: t('driveCalendar.openCalendar', 'Open Drive Calendar'),
+              label: t('driveCalendar.openCalendar', 'Open drive calendar'),
               to: '/drive-calendar',
             }}
           />

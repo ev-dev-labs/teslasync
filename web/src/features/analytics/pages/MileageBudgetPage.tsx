@@ -34,7 +34,7 @@ const HISTORY_LIMIT = 1_000;
 
 export default function MileageBudgetPage() {
   const { t } = useTranslation();
-  usePageTitle(t('mileageBudget.title', 'Mileage Budget'));
+  usePageTitle(t('mileageBudget.title', 'Mileage budget'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -92,7 +92,7 @@ export default function MileageBudgetPage() {
     !historyCapped && budget.paceRatio != null && budget.paceRatio > 1;
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('mileageBudget.title', 'Mileage Budget')} />;
+    return <NoVehicleSelected pageTitle={t('mileageBudget.title', 'Mileage budget')} />;
   }
 
   const isLoading = drivesQuery.isLoading;
@@ -100,7 +100,7 @@ export default function MileageBudgetPage() {
 
   return (
     <PageContainer
-      title={t('mileageBudget.title', 'Mileage Budget')}
+      title={t('mileageBudget.title', 'Mileage budget')}
       subtitle={t('mileageBudget.subtitle', 'Lease and warranty allowance pacing with overage forecast')}
       query={drivesQuery}
     >
@@ -141,9 +141,9 @@ export default function MileageBudgetPage() {
                   historyCapped
                     ? t(
                         'mileageBudget.usedObserved',
-                        'Observed in Returned Window',
+                        'Observed in returned window',
                       )
-                    : t('mileageBudget.used', 'Driven This Term')
+                    : t('mileageBudget.used', 'Driven this term')
                 }
                 value={formatDistance(budget.usedM, { precision: 0 })}
                 subtitle={
@@ -187,7 +187,7 @@ export default function MileageBudgetPage() {
                 color={historyCapped ? 'cyan' : paceOver ? 'red' : 'green'}
               />
               <MetricCard
-                label={t('mileageBudget.projected', 'Projected Term Total')}
+                label={t('mileageBudget.projected', 'Projected term total')}
                 value={
                   !historyCapped && budget.projectedTotalM != null
                     ? formatDistance(budget.projectedTotalM, { precision: 0 })
@@ -213,7 +213,7 @@ export default function MileageBudgetPage() {
                 color="purple"
               />
               <MetricCard
-                label={t('mileageBudget.overageCost', 'Projected Overage')}
+                label={t('mileageBudget.overageCost', 'Projected overage')}
                 value={
                   historyCapped
                     ? '—'
@@ -251,7 +251,7 @@ export default function MileageBudgetPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <SlidersHorizontal className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mileageBudget.terms', 'Allowance Terms')}
+              {t('mileageBudget.terms', 'Allowance terms')}
               <HelpTooltip
                 size="sm"
                 i18nKey="help.mileageBudget.body"
@@ -344,9 +344,9 @@ export default function MileageBudgetPage() {
               historyCapped
                 ? t(
                     'mileageBudget.chartObserved',
-                    'Observed Distance vs Allowance',
+                    'Observed distance vs allowance',
                   )
-                : t('mileageBudget.chart', 'Distance vs Allowance')
+                : t('mileageBudget.chart', 'Distance vs allowance')
             }
             ariaLabel={
               historyCapped

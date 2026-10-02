@@ -35,7 +35,7 @@ const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function MilestonesPage() {
   const { t } = useTranslation();
-  usePageTitle(t('milestones.title', 'Odometer Milestones'));
+  usePageTitle(t('milestones.title', 'Odometer milestones'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr =
@@ -87,7 +87,7 @@ export default function MilestonesPage() {
   if (vehicleId == null) {
     return (
       <NoVehicleSelected
-        pageTitle={t('milestones.title', 'Odometer Milestones')}
+        pageTitle={t('milestones.title', 'Odometer milestones')}
       />
     );
   }
@@ -102,13 +102,13 @@ export default function MilestonesPage() {
 
   return (
     <PageContainer
-      title={t('milestones.title', 'Odometer Milestones')}
+      title={t('milestones.title', 'Odometer milestones')}
       subtitle={t(
         'milestones.subtitle',
         'Observed progress, unit-round milestones, and evidence-based forecasts',
       )}
       query={drivesQuery}
-      actions={
+      contextActions={
         <MilestoneControls
           baseDisplay={baseDisplay}
           distanceUnit={unitPrefs.distance}

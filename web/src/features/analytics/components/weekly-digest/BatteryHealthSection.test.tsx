@@ -131,7 +131,7 @@ function renderSection(metrics: DigestMetrics, over: RenderOverrides = {}) {
 }
 
 function title(): HTMLElement {
-  return screen.getByRole('heading', { level: 3, name: 'Battery Health' });
+  return screen.getByRole('heading', { level: 3, name: 'Battery health' });
 }
 
 describe('BatteryHealthSection — populated', () => {
@@ -142,7 +142,7 @@ describe('BatteryHealthSection — populated', () => {
     // exactly the copy, not "battery Battery Health".
     const heading = title();
     expect(heading.tagName).toBe('H3');
-    expect(heading).toHaveAccessibleName('Battery Health');
+    expect(heading).toHaveAccessibleName('Battery health');
   });
 
   it('renders both battery pills with their labels and rounded SoC values', () => {
@@ -150,8 +150,8 @@ describe('BatteryHealthSection — populated', () => {
       makeMetrics({ chargingSessionCount: 12, batteryStart: 20, batteryEnd: 80, chargeEnergyAddedWh: 40_000 }),
     );
 
-    expect(screen.getByText('Avg Battery at Charge Start')).toBeInTheDocument();
-    expect(screen.getByText('Avg Battery at Charge End')).toBeInTheDocument();
+    expect(screen.getByText('Avg battery at charge start')).toBeInTheDocument();
+    expect(screen.getByText('Avg battery at charge end')).toBeInTheDocument();
     // BatteryPill renders `${fmtInt(level)}%` — level is Math.round(metric).
     expect(screen.getByText('20%')).toBeInTheDocument();
     expect(screen.getByText('80%')).toBeInTheDocument();
@@ -170,9 +170,9 @@ describe('BatteryHealthSection — populated', () => {
     expect(screen.getByText('220 km')).toBeInTheDocument();
 
     // Every stat/pill label is present exactly once.
-    expect(screen.getByText('Avg Charge Gain')).toBeInTheDocument();
-    expect(screen.getByText('Charge Sessions')).toBeInTheDocument();
-    expect(screen.getByText('Est. Range Added')).toBeInTheDocument();
+    expect(screen.getByText('Avg charge gain')).toBeInTheDocument();
+    expect(screen.getByText('Charge sessions')).toBeInTheDocument();
+    expect(screen.getByText('Est. range added')).toBeInTheDocument();
   });
 
   it('does not render the loading / error / empty bodies when data is present', () => {
@@ -226,7 +226,7 @@ describe('BatteryHealthSection — loading', () => {
     expect(title()).toBeInTheDocument();
     // No pill / stat values leak through the skeleton.
     expect(screen.queryByText('20%')).toBeNull();
-    expect(screen.queryByText('Avg Charge Gain')).toBeNull();
+    expect(screen.queryByText('Avg charge gain')).toBeNull();
   });
 
   it('gives loading precedence over an error (skeleton wins, no QueryError)', () => {
@@ -253,7 +253,7 @@ describe('BatteryHealthSection — error + retry', () => {
     // QueryError branches on ApiError.status → the 5xx "Server error" copy.
     expect(screen.getByText('Server error')).toBeInTheDocument();
     // The populated body is replaced, never rendered alongside the error.
-    expect(screen.queryByText('Avg Charge Gain')).toBeNull();
+    expect(screen.queryByText('Avg charge gain')).toBeNull();
 
     const retry = screen.getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
@@ -280,8 +280,8 @@ describe('BatteryHealthSection — empty state', () => {
 
     // Title stays; the pills/stats that would otherwise render are absent.
     expect(title()).toBeInTheDocument();
-    expect(screen.queryByText('Avg Battery at Charge Start')).toBeNull();
-    expect(screen.queryByText('Est. Range Added')).toBeNull();
+    expect(screen.queryByText('Avg battery at charge start')).toBeNull();
+    expect(screen.queryByText('Est. range added')).toBeNull();
   });
 
   it('treats a nullish session count as empty via the `?? 0` guard', () => {
@@ -294,7 +294,7 @@ describe('BatteryHealthSection — empty state', () => {
     expect(
       screen.getByText('No battery data is available for this week.'),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Avg Charge Gain')).toBeNull();
+    expect(screen.queryByText('Avg charge gain')).toBeNull();
   });
 });
 

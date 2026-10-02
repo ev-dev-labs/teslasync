@@ -334,7 +334,7 @@ describe('StatisticsPage', () => {
     renderPage();
 
     const totals = await screen.findByRole('region', { name: 'Statistics' });
-    expect(within(totals).getByText('Total Distance')).toBeInTheDocument();
+    expect(within(totals).getByText('Total distance')).toBeInTheDocument();
     expect(within(totals).getByText('500 km')).toBeInTheDocument();
     expect(within(totals).getByText('42')).toBeInTheDocument();
     expect(within(totals).getByText('100.00 kWh')).toBeInTheDocument();
@@ -425,8 +425,8 @@ describe('StatisticsPage', () => {
   it('renders the mileage summary cards on the happy path', async () => {
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
-    expect(screen.getByText('Daily Average')).toBeInTheDocument();
-    expect(screen.getByText('Yearly Projection')).toBeInTheDocument();
+    expect(screen.getByText('Daily average')).toBeInTheDocument();
+    expect(screen.getByText('Yearly projection')).toBeInTheDocument();
     expect(screen.getByText('8,000 km')).toBeInTheDocument();
   });
 
@@ -435,14 +435,14 @@ describe('StatisticsPage', () => {
     const { unmount } = renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('No mileage data available')).toBeInTheDocument();
-    expect(screen.queryByText('Daily Average')).not.toBeInTheDocument();
+    expect(screen.queryByText('Daily average')).not.toBeInTheDocument();
     unmount();
 
     mockMileage.mockReturnValue(qr({ error: new Error('mileage down') }));
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Daily Average')).not.toBeInTheDocument();
+    expect(screen.queryByText('Daily average')).not.toBeInTheDocument();
   });
 
   it('renders the state-distribution chart figure when data is present', async () => {
@@ -450,7 +450,7 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'State Distribution' }),
+      screen.getByRole('heading', { level: 3, name: 'State distribution' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Vehicle state distribution pie chart' }),
@@ -485,7 +485,7 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Vehicle Comparison' }),
+      screen.getByRole('heading', { level: 3, name: 'Vehicle comparison' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
   });

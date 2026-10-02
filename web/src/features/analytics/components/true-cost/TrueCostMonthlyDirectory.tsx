@@ -29,12 +29,15 @@ export function TrueCostMonthlyDirectory({
   const columns = useMemo<Column<TcoMonthlyDirectoryRow>[]>(() => [
     {
       key: 'source',
+      align: 'right',
       header: t('tco.directory.sourceRow', 'Source row'),
       render: (row) => <Text variant="caption" mono>{row.sourceIndex + 1}</Text>,
       visibleOnMobile: true,
     },
     {
       key: 'month',
+      filterValue: (row) => row.month,
+      filterValueLabel: (_value, row) => row.month ? display.formatMonth(row.month) : '—',
       header: t('tco.columns.month', 'Month'),
       render: (row) => (
         <Text variant="bodySm">
@@ -45,6 +48,8 @@ export function TrueCostMonthlyDirectory({
     },
     {
       key: 'disposition',
+      filterValue: (row) => row.disposition,
+      filterValueLabel: (_value, row) => dispositionLabel(row.disposition, t),
       header: t('tco.directory.disposition', 'Disposition'),
       render: (row) => (
         <Badge variant={row.disposition === 'eligible' ? 'success' : 'warning'}>
@@ -55,6 +60,8 @@ export function TrueCostMonthlyDirectory({
     },
     {
       key: 'evCost',
+      filterValue: (row) => row.evCost.value,
+      filterValueLabel: (_value, row) => display.formatCurrency(row.evCost.value),
       header: t('tco.columns.evCost', 'Recorded EV cost'),
       render: (row) => (
         <Text variant="bodySm" mono>{display.formatCurrency(row.evCost.value)}</Text>
@@ -63,6 +70,8 @@ export function TrueCostMonthlyDirectory({
     },
     {
       key: 'gasCost',
+      filterValue: (row) => row.gasCost.value,
+      filterValueLabel: (_value, row) => display.formatCurrency(row.gasCost.value),
       header: t('tco.columns.gasCost', 'Modeled gas equivalent'),
       render: (row) => (
         <Text variant="bodySm" mono>{display.formatCurrency(row.gasCost.value)}</Text>
@@ -71,6 +80,8 @@ export function TrueCostMonthlyDirectory({
     },
     {
       key: 'energy',
+      filterValue: (row) => row.energyWh.value,
+      filterValueLabel: (_value, row) => display.formatEnergy(row.energyWh.value),
       header: t('tco.columns.energy', 'Recorded-cost energy'),
       render: (row) => (
         <Text variant="bodySm" mono>{display.formatEnergy(row.energyWh.value)}</Text>
@@ -79,6 +90,8 @@ export function TrueCostMonthlyDirectory({
     },
     {
       key: 'apiSavings',
+      filterValue: (row) => row.apiSavings.value,
+      filterValueLabel: (_value, row) => display.formatSignedCurrency(row.apiSavings.value),
       header: t('tco.directory.apiSavings', 'API savings'),
       render: (row) => (
         <Text variant="bodySm" mono>{display.formatSignedCurrency(row.apiSavings.value)}</Text>
@@ -87,6 +100,8 @@ export function TrueCostMonthlyDirectory({
     },
     {
       key: 'apiCumulative',
+      filterValue: (row) => row.apiCumulative.value,
+      filterValueLabel: (_value, row) => display.formatSignedCurrency(row.apiCumulative.value),
       header: t('tco.directory.apiCumulative', 'API cumulative'),
       render: (row) => (
         <Text variant="bodySm" mono>{display.formatSignedCurrency(row.apiCumulative.value)}</Text>
@@ -95,6 +110,8 @@ export function TrueCostMonthlyDirectory({
     },
     {
       key: 'derivedDelta',
+      filterValue: (row) => row.derivedFuelDelta,
+      filterValueLabel: (_value, row) => display.formatSignedCurrency(row.derivedFuelDelta),
       header: t('tco.columns.derivedDelta', 'Derived fuel delta'),
       render: (row) => (
         <Text variant="bodySm" mono>{display.formatSignedCurrency(row.derivedFuelDelta)}</Text>
@@ -118,6 +135,7 @@ export function TrueCostMonthlyDirectory({
         </Text>
         <TrueCostSectionBody state={state}>
           <DataTable
+            enableValueFilters
             tableId="analytics:true-cost-monthly-evidence"
             columns={columns}
             data={[...analysis.monthly]}

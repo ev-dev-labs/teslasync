@@ -1,4 +1,4 @@
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -153,49 +153,37 @@ export function CarbonAccountingIdentities({
                   <Text as="p" variant="label">{checkLabel(check.id, t)}</Text>
                   <Badge variant={status.variant}>{status.label}</Badge>
                 </div>
-                {check.unit === 'hour_set' ? (
-                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                    <Text as="span" variant="caption">
-                      {t('carbon.accounting.expected', 'Expected')}
-                    </Text>
-                    <Text as="span" variant="caption" mono>
-                      {hourSetValue(check.expectedHours, display, t)}
-                    </Text>
-                    <Text as="span" variant="caption">
-                      {t('carbon.accounting.observed', 'Observed')}
-                    </Text>
-                    <Text as="span" variant="caption" mono>
-                      {hourSetValue(check.observedHours, display, t)}
-                    </Text>
-                  </div>
-                ) : (
-                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                    <Text as="span" variant="caption">
-                      {t('carbon.accounting.expected', 'Expected')}
-                    </Text>
-                    <Text as="span" variant="caption" mono>
-                      {checkValue(check.expected, check, display, t)}
-                    </Text>
-                    <Text as="span" variant="caption">
-                      {t('carbon.accounting.observed', 'Observed')}
-                    </Text>
-                    <Text as="span" variant="caption" mono>
-                      {checkValue(check.observed, check, display, t)}
-                    </Text>
-                    <Text as="span" variant="caption">
-                      {t('carbon.accounting.residual', 'Residual')}
-                    </Text>
-                    <Text as="span" variant="caption" mono>
-                      {checkValue(check.residual, check, display, t)}
-                    </Text>
-                    <Text as="span" variant="caption">
-                      {t('carbon.accounting.tolerance', 'Tolerance')}
-                    </Text>
-                    <Text as="span" variant="caption" mono>
-                      {checkValue(check.tolerance, check, display, t)}
-                    </Text>
-                  </div>
-                )}
+                <Table className="mt-2" aria-label={checkLabel(check.id, t)}>
+
+                  <tbody>
+                    <tr>
+                      <th scope="row"><Text variant="caption">{t('carbon.accounting.expected', 'Expected')}</Text></th>
+                      <td className="text-right"><Text variant="caption" mono>
+                        {check.unit === 'hour_set'
+                          ? hourSetValue(check.expectedHours, display, t)
+                          : checkValue(check.expected, check, display, t)}
+                      </Text></td>
+                    </tr>
+                    <tr>
+                      <th scope="row"><Text variant="caption">{t('carbon.accounting.observed', 'Observed')}</Text></th>
+                      <td className="text-right"><Text variant="caption" mono>
+                        {check.unit === 'hour_set'
+                          ? hourSetValue(check.observedHours, display, t)
+                          : checkValue(check.observed, check, display, t)}
+                      </Text></td>
+                    </tr>
+                    {check.unit !== 'hour_set' && <>
+                      <tr>
+                        <th scope="row"><Text variant="caption">{t('carbon.accounting.residual', 'Residual')}</Text></th>
+                        <td className="text-right"><Text variant="caption" mono>{checkValue(check.residual, check, display, t)}</Text></td>
+                      </tr>
+                      <tr>
+                        <th scope="row"><Text variant="caption">{t('carbon.accounting.tolerance', 'Tolerance')}</Text></th>
+                        <td className="text-right"><Text variant="caption" mono>{checkValue(check.tolerance, check, display, t)}</Text></td>
+                      </tr>
+                    </>}
+                  </tbody>
+                </Table>
               </li>
             );
           })}

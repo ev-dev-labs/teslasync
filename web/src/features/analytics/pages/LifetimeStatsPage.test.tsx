@@ -235,7 +235,7 @@ describe('LifetimeStatsPage', () => {
     renderPage();
 
     // Page shell.
-    expect(screen.getByRole('heading', { name: /Lifetime Stats/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Lifetime stats/i })).toBeInTheDocument();
 
     // KPI band (km identity: 12345 km stays 12,345 km).
     expect(screen.getByText('1,234')).toBeInTheDocument(); // total drives
@@ -300,7 +300,7 @@ describe('LifetimeStatsPage', () => {
     const { container } = renderPage();
 
     // Header still present; no resolved KPI values.
-    expect(screen.getByRole('heading', { name: /Lifetime Stats/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Lifetime stats/i })).toBeInTheDocument();
     expect(screen.queryByText('12,345')).not.toBeInTheDocument();
     expect(screen.queryByText('456.7 km')).not.toBeInTheDocument();
     // Skeletons render across the page.

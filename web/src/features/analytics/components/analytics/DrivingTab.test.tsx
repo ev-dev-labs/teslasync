@@ -286,10 +286,10 @@ describe('DrivingTab — loading', () => {
     const { container } = renderTab(makeQuery({ isLoading: true }));
 
     // Panel titles always render (they frame the section)…
-    expect(screen.getByText('Speed Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Trend')).toBeInTheDocument();
+    expect(screen.getByText('Speed distribution')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency trend')).toBeInTheDocument();
     // …but the performance band is a skeleton — no card labels leak through…
-    expect(screen.queryByText('Top Speed')).toBeNull();
+    expect(screen.queryByText('Top speed')).toBeNull();
     // …pulsing skeletons are on screen…
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     // …and no chart has been drawn yet.
@@ -356,13 +356,13 @@ describe('DrivingTab — populated', () => {
     renderTab(makeQuery({ data: populated() }));
 
     // Every panel title frames its section.
-    expect(screen.getByText('Speed Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Trip Distance Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Hourly Driving Pattern')).toBeInTheDocument();
-    expect(screen.getByText('Temperature vs Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('Daily Driving Trend')).toBeInTheDocument();
-    expect(screen.getByText('Drive Duration Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Trend')).toBeInTheDocument();
+    expect(screen.getByText('Speed distribution')).toBeInTheDocument();
+    expect(screen.getByText('Trip distance distribution')).toBeInTheDocument();
+    expect(screen.getByText('Hourly driving pattern')).toBeInTheDocument();
+    expect(screen.getByText('Temperature vs efficiency')).toBeInTheDocument();
+    expect(screen.getByText('Daily driving trend')).toBeInTheDocument();
+    expect(screen.getByText('Drive duration distribution')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency trend')).toBeInTheDocument();
 
     // Three bar charts, two composed, one scatter, one area = seven charts.
     expect(screen.getAllByTestId('chart-bar')).toHaveLength(3);
@@ -371,10 +371,10 @@ describe('DrivingTab — populated', () => {
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();
 
     // Both sibling bands compose in (performance cards + temperature stats).
-    expect(screen.getByText('Top Speed')).toBeInTheDocument();
-    expect(screen.getByText('Longest Drive')).toBeInTheDocument();
-    expect(screen.getByText('Inside Min')).toBeInTheDocument();
-    expect(screen.getByText('Outside Max')).toBeInTheDocument();
+    expect(screen.getByText('Top speed')).toBeInTheDocument();
+    expect(screen.getByText('Longest drive')).toBeInTheDocument();
+    expect(screen.getByText('Inside min')).toBeInTheDocument();
+    expect(screen.getByText('Outside max')).toBeInTheDocument();
   });
 
   it('binds every chart series to its expected dataKey', () => {

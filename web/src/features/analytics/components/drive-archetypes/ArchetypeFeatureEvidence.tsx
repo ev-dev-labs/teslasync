@@ -7,6 +7,7 @@ import {
   GlassPanel,
   MetricLabel,
   PanelTitle,
+  Table,
   Text,
 } from '@/components/ui';
 import { fmtInt } from '@/lib/numberFormat';
@@ -74,25 +75,27 @@ export function ArchetypeFeatureEvidence({
           </Badge>
         </div>
         <ArchetypeSectionBody summary={summary} state={state} requirement="eligible">
-          <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
-            <div className="grid min-w-[620px] grid-cols-4 gap-3 bg-[var(--surface-2)] px-4 py-2">
-              <MetricLabel>{t('archetypes.features.feature', 'Feature')}</MetricLabel>
-              <MetricLabel>{t('archetypes.features.minimum', 'Minimum')}</MetricLabel>
-              <MetricLabel>{t('archetypes.features.median', 'Median')}</MetricLabel>
-              <MetricLabel>{t('archetypes.features.maximum', 'Maximum')}</MetricLabel>
-            </div>
+          <Table className="min-w-[620px]" aria-label={t('archetypes.features.title', 'Feature ranges and temperature-imputation evidence')}>
+
+            <thead><tr>
+              <th scope="col"><MetricLabel>{t('archetypes.features.feature', 'Feature')}</MetricLabel></th>
+              <th scope="col" className="text-right"><MetricLabel>{t('archetypes.features.minimum', 'Minimum')}</MetricLabel></th>
+              <th scope="col" className="text-right"><MetricLabel>{t('archetypes.features.median', 'Median')}</MetricLabel></th>
+              <th scope="col" className="text-right"><MetricLabel>{t('archetypes.features.maximum', 'Maximum')}</MetricLabel></th>
+            </tr></thead>
+            <tbody>
             {rows.map((row) => (
-              <div
+              <tr
                 key={row.label}
-                className="grid min-w-[620px] grid-cols-4 gap-3 border-t border-[var(--border-subtle)] px-4 py-3"
               >
-                <Text variant="label">{row.label}</Text>
-                <Text variant="bodySm">{row.format(row.range.min)}</Text>
-                <Text variant="bodySm">{row.format(row.range.median)}</Text>
-                <Text variant="bodySm">{row.format(row.range.max)}</Text>
-              </div>
+                <th scope="row"><Text variant="label">{row.label}</Text></th>
+                <td className="text-right"><Text variant="bodySm">{row.format(row.range.min)}</Text></td>
+                <td className="text-right"><Text variant="bodySm">{row.format(row.range.median)}</Text></td>
+                <td className="text-right"><Text variant="bodySm">{row.format(row.range.max)}</Text></td>
+              </tr>
             ))}
-          </div>
+            </tbody>
+          </Table>
           <AlertBanner
             className="mt-4"
             variant={imputed > 0 ? 'warning' : 'info'}

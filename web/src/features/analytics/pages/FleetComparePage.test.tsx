@@ -275,7 +275,7 @@ describe('FleetComparePage', () => {
 
     // Page chrome + both selectors.
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Fleet Comparison' }),
+      screen.getByRole('heading', { level: 1, name: 'Fleet comparison' }),
     ).toBeInTheDocument()
     const selectA = (await screen.findByLabelText('Vehicle A')) as HTMLSelectElement
     const selectB = screen.getByLabelText('Vehicle B') as HTMLSelectElement
@@ -291,8 +291,8 @@ describe('FleetComparePage', () => {
     // The lifetime table renders every metric row label (Avg Efficiency /
     // Charging Cost / CO₂ Saved also appear as KPI-band labels → getAllByText).
     for (const label of [
-      'Total Drives', 'Total Distance', 'Avg Efficiency', 'Avg Speed', 'Top Speed',
-      'Regen Ratio', 'CO₂ Saved', 'Charging Cost', 'Total Energy', 'Charge Sessions',
+      'Total drives', 'Total distance', 'Avg efficiency', 'Avg speed', 'Top speed',
+      'Regen ratio', 'CO₂ saved', 'Charging cost', 'Total energy', 'Charge sessions',
     ]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0)
     }
@@ -306,6 +306,9 @@ describe('FleetComparePage', () => {
     // Vehicle names surface as the table's value-column headers.
     expect(screen.getAllByText('Model 3 LR').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Model Y P').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Reorder or hide columns' })).not.toBeInTheDocument()
+    const comparisonTable = screen.getByRole('table')
+    expect(comparisonTable.querySelectorAll('[role="separator"], [draggable="true"]')).toHaveLength(0)
   })
 
   it('annotates the winner with a ✓ across higher / lower / tie semantics', async () => {
@@ -379,7 +382,7 @@ describe('FleetComparePage', () => {
     // Header is always present; the body is the spinner shell, never the
     // selectors, table, or the single-vehicle empty state.
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Fleet Comparison' }),
+      screen.getByRole('heading', { level: 1, name: 'Fleet comparison' }),
     ).toBeInTheDocument()
     expect(screen.queryByLabelText('Vehicle A')).toBeNull()
     expect(screen.queryByRole('table')).toBeNull()
@@ -400,7 +403,7 @@ describe('FleetComparePage', () => {
       await screen.findByText('No drive data available yet'),
     ).toBeInTheDocument()
     // The rest of the page still renders — the table is unaffected.
-    expect(screen.getAllByText('Total Drives').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Total drives').length).toBeGreaterThan(0)
   })
 
   it('surfaces a QueryError in both trend panels when monthly mileage fails', async () => {

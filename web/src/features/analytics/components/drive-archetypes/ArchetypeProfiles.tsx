@@ -7,6 +7,7 @@ import {
   GlassPanel,
   MetricLabel,
   PanelTitle,
+  Table,
   Text,
 } from '@/components/ui';
 import { fmtInt, fmtPercent } from '@/lib/numberFormat';
@@ -89,14 +90,16 @@ export function ArchetypeProfiles({
                       {archetypeLabel(t, cluster.label)}
                     </Badge>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Table className="mt-4" aria-label={archetypeIdentity(t, cluster.index, cluster.label)}>
+                    <tbody>
                     {metrics.map(([label, value]) => (
-                      <div key={label}>
-                        <MetricLabel>{label}</MetricLabel>
-                        <Text as="p" variant="bodySm" className="mt-1">{value}</Text>
-                      </div>
+                      <tr key={label}>
+                        <th scope="row"><MetricLabel>{label}</MetricLabel></th>
+                        <td className="text-right"><Text as="p" variant="bodySm">{value}</Text></td>
+                      </tr>
                     ))}
-                  </div>
+                    </tbody>
+                  </Table>
                   <div className="mt-4 border-t border-[var(--border-subtle)] pt-3">
                     <Text as="p" variant="caption">
                       {t(

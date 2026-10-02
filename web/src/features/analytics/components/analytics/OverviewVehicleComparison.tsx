@@ -107,7 +107,7 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
     <>
       {/* Fleet Usage Donut */}
       <AnalyticsChartPanel
-        title={t('analytics.overview.fleetUsage', 'Fleet Usage')}
+        title={t('analytics.overview.fleetUsage', 'Fleet usage')}
         icon={<PieChartIcon className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -146,7 +146,7 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
 
       {/* Efficiency Leaderboard */}
       <AnalyticsPanel
-        title={t('analytics.overview.effLeaderboard', 'Efficiency Leaderboard')}
+        title={t('analytics.overview.effLeaderboard', 'Efficiency leaderboard')}
         icon={<Trophy className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -179,7 +179,7 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
 
       {/* Radar Vehicle Comparison */}
       <AnalyticsChartPanel
-        title={t('analytics.overview.vehicleComparison', 'Vehicle Comparison')}
+        title={t('analytics.overview.vehicleComparison', 'Vehicle comparison')}
         icon={<RadarIcon className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -221,7 +221,7 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
 
       {/* Energy & Activity */}
       <AnalyticsChartPanel
-        title={t('analytics.overview.energyActivity', 'Energy & Activity')}
+        title={t('analytics.overview.energyActivity', 'Energy & activity')}
         icon={<BarChart3 className="h-4 w-4" />}
         loading={isLoading}
         error={err}

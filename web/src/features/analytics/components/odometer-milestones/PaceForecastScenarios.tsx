@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
 import { Grid } from '@/components/layout';
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
 
 import type { OdometerMilestoneResult, PaceScenario } from '../../lib/odometerMilestones';
@@ -93,7 +93,8 @@ export function PaceForecastScenarios({
                           )}
                     </Badge>
                   </div>
-                  <dl className="mt-4 space-y-2">
+                  <Table className="mt-4" aria-label={titleOf(scenario)}>
+                    <tbody>
                     {[
                       {
                         key: 'samples',
@@ -168,15 +169,14 @@ export function PaceForecastScenarios({
                               : '—',
                       },
                     ].map((item) => (
-                      <div
+                      <tr
                         key={item.key}
-                        className="flex items-baseline justify-between gap-3"
                       >
-                        <Text as="dt" variant="caption">
+                        <th scope="row"><Text variant="caption">
                           {item.label}
-                        </Text>
+                        </Text></th>
+                        <td className="text-right">
                         <Text
-                          as="dd"
                           size="xs"
                           weight="medium"
                           color="secondary"
@@ -184,9 +184,11 @@ export function PaceForecastScenarios({
                         >
                           {item.value}
                         </Text>
-                      </div>
+                        </td>
+                      </tr>
                     ))}
-                  </dl>
+                    </tbody>
+                  </Table>
                 </article>
               ))}
             </Grid>

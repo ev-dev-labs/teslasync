@@ -145,22 +145,14 @@ export default function StatisticsPage() {
   }, [fleet, fromKm]);
 
   /* ── Toolbar ───────────────────────────────────────────────────── */
-  const actions = (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button
-        size="sm"
-        onClick={() => { void refetch(); }}
-        aria-label={t('common.refresh', 'Refresh')}
-      >
-        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-      </Button>
-      <SavedViewMenu
-        route="/statistics"
-        currentQuery={savedView.currentQuery}
-        onApply={savedView.apply}
-      />
-      <DataFreshnessAuto query={statsQuery} />
-    </div>
+  const refreshAction = (
+    <Button
+      size="sm"
+      onClick={() => { void refetch(); }}
+      aria-label={t('common.refresh', 'Refresh')}
+    >
+      <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+    </Button>
   );
 
   /* ── Render ────────────────────────────────────────────────────── */
@@ -168,7 +160,15 @@ export default function StatisticsPage() {
     <PageContainer
       title={t('statistics.title', 'Statistics')}
       subtitle={t('statistics.subtitle', 'Lifetime vehicle statistics and records')}
-      actions={actions}
+      metadataActions={<DataFreshnessAuto query={statsQuery} />}
+      secondaryActions={refreshAction}
+      overflowActions={
+        <SavedViewMenu
+          route="/statistics"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
+      }
     >
       {/* 1 — Period totals + averages (both derived from period-stats) */}
       <FadeIn>
@@ -206,18 +206,18 @@ export default function StatisticsPage() {
               aria-label={t('statistics.title', 'Statistics')}
               className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5"
             >
-              <MetricCard label={t('statistics.totalDistance', 'Total Distance')} value={`${fmtInt(fromKm(stats.total_distance ?? 0))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
-              <MetricCard label={t('statistics.totalDrives', 'Total Drives')} value={fmtInt(stats.total_drives ?? 0)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
-              <MetricCard label={t('statistics.totalEnergy', 'Total Energy')} value={`${fmtNumber(stats.energy_used ?? 0)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" />
-              <MetricCard label={t('statistics.totalCost', 'Total Cost')} value={formatCurrency(stats.total_cost ?? 0, 0)} icon={<DollarSign className="h-4 w-4" />} color="red" />
-              <MetricCard label={t('statistics.co2Saved', 'CO₂ Saved')} value={`${fmtNumber(stats.co2_saved ?? 0)} kg`} icon={<Leaf className="h-4 w-4" />} color="green" />
+              <MetricCard label={t('statistics.totalDistance', 'Total distance')} value={`${fmtInt(fromKm(stats.total_distance ?? 0))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
+              <MetricCard label={t('statistics.totalDrives', 'Total drives')} value={fmtInt(stats.total_drives ?? 0)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
+              <MetricCard label={t('statistics.totalEnergy', 'Total energy')} value={`${fmtNumber(stats.energy_used ?? 0)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" />
+              <MetricCard label={t('statistics.totalCost', 'Total cost')} value={formatCurrency(stats.total_cost ?? 0, 0)} icon={<DollarSign className="h-4 w-4" />} color="red" />
+              <MetricCard label={t('statistics.co2Saved', 'CO₂ saved')} value={`${fmtNumber(stats.co2_saved ?? 0)} kg`} icon={<Leaf className="h-4 w-4" />} color="green" />
             </section>
             <section
               aria-label={t('statistics.averages', 'Averages')}
               className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3"
             >
-              <MetricCard label={t('statistics.avgDriveDistance', 'Avg Drive Distance')} value={`${fmtNumber(fromKm(avgDriveDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
-              <MetricCard label={t('statistics.avgEfficiency', 'Avg Efficiency')} value={`${fmtNumber(whPerKmToDisplay(stats.avg_efficiency ?? 0))} ${efficiencyUnit}`} icon={<Gauge className="h-4 w-4" />} color="green" />
+              <MetricCard label={t('statistics.avgDriveDistance', 'Avg drive distance')} value={`${fmtNumber(fromKm(avgDriveDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
+              <MetricCard label={t('statistics.avgEfficiency', 'Avg efficiency')} value={`${fmtNumber(whPerKmToDisplay(stats.avg_efficiency ?? 0))} ${efficiencyUnit}`} icon={<Gauge className="h-4 w-4" />} color="green" />
               <MetricCard label={t('statistics.costPerKm', 'Cost per km')} value={(stats.total_distance ?? 0) > 0 ? formatCurrency((stats.total_cost ?? 0) / stats.total_distance, 3) : '—'} icon={<DollarSign className="h-4 w-4" />} color="amber" />
             </section>
           </div>
@@ -230,7 +230,7 @@ export default function StatisticsPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Battery className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('statistics.batteryHealth', 'Battery Health')}
+              {t('statistics.batteryHealth', 'Battery health')}
             </PanelTitle>
             {batteryLoading ? (
               <Skeleton className="h-40 rounded-xl" />
@@ -272,7 +272,7 @@ export default function StatisticsPage() {
 
           {/* chart-a11y:no-table pie-chart slices are aggregated state counts; SR users get the same info via the State page */}
           <ChartContainer
-            title={t('statistics.stateDistribution', 'State Distribution')}
+            title={t('statistics.stateDistribution', 'State distribution')}
             ariaLabel={t('statistics.stateDistribution.aria', 'Vehicle state distribution pie chart')}
             exportable
             exportFilename="state-distribution"
@@ -313,7 +313,7 @@ export default function StatisticsPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('statistics.mileage', 'Mileage Summary')}
+              {t('statistics.mileage', 'Mileage summary')}
             </PanelTitle>
             {mileageLoading ? (
               <Skeleton className="h-40 rounded-xl" />
@@ -321,10 +321,10 @@ export default function StatisticsPage() {
               <QueryError error={mileageError} />
             ) : mileage ? (
               <div className="grid grid-cols-2 gap-3">
-                <MetricCard label={t('statistics.totalMileage', 'Total Distance')} value={`${fmtInt(fromKm(mileage.lifetime_km ?? 0))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
-                <MetricCard label={t('statistics.dailyAvg', 'Daily Average')} value={`${fmtNumber(fromKm((mileage.last_30d_km ?? 0) / 30))} ${distanceUnit}`} icon={<Car className="h-4 w-4" />} color="green" />
-                <MetricCard label={t('statistics.totalDrives', 'Total Drives')} value={fmtInt(mileage.drive_count_lifetime ?? 0)} icon={<Clock className="h-4 w-4" />} color="purple" />
-                <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(fromKm(((mileage.last_30d_km ?? 0) / 30) * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
+                <MetricCard label={t('statistics.totalMileage', 'Total distance')} value={`${fmtInt(fromKm(mileage.lifetime_km ?? 0))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
+                <MetricCard label={t('statistics.dailyAvg', 'Daily average')} value={`${fmtNumber(fromKm((mileage.last_30d_km ?? 0) / 30))} ${distanceUnit}`} icon={<Car className="h-4 w-4" />} color="green" />
+                <MetricCard label={t('statistics.totalDrives', 'Total drives')} value={fmtInt(mileage.drive_count_lifetime ?? 0)} icon={<Clock className="h-4 w-4" />} color="purple" />
+                <MetricCard label={t('statistics.yearlyProjection', 'Yearly projection')} value={`${fmtInt(fromKm(((mileage.last_30d_km ?? 0) / 30) * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
               </div>
             ) : (
               // no-action: mileage totals populate automatically after a completed drive.
@@ -342,7 +342,7 @@ export default function StatisticsPage() {
 
           {/* chart-a11y:no-table multi-vehicle bar chart — fleet rollup with per-vehicle drill-down available */}
           <ChartContainer
-            title={t('statistics.vehicleComparison', 'Vehicle Comparison')}
+            title={t('statistics.vehicleComparison', 'Vehicle comparison')}
             ariaLabel={t('statistics.vehicleComparison.aria', 'Distance and energy bar chart comparing all vehicles in the fleet')}
             chartKey="fleet-vehicle-comparison"
             exportable

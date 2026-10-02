@@ -34,7 +34,7 @@ export function BatteryHealthSection({
     <GlassPanel className="flex h-full flex-col gap-5 p-4 sm:p-5">
       <PanelTitle className="flex items-center gap-2">
         <Battery className="h-4 w-4 text-purple-300" aria-hidden="true" />
-        {t('analytics.weeklyDigest.batteryHealth', 'Battery Health')}
+        {t('analytics.weeklyDigest.batteryHealth', 'Battery health')}
       </PanelTitle>
 
       {isLoading ? (
@@ -52,28 +52,28 @@ export function BatteryHealthSection({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <BatteryPill
               level={Math.round(metrics.batteryStart ?? 0)}
-              label={t('analytics.weeklyDigest.avgBatteryStart', 'Avg Battery at Charge Start')}
+              label={t('analytics.weeklyDigest.avgBatteryStart', 'Avg battery at charge start')}
             />
             <BatteryPill
               level={Math.round(metrics.batteryEnd ?? 0)}
-              label={t('analytics.weeklyDigest.avgBatteryEnd', 'Avg Battery at Charge End')}
+              label={t('analytics.weeklyDigest.avgBatteryEnd', 'Avg battery at charge end')}
             />
           </div>
 
           {/* Range stats */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <MiniStat
-              label={t('analytics.weeklyDigest.avgChargeGain', 'Avg Charge Gain')}
+              label={t('analytics.weeklyDigest.avgChargeGain', 'Avg charge gain')}
               value={`${fmtNumber((metrics.batteryEnd ?? 0) - (metrics.batteryStart ?? 0), 1)}%`}
               icon={<TrendingUp className="h-4 w-4" />}
             />
             <MiniStat
-              label={t('analytics.weeklyDigest.chargeSessions', 'Charge Sessions')}
+              label={t('analytics.weeklyDigest.chargeSessions', 'Charge sessions')}
               value={fmtInt(metrics.chargingSessionCount ?? 0)}
               icon={<Zap className="h-4 w-4" />}
             />
             <MiniStat
-              label={t('analytics.weeklyDigest.estRangeAdded', 'Est. Range Added')}
+              label={t('analytics.weeklyDigest.estRangeAdded', 'Est. range added')}
               value={formatDistance(
                 (metrics.chargeEnergyAddedWh ?? 0) * EST_RANGE_M_PER_WH,
                 { precision: 0 },

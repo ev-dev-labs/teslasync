@@ -80,7 +80,7 @@ const BANNER_DISMISSED_KEY = 'phase40.compareBanner.dismissed.period';
 
 export default function PeriodComparePage() {
   const { t } = useTranslation();
-  usePageTitle(t('compare.title', 'Period Comparison'));
+  usePageTitle(t('compare.title', 'Period comparison'));
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
@@ -189,12 +189,12 @@ export default function PeriodComparePage() {
     const effA = distanceUnit === 'mi' ? (a.avg_efficiency ?? 0) * KM_PER_MILE : (a.avg_efficiency ?? 0);
     const effB = distanceUnit === 'mi' ? (b.avg_efficiency ?? 0) * KM_PER_MILE : (b.avg_efficiency ?? 0);
     return [
-      { key: 'distance', label: t('compare.totalDistance', 'Total Distance'), icon: <Car className="h-4 w-4" aria-hidden="true" />, a: distA, b: distB, unit: distanceUnit, color: 'cyan' as const, semantic: COMPARE_METRIC_SEMANTICS.distance },
-      { key: 'drives', label: t('compare.totalDrives', 'Total Drives'), icon: <TrendingUp className="h-4 w-4" aria-hidden="true" />, a: a.total_drives ?? 0, b: b.total_drives ?? 0, unit: '', color: 'green' as const, semantic: COMPARE_METRIC_SEMANTICS.drives },
-      { key: 'energy', label: t('compare.energyUsed', 'Energy Used'), icon: <Zap className="h-4 w-4" aria-hidden="true" />, a: a.energy_used ?? 0, b: b.energy_used ?? 0, unit: 'kWh', color: 'purple' as const, semantic: COMPARE_METRIC_SEMANTICS.energy },
-      { key: 'efficiency', label: t('compare.avgEfficiency', 'Avg Efficiency'), icon: <Gauge className="h-4 w-4" aria-hidden="true" />, a: effA, b: effB, unit: efficiencyUnit, color: 'cyan' as const, semantic: COMPARE_METRIC_SEMANTICS.efficiency },
-      { key: 'cost', label: t('compare.totalCost', 'Total Cost'), icon: <DollarSign className="h-4 w-4" aria-hidden="true" />, a: a.total_cost ?? 0, b: b.total_cost ?? 0, unit: '$', color: 'green' as const, semantic: COMPARE_METRIC_SEMANTICS.cost },
-      { key: 'co2', label: t('compare.co2Saved', 'CO₂ Saved'), icon: <Leaf className="h-4 w-4" aria-hidden="true" />, a: a.co2_saved ?? 0, b: b.co2_saved ?? 0, unit: 'kg', color: 'purple' as const, semantic: COMPARE_METRIC_SEMANTICS.co2 },
+      { key: 'distance', label: t('compare.totalDistance', 'Total distance'), icon: <Car className="h-4 w-4" aria-hidden="true" />, a: distA, b: distB, unit: distanceUnit, color: 'cyan' as const, semantic: COMPARE_METRIC_SEMANTICS.distance },
+      { key: 'drives', label: t('compare.totalDrives', 'Total drives'), icon: <TrendingUp className="h-4 w-4" aria-hidden="true" />, a: a.total_drives ?? 0, b: b.total_drives ?? 0, unit: '', color: 'green' as const, semantic: COMPARE_METRIC_SEMANTICS.drives },
+      { key: 'energy', label: t('compare.energyUsed', 'Energy used'), icon: <Zap className="h-4 w-4" aria-hidden="true" />, a: a.energy_used ?? 0, b: b.energy_used ?? 0, unit: 'kWh', color: 'purple' as const, semantic: COMPARE_METRIC_SEMANTICS.energy },
+      { key: 'efficiency', label: t('compare.avgEfficiency', 'Avg efficiency'), icon: <Gauge className="h-4 w-4" aria-hidden="true" />, a: effA, b: effB, unit: efficiencyUnit, color: 'cyan' as const, semantic: COMPARE_METRIC_SEMANTICS.efficiency },
+      { key: 'cost', label: t('compare.totalCost', 'Total cost'), icon: <DollarSign className="h-4 w-4" aria-hidden="true" />, a: a.total_cost ?? 0, b: b.total_cost ?? 0, unit: '$', color: 'green' as const, semantic: COMPARE_METRIC_SEMANTICS.cost },
+      { key: 'co2', label: t('compare.co2Saved', 'CO₂ saved'), icon: <Leaf className="h-4 w-4" aria-hidden="true" />, a: a.co2_saved ?? 0, b: b.co2_saved ?? 0, unit: 'kg', color: 'purple' as const, semantic: COMPARE_METRIC_SEMANTICS.co2 },
     ];
   }, [a, b, t, distanceUnit, efficiencyUnit]);
 
@@ -247,18 +247,21 @@ export default function PeriodComparePage() {
       },
       {
         key: 'periodA',
+        align: 'right',
         header: t('compare.periodA', 'Period A'),
         sortable: true,
         render: (r) => <Text variant="body" className="tabular-nums">{fmtNumber(r.periodA)}</Text>,
       },
       {
         key: 'periodB',
+        align: 'right',
         header: t('compare.periodB', 'Period B'),
         sortable: true,
         render: (r) => <Text variant="body" className="tabular-nums">{fmtNumber(r.periodB)}</Text>,
       },
       {
         key: 'change',
+        align: 'right',
         header: t('compare.change', 'Change'),
         sortable: true,
         render: (r) => {
@@ -279,6 +282,7 @@ export default function PeriodComparePage() {
       },
       {
         key: 'pctChange',
+        align: 'right',
         header: t('compare.pctChange', '% Change'),
         render: (r) => (
           <Badge variant={r.favorable == null ? 'neutral' : r.favorable ? 'success' : 'danger'} size="sm">
@@ -304,14 +308,14 @@ export default function PeriodComparePage() {
     const costPct = pctChange(a.total_cost ?? 0, b.total_cost ?? 0);
     return [
       distPct.neutral
-        ? t('compare.distanceNoBaseline', 'Distance change is unavailable: Period B has no baseline.')
-        : t('compare.insightDistance', 'Distance traveled was {{pct}} {{dir}} in Period A vs Period B.', {
+        ? t('compare.distanceNoBaseline', 'Distance change is unavailable: period B has no baseline.')
+        : t('compare.insightDistance', 'Distance traveled was {{pct}} {{dir}} in period A vs period B.', {
           pct: distPct.value,
           dir: distPct.positive ? t('compare.more', 'more') : t('compare.less', 'less'),
         }),
       effPct.neutral
-        ? t('compare.efficiencyNoBaseline', 'Efficiency change is unavailable: Period B has no baseline.')
-        : t('compare.insightEfficiency', 'Efficiency {{dir}} by {{pct}} compared to Period B.', {
+        ? t('compare.efficiencyNoBaseline', 'Efficiency change is unavailable: period B has no baseline.')
+        : t('compare.insightEfficiency', 'Efficiency {{dir}} by {{pct}} compared to period B.', {
           pct: effNum == null ? effPct.value : `${fmtNumber(Math.abs(effNum), 1)}%`,
           dir: effA === effB
             ? t('compare.unchanged', 'unchanged')
@@ -320,8 +324,8 @@ export default function PeriodComparePage() {
               : t('compare.declined', 'declined'),
         }),
       costPct.neutral
-        ? t('compare.costNoBaseline', 'Cost change is unavailable: Period B has no baseline.')
-        : t('compare.insightCost', 'Costs were {{pct}} {{dir}} in Period A.', {
+        ? t('compare.costNoBaseline', 'Cost change is unavailable: period B has no baseline.')
+        : t('compare.insightCost', 'Costs were {{pct}} {{dir}} in period A.', {
           pct: costPct.value,
           dir: costPct.positive ? t('compare.higher', 'higher') : t('compare.lower', 'lower'),
         }),
@@ -330,7 +334,7 @@ export default function PeriodComparePage() {
 
   /* ── Toolbar (vehicle + both periods + refresh) ── */
 
-  const actions = (
+  const comparisonControls = (
     <div className="flex flex-wrap items-center gap-2">
       <Select
         aria-label={t('compare.vehicle', 'Vehicle')}
@@ -358,14 +362,6 @@ export default function PeriodComparePage() {
         onChange={(e) => setPeriodB(e.target.value as PeriodValue)}
         className="w-full sm:w-36"
       />
-      <Button
-        variant="ghost"
-        onClick={refetchAll}
-        aria-label={t('compare.refresh', 'Refresh')}
-        title={t('compare.refresh', 'Refresh')}
-      >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
-      </Button>
     </div>
   );
 
@@ -373,9 +369,19 @@ export default function PeriodComparePage() {
 
   return (
     <PageContainer
-      title={t('compare.title', 'Period Comparison')}
+      title={t('compare.title', 'Period comparison')}
       subtitle={t('compare.subtitle', 'Compare key metrics across two time periods')}
-      actions={actions}
+      contextActions={comparisonControls}
+      secondaryActions={
+        <Button
+          variant="ghost"
+          onClick={refetchAll}
+          aria-label={t('compare.refresh', 'Refresh')}
+          title={t('compare.refresh', 'Refresh')}
+        >
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      }
       query={[statsA, statsB]}
     >
       {/* Disambiguation banner — points users who wanted the fleet view to the
@@ -395,7 +401,7 @@ export default function PeriodComparePage() {
               to="/vehicle-comparison"
               className="font-medium text-cyan-300 underline-offset-2 hover:underline"
             >
-              {t('compare.banner.toFleetCta', 'Open Fleet comparison →')}
+              {t('compare.banner.toFleetCta', 'Open fleet comparison →')}
             </Link>
           </AlertBanner>
         </FadeIn>
@@ -460,7 +466,7 @@ export default function PeriodComparePage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('compare.deltaChartTitle', 'Change vs Period B (%)')}
+              {t('compare.deltaChartTitle', 'Change vs period B (%)')}
             </PanelTitle>
             {loadError ? (
               <QueryError error={loadError} onRetry={refetchAll} />
@@ -471,22 +477,22 @@ export default function PeriodComparePage() {
                 icon={<BarChart3 className="h-8 w-8" aria-hidden="true" />}
                 message={metrics.length === 0
                   ? t('compare.empty', 'Select a vehicle and two periods to compare.')
-                  : t('compare.noChartBaseline', 'Percent change requires a nonzero Period B baseline. Try another window.')}
+                  : t('compare.noChartBaseline', 'Percent change requires a nonzero period B baseline. Try another window.')}
               />
             ) : (
               <>
               {deltaChartData.length < metrics.length && (
                 <Text as="p" size="sm" color="secondary">
                   {metrics.length - deltaChartData.length === 1
-                    ? t('compare.omittedBaseline', 'One metric with no Period B baseline is omitted from the chart.')
-                    : t('compare.omittedBaselines', '{{count}} metrics with no Period B baseline are omitted from the chart.', {
+                    ? t('compare.omittedBaseline', 'One metric with no period B baseline is omitted from the chart.')
+                    : t('compare.omittedBaselines', '{{count}} metrics with no period B baseline are omitted from the chart.', {
                       count: metrics.length - deltaChartData.length,
                     })}
                 </Text>
               )}
               <EmbeddedChart
-                title={t('compare.deltaChartTitle', 'Change vs Period B (%)')}
-                ariaLabel={t('compare.deltaChartAria', 'Percent change of each metric in Period A relative to Period B')}
+                title={t('compare.deltaChartTitle', 'Change vs period B (%)')}
+                ariaLabel={t('compare.deltaChartAria', 'Percent change of each metric in period A relative to period B')}
                 data={deltaChartData}
                 dataColumns={[
                   { key: 'name', label: t('compare.metric', 'Metric') },
@@ -583,7 +589,7 @@ export default function PeriodComparePage() {
       <FadeIn delay={0.15}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3">
-            {t('compare.tableTitle', 'Comparison Details')}
+            {t('compare.tableTitle', 'Comparison details')}
           </PanelTitle>
           {loadError ? (
             <QueryError error={loadError} onRetry={refetchAll} />
@@ -592,6 +598,9 @@ export default function PeriodComparePage() {
           ) : (
             <DataTable
               tableId="analytics:period-compare"
+              resizable={false}
+              columnReorder={false}
+              columnVisibility={false}
               columns={columns}
               data={tableRows}
               keyExtractor={(r) => r.metric}

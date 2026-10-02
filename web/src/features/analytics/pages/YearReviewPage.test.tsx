@@ -15,7 +15,7 @@
  *      still resolving or the auto-select is one frame away. The genuine
  *      empty prompt is reserved for a resolved-but-empty fleet.
  *   4. Year navigation (prev / next / next-disabled-at-current-year / close)
- *      and vehicle disambiguation (multi-vehicle select + URL auto-select).
+ *      and workspace vehicle selection (global picker + URL auto-select).
  *   5. The zero-activity info banner and the vehicle subtitle.
  *   6. Handing the correct data/props to each of the nine review sub-panels
  *      and the numeric vehicle id to the AI narration section.
@@ -33,6 +33,8 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { Button } from '@/components/ui';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 // jsdom lacks matchMedia; framer-motion (reached via <FadeIn>) reads it at
 // module load. Install before any import evaluates.
@@ -266,13 +268,19 @@ function yearReviewCalls(): string[] {
     .filter((u) => u.includes('/analytics/year-review'));
 }
 
-function renderPage(path = '/year-review/2023?vehicle_id=10') {
+function WorkspaceVehicleControl() {
+  const { setVehicleId } = useSelectedVehicle();
+  return <Button onClick={() => setVehicleId(20)}>Switch workspace vehicle</Button>;
+}
+
+function renderPage(path = '/year-review/2023?vehicle_id=10', withWorkspaceControl = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
+        {withWorkspaceControl && <WorkspaceVehicleControl />}
         <Routes>
           <Route path="/year-review" element={<YearReviewPage />} />
           <Route path="/year-review/:year" element={<YearReviewPage />} />
@@ -302,7 +310,7 @@ describe('YearReviewPage — happy path', () => {
     await screen.findByTestId('year-monthly-chart');
 
     expect(
-      screen.getByRole('heading', { level: 1, name: '2023 Year in Review' }),
+      screen.getByRole('heading', { level: 1, name: '2023 Year in review' }),
     ).toBeInTheDocument();
 
     for (const name of [
@@ -516,14 +524,14 @@ describe('YearReviewPage — year navigation & a11y', () => {
 });
 
 describe('YearReviewPage — vehicle selection & URL auto-select', () => {
-  it('renders a labelled select for multi-vehicle accounts and refetches + rewires AI on switch', async () => {
+  it('uses workspace vehicle changes without duplicating the picker and rewires the feed and AI', async () => {
     installRequest();
-    renderPage('/year-review/2023?vehicle_id=10');
+    renderPage('/year-review/2023?vehicle_id=10', true);
 
     await screen.findByTestId('year-monthly-chart');
 
-    const select = screen.getByRole('combobox', { name: 'Select vehicle' });
-    fireEvent.change(select, { target: { value: '20' } });
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Switch workspace vehicle' }));
 
     await waitFor(() =>
       expect(yearReviewCalls().some((u) => /vehicle_id=20\b/.test(u))).toBe(true),

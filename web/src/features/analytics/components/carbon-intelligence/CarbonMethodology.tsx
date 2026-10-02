@@ -30,7 +30,7 @@ export function CarbonMethodology({
       title: t('carbon.method.formulaTitle', 'Charging attribution'),
       body: t(
         'carbon.method.formulaBody',
-        'Session CO₂ equals positive charging energy multiplied by the matching model intensity and converted from grams to kilograms. The frontend independently derives average intensity from returned CO₂ and canonical Wh.',
+        'Session CO₂ equals positive charging energy multiplied by the matching model intensity and converted from grams to kilograms. the frontend independently derives average intensity from returned CO₂ and canonical Wh.',
       ),
     },
     {

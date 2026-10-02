@@ -1,7 +1,7 @@
 import { SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
 
@@ -65,7 +65,7 @@ export function TrueCostAssumptionsLedger({
   return (
     <section
       data-testid="tco-assumptions"
-      aria-label={t('tco.assumptions.aria', 'True Cost assumptions and settings ledger')}
+      aria-label={t('tco.assumptions.aria', 'True cost assumptions and settings ledger')}
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
@@ -73,18 +73,22 @@ export function TrueCostAssumptionsLedger({
           {t('tco.assumptions.title', 'Assumption and settings ledger')}
         </PanelTitle>
         <TrueCostSectionBody state={state}>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <Table aria-label={t('tco.assumptions.title', 'Assumption and settings ledger')}>
+
+            <tbody>
             {rows.map((row) => (
-              <div
+              <tr
                 key={row.label}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <Text as="p" variant="metricLabel">{row.label}</Text>
+                <th scope="row"><Text as="p" variant="metricLabel">{row.label}</Text></th>
+                <td>
                 <Text as="p" variant="body" mono className="mt-1">{row.value}</Text>
                 <Text as="p" variant="caption" className="mt-1">{row.detail}</Text>
-              </div>
+                </td>
+              </tr>
             ))}
-          </div>
+            </tbody>
+          </Table>
         </TrueCostSectionBody>
       </GlassPanel>
     </section>

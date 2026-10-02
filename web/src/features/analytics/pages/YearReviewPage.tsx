@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Select, SectionTitle, Text } from '@/components/ui';
+import { GlassPanel, Button, SectionTitle, Text } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, StatGridSkeleton, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -35,18 +35,14 @@ export default function YearReviewPage() {
 
   const currentYear = new Date().getFullYear();
   const year = Number(yearParam) || currentYear;
-  usePageTitle(t('yearReview.pageTitle', { year, defaultValue: '{{year}} Year in Review' }));
+  usePageTitle(t('yearReview.pageTitle', { year, defaultValue: '{{year}} Year in review' }));
 
   const { formatDistance, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
 
   const { isLoading: vehiclesLoading } = useVehicles();
-  const { vehicleId, vehicles: vehicleList, setVehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicles: vehicleList } = useSelectedVehicle();
   const vehicleIdParam = vehicleId == null ? '' : String(vehicleId);
-  const vehicleOptions = useMemo(
-    () => vehicleList.map((v) => ({ value: String(v.id), label: v.display_name || v.vin })),
-    [vehicleList],
-  );
 
   const query = useYearReview(year, vehicleIdParam || undefined);
   const { data, isLoading, isError, error, refetch } = query;
@@ -84,20 +80,8 @@ export default function YearReviewPage() {
     <GlassPanel className="p-4 sm:p-5"><Skeleton height={h} /></GlassPanel>
   );
 
-  const actions = (
+  const yearControls = (
     <div className="flex flex-wrap items-center gap-2">
-      {vehicleList.length > 1 && (
-        <Select
-          options={vehicleOptions}
-          value={vehicleIdParam}
-          onChange={(e) => {
-            const next = Number(e.target.value);
-            setVehicleId(Number.isInteger(next) && next > 0 ? next : null);
-          }}
-          aria-label={t('yearReview.selectVehicle', 'Select vehicle')}
-          size="sm"
-        />
-      )}
       <div className="flex items-center gap-1">
         <Button variant="ghost" size="sm" onClick={() => goYear(year - 1)} aria-label={t('yearReview.prevYear', 'Previous year')}>
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -107,9 +91,6 @@ export default function YearReviewPage() {
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
-      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label={t('yearReview.close', 'Close')}>
-        <X className="h-4 w-4" aria-hidden="true" />
-      </Button>
     </div>
   );
 
@@ -119,9 +100,15 @@ export default function YearReviewPage() {
 
   return (
     <PageContainer
-      title={t('yearReview.pageTitle', { year, defaultValue: '{{year}} Year in Review' })}
-      subtitle={subtitle}
-      actions={actions}
+      title={t('yearReview.pageTitle', { year, defaultValue: '{{year}} Year in review' })}
+      subtitle={t('yearReview.subtitle', 'Your electric year, summarized')}
+      metadataActions={data?.vehicle ? <Text variant="caption">{subtitle}</Text> : undefined}
+      contextActions={yearControls}
+      secondaryActions={
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label={t('yearReview.close', 'Close')}>
+          <X className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      }
       query={query}
     >
       {noActivity && (

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CircuitBoard, FlaskConical, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
+import { GlassPanel, PanelTitle, Table, Text, Badge, HelpTooltip } from '@/components/ui';
 
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -40,7 +40,7 @@ const VERDICT_DEFAULT: Record<ImpactVerdict, string> = {
 
 export default function FirmwareImpactPage() {
   const { t } = useTranslation();
-  usePageTitle(t('firmwareImpact.title', 'Firmware Impact'));
+  usePageTitle(t('firmwareImpact.title', 'Firmware impact'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -111,7 +111,7 @@ export default function FirmwareImpactPage() {
   );
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('firmwareImpact.title', 'Firmware Impact')} />;
+    return <NoVehicleSelected pageTitle={t('firmwareImpact.title', 'Firmware impact')} />;
   }
 
   const drivesHaveData = drivesQuery.data !== undefined;
@@ -129,7 +129,7 @@ export default function FirmwareImpactPage() {
 
   return (
     <PageContainer
-      title={t('firmwareImpact.title', 'Firmware Impact')}
+      title={t('firmwareImpact.title', 'Firmware impact')}
       subtitle={t(
         'firmwareImpact.subtitle',
         'A controlled before-and-after test of every software update, judged by Welch\u2019s t-test on your real consumption',
@@ -160,7 +160,7 @@ export default function FirmwareImpactPage() {
           ) : (
             <>
               <MetricCard
-                label={t('firmwareImpact.tested', 'Updates Tested')}
+                label={t('firmwareImpact.tested', 'Updates tested')}
                 value={summary.impacts.length}
                 subtitle={t('firmwareImpact.skipped', '{{n}} skipped for thin data', {
                   n: summary.skipped,
@@ -174,21 +174,21 @@ export default function FirmwareImpactPage() {
                 }}
               />
               <MetricCard
-                label={t('firmwareImpact.significant', 'Statistically Real')}
+                label={t('firmwareImpact.significant', 'Statistically real')}
                 value={summary.significantCount}
                 subtitle={t('firmwareImpact.significantHint', 'p < 0.05 with a non-trivial effect')}
                 icon={<FlaskConical className="h-5 w-5" />}
                 color="purple"
               />
               <MetricCard
-                label={t('firmwareImpact.best', 'Biggest Gain')}
+                label={t('firmwareImpact.best', 'Biggest gain')}
                 value={best != null ? `${Math.round(best.deltaWhPerKm * 10) / 10} Wh/km` : '—'}
                 subtitle={best != null ? best.version : t('firmwareImpact.none', 'None detected')}
                 icon={<TrendingDown className="h-5 w-5" />}
                 color="green"
               />
               <MetricCard
-                label={t('firmwareImpact.worst', 'Biggest Regression')}
+                label={t('firmwareImpact.worst', 'Biggest regression')}
                 value={worst != null ? `+${Math.round(worst.deltaWhPerKm * 10) / 10} Wh/km` : '—'}
                 subtitle={worst != null ? worst.version : t('firmwareImpact.none', 'None detected')}
                 icon={<TrendingUp className="h-5 w-5" />}
@@ -213,7 +213,7 @@ export default function FirmwareImpactPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('firmwareImpact.chart', 'Consumption Change per Version')}
+            title={t('firmwareImpact.chart', 'Consumption change per version')}
             subtitle={t(
               'firmwareImpact.chartHint',
               'Bars below the line mean the car got more efficient after that update',
@@ -272,7 +272,7 @@ export default function FirmwareImpactPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <FlaskConical className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('firmwareImpact.detail', 'Version by Version')}
+            {t('firmwareImpact.detail', 'Version by version')}
             <HelpTooltip
               size="sm"
               i18nKey="help.firmwareImpact.detail"
@@ -306,42 +306,40 @@ export default function FirmwareImpactPage() {
                       {formatDateShort(i.installedAt)}
                     </Text>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
-                    <Text variant="caption">
+                  <Table aria-label={i.version}>
+                    <tbody>
+                    <tr><th scope="row"><Text variant="caption">
                       {t('firmwareImpact.before', 'Before')}
-                    </Text>
-                    <Text variant="bodySm">
+                    </Text></th><td className="text-right"><Text variant="bodySm">
                       {t('firmwareImpact.whPerKmN', '{{v}} Wh/km · n={{n}}', {
                         v: Math.round(i.before.meanWhPerKm),
                         n: i.before.n,
                       })}
-                    </Text>
-                    <Text variant="caption">
+                    </Text></td></tr>
+                    <tr><th scope="row"><Text variant="caption">
                       {t('firmwareImpact.after', 'After')}
-                    </Text>
-                    <Text variant="bodySm">
+                    </Text></th><td className="text-right"><Text variant="bodySm">
                       {t('firmwareImpact.whPerKmN', '{{v}} Wh/km · n={{n}}', {
                         v: Math.round(i.after.meanWhPerKm),
                         n: i.after.n,
                       })}
-                    </Text>
-                    <Text variant="caption">
+                    </Text></td></tr>
+                    <tr><th scope="row"><Text variant="caption">
                       {t('firmwareImpact.change', 'Change')}
-                    </Text>
-                    <Text variant="bodySm">
+                    </Text></th><td className="text-right"><Text variant="bodySm">
                       {`${i.deltaWhPerKm > 0 ? '+' : ''}${Math.round(i.deltaWhPerKm * 10) / 10} Wh/km (${
                         i.deltaShare > 0 ? '+' : ''
                       }${Math.round(i.deltaShare * 1000) / 10}%)`}
-                    </Text>
-                    <Text variant="caption">
+                    </Text></td></tr>
+                    <tr><th scope="row"><Text variant="caption">
                       {t('firmwareImpact.stats', 'p · d')}
-                    </Text>
-                    <Text variant="bodySm">
+                    </Text></th><td className="text-right"><Text variant="bodySm">
                       {i.p != null && i.cohensD != null
                         ? `${i.p < 0.001 ? '<0.001' : i.p.toFixed(3)} · ${Math.abs(i.cohensD).toFixed(2)}`
                         : '—'}
-                    </Text>
-                  </div>
+                    </Text></td></tr>
+                    </tbody>
+                  </Table>
                 </li>
               ))}
             </ul>

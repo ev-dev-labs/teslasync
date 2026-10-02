@@ -217,6 +217,34 @@ beforeEach(() => {
 })
 
 describe('TimelinePage', () => {
+  it('filters loaded transitions without recomputing dwell from the remaining rows', async () => {
+    renderPage()
+    await screen.findByText('10', {}, { timeout: 8000 })
+    const filterButton = screen.getByRole('button', { name: 'Filter To state' })
+    const table = screen.getByRole('table')
+    const firstRow = (await within(table).findByText('asleep')).closest('tr')!
+    expect(within(firstRow).getByText('1h')).toBeInTheDocument()
+
+    fireEvent.click(filterButton)
+    const filter = screen.getByRole('dialog', { name: 'Filter To state' })
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'charging' }))
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }))
+
+    expect(within(table).getAllByRole('row')).toHaveLength(3)
+    const filteredFirstRow = within(table).getByText('asleep').closest('tr')!
+    expect(within(filteredFirstRow).getByText('1h')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('region', { name: 'Summary metrics' })).toHaveTextContent('10')
+    })
+
+    fireEvent.click(filterButton)
+    const reopened = screen.getByRole('dialog', { name: 'Filter To state' })
+    expect(within(reopened).getByRole('checkbox', { name: 'charging' })).not.toBeChecked()
+    fireEvent.click(within(reopened).getByRole('button', { name: 'Clear' }))
+    fireEvent.click(within(reopened).getByRole('button', { name: 'Done' }))
+    expect(within(table).getAllByRole('row')).toHaveLength(4)
+  })
+
   it('renders the KPI band, every section panel, and the transitions table', async () => {
     renderPage()
 
@@ -228,14 +256,14 @@ describe('TimelinePage', () => {
     // transition counts (4 + 3 + 2 + 1 = 10).
     expect(await screen.findByText('10', {}, { timeout: 8000 })).toBeInTheDocument()
     const kpiBand = screen.getByRole('region', { name: 'Summary metrics' })
-    expect(within(kpiBand).getByText('Total Transitions')).toBeInTheDocument()
-    expect(within(kpiBand).getByText('Total Transitions')).toBeInTheDocument()
+    expect(within(kpiBand).getByText('Total transitions')).toBeInTheDocument()
+    expect(within(kpiBand).getByText('Total transitions')).toBeInTheDocument()
 
     // All four section panels render their titles (never hidden).
-    expect(screen.getByText('State Distribution')).toBeInTheDocument()
-    expect(screen.getByText('Daily Breakdown')).toBeInTheDocument()
-    expect(screen.getByText('Time by State')).toBeInTheDocument()
-    expect(screen.getByText('State Transitions')).toBeInTheDocument()
+    expect(screen.getByText('State distribution')).toBeInTheDocument()
+    expect(screen.getByText('Daily breakdown')).toBeInTheDocument()
+    expect(screen.getByText('Time by state')).toBeInTheDocument()
+    expect(screen.getByText('State transitions')).toBeInTheDocument()
 
     // Regression: EmbeddedChart used to default to fluid sizing, silently
     // ignoring these explicit heights. ResponsiveContainer then measured an
@@ -288,7 +316,7 @@ describe('TimelinePage', () => {
 
     // The KPI band still renders zeroed values rather than vanishing.
     const kpiBand = screen.getByRole('region', { name: 'Summary metrics' })
-    expect(within(kpiBand).getByText('Total Transitions')).toBeInTheDocument()
+    expect(within(kpiBand).getByText('Total transitions')).toBeInTheDocument()
     expect(within(kpiBand).getAllByText('0m').length).toBe(3)
   })
 
@@ -305,7 +333,7 @@ describe('TimelinePage', () => {
     await waitFor(() =>
       expect(screen.getByRole('status', { name: /Loading/ })).toBeInTheDocument(),
     )
-    expect(screen.queryByText('Total Transitions')).toBeNull()
+    expect(screen.queryByText('Total transitions')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Summary metrics' })).toBeNull()
   })
 

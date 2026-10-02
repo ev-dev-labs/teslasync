@@ -56,7 +56,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
       ) : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
           <MetricCard
-            label={t('analytics.battery.healthScore', 'Health Score')}
+            label={t('analytics.battery.healthScore', 'Health score')}
             value={latest ? fmtNumber(safe(latest.health_score), 1) : '—'}
             subtitle="%"
             icon={<Heart className="h-4 w-4" />}
@@ -76,7 +76,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
             color="amber"
           />
           <MetricCard
-            label={t('analytics.battery.estRange', 'Est. Range')}
+            label={t('analytics.battery.estRange', 'Est. range')}
             value={latest ? fmtNumber(fromKm(safe(latest.range_km)), 0) : '—'}
             subtitle={distanceUnit}
             icon={<MapPin className="h-4 w-4" />}
@@ -98,7 +98,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
         {/* Health Score Timeline — hero band */}
         <AnalyticsChartPanel
           className="md:col-span-2 2xl:col-span-3"
-          title={t('analytics.battery.healthTimeline', 'Health Score Timeline')}
+          title={t('analytics.battery.healthTimeline', 'Health score timeline')}
           icon={<Heart className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -130,7 +130,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Capacity Trend */}
         <AnalyticsChartPanel
-          title={t('analytics.battery.capacityTrend', 'Capacity Trend')}
+          title={t('analytics.battery.capacityTrend', 'Capacity trend')}
           icon={<Battery className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -162,7 +162,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Range Trend */}
         <AnalyticsChartPanel
-          title={t('analytics.battery.rangeTrend', 'Range Trend')}
+          title={t('analytics.battery.rangeTrend', 'Range trend')}
           icon={<MapPin className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -199,7 +199,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
         {/* Degradation & Cycles */}
         <AnalyticsChartPanel
           className="md:col-span-2 2xl:col-span-1"
-          title={t('analytics.battery.degradationCycles', 'Degradation & Cycles')}
+          title={t('analytics.battery.degradationCycles', 'Degradation & cycles')}
           icon={<TrendingUp className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -215,7 +215,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
               key: 'degradation_pct',
               label: t('analytics.battery.degradPct', 'Degradation %'),
             },
-            { key: 'cycle_count', label: t('analytics.battery.cycleCount', 'Cycle Count') },
+            { key: 'cycle_count', label: t('analytics.battery.cycleCount', 'Cycle count') },
           ]}
           exportFilename="fleet-battery-degradation-cycles"
           chartKey="analytics-battery-degradation-cycles"
@@ -233,7 +233,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
                   <ChartGradient id="degradGrad" color={CHART_COLORS[5]} />
                 </defs>
                 <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="degradation_pct" name={t('analytics.battery.degradPct', 'Degradation %')} stroke={CHART_COLORS[5]} fill="url(#degradGrad)" hide={hiddenSeries?.isHidden('degradation_pct')} />
-                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="cycle_count" name={t('analytics.battery.cycleCount', 'Cycle Count')} stroke={CHART_COLORS[4]} hide={hiddenSeries?.isHidden('cycle_count')} />
+                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="cycle_count" name={t('analytics.battery.cycleCount', 'Cycle count')} stroke={CHART_COLORS[4]} hide={hiddenSeries?.isHidden('cycle_count')} />
               </ComposedChart>
             </ResponsiveContainer>
           )}

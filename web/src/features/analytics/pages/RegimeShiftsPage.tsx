@@ -4,7 +4,6 @@ import { GitBranch, Layers, Thermometer, TrendingUp } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -30,7 +29,7 @@ const KM_PER_MILE = convertDistanceToSI(1, 'mi') / 1000;
 
 export default function RegimeShiftsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('regimes.title', 'Regime Shifts'));
+  usePageTitle(t('regimes.title', 'Regime shifts'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -66,7 +65,7 @@ export default function RegimeShiftsPage() {
   const lastShift = summary.shifts[summary.shifts.length - 1] ?? null;
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('regimes.title', 'Regime Shifts')} />;
+    return <NoVehicleSelected pageTitle={t('regimes.title', 'Regime shifts')} />;
   }
 
   const isLoading = drivesQuery.isLoading;
@@ -74,10 +73,9 @@ export default function RegimeShiftsPage() {
 
   return (
     <PageContainer
-      title={t('regimes.title', 'Regime Shifts')}
+      title={t('regimes.title', 'Regime shifts')}
       subtitle={t('regimes.subtitle', 'Statistical changepoints in your weekly consumption')}
       query={drivesQuery}
-      actions={<VehicleSelect />}
     >
       {/* 1 — KPI band */}
       <FadeIn>
@@ -96,14 +94,14 @@ export default function RegimeShiftsPage() {
           ) : (
             <>
               <MetricCard
-                label={t('regimes.regimeCount', 'Regimes Detected')}
+                label={t('regimes.regimeCount', 'Regimes detected')}
                 value={summary.segments.length || '—'}
                 subtitle={t('regimes.overWeeks', 'over {{count}} weeks', { count: summary.analyzedWeeks })}
                 icon={<Layers className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
-                label={t('regimes.currentRegime', 'Current Regime')}
+                label={t('regimes.currentRegime', 'Current regime')}
                 value={latest ? `${toEff(latest.meanWhPerKm)} ${effUnit}` : '—'}
                 subtitle={
                   latest
@@ -114,7 +112,7 @@ export default function RegimeShiftsPage() {
                 color="purple"
               />
               <MetricCard
-                label={t('regimes.lastShift', 'Last Shift')}
+                label={t('regimes.lastShift', 'Last shift')}
                 value={
                   lastShift
                     ? `${lastShift.deltaShare > 0 ? '+' : ''}${Math.round(lastShift.deltaShare * 100)}%`
@@ -125,7 +123,7 @@ export default function RegimeShiftsPage() {
                 color={lastShift == null ? 'green' : lastShift.deltaShare > 0 ? 'amber' : 'green'}
               />
               <MetricCard
-                label={t('regimes.tempLink', 'Temp Link')}
+                label={t('regimes.tempLink', 'Temp link')}
                 value={
                   lastShift?.tempDeltaC != null
                     ? `${lastShift.tempDeltaC > 0 ? '+' : ''}${formatTemperature(Math.abs(lastShift.tempDeltaC), { precision: 0 })}`
@@ -151,7 +149,7 @@ export default function RegimeShiftsPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('regimes.chart', 'Weekly Consumption & Detected Regimes')}
+            title={t('regimes.chart', 'Weekly consumption & detected regimes')}
             subtitle={t('regimes.chartHint', 'The stepped line is each regime’s mean; vertical lines mark detected shifts')}
             ariaLabel={t('regimes.chart.aria', 'Weekly consumption line with stepped regime means and changepoint markers')}
             chartKey="regime-shifts-weekly-consumption"
@@ -213,7 +211,7 @@ export default function RegimeShiftsPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <GitBranch className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('regimes.shiftLog', 'Shift Log')}
+            {t('regimes.shiftLog', 'Shift log')}
             <HelpTooltip
               size="sm"
               i18nKey="help.regimeShifts.body"

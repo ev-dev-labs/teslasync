@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -364,6 +364,22 @@ describe('TrueCostPage persistent query states', () => {
 });
 
 describe('TrueCostPage evidence rendering', () => {
+  it('keeps every accounting operand and temporal evidence row in accessible shared tables', () => {
+    renderPage();
+
+    const tables = within(screen.getByTestId('tco-accounting')).getAllByRole('table');
+    expect(tables.length).toBeGreaterThan(0);
+    for (const table of tables) {
+      expect(within(table).getAllByRole('rowheader').map((header) => header.textContent))
+        .toEqual(['Expected', 'Observed', 'Residual', 'Tolerance']);
+      expect(within(table).getAllByRole('cell').every((cell) => cell.classList.contains('text-right')))
+        .toBe(true);
+    }
+    const coverage = within(screen.getByTestId('tco-temporal-coverage')).getByRole('table');
+    expect(within(coverage).getAllByRole('rowheader')).toHaveLength(6);
+    expectPersistentShells();
+  });
+
   it('withholds the synthetic $50 maintenance floor for a resolved zero envelope', () => {
     h.query = query({
       data: cost({
@@ -472,6 +488,10 @@ describe('TrueCostPage evidence rendering', () => {
     expect(screen.getAllByText('Balances').length).toBeGreaterThan(5);
     expect(screen.getByText('1.0× MPG')).toBeInTheDocument();
     expect(screen.getAllByText(/Gas \$300\.00/).length).toBeGreaterThan(0);
+    const matrix = screen.getByTestId('tco-sensitivity');
+    expect(within(matrix).queryByRole('button', { name: 'Reorder or hide columns' })).not.toBeInTheDocument();
+    expect(within(matrix).queryAllByRole('separator')).toHaveLength(0);
+    expect(matrix.querySelectorAll('[draggable="true"]')).toHaveLength(0);
   });
 
   it('states endpoint assumptions without claiming a complete ownership calculation', () => {
@@ -480,6 +500,6 @@ describe('TrueCostPage evidence rendering', () => {
     expect(screen.getByText(/not a complete ownership-cost calculation/i)).toBeInTheDocument();
     expect(screen.getByText(/Lifetime gasoline equivalent is distance-derived/i)).toBeInTheDocument();
     expect(screen.getByText(/Only monthly gasoline equivalents are energy-derived/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Total Cost of Ownership/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Total cost of Ownership/i)).not.toBeInTheDocument();
   });
 });

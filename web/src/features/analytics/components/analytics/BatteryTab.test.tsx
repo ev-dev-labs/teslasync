@@ -246,8 +246,8 @@ describe('BatteryTab — loading', () => {
     const { container } = renderTab(makeQuery({ isLoading: true }));
 
     // The KPI band is a skeleton — no card labels or values leak through.
-    expect(screen.queryByText('Health Score')).toBeNull();
-    expect(screen.queryByText('Est. Range')).toBeNull();
+    expect(screen.queryByText('Health score')).toBeNull();
+    expect(screen.queryByText('Est. range')).toBeNull();
     // Pulsing skeletons are on screen…
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     // …but no chart has been drawn yet.
@@ -264,9 +264,9 @@ describe('BatteryTab — empty', () => {
     renderTab(makeQuery({ data: analytics([]) }));
 
     // Band never disappears: every labelled card is present…
-    expect(screen.getByText('Health Score')).toBeInTheDocument();
+    expect(screen.getByText('Health score')).toBeInTheDocument();
     expect(screen.getByText('Capacity')).toBeInTheDocument();
-    expect(screen.getByText('Est. Range')).toBeInTheDocument();
+    expect(screen.getByText('Est. range')).toBeInTheDocument();
     // …and each of the five values collapses to the em-dash placeholder.
     expect(screen.getAllByText('—')).toHaveLength(5);
 
@@ -326,10 +326,10 @@ describe('BatteryTab — populated', () => {
     renderTab(makeQuery({ data: analytics(TREND) }));
 
     // Panel titles frame each section.
-    expect(screen.getByText('Health Score Timeline')).toBeInTheDocument();
-    expect(screen.getByText('Capacity Trend')).toBeInTheDocument();
-    expect(screen.getByText('Range Trend')).toBeInTheDocument();
-    expect(screen.getByText('Degradation & Cycles')).toBeInTheDocument();
+    expect(screen.getByText('Health score timeline')).toBeInTheDocument();
+    expect(screen.getByText('Capacity trend')).toBeInTheDocument();
+    expect(screen.getByText('Range trend')).toBeInTheDocument();
+    expect(screen.getByText('Degradation & cycles')).toBeInTheDocument();
 
     // Four charts: one area, two lines, one composed.
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();

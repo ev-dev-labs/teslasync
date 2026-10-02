@@ -71,13 +71,13 @@ export function HeroGauges({ query }: { query: FleetAnalyticsQuery }) {
         color="amber"
       />
       <MetricCard
-        label={t('analytics.hero.gasSavings', 'Gas Savings')}
+        label={t('analytics.hero.gasSavings', 'Gas savings')}
         value={data ? formatCurrency(Math.max(gasSavings, 0), 0) : dash}
         icon={<DollarSign className="h-4 w-4" />}
         color="green"
       />
       <MetricCard
-        label={t('analytics.hero.co2Saved', 'CO₂ Saved')}
+        label={t('analytics.hero.co2Saved', 'CO₂ saved')}
         value={data ? fmtNumber(co2Saved, 0) : dash}
         subtitle="kg"
         icon={<Leaf className="h-4 w-4" />}

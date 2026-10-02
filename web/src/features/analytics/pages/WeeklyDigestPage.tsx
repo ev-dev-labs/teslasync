@@ -22,7 +22,7 @@ import {
 
 export default function WeeklyDigestPage() {
   const { t } = useTranslation();
-  usePageTitle(t('analytics.weeklyDigest.title', 'Weekly Digest'));
+  usePageTitle(t('analytics.weeklyDigest.title', 'Weekly digest'));
 
   const {
     weekLabel,
@@ -106,7 +106,7 @@ export default function WeeklyDigestPage() {
 
   return (
     <PageContainer
-      title={t('analytics.weeklyDigest.title', 'Weekly Digest')}
+      title={t('analytics.weeklyDigest.title', 'Weekly digest')}
       subtitle={t('analytics.weeklyDigest.subtitle', 'Your driving and charging summary for the week')}
       query={freshnessQueries}
       dataSources={dataSources}

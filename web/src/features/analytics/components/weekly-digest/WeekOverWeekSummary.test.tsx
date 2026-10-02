@@ -136,13 +136,13 @@ describe('WeekOverWeekSummary — populated rendering', () => {
   it('renders the section title and every stat label', () => {
     renderSummary({ metrics: POPULATED });
 
-    expect(screen.getByText('Week-over-Week Comparison')).toBeInTheDocument();
+    expect(screen.getByText('Week-over-week comparison')).toBeInTheDocument();
     expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.getByText('Drives')).toBeInTheDocument();
     expect(screen.getByText('Energy')).toBeInTheDocument();
     expect(screen.getByText('Cost')).toBeInTheDocument();
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('CO₂ Saved')).toBeInTheDocument();
+    expect(screen.getByText('CO₂ saved')).toBeInTheDocument();
   });
 
   it('formats each metric value with its unit suffix', () => {
@@ -254,7 +254,7 @@ describe('WeekOverWeekSummary — loading state', () => {
     const { container } = renderSummary({ metrics: POPULATED, isLoading: true });
 
     // Title lives outside the grid and is always shown.
-    expect(screen.getByText('Week-over-Week Comparison')).toBeInTheDocument();
+    expect(screen.getByText('Week-over-week comparison')).toBeInTheDocument();
     // Loading StatCards render skeletons only — labels and values are suppressed.
     expect(screen.queryByText('Distance')).toBeNull();
     expect(screen.queryByText('130.0')).toBeNull();
@@ -278,7 +278,7 @@ describe('WeekOverWeekSummary — error state', () => {
     expect(screen.queryByText('Distance')).toBeNull();
     expect(screen.queryByText('130.0')).toBeNull();
     // The section title is still present so the band keeps its heading.
-    expect(screen.getByText('Week-over-Week Comparison')).toBeInTheDocument();
+    expect(screen.getByText('Week-over-week comparison')).toBeInTheDocument();
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
@@ -299,7 +299,7 @@ describe('WeekOverWeekSummary — accessibility', () => {
     renderSummary({ metrics: POPULATED });
 
     expect(
-      screen.getByRole('region', { name: 'Week-over-Week Comparison' }),
+      screen.getByRole('region', { name: 'Week-over-week comparison' }),
     ).toBeInTheDocument();
   });
 

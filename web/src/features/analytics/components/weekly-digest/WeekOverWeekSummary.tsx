@@ -31,11 +31,11 @@ export function WeekOverWeekSummary({
 
   return (
     <section
-      aria-label={t('analytics.weeklyDigest.weekOverWeek', 'Week-over-Week Comparison')}
+      aria-label={t('analytics.weeklyDigest.weekOverWeek', 'Week-over-week comparison')}
       className="space-y-3"
     >
       <SectionTitle>
-        {t('analytics.weeklyDigest.weekOverWeek', 'Week-over-Week Comparison')}
+        {t('analytics.weeklyDigest.weekOverWeek', 'Week-over-week comparison')}
       </SectionTitle>
       {isError ? (
         <GlassPanel className="p-4 sm:p-5">
@@ -84,7 +84,7 @@ export function WeekOverWeekSummary({
           />
           <StatCard
             loading={isLoading}
-            label={t('analytics.weeklyDigest.co2', 'CO₂ Saved')}
+            label={t('analytics.weeklyDigest.co2', 'CO₂ saved')}
             value={fmtNumber(metrics.co2Saved ?? 0, 1)}
             unit="kg"
             icon={<Leaf className="h-4 w-4" aria-hidden="true" />}

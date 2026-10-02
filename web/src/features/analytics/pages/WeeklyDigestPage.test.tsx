@@ -245,7 +245,7 @@ describe('WeeklyDigestPage — scaffolding + a11y', () => {
   it('renders the page header and every digest surface without a redundant vehicle picker', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Weekly Digest' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Weekly digest' })).toBeInTheDocument();
     expect(
       screen.getByText('Your driving and charging summary for the week'),
     ).toBeInTheDocument();
@@ -280,7 +280,7 @@ describe('WeeklyDigestPage — scaffolding + a11y', () => {
 
   it('sets the document title via usePageTitle', () => {
     renderPage();
-    expect(document.title).toContain('Weekly Digest');
+    expect(document.title).toContain('Weekly digest');
   });
 });
 

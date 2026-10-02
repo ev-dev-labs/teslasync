@@ -87,7 +87,7 @@ function makeQuery(data: FleetAnalytics | undefined, isLoading = false): FleetAn
   } as unknown as FleetAnalyticsQuery;
 }
 
-const ALL_LABELS = ['Distance', 'Drives', 'Energy', 'Efficiency', 'Gas Savings', 'CO₂ Saved'];
+const ALL_LABELS = ['Distance', 'Drives', 'Energy', 'Efficiency', 'Gas savings', 'CO₂ saved'];
 
 beforeEach(() => {
   h.distance.current = 'km';

@@ -1,7 +1,7 @@
 import { CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
 
@@ -69,17 +69,16 @@ export function TrueCostTemporalCoverage({
           {t('tco.coverage.subtitle', 'Calendar labels follow backend/database semantics because the endpoint exposes no timezone. A gap means no positive-cost row was returned, not no charging.')}
         </Text>
         <TrueCostSectionBody state={state}>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <Table aria-label={t('tco.coverage.title', 'Temporal, coverage, and gap evidence')}>
+            <tbody>
             {rows.map((row) => (
-              <div
-                key={row.label}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <Text as="p" variant="metricLabel">{row.label}</Text>
-                <Text as="p" variant="bodySm" mono className="mt-1">{row.value}</Text>
-              </div>
+              <tr key={row.label}>
+                <th scope="row"><Text variant="metricLabel">{row.label}</Text></th>
+                <td className="text-right"><Text variant="bodySm" mono>{row.value}</Text></td>
+              </tr>
             ))}
-          </div>
+            </tbody>
+          </Table>
         </TrueCostSectionBody>
       </GlassPanel>
     </section>

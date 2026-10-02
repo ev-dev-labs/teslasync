@@ -226,7 +226,7 @@ describe('MileagePage — no vehicle selected', () => {
     ).toBeInTheDocument();
     // The KPI region and its metrics must not mount when there is no vehicle.
     expect(screen.queryByRole('region', { name: 'Mileage summary metrics' })).toBeNull();
-    expect(screen.queryByText('Total Distance')).toBeNull();
+    expect(screen.queryByText('Total distance')).toBeNull();
   });
 });
 
@@ -240,10 +240,10 @@ describe('MileagePage — loading', () => {
     // Page + panel scaffolding always renders.
     expect(screen.getByRole('heading', { name: 'Mileage', level: 1 })).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Odometer Over Time', level: 3 }),
+      screen.getByRole('heading', { name: 'Odometer over time', level: 3 }),
     ).toBeInTheDocument();
     // Skeletons stand in for the real content: no metric values, no chart image.
-    expect(within(kpiRegion()).queryByText('Total Distance')).toBeNull();
+    expect(within(kpiRegion()).queryByText('Total distance')).toBeNull();
     expect(screen.queryByRole('img', { name: 'Odometer readings over time' })).toBeNull();
     // Loading is not "empty": the empty-state copy must not show yet.
     expect(screen.queryByText('No odometer readings yet')).toBeNull();
@@ -255,14 +255,14 @@ describe('MileagePage — populated (km)', () => {
     renderPage();
     const kpi = kpiRegion();
 
-    expect(cardValue(kpi, 'Total Distance')).toBe('12,000 km');
-    expect(cardValue(kpi, 'Total Drives')).toBe('500');
+    expect(cardValue(kpi, 'Total distance')).toBe('12,000 km');
+    expect(cardValue(kpi, 'Total drives')).toBe('500');
     // last_30d_km 930 / 30 = 31.00
-    expect(cardValue(kpi, 'Daily Avg (30d)')).toBe('31.00 km');
+    expect(cardValue(kpi, 'Daily avg (30d)')).toBe('31.00 km');
     // 31 * 365 = 11,315 (integer projection)
-    expect(cardValue(kpi, 'Annual Projection')).toBe('11,315 km');
-    expect(cardValue(kpi, 'Last 7 Days')).toBe('210.00 km');
-    expect(cardValue(kpi, 'Last 365 Days')).toBe('9,500 km');
+    expect(cardValue(kpi, 'Annual projection')).toBe('11,315 km');
+    expect(cardValue(kpi, 'Last 7 days')).toBe('210.00 km');
+    expect(cardValue(kpi, 'Last 365 days')).toBe('9,500 km');
   });
 
   it('renders distance-by-window bars and the activity list', () => {
@@ -270,15 +270,15 @@ describe('MileagePage — populated (km)', () => {
     const w = windowsRegion();
 
     // MetricBar sublabels (fmtNumber → 2 decimals).
-    expect(siblingText(w, 'Last 7 Days')).toBe('210.00 km');
-    expect(siblingText(w, 'Last 30 Days')).toBe('930.00 km');
-    expect(siblingText(w, 'Last 365 Days')).toBe('9,500.00 km');
+    expect(siblingText(w, 'Last 7 days')).toBe('210.00 km');
+    expect(siblingText(w, 'Last 30 days')).toBe('930.00 km');
+    expect(siblingText(w, 'Last 365 days')).toBe('9,500.00 km');
 
     // Activity KVList.
-    expect(siblingText(w, 'Lifetime Drives')).toBe('500');
+    expect(siblingText(w, 'Lifetime drives')).toBe('500');
     expect(siblingText(w, 'Drives (30d)')).toBe('40');
-    expect(siblingText(w, 'First Drive')).toContain('2020');
-    expect(siblingText(w, 'Last Drive')).toContain('2024');
+    expect(siblingText(w, 'First drive')).toContain('2020');
+    expect(siblingText(w, 'Last drive')).toContain('2024');
   });
 
   it('mounts the three chart surfaces and the monthly summary table', () => {
@@ -291,7 +291,7 @@ describe('MileagePage — populated (km)', () => {
     // Monthly summary table: unit-suffixed headers + a data row.
     const table = screen.getByRole('table');
     expect(within(table).getByText('Distance (km)')).toBeInTheDocument();
-    expect(within(table).getByText('Distance / Drive (km)')).toBeInTheDocument();
+    expect(within(table).getByText('Distance / drive (km)')).toBeInTheDocument();
     expect(within(table).getByText('2024-06')).toBeInTheDocument();
     // 400 km / 20 drives = 20.00 distance-per-drive for the May row.
     expect(within(table).getByText('20.00')).toBeInTheDocument();
@@ -311,7 +311,7 @@ describe('MileagePage — unit boundary (miles)', () => {
     renderPage();
 
     // 12000 km → 12000000 m ÷ 1609.344 ≈ 7456 mi (fmtInt).
-    expect(cardValue(kpiRegion(), 'Total Distance')).toBe('7,456 mi');
+    expect(cardValue(kpiRegion(), 'Total distance')).toBe('7,456 mi');
     // Header + card unit suffix follow the preference.
     expect(within(screen.getByRole('table')).getByText('Distance (mi)')).toBeInTheDocument();
   });
@@ -328,7 +328,7 @@ describe('MileagePage — empty states', () => {
     // Monthly bar chart empty-state + monthly table empty message.
     expect(screen.getAllByText('No monthly distance yet').length).toBeGreaterThanOrEqual(1);
     // KPIs still render because /mileage/stats resolved.
-    expect(cardValue(kpiRegion(), 'Total Distance')).toBe('12,000 km');
+    expect(cardValue(kpiRegion(), 'Total distance')).toBe('12,000 km');
   });
 
   it('drops null-odometer days so the odometer panel empties but daily distance still charts', () => {
@@ -367,7 +367,7 @@ describe('MileagePage — per-query error + retry', () => {
     const w = windowsRegion();
     expect(within(w).getByText('Service unavailable')).toBeInTheDocument();
     // Stats-driven KPIs remain intact.
-    expect(cardValue(kpiRegion(), 'Total Distance')).toBe('12,000 km');
+    expect(cardValue(kpiRegion(), 'Total distance')).toBe('12,000 km');
 
     fireEvent.click(within(w).getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(q.refetch).toHaveBeenCalled());
@@ -396,10 +396,10 @@ describe('MileagePage — null safety + a11y', () => {
     renderPage();
 
     const w = windowsRegion();
-    expect(siblingText(w, 'First Drive')).toBe('—');
-    expect(siblingText(w, 'Last Drive')).toBe('—');
+    expect(siblingText(w, 'First drive')).toBe('—');
+    expect(siblingText(w, 'Last drive')).toBe('—');
     // Non-null numeric activity stats are unaffected.
-    expect(siblingText(w, 'Lifetime Drives')).toBe('500');
+    expect(siblingText(w, 'Lifetime drives')).toBe('500');
   });
 
   it('exposes labelled regions without duplicating the shared vehicle control', () => {

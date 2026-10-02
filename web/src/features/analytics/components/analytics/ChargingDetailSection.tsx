@@ -49,7 +49,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
     <>
       {/* Charger Brands */}
       <AnalyticsPanel
-        title={t('analytics.charging.chargerBrands', 'Charger Brands')}
+        title={t('analytics.charging.chargerBrands', 'Charger brands')}
         icon={<Building2 className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -82,7 +82,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
 
       {/* Cost by Charger Type */}
       <AnalyticsPanel
-        title={t('analytics.charging.costByType', 'Cost by Charger Type')}
+        title={t('analytics.charging.costByType', 'Cost by charger type')}
         icon={<Plug className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -115,7 +115,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
 
       {/* Cost Analysis Cards */}
       <AnalyticsPanel
-        title={t('analytics.charging.costAnalysis', 'Cost Analysis')}
+        title={t('analytics.charging.costAnalysis', 'Cost analysis')}
         icon={<DollarSign className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -126,25 +126,25 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
       >
         <div className="grid grid-cols-2 gap-3">
           <MetricCard
-            label={t('analytics.charging.minCost', 'Min Cost')}
+            label={t('analytics.charging.minCost', 'Min cost')}
             value={formatCurrency(safe(costStats?.min), 2)}
             icon={<DollarSign className="h-4 w-4" />}
             color="green"
           />
           <MetricCard
-            label={t('analytics.charging.avgCost', 'Avg Cost')}
+            label={t('analytics.charging.avgCost', 'Avg cost')}
             value={formatCurrency(safe(costStats?.avg), 2)}
             icon={<DollarSign className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
-            label={t('analytics.charging.medianCost', 'Median Cost')}
+            label={t('analytics.charging.medianCost', 'Median cost')}
             value={formatCurrency(safe(costStats?.median), 2)}
             icon={<DollarSign className="h-4 w-4" />}
             color="purple"
           />
           <MetricCard
-            label={t('analytics.charging.maxCost', 'Max Cost')}
+            label={t('analytics.charging.maxCost', 'Max cost')}
             value={formatCurrency(safe(costStats?.max), 2)}
             icon={<DollarSign className="h-4 w-4" />}
             color="amber"
@@ -155,7 +155,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
       {/* Monthly Charging Trend — hero band */}
       <AnalyticsChartPanel
         className="md:col-span-2 2xl:col-span-3"
-        title={t('analytics.charging.monthlyTrend', 'Monthly Charging Trend')}
+        title={t('analytics.charging.monthlyTrend', 'Monthly charging trend')}
         icon={<TrendingUp className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -171,7 +171,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
         dataColumns={[
           { key: 'month', label: t('analytics.charging.month', 'Month') },
           { key: 'energy', label: t('analytics.charging.energykWh', 'Energy (kWh)') },
-          { key: 'avg_power', label: t('analytics.charging.avgPowerkW', 'Avg Power (kW)') },
+          { key: 'avg_power', label: t('analytics.charging.avgPowerkW', 'Avg power (kW)') },
           { key: 'sessions', label: t('analytics.charging.sessions', 'Sessions') },
         ]}
         exportFilename="fleet-monthly-charging"
@@ -188,7 +188,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
               <ChartLegend />
               {areaGradient('monthlyEnergyGrad', CHART_COLORS[1])}
               <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[1]} fill="url(#monthlyEnergyGrad)" hide={hiddenSeries?.isHidden('energy')} />
-              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_power" name={t('analytics.charging.avgPowerkW', 'Avg Power (kW)')} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('avg_power')} />
+              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_power" name={t('analytics.charging.avgPowerkW', 'Avg power (kW)')} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('avg_power')} />
               <Bar yAxisId="left" dataKey="sessions" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[2]} radius={BAR_RADIUS} opacity={0.6} hide={hiddenSeries?.isHidden('sessions')} />
             </ComposedChart>
           </ResponsiveContainer>

@@ -38,7 +38,7 @@ export function YearSummaryCard({ data }: Props) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <Heading level="panel">{data.year}</Heading>
-          <Caption>{t('yearReview.title', 'Year in Review')}</Caption>
+          <Caption>{t('yearReview.title', 'Year in review')}</Caption>
         </div>
         <div className="text-end">
           <Text size="sm" weight="semibold" color="primary" className="block">{data.vehicle?.display_name ?? '—'}</Text>

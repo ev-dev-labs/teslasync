@@ -140,7 +140,7 @@ describe('YearSummaryCard', () => {
     render(<YearSummaryCard data={makeReview()} />);
 
     expect(screen.getByRole('heading', { level: 3, name: '2024' })).toBeInTheDocument();
-    expect(screen.getByText('Year in Review')).toBeInTheDocument();
+    expect(screen.getByText('Year in review')).toBeInTheDocument();
     expect(screen.getByText('Model 3 Performance')).toBeInTheDocument();
     expect(screen.getByText('model3')).toBeInTheDocument();
     expect(screen.getByText('Screenshot to share your year')).toBeInTheDocument();

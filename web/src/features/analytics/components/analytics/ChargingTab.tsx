@@ -48,34 +48,34 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
               color="cyan"
             />
             <MetricCard
-              label={t('analytics.charging.totalEnergy', 'Total Energy')}
+              label={t('analytics.charging.totalEnergy', 'Total energy')}
               value={data ? fmtNumber(data.total_energy_kwh ?? 0, 1) : '—'}
               subtitle="kWh"
               icon={<Zap className="h-4 w-4" />}
               color="green"
             />
             <MetricCard
-              label={t('analytics.charging.totalCost', 'Total Cost')}
+              label={t('analytics.charging.totalCost', 'Total cost')}
               value={data ? formatCurrency(data.total_cost ?? 0, 2) : '—'}
               icon={<DollarSign className="h-4 w-4" />}
               color="amber"
             />
             <MetricCard
-              label={t('analytics.charging.avgPower', 'Avg Power')}
+              label={t('analytics.charging.avgPower', 'Avg power')}
               value={powerStats ? fmtNumber(safe(powerStats.avg), 1) : '—'}
               subtitle="kW"
               icon={<Gauge className="h-4 w-4" />}
               color="purple"
             />
             <MetricCard
-              label={t('analytics.charging.avgDuration', 'Avg Duration')}
+              label={t('analytics.charging.avgDuration', 'Avg duration')}
               value={durStats ? fmtNumber(safe(durStats.avg), 0) : '—'}
               subtitle={t('analytics.charging.min', 'min')}
               icon={<Timer className="h-4 w-4" />}
               color="cyan"
             />
             <MetricCard
-              label={t('analytics.charging.chargeEff', 'Charge Efficiency')}
+              label={t('analytics.charging.chargeEff', 'Charge efficiency')}
               value={effStats ? fmtNumber(safe(effStats.avg), 1) : '—'}
               subtitle="%"
               icon={<TrendingUp className="h-4 w-4" />}
@@ -91,7 +91,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
       >
         {/* Charger Types Donut */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.chargerTypes', 'Charger Types')}
+          title={t('analytics.charging.chargerTypes', 'Charger types')}
           icon={<PieChartIcon className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -130,7 +130,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Start Battery Distribution */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.startBattery', 'Start Battery Distribution')}
+          title={t('analytics.charging.startBattery', 'Start battery distribution')}
           icon={<Battery className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -158,7 +158,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Hourly Charging Pattern */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.hourlyPattern', 'Hourly Charging Pattern')}
+          title={t('analytics.charging.hourlyPattern', 'Hourly charging pattern')}
           icon={<Clock className="h-4 w-4" />}
           loading={isLoading}
           error={err}

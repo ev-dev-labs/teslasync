@@ -321,12 +321,39 @@ beforeEach(() => {
 });
 
 describe('DriveArchetypesPage', () => {
+  it('preserves scientific axes and numeric alignment in shared evidence tables', () => {
+    renderPage();
+
+    const featureTable = within(screen.getByTestId('drive-archetypes-feature-ranges'))
+      .getByRole('table');
+    expect(within(featureTable).getAllByRole('columnheader').map((header) => header.textContent))
+      .toEqual(['Feature', 'Minimum', 'Median', 'Maximum']);
+    expect(within(featureTable).getAllByRole('rowheader')).toHaveLength(4);
+    expect(within(featureTable).getAllByRole('cell').every((cell) => cell.classList.contains('text-right')))
+      .toBe(true);
+
+    const candidateTable = within(screen.getByTestId('drive-archetypes-candidates'))
+      .getByRole('table');
+    expect(within(candidateTable).getAllByRole('columnheader').map((header) => header.textContent))
+      .toEqual([
+        'Candidate',
+        'Silhouette',
+        'Restart agreement',
+        'Inertia',
+        'Realized clusters',
+        'Smallest / largest',
+        'Decision',
+      ]);
+    expect(within(candidateTable).getAllByRole('rowheader').length).toBeGreaterThan(0);
+    expectEverySection();
+  });
+
   it('renders all fifteen shells, requests 1,000 rows, and refreshes evidence', () => {
     renderPage();
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Drive Archetypes',
+      name: 'Drive archetypes',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.hook).toHaveBeenLastCalledWith('7', 1000);

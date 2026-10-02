@@ -365,7 +365,7 @@ describe('CarbonIntelligencePage', () => {
     expectEverySection();
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Carbon Intelligence',
+      name: 'Carbon intelligence',
     })).toBeInTheDocument();
   });
 

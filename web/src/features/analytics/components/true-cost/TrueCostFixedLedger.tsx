@@ -70,18 +70,22 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
     () => [
       {
         key: 'incurred_on',
+        filterValue: (e) => e.incurred_on,
         header: t('tco.ledger.date', 'Date'),
         sortable: true,
         render: (e) => <Text variant="bodySm">{e.incurred_on}</Text>,
       },
       {
         key: 'category',
+        filterValue: (e) => e.category,
         header: t('tco.ledger.category', 'Category'),
         sortable: true,
         render: (e) => <Text variant="bodySm">{e.category}</Text>,
       },
       {
         key: 'amount',
+        filterValue: (e) => `${e.currency}:${e.amount}`,
+        filterValueLabel: (_value, e) => formatCurrency(e.amount),
         header: t('tco.ledger.amount', 'Amount'),
         align: 'right',
         sortable: true,
@@ -152,7 +156,7 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Wallet className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('tco.ledger.title', 'Fixed-Cost Ledger')}
+          {t('tco.ledger.title', 'Fixed-cost ledger')}
         </PanelTitle>
         <Text variant="bodySm" className="tabular-nums">
           {t('tco.ledger.allIn', 'All-in: {{total}} ({{perKm}}/km)', {
@@ -169,6 +173,7 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
       ) : (
         <div className="space-y-4">
           <DataTable
+            enableValueFilters
             tableId="analytics:tco-fixed-ledger"
             columns={columns}
             mobileColumns={['incurred_on', 'category', 'amount']}

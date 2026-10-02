@@ -108,9 +108,9 @@ import type { FleetAnalyticsQuery } from './constants';
 const SUMMARY_REGION = 'Charging summary metrics';
 const CHARTS_REGION = 'Charging';
 const PANEL_TITLES = [
-  'Charger Types',
-  'Start Battery Distribution',
-  'Hourly Charging Pattern',
+  'Charger types',
+  'Start battery distribution',
+  'Hourly charging pattern',
 ] as const;
 
 function makeStats(overrides: Partial<StatsSummary> = {}): StatsSummary {

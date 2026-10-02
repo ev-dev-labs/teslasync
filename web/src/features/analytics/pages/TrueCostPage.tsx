@@ -34,7 +34,7 @@ import { analyzeTrueCost } from '../lib/trueCost';
 
 export default function TrueCostPage() {
   const { t } = useTranslation();
-  usePageTitle(t('tco.title', 'Lifetime Operating Cost'));
+  usePageTitle(t('tco.title', 'Lifetime operating cost'));
   const { vehicleId } = useSelectedVehicle();
   const { settings } = useSettings();
   const vehicleIdString = vehicleId != null ? String(vehicleId) : '';
@@ -71,7 +71,7 @@ export default function TrueCostPage() {
 
   return (
     <PageContainer
-      title={t('tco.title', 'Lifetime Operating Cost')}
+      title={t('tco.title', 'Lifetime operating cost')}
       subtitle={t(
         'tco.subtitle',
         'Evidence-backed recorded charging versus modeled gasoline operating cost',

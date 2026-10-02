@@ -144,7 +144,7 @@ describe('DriveCalendarPage', () => {
   it('keeps every bento section mounted for a resolved empty calendar', () => {
     renderCalendar();
 
-    expect(screen.getByRole('heading', { name: 'Drive Calendar' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Drive calendar' })).toBeInTheDocument();
     expect(screen.getByText('Driving activity and streaks in the selected period')).toBeInTheDocument();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
@@ -185,7 +185,7 @@ describe('DriveCalendarPage', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null });
     renderCalendar();
 
-    expect(screen.getByTestId('no-vehicle')).toHaveTextContent('Drive Calendar');
+    expect(screen.getByTestId('no-vehicle')).toHaveTextContent('Drive calendar');
     expect(screen.queryByTestId('calendar-heatmap')).not.toBeInTheDocument();
   });
 

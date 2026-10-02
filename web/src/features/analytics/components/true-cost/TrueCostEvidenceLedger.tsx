@@ -42,7 +42,7 @@ export function TrueCostEvidenceLedger({
   return (
     <section
       data-testid="tco-evidence-kpis"
-      aria-label={t('tco.kpis.aria', 'True Cost KPI and evidence ledger')}
+      aria-label={t('tco.kpis.aria', 'True cost KPI and evidence ledger')}
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4">

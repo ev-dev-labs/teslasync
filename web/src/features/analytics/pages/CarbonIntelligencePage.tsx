@@ -34,7 +34,7 @@ import { buildCarbonIntelligence } from '../lib/carbonIntelligence';
 
 export default function CarbonIntelligencePage() {
   const { t } = useTranslation();
-  usePageTitle(t('carbon.title', 'Carbon Intelligence'));
+  usePageTitle(t('carbon.title', 'Carbon intelligence'));
   const { vehicleId } = useSelectedVehicle();
   const timezone = useTimezone('vehicle');
   const { start, end, startInstant, endInstantExclusive } = useRangeState({
@@ -90,7 +90,7 @@ export default function CarbonIntelligencePage() {
 
   return (
     <PageContainer
-      title={t('carbon.title', 'Carbon Intelligence')}
+      title={t('carbon.title', 'Carbon intelligence')}
       subtitle={t(
         'carbon.subtitle',
         'Dense evidence for selected-period charging emissions, model coverage, lifetime context, and bounded scenarios',
@@ -104,10 +104,6 @@ export default function CarbonIntelligencePage() {
         ]
         : intensityQuery}
       copyLink
-      actions={(
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-        </div>
-      )}
     >
       <FadeIn>
         <CarbonEvidenceLedger {...sectionProps} />

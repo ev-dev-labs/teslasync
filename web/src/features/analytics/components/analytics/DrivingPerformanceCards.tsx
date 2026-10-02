@@ -44,42 +44,42 @@ export function DrivingPerformanceCards({ query }: { query: FleetAnalyticsQuery 
       className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6"
     >
       <MetricCard
-        label={t('analytics.driving.topSpeed', 'Top Speed')}
+        label={t('analytics.driving.topSpeed', 'Top speed')}
         value={ss ? fmtNumber(fromKmh(safe(ss.max)), 0) : '—'}
         subtitle={speedUnit}
         icon={<Gauge className="h-4 w-4" />}
         color="cyan"
       />
       <MetricCard
-        label={t('analytics.driving.avgSpeed', 'Avg Speed')}
+        label={t('analytics.driving.avgSpeed', 'Avg speed')}
         value={ss ? fmtNumber(fromKmh(safe(ss.avg)), 0) : '—'}
         subtitle={speedUnit}
         icon={<TrendingUp className="h-4 w-4" />}
         color="purple"
       />
       <MetricCard
-        label={t('analytics.driving.peakPower', 'Peak Power')}
+        label={t('analytics.driving.peakPower', 'Peak power')}
         value={ps ? fmtNumber(safe(ps.max), 0) : '—'}
         subtitle="kW"
         icon={<Zap className="h-4 w-4" />}
         color="amber"
       />
       <MetricCard
-        label={t('analytics.driving.peakRegen', 'Peak Regen')}
+        label={t('analytics.driving.peakRegen', 'Peak regen')}
         value={rs ? fmtNumber(safe(rs.max), 0) : '—'}
         subtitle="kW"
         icon={<BatteryCharging className="h-4 w-4" />}
         color="green"
       />
       <MetricCard
-        label={t('analytics.driving.avgDriveDist', 'Avg Drive Distance')}
+        label={t('analytics.driving.avgDriveDist', 'Avg drive distance')}
         value={ds ? fmtNumber(fromKm(safe(ds.avg)), 1) : '—'}
         subtitle={distanceUnit}
         icon={<MapPin className="h-4 w-4" />}
         color="cyan"
       />
       <MetricCard
-        label={t('analytics.driving.longestDrive', 'Longest Drive')}
+        label={t('analytics.driving.longestDrive', 'Longest drive')}
         value={ds ? fmtNumber(fromKm(safe(ds.max)), 1) : '—'}
         subtitle={distanceUnit}
         icon={<Car className="h-4 w-4" />}

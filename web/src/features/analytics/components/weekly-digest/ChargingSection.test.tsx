@@ -302,7 +302,7 @@ describe('ChargingSection — stat row values', () => {
     expect(screen.getByText('0.0 kW')).toBeInTheDocument();
     expect(screen.getByText('$0.00')).toBeInTheDocument();
     // The "Sessions" tile falls back to fmtInt(0) → "0".
-    expect(screen.getByText('Total Energy Added')).toBeInTheDocument();
+    expect(screen.getByText('Total energy added')).toBeInTheDocument();
   });
 
   it('always renders every stat label + the section title', () => {
@@ -310,9 +310,9 @@ describe('ChargingSection — stat row values', () => {
 
     expect(screen.getByText('Charging')).toBeInTheDocument();
     expect(screen.getByText('Sessions')).toBeInTheDocument();
-    expect(screen.getByText('Total Energy Added')).toBeInTheDocument();
-    expect(screen.getByText('Avg Charge Rate')).toBeInTheDocument();
-    expect(screen.getByText('Total Cost')).toBeInTheDocument();
+    expect(screen.getByText('Total energy added')).toBeInTheDocument();
+    expect(screen.getByText('Avg charge rate')).toBeInTheDocument();
+    expect(screen.getByText('Total cost')).toBeInTheDocument();
   });
 });
 
@@ -361,6 +361,6 @@ describe('ChargingSection — structure', () => {
     expect(icon).not.toBeNull();
     expect(icon).toHaveAttribute('aria-hidden', 'true');
     // The panel always renders its caption regardless of data state.
-    expect(container.textContent).toContain('Daily Energy Added (kWh)');
+    expect(container.textContent).toContain('Daily energy added (kWh)');
   });
 });
