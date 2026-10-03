@@ -615,7 +615,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   );
 
   const listHeading = (
-    <div className="min-w-0">
+    <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
       <Text variant="bodySm" className="font-semibold text-[var(--text-primary)]">
         {t('notifications.inbox.evidence.title', 'Notification evidence')}
       </Text>
@@ -706,7 +706,10 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       title={openedLog?.title || t('notifications.inbox.detail.title', 'Notification details')}
     >
       {openedLog ? <NotificationInboxDetails log={openedLog} rule={openedRule} vehicle={openedVehicle} actions={buildRowContextMenu(openedLog)} />
-        : <EmptyState message={t('notifications.inbox.detail.empty', 'Select a notification to inspect its details.')} />}
+        : (
+          // no-action: The inspection modal closes when its selected notification is cleared.
+          <EmptyState message={t('notifications.inbox.detail.empty', 'Select a notification to inspect its details.')} />
+        )}
     </Modal>
     <PullToRefresh onRefresh={async () => { await (isGrouped ? groupsRefetch() : refetch()); }}>
     <div className="min-w-0 w-full max-w-full space-y-4">

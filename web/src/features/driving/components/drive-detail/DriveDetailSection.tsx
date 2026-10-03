@@ -20,6 +20,7 @@ export function DriveDetailSection({
         {available ? children : (
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle>{title}</PanelTitle>
+            {/* no-action: Missing historical section evidence cannot be recreated for this drive. */}
             <EmptyState message={t('driveDetail.report.sectionUnavailable', 'No {{section}} data is available for this drive.', { section: title })} />
           </GlassPanel>
         )}

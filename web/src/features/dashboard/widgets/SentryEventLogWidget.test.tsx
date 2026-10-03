@@ -25,7 +25,7 @@
  *   - the populated feed — one row per event, wide-only subtitles, newest-first
  *     ordering, and that the decorative row icons are hidden from the a11y tree.
  *
- * Strategy: the vehicle hook (`useVehicles`), the inline TanStack `useQuery` and
+ * Strategy: the vehicle lookup, the shared hook's TanStack `useQuery` and
  * the API `request` client are mocked so no network is touched and every query
  * state is controllable per-test. i18n is a passthrough that honours the English
  * default and interpolates `{{var}}` tokens so the visible copy is deterministic
@@ -72,11 +72,13 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
   return { ...actual, useQuery: (options: unknown) => useQueryMock(options) };
 });
 
-vi.mock('@/api/hooks/useVehicles', () => ({
+vi.mock('@/api/hooks/useVehicles', async importOriginal => ({
+  ...await importOriginal<typeof import('@/api/hooks/useVehicles')>(),
   useVehicles: () => useVehiclesMock(),
 }));
 
-vi.mock('@/api/client', () => ({
+vi.mock('@/api/client', async importOriginal => ({
+  ...await importOriginal<typeof import('@/api/client')>(),
   request: (...args: unknown[]) => requestMock(...args),
 }));
 
@@ -147,8 +149,10 @@ function makeResult(over: Partial<QueryResult> = {}): QueryResult {
 
 interface CapturedQuery {
   queryKey: unknown[];
-  queryFn: () => Promise<unknown>;
+  queryFn: (context: { signal: AbortSignal }) => Promise<unknown>;
   enabled: boolean;
+  refetchInterval: number;
+  select: (data: SecurityEvent[] | null) => SecurityEvent[];
 }
 function lastQueryOptions(): CapturedQuery {
   return useQueryMock.mock.calls.at(-1)?.[0] as CapturedQuery;
@@ -317,8 +321,11 @@ describe('SentryEventLogWidget — query wiring', () => {
 
   it('fetches the snake_case security endpoint with NO /api/v1 prefix', async () => {
     renderWidget({ cols: 3, rows: 2 }, 42);
-    await lastQueryOptions().queryFn();
-    expect(requestMock).toHaveBeenCalledWith('/security?vehicle_id=42&limit=10');
+    const signal = new AbortController().signal;
+    await lastQueryOptions().queryFn({ signal });
+    expect(requestMock).toHaveBeenCalledWith('/security?vehicle_id=42&limit=10', { signal });
+    expect(lastQueryOptions().refetchInterval).toBe(30_000);
+    expect(lastQueryOptions().select(null)).toEqual([]);
   });
 
   it('scales the event limit with the widget size (wide 10 / tall 7 / small 4)', () => {

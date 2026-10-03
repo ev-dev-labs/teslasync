@@ -56,7 +56,8 @@ export function SilentCounterPanel({ driveId }: { driveId: string | undefined })
             {t('driveDetail.silent.fsd', 'Open FSD insights')}
           </Link>
         </>
-      ) : <EmptyState message={t('driveDetail.silent.unknown', 'The FSD trip meter did not report on this drive. Absence is not a disengagement.')} />}
+      ) : <EmptyState message={t('driveDetail.silent.unknown', 'The FSD trip meter did not report on this drive. Absence is not a disengagement.')}
+        actionTo={{ label: t('driveDetail.silent.fsd', 'Open FSD insights'), to: '/fsd' }} />}
     </GlassPanel>
   );
 }

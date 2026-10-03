@@ -132,7 +132,8 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
           ]}
           chart={null}
         />
-        {data == null && <EmptyState message={t('widget.costForecast.noData', 'No forecast data')} />}
+        {data == null && <EmptyState message={t('widget.costForecast.noData', 'No forecast data')}
+          action={{ label: t('common.refresh', 'Refresh'), onClick: handleRefresh }} />}
       </WidgetShell>
     );
   }

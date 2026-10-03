@@ -135,7 +135,8 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
         emptyIcon={<TrendingDown className="h-5 w-5" />}
       />
       {isCompact && !data && (
-        <EmptyState message={t('widget.noDegradation', 'No degradation data')} icon={<TrendingDown className="h-5 w-5" />} />
+        <EmptyState message={t('widget.noDegradation', 'No degradation data')} icon={<TrendingDown className="h-5 w-5" />}
+          action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} />
       )}
     </WidgetShell>
   );

@@ -60,6 +60,7 @@ export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
           <EmptyState
             icon={<Battery className="h-6 w-6" />}
             message={t('widget.noBattery', 'No battery data')}
+            action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }}
             className="py-4"
           />
         )}

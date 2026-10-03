@@ -137,7 +137,8 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
             {tier && <Badge variant={tier.variant} size="sm" className="self-start">
               {t(`widget.forecast.${tier.key}`, tier.label)}
             </Badge>}
-            {!hasData && <EmptyState icon={<TrendingDown className="h-5 w-5" />} message={t('widget.forecast.noData', 'No degradation forecast data')} />}
+            {!hasData && <EmptyState icon={<TrendingDown className="h-5 w-5" />} message={t('widget.forecast.noData', 'No degradation forecast data')}
+              action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} />}
           </div>
         ) : (
           /* ── Standard layout (2×4) ── */
@@ -178,7 +179,10 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                       </p>
                     </li>
                   ))}
-                </ul> : <EmptyState message={emptySectionMessage} />}
+                </ul> : (
+                  // no-action: Outlook points are read-only model output; the widget owns refresh.
+                  <EmptyState message={emptySectionMessage} />
+                )}
               </div>
 
             {/* Risk factors list */}
@@ -212,7 +216,10 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                       </li>
                     );
                   })}
-                </ul> : <EmptyState message={emptySectionMessage} />}
+                </ul> : (
+                  // no-action: Missing model risk factors cannot be authored here; the widget owns refresh.
+                  <EmptyState message={emptySectionMessage} />
+                )}
               </div>
 
             {/* Recommendations as tip cards */}

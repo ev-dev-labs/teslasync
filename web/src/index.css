@@ -422,8 +422,8 @@ select option:checked {
   }
 
   .metric-label {
-    /* Aligned with typography.role.metricLabel — micro uppercase eyebrow above big metric values. */
-    @apply text-2xs font-medium uppercase tracking-wider;
+    /* Aligned with typography.role.metricLabel; keep authored label casing. */
+    @apply text-2xs font-medium tracking-wider;
     color: var(--text-muted);
   }
 }

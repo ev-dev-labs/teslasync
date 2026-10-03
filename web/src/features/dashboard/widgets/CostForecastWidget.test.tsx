@@ -48,7 +48,7 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -411,12 +411,15 @@ describe('CostForecastWidget', () => {
   });
 
   it('compact layout shows the empty state when there is no data', () => {
-    forecastMock.mockReturnValue(makeQuery({ data: undefined }));
+    const refetch = vi.fn();
+    forecastMock.mockReturnValue(makeQuery({ data: undefined, refetch }));
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('No forecast data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByText('$130')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh', exact: true }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('renders a skeleton placeholder while the query is loading', () => {

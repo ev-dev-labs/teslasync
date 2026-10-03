@@ -102,7 +102,10 @@ export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefin
             </Text>
           ) : null}
         </>
-      ) : <EmptyState message={t('physicsLedger.drive.empty', 'No drive interval in this window.')} />}
+      ) : (
+        // no-action: The full-ledger navigation remains directly below this empty state.
+        <EmptyState message={t('physicsLedger.drive.empty', 'No drive interval in this window.')} />
+      )}
       <Text as="p" size="sm" color="secondary">
         <Link to="/tesla-physics/ledger" className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]">
           {t('driveDetail.ledger.openFull', 'Open the full physics ledger')}

@@ -48,7 +48,10 @@ export function GearTheaterPanel({ driveId }: { driveId: string | undefined }) {
             />
           )}
         </>
-      ) : <EmptyState message={t('driveDetail.theater.empty', 'No P/R/N/D or charge-port changes were recorded for this drive.')} />}
+      ) : (
+        // no-action: An absence of recorded transitions is historical evidence, not an editable list.
+        <EmptyState message={t('driveDetail.theater.empty', 'No P/R/N/D or charge-port changes were recorded for this drive.')} />
+      )}
     </GlassPanel>
   );
 }

@@ -219,11 +219,14 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
                 ))}
                 {analysis.gapSignals.length === 0 && <EmptyState message={gapData == null
                   ? t('widget.signalHealth.noData', 'No signal health data')
-                  : t('widget.signalHealth.noGaps', 'No observed signal gaps')} />}
+                  : t('widget.signalHealth.noGaps', 'No observed signal gaps')}
+                  // no-action: A successful observation without gaps needs no corrective action.
+                  action={gapData == null ? { label: t('common.refresh', 'Refresh'), onClick: refresh } : undefined} />}
               </div>
             </div>
           )}
-          {!hasData && !isWide && <EmptyState icon={<Activity className="size-5" />} message={t('widget.signalHealth.noData', 'No signal health data')} className="py-4" />}
+          {!hasData && !isWide && <EmptyState icon={<Activity className="size-5" />} message={t('widget.signalHealth.noData', 'No signal health data')} className="py-4"
+            action={{ label: t('common.refresh', 'Refresh'), onClick: refresh }} />}
         </div>
       )}
     </WidgetShell>

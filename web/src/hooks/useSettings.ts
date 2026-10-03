@@ -72,7 +72,7 @@ function sanitizePrecision(v: number | null | undefined): number {
 /**
  * React hook providing application settings.
  *
- * Fetches settings from the API (cached for 5 min) and returns settings state
+ * Fetches settings from the API (cached for 5 min, revalidated on mount) and returns settings state
  * plus non-conversion settings-derived flags/labels. Measurement display
  * conversion lives in `useUnits`; currency/cost formatting lives in
  * `useFormatting`.
@@ -82,6 +82,7 @@ export function useSettings() {
     queryKey: ['settings'],
     queryFn: getSettings,
     staleTime: 5 * 60 * 1000,
+    refetchOnMount: 'always',
     retry: 1,
   })
 

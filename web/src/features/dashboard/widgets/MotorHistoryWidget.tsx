@@ -157,7 +157,8 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
           stats={stats}
           chart={null}
         />
-        {!hasData && <EmptyState message={t('widget.motorHistory.noData', 'No motor history')} />}
+        {!hasData && <EmptyState message={t('widget.motorHistory.noData', 'No motor history')}
+          action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} />}
       </WidgetShell>
     );
   }
@@ -173,7 +174,8 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
         emptyIcon={<Cog className="h-5 w-5" />}
         stats={stats}
         chart={
-          !hasData ? <EmptyState message={t('widget.motorHistory.noData', 'No motor history')} /> : <EmbeddedChart
+          !hasData ? <EmptyState message={t('widget.motorHistory.noData', 'No motor history')}
+            action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} /> : <EmbeddedChart
             title={t('widget.motorHistory.title', 'Motor history')}
             ariaLabel={t(
               'widget.motorHistory.chartAria',

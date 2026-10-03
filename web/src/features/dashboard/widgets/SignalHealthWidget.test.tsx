@@ -229,8 +229,8 @@ describe('SignalHealthWidget — lifecycle states', () => {
 
   it('renders an accessible empty state when no source data has arrived', () => {
     MOCK_STATS = makeStats({ data: undefined, dataUpdatedAt: 0 });
-    MOCK_GAPS = { data: undefined };
-    MOCK_SIGNALS = { data: undefined };
+    MOCK_GAPS = { data: undefined, refetch: vi.fn() };
+    MOCK_SIGNALS = { data: undefined, refetch: vi.fn() };
     renderWidget(STANDARD);
 
     expect(screen.getByRole('status')).toBeInTheDocument();
@@ -238,6 +238,18 @@ describe('SignalHealthWidget — lifecycle states', () => {
     // No StatCards leak through the empty branch.
     expect(screen.getByText('Total signals')).toBeInTheDocument();
     expect(statValue('Total signals')).toBe('—');
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh', exact: true }));
+    expect(MOCK_STATS.refetch).toHaveBeenCalledTimes(1);
+    expect(MOCK_GAPS.refetch).toHaveBeenCalledTimes(1);
+    expect(MOCK_SIGNALS.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not suggest corrective action when a successful snapshot records no signal gaps', () => {
+    MOCK_GAPS = { data: {} };
+    renderWidget(WIDE);
+
+    expect(screen.getByText('No observed signal gaps')).toBeInTheDocument();
+    expect(within(screen.getByRole('status')).queryByRole('button')).toBeNull();
   });
 
   it('resolves to vehicle id 0 and still calls every hook when the fleet is empty', () => {

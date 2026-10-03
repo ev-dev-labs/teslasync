@@ -26,7 +26,7 @@
  * reach for router context.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { VehicleState } from '@/api/types';
@@ -221,10 +221,13 @@ describe('BatteryGaugeWidget — states', () => {
   });
 
   it('shows the empty state when no vehicle snapshot has landed', () => {
-    useVehicleStateMock.mockReturnValue(makeResult({ data: { state: undefined, live: false } }));
+    const refetch = vi.fn();
+    useVehicleStateMock.mockReturnValue(makeResult({ data: { state: undefined, live: false }, refetch }));
     renderWidget();
     expect(screen.getByText('No battery data')).toBeInTheDocument();
     expect(screen.queryByText('Battery')).toBeNull();
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh', exact: true }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces an error affordance (red freshness dot + Refresh) on failure', () => {

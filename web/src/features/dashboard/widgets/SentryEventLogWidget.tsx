@@ -1,10 +1,8 @@
 import { useMemo, useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Shield, Lock, Unlock, Eye, EyeOff, DoorOpen, DoorClosed } from 'lucide-react';
-import { useVehicles } from '@/api/hooks/useVehicles';
-import { request } from '@/api/client';
+import { useSentryEvents, useVehicles } from '@/api/hooks/useVehicles';
 import type { SecurityEvent } from '@/api/types';
 import { asNonEmptyString } from '@/lib/typeGuards';
 import { parseEnumBool } from '@/lib/parseEnums';
@@ -118,12 +116,7 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
   const isTall = size.rows >= 2;
   const eventLimit = isWide ? 10 : isTall ? 7 : 4;
 
-  const query = useQuery({
-    queryKey: ['security-events', id, `sentry-log-${eventLimit}`],
-    queryFn: () => request<SecurityEvent[]>(`/security?vehicle_id=${id}&limit=${eventLimit}`),
-    enabled: id > 0,
-    refetchInterval: 30_000,
-  });
+  const query = useSentryEvents(id, eventLimit);
   const { data: events, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
   const state = useDataState(query, { provenance: 'historical' });
   const displayState = id === 0 && (vehicleState.fatalError || vehicleQuery.isLoading) ? vehicleState : state;

@@ -387,10 +387,8 @@ describe('system-health — lazy component wiring', () => {
 
     expect(screen.getByText('Healthy')).toBeInTheDocument();
     // 3 of 4 services report ok/healthy (tesla_api is degraded).
-    const count = screen.getByText(
-      (_content, el) => (el?.textContent ?? '').replace(/\s+/g, ' ').trim() === '3/4 services',
-    );
-    expect(count).toBeInTheDocument();
+    expect(screen.getByText('3/4')).toBeInTheDocument();
+    expect(screen.getByText('Services')).toBeInTheDocument();
     // Compact mode hides the widget title.
     expect(screen.queryByText('System health')).not.toBeInTheDocument();
   });
@@ -405,12 +403,26 @@ describe('system-health — lazy component wiring', () => {
     expect(screen.getByText('System health')).toBeInTheDocument();
   });
 
-  it('renders a loading skeleton (no title) while health is in flight', async () => {
+  it('renders a loading skeleton with its title while every health source is initially pending', async () => {
     mockUseSystemHealth.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+    mockUseDBStats.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+    mockUseConnectionPool.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = await renderWidget('system-health', { cols: 2, rows: 4 });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('System health')).toBeInTheDocument();
+  });
+
+  it('retains available database readings while the health source is initially pending', async () => {
+    mockUseSystemHealth.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+    mockUseDBStats.mockReturnValue(makeQuery({ data: { databaseSize: '128 MB' } }));
+    mockUseConnectionPool.mockReturnValue(makeQuery({ data: { inUse: 5, maxOpen: 25 } }));
+    const { container } = await renderWidget('system-health', { cols: 2, rows: 4 });
+
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByText('128 MB')).toBeInTheDocument();
+    expect(screen.getByText('5/25')).toBeInTheDocument();
+    expect(screen.getByText('No system health data')).toBeInTheDocument();
   });
 
   it('surfaces a genuine load error as an error panel instead of a misleading empty state', async () => {
