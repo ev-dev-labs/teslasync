@@ -16,6 +16,7 @@ export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
     { key: 'end', header: t('physicsLedger.unknown.end', 'End'), render: (row) => formatDateTime(row.ended_at) },
     {
       key: 'duration',
+      align: 'right',
       header: t('physicsLedger.unknown.duration', 'Duration'),
       render: (row) => formatDuration(row.duration_s),
     },

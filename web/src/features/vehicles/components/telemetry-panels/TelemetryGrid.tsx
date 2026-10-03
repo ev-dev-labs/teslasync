@@ -63,7 +63,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           value={
             state.is_charging
               ? `${fmtInt(state.charger_power)} kW`
-              : t('common.notCharging', 'Not Charging')
+              : t('common.notCharging', 'Not charging')
           }
           color={state.is_charging ? 'text-emerald-300' : 'text-[var(--text-muted)]'}
           sub={

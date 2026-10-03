@@ -39,7 +39,7 @@ export function NextChargeDecisionStrip({ vehicleId, currentSoc }: NextChargeDec
   return (
     <GlassPanel className="p-4" data-testid="next-charge-decision">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <PanelTitle>{t('nextCharge.title', 'Next Charge')}</PanelTitle>
+        <PanelTitle>{t('nextCharge.title', 'Next charge')}</PanelTitle>
         {data ? (
           <Badge variant={VERDICT_BADGE[data.verdict] ?? 'neutral'}>
             {t(`nextCharge.verdict.${data.verdict}`, verdictLabel(data.verdict))}

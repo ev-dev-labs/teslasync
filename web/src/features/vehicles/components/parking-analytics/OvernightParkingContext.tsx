@@ -100,7 +100,7 @@ export function OvernightParkingContext({
     >
       <ChartContainer
         className="h-full"
-        title={t('parking.overnight.title', 'Overnight vs Daytime Context')}
+        title={t('parking.overnight.title', 'Overnight vs daytime context')}
         subtitle={subtitle}
         ariaLabel={t(
           'parking.overnight.aria',

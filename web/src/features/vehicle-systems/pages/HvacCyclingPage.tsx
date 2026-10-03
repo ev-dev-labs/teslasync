@@ -32,7 +32,7 @@ const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function HvacCyclingPage() {
   const { t, i18n } = useTranslation();
-  usePageTitle(t('hvacCycling.title', 'HVAC Cycling'));
+  usePageTitle(t('hvacCycling.title', 'HVAC cycling'));
 
   const { vehicleId } = useSelectedVehicle();
   const { formatDuration } = useUnits();
@@ -78,7 +78,7 @@ export default function HvacCyclingPage() {
 
   return (
     <PageContainer
-      title={t('hvacCycling.title', 'HVAC Cycling')}
+      title={t('hvacCycling.title', 'HVAC cycling')}
       subtitle={t(
         'hvacCycling.subtitle',
         'An evidence chain from returned climate rows to gap-qualified intervals, censored runs, and complete-cycle diagnostics',

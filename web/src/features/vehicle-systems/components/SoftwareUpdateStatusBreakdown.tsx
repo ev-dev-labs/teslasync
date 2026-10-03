@@ -51,7 +51,7 @@ export function SoftwareUpdateStatusBreakdown({
   return (
     <ul
       className="space-y-3"
-      aria-label={t('softwareUpdates.breakdown.title', 'By Status')}
+      aria-label={t('softwareUpdates.breakdown.title', 'By status')}
     >
       {rows.map((key) => {
         const meta = UPDATE_STATUS[key];

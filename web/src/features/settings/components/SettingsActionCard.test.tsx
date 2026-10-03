@@ -96,7 +96,7 @@ describe('SettingsActionCard — link card', () => {
   it('derives the link accessible name from the title + description', () => {
     renderCard({ href: '/data-export' })
 
-    const link = screen.getByRole('link', { name: /Data Export/i })
+    const link = screen.getByRole('link', { name: /Data export/i })
     expect(link).toBeInTheDocument()
     expect(link.textContent).toContain('Export drives and charging data')
   })

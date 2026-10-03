@@ -45,7 +45,7 @@ export default function PhysicsNervousSystemSection({ physics }: { physics: Phys
       <Text as="p" variant="bodySm">{t('teslaOnly.nervousAttention', 'Signals needing attention')}</Text>
       <DataTable tableId="physics:nerves-attention" data={[...conflicting, ...other]} columns={columns} pagination={pagination}
         mobileColumns={['field', 'status']} keyExtractor={(r) => r.field} emptyMessage={t('teslaOnly.nervousNone', 'No non-alive signals returned in this frame.')} />
-      <Text as="p" variant="bodySm">{t('teslaOnly.nervousMatchedBudgets', 'Non-alive fields with a same-named Unknown OS budget: {{count}} / {{total}}', {
+      <Text as="p" variant="bodySm">{t('teslaOnly.nervousMatchedBudgets', 'Non-alive fields with a same-named unknown OS budget: {{count}} / {{total}}', {
         count: matchedBudgets.length, total: conflicting.length + other.length,
       })}</Text>
       {matchedBudgets.length ? matchedBudgets.slice(0, 5).map(({ nerve, budget }) =>

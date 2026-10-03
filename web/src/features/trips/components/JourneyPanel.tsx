@@ -202,7 +202,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <GlassPanel className="p-4 sm:p-5">
+      <GlassPanel className="min-w-0 p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <PanelTitle>{t('journey.list.title', 'Planned journeys')}</PanelTitle>

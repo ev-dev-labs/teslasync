@@ -96,7 +96,7 @@ export default function ActiveSessionsPage() {
         'account.sessions.subtitle',
         'Devices currently signed in to TeslaSync. Revoke individual sessions or sign out everywhere else.',
       )}
-      actions={actions}
+      destructiveActions={actions}
       query={sessionsQuery}
       copyLink
     >

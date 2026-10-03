@@ -57,7 +57,7 @@ export default function PhysicsUnknownSection({ physics }: { physics: PhysicsPag
       <RawRows title={t('teslaOnly.budgetBreakdown', 'Per-signal coverage budget')} rows={sorted} tableId="physics:unknown" t={t}
         keyExtractor={(r) => r.kind} columns={[
           { key: 'kind', header: t('teslaOnly.kind', 'Kind'), render: (r) => r.kind },
-          { key: 'hours', header: t('teslaOnly.unknownHours', 'Unknown'), render: (r) => hours(r.hours, t) },
+          { key: 'hours', align: 'right', header: t('teslaOnly.unknownHours', 'Unknown'), render: (r) => hours(r.hours, t) },
           { key: 'flag', header: t('teslaOnly.unknownFlag', 'Unknown flag'), render: (r) => yesNo(r.unknown, t) },
         ]} />
     </Evidence>

@@ -88,8 +88,8 @@ describe('AccessOverviewPanel', () => {
     });
 
     // Section headings.
-    expect(screen.getByText('Invitation Status')).toBeInTheDocument();
-    expect(screen.getByText('Driver Roles')).toBeInTheDocument();
+    expect(screen.getByText('Invitation status')).toBeInTheDocument();
+    expect(screen.getByText('Driver roles')).toBeInTheDocument();
 
     // titleCase-resolved bar labels.
     expect(screen.getByText('Pending')).toBeInTheDocument();
@@ -125,7 +125,7 @@ describe('AccessOverviewPanel', () => {
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     // Loading replaces the content — the section subheads must not render.
-    expect(screen.queryByText('Invitation Status')).toBeNull();
+    expect(screen.queryByText('Invitation status')).toBeNull();
   });
 
   it('prioritises the loading state over the error and empty flags', () => {
@@ -156,7 +156,7 @@ describe('AccessOverviewPanel', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
 
     // Error UI replaces the content, it does not augment it.
-    expect(screen.queryByText('Invitation Status')).toBeNull();
+    expect(screen.queryByText('Invitation status')).toBeNull();
   });
 
   it('never renders a blank panel when isError is set without an error object', () => {
@@ -170,7 +170,7 @@ describe('AccessOverviewPanel', () => {
       totalDrivers: 1,
     });
 
-    expect(screen.getByText('Invitation Status')).toBeInTheDocument();
+    expect(screen.getByText('Invitation status')).toBeInTheDocument();
     expect(screen.getByText('Pending')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText(/server error/i)).toBeNull();
@@ -183,8 +183,8 @@ describe('AccessOverviewPanel', () => {
       screen.getByText('No access data to summarize yet.'),
     ).toBeInTheDocument();
     // Empty state replaces the section content.
-    expect(screen.queryByText('Invitation Status')).toBeNull();
-    expect(screen.queryByText('Driver Roles')).toBeNull();
+    expect(screen.queryByText('Invitation status')).toBeNull();
+    expect(screen.queryByText('Driver roles')).toBeNull();
   });
 
   it('shows the "no invitations" caption while still rendering role chips', () => {

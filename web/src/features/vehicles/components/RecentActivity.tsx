@@ -28,7 +28,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-title flex items-center gap-2">
               <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
-              {t('common.recentDrives', 'Recent Drives')}
+              {t('common.recentDrives', 'Recent drives')}
             </h3>
             <Link
               to="/drives"
@@ -88,7 +88,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-title flex items-center gap-2">
               <BatteryCharging className="h-4 w-4 text-emerald-300" aria-hidden="true" />{' '}
-              {t('common.recentCharges', 'Recent Charges')}
+              {t('common.recentCharges', 'Recent charges')}
             </h3>
             <Link
               to="/charging"

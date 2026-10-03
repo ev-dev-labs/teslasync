@@ -53,20 +53,20 @@ export default function PhysicsMetersSection({ physics }: { physics: PhysicsPage
           from: distance(epoch.fsd_meter_start_m), to: distance(epoch.fsd_meter_end_m),
         })}</Text>
       </div>) : <Text as="p" variant="caption">{t('teslaOnly.metersNoEpochs', 'No firmware counter bounds were returned for cross-checking.')}</Text>}
-      <Text as="p" variant="bodySm">{t('teslaOnly.metersModeContext', 'Latest mode context: Valet {{valet}}, Service {{service}}, Transport {{transport}}', {
+      <Text as="p" variant="bodySm">{t('teslaOnly.metersModeContext', 'Latest mode context: valet {{valet}}, service {{service}}, transport {{transport}}', {
         valet: modes?.valet == null ? unknown(t) : modes.valet ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No'),
         service: modes?.service == null ? unknown(t) : modes.service ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No'),
         transport: modes?.transport == null ? unknown(t) : modes.transport ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No'),
       })}</Text>
       <Text as="p" variant="caption">{t('teslaOnly.metersModeCaution', 'Latest modes are not historical mode readings at each drop. Firmware epoch bounds are observations, not a continuous trace or proof of cause.')}</Text>
-      <Text as="p" variant="caption">{t('teslaOnly.metersAnalysis', 'Counters are current returned readings, not lifetime totals. A drop is a difference between before and after counter values, not lost driven distance. The cause is classified from nearby mode or firmware evidence, not established as fact. Compare Firmware Epochs.')}</Text>
+      <Text as="p" variant="caption">{t('teslaOnly.metersAnalysis', 'Counters are current returned readings, not lifetime totals. A drop is a difference between before and after counter values, not lost driven distance. The cause is classified from nearby mode or firmware evidence, not established as fact. Compare firmware epochs.')}</Text>
       <RawRows title={physics.title} rows={[...resets].reverse()} tableId="physics:meters" t={t} mobileColumns={['meter', 'at', 'drop']}
         keyExtractor={(r) => `${r.meter}-${r.at}`} columns={[
           { key: 'meter', header: t('teslaOnly.meter', 'Meter'), render: (r) => r.meter },
           { key: 'at', header: t('teslaOnly.started', 'Started'), render: (r) => time(r.at, t) },
-          { key: 'before', header: t('teslaOnly.before', 'Before'), render: (r) => distance(r.from_m) },
-          { key: 'after', header: t('teslaOnly.after', 'After'), render: (r) => distance(r.to_m) },
-          { key: 'drop', header: t('teslaOnly.metersDrop', 'Measured drop'), render: (r) => r.from_m != null && r.to_m != null && r.from_m > r.to_m ? distance(r.from_m - r.to_m) : unknown(t) },
+          { key: 'before', align: 'right', header: t('teslaOnly.before', 'Before'), render: (r) => distance(r.from_m) },
+          { key: 'after', align: 'right', header: t('teslaOnly.after', 'After'), render: (r) => distance(r.to_m) },
+          { key: 'drop', align: 'right', header: t('teslaOnly.metersDrop', 'Measured drop'), render: (r) => r.from_m != null && r.to_m != null && r.from_m > r.to_m ? distance(r.from_m - r.to_m) : unknown(t) },
           { key: 'cause', header: t('teslaOnly.cause', 'Cause'), render: (r) => r.cause },
         ]} />
     </Evidence>

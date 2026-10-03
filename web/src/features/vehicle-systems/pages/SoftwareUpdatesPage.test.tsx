@@ -256,12 +256,12 @@ describe('SoftwareUpdatesPage — structure, wiring & a11y', () => {
     await screen.findByTestId('cadence-chart');
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Software Updates' }),
+      screen.getByRole('heading', { level: 1, name: 'Software updates' }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Track firmware versions and update history'),
     ).toBeInTheDocument();
-    expect(document.title).toContain('Software Updates');
+    expect(document.title).toContain('Software updates');
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
     // Icon-only refresh control has a real accessible name.
@@ -289,14 +289,14 @@ describe('SoftwareUpdatesPage — KPI derivations', () => {
     renderPage();
     await screen.findByTestId('cadence-chart');
 
-    expect(within(kpiCard('Current Version')).getByText('2025.20.1')).toBeInTheDocument();
-    expect(within(kpiCard('Total Updates')).getByText('3')).toBeInTheDocument();
+    expect(within(kpiCard('Current version')).getByText('2025.20.1')).toBeInTheDocument();
+    expect(within(kpiCard('Total updates')).getByText('3')).toBeInTheDocument();
     expect(within(kpiCard('Installed')).getByText('2')).toBeInTheDocument();
     expect(within(kpiCard('Pending')).getByText('1')).toBeInTheDocument();
     // Two installs 92 days apart → avg cadence "92d" (absolute-instant math).
-    expect(within(kpiCard('Avg Cadence')).getByText('92d')).toBeInTheDocument();
+    expect(within(kpiCard('Avg cadence')).getByText('92d')).toBeInTheDocument();
     // Last installed resolves to a real date, not the em-dash placeholder.
-    expect(within(kpiCard('Last Installed')).getByText(/2025/)).toBeInTheDocument();
+    expect(within(kpiCard('Last installed')).getByText(/2025/)).toBeInTheDocument();
   });
 
   it('bins updates into sorted calendar-month cadence points and tallies status counts', async () => {
@@ -372,7 +372,7 @@ describe('SoftwareUpdatesPage — resilience states', () => {
     // Data children are not shown while loading…
     expect(screen.queryByTestId('cadence-chart')).toBeNull();
     // …but the KPI band always renders (never a blank page) with a placeholder.
-    expect(within(kpiCard('Current Version')).getByText('—')).toBeInTheDocument();
+    expect(within(kpiCard('Current version')).getByText('—')).toBeInTheDocument();
   });
 
   it('shows an error state with retry in every data section on request failure', async () => {

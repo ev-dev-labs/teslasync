@@ -5,7 +5,7 @@ import { GlassPanel, PanelTitle, DataTable, Text, useSortToggle, type Column } f
 import { RouteDisplay, DateTime } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDateShort, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import type { TripDetail, TripDriveSummary } from '@/api/types';
 
 /** Stable empty reference so a trip without drives never churns the sort memo. */
@@ -69,12 +69,17 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
       },
       {
         key: 'started_at',
+        filterValue: (d) => d.started_at ?? null,
+        filterValueLabel: (_, d) => formatDateShort(d.started_at),
         header: t('trips.detail.table.started', 'Started'),
         sortable: true,
         render: (d) => <DateTime value={d.started_at} variant="short" className="text-sm" />,
       },
       {
         key: 'distance_m',
+        align: 'right',
+        filterValue: (d) => d.distance_m ?? null,
+        filterValueLabel: (value, d) => value == null ? '—' : formatDistance(d.distance_m),
         header: t('trips.detail.table.distance', 'Distance'),
         sortable: true,
         render: (d) => (
@@ -85,6 +90,9 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
       },
       {
         key: 'energy_used_wh',
+        align: 'right',
+        filterValue: (d) => d.energy_used_wh ?? null,
+        filterValueLabel: (value, d) => value == null ? '—' : formatEnergy(d.energy_used_wh),
         header: t('trips.detail.table.energy', 'Energy'),
         sortable: true,
         render: (d) => (
@@ -95,6 +103,9 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
       },
       {
         key: 'duration_s',
+        align: 'right',
+        filterValue: (d) => d.duration_s ?? null,
+        filterValueLabel: (_, d) => (d.duration_s ?? 0) > 0 ? formatDurationSecondsAsMinutes(d.duration_s) : '—',
         header: t('trips.detail.table.duration', 'Duration'),
         sortable: true,
         render: (d) => (
@@ -108,7 +119,7 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
   );
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
+    <GlassPanel className="min-w-0 p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('trips.detail.drivesTitle', 'Drives in this trip')}
@@ -124,6 +135,7 @@ export function TripDrivesTable({ trip, isLoading, isError, error, onRetry }: Tr
         <Skeleton height={240} />
       ) : (
         <DataTable
+          enableValueFilters
           tableId="trips:trip-detail-drives"
           columns={columns}
           mobileColumns={['route', 'started_at', 'distance_m']}

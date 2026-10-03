@@ -48,7 +48,7 @@ function expectAllFourCards() {
   expect(screen.getByText('Drivers')).toBeInTheDocument();
   expect(screen.getByText('Invitations')).toBeInTheDocument();
   expect(screen.getByText('Pending')).toBeInTheDocument();
-  expect(screen.getByText('Expiring Soon')).toBeInTheDocument();
+  expect(screen.getByText('Expiring soon')).toBeInTheDocument();
 }
 
 /**
@@ -101,7 +101,7 @@ describe('AccessKpiBand — value surfacing', () => {
     expect(within(cardFor('Drivers')).getByText('3')).toBeInTheDocument();
     expect(within(cardFor('Invitations')).getByText('12')).toBeInTheDocument();
     expect(within(cardFor('Pending')).getByText('5')).toBeInTheDocument();
-    expect(within(cardFor('Expiring Soon')).getByText('2')).toBeInTheDocument();
+    expect(within(cardFor('Expiring soon')).getByText('2')).toBeInTheDocument();
   });
 
   it('does not leak a value into the wrong card', () => {

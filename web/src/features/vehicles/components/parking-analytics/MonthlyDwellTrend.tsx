@@ -74,7 +74,7 @@ export function MonthlyDwellTrend(
       data-testid="parking-monthly"
     >
       <ChartContainer
-        title={t('parking.monthly.title', 'Monthly Dwell & Stint Trend')}
+        title={t('parking.monthly.title', 'Monthly dwell & stint trend')}
         subtitle={t(
           'parking.monthly.subtitle',
           '{{count}} stints grouped by parking-start month in {{timeZone}}; observed dwell includes right-censored tails.',

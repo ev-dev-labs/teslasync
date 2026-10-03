@@ -98,14 +98,14 @@ describe('ClimateSection', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Climate' })).toBeInTheDocument()
 
     for (const label of [
-      'Inside Temp',
-      'Outside Temp',
-      'Driver Setpoint',
-      'Fan Speed',
-      'Seat Heater Left',
-      'Seat Heater Right',
+      'Inside temp',
+      'Outside temp',
+      'Driver setpoint',
+      'Fan speed',
+      'Seat heater left',
+      'Seat heater right',
       'Defrost',
-      'Climate On',
+      'Climate on',
     ]) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
@@ -126,14 +126,14 @@ describe('ClimateSection', () => {
     expect(mockT).toHaveBeenCalledWith('vehicles.detail.noClimateData', 'No climate data available')
 
     // None of the metric cards leak through in the empty branch.
-    expect(screen.queryByText('Inside Temp')).toBeNull()
+    expect(screen.queryByText('Inside temp')).toBeNull()
     expect(formatTemperature).not.toHaveBeenCalled()
   })
 
   it('treats undefined the same as null (empty state, no throw)', () => {
     expect(() => render(<ClimateSection climateData={undefined} />)).not.toThrow()
     expect(screen.getByRole('status')).toHaveTextContent('No climate data available')
-    expect(screen.queryByText('Fan Speed')).toBeNull()
+    expect(screen.queryByText('Fan speed')).toBeNull()
   })
 
   it('routes each temperature field through the useUnits formatter and renders the echo', () => {
@@ -275,14 +275,14 @@ describe('ClimateSection', () => {
 
     const expected: ReadonlyArray<readonly [string, string]> = [
       ['vehicles.detail.climate', 'Climate'],
-      ['common.insideTemp', 'Inside Temp'],
-      ['common.outsideTemp', 'Outside Temp'],
-      ['vehicles.detail.driverSetpoint', 'Driver Setpoint'],
-      ['vehicles.detail.fanSpeed', 'Fan Speed'],
-      ['vehicles.detail.seatHeaterL', 'Seat Heater Left'],
-      ['vehicles.detail.seatHeaterR', 'Seat Heater Right'],
+      ['common.insideTemp', 'Inside temp'],
+      ['common.outsideTemp', 'Outside temp'],
+      ['vehicles.detail.driverSetpoint', 'Driver setpoint'],
+      ['vehicles.detail.fanSpeed', 'Fan speed'],
+      ['vehicles.detail.seatHeaterL', 'Seat heater left'],
+      ['vehicles.detail.seatHeaterR', 'Seat heater right'],
       ['vehicles.detail.defrost', 'Defrost'],
-      ['vehicles.detail.climateOn', 'Climate On'],
+      ['vehicles.detail.climateOn', 'Climate on'],
     ]
     for (const [key, fallback] of expected) {
       expect(mockT).toHaveBeenCalledWith(key, fallback)

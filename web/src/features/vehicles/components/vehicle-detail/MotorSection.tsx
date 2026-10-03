@@ -36,19 +36,19 @@ export function MotorSection({ motorData }: MotorSectionProps) {
       {motorData ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <MetricCard
-            label={t('vehicles.detail.shiftState', 'Shift State')}
+            label={t('vehicles.detail.shiftState', 'Shift state')}
             value={motorData.shift_state ?? '—'}
             icon={<Settings className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.packVoltage', 'Pack Voltage')}
+            label={t('vehicles.detail.packVoltage', 'Pack voltage')}
             value={vbat != null ? `${fmtNumber(vbat)} V` : '—'}
             icon={<Battery className="h-4 w-4" aria-hidden="true" />}
             color="purple"
           />
           <MetricCard
-            label={t('vehicles.detail.motorCurrentFront', 'Motor Current (F)')}
+            label={t('vehicles.detail.motorCurrentFront', 'Motor current (F)')}
             value={
               motorData.motor_current_front != null
                 ? `${fmtNumber(motorData.motor_current_front)} A`
@@ -58,7 +58,7 @@ export function MotorSection({ motorData }: MotorSectionProps) {
             color="green"
           />
           <MetricCard
-            label={t('vehicles.detail.torqueFront', 'Front Torque')}
+            label={t('vehicles.detail.torqueFront', 'Front torque')}
             value={
               motorData.torque_nm_front != null ? `${fmtNumber(motorData.torque_nm_front)} Nm` : '—'
             }
@@ -66,7 +66,7 @@ export function MotorSection({ motorData }: MotorSectionProps) {
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.torqueRear', 'Rear Torque')}
+            label={t('vehicles.detail.torqueRear', 'Rear torque')}
             value={
               motorData.torque_nm_rear != null ? `${fmtNumber(motorData.torque_nm_rear)} Nm` : '—'
             }
@@ -86,7 +86,7 @@ export function MotorSection({ motorData }: MotorSectionProps) {
             color="purple"
           />
           <MetricCard
-            label={t('vehicles.detail.motorTemp', 'Motor Temp (peak)')}
+            label={t('vehicles.detail.motorTemp', 'Motor temp (peak)')}
             value={
               maxMotorTemp != null && isFinite(maxMotorTemp)
                 ? formatTemperature(maxMotorTemp)

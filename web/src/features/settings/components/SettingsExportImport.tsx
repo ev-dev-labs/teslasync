@@ -244,7 +244,7 @@ export function SettingsExportImport() {
           </IconBox>
           <div className="flex-1 min-w-0">
             <Heading level="section">
-              {t('backup.title', 'Backup & Restore')}
+              {t('backup.title', 'Backup & restore')}
             </Heading>
             <Text variant="bodySm">
               {t(

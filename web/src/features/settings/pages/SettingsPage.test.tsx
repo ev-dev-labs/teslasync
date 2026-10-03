@@ -377,7 +377,7 @@ describe('SettingsPage — loading & empty placeholders', () => {
     expect(screen.queryByText('Distance')).toBeNull()
     expect(screen.queryByText('Currency')).toBeNull()
     // The rest of the page still renders (never a frozen/blank screen).
-    expect(screen.getByRole('link', { name: /Data Export/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Data export/i })).toBeInTheDocument()
   })
 
   it('renders em-dash placeholders — never blanks — when settings are unavailable', () => {
@@ -477,7 +477,7 @@ describe('SettingsPage — quick actions', () => {
   it('links the Data Export card to /data-export', () => {
     renderPage()
 
-    const link = screen.getByRole('link', { name: /Data Export/i })
+    const link = screen.getByRole('link', { name: /Data export/i })
     expect(link).toHaveAttribute('href', '/data-export')
   })
 
@@ -487,7 +487,7 @@ describe('SettingsPage — quick actions', () => {
     const handler = vi.fn()
     window.addEventListener(TOUR_OPEN_LAUNCHER_EVENT, handler)
     try {
-      fireEvent.click(screen.getByRole('button', { name: /Open Tour Launcher/i }))
+      fireEvent.click(screen.getByRole('button', { name: /Open tour launcher/i }))
       expect(handler).toHaveBeenCalledTimes(1)
     } finally {
       window.removeEventListener(TOUR_OPEN_LAUNCHER_EVENT, handler)
@@ -500,7 +500,7 @@ describe('SettingsPage — quick actions', () => {
 
     renderPage()
 
-    fireEvent.click(screen.getByRole('button', { name: /Restart Checklist/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Restart checklist/i }))
 
     // restartChecklist() clears the dismissed flag …
     expect(localStorage.getItem(CHECKLIST_DISMISSED_KEY)).toBeNull()

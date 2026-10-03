@@ -117,10 +117,10 @@ export type TirePosition = (typeof TIRE_POSITIONS)[number];
 // render boundary via `tireLabel(pos)` so translators can localise each
 // corner without touching this map.
 const TIRE_LABELS: Record<TirePosition, string> = {
-  fl: 'Front Left',
-  fr: 'Front Right',
-  rl: 'Rear Left',
-  rr: 'Rear Right',
+  fl: 'Front left',
+  fr: 'Front right',
+  rl: 'Rear left',
+  rr: 'Rear right',
 };
 
 export type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
@@ -200,7 +200,7 @@ const LINE_COLORS: Record<TirePosition, string> = {
 
 export default function TirePressurePage() {
   const { t } = useTranslation();
-  usePageTitle(t('tirePressure.title', 'Tire Pressure'));
+  usePageTitle(t('tirePressure.title', 'Tire pressure'));
   const { unitPrefs } = useUnits();
   const pressureUnit = unitPrefs.pressure;
 
@@ -415,13 +415,22 @@ export default function TirePressurePage() {
       ...TIRE_POSITIONS.map(
         (pos): Column<TirePressureReading> => ({
           key: pos,
+          align: 'right',
+          filterValue: (row) => {
+            const value = getTirePressureValue(row, pos);
+            return value > 0 ? value : null;
+          },
+          filterValueLabel: (_value, row) => {
+            const value = getTirePressureValue(row, pos);
+            return value > 0 ? `${fmtNumber(pressureDisplayValue(value))} ${pressureUnit}` : '—';
+          },
           header: `${tireLabel(pos)} (${pressureUnit})`,
           render: (row: TirePressureReading) => {
             const val = getTirePressureValue(row, pos);
             const status = pressureStatus(val);
             return (
-              <Badge variant={statusVariant(status)} size="sm">
-                {fmtNumber(pressureDisplayValue(val ?? 0))}
+              <Badge variant={val > 0 ? statusVariant(status) : 'neutral'} size="sm">
+                {val > 0 ? fmtNumber(pressureDisplayValue(val)) : '—'}
               </Badge>
             );
           },
@@ -435,14 +444,14 @@ export default function TirePressurePage() {
           if (hasTpmsWarning(row.tpms_hard_warnings)) {
             return (
               <Badge variant="danger" size="sm" dot>
-                {t('tirePressure.warn.hardShort', 'Hard Warning')}
+                {t('tirePressure.warn.hardShort', 'Hard warning')}
               </Badge>
             );
           }
           if (hasTpmsWarning(row.tpms_soft_warnings)) {
             return (
               <Badge variant="warning" size="sm" dot>
-                {t('tirePressure.warn.softShort', 'Soft Warning')}
+                {t('tirePressure.warn.softShort', 'Soft warning')}
               </Badge>
             );
           }
@@ -464,7 +473,7 @@ export default function TirePressurePage() {
 
   return (
     <PageContainer
-      title={t('tirePressure.title', 'Tire Pressure')}
+      title={t('tirePressure.title', 'Tire pressure')}
       subtitle={t(
         'tirePressure.subtitle',
         'Monitor tire pressure readings and history',
@@ -505,7 +514,7 @@ export default function TirePressurePage() {
           className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         >
           <MetricCard
-            label={t('tirePressure.avgPressure', 'Avg Pressure')}
+            label={t('tirePressure.avgPressure', 'Avg pressure')}
             value={
               summaryStats
                 ? `${fmtNumber(pressureDisplayValue(summaryStats.avg ?? 0))} ${pressureUnit}`
@@ -515,7 +524,7 @@ export default function TirePressurePage() {
             color="cyan"
           />
           <MetricCard
-            label={t('tirePressure.minPressure', 'Min Pressure')}
+            label={t('tirePressure.minPressure', 'Min pressure')}
             value={
               summaryStats
                 ? `${fmtNumber(pressureDisplayValue(summaryStats.min ?? 0))} ${pressureUnit}`
@@ -525,13 +534,13 @@ export default function TirePressurePage() {
             color="green"
           />
           <MetricCard
-            label={t('tirePressure.warningCount', 'Warning Count')}
+            label={t('tirePressure.warningCount', 'Warning count')}
             value={summaryStats?.warningCount ?? 0}
             icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
             color="amber"
           />
           <MetricCard
-            label={t('tirePressure.lastUpdated', 'Last Updated')}
+            label={t('tirePressure.lastUpdated', 'Last updated')}
             value={lastUpdatedAt ? formatDateTime(lastUpdatedAt) : '—'}
             icon={<Clock className="h-5 w-5" aria-hidden="true" />}
             color="purple"
@@ -549,7 +558,7 @@ export default function TirePressurePage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tirePressure.currentReadings', 'Current Readings')}
+              {t('tirePressure.currentReadings', 'Current readings')}
             </PanelTitle>
 
             {loadingLatest && !latest ? (
@@ -598,7 +607,7 @@ export default function TirePressurePage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tirePressure.pressureHistory', 'Pressure History')}
+              {t('tirePressure.pressureHistory', 'Pressure history')}
             </PanelTitle>
 
             {loadingHistory && !history ? (
@@ -619,7 +628,7 @@ export default function TirePressurePage() {
                 {/* chart-a11y:no-table tire pressure time-series for 4 positions — dense history, not tabular */}
                 <EmbeddedChart
                   chartKey="tire-pressure-history"
-                  title={t('tirePressure.pressureHistory', 'Pressure History')}
+                  title={t('tirePressure.pressureHistory', 'Pressure history')}
                   ariaLabel={t('tirePressure.pressureHistoryAria', 'Tire pressure over time for all four positions')}
                   fluid
                 >
@@ -667,7 +676,7 @@ export default function TirePressurePage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('tirePressure.historyTable', 'History Table')}
+            {t('tirePressure.historyTable', 'History table')}
           </PanelTitle>
 
           {loadingHistory && !history ? (
@@ -686,6 +695,7 @@ export default function TirePressurePage() {
           ) : (
             <DataTable
               tableId="vehicle-systems:tire-pressure-history"
+              enableValueFilters
               columns={historyColumns}
               mobileColumns={['created_at', 'warnings']}
               data={tableData}

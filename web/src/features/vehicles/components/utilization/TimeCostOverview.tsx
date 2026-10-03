@@ -152,7 +152,7 @@ export function TimeCostOverview({
             className="h-4 w-4 text-cyan-300"
             aria-hidden="true"
           />
-          {t('utilization.timeSplit', 'Where the Hours Go')}
+          {t('utilization.timeSplit', 'Where the hours go')}
           <HelpTooltip
             size="sm"
             i18nKey="help.utilization.body"
@@ -239,7 +239,7 @@ export function TimeCostOverview({
             className="h-4 w-4 text-cyan-300"
             aria-hidden="true"
           />
-          {t('utilization.ledger', 'Cost of Motion')}
+          {t('utilization.ledger', 'Cost of motion')}
         </PanelTitle>
         <UtilizationSectionBody state={state} className="min-h-56">
           {summary.accounting.eligibleRows === 0 ? (
@@ -264,7 +264,7 @@ export function TimeCostOverview({
               <Text variant="caption" as="p" className="mt-3">
                 {t(
                   'utilization.costAssumption',
-                  'Energy-only estimate using the Settings electricity rate. It excludes insurance, depreciation, financing, maintenance, and charging losses.',
+                  'Energy-only estimate using the settings electricity rate. It excludes insurance, depreciation, financing, maintenance, and charging losses.',
                 )}
               </Text>
             </>

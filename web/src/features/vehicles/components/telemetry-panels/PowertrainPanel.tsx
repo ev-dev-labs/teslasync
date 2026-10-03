@@ -62,7 +62,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
           {/* Shift state badge */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.shiftState', 'Shift State')}
+              {t('telemetry.shiftState', 'Shift state')}
             </span>
             <span
               className={cn(
@@ -144,12 +144,12 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
           {/* Torque split */}
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
-              label={t('telemetry.torqueFront', 'Front Torque')}
+              label={t('telemetry.torqueFront', 'Front torque')}
               value={motorData.torque_nm_front != null ? fmtNumber(motorData.torque_nm_front) : '—'}
               subtitle="Nm"
             />
             <MetricCard
-              label={t('telemetry.torqueRear', 'Rear Torque')}
+              label={t('telemetry.torqueRear', 'Rear torque')}
               value={motorData.torque_nm_rear != null ? fmtNumber(motorData.torque_nm_rear) : '—'}
               subtitle="Nm"
             />
@@ -158,7 +158,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
           {/* Temperatures */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.motorTemp', 'Motor Temp (peak)')}
+              {t('telemetry.motorTemp', 'Motor temp (peak)')}
             </span>
             <span
               className={cn(
@@ -171,7 +171,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.inverterTemp', 'Inverter Temp')}
+              {t('telemetry.inverterTemp', 'Inverter temp')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {formatTemperature(motorData.inverter_temp_c)}

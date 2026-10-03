@@ -45,7 +45,7 @@ export default function PhysicsLifeTapeSection({ physics }: { physics: PhysicsPa
           <Badge variant={name === 'unknown' ? 'warning' : 'neutral'} size="sm">{seconds(item.duration, t)} · {total > 0 ? `${fmtNumber(100 * item.duration / total, 1)}%` : t('teslaOnly.unknown', 'unknown')}</Badge></div>
         <Text as="p" variant="caption">{t('teslaOnly.lifeIntervals', '{{count}} returned intervals', { count: item.count })}</Text>
       </div>)}</div>
-      <Text as="p" variant="caption">{t('teslaOnly.workbench.tapeCaution', 'State durations classify the returned window, not GPS distance. Neutral rolling is not confirmed Park; gaps stay Unknown.')}</Text>
+      <Text as="p" variant="caption">{t('teslaOnly.workbench.tapeCaution', 'State durations classify the returned window, not GPS distance. Neutral rolling is not confirmed park; gaps stay unknown.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.lifeTimeline', 'Longest interval and state chronology')}>
       {longest ? <Text as="p" variant="bodySm">{t('teslaOnly.lifeLongest', 'Longest returned interval: {{state}} for {{duration}}, {{from}} → {{to}}', {
@@ -63,7 +63,7 @@ export default function PhysicsLifeTapeSection({ physics }: { physics: PhysicsPa
           { key: 'state', header: t('teslaOnly.state', 'State'), render: (r) => r.state },
           { key: 'started', header: t('teslaOnly.started', 'Started'), render: (r) => time(r.started_at, t) },
           { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (r) => time(r.ended_at, t) },
-          { key: 'duration', header: t('teslaOnly.duration', 'Duration'), render: (r) => seconds(r.duration_s, t) },
+          { key: 'duration', align: 'right', header: t('teslaOnly.duration', 'Duration'), render: (r) => seconds(r.duration_s, t) },
         ]} />
     </Evidence>
   </>;

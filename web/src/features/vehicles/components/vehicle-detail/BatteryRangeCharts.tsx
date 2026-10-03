@@ -86,7 +86,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
       <GlassPanel className="p-6">
         <PanelTitle className="mb-4 flex items-center gap-2">
           <Battery className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('vehicles.detail.batteryOverview', 'Battery Overview')}
+          {t('vehicles.detail.batteryOverview', 'Battery overview')}
         </PanelTitle>
         <div className="flex items-center gap-4 mb-4">
           <LinearGauge
@@ -116,7 +116,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
         </div>
         <div className="h-48">
           <EmbeddedChart
-            title={t('vehicles.detail.batteryOverview', 'Battery Overview')}
+            title={t('vehicles.detail.batteryOverview', 'Battery overview')}
             ariaLabel={t('vehicles.detail.batteryAria', 'Battery current and remaining levels bar chart')}
             data={batteryChartData}
             dataColumns={batteryColumns}
@@ -139,13 +139,13 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
       <GlassPanel className="p-6">
         <PanelTitle className="mb-4 flex items-center gap-2">
           <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('vehicles.detail.driveTrend', 'Drive Distance Trend')}
+          {t('vehicles.detail.driveTrend', 'Drive distance trend')}
         </PanelTitle>
         {driveChartData.length > 0 ? (
           <div className="h-64">
             <EmbeddedChart
               chartKey="battery-drive-trend"
-              title={t('vehicles.detail.driveTrend', 'Drive Distance Trend')}
+              title={t('vehicles.detail.driveTrend', 'Drive distance trend')}
               ariaLabel={t('vehicles.detail.driveTrendAria', 'Recent drive distance and duration area chart')}
               data={driveChartData}
               dataColumns={driveColumns}

@@ -76,7 +76,7 @@ export function ParkingTemporalProfile({
       data-testid="parking-temporal"
     >
       <ChartContainer
-        title={t('parking.temporal.title', 'When Parking Starts')}
+        title={t('parking.temporal.title', 'When parking starts')}
         subtitle={t(
           'parking.temporal.subtitle',
           '{{count}} reconstructed starts grouped in {{timeZone}}; dwell is credited to its start period.',

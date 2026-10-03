@@ -49,7 +49,7 @@ export function AccessKpiBand({ drivers, invitations, pending, expiringSoon }: A
         color="amber"
       />
       <MetricCard
-        label={t('vehicleAccess.kpi.expiringSoon', 'Expiring Soon')}
+        label={t('vehicleAccess.kpi.expiringSoon', 'Expiring soon')}
         value={expiringSoon ?? 0}
         icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
         color="red"

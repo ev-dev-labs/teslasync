@@ -359,18 +359,18 @@ describe('MaintenancePage', () => {
 
     // Page shell + every panel heading.
     expect(screen.getByRole('heading', { level: 1, name: 'Maintenance' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Maintenance Items/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Service Projections/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Estimated Annual Cost/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Maintenance by Category/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Service Records/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Maintenance items/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Service projections/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Estimated annual cost/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Maintenance by category/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Service records/i })).toBeInTheDocument();
 
     // KPI band — the raw-status reduce, scoped to its a11y landmark so the
     // labels don't collide with the status badges elsewhere on the page.
     const kpis = within(screen.getByRole('region', { name: 'Maintenance summary' }));
-    expect(kpis.getByText('Total Items')).toBeInTheDocument();
+    expect(kpis.getByText('Total items')).toBeInTheDocument();
     expect(kpis.getByText('Overdue')).toBeInTheDocument();
-    expect(kpis.getByText('Due Soon')).toBeInTheDocument();
+    expect(kpis.getByText('Due soon')).toBeInTheDocument();
     expect(kpis.getByText('Healthy')).toBeInTheDocument();
     expect(kpis.getByText('Completed')).toBeInTheDocument();
     expect(kpis.getByText('4')).toBeInTheDocument(); // total items
@@ -448,7 +448,7 @@ describe('MaintenancePage', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Maintenance' })).toBeInTheDocument();
     // KPI band collapses to its skeleton — the labels are absent while loading.
-    expect(screen.queryByText('Total Items')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total items')).not.toBeInTheDocument();
     // Skeletons render across the page (KPI + items + projections + cost + records).
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(10);
     // No resolved item or error copy.
@@ -489,7 +489,7 @@ describe('MaintenancePage', () => {
     expect(screen.getByText('No maintenance items to categorize yet.')).toBeInTheDocument();
     expect(screen.getByText('No service records logged yet.')).toBeInTheDocument();
     // Shell + AI slot still mount.
-    expect(screen.getByText('Total Items')).toBeInTheDocument();
+    expect(screen.getByText('Total items')).toBeInTheDocument();
     expect(screen.getByTestId('ai-predictive-maintenance')).toBeInTheDocument();
   });
 
@@ -569,8 +569,8 @@ describe('MaintenancePage', () => {
 
     renderPage();
 
-    expect(screen.getByText('Total Spent')).toBeInTheDocument();
-    expect(screen.getByText('Avg / Service')).toBeInTheDocument();
+    expect(screen.getByText('Total spent')).toBeInTheDocument();
+    expect(screen.getByText('Avg / service')).toBeInTheDocument();
     // Single record → the <2-dates branch: every figure collapses to $500.
     expect(screen.getAllByText('$500').length).toBeGreaterThanOrEqual(2);
   });
@@ -634,7 +634,7 @@ describe('MaintenancePage', () => {
 
     renderPage();
 
-    const recordsHeading = screen.getByRole('heading', { name: /Service Records/i });
+    const recordsHeading = screen.getByRole('heading', { name: /Service records/i });
     const panel = recordsHeading.closest('div');
     expect(panel).not.toBeNull();
     const scoped = within(panel as HTMLElement);

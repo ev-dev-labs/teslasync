@@ -90,7 +90,7 @@ function statusLabel(status: string, t: TFunction): string {
 
 export default function MediaPlayerPage() {
   const { t } = useTranslation();
-  usePageTitle(t('media.title', 'Media Player'));
+  usePageTitle(t('media.title', 'Media player'));
 
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
@@ -214,6 +214,7 @@ export default function MediaPlayerPage() {
       },
       {
         key: 'now_playing_title',
+        filterValue: (row) => row.now_playing_title || null,
         header: t('media.col.track', 'Track'),
         sortable: true,
         render: (row) => (
@@ -224,6 +225,7 @@ export default function MediaPlayerPage() {
       },
       {
         key: 'now_playing_artist',
+        filterValue: (row) => row.now_playing_artist || null,
         header: t('media.col.artist', 'Artist'),
         sortable: true,
         render: (row) => (
@@ -234,6 +236,7 @@ export default function MediaPlayerPage() {
       },
       {
         key: 'playback_source',
+        filterValue: (row) => row.playback_source || null,
         header: t('media.col.source', 'Source'),
         sortable: true,
         render: (row) => (
@@ -247,6 +250,9 @@ export default function MediaPlayerPage() {
       },
       {
         key: 'audio_volume',
+        align: 'right',
+        filterValue: (row) => row.audio_volume == null ? null : `${row.audio_volume}:${row.audio_volume_max ?? ''}`,
+        filterValueLabel: (_value, row) => row.audio_volume == null ? '—' : `${formatVolumeLevel(row.audio_volume)}/${formatVolumeLevel(row.audio_volume_max)}`,
         header: t('media.col.volume', 'Volume'),
         sortable: true,
         render: (row) => (
@@ -257,6 +263,8 @@ export default function MediaPlayerPage() {
       },
       {
         key: 'playback_status',
+        filterValue: (row) => row.playback_status || null,
+        filterValueLabel: (_value, row) => statusLabel(row.playback_status ?? '', t),
         header: t('media.col.status', 'Status'),
         sortable: true,
         render: (row) => (
@@ -321,7 +329,7 @@ export default function MediaPlayerPage() {
 
   return (
     <PageContainer
-      title={t('media.title', 'Media Player')}
+      title={t('media.title', 'Media player')}
       subtitle={t('media.subtitle', 'Now playing, volume, and listening history')}
       query={[mediaQuery, historyQuery]}
     >
@@ -345,7 +353,7 @@ export default function MediaPlayerPage() {
           >
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Music className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('media.nowPlaying', 'Now Playing')}
+              {t('media.nowPlaying', 'Now playing')}
             </PanelTitle>
 
             {!hasVehicle ? (
@@ -475,25 +483,25 @@ export default function MediaPlayerPage() {
           className="grid grid-cols-2 gap-4 lg:grid-cols-4"
         >
           <MetricCard
-            label={t('media.uniqueTracks', 'Unique Tracks')}
+            label={t('media.uniqueTracks', 'Unique tracks')}
             value={stats.uniqueTracks}
             icon={<ListMusic className="h-5 w-5" aria-hidden="true" />}
             color="purple"
           />
           <MetricCard
-            label={t('media.topSource', 'Top Source')}
+            label={t('media.topSource', 'Top source')}
             value={stats.topSource}
             icon={<Radio className="h-5 w-5" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
-            label={t('media.avgVolume', 'Avg Volume')}
+            label={t('media.avgVolume', 'Avg volume')}
             value={fmtInt(stats.avgVolume)}
             icon={<Volume2 className="h-5 w-5" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
-            label={t('media.volumeStepFull', 'Volume Step')}
+            label={t('media.volumeStepFull', 'Volume step')}
             value={
               latest?.audio_volume_increment != null
                 ? fmtNumber(latest.audio_volume_increment, 2)
@@ -515,7 +523,7 @@ export default function MediaPlayerPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Volume2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('media.volumeOverTime', 'Volume over Time')}
+              {t('media.volumeOverTime', 'Volume over time')}
             </PanelTitle>
             {!hasVehicle ? (
               noVehicleState(
@@ -535,7 +543,7 @@ export default function MediaPlayerPage() {
               <div className="h-56 sm:h-64 xl:h-72">
                 {/* chart-a11y:no-table media volume time-series — continuous audio levels, not tabular */}
                 <EmbeddedChart
-                  title={t('media.volumeOverTime', 'Volume over Time')}
+                  title={t('media.volumeOverTime', 'Volume over time')}
                   ariaLabel={t('media.volumeAria', 'Media volume over time area chart')}
                   fluid
                 >
@@ -571,7 +579,7 @@ export default function MediaPlayerPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Disc3 className="h-4 w-4 text-purple-300" aria-hidden="true" />
-              {t('media.sourceDistribution', 'Source Distribution')}
+              {t('media.sourceDistribution', 'Source distribution')}
             </PanelTitle>
             {!hasVehicle ? (
               noVehicleState(
@@ -592,7 +600,7 @@ export default function MediaPlayerPage() {
                 {/* chart-a11y:no-table pie chart with dynamic source names — legend list below chart serves as accessible summary */}
                 <div className="h-48 sm:h-56">
                   <EmbeddedChart
-                    title={t('media.sourceDistribution', 'Source Distribution')}
+                    title={t('media.sourceDistribution', 'Source distribution')}
                     ariaLabel={t('media.sourceAria', 'Pie chart of media source distribution')}
                     fluid
                   >
@@ -644,7 +652,7 @@ export default function MediaPlayerPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <ListMusic className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('media.playbackHistory', 'Playback History')}
+            {t('media.playbackHistory', 'Playback history')}
             <Badge variant="neutral" size="sm" className="ml-auto">
               {fmtInt(filtered.length)} {t('media.records', 'records')}
             </Badge>
@@ -666,6 +674,8 @@ export default function MediaPlayerPage() {
           ) : (
             <DataTable<MediaSnapshot>
               tableId="vehicle-systems:media-history"
+              enableValueFilters
+              filterData={history ?? []}
               columns={columns}
               mobileColumns={['now_playing_title', 'playback_status', 'created_at']}
               data={sortedHistory}

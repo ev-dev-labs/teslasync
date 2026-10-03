@@ -37,7 +37,7 @@ const convertDeltaC = (valueC: number, unit: TemperatureUnitPref): number =>
   convertTempFromSI(valueC, unit) - convertTempFromSI(0, unit);
 export default function ComfortConsistencyPage() {
   const { t } = useTranslation();
-  usePageTitle(t('comfortConsistency.title', 'Comfort Consistency'));
+  usePageTitle(t('comfortConsistency.title', 'Comfort consistency'));
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const { unitPrefs, formatDuration } = useUnits();
@@ -92,7 +92,7 @@ export default function ComfortConsistencyPage() {
 
   return (
     <PageContainer
-      title={t('comfortConsistency.title', 'Comfort Consistency')}
+      title={t('comfortConsistency.title', 'Comfort consistency')}
       subtitle={t(
         'comfortConsistency.subtitle',
         'Evidence-qualified cabin-to-setpoint adherence, stabilization, and overshoot from the returned climate timeline',

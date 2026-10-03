@@ -32,7 +32,7 @@ const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function CabinThermalPage() {
   const { t, i18n } = useTranslation();
-  usePageTitle(t('cabinThermal.title', 'Cabin Thermal Model'));
+  usePageTitle(t('cabinThermal.title', 'Cabin thermal model'));
 
   const { vehicleId } = useSelectedVehicle();
   const {
@@ -73,7 +73,7 @@ export default function CabinThermalPage() {
 
   return (
     <PageContainer
-      title={t('cabinThermal.title', 'Cabin Thermal Model')}
+      title={t('cabinThermal.title', 'Cabin thermal model')}
       subtitle={t(
         'cabinThermal.subtitle',
         'A gate-by-gate audit of parked cabin relaxation, from returned climate rows to accepted Newton-cooling fits',

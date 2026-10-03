@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
+import { Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { AIAutoTripNameSuggestion } from '@/components/ai/AIAutoTripNameSuggestion';
 import { useTrip } from '@/api/hooks/useTrips';
@@ -27,7 +28,7 @@ export default function TripDetailPage() {
     [trip, id, t],
   );
 
-  // Keep the browser tab title consistent with the on-page subtitle: an
+  // Keep the browser tab title consistent with the on-page identity: an
   // unnamed but loaded trip identifies itself as "Trip #<id>" instead of the
   // generic page title, so multiple open trip tabs stay distinguishable.
   usePageTitle(trip ? tripLabel : t('trips.detail.title', 'Trip Detail'));
@@ -40,7 +41,7 @@ export default function TripDetailPage() {
   return (
     <PageContainer
       title={t('trips.detail.title', 'Trip Detail')}
-      subtitle={trip ? tripLabel : undefined}
+      metadataActions={trip ? <Text variant="bodySm" className="max-w-full [overflow-wrap:anywhere]">{tripLabel}</Text> : undefined}
       query={tripQuery}
       breadcrumbLabels={breadcrumbLabels}
     >

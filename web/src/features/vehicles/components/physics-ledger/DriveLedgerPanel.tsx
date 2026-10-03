@@ -1,7 +1,7 @@
 import type {
   PhysicsDriveLedger
 } from '@/api/types';
-import { Caption, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Caption, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { unknownLabel, useT } from './helpers';
 import { TermRow } from './TermRow';
@@ -26,23 +26,31 @@ export function DriveLedgerPanel({ ledger }: { ledger?: PhysicsDriveLedger | nul
       <Text as="p" size="sm" color="secondary">
         {ledger.honesty}
       </Text>
-      <div className="divide-y divide-[var(--border-default)]">
-        <TermRow label={t('physicsLedger.drive.measured', 'Measured pack energy')} term={ledger.measured_wh} format={energy} highlight />
-        <TermRow label={t('physicsLedger.drive.aero', 'Aero')} term={ledger.aero_wh} format={energy} />
-        <TermRow label={t('physicsLedger.drive.rolling', 'Rolling')} term={ledger.rolling_wh} format={energy} />
-        <TermRow label={t('physicsLedger.drive.grade', 'Grade')} term={ledger.grade_wh} format={energy} />
-        <TermRow label={t('physicsLedger.drive.inertial', 'Inertial')} term={ledger.inertial_wh} format={energy} />
-        <TermRow label={t('physicsLedger.drive.accessory', 'Accessory / HVAC')} term={ledger.accessory_wh} format={energy} />
-        <TermRow label={t('physicsLedger.drive.drivetrainLoss', 'Drivetrain loss (model)')} term={ledger.drivetrain_loss_wh} format={energy} />
-      </div>
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-[var(--border-default)] pt-2">
-        <Text as="span" size="sm" className="font-semibold">
-          {t('physicsLedger.drive.unexplained', 'Unexplained residual')}
-        </Text>
-        <Text as="span" size="sm" className="font-semibold tabular-nums">
-          {ledger.unexplained_known && ledger.unexplained_wh != null ? energy(ledger.unexplained_wh) : unknownLabel(t)}
-        </Text>
-      </div>
+      <Table aria-label={t('physicsLedger.drive.title', 'Drive energy ledger')}>
+        <tbody>
+          <TermRow label={t('physicsLedger.drive.measured', 'Measured pack energy')} term={ledger.measured_wh} format={energy} highlight />
+          <TermRow label={t('physicsLedger.drive.aero', 'Aero')} term={ledger.aero_wh} format={energy} />
+          <TermRow label={t('physicsLedger.drive.rolling', 'Rolling')} term={ledger.rolling_wh} format={energy} />
+          <TermRow label={t('physicsLedger.drive.grade', 'Grade')} term={ledger.grade_wh} format={energy} />
+          <TermRow label={t('physicsLedger.drive.inertial', 'Inertial')} term={ledger.inertial_wh} format={energy} />
+          <TermRow label={t('physicsLedger.drive.accessory', 'Accessory / HVAC')} term={ledger.accessory_wh} format={energy} />
+          <TermRow label={t('physicsLedger.drive.drivetrainLoss', 'Drivetrain loss (model)')} term={ledger.drivetrain_loss_wh} format={energy} />
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row">
+              <Text as="span" size="sm" className="font-semibold">
+                {t('physicsLedger.drive.unexplained', 'Unexplained residual')}
+              </Text>
+            </th>
+            <td className="text-right tabular-nums">
+              <Text as="span" size="sm" className="font-semibold">
+                {ledger.unexplained_known && ledger.unexplained_wh != null ? energy(ledger.unexplained_wh) : unknownLabel(t)}
+              </Text>
+            </td>
+          </tr>
+        </tfoot>
+      </Table>
       <Caption>
         {t('physicsLedger.drive.predicted', 'Predicted (known terms)')}:{' '}
         {ledger.predicted_wh != null ? energy(ledger.predicted_wh) : unknownLabel(t)}

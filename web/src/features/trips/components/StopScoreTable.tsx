@@ -20,6 +20,7 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
   const columns: Column<ScoredStop>[] = [
     {
       key: 'stop',
+      filterValue: (row) => row.site ?? null,
       header: t('journey.scoring.col.stop', 'Stop'),
       render: (row) => (
         <div>
@@ -36,6 +37,9 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
     },
     {
       key: 'score',
+      align: 'right',
+      filterValue: (row) => row.score ?? null,
+      filterValueLabel: (_, row) => fmtNumber(row.score, 0),
       header: t('journey.scoring.col.score', 'Score'),
       render: (row) => (
         <div className="flex min-w-[6rem] items-center gap-2">
@@ -53,6 +57,9 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
     },
     {
       key: 'wait',
+      align: 'right',
+      filterValue: (row) => row.wait_s ?? null,
+      filterValueLabel: (_, row) => row.wait_s == null ? '—' : t('journey.scoring.min', '{{min}} min', { min: fmtNumber(row.wait_s / 60, 0) }),
       header: t('journey.scoring.col.wait', 'Wait'),
       render: (row) => (
         <Text as="span" className="tabular-nums">
@@ -64,6 +71,9 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
     },
     {
       key: 'price',
+      align: 'right',
+      filterValue: (row) => row.unit_price ?? null,
+      filterValueLabel: (_, row) => row.unit_price == null ? '—' : formatCurrency(row.unit_price, 2),
       header: t('journey.scoring.col.price', '$/kWh'),
       render: (row) => (
         <Text as="span" className="tabular-nums">
@@ -73,6 +83,9 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
     },
     {
       key: 'health',
+      align: 'right',
+      filterValue: (row) => row.health ?? null,
+      filterValueLabel: (_, row) => row.health == null ? '—' : fmtNumber(row.health, 0),
       header: t('journey.scoring.col.health', 'Health'),
       render: (row) => (
         <Text as="span" className="tabular-nums">
@@ -82,6 +95,9 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
     },
     {
       key: 'corridor',
+      align: 'right',
+      filterValue: (row) => row.corridor_m ?? null,
+      filterValueLabel: (_, row) => units.formatDistance(row.corridor_m),
       header: t('journey.scoring.col.corridor', 'Off route'),
       render: (row) => (
         <Text as="span" className="tabular-nums">
@@ -93,6 +109,7 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
 
   return (
     <DataTable
+      enableValueFilters
       columns={columns}
       mobileColumns={['stop', 'score', 'wait']}
       data={safeArray(stops)}

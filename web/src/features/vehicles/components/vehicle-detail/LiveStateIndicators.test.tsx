@@ -115,7 +115,7 @@ describe('LiveStateIndicators — structure & a11y', () => {
 
     // The cluster is exposed to assistive tech as a named group rather than a
     // bare div of loose text.
-    expect(screen.getByRole('group', { name: 'Live State' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Live state' })).toBeInTheDocument()
     expect(badges()).toHaveLength(5)
   })
 
@@ -140,7 +140,7 @@ describe('LiveStateIndicators — structure & a11y', () => {
     expect(text).toContain('Locked')
     expect(text).toContain('Sentry:')
     expect(text).toContain('Climate:')
-    expect(text).toContain('Not Charging')
+    expect(text).toContain('Not charging')
   })
 })
 
@@ -231,7 +231,7 @@ describe('LiveStateIndicators — sentry / climate / charging badges', () => {
 
     rerender(<LiveStateIndicators state={makeState({ is_charging: false })} />)
     charging = badges()[4]
-    expect(charging.textContent).toBe('Not Charging')
+    expect(charging.textContent).toBe('Not charging')
     expect(charging.dataset.variant).toBe('neutral')
   })
 })

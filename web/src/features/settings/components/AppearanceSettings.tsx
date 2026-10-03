@@ -97,7 +97,7 @@ export function AppearanceSettings() {
 
   const timeFormatChoices: { id: TimeFormatId; label: string; help: string }[] = [
     { id: 'relative', label: t('theme.timeFormat.relative', 'Relative (2h ago)'), help: t('theme.timeFormat.relativeHelp', 'Best for recent activity feeds') },
-    { id: 'absolute', label: t('theme.timeFormat.absolute', 'Absolute (Nov 12, 13:42)'), help: t('theme.timeFormat.absoluteHelp', 'Best for trip planning and event correlation') },
+    { id: 'absolute', label: t('theme.timeFormat.absolute', 'Absolute (nov 12, 13:42)'), help: t('theme.timeFormat.absoluteHelp', 'Best for trip planning and event correlation') },
   ]
 
   const densityChoices: { id: DensityId; label: string; help: string }[] = [

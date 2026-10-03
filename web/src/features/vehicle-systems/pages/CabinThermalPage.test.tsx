@@ -204,7 +204,7 @@ describe('CabinThermalPage', () => {
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Cabin Thermal Model',
+      name: 'Cabin thermal model',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.historyHook).toHaveBeenLastCalledWith('7');

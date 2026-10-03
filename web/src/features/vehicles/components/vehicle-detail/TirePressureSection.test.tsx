@@ -90,7 +90,7 @@ describe('TirePressureSection — structure', () => {
   it('renders the "Tire Pressure" panel heading as a real heading element', () => {
     render(<TirePressureSection tireData={makeTire()} />)
 
-    const heading = screen.getByRole('heading', { name: 'Tire Pressure' })
+    const heading = screen.getByRole('heading', { name: 'Tire pressure' })
     expect(heading).toBeInTheDocument()
     expect(heading.tagName).toBe('H3')
   })
@@ -98,10 +98,10 @@ describe('TirePressureSection — structure', () => {
   it('renders one labelled card per corner', () => {
     render(<TirePressureSection tireData={makeTire()} />)
 
-    expect(screen.getByText('Front Left')).toBeInTheDocument()
-    expect(screen.getByText('Front Right')).toBeInTheDocument()
-    expect(screen.getByText('Rear Left')).toBeInTheDocument()
-    expect(screen.getByText('Rear Right')).toBeInTheDocument()
+    expect(screen.getByText('Front left')).toBeInTheDocument()
+    expect(screen.getByText('Front right')).toBeInTheDocument()
+    expect(screen.getByText('Rear left')).toBeInTheDocument()
+    expect(screen.getByText('Rear right')).toBeInTheDocument()
   })
 })
 
@@ -184,12 +184,12 @@ describe('TirePressureSection — null-value safety', () => {
     // The missing value is rendered as the em-dash placeholder, not a crash.
     expect(screen.getByText('\u2014')).toBeInTheDocument()
 
-    const badge = screen.getByText('No Data')
+    const badge = screen.getByText('No data')
     expect(badge).toBeInTheDocument()
     expect(badge.className).toContain(BADGE_VARIANTS.neutral)
 
     // The rest of the grid still renders — the panel is never left blank.
-    expect(screen.getByText('Front Left')).toBeInTheDocument()
+    expect(screen.getByText('Front left')).toBeInTheDocument()
     expect(screen.getAllByText('3.00 bar')).toHaveLength(3)
   })
 })
@@ -201,15 +201,15 @@ describe('TirePressureSection — empty states', () => {
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.getByText('No tire pressure data available')).toBeInTheDocument()
     // No corner cards render behind the empty state.
-    expect(screen.queryByText('Front Left')).toBeNull()
-    expect(screen.queryByText('Rear Right')).toBeNull()
+    expect(screen.queryByText('Front left')).toBeNull()
+    expect(screen.queryByText('Rear right')).toBeNull()
   })
 
   it('shows the empty state when the snapshot is undefined', () => {
     render(<TirePressureSection tireData={undefined} />)
 
     expect(screen.getByText('No tire pressure data available')).toBeInTheDocument()
-    expect(screen.queryByText('Front Left')).toBeNull()
+    expect(screen.queryByText('Front left')).toBeNull()
   })
 })
 
@@ -228,7 +228,7 @@ describe('TirePressureSection — i18n', () => {
   it('renders translated fallbacks, never raw translation keys', () => {
     render(<TirePressureSection tireData={makeTire({ rear_left: HIGH_PA })} />)
 
-    expect(screen.getByText('Tire Pressure')).toBeInTheDocument()
+    expect(screen.getByText('Tire pressure')).toBeInTheDocument()
     expect(screen.getByText('High')).toBeInTheDocument()
     // The underlying i18n keys must never leak into the UI.
     expect(screen.queryByText('vehicles.detail.tirePressure')).toBeNull()

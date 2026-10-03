@@ -409,16 +409,16 @@ describe('TirePressurePage — populated data (bar)', () => {
     renderPage();
 
     // Header shell always renders.
-    expect(screen.getByRole('heading', { level: 1, name: 'Tire Pressure' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tire pressure' })).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
 
     // Wait for the latest reading to resolve (avg KPI is a unique post-resolution
     // string), then scope each KPI to its card. avg = 300k Pa = 3 bar,
     // min = 200k Pa = 2 bar, 2 warnings.
     await screen.findByText('3.00 bar');
-    expect(kpiCard('Avg Pressure').getByText('3.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Min Pressure').getByText('2.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Warning Count').getByText('2')).toBeInTheDocument();
+    expect(kpiCard('Avg pressure').getByText('3.00 bar')).toBeInTheDocument();
+    expect(kpiCard('Min pressure').getByText('2.00 bar')).toBeInTheDocument();
+    expect(kpiCard('Warning count').getByText('2')).toBeInTheDocument();
 
     // Gauge status badges reflect each corner's bucket.
     expect(screen.getAllByText('Normal')).toHaveLength(2);
@@ -430,8 +430,8 @@ describe('TirePressurePage — populated data (bar)', () => {
 
     // History table headers carry the active display unit; the soft-warning row
     // surfaces its badge and the clean row an OK badge. No empty/placeholder.
-    expect(screen.getByText('Front Left (bar)')).toBeInTheDocument();
-    expect(screen.getByText('Soft Warning')).toBeInTheDocument();
+    expect(screen.getByText('Front left (bar)')).toBeInTheDocument();
+    expect(screen.getByText('Soft warning')).toBeInTheDocument();
     expect(screen.getByText('OK')).toBeInTheDocument();
     expect(screen.queryByText('No history data')).not.toBeInTheDocument();
     expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
@@ -453,9 +453,9 @@ describe('TirePressurePage — populated data (bar)', () => {
 
     // Wait for the reading to resolve; avg + min both convert to 3.00 bar.
     await screen.findAllByText('3.00 bar');
-    expect(kpiCard('Min Pressure').getByText('3.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Avg Pressure').getByText('3.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Warning Count').getByText('0')).toBeInTheDocument();
+    expect(kpiCard('Min pressure').getByText('3.00 bar')).toBeInTheDocument();
+    expect(kpiCard('Avg pressure').getByText('3.00 bar')).toBeInTheDocument();
+    expect(kpiCard('Warning count').getByText('0')).toBeInTheDocument();
     // The phantom 0-bar reading must not leak into the KPI band.
     expect(screen.queryByText('0.00 bar')).not.toBeInTheDocument();
   });
@@ -469,9 +469,9 @@ describe('TirePressurePage — unit-aware display', () => {
     renderPage();
 
     // Column header advertises the psi unit ...
-    expect(await screen.findByText('Front Left (psi)')).toBeInTheDocument();
+    expect(await screen.findByText('Front left (psi)')).toBeInTheDocument();
     // ... and the KPI values are converted into psi (not left as bar).
-    expect(kpiCard('Avg Pressure').getByText('43.51 psi')).toBeInTheDocument();
+    expect(kpiCard('Avg pressure').getByText('43.51 psi')).toBeInTheDocument();
     expect(screen.queryByText('3.00 bar')).not.toBeInTheDocument();
   });
 });
@@ -483,7 +483,7 @@ describe('TirePressurePage — TPMS warning banners', () => {
     renderPage();
 
     expect(await screen.findByText('Hard TPMS warning active')).toBeInTheDocument();
-    expect(screen.getByText('Hard Warning')).toBeInTheDocument();
+    expect(screen.getByText('Hard warning')).toBeInTheDocument();
     expect(screen.queryByText('Soft TPMS warning active')).not.toBeInTheDocument();
   });
 
@@ -520,7 +520,7 @@ describe('TirePressurePage — loading / empty / error states', () => {
     // Both the chart and the table surface an empty placeholder.
     expect(screen.getAllByText('No history data').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();
-    expect(kpiCard('Avg Pressure').getByText('—')).toBeInTheDocument();
+    expect(kpiCard('Avg pressure').getByText('—')).toBeInTheDocument();
   });
 
   it('names the failed source, preserves history, and keeps section retry working', async () => {
@@ -566,7 +566,7 @@ describe('TirePressurePage — interactions + a11y', () => {
   it('uses the shared range for history without rendering a local range picker', async () => {
     renderPage();
 
-    await screen.findByText('Front Left (bar)'); // wait for populated render
+    await screen.findByText('Front left (bar)'); // wait for populated render
     expect(H.historyPaths).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01&end=2026-06-30');
     expect(screen.queryByTestId('tire-pressure-range')).not.toBeInTheDocument();
     expect(H.setRange).not.toHaveBeenCalled();

@@ -42,11 +42,11 @@ export default function PhysicsClocksSection({ physics }: { physics: PhysicsPage
   const columns = [
     { key: 'event', header: t('teslaOnly.eventTime', 'Event time'), render: (row: ClockReading) => preciseTime(row.event_time) },
     { key: 'ingest', header: t('teslaOnly.ingestTime', 'Ingest time'), render: (row: ClockReading) => preciseTime(row.ingest_time) },
-    { key: 'lag', header: t('teslaOnly.clocksLag', 'Stored ingest lag'), render: (row: ClockReading) => {
+    { key: 'lag', align: 'right' as const, header: t('teslaOnly.clocksLag', 'Stored ingest lag'), render: (row: ClockReading) => {
       const value = lagFor(row);
       return value == null ? unknown(t) : `${fmtNumber(value, 1)} s`;
     } },
-    { key: 'gap', header: t('teslaOnly.elapsedSinceEvent', 'Elapsed since prior event'), render: (row: ClockReading) => seconds(row.gap_s, t) },
+    { key: 'gap', align: 'right' as const, header: t('teslaOnly.elapsedSinceEvent', 'Elapsed since prior event'), render: (row: ClockReading) => seconds(row.gap_s, t) },
     { key: 'display', header: t('teslaOnly.displayTime', 'Display time'), render: (row: ClockReading) => preciseTime(row.display_time) },
     { key: 'unknown', header: t('teslaOnly.unknownFlag', 'Unknown flag'), render: (row: ClockReading) => yesNo(row.unknown, t) },
   ];
@@ -79,7 +79,7 @@ export default function PhysicsClocksSection({ physics }: { physics: PhysicsPage
         <Badge variant="neutral" size="sm">{t('teslaOnly.clocksLagRange', 'Stored lag range: {{from}} → {{to}}', { from: seconds(lag[0], t), to: seconds(maximum(lag), t) })}</Badge>
         {latest?.unknown && <Badge variant="warning" size="sm">{t('teslaOnly.workbench.latestFlag', 'Latest reading flagged unknown')}</Badge>}
       </div>
-      <Text as="p" variant="caption">{t('teslaOnly.clocksAnalysis', 'Lag is ingest minus event time for paired timestamps; negative values can reflect clock disagreement. Intervals are gaps between returned events, not proven outages. Display time is generated on read. Compare Unknown OS and Car Kept Living.')}</Text>
+      <Text as="p" variant="caption">{t('teslaOnly.clocksAnalysis', 'Lag is ingest minus event time for paired timestamps; negative values can reflect clock disagreement. Intervals are gaps between returned events, not proven outages. Display time is generated on read. Compare unknown OS and car kept living.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.clocksRecent', 'Latest six returned samples (second precision)')}>
       <DataTable tableId="physics:clocks-recent" data={rows.slice(-6).reverse()} columns={columns} pagination={pagination}

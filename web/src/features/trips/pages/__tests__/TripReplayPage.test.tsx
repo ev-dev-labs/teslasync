@@ -412,6 +412,11 @@ describe('TripReplayPage populated', () => {
   it('renders every summary + current-position section (no hidden panels)', () => {
     renderPage();
 
+    const context = screen.getByText(/Home → Office/);
+    expect(context).toBeVisible();
+    expect(context.closest('[data-action-group="metadata"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh replay data' })
+      .closest('[data-action-group="secondary"]')).not.toBeNull();
     for (const label of ['Distance', 'Duration', 'Avg Speed', 'Max Speed', 'Efficiency', 'Elevation Gain', 'Elevation Loss']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }

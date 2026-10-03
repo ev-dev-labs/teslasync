@@ -102,7 +102,7 @@ describe('BatteryComparison', () => {
     renderComparison([makeVehicle(1, 'Model 3'), makeVehicle(2, 'Model Y')]);
 
     // Header is always present.
-    expect(screen.getByText('Fleet Battery Status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet battery status')).toBeInTheDocument();
 
     // One progressbar per resolved vehicle, each with an accessible name.
     const bars = await screen.findAllByRole('progressbar');
@@ -150,7 +150,7 @@ describe('BatteryComparison', () => {
     renderComparison([makeVehicle(1), makeVehicle(2)]);
 
     // Header stays; the shared empty state (role=status) replaces the bars.
-    expect(screen.getByText('Fleet Battery Status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet battery status')).toBeInTheDocument();
     expect(
       await screen.findByText('No battery data available for the current fleet.'),
     ).toBeInTheDocument();
@@ -184,11 +184,11 @@ describe('BatteryComparison', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('clamps out-of-range and non-finite battery levels into 0–100', async () => {
+  it('clamps recorded percentages and keeps non-finite readings unknown', async () => {
     resolvedFleet({
       1: makeState(150), // over-range → 100
       2: makeState(-20), // under-range → 0
-      3: makeState(Number.NaN), // non-finite → 0
+      3: makeState(Number.NaN),
     });
 
     renderComparison([
@@ -199,11 +199,12 @@ describe('BatteryComparison', () => {
 
     const over = await screen.findByRole('progressbar', { name: /Over battery level/i });
     const under = screen.getByRole('progressbar', { name: /Under battery level/i });
-    const nan = screen.getByRole('progressbar', { name: /Nan battery level/i });
+    const nan = screen.getByRole('group', { name: /Nan battery level/i });
 
     expect(over).toHaveAttribute('aria-valuenow', '100');
     expect(under).toHaveAttribute('aria-valuenow', '0');
-    expect(nan).toHaveAttribute('aria-valuenow', '0');
+    expect(nan).not.toHaveAttribute('aria-valuenow');
+    expect(screen.queryByRole('progressbar', { name: /Nan battery level/i })).not.toBeInTheDocument();
     expect((over.firstElementChild as HTMLElement).style.width).toBe('100%');
     expect((under.firstElementChild as HTMLElement).style.width).toBe('0%');
   });

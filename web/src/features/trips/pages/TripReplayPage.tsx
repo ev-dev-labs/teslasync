@@ -7,7 +7,7 @@ import {
   ArrowUpRight, ArrowDownRight, RefreshCw,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, PanelTitle } from '@/components/ui';
+import { GlassPanel, Button, PanelTitle, Text } from '@/components/ui';
 import {
   PlaybackControls,
   type TimelineMarker,
@@ -414,8 +414,12 @@ export default function TripReplayPage() {
   return (
     <PageContainer
       title={t('replay.title', 'Trip Replay')}
-      subtitle={drive
-        ? `${t('replay.drive', 'Drive')} #${drive.id} — ${formatDate(drive.startTs)}${drive.startAddress && drive.endAddress ? ` · ${drive.startAddress} → ${drive.endAddress}` : ''}`
+      metadataActions={drive
+        ? (
+          <Text variant="bodySm" className="max-w-full [overflow-wrap:anywhere]">
+            {`${t('replay.drive', 'Drive')} #${drive.id} — ${formatDate(drive.startTs)}${drive.startAddress && drive.endAddress ? ` · ${drive.startAddress} → ${drive.endAddress}` : ''}`}
+          </Text>
+        )
         : undefined}
       loading={isLoading}
       error={error instanceof Error ? error : error ? new Error(String(error)) : null}
@@ -425,7 +429,7 @@ export default function TripReplayPage() {
           ? `${drive.startAddress ?? t('replay.drive', 'Drive')} → ${drive.endAddress ?? ''}`
           : `${t('replay.drive', 'Drive')} #${id}`,
       }}
-      actions={
+      secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2" data-tour="drive-replay-share">
           <Button
             variant="ghost"

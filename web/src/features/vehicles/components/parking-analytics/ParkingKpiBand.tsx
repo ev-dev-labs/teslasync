@@ -55,7 +55,7 @@ export function ParkingKpiBand({
         ) : (
           <>
             <MetricCard
-              label={t('parking.parkedShare', 'Time Parked')}
+              label={t('parking.parkedShare', 'Time parked')}
               value={
                 summary.parkedShare != null
                   ? `${fmtNumber(summary.parkedShare * 100, 0)}%`
@@ -66,7 +66,7 @@ export function ParkingKpiBand({
               color="cyan"
             />
             <MetricCard
-              label={t('parking.nightShare', 'Overnight Share')}
+              label={t('parking.nightShare', 'Overnight share')}
               value={
                 summary.nightShare != null
                   ? `${fmtNumber(summary.nightShare * 100, 0)}%`
@@ -81,7 +81,7 @@ export function ParkingKpiBand({
               color="purple"
             />
             <MetricCard
-              label={t('parking.longestStint', 'Longest Stint')}
+              label={t('parking.longestStint', 'Longest stint')}
               value={
                 summary.longestStint
                   ? formatDuration(summary.longestStint.durationMs / 1_000, {

@@ -65,13 +65,13 @@ export function QuickStatsGrid({ state, status }: QuickStatsGridProps) {
         subtitle={state.speed > 0 ? t('common.driving', 'Driving') : t('common.parked', 'Parked')}
       />
       <MetricCard
-        label={t('common.insideTemp', 'Inside Temp')}
+        label={t('common.insideTemp', 'Inside temp')}
         value={formatTemperature(state.inside_temp)}
         icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
         color="green"
       />
       <MetricCard
-        label={t('common.outsideTemp', 'Outside Temp')}
+        label={t('common.outsideTemp', 'Outside temp')}
         value={formatTemperature(state.outside_temp)}
         icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
         color="cyan"

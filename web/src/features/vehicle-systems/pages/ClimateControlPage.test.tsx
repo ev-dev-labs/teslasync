@@ -296,12 +296,12 @@ describe('ClimateControlPage — structure, wiring & a11y', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Climate Control' }),
+      screen.getByRole('heading', { level: 1, name: 'Climate control' }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('HVAC status, temperatures, and seat heaters'),
     ).toBeInTheDocument();
-    expect(document.title).toContain('Climate Control');
+    expect(document.title).toContain('Climate control');
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
 
@@ -336,52 +336,52 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
   it('shows the active HVAC banner with keeper / defrost / battery-heater / power chips', () => {
     renderPage();
 
-    expect(screen.getByText('HVAC System')).toBeInTheDocument();
+    expect(screen.getByText('HVAC system')).toBeInTheDocument();
     // keeper appears in the banner chip AND the climate-systems card.
-    expect(screen.getAllByText('Dog Mode').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Dog mode').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Defrost')).toBeInTheDocument();
     // battery-heater appears in the banner chip AND the protection card.
-    expect(screen.getAllByText('Battery Heater').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Insufficient Power to Heat')).toBeInTheDocument();
+    expect(screen.getAllByText('Battery heater').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Insufficient power to heat')).toBeInTheDocument();
   });
 
   it('renders climate-system + protection metrics from the latest state', () => {
     renderPage();
 
-    expect(within(card('HVAC Power')).getByText('On')).toBeInTheDocument();
-    expect(within(card('HVAC Power')).getByText('State: On')).toBeInTheDocument();
-    expect(within(card('Fan Speed')).getByText('5')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('State: On')).toBeInTheDocument();
+    expect(within(card('Fan speed')).getByText('5')).toBeInTheDocument();
     // heatStyle(2) → "Medium" for the steering-wheel heat level.
-    expect(within(card('Steering Wheel Heat Level')).getByText('Medium')).toBeInTheDocument();
-    expect(within(card('Overheat Protection')).getByText('On')).toBeInTheDocument();
+    expect(within(card('Steering wheel heat level')).getByText('Medium')).toBeInTheDocument();
+    expect(within(card('Overheat protection')).getByText('On')).toBeInTheDocument();
     // passenger set temp converts + carries the °C suffix.
-    expect(within(card('Passenger Setting')).getByText('20.0°C')).toBeInTheDocument();
+    expect(within(card('Passenger setting')).getByText('20.0°C')).toBeInTheDocument();
   });
 
   it('renders seat-heater levels, cooling ventilation and auto-climate chips', () => {
     renderPage();
-    const region = screen.getByRole('region', { name: 'Comfort & Efficiency' });
+    const region = screen.getByRole('region', { name: 'Comfort & efficiency' });
 
     // Front-left seat heater at level 3 → "High (3/3)".
     expect(within(region).getByText('High (3/3)')).toBeInTheDocument();
     expect(within(region).getByText(/Ventilation:\s*On/)).toBeInTheDocument();
 
     // Auto-climate: left is auto, right is manual.
-    const leftChip = within(region).getByText('Auto Climate (Left)').closest('div')!;
+    const leftChip = within(region).getByText('Auto climate (left)').closest('div')!;
     expect(within(leftChip).getByText('Auto')).toBeInTheDocument();
-    const rightChip = within(region).getByText('Auto Climate (Right)').closest('div')!;
+    const rightChip = within(region).getByText('Auto climate (right)').closest('div')!;
     expect(within(rightChip).getByText('Manual')).toBeInTheDocument();
   });
 
   it('derives comfort score/delta and history-driven efficiency stats', () => {
     renderPage();
-    const overview = screen.getByRole('region', { name: 'Climate Overview' });
-    const efficiency = screen.getByRole('region', { name: 'Comfort & Efficiency' });
+    const overview = screen.getByRole('region', { name: 'Climate overview' });
+    const efficiency = screen.getByRole('region', { name: 'Comfort & efficiency' });
 
     // inside 22, set 21 → |Δ|=1 → score 90, delta +1, near target, excellent.
     expect(within(overview).getByText('90')).toBeInTheDocument();
     expect(within(overview).getByText('+1')).toBeInTheDocument();
-    expect(within(overview).getByText('Near Target')).toBeInTheDocument();
+    expect(within(overview).getByText('Near target')).toBeInTheDocument();
     expect(within(overview).getByText('Excellent')).toBeInTheDocument();
 
     // efficiency: avg fan 5.0, peak 6.0, AC-on 50%, comfort 90%.
@@ -407,7 +407,7 @@ describe('ClimateControlPage — imperial (°F) unit boundary', () => {
     renderPage();
 
     // 20 °C → 68 °F on the passenger card (suffix flips with the preference).
-    expect(within(card('Passenger Setting')).getByText('68.0°F')).toBeInTheDocument();
+    expect(within(card('Passenger setting')).getByText('68.0°F')).toBeInTheDocument();
     // history: 18 °C → 64.4 °F cell; header unit flips to °F.
     const table = screen.getByRole('table');
     expect(within(table).getByText('64.4')).toBeInTheDocument();
@@ -423,10 +423,10 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     const { container } = renderPage();
 
     // Shell still renders; the section heading stays put so layout doesn't jump.
-    expect(screen.getByRole('heading', { level: 1, name: 'Climate Control' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Climate Systems' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Climate control' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Climate systems' })).toBeInTheDocument();
     // …but its metric cards are replaced by pulse skeletons.
-    expect(screen.queryByText('HVAC Power')).not.toBeInTheDocument();
+    expect(screen.queryByText('HVAC power')).not.toBeInTheDocument();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 
@@ -434,13 +434,13 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     install({ latest: undefined, history: [] });
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Climate Systems' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Climate systems' })).toBeInTheDocument();
     // Nullish values collapse to explicit off/zero placeholders — no crash.
-    expect(within(card('HVAC Power')).getByText('Off')).toBeInTheDocument();
-    expect(within(card('Fan Speed')).getByText('0')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('Off')).toBeInTheDocument();
+    expect(within(card('Fan speed')).getByText('0')).toBeInTheDocument();
     // Gauges + charts + table show their own empty states.
-    const overview = screen.getByRole('region', { name: 'Climate Overview' });
-    expect(within(overview).getByText('Inside Temp')).toBeInTheDocument();
+    const overview = screen.getByRole('region', { name: 'Climate overview' });
+    expect(within(overview).getByText('Inside temp')).toBeInTheDocument();
     expect(screen.getByText('No temperature history has been recorded.')).toBeInTheDocument();
     expect(screen.getByText(/Cabin, ambient, and set-point trends/)).toBeInTheDocument();
     expect(screen.getByText('No HVAC operating history has been recorded.')).toBeInTheDocument();
@@ -459,7 +459,7 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     expect(banner).toBeInTheDocument();
     expect(banner.textContent).toContain('boom');
     // The deterministic bands still render beneath the error banner.
-    expect(within(card('HVAC Power')).getByText('Off')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('Off')).toBeInTheDocument();
   });
 });
 
@@ -507,7 +507,7 @@ describe('ClimateControlPage — heatStyle rounding (regression)', () => {
     renderPage();
 
     // 2.6 → 3 → "High"; subtitle rounds too (Level 3).
-    const swCard = card('Steering Wheel Heat Level');
+    const swCard = card('Steering wheel heat level');
     expect(within(swCard).getByText('High')).toBeInTheDocument();
     expect(within(swCard).getByText('Level 3')).toBeInTheDocument();
     // Front-right seat heater 1.6 → 2 → "Medium (2/3)".

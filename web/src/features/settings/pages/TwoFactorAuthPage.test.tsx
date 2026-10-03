@@ -164,7 +164,7 @@ describe('TwoFactorAuthPage — open mode', () => {
 
     // Both bento sections expose accessible region names (a11y landmarks).
     expect(
-      screen.getByRole('region', { name: /Manage two-factor authentication/i }),
+      screen.getByRole('region', { name: /Manage Two-factor authentication/i }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('region', { name: /Two-factor apps and recovery/i }),

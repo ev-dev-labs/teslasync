@@ -52,7 +52,7 @@ export function ParkingCoverageMethodology({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <PanelTitle className="flex items-center gap-2">
             <Database className="h-4 w-4 text-purple-300" aria-hidden="true" />
-            {t('parking.coverage.title', 'Coverage & Method')}
+            {t('parking.coverage.title', 'Coverage & method')}
           </PanelTitle>
           <Badge
             variant={coverage.possiblyCapped ? 'warning' : 'success'}

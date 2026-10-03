@@ -20,10 +20,10 @@ export function TirePressureSection({ tireData }: TirePressureSectionProps) {
     () =>
       tireData
         ? [
-            { label: t('vehicles.detail.tireFl', 'Front Left'), value: tireData.front_left },
-            { label: t('vehicles.detail.tireFr', 'Front Right'), value: tireData.front_right },
-            { label: t('vehicles.detail.tireRl', 'Rear Left'), value: tireData.rear_left },
-            { label: t('vehicles.detail.tireRr', 'Rear Right'), value: tireData.rear_right },
+            { label: t('vehicles.detail.tireFl', 'Front left'), value: tireData.front_left },
+            { label: t('vehicles.detail.tireFr', 'Front right'), value: tireData.front_right },
+            { label: t('vehicles.detail.tireRl', 'Rear left'), value: tireData.rear_left },
+            { label: t('vehicles.detail.tireRr', 'Rear right'), value: tireData.rear_right },
           ]
         : [],
     [tireData, t],
@@ -43,7 +43,7 @@ export function TirePressureSection({ tireData }: TirePressureSectionProps) {
         case 'critical-high':
           return t('common.critical', 'Critical')
         default:
-          return t('common.noData', 'No Data')
+          return t('common.noData', 'No data')
       }
     },
     [t],
@@ -53,7 +53,7 @@ export function TirePressureSection({ tireData }: TirePressureSectionProps) {
     <GlassPanel className="p-6">
       <PanelTitle className="mb-4 flex items-center gap-2">
         <CircleDot className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('vehicles.detail.tirePressure', 'Tire Pressure')}
+        {t('vehicles.detail.tirePressure', 'Tire pressure')}
       </PanelTitle>
       {tireData ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

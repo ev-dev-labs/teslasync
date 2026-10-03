@@ -55,7 +55,7 @@ export function UtilizationKpis({
         ) : (
           <>
             <MetricCard
-              label={t('utilization.drivingShare', 'Time Driving')}
+              label={t('utilization.drivingShare', 'Time driving')}
               value={
                 summary.drivingShare != null
                   ? `${fmtNumber(summary.drivingShare * 100, 1)}%`
@@ -71,7 +71,7 @@ export function UtilizationKpis({
               color="cyan"
             />
             <MetricCard
-              label={t('utilization.activeDays', 'Days Used')}
+              label={t('utilization.activeDays', 'Days used')}
               value={
                 summary.activeDayShare != null
                   ? `${fmtNumber(summary.activeDayShare * 100, 0)}%`
@@ -94,7 +94,7 @@ export function UtilizationKpis({
               color="purple"
             />
             <MetricCard
-              label={t('utilization.perDay', 'Distance per Day')}
+              label={t('utilization.perDay', 'Distance per day')}
               value={
                 summary.distancePerDayM != null
                   ? formatDistance(summary.distancePerDayM, {
@@ -113,7 +113,7 @@ export function UtilizationKpis({
             <MetricCard
               label={t(
                 'utilization.costPerKmCard',
-                'Cost per Distance',
+                'Cost per distance',
               )}
               value={
                 costPerDisplayDistance != null

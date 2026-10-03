@@ -24,7 +24,7 @@ export default function PhysicsChargePortSection({ physics }: { physics: Physics
     { key: 'state', header: t('teslaOnly.chargeState', 'Charge state'), render: (r: typeof rows[number]) => r.charge_state || unknown(t) },
     { key: 'gear', header: t('teslaOnly.gear', 'Gear'), render: (r: typeof rows[number]) => r.gear || unknown(t) },
     { key: 'firmware', header: t('teslaOnly.firmware', 'Firmware'), render: (r: typeof rows[number]) => r.firmware || unknown(t) },
-    { key: 'current', header: t('teslaOnly.packCurrent', 'Pack current'), render: (r: typeof rows[number]) => r.pack_current_a == null ? unknown(t) : `${fmtNumber(r.pack_current_a, 1)} A` },
+    { key: 'current', align: 'right' as const, header: t('teslaOnly.packCurrent', 'Pack current'), render: (r: typeof rows[number]) => r.pack_current_a == null ? unknown(t) : `${fmtNumber(r.pack_current_a, 1)} A` },
     { key: 'latch', header: t('teslaOnly.latch', 'Latch'), render: (r: typeof rows[number]) => r.latch || unknown(t) },
     { key: 'door', header: t('teslaOnly.door', 'Door'), render: (r: typeof rows[number]) => yesNo(r.door_open, t) },
     { key: 'schedule', header: t('teslaOnly.scheduleMode', 'Schedule mode'), render: (r: typeof rows[number]) => r.scheduled_mode || unknown(t) },

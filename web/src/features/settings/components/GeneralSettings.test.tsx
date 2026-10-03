@@ -176,9 +176,9 @@ describe('GeneralSettings — loading', () => {
 
     // Header always renders; the Save button lives outside the loading branch.
     expect(screen.getByText('Application')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /save settings/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Save settings/i })).toBeInTheDocument()
     // Form fields are gated behind the loaded branch.
-    expect(screen.queryByLabelText('Distance Unit')).toBeNull()
+    expect(screen.queryByLabelText('Distance unit')).toBeNull()
   })
 })
 
@@ -193,20 +193,20 @@ describe('GeneralSettings — rendering', () => {
     })
     renderPanel()
 
-    const distance = (await screen.findByLabelText('Distance Unit')) as HTMLSelectElement
+    const distance = (await screen.findByLabelText('Distance unit')) as HTMLSelectElement
     expect(distance.value).toBe('mi')
-    expect((screen.getByLabelText('Temperature Unit') as HTMLSelectElement).value).toBe('F')
-    expect((screen.getByLabelText('Pressure Unit') as HTMLSelectElement).value).toBe('psi')
+    expect((screen.getByLabelText('Temperature unit') as HTMLSelectElement).value).toBe('F')
+    expect((screen.getByLabelText('Pressure unit') as HTMLSelectElement).value).toBe('psi')
     expect((screen.getByLabelText('Currency') as HTMLSelectElement).value).toBe('€')
-    expect((screen.getByLabelText('Number & Date Locale') as HTMLSelectElement).value).toBe('de-DE')
+    expect((screen.getByLabelText('Number & date locale') as HTMLSelectElement).value).toBe('de-DE')
     // The currency-aware cost field renders with its accessible label.
-    expect(screen.getByLabelText('Electricity Cost (per kWh)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Electricity cost (per kWh)')).toBeInTheDocument()
   })
 
   it('does not render the sync banner when the fleet reports no vehicles', async () => {
     renderPanel()
-    await screen.findByLabelText('Distance Unit')
-    expect(screen.queryByRole('button', { name: /sync from car/i })).toBeNull()
+    await screen.findByLabelText('Distance unit')
+    expect(screen.queryByRole('button', { name: /Sync from car/i })).toBeNull()
     expect(screen.queryByText(/Car uses/)).toBeNull()
   })
 })
@@ -216,7 +216,7 @@ describe('GeneralSettings — decimal precision', () => {
     state.settings = makeSettings({ decimal_precision: 3 })
     renderPanel()
 
-    const input = (await screen.findByLabelText('Decimal Precision')) as HTMLInputElement
+    const input = (await screen.findByLabelText('Decimal precision')) as HTMLInputElement
     expect(input.value).toBe('3')
     // (14.248539).toFixed(3) === '14.249'
     expect(screen.getByText(/14\.249/)).toBeInTheDocument()
@@ -228,7 +228,7 @@ describe('GeneralSettings — decimal precision', () => {
     state.settings = makeSettings({ decimal_precision: 150 })
     renderPanel()
 
-    const input = (await screen.findByLabelText('Decimal Precision')) as HTMLInputElement
+    const input = (await screen.findByLabelText('Decimal precision')) as HTMLInputElement
     expect(input.value).toBe('150')
     // Panel survived render and the clamped preview (toFixed(20)) is shown.
     expect(screen.getByText('Application')).toBeInTheDocument()
@@ -237,7 +237,7 @@ describe('GeneralSettings — decimal precision', () => {
 
   it('updates the preview on edit and clamps typed values above 20', async () => {
     renderPanel()
-    const input = (await screen.findByLabelText('Decimal Precision')) as HTMLInputElement
+    const input = (await screen.findByLabelText('Decimal precision')) as HTMLInputElement
     // Default precision 2 → '14.25'.
     expect(screen.getByText(/14\.25/)).toBeInTheDocument()
 
@@ -254,13 +254,13 @@ describe('GeneralSettings — decimal precision', () => {
 describe('GeneralSettings — interaction', () => {
   it('updates the bound value when a select changes', async () => {
     renderPanel()
-    const distance = (await screen.findByLabelText('Distance Unit')) as HTMLSelectElement
+    const distance = (await screen.findByLabelText('Distance unit')) as HTMLSelectElement
     expect(distance.value).toBe('km')
 
     fireEvent.change(distance, { target: { value: 'mi' } })
     expect(distance.value).toBe('mi')
 
-    const temp = screen.getByLabelText('Temperature Unit') as HTMLSelectElement
+    const temp = screen.getByLabelText('Temperature unit') as HTMLSelectElement
     fireEvent.change(temp, { target: { value: 'F' } })
     expect(temp.value).toBe('F')
   })
@@ -269,10 +269,10 @@ describe('GeneralSettings — interaction', () => {
 describe('GeneralSettings — save', () => {
   it('issues PUT /settings with the current form and shows confirmation', async () => {
     renderPanel()
-    const distance = (await screen.findByLabelText('Distance Unit')) as HTMLSelectElement
+    const distance = (await screen.findByLabelText('Distance unit')) as HTMLSelectElement
     fireEvent.change(distance, { target: { value: 'mi' } })
 
-    fireEvent.click(screen.getByRole('button', { name: /save settings/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Save settings/i }))
 
     await waitFor(() => {
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -295,9 +295,9 @@ describe('GeneralSettings — save', () => {
   it('surfaces a save failure without showing a false confirmation', async () => {
     state.failPut = true
     renderPanel()
-    await screen.findByLabelText('Distance Unit')
+    await screen.findByLabelText('Distance unit')
 
-    fireEvent.click(screen.getByRole('button', { name: /save settings/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Save settings/i }))
 
     await waitFor(() => {
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -326,7 +326,7 @@ describe('GeneralSettings — sync from car', () => {
 
   it('shows the sync banner and the read-only car clock format', async () => {
     renderPanel()
-    expect(await screen.findByRole('button', { name: /sync from car/i })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Sync from car/i })).toBeInTheDocument()
     expect(screen.getByText(/Miles \/ Fahrenheit \/ PSI/)).toBeInTheDocument()
     // setting_24hr_time: true → "24-hour" read-only chip.
     expect(screen.getByText('24-hour')).toBeInTheDocument()
@@ -334,7 +334,7 @@ describe('GeneralSettings — sync from car', () => {
 
   it('writes the translated car units back through PUT /settings', async () => {
     renderPanel()
-    const syncBtn = await screen.findByRole('button', { name: /sync from car/i })
+    const syncBtn = await screen.findByRole('button', { name: /Sync from car/i })
     fireEvent.click(syncBtn)
 
     await waitFor(() => {
@@ -352,7 +352,7 @@ describe('GeneralSettings — sync from car', () => {
     expect(body.unit_of_pressure).toBe('psi')
 
     // The distance select reflects the synced value.
-    expect((screen.getByLabelText('Distance Unit') as HTMLSelectElement).value).toBe('mi')
+    expect((screen.getByLabelText('Distance unit') as HTMLSelectElement).value).toBe('mi')
   })
 })
 
@@ -371,7 +371,7 @@ describe('GeneralSettings — draft recovery', () => {
 
     renderPanel()
 
-    const distance = (await screen.findByLabelText('Distance Unit')) as HTMLSelectElement
+    const distance = (await screen.findByLabelText('Distance unit')) as HTMLSelectElement
     expect(distance.value).toBe('mi')
     // Recovery banner is shown for the restored draft.
     expect(screen.getByText(/draft restored from/i)).toBeInTheDocument()
@@ -380,7 +380,7 @@ describe('GeneralSettings — draft recovery', () => {
 
     // Discarding reverts to the server snapshot and dismisses the banner.
     await waitFor(() => {
-      expect((screen.getByLabelText('Distance Unit') as HTMLSelectElement).value).toBe('km')
+      expect((screen.getByLabelText('Distance unit') as HTMLSelectElement).value).toBe('km')
     })
     expect(screen.queryByText(/draft restored from/i)).toBeNull()
   })

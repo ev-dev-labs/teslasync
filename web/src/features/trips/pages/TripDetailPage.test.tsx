@@ -16,11 +16,11 @@
  * injected via a `useParams` stub.
  *
  * Covered facets:
- *   - READY (named): shell + subtitle + freshness chip + every section mounts,
+ *   - READY (named): shell + identity + freshness chip + every section mounts,
  *     the same trip object reaches each data section, tab title = trip name.
- *   - READY (unnamed): subtitle AND tab title both fall back to "Trip #<id>"
+ *   - READY (unnamed): identity AND tab title both fall back to "Trip #<id>"
  *     (the fixed inconsistency — the tab used to stay the generic title).
- *   - LOADING: no subtitle, generic tab title, loading flag propagated.
+ *   - LOADING: no identity, generic tab title, loading flag propagated.
  *   - ERROR: the error object reaches each section and every Retry calls the
  *     shared refetch (user interaction).
  *   - EDGE (missing id): no non-null-assertion blow-up; hook gets '' and the
@@ -30,7 +30,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -261,9 +261,15 @@ describe('TripDetailPage', () => {
 
     renderPage();
 
-    // Shell: <h1> page title + subtitle = the trip's name.
-    expect(screen.getByRole('heading', { level: 1, name: 'Trip Detail' })).toBeInTheDocument();
-    expect(screen.getByText('Weekend Getaway')).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 1, name: 'Trip Detail' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading).toHaveAttribute('tabindex', '-1');
+    const header = heading.closest('header');
+    expect(header).toHaveClass('border-0');
+    if (!header) throw new Error('Trip header is missing');
+    const identity = within(header).getByText('Weekend Getaway');
+    expect(identity).toBeVisible();
+    expect(identity.closest('[data-action-group="metadata"]')).not.toBeNull();
 
     // The hook was queried with the route param.
     expect(h.useTrip).toHaveBeenCalledWith('5');
@@ -289,13 +295,13 @@ describe('TripDetailPage', () => {
     expect(document.title).toBe('Weekend Getaway — TeslaSync');
   });
 
-  it('falls back to "Trip #<id>" for an unnamed loaded trip in both the subtitle and tab title', () => {
+  it('falls back to "Trip #<id>" for an unnamed loaded trip in both the visible identity and tab title', () => {
     h.id = '7';
     h.useTrip.mockReturnValue(makeQuery({ data: makeTrip({ id: 7, name: null }) }));
 
     renderPage();
 
-    // Subtitle uses the interpolated fallback label.
+    // Identity uses the interpolated fallback label.
     expect(screen.getByText('Trip #7')).toBeInTheDocument();
 
     // Regression guard: the tab title previously stayed the generic
@@ -304,7 +310,7 @@ describe('TripDetailPage', () => {
     expect(document.title).toBe('Trip #7 — TeslaSync');
   });
 
-  it('shows no subtitle and a generic tab title while loading, and marks every section loading', () => {
+  it('shows no identity and a generic tab title while loading, and marks every section loading', () => {
     h.id = '9';
     h.useTrip.mockReturnValue(
       makeQuery({ data: undefined, isLoading: true, isFetching: true, dataUpdatedAt: 0 }),
@@ -313,7 +319,7 @@ describe('TripDetailPage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Trip Detail' })).toBeInTheDocument();
-    // No trip → the subtitle is suppressed (never a stray "Trip #9").
+    // No trip → the identity is suppressed (never a stray "Trip #9").
     expect(screen.queryByText('Trip #9')).not.toBeInTheDocument();
     expect(document.title).toBe('Trip Detail — TeslaSync');
 

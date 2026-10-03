@@ -47,7 +47,7 @@ export function HvacCyclingHourlyDuty({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <Clock3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.hourly.title', 'Hourly HVAC Duty')}
+          {t('hvacCycling.hourly.title', 'Hourly HVAC duty')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-3">
           {t(

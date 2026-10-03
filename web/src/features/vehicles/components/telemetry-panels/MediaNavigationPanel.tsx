@@ -26,13 +26,13 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <Headphones className="h-4 w-4 text-purple-300" aria-hidden="true" /> {t('telemetry.mediaNav', 'Media & Navigation')}
+        <Headphones className="h-4 w-4 text-purple-300" aria-hidden="true" /> {t('telemetry.mediaNav', 'Media & navigation')}
       </h3>
       <div className="space-y-5">
         {/* Now Playing */}
         <div>
-          <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)] mb-2">
-            {t('telemetry.nowPlaying', 'Now Playing')}
+          <p className="text-2xs tracking-wider text-[var(--text-muted)] mb-2">
+            {t('telemetry.nowPlaying', 'Now playing')}
           </p>
           {mediaData ? (
             <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 space-y-2">
@@ -70,7 +70,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
 
         {/* Navigation destination */}
         <div>
-          <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)] mb-2 flex items-center gap-1">
+          <p className="text-2xs tracking-wider text-[var(--text-muted)] mb-2 flex items-center gap-1">
             <Navigation2 className="h-3 w-3" aria-hidden="true" /> {t('telemetry.navigation', 'Navigation')}
           </p>
           {locationData ? (

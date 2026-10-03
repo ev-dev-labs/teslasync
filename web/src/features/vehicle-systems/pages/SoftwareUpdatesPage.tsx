@@ -68,7 +68,7 @@ function monthLabel(key: string): string {
 
 export default function SoftwareUpdatesPage() {
   const { t } = useTranslation();
-  usePageTitle(t('softwareUpdates.title', 'Software Updates'));
+  usePageTitle(t('softwareUpdates.title', 'Software updates'));
 
   const { vehicleId, vehicles } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
@@ -190,9 +190,9 @@ export default function SoftwareUpdatesPage() {
 
   return (
     <PageContainer
-      title={t('softwareUpdates.title', 'Software Updates')}
+      title={t('softwareUpdates.title', 'Software updates')}
       subtitle={t('softwareUpdates.subtitle', 'Track firmware versions and update history')}
-      actions={actions}
+      secondaryActions={actions}
       query={updatesQuery}
     >
       {/* 1 — KPI band ─────────────────────────────────────────────── */}
@@ -201,12 +201,12 @@ export default function SoftwareUpdatesPage() {
           aria-label={t('softwareUpdates.kpi.label', 'Software update summary')}
           className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
         >
-          <MetricCard icon={<Smartphone className="h-5 w-5" />} label={t('softwareUpdates.kpi.currentVersion', 'Current Version')} value={latestVersion} color="cyan" />
-          <MetricCard icon={<Download className="h-5 w-5" />} label={t('softwareUpdates.kpi.totalUpdates', 'Total Updates')} value={fmtInt(totalUpdates)} color="purple" />
+          <MetricCard icon={<Smartphone className="h-5 w-5" />} label={t('softwareUpdates.kpi.currentVersion', 'Current version')} value={latestVersion} color="cyan" />
+          <MetricCard icon={<Download className="h-5 w-5" />} label={t('softwareUpdates.kpi.totalUpdates', 'Total updates')} value={fmtInt(totalUpdates)} color="purple" />
           <MetricCard icon={<CheckCircle className="h-5 w-5" />} label={t('softwareUpdates.kpi.installed', 'Installed')} value={fmtInt(installedCount)} color="green" />
           <MetricCard icon={<ArrowUpCircle className="h-5 w-5" />} label={t('softwareUpdates.kpi.pending', 'Pending')} value={fmtInt(pendingCount)} color="amber" />
-          <MetricCard icon={<Calendar className="h-5 w-5" />} label={t('softwareUpdates.kpi.lastInstalled', 'Last Installed')} value={lastInstalledAt ? formatDate(lastInstalledAt) : '—'} color="blue" />
-          <MetricCard icon={<CalendarClock className="h-5 w-5" />} label={t('softwareUpdates.kpi.avgCadence', 'Avg Cadence')} value={avgCadence} color="cyan" />
+          <MetricCard icon={<Calendar className="h-5 w-5" />} label={t('softwareUpdates.kpi.lastInstalled', 'Last installed')} value={lastInstalledAt ? formatDate(lastInstalledAt) : '—'} color="blue" />
+          <MetricCard icon={<CalendarClock className="h-5 w-5" />} label={t('softwareUpdates.kpi.avgCadence', 'Avg cadence')} value={avgCadence} color="cyan" />
         </section>
       </FadeIn>
 
@@ -216,7 +216,7 @@ export default function SoftwareUpdatesPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('softwareUpdates.cadence.title', 'Update Cadence')}
+              {t('softwareUpdates.cadence.title', 'Update cadence')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={224} />
@@ -240,7 +240,7 @@ export default function SoftwareUpdatesPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('softwareUpdates.breakdown.title', 'By Status')}
+              {t('softwareUpdates.breakdown.title', 'By status')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={160} />
@@ -273,7 +273,7 @@ export default function SoftwareUpdatesPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-4 flex items-center gap-2">
             <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('softwareUpdates.timeline.title', 'Update Timeline')}
+            {t('softwareUpdates.timeline.title', 'Update timeline')}
           </PanelTitle>
           {isLoading ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">

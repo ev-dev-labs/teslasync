@@ -96,15 +96,15 @@ const EVENT_BADGE_VARIANT: Record<string, BadgeVariant> = {
 // [i18nKey, English fallback] — the English lives only as the sanctioned
 // `t(key, fallback)` default, never as raw rendered text.
 const EVENT_LABEL_KEYS: Record<string, [string, string]> = {
-  vehicle_moved: ['guard.eventVehicleMoved', 'Vehicle Moved'],
-  unauthorized_unlock: ['guard.eventUnauthorizedUnlock', 'Unauthorized Unlock'],
-  unauthorized_drive: ['guard.eventUnauthorizedDrive', 'Unauthorized Drive'],
-  sentry_triggered: ['guard.eventSentryTriggered', 'Sentry Triggered'],
-  manual_panic: ['guard.eventManualPanic', 'Manual Panic'],
-  test_alert: ['guard.eventTestAlert', 'Test Alert'],
-  locked: ['guard.eventLocked', 'Lock State Changed'],
-  sentry_mode: ['guard.eventSentryMode', 'Sentry Mode'],
-  valet_mode_enabled: ['guard.eventValetMode', 'Valet Mode'],
+  vehicle_moved: ['guard.eventVehicleMoved', 'Vehicle moved'],
+  unauthorized_unlock: ['guard.eventUnauthorizedUnlock', 'Unauthorized unlock'],
+  unauthorized_drive: ['guard.eventUnauthorizedDrive', 'Unauthorized drive'],
+  sentry_triggered: ['guard.eventSentryTriggered', 'Sentry triggered'],
+  manual_panic: ['guard.eventManualPanic', 'Manual panic'],
+  test_alert: ['guard.eventTestAlert', 'Test alert'],
+  locked: ['guard.eventLocked', 'Lock state changed'],
+  sentry_mode: ['guard.eventSentryMode', 'Sentry mode'],
+  valet_mode_enabled: ['guard.eventValetMode', 'Valet mode'],
 };
 
 function eventLabelKey(type: string): [string, string] {
@@ -115,7 +115,7 @@ function eventLabelKey(type: string): [string, string] {
 
 export default function GuardModePage() {
   const { t } = useTranslation();
-  usePageTitle(t('guard.title', 'Guard Mode'));
+  usePageTitle(t('guard.title', 'Guard mode'));
 
   // Vehicle selector — global, shared across all vehicle-scoped pages.
   const { vehicleId, vehicle: activeVehicle } = useSelectedVehicle();
@@ -188,9 +188,9 @@ export default function GuardModePage() {
 
   const sensitivityOptions = useMemo(
     () => [
-      { value: 'low', label: t('guard.sensitivityLowFull', 'Low — Movement > 1 km') },
-      { value: 'medium', label: t('guard.sensitivityMediumFull', 'Medium — Movement > 200 m') },
-      { value: 'high', label: t('guard.sensitivityHighFull', 'High — Any movement') },
+      { value: 'low', label: t('guard.sensitivityLowFull', 'Low — movement > 1 km') },
+      { value: 'medium', label: t('guard.sensitivityMediumFull', 'Medium — movement > 200 m') },
+      { value: 'high', label: t('guard.sensitivityHighFull', 'High — any movement') },
     ],
     [t],
   );
@@ -254,7 +254,7 @@ export default function GuardModePage() {
   // ── Render ──────────────────────────────────────────────────────────
   return (
     <PageContainer
-      title={t('guard.title', 'Guard Mode')}
+      title={t('guard.title', 'Guard mode')}
       subtitle={t('guard.subtitle', 'Anti-theft monitoring and emergency response')}
       query={configQuery}
     >
@@ -262,7 +262,7 @@ export default function GuardModePage() {
       {isTriggered && latestEvent && (
         <AlertBanner
           variant="danger"
-          title={t('guard.alertTriggered', 'Guard Alert Triggered!')}
+          title={t('guard.alertTriggered', 'Guard alert triggered!')}
           icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
         >
           <Text as="p" variant="bodySm">
@@ -286,19 +286,19 @@ export default function GuardModePage() {
             className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
           >
             <MetricCard
-              label={t('guard.kpiState', 'Guard State')}
+              label={t('guard.kpiState', 'Guard state')}
               value={stateLabel}
               icon={<StateIcon className="h-5 w-5" aria-hidden="true" />}
               color={stateColor}
             />
             <MetricCard
-              label={t('guard.kpiSentry', 'Sentry Mode')}
+              label={t('guard.kpiSentry', 'Sentry mode')}
               value={sentryOn == null ? '—' : sentryOn ? t('guard.on', 'On') : t('guard.off', 'Off')}
               icon={<Eye className="h-5 w-5" aria-hidden="true" />}
               color={sentryOn ? 'green' : 'cyan'}
             />
             <MetricCard
-              label={t('guard.kpiLock', 'Lock State')}
+              label={t('guard.kpiLock', 'Lock state')}
               value={isLocked == null ? '—' : isLocked ? t('guard.locked', 'Locked') : t('guard.unlocked', 'Unlocked')}
               icon={<LockIcon className="h-5 w-5" aria-hidden="true" />}
               color={isLocked == null ? 'cyan' : isLocked ? 'green' : 'amber'}
@@ -316,7 +316,7 @@ export default function GuardModePage() {
               color={unacknowledgedCount > 0 ? 'red' : 'green'}
             />
             <MetricCard
-              label={t('guard.kpiTotal', 'Total Events')}
+              label={t('guard.kpiTotal', 'Total events')}
               value={events.length}
               icon={<History className="h-5 w-5" aria-hidden="true" />}
               color="cyan"
@@ -336,7 +336,7 @@ export default function GuardModePage() {
             <div className="p-4 pb-0 sm:p-5 sm:pb-0">
               <PanelTitle className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('guard.liveMap', 'Live Vehicle Location')}
+                {t('guard.liveMap', 'Live vehicle location')}
               </PanelTitle>
             </div>
             <div className="mt-3 h-80 flex-1 sm:h-96 xl:h-[32rem]">
@@ -401,7 +401,7 @@ export default function GuardModePage() {
                 </HelperText>
               </div>
               <Toggle
-                label={t('guard.enableGuard', 'Guard Mode')}
+                label={t('guard.enableGuard', 'Guard mode')}
                 checked={isArmed}
                 onChange={() => handleToggleGuard()}
               />
@@ -427,7 +427,7 @@ export default function GuardModePage() {
                 className="w-full"
               >
                 <Siren className="h-4 w-4" aria-hidden="true" />
-                {panic.isPending ? t('guard.panicking', 'Sending…') : t('guard.panicButton', 'Activate Panic')}
+                {panic.isPending ? t('guard.panicking', 'Sending…') : t('guard.panicButton', 'Activate panic')}
               </Button>
               <HelperText>
                 {t(
@@ -450,12 +450,12 @@ export default function GuardModePage() {
           <GlassPanel className="space-y-4 p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="flex items-center gap-2">
               <SlidersHorizontal className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('guard.settings', 'Guard Settings')}
+              {t('guard.settings', 'Guard settings')}
             </PanelTitle>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
               <div className="space-y-1">
                 <Select
-                  label={t('guard.homeGeofence', 'Home Geofence')}
+                  label={t('guard.homeGeofence', 'Home geofence')}
                   options={geofenceOptions}
                   value={effectiveHomeGeofenceId}
                   onChange={(e) => setHomeGeofenceId(e.target.value)}
@@ -476,7 +476,7 @@ export default function GuardModePage() {
               <div className="flex flex-col justify-between gap-3">
                 <div className="space-y-1">
                   <Toggle
-                    label={t('guard.autoPanic', 'Auto-Panic on Trigger')}
+                    label={t('guard.autoPanic', 'Auto-panic on trigger')}
                     checked={effectiveAutoPanic}
                     onChange={setAutoPanic}
                   />
@@ -488,7 +488,7 @@ export default function GuardModePage() {
             </div>
             <div className="flex justify-end">
               <Button onClick={handleSaveSettings} loading={setConfig.isPending} disabled={setConfig.isPending || noVehicle}>
-                {t('guard.saveSettings', 'Save Settings')}
+                {t('guard.saveSettings', 'Save settings')}
               </Button>
             </div>
           </GlassPanel>
@@ -535,7 +535,7 @@ export default function GuardModePage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <PanelTitle className="flex items-center gap-2">
               <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('guard.eventTimeline', 'Event Timeline')}
+              {t('guard.eventTimeline', 'Event timeline')}
             </PanelTitle>
             {unacknowledgedCount > 0 && (
               <Badge variant="danger" size="sm">
@@ -571,12 +571,12 @@ export default function GuardModePage() {
       {/* Panic confirmation dialog */}
       <ConfirmDialog
         open={panicDialogOpen}
-        title={t('guard.panicConfirmTitle', 'Activate Panic Mode?')}
+        title={t('guard.panicConfirmTitle', 'Activate panic mode?')}
         message={t(
           'guard.panicConfirmMessage',
           'This will immediately flash lights, honk horn, lock doors, enable sentry mode, and send alerts to all notification channels.',
         )}
-        confirmLabel={t('guard.panicConfirmLabel', 'Activate Panic')}
+        confirmLabel={t('guard.panicConfirmLabel', 'Activate panic')}
         cancelLabel={t('common.cancel', 'Cancel')}
         variant="danger"
         loading={panic.isPending}

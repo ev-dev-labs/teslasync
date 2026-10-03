@@ -78,7 +78,7 @@ export function DurationDistributionChart({
         className="h-full"
         title={t(
           'parking.durationDistribution.title',
-          'Parking Duration Distribution',
+          'Parking duration distribution',
         )}
         subtitle={t(
           'parking.durationDistribution.subtitle',

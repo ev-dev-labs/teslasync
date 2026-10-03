@@ -252,7 +252,7 @@ describe('ComfortConsistencyPage', () => {
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Comfort Consistency',
+      name: 'Comfort consistency',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.historyHook).toHaveBeenLastCalledWith('7');

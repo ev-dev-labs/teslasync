@@ -33,7 +33,7 @@ export default function PhysicsDictionarySection({ physics }: { physics: Physics
         shortest: ranked.length ? seconds(ranked[0], t) : unknown(t),
         longest: ranked.length ? seconds(ranked[ranked.length - 1], t) : unknown(t),
       })}</Text>
-      <Text as="p" variant="caption">{t('teslaOnly.dictionaryNote', 'Typical dwell is a median of observed Complete-to-Disconnected transitions, not a target or a penalty. Returned Vault dwells may cover a different subset: compare rather than silently equate the two medians. No observed sample does not imply zero dwell.')}</Text>
+      <Text as="p" variant="caption">{t('teslaOnly.dictionaryNote', 'Typical dwell is a median of observed Complete-to-Disconnected transitions, not a target or a penalty. Returned vault dwells may cover a different subset: compare rather than silently equate the two medians. No observed sample does not imply zero dwell.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.dictionaryDistribution', 'Recorded etiquette dwell distribution')}>
       {report?.vault ? <>
@@ -48,12 +48,12 @@ export default function PhysicsDictionarySection({ physics }: { physics: Physics
           from: seconds(lowerQuartile, t), to: seconds(upperQuartile, t),
         })}</Text>
         <Text as="p" variant="caption">{t('teslaOnly.dictionaryQuartileCaution', 'Quartiles are nearest returned observations, not a confidence interval. With fewer than four usable dwells the middle-half bounds stay unknown.')}</Text>
-        <Text as="p" variant="caption">{t('teslaOnly.dictionaryDistributionCaution', 'Counts describe the returned Vault samples only. They may not be the source population for the Dictionary median; without session timestamps they cannot establish trend or cause.')}</Text>
-      </> : <Text as="p" variant="bodySm">{t('teslaOnly.dictionaryVaultUnavailable', 'Vault etiquette observations were not returned; Dictionary statistics cannot be cross-checked against individual dwells.')}</Text>}
+        <Text as="p" variant="caption">{t('teslaOnly.dictionaryDistributionCaution', 'Counts describe the returned vault samples only. They may not be the source population for the dictionary median; without session timestamps they cannot establish trend or cause.')}</Text>
+      </> : <Text as="p" variant="bodySm">{t('teslaOnly.dictionaryVaultUnavailable', 'Vault etiquette observations were not returned; dictionary statistics cannot be cross-checked against individual dwells.')}</Text>}
       <RawRows title={t('teslaOnly.vaultEtiquette', 'Supercharger etiquette dwells')} rows={dwells} t={t}
         tableId="physics:dictionary" keyExtractor={(r) => String(r.index)} columns={[
-          { key: 'dwell', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (r) => seconds(r.dwell, t) },
-          { key: 'index', header: t('teslaOnly.dictionaryIndex', 'Returned observation'), render: (r) => r.index + 1 },
+          { key: 'dwell', align: 'right', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (r) => seconds(r.dwell, t) },
+          { key: 'index', align: 'right', header: t('teslaOnly.dictionaryIndex', 'Returned observation'), render: (r) => r.index + 1 },
         ]} />
     </Evidence>
   </>;

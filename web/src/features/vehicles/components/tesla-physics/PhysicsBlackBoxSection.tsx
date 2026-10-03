@@ -63,7 +63,7 @@ export default function PhysicsBlackBoxSection({ physics }: { physics: PhysicsPa
           { key: 'firmware', header: t('teslaOnly.firmware', 'Firmware'), render: (r) => r.firmware || unknown(t) },
           { key: 'latch', header: t('teslaOnly.latch', 'Latch'), render: (r) => r.latch || unknown(t) },
           { key: 'door', header: t('teslaOnly.door', 'Door'), render: (r) => yesNo(r.door_open, t) },
-          { key: 'current', header: t('teslaOnly.packCurrent', 'Pack current'), render: (r) => r.pack_current_a == null ? unknown(t) : `${fmtNumber(r.pack_current_a, 1)} A` },
+          { key: 'current', align: 'right', header: t('teslaOnly.packCurrent', 'Pack current'), render: (r) => r.pack_current_a == null ? unknown(t) : `${fmtNumber(r.pack_current_a, 1)} A` },
           { key: 'schedule', header: t('teslaOnly.scheduleMode', 'Schedule mode'), render: (r) => r.scheduled_mode || unknown(t) },
         ]} />
     </Evidence>

@@ -24,25 +24,25 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
       {climateData ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <MetricCard
-            label={t('common.insideTemp', 'Inside Temp')}
+            label={t('common.insideTemp', 'Inside temp')}
             value={formatTemperature(climateData.inside_temp ?? climateData.inside_temp_c)}
             icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
-            label={t('common.outsideTemp', 'Outside Temp')}
+            label={t('common.outsideTemp', 'Outside temp')}
             value={formatTemperature(climateData.outside_temp ?? climateData.outside_temp_c)}
             icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.driverSetpoint', 'Driver Setpoint')}
+            label={t('vehicles.detail.driverSetpoint', 'Driver setpoint')}
             value={formatTemperature(climateData.driver_temp_setting ?? climateData.driver_setpoint_c)}
             icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
             color="purple"
           />
           <MetricCard
-            label={t('vehicles.detail.fanSpeed', 'Fan Speed')}
+            label={t('vehicles.detail.fanSpeed', 'Fan speed')}
             value={
               climateData.hvac_fan_status != null
                 ? String(climateData.hvac_fan_status)
@@ -54,7 +54,7 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.seatHeaterL', 'Seat Heater Left')}
+            label={t('vehicles.detail.seatHeaterL', 'Seat heater left')}
             value={
               climateData.seat_heater_left != null
                 ? `${t('common.level', 'Level')} ${climateData.seat_heater_left}`
@@ -64,7 +64,7 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
             color="green"
           />
           <MetricCard
-            label={t('vehicles.detail.seatHeaterR', 'Seat Heater Right')}
+            label={t('vehicles.detail.seatHeaterR', 'Seat heater right')}
             value={
               climateData.seat_heater_right != null
                 ? `${t('common.level', 'Level')} ${climateData.seat_heater_right}`
@@ -84,7 +84,7 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
             color={climateData.defrost_mode && climateData.defrost_mode !== 'Off' ? 'green' : 'cyan'}
           />
           <MetricCard
-            label={t('vehicles.detail.climateOn', 'Climate On')}
+            label={t('vehicles.detail.climateOn', 'Climate on')}
             value={
               (climateData.is_ac_on ?? climateData.is_climate_on)
                 ? t('common.on', 'On')

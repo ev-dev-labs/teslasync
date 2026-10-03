@@ -167,7 +167,7 @@ beforeEach(() => {
 describe('RecentActivity — Recent Drives panel', () => {
   it('renders the heading and a "View all" link to /drives', () => {
     const { container } = renderActivity({ drives: [makeDrive()], sessions: [] });
-    expect(screen.getByRole('heading', { name: /Recent Drives/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Recent drives/i })).toBeInTheDocument();
     const viewAll = container.querySelector('a[href="/drives"]');
     expect(viewAll).not.toBeNull();
     expect(viewAll).toHaveTextContent('View all');
@@ -223,7 +223,7 @@ describe('RecentActivity — Recent Drives panel', () => {
 describe('RecentActivity — Recent Charges panel', () => {
   it('renders the heading and a "View all" link to /charging', () => {
     const { container } = renderActivity({ drives: [], sessions: [makeSession()] });
-    expect(screen.getByRole('heading', { name: /Recent Charges/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Recent charges/i })).toBeInTheDocument();
     const viewAll = container.querySelector('a[href="/charging"]');
     expect(viewAll).not.toBeNull();
     expect(viewAll).toHaveTextContent('View all');
@@ -282,8 +282,8 @@ describe('RecentActivity — empty & undefined states', () => {
   it('degrades undefined props to the empty states without crashing', () => {
     expect(() => renderActivity({})).not.toThrow();
     // Both panels still render their headings — never a blank shell.
-    expect(screen.getByRole('heading', { name: /Recent Drives/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Recent Charges/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Recent drives/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Recent charges/i })).toBeInTheDocument();
     expect(screen.getByText('No drives recorded yet')).toBeInTheDocument();
     expect(screen.getByText('No charging sessions recorded yet')).toBeInTheDocument();
   });

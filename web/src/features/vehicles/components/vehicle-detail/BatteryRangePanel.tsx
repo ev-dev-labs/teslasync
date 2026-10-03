@@ -44,13 +44,13 @@ export function BatteryRangePanel({ state }: BatteryRangePanelProps) {
         </div>
         <div className="flex-1 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <MetricCard
-            label={t('vehicles.detail.ratedRange', 'Rated Range')}
+            label={t('vehicles.detail.ratedRange', 'Rated range')}
             value={formatDistance(state.rated_range, { precision: 0 })}
             icon={<Navigation aria-hidden="true" className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.idealRange', 'Ideal Range')}
+            label={t('vehicles.detail.idealRange', 'Ideal range')}
             value={formatDistance(state.ideal_range, { precision: 0 })}
             icon={<MapPin aria-hidden="true" className="h-4 w-4" />}
             color="green"
@@ -60,7 +60,7 @@ export function BatteryRangePanel({ state }: BatteryRangePanelProps) {
             value={
               isCharging
                 ? `${formatDistance(state.charge_rate)}/h`
-                : t('common.notCharging', 'Not Charging')
+                : t('common.notCharging', 'Not charging')
             }
             icon={<BatteryCharging aria-hidden="true" className="h-4 w-4" />}
             color={isCharging ? 'green' : 'cyan'}

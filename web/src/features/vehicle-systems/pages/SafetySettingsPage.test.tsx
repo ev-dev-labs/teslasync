@@ -400,7 +400,7 @@ describe('SafetySettingsPage', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Safety Settings' }),
+      screen.getByRole('heading', { level: 1, name: 'Safety settings' }),
     ).toBeInTheDocument();
     // Seven placeholder panels (KPI, gauge, live signals, ADAS, stats, chart, table).
     expect(
@@ -415,9 +415,9 @@ describe('SafetySettingsPage', () => {
     renderPage();
 
     const kpi = screen.getByRole('region', { name: 'Safety summary' });
-    expect(within(kpi).getByText('Safety Score')).toBeInTheDocument();
+    expect(within(kpi).getByText('Safety score')).toBeInTheDocument();
     expect(within(kpi).getByText('67%')).toBeInTheDocument(); // 6/9 → 66.7 → 67
-    expect(within(kpi).getByText('Total Features')).toBeInTheDocument();
+    expect(within(kpi).getByText('Total features')).toBeInTheDocument();
     expect(within(kpi).getByText('9')).toBeInTheDocument();
     expect(within(kpi).getByText('Enabled')).toBeInTheDocument();
     expect(within(kpi).getByText('6')).toBeInTheDocument();
@@ -436,9 +436,9 @@ describe('SafetySettingsPage', () => {
     renderPage();
     const overview = screen.getByRole('region', { name: 'Safety overview' });
 
-    expect(within(overview).getByText('Driver Belt')).toBeInTheDocument();
+    expect(within(overview).getByText('Driver belt')).toBeInTheDocument();
     expect(within(overview).getByText('Buckled')).toBeInTheDocument();
-    expect(within(overview).getByText('Passenger Belt')).toBeInTheDocument();
+    expect(within(overview).getByText('Passenger belt')).toBeInTheDocument();
     expect(within(overview).getByText('Unbuckled')).toBeInTheDocument();
     expect(within(overview).getByText('Occupied')).toBeInTheDocument();
     expect(within(overview).getByText('Locked')).toBeInTheDocument();
@@ -457,13 +457,13 @@ describe('SafetySettingsPage', () => {
       name: 'ADAS features and driving statistics',
     });
 
-    expect(within(features).getByText('Auto Emergency Braking')).toBeInTheDocument();
-    expect(within(features).getByText('Forward Collision Warning')).toBeInTheDocument();
+    expect(within(features).getByText('Auto emergency braking')).toBeInTheDocument();
+    expect(within(features).getByText('Forward collision warning')).toBeInTheDocument();
     expect(within(features).getByText('High')).toBeInTheDocument(); // fcw value
 
-    expect(within(features).getByText('Distance Since Reset')).toBeInTheDocument();
+    expect(within(features).getByText('Distance since reset')).toBeInTheDocument();
     expect(within(features).getByText('12.00')).toBeInTheDocument(); // 12000 m → 12 km
-    expect(within(features).getByText('Self-Driving Distance')).toBeInTheDocument();
+    expect(within(features).getByText('Self-driving distance')).toBeInTheDocument();
     expect(within(features).getByText('3.00')).toBeInTheDocument(); // 3000 m → 3 km
   });
 
@@ -505,9 +505,9 @@ describe('SafetySettingsPage', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Safety Settings' }),
+      screen.getByRole('heading', { level: 1, name: 'Safety settings' }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Total Features')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total features')).not.toBeInTheDocument();
     expect(screen.queryByTestId('linear-gauge')).not.toBeInTheDocument();
     expect(
       screen.queryByText('Select a vehicle to view its safety settings.'),
@@ -522,7 +522,7 @@ describe('SafetySettingsPage', () => {
     renderPage();
 
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText('Total Features')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total features')).not.toBeInTheDocument();
 
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries.length).toBeGreaterThanOrEqual(1);
@@ -539,7 +539,7 @@ describe('SafetySettingsPage', () => {
       screen.getAllByText('No safety data available for this vehicle.'),
     ).toHaveLength(2);
     // The misleading "0% / 9 disabled" MetricCards are gone.
-    expect(screen.queryByText('Total Features')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total features')).not.toBeInTheDocument();
     expect(screen.queryByText('67%')).not.toBeInTheDocument();
     // Dependent sections keep their own tailored placeholders.
     expect(

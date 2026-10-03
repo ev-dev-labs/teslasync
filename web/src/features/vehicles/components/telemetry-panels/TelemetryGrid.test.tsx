@@ -201,10 +201,10 @@ describe('TelemetryGrid', () => {
   it('shows an i18n "Not Charging" label with muted colour and no ETA when idle', () => {
     renderGrid({ is_charging: false })
 
-    const value = screen.getByText('Not Charging')
+    const value = screen.getByText('Not charging')
     expect(value.className).toContain('text-[var(--text-muted)]')
     expect(screen.queryByText(/Full in/)).toBeNull()
-    expect(mockT).toHaveBeenCalledWith('common.notCharging', 'Not Charging')
+    expect(mockT).toHaveBeenCalledWith('common.notCharging', 'Not charging')
   })
 
   it('renders sentry state as Active (rose) or Off (muted) through i18n', () => {

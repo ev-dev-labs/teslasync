@@ -126,9 +126,9 @@ export default function TripListPage() {
       title={t('trips.title', 'Trips')}
       subtitle={t('trips.subtitle', 'Multi-drive trip reports with distance and cost tracking')}
       loading={isLoading && allTrips.length === 0}
-      actions={
+      metadataActions={<DataFreshnessAuto query={tripsQuery} />}
+      overflowActions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <DataFreshnessAuto query={tripsQuery} />
           <SavedViewMenu
             route="/trips"
             currentQuery={savedView.currentQuery}

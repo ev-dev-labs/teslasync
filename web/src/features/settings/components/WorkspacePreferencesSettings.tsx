@@ -36,7 +36,7 @@ const LANDING_PAGE_LABELS: Record<
   },
   '/action-center': {
     key: 'productPreferences.landing.options.actionCenter',
-    fallback: 'Action Center',
+    fallback: 'Action center',
   },
   '/vehicles': {
     key: 'productPreferences.landing.options.vehicles',

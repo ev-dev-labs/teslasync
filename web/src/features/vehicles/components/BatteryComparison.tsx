@@ -6,7 +6,7 @@ import { EmptyState, Skeleton } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
 import { batteryColor } from '@/lib/colors';
-import type { Vehicle, VehicleState } from '@/api/types';
+import type { Vehicle, VehicleStateReadings } from '@/api/types';
 
 interface BatteryComparisonProps {
   vehicles: Vehicle[];
@@ -14,12 +14,12 @@ interface BatteryComparisonProps {
 
 interface FleetBatteryEntry {
   vehicle: Vehicle;
-  state: VehicleState | null;
+  state: VehicleStateReadings | null;
 }
 
 /** Coerce an arbitrary battery reading into a safe 0–100 percentage. */
-function clampPercent(value: number | null | undefined): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+function clampPercent(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.max(0, Math.min(100, value));
 }
 
@@ -51,14 +51,14 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
   if (vehicles.length === 0) return null;
 
   const bars = (allStates ?? []).filter(
-    (q): q is { vehicle: Vehicle; state: VehicleState } => q.state !== null,
+    (q): q is { vehicle: Vehicle; state: VehicleStateReadings } => q.state !== null,
   );
 
   return (
     <GlassPanel className="p-5">
       <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
         <Activity className="h-4 w-4 text-cyan-400" aria-hidden="true" />
-        {t('fleet.batteryStatus', 'Fleet Battery Status')}
+        {t('fleet.batteryStatus', 'Fleet battery status')}
       </h3>
       {isLoading ? (
         <div className="space-y-3" data-testid="battery-comparison-loading">
@@ -75,8 +75,8 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
             const label =
               vehicle.display_name || vehicle.vin || t('fleet.unknownVehicle', 'Unknown vehicle');
             const level = clampPercent(state.battery_level);
-            const color = batteryColor(level);
-            const range = formatDistance(state.rated_range ?? 0);
+            const color = level == null ? 'var(--text-muted)' : batteryColor(level);
+            const range = formatDistance(state.rated_range);
             return (
               <div key={vehicle.id} className="flex items-center gap-3">
                 <span
@@ -87,23 +87,23 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
                 </span>
                 <div
                   className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden"
-                  role="progressbar"
-                  aria-valuenow={level}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
+                  role={level == null ? 'group' : 'progressbar'}
+                  aria-valuenow={level ?? undefined}
+                  aria-valuemin={level == null ? undefined : 0}
+                  aria-valuemax={level == null ? undefined : 100}
                   aria-label={`${label} ${t('fleet.batteryLevel', 'battery level')}`}
                 >
                   <div
                     className="h-full rounded-full transition-all duration-slow"
                     style={{
-                      width: `${level}%`,
+                      width: `${level ?? 0}%`,
                       background: `linear-gradient(90deg, ${color}80, ${color})`,
                       boxShadow: `0 0 10px ${color}40`,
                     }}
                   />
                 </div>
                 <span className="text-xs font-medium text-[var(--text-primary)] w-10 text-right">
-                  {level}%
+                  {level == null ? '—' : `${level}%`}
                 </span>
                 <span className="text-2xs text-[var(--text-muted)] w-16 text-right">
                   {range}

@@ -138,7 +138,7 @@ beforeEach(() => {
 describe('TeslaAccountSection — header + connection status region', () => {
   it('always renders the panel heading and subtitle', () => {
     renderSection()
-    expect(screen.getByText('Tesla Account')).toBeInTheDocument()
+    expect(screen.getByText('Tesla account')).toBeInTheDocument()
     expect(
       screen.getByText('Connect your Tesla account to sync vehicles and data'),
     ).toBeInTheDocument()
@@ -166,7 +166,7 @@ describe('TeslaAccountSection — disconnected / not-connected branch', () => {
     const buttons = screen.getAllByRole('button')
     expect(buttons).toHaveLength(1)
     expect(
-      screen.getByRole('button', { name: 'Connect Tesla Account' }),
+      screen.getByRole('button', { name: 'Connect Tesla account' }),
     ).toBeInTheDocument()
   })
 
@@ -179,7 +179,7 @@ describe('TeslaAccountSection — disconnected / not-connected branch', () => {
       screen.queryByRole('button', { name: 'Disconnect' }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: 'Refresh Token' }),
+      screen.queryByRole('button', { name: 'Refresh token' }),
     ).not.toBeInTheDocument()
   })
 })
@@ -190,12 +190,12 @@ describe('TeslaAccountSection — connected branch', () => {
     renderSection()
 
     expect(screen.getByText('Connected')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Refresh Token' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sync Vehicles' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Refresh token' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sync vehicles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Re-authorize' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: 'Connect Tesla Account' }),
+      screen.queryByRole('button', { name: 'Connect Tesla account' }),
     ).not.toBeInTheDocument()
   })
 
@@ -269,7 +269,7 @@ describe('TeslaAccountSection — connect / re-authorize (OAuth handoff)', () =>
     mockedAuthURL.mockReturnValue(mutation({ mutate }))
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Connect Tesla Account' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Connect Tesla account' }))
 
     expect(mutate).toHaveBeenCalledTimes(1)
     expect(window.location.href).toBe('https://auth.tesla.com/oauth2/v3/authorize')
@@ -282,7 +282,7 @@ describe('TeslaAccountSection — connect / re-authorize (OAuth handoff)', () =>
     mockedAuthURL.mockReturnValue(mutation({ mutate }))
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Connect Tesla Account' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Connect Tesla account' }))
 
     expect(mutate).toHaveBeenCalledTimes(1)
     // Guard holds — the tab stays on its original URL rather than "/undefined".
@@ -302,7 +302,7 @@ describe('TeslaAccountSection — connect / re-authorize (OAuth handoff)', () =>
   it('shows the connect button in a loading state while the auth URL is pending', () => {
     mockedAuthURL.mockReturnValue(mutation({ isPending: true }))
     renderSection()
-    const button = screen.getByRole('button', { name: 'Connect Tesla Account' })
+    const button = screen.getByRole('button', { name: 'Connect Tesla account' })
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
   })
@@ -318,7 +318,7 @@ describe('TeslaAccountSection — refresh token action', () => {
     mockedRefresh.mockReturnValue(mutation({ mutate }))
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh Token' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh token' }))
 
     expect(mutate).toHaveBeenCalledTimes(1)
     expect(mutate).toHaveBeenCalledWith(
@@ -337,7 +337,7 @@ describe('TeslaAccountSection — refresh token action', () => {
     mockedRefresh.mockReturnValue(mutation({ mutate }))
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh Token' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh token' }))
     expect(await screen.findByText('Token refreshed')).toBeInTheDocument()
   })
 
@@ -348,7 +348,7 @@ describe('TeslaAccountSection — refresh token action', () => {
     mockedRefresh.mockReturnValue(mutation({ mutate }))
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh Token' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh token' }))
     expect(await screen.findByText('Token refresh failed')).toBeInTheDocument()
     expect(screen.getByText('token endpoint 500')).toBeInTheDocument()
   })
@@ -356,7 +356,7 @@ describe('TeslaAccountSection — refresh token action', () => {
   it('disables the refresh button while a refresh is in flight', () => {
     mockedRefresh.mockReturnValue(mutation({ isPending: true }))
     renderSection()
-    expect(screen.getByRole('button', { name: 'Refresh Token' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Refresh token' })).toBeDisabled()
   })
 })
 
@@ -370,7 +370,7 @@ describe('TeslaAccountSection — sync vehicles action', () => {
     mockedSync.mockReturnValue(mutation({ mutate }))
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sync Vehicles' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sync vehicles' }))
     expect(mutate).toHaveBeenCalledTimes(1)
     expect(mutate).toHaveBeenCalledWith(
       undefined,
@@ -385,7 +385,7 @@ describe('TeslaAccountSection — sync vehicles action', () => {
     mockedSync.mockReturnValue(mutation({ mutate }))
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sync Vehicles' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sync vehicles' }))
     expect(await screen.findByText('Vehicle sync failed')).toBeInTheDocument()
     expect(screen.getByText('fleet API unreachable')).toBeInTheDocument()
   })
@@ -407,7 +407,7 @@ describe('TeslaAccountSection — sync vehicles action', () => {
   it('disables the sync button while a sync is in flight', () => {
     mockedSync.mockReturnValue(mutation({ isPending: true }))
     renderSection()
-    expect(screen.getByRole('button', { name: 'Sync Vehicles' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Sync vehicles' })).toBeDisabled()
   })
 })
 
@@ -424,7 +424,7 @@ describe('TeslaAccountSection — disconnect confirmation flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
 
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText('Disconnect Tesla Account?')).toBeInTheDocument()
+    expect(within(dialog).getByText('Disconnect Tesla account?')).toBeInTheDocument()
     // Nothing fires until the user actually confirms.
     expect(mutate).not.toHaveBeenCalled()
   })

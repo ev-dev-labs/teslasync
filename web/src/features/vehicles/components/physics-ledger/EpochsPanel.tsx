@@ -14,21 +14,25 @@ export function EpochsPanel({ ledger }: { ledger: PhysicsLedger }) {
     { key: 'firmware', header: t('physicsLedger.epochs.firmware', 'Firmware'), render: (row) => row.firmware },
     {
       key: 'measured',
+      align: 'right',
       header: t('physicsLedger.epochs.measured', 'Measured'),
       render: (row) => (row.measured_wh != null ? formatEnergy(row.measured_wh) : unknownLabel(t)),
     },
     {
       key: 'predicted',
+      align: 'right',
       header: t('physicsLedger.epochs.predicted', 'Predicted'),
       render: (row) => (row.predicted_wh != null ? formatEnergy(row.predicted_wh) : unknownLabel(t)),
     },
     {
       key: 'unexplained',
+      align: 'right',
       header: t('physicsLedger.epochs.unexplained', 'Unexplained'),
       render: (row) => (row.unexplained_wh != null ? formatEnergy(row.unexplained_wh) : unknownLabel(t)),
     },
     {
       key: 'samples',
+      align: 'right',
       header: t('physicsLedger.epochs.samples', 'Samples'),
       render: (row) => fmtNumber(row.sample_count, 0),
     },

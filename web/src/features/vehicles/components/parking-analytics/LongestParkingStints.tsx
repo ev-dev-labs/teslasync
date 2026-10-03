@@ -50,6 +50,7 @@ export function LongestParkingStints({
     () => [
       {
         key: 'rank',
+        align: 'right',
         header: t('parking.longest.rank', 'Rank'),
         visibleOnMobile: true,
         render: (row) => (
@@ -120,7 +121,7 @@ export function LongestParkingStints({
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
           <ListOrdered className="h-4 w-4 text-amber-300" aria-hidden="true" />
-          {t('parking.longest.title', 'Longest Observed Stints')}
+          {t('parking.longest.title', 'Longest observed stints')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mt-1">
           {t(

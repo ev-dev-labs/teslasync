@@ -129,13 +129,13 @@ function renderPage() {
 describe('FleetSetupPage', () => {
   it('renders KPI, Tesla connect, subscribe, stream, and domain panels', async () => {
     renderPage()
-    expect(await screen.findByRole('heading', { name: 'Fleet Setup' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Fleet setup' })).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByText('Auto-refresh on')).toBeInTheDocument()
     })
-    expect(screen.getByText('Refresh Token')).toBeInTheDocument()
+    expect(screen.getByText('Refresh token')).toBeInTheDocument()
     expect(screen.getAllByText('Subscribe telemetry').length).toBeGreaterThan(0)
-    expect(screen.getByText('How Fleet Setup works')).toBeInTheDocument()
+    expect(screen.getByText('How fleet setup works')).toBeInTheDocument()
     expect(screen.getByText('Domain & certificates')).toBeInTheDocument()
     expect(screen.getAllByText('Streaming').length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: /Open Fleet API tools/i })).toHaveAttribute(
@@ -188,7 +188,7 @@ describe('FleetSetupPage', () => {
         'No stream yet. After subscribe, Tesla delivers the first batch when the vehicle next wakes.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText('How Fleet Setup works')).toBeInTheDocument()
+    expect(screen.getByText('How fleet setup works')).toBeInTheDocument()
     expect(screen.getByText('Domain & certificates')).toBeInTheDocument()
   })
 })

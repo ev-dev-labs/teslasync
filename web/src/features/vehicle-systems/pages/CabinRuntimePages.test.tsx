@@ -88,14 +88,14 @@ describe('cabin analytics runtime pages', () => {
   it('renders HVAC Cycling with canonical boolean HVAC history', () => {
     renderPage(<HvacCyclingPage />);
 
-    expect(screen.getByRole('heading', { name: 'HVAC Cycling' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Hourly HVAC Duty' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'HVAC cycling' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hourly HVAC duty' })).toBeInTheDocument();
   });
 
   it('renders Cabin Thermal Model with canonical boolean HVAC history', () => {
     renderPage(<CabinThermalPage />);
 
-    expect(screen.getByRole('heading', { name: 'Cabin Thermal Model' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Cabin thermal model' })).toBeInTheDocument();
     expect(screen.getByText('Accepted median τ')).toBeInTheDocument();
   });
 });

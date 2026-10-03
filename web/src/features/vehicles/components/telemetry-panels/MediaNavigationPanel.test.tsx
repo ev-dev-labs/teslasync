@@ -80,9 +80,9 @@ beforeEach(() => {
 describe('MediaNavigationPanel', () => {
   it('always renders the accessible section heading and both column labels', () => {
     render(<MediaNavigationPanel mediaData={null} locationData={null} />);
-    expect(screen.getByRole('heading', { name: 'Media & Navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Media & navigation' })).toBeInTheDocument();
     // The sub-section labels render regardless of data so the panel is never blank.
-    expect(screen.getByText('Now Playing')).toBeInTheDocument();
+    expect(screen.getByText('Now playing')).toBeInTheDocument();
     expect(screen.getByText('Navigation')).toBeInTheDocument();
   });
 

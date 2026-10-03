@@ -172,6 +172,7 @@ describe('ActiveSessionsPage — forward-auth + non-empty list', () => {
     ).toBeTruthy()
     // Header "all others" shows because hasOthers=true.
     expect(screen.getByTestId('active-sessions-revoke-all-others')).toBeTruthy()
+    expect(screen.getByTestId('active-sessions-revoke-all-others').closest('[data-action-group="destructive"]')).not.toBeNull()
   })
 
   it('per-row revoke opens confirm and fires DELETE on confirm', async () => {
@@ -337,7 +338,7 @@ describe('ActiveSessionsPage — empty list', () => {
     // DataTable's empty state surfaces our message verbatim once the query
     // resolves (during load it shows a skeleton instead).
     await waitFor(() => {
-      expect(screen.getByText(/No active sessions for this account\./i)).toBeTruthy()
+      expect(screen.getByText(/No Active sessions for this account\./i)).toBeTruthy()
     })
     expect(screen.getByTestId('active-sessions-section')).toBeTruthy()
     expect(screen.queryByTestId('active-sessions-revoke-all-others')).toBeNull()

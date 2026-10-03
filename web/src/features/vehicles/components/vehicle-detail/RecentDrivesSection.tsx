@@ -30,17 +30,20 @@ function useDriveColumns(distanceUnit: DistanceUnitPref): Column<Drive>[] {
       },
       {
         key: 'distance',
+        align: 'right',
         header: t('common.distance', 'Distance'),
         render: (d) => `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit))} ${distanceUnit}`,
         sortable: true,
       },
       {
         key: 'duration',
+        align: 'right',
         header: t('common.duration', 'Duration'),
         render: (d) => durationStr((d.duration_s ?? 0) / 60),
       },
       {
         key: 'battery',
+        align: 'right',
         header: t('common.battery', 'Battery'),
         render: (d) =>
           d.start_soc_pct != null && d.end_soc_pct != null
@@ -72,7 +75,7 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
       <div className="mb-4 flex items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('common.recentDrives', 'Recent Drives')}
+          {t('common.recentDrives', 'Recent drives')}
         </PanelTitle>
         <Link
           to="/drives"

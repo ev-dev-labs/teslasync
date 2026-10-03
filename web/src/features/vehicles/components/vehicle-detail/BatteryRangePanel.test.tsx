@@ -152,8 +152,8 @@ describe('BatteryRangePanel — range metrics', () => {
 
     expect(mockFormatDistance).toHaveBeenCalledWith(500, { precision: 0 })
     expect(mockFormatDistance).toHaveBeenCalledWith(480, { precision: 0 })
-    expect(screen.getByText('Rated Range')).toBeInTheDocument()
-    expect(screen.getByText('Ideal Range')).toBeInTheDocument()
+    expect(screen.getByText('Rated range')).toBeInTheDocument()
+    expect(screen.getByText('Ideal range')).toBeInTheDocument()
     expect(screen.getByText('500 km')).toBeInTheDocument()
     expect(screen.getByText('480 km')).toBeInTheDocument()
   })
@@ -163,7 +163,7 @@ describe('BatteryRangePanel — range metrics', () => {
 
     expect(mockFormatDistance).toHaveBeenCalledWith(undefined, { precision: 0 })
     // The Rated Range card body falls back to the formatter's em dash.
-    expect(screen.getByText('Rated Range').closest('div')).toHaveTextContent('—')
+    expect(screen.getByText('Rated range').closest('div')).toHaveTextContent('—')
   })
 })
 
@@ -178,7 +178,7 @@ describe('BatteryRangePanel — charging state', () => {
   it('shows "Not Charging" when idle and never formats the charge rate', () => {
     render(<BatteryRangePanel state={makeState({ is_charging: false, charge_rate: 48 })} />)
 
-    expect(screen.getByText('Not Charging')).toBeInTheDocument()
+    expect(screen.getByText('Not charging')).toBeInTheDocument()
     expect(screen.queryByText('48 km/h')).toBeNull()
     expect(mockFormatDistance).not.toHaveBeenCalledWith(48)
   })
@@ -211,7 +211,7 @@ describe('BatteryRangePanel — charging state', () => {
     )
 
     expect(screen.queryByText(/Full in/)).toBeNull()
-    expect(screen.getByText('Not Charging')).toBeInTheDocument()
+    expect(screen.getByText('Not charging')).toBeInTheDocument()
   })
 })
 

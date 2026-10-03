@@ -193,7 +193,7 @@ describe('HvacCyclingPage', () => {
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'HVAC Cycling',
+      name: 'HVAC cycling',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.historyHook).toHaveBeenLastCalledWith('7');

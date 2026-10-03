@@ -26,7 +26,7 @@ import {
 
 export default function FleetSetupPage() {
   const { t } = useTranslation('settings')
-  usePageTitle(t('fleetSetup.title', 'Fleet Setup'))
+  usePageTitle(t('fleetSetup.title', 'Fleet setup'))
 
   const auth = useAuthStatus()
   const apiInfo = useFleetApiInfo()
@@ -38,7 +38,7 @@ export default function FleetSetupPage() {
 
   return (
     <PageContainer
-      title={t('fleetSetup.title', 'Fleet Setup')}
+      title={t('fleetSetup.title', 'Fleet setup')}
       subtitle={t(
         'fleetSetup.subtitle',
         'Connect Tesla, keep the token fresh, subscribe a vehicle, then wait for telemetry.',

@@ -134,8 +134,8 @@ describe('MotorSection — empty state', () => {
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.getByText('No motor data available')).toBeInTheDocument()
     // None of the metric-card labels render in the empty branch.
-    expect(screen.queryByText('Shift State')).toBeNull()
-    expect(screen.queryByText('Pack Voltage')).toBeNull()
+    expect(screen.queryByText('Shift state')).toBeNull()
+    expect(screen.queryByText('Pack voltage')).toBeNull()
     // The peak-temp formatter is never reached with no data.
     expect(mockFormatTemperature).not.toHaveBeenCalled()
   })
@@ -153,13 +153,13 @@ describe('MotorSection — shift state', () => {
   it('surfaces the raw gear string', () => {
     render(<MotorSection motorData={makeMotor({ shift_state: 'R' })} />)
 
-    expect(screen.getByText('Shift State')).toBeInTheDocument()
-    expect(within(card('Shift State')).getByText('R')).toBeInTheDocument()
+    expect(screen.getByText('Shift state')).toBeInTheDocument()
+    expect(within(card('Shift state')).getByText('R')).toBeInTheDocument()
   })
 
   it('falls back to an em dash when shift_state is null', () => {
     render(<MotorSection motorData={makeMotor({ shift_state: null })} />)
-    expect(card('Shift State')).toHaveTextContent('—')
+    expect(card('Shift state')).toHaveTextContent('—')
   })
 })
 
@@ -180,13 +180,13 @@ describe('MotorSection — pack voltage', () => {
     // Guards the `??` (not `||`) coalescing: 0 is a real reading, not "missing".
     render(<MotorSection motorData={makeMotor({ vbat_rear: 0, vbat_front: 390 })} />)
 
-    expect(within(card('Pack Voltage')).getByText('0.00 V')).toBeInTheDocument()
+    expect(within(card('Pack voltage')).getByText('0.00 V')).toBeInTheDocument()
     expect(screen.queryByText('390.00 V')).toBeNull()
   })
 
   it('shows an em dash when neither axle reports a voltage', () => {
     render(<MotorSection motorData={makeMotor({ vbat_rear: null, vbat_front: null })} />)
-    expect(card('Pack Voltage')).toHaveTextContent('—')
+    expect(card('Pack voltage')).toHaveTextContent('—')
   })
 })
 
@@ -198,12 +198,12 @@ describe('MotorSection — motor current', () => {
 
   it('keeps a genuine 0 A reading', () => {
     render(<MotorSection motorData={makeMotor({ motor_current_front: 0 })} />)
-    expect(within(card('Motor Current (F)')).getByText('0.00 A')).toBeInTheDocument()
+    expect(within(card('Motor current (F)')).getByText('0.00 A')).toBeInTheDocument()
   })
 
   it('renders an em dash when the current is null', () => {
     render(<MotorSection motorData={makeMotor({ motor_current_front: null })} />)
-    expect(card('Motor Current (F)')).toHaveTextContent('—')
+    expect(card('Motor current (F)')).toHaveTextContent('—')
   })
 })
 
@@ -211,8 +211,8 @@ describe('MotorSection — torque split', () => {
   it('renders front + rear torque in Nm', () => {
     render(<MotorSection motorData={makeMotor({ torque_nm_front: 320.5, torque_nm_rear: 280 })} />)
 
-    expect(screen.getByText('Front Torque')).toBeInTheDocument()
-    expect(screen.getByText('Rear Torque')).toBeInTheDocument()
+    expect(screen.getByText('Front torque')).toBeInTheDocument()
+    expect(screen.getByText('Rear torque')).toBeInTheDocument()
     expect(screen.getByText('320.50 Nm')).toBeInTheDocument()
     expect(screen.getByText('280.00 Nm')).toBeInTheDocument()
   })
@@ -220,8 +220,8 @@ describe('MotorSection — torque split', () => {
   it('renders an em dash independently for each null axle', () => {
     render(<MotorSection motorData={makeMotor({ torque_nm_front: null, torque_nm_rear: 280 })} />)
 
-    expect(card('Front Torque')).toHaveTextContent('—')
-    expect(within(card('Rear Torque')).getByText('280.00 Nm')).toBeInTheDocument()
+    expect(card('Front torque')).toHaveTextContent('—')
+    expect(within(card('Rear torque')).getByText('280.00 Nm')).toBeInTheDocument()
   })
 })
 
@@ -284,7 +284,7 @@ describe('MotorSection — peak motor temperature', () => {
       />,
     )
 
-    expect(card('Motor Temp (peak)')).toHaveTextContent('—')
+    expect(card('Motor temp (peak)')).toHaveTextContent('—')
     // The finite-guard short-circuits before any formatTemperature call —
     // crucially it never passes the -Infinity Math.max sentinel through.
     expect(mockFormatTemperature).not.toHaveBeenCalled()

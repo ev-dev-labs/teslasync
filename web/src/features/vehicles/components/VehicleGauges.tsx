@@ -160,14 +160,14 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 value={batteryLevel}
                 max={100}
                 color={batteryColor(batteryLevel)}
-                label={t('common.batteryLevel', 'Battery Level')}
+                label={t('common.batteryLevel', 'Battery level')}
                 sublabel={`${fmtNumber(batteryLevel, 0)}%`}
               />
               <MetricBar
                 value={rangeDisplay}
                 max={rangeMax}
                 color={COLOR.CYAN}
-                label={t('common.estimatedRange', 'Estimated Range')}
+                label={t('common.estimatedRange', 'Estimated range')}
                 sublabel={formatDistance(ratedRange)}
               />
               {state.is_charging && (
@@ -175,7 +175,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                   value={chargeRateDisplay}
                   max={chargeRateMax}
                   color="#10b981"
-                  label={t('common.chargeRate', 'Charge Rate')}
+                  label={t('common.chargeRate', 'Charge rate')}
                   sublabel={`${formatDistance(chargeRate)}/h`}
                 />
               )}

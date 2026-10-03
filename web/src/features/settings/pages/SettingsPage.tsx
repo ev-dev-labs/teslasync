@@ -196,7 +196,7 @@ export default function SettingsPage() {
     <PageContainer
       title={t('title', 'Settings')}
       subtitle={t('settings.organization.subtitle', 'Find a category, adjust your preferences, and keep TeslaSync working your way.')}
-      actions={<SettingsSearch className="w-full sm:w-72" />}
+      contextActions={<SettingsSearch className="w-full sm:w-72" />}
       query={settingsQuery}
     >
       <EditConflictBanner
@@ -242,7 +242,7 @@ export default function SettingsPage() {
                       href="/data-export"
                       iconColor="green"
                       icon={<Download className="h-5 w-5" aria-hidden="true" />}
-                      title={t('export.title', 'Data Export')}
+                      title={t('export.title', 'Data export')}
                       description={t(
                         'export.subtitle',
                         'Export drives, charging, analytics, or full backup as CSV/JSON',
@@ -252,19 +252,19 @@ export default function SettingsPage() {
                       dataTour="settings-tour"
                       iconColor="cyan"
                       icon={<PlayCircle className="h-5 w-5" aria-hidden="true" />}
-                      title={t('tour.title', 'Onboarding Tour')}
+                      title={t('tour.title', 'Onboarding tour')}
                       description={t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}
                       action={
                         <Button variant="ghost" className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
                           <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {t('tour.restart', 'Open Tour Launcher')}
+                          {t('tour.restart', 'Open tour launcher')}
                         </Button>
                       }
                     />
                     <SettingsActionCard
                       iconColor="cyan"
                       icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
-                      title={t('checklist.settings.title', 'Setup Checklist')}
+                      title={t('checklist.settings.title', 'Setup checklist')}
                       description={t(
                         'checklist.settings.description',
                         'Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer.',
@@ -284,7 +284,7 @@ export default function SettingsPage() {
                           }}
                         >
                           <Rocket className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {t('checklist.settings.restart', 'Restart Checklist')}
+                          {t('checklist.settings.restart', 'Restart checklist')}
                         </Button>
                       }
                     />

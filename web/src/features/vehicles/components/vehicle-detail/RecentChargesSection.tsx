@@ -57,17 +57,20 @@ function useChargeColumns(): Column<ChargingSession>[] {
       },
       {
         key: 'energy',
+        align: 'right',
         header: t('common.energy', 'Energy'),
         render: (s) => `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh`,
         sortable: true,
       },
       {
         key: 'duration',
+        align: 'right',
         header: t('common.duration', 'Duration'),
         render: (s) => durationStr(chargeDurationMinutes(s)),
       },
       {
         key: 'cost',
+        align: 'right',
         header: t('common.cost', 'Cost'),
         // `cost_decimal` is the SI-canonical column; `cost` is the legacy alias.
         render: (s) => {
@@ -77,6 +80,7 @@ function useChargeColumns(): Column<ChargingSession>[] {
       },
       {
         key: 'battery',
+        align: 'right',
         header: t('common.battery', 'Battery'),
         render: (s) => {
           if (s.start_soc_pct == null) return '—'
@@ -99,7 +103,7 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
       <div className="mb-4 flex items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <BatteryCharging className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-          {t('common.recentCharges', 'Recent Charges')}
+          {t('common.recentCharges', 'Recent charges')}
         </PanelTitle>
         <Link
           to="/charging"

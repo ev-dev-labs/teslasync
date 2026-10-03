@@ -274,11 +274,11 @@ describe('GuardModePage — status surfaces', () => {
     renderPage();
 
     // Triggered banner (latest event is unacknowledged + not a test alert).
-    expect(screen.getByText('Guard Alert Triggered!')).toBeInTheDocument();
+    expect(screen.getByText('Guard alert triggered!')).toBeInTheDocument();
 
     // Six KPI tiles, scoped to the overview region to avoid label collisions.
     const band = kpi();
-    expect(band.getByText('Guard State')).toBeInTheDocument();
+    expect(band.getByText('Guard state')).toBeInTheDocument();
     expect(band.getByText('Triggered')).toBeInTheDocument();
     expect(band.getByText('On')).toBeInTheDocument(); // sentry
     expect(band.getByText('Locked')).toBeInTheDocument(); // lock
@@ -302,7 +302,7 @@ describe('GuardModePage — status surfaces', () => {
     });
     renderPage();
 
-    expect(screen.queryByText('Guard Alert Triggered!')).not.toBeInTheDocument();
+    expect(screen.queryByText('Guard alert triggered!')).not.toBeInTheDocument();
     const band = kpi();
     expect(band.getByText('Disarmed')).toBeInTheDocument();
     expect(band.getByText('Unlocked')).toBeInTheDocument();
@@ -337,9 +337,9 @@ describe('GuardModePage — status surfaces', () => {
     // The <section aria-label="Guard status overview"> is replaced by a
     // skeleton grid while loading, so the metric labels are absent.
     expect(screen.queryByRole('region', { name: 'Guard status overview' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Guard State')).not.toBeInTheDocument();
+    expect(screen.queryByText('Guard state')).not.toBeInTheDocument();
     // The page shell (title) still renders.
-    expect(screen.getByRole('heading', { level: 1, name: 'Guard Mode' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Guard mode' })).toBeInTheDocument();
   });
 });
 
@@ -353,7 +353,7 @@ describe('GuardModePage — arm/disarm + settings', () => {
     });
     renderPage();
 
-    const guardSwitch = screen.getByRole('switch', { name: 'Guard Mode' });
+    const guardSwitch = screen.getByRole('switch', { name: 'Guard mode' });
     expect(guardSwitch).toHaveAttribute('aria-checked', 'false');
 
     fireEvent.click(guardSwitch);
@@ -378,7 +378,7 @@ describe('GuardModePage — arm/disarm + settings', () => {
     });
     renderPage();
 
-    const autoPanicSwitch = screen.getByRole('switch', { name: 'Auto-Panic on Trigger' });
+    const autoPanicSwitch = screen.getByRole('switch', { name: 'Auto-panic on trigger' });
     // Reflects persisted state.
     expect(autoPanicSwitch).toHaveAttribute('aria-checked', 'true');
 
@@ -388,7 +388,7 @@ describe('GuardModePage — arm/disarm + settings', () => {
 
     // Also change sensitivity, then Save — both draft edits must be persisted.
     fireEvent.change(screen.getByLabelText('Sensitivity'), { target: { value: 'low' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
 
     expect(H.setConfig.mutate).toHaveBeenCalledWith(
       expect.objectContaining({ vehicleId: 42, enabled: true, sensitivity: 'low', auto_panic: false }),
@@ -402,8 +402,8 @@ describe('GuardModePage — arm/disarm + settings', () => {
     });
     renderPage();
 
-    fireEvent.change(screen.getByLabelText('Home Geofence'), { target: { value: '7' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }));
+    fireEvent.change(screen.getByLabelText('Home geofence'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
 
     expect(H.setConfig.mutate).toHaveBeenCalledWith(
       expect.objectContaining({ home_geofence_id: 7 }),
@@ -418,18 +418,18 @@ describe('GuardModePage — emergency panic', () => {
 
     // No dialog until the Emergency button is pressed.
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Activate Panic/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Activate panic/i }));
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Activate Panic Mode?')).toBeInTheDocument();
+    expect(within(dialog).getByText('Activate panic mode?')).toBeInTheDocument();
 
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Activate Panic' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Activate panic' }));
     expect(H.panic.mutate).toHaveBeenCalledWith(42);
   });
 
   it('does not trigger panic when the dialog is cancelled', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /Activate Panic/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Activate panic/i }));
 
     const dialog = screen.getByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
@@ -444,11 +444,11 @@ describe('GuardModePage — emergency panic', () => {
     install({ config: makeQuery<GuardConfig>({ data: undefined }) });
     renderPage();
 
-    expect(screen.getByRole('button', { name: /Activate Panic/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Save Settings' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Activate panic/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save settings' })).toBeDisabled();
 
     // Guard toggle is a no-op with no vehicle (guarded by activeVehicleId <= 0).
-    fireEvent.click(screen.getByRole('switch', { name: 'Guard Mode' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Guard mode' }));
     expect(H.setConfig.mutate).not.toHaveBeenCalled();
   });
 });

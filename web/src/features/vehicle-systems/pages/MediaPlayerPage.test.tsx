@@ -290,9 +290,9 @@ describe('MediaPlayerPage — no vehicle selected', () => {
     expect(screen.getByText('Select a vehicle to view playback history')).toBeInTheDocument();
 
     // KPIs collapse to honest placeholders, not stale numbers.
-    expect(kpiValue('Unique Tracks')).toBe('0');
-    expect(kpiValue('Top Source')).toBe('—');
-    expect(kpiValue('Avg Volume')).toBe('0');
+    expect(kpiValue('Unique tracks')).toBe('0');
+    expect(kpiValue('Top source')).toBe('—');
+    expect(kpiValue('Avg volume')).toBe('0');
 
     // Both queries are scoped to the empty vehicle (disabled upstream).
     expect(mockMedia).toHaveBeenCalledWith('');
@@ -314,7 +314,7 @@ describe('MediaPlayerPage — loading', () => {
     expect(screen.queryByText('No volume data for this period')).not.toBeInTheDocument();
     expect(screen.queryByText('No playback history for this period')).not.toBeInTheDocument();
     // Aggregates are withheld while the first load is in flight (no data yet).
-    expect(kpiValue('Unique Tracks')).toBe('0');
+    expect(kpiValue('Unique tracks')).toBe('0');
   });
 });
 
@@ -354,8 +354,8 @@ describe('MediaPlayerPage — populated happy path', () => {
     renderPage();
     const region = nowPlayingRegion();
 
-    expect(screen.getByRole('heading', { name: 'Media Player', level: 1 })).toBeInTheDocument();
-    expect(within(region).getByText('Now Playing')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Media player', level: 1 })).toBeInTheDocument();
+    expect(within(region).getByText('Now playing')).toBeInTheDocument();
     expect(within(region).getByText('Now Song')).toBeInTheDocument();
     expect(within(region).getByText(/Now Artist/)).toHaveTextContent('Now Album');
     expect(within(region).getByText('KEXP')).toBeInTheDocument();
@@ -382,10 +382,10 @@ describe('MediaPlayerPage — populated happy path', () => {
   it('renders honest KPI tiles and the source legend derived from the history aggregates', () => {
     renderPage();
 
-    expect(kpiValue('Unique Tracks')).toBe('3');
-    expect(kpiValue('Top Source')).toBe('Spotify');
-    expect(kpiValue('Avg Volume')).toBe('6'); // (4 + 8 + 6) / 3
-    expect(kpiValue('Volume Step')).toBe('0.50');
+    expect(kpiValue('Unique tracks')).toBe('3');
+    expect(kpiValue('Top source')).toBe('Spotify');
+    expect(kpiValue('Avg volume')).toBe('6'); // (4 + 8 + 6) / 3
+    expect(kpiValue('Volume step')).toBe('0.50');
 
     // Source legend: Spotify(2) + Bluetooth(1) — the counts are unique on the page.
     expect(screen.getByText('(2)')).toBeInTheDocument();
@@ -455,8 +455,8 @@ describe('MediaPlayerPage — avgVolume excludes missing readings (bug fix)', ()
     );
     renderPage();
 
-    expect(kpiValue('Avg Volume')).toBe('6');
-    expect(kpiValue('Avg Volume')).not.toBe('3');
+    expect(kpiValue('Avg volume')).toBe('6');
+    expect(kpiValue('Avg volume')).not.toBe('3');
   });
 });
 

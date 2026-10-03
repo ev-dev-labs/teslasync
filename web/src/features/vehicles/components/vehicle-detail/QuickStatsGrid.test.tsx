@@ -164,8 +164,8 @@ describe('QuickStatsGrid', () => {
       'Range',
       'Odometer',
       'Speed',
-      'Inside Temp',
-      'Outside Temp',
+      'Inside temp',
+      'Outside temp',
       'Power',
       'State',
     ]) {
@@ -265,8 +265,8 @@ describe('QuickStatsGrid', () => {
       ['common.range', 'Range'],
       ['common.odometer', 'Odometer'],
       ['common.speed', 'Speed'],
-      ['common.insideTemp', 'Inside Temp'],
-      ['common.outsideTemp', 'Outside Temp'],
+      ['common.insideTemp', 'Inside temp'],
+      ['common.outsideTemp', 'Outside temp'],
       ['common.power', 'Power'],
       ['common.state', 'State'],
     ]

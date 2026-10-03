@@ -23,21 +23,21 @@ export const yesNo = (value: boolean | null | undefined, t: Translate) =>
   value == null ? unknown(t) : value ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No');
 
 export const features = [
-  { slug: 'clocks', title: 'Three Clocks', slice: 'clocks' },
-  { slug: 'life-tape', title: 'Life Tape', slice: 'life_tape' },
-  { slug: 'contradictions', title: 'Contradiction Court', slice: 'contradictions' },
-  { slug: 'meters', title: 'Trip-Meter Genealogy', slice: 'meters' },
+  { slug: 'clocks', title: 'Three clocks', slice: 'clocks' },
+  { slug: 'life-tape', title: 'Life tape', slice: 'life_tape' },
+  { slug: 'contradictions', title: 'Contradiction court', slice: 'contradictions' },
+  { slug: 'meters', title: 'Trip-meter genealogy', slice: 'meters' },
   { slug: 'unknown', title: 'Unknown OS', slice: 'unknown_os' },
-  { slug: 'car-kept-living', title: 'Car Kept Living', slice: 'car_kept_living' },
-  { slug: 'logbook', title: 'Tesla-Language Logbook', slice: 'logbook' },
-  { slug: 'firmware-epochs', title: 'Firmware Epochs', slice: 'firmware_epochs' },
-  { slug: 'charge-port', title: 'Charge-Port Court', slice: 'charge_port_court' },
-  { slug: 'black-box', title: 'Black Box 90s', slice: 'black_box' },
-  { slug: 'dictionary', title: 'Owner Dictionary', slice: 'dictionary' },
-  { slug: 'vault', title: 'Physics Vault', slice: 'vault' },
-  { slug: 'modes', title: 'Mode Laws', slice: 'modes' },
-  { slug: 'nervous-system', title: 'Nervous System', slice: 'nervous_system' },
-  { slug: 'range', title: 'Range Disagreement', slice: 'range' },
+  { slug: 'car-kept-living', title: 'Car kept living', slice: 'car_kept_living' },
+  { slug: 'logbook', title: 'Tesla-language logbook', slice: 'logbook' },
+  { slug: 'firmware-epochs', title: 'Firmware epochs', slice: 'firmware_epochs' },
+  { slug: 'charge-port', title: 'Charge-port court', slice: 'charge_port_court' },
+  { slug: 'black-box', title: 'Black box 90s', slice: 'black_box' },
+  { slug: 'dictionary', title: 'Owner dictionary', slice: 'dictionary' },
+  { slug: 'vault', title: 'Physics vault', slice: 'vault' },
+  { slug: 'modes', title: 'Mode laws', slice: 'modes' },
+  { slug: 'nervous-system', title: 'Nervous system', slice: 'nervous_system' },
+  { slug: 'range', title: 'Range disagreement', slice: 'range' },
 ] as const satisfies ReadonlyArray<{ slug: string; title: string; slice: keyof ExclusiveReport }>;
 export type PhysicsSlug = typeof features[number]['slug'];
 
@@ -48,7 +48,7 @@ export function usePhysicsPage(slug?: PhysicsSlug) {
   const query = useTeslaExclusive(vehicleId == null ? undefined : String(vehicleId));
   const state = useDataState(query, { provenance: 'historical' });
   const feature = features.find((item) => item.slug === slug);
-  const title = feature ? t(`teslaOnly.${feature.slug === 'life-tape' ? 'lifeTape' : feature.slug === 'firmware-epochs' ? 'epochs' : feature.slug === 'charge-port' ? 'portCourt' : feature.slug === 'black-box' ? 'blackBox' : feature.slug === 'car-kept-living' ? 'carKeptLiving' : feature.slug === 'nervous-system' ? 'nervous' : feature.slug === 'unknown' ? 'unknownOS' : feature.slug}`, feature.title) : t('teslaOnly.title', 'Tesla Physics');
+  const title = feature ? t(`teslaOnly.${feature.slug === 'life-tape' ? 'lifeTape' : feature.slug === 'firmware-epochs' ? 'epochs' : feature.slug === 'charge-port' ? 'portCourt' : feature.slug === 'black-box' ? 'blackBox' : feature.slug === 'car-kept-living' ? 'carKeptLiving' : feature.slug === 'nervous-system' ? 'nervous' : feature.slug === 'unknown' ? 'unknownOS' : feature.slug}`, feature.title) : t('teslaOnly.title', 'Tesla physics');
   return { slug, t, title, vehicleId, query, state, report: state.data };
 }
 
@@ -58,7 +58,7 @@ export function PhysicsPageShell({ physics, children, navigation }: {
   physics: PhysicsPage; children: ReactNode; navigation: ReactNode;
 }) {
   const { slug, t, title, vehicleId, query, state, report } = physics;
-  const pageTitle = t('teslaOnly.title', 'Tesla Physics');
+  const pageTitle = t('teslaOnly.title', 'Tesla physics');
   usePageTitle(pageTitle);
   if (vehicleId == null) return <NoVehicleSelected pageTitle={pageTitle} />;
   const slice = features.find((feature) => feature.slug === slug)?.slice;
@@ -66,7 +66,7 @@ export function PhysicsPageShell({ physics, children, navigation }: {
   const limited = evidence && (!evidence.history_available || !evidence.black_box_available || evidence.history_truncated ||
     evidence.black_box_truncated || evidence.drive_sessions_truncated || evidence.charge_sessions_truncated);
   return <PageContainer title={pageTitle} subtitle={t('teslaOnly.workbench.subtitle', 'A bounded evidence workbench: conclusions first, raw observations on demand.')}
-    query={query} copyLink contextActions={<div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+    query={query} copyLink metadataActions={<div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
       <DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />
     </div>}>
     <StaleRefreshWarning state={state} label={title} />

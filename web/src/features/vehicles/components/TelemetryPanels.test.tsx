@@ -386,7 +386,7 @@ describe('TelemetryGrid — charger tile', () => {
   it('shows "Not Charging" and no time-to-full when idle', () => {
     render(<TelemetryGrid state={makeState({ is_charging: false })} />)
 
-    expect(screen.getByText('Not Charging')).toHaveClass('text-[var(--text-muted)]')
+    expect(screen.getByText('Not charging')).toHaveClass('text-[var(--text-muted)]')
     expect(screen.queryByText(/Full in/)).toBeNull()
   })
 })
@@ -414,14 +414,14 @@ describe('LiveTelemetryPanels — composition', () => {
   it('renders the section header and every child panel heading', () => {
     render(<LiveTelemetryPanels {...makeLiveProps()} />)
 
-    expect(screen.getByRole('heading', { name: /Live Telemetry/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Live telemetry/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Powertrain/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Climate/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Security/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Vehicle State/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Tire Pressure/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Energy & Charging/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Media & Navigation/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Vehicle state/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Tire pressure/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Energy & charging/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Media & navigation/ })).toBeInTheDocument()
   })
 })
 
@@ -459,14 +459,14 @@ describe('LiveTelemetryPanels — vehicle state + sse', () => {
       />,
     )
 
-    const panel = within(panelFor(/Vehicle State/))
+    const panel = within(panelFor(/Vehicle state/))
     expect(panel.getByText('Live')).toBeInTheDocument()
     expect(panel.getByText('On')).toBeInTheDocument()
   })
 
   it('hides the Live badge when disconnected', () => {
     render(<LiveTelemetryPanels {...makeLiveProps({ sseConnected: false })} />)
-    expect(within(panelFor(/Vehicle State/)).queryByText('Live')).toBeNull()
+    expect(within(panelFor(/Vehicle state/)).queryByText('Live')).toBeNull()
   })
 })
 
@@ -474,11 +474,11 @@ describe('LiveTelemetryPanels — tire + charging + media', () => {
   it('converts Pa→kPa, formats each tire, and reports all-normal', () => {
     render(<LiveTelemetryPanels {...makeLiveProps({ tireData: makeTire() })} />)
 
-    const panel = within(panelFor(/Tire Pressure/))
+    const panel = within(panelFor(/Tire pressure/))
     // paToKpa(290000) === 290 → formatPressure(290) → "290 bar", one per tire.
     expect(fmt.formatPressure).toHaveBeenCalledWith(290)
     expect(panel.getAllByText('290 bar')).toHaveLength(4)
-    expect(panel.getByText(/All Normal/)).toBeInTheDocument()
+    expect(panel.getByText(/All normal/)).toBeInTheDocument()
   })
 
   it('surfaces charging state + battery level in EnergyChargingPanel', () => {
@@ -494,7 +494,7 @@ describe('LiveTelemetryPanels — tire + charging + media', () => {
       />,
     )
 
-    const panel = within(panelFor(/Energy & Charging/))
+    const panel = within(panelFor(/Energy & charging/))
     expect(panel.getByText('Charging')).toBeInTheDocument()
     expect(panel.getByText('66.00%')).toBeInTheDocument()
     expect(panel.getByText('240.00')).toBeInTheDocument()
@@ -514,7 +514,7 @@ describe('LiveTelemetryPanels — tire + charging + media', () => {
       />,
     )
 
-    const panel = within(panelFor(/Media & Navigation/))
+    const panel = within(panelFor(/Media & navigation/))
     expect(panel.getByText('Song X')).toBeInTheDocument()
     expect(panel.getByText('Artist Y')).toBeInTheDocument()
     expect(panel.getByText('Home Base')).toBeInTheDocument()
@@ -551,6 +551,6 @@ describe('LiveTelemetryPanels — empty states', () => {
 
     // Panels never disappear — their shells/headings still render.
     expect(screen.getByRole('heading', { name: /Powertrain/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Vehicle State/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Vehicle state/ })).toBeInTheDocument()
   })
 })

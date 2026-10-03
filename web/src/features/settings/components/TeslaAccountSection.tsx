@@ -66,7 +66,7 @@ export function TeslaAccountSection() {
 
   async function handleDisconnect() {
     const ok = await confirmDisconnect({
-      title: t('tesla.disconnectTitle', 'Disconnect Tesla Account?'),
+      title: t('tesla.disconnectTitle', 'Disconnect Tesla account?'),
       message: t('tesla.disconnectConfirm', 'Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.'),
       variant: 'danger',
       confirmLabel: t('tesla.disconnect', 'Disconnect'),
@@ -100,7 +100,7 @@ export function TeslaAccountSection() {
             <Shield className="h-5 w-5" />
           </IconBox>
           <div>
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('tesla.title', 'Tesla Account')}</h2>
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('tesla.title', 'Tesla account')}</h2>
             <p className="text-xs text-[var(--text-muted)]">{t('tesla.subtitle', 'Connect your Tesla account to sync vehicles and data')}</p>
           </div>
         </div>
@@ -122,7 +122,7 @@ export function TeslaAccountSection() {
                   {expiringSoon !== null && (
                     <span
                       data-testid="tesla-expiring-soon-pill"
-                      className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-amber-300"
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-2xs font-semibold tracking-wide text-amber-300"
                     >
                       <AlertTriangle className="h-3 w-3" aria-hidden />
                       {t('tesla.expiringSoon', 'Expires in {{days}}d', { days: expiringSoon })}
@@ -160,7 +160,7 @@ export function TeslaAccountSection() {
         <div className="flex flex-wrap gap-3">
           {!auth?.authenticated ? (
             <Button variant="primary" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} loading={authUrlMut.isPending}>
-              {t('tesla.connect', 'Connect Tesla Account')}
+              {t('tesla.connect', 'Connect Tesla account')}
             </Button>
           ) : (
             <>
@@ -168,12 +168,12 @@ export function TeslaAccountSection() {
                 onSuccess: () => toast.success(t('toast.tokenRefreshed', 'Token refreshed')),
                 onError: (err: Error) => toast.error(t('toast.tokenRefreshFailed', 'Token refresh failed'), err.message),
               })} disabled={refreshMut.isPending}>
-                {t('tesla.refreshToken', 'Refresh Token')}
+                {t('tesla.refreshToken', 'Refresh token')}
               </Button>
               <Button variant="secondary" icon={<Car className={cn('h-4 w-4', syncMut.isPending && 'animate-spin')} />} onClick={() => syncMut.mutate(undefined, {
                 onError: (err: Error) => toast.error(t('toast.syncFailed', 'Vehicle sync failed'), err.message),
               })} disabled={syncMut.isPending}>
-                {t('tesla.syncVehicles', 'Sync Vehicles')}
+                {t('tesla.syncVehicles', 'Sync vehicles')}
               </Button>
               <Button variant="secondary" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} disabled={authUrlMut.isPending} className="!border-neon-cyan/30 !text-neon-cyan hover:!bg-neon-cyan/5">
                 {t('tesla.reauthorize', 'Re-authorize')}

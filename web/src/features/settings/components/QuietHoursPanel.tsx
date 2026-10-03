@@ -386,7 +386,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
             </IconBox>
             <div>
               <h2 className="text-base font-semibold text-[var(--text-primary)]">
-                {t('quietHours.title', 'Quiet hours / Do-Not-Disturb')}
+                {t('quietHours.title', 'Quiet hours / do-not-disturb')}
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
                 {t('quietHours.subtitle', 'Defer non-critical notifications during sleep, meetings, or other time-of-day windows.')}
@@ -409,7 +409,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
         {isLoading ? (
           <ListSkeleton
             rows={2}
-            label={t('quietHours.loading', 'Loading quiet-hours windows…')}
+            label={t('quietHours.loading', 'Loading quiet-hours Windows…')}
             testId="quiet-hours-loading"
           />
         ) : windows.length === 0 && !draft ? (

@@ -127,7 +127,7 @@ const STATUS_BADGE_MAP: Record<
   { variant: 'success' | 'warning' | 'danger' | 'info'; labelKey: string; fallback: string }
 > = {
   good: { variant: 'success', labelKey: 'maintenance.status.good', fallback: 'Good' },
-  soon: { variant: 'warning', labelKey: 'maintenance.status.soon', fallback: 'Due Soon' },
+  soon: { variant: 'warning', labelKey: 'maintenance.status.soon', fallback: 'Due soon' },
   overdue: { variant: 'danger', labelKey: 'maintenance.status.overdue', fallback: 'Overdue' },
   completed: { variant: 'info', labelKey: 'maintenance.status.completed', fallback: 'Completed' },
 };
@@ -142,7 +142,7 @@ const STATUS_SORT_ORDER: Record<MaintenanceStatus, number> = {
 const SORT_OPTIONS: Array<{ value: string; labelKey: string; fallback: string }> = [
   { value: 'status', labelKey: 'maintenance.sort.status', fallback: 'Status' },
   { value: 'name', labelKey: 'maintenance.sort.name', fallback: 'Name' },
-  { value: 'due_date', labelKey: 'maintenance.sort.dueDate', fallback: 'Due Date' },
+  { value: 'due_date', labelKey: 'maintenance.sort.dueDate', fallback: 'Due date' },
   { value: 'category', labelKey: 'maintenance.sort.category', fallback: 'Category' },
 ];
 
@@ -246,7 +246,7 @@ function CategoryChip({ category }: { category: string }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 capitalize',
+        'inline-flex items-center gap-1 rounded-md border px-2 py-0.5',
         typography.size.xs,
         typography.weight.medium,
         TONE_CHIP[toneFor(category)],
@@ -368,6 +368,7 @@ function buildServiceColumns(
     {
       key: 'description',
       header: t('maintenance.col.description', 'Description'),
+      filterValue: (r) => r.description || null,
       render: (r) => (
         <Text as="span" variant="body" className="block max-w-[220px] truncate">
           {r.description || '—'}
@@ -377,18 +378,23 @@ function buildServiceColumns(
     {
       key: 'mileage',
       header: t('maintenance.col.mileage', 'Mileage'),
+      align: 'right',
+      filterValue: (r) => r.mileage ?? null,
+      filterValueLabel: (_value, r) => formatDistance(r.mileage, { precision: 0 }),
       sortable: true,
       render: (r) => <Text as="span" size="sm" className="tabular-nums">{formatDistance(r.mileage, { precision: 0 })}</Text>,
     },
     {
       key: 'cost',
       header: t('maintenance.col.cost', 'Cost'),
+      align: 'right',
       sortable: true,
       render: (r) => <Currency value={r.cost} className={cn(typography.size.sm, 'tabular-nums')} />,
     },
     {
       key: 'provider',
       header: t('maintenance.col.provider', 'Provider'),
+      filterValue: (r) => r.provider || null,
       render: (r) => <Text as="span" size="sm" color="secondary">{r.provider || '—'}</Text>,
     },
     {
@@ -466,7 +472,7 @@ export default function MaintenancePage() {
 
   const categoryOptions = useMemo(
     () => [
-      { value: 'all', label: t('maintenance.allCategories', 'All Categories') },
+      { value: 'all', label: t('maintenance.allCategories', 'All categories') },
       ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) })),
     ],
     [categories, t],
@@ -555,32 +561,30 @@ export default function MaintenancePage() {
     recordsQuery.refetch();
   }, [itemsQuery, recordsQuery]);
 
-  const actions = (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button
-        variant="primary"
-        size="sm"
-        icon={<CalendarPlus className="h-4 w-4" />}
-        onClick={handleSchedule}
-      >
-        {t('maintenance.schedule', 'Schedule')}
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleRefresh}
-        aria-label={t('maintenance.refresh', 'Refresh maintenance data')}
-      >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
-      </Button>
-    </div>
-  );
-
   return (
     <PageContainer
       title={t('maintenance.title', 'Maintenance')}
       subtitle={t('maintenance.subtitle', 'Service schedule, records, and upcoming maintenance')}
-      actions={actions}
+      secondaryActions={
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          aria-label={t('maintenance.refresh', 'Refresh maintenance data')}
+        >
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      }
+      primaryAction={
+        <Button
+          variant="primary"
+          size="sm"
+          icon={<CalendarPlus className="h-4 w-4" />}
+          onClick={handleSchedule}
+        >
+          {t('maintenance.schedule', 'Schedule')}
+        </Button>
+      }
       query={[itemsQuery, recordsQuery]}
       dataSources={dataSources}
     >
@@ -593,7 +597,7 @@ export default function MaintenancePage() {
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
               <MetricCard
                 icon={<ListChecks className="h-5 w-5" />}
-                label={t('maintenance.kpi.total', 'Total Items')}
+                label={t('maintenance.kpi.total', 'Total items')}
                 value={summary.total}
                 color="cyan"
               />
@@ -605,7 +609,7 @@ export default function MaintenancePage() {
               />
               <MetricCard
                 icon={<Clock className="h-5 w-5" />}
-                label={t('maintenance.kpi.soon', 'Due Soon')}
+                label={t('maintenance.kpi.soon', 'Due soon')}
                 value={summary.soon}
                 color="amber"
               />
@@ -644,7 +648,7 @@ export default function MaintenancePage() {
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <PanelTitle className="flex items-center gap-2">
                 <Wrench className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('maintenance.itemsTitle', 'Maintenance Items')}
+                {t('maintenance.itemsTitle', 'Maintenance items')}
               </PanelTitle>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-1.5">
@@ -701,7 +705,7 @@ export default function MaintenancePage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('maintenance.projectionsTitle', 'Service Projections')}
+              {t('maintenance.projectionsTitle', 'Service projections')}
             </PanelTitle>
             {itemsQuery.isLoading ? (
               <div className="space-y-3">
@@ -752,7 +756,7 @@ export default function MaintenancePage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('maintenance.costTitle', 'Estimated Annual Cost')}
+              {t('maintenance.costTitle', 'Estimated annual cost')}
             </PanelTitle>
             {recordsQuery.isLoading ? (
               <Skeleton height={120} />
@@ -762,17 +766,17 @@ export default function MaintenancePage() {
               <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
                   <MetricCard
-                    label={t('maintenance.totalSpent', 'Total Spent')}
+                    label={t('maintenance.totalSpent', 'Total spent')}
                     value={formatCurrency(costStats.totalCost, 0)}
                     color="green"
                   />
                   <MetricCard
-                    label={t('maintenance.annualEst', 'Annual Est.')}
+                    label={t('maintenance.annualEst', 'Annual est.')}
                     value={`${formatCurrency(costStats.annualCost, 0)}${t('maintenance.perYear', '/yr')}`}
                     color="cyan"
                   />
                   <MetricCard
-                    label={t('maintenance.avgService', 'Avg / Service')}
+                    label={t('maintenance.avgService', 'Avg / service')}
                     value={formatCurrency(costStats.avgPerService, 0)}
                     color="purple"
                   />
@@ -793,7 +797,7 @@ export default function MaintenancePage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('maintenance.categoryTitle', 'Maintenance by Category')}
+              {t('maintenance.categoryTitle', 'Maintenance by category')}
             </PanelTitle>
             {itemsQuery.isLoading ? (
               <div className="space-y-3">
@@ -830,7 +834,7 @@ export default function MaintenancePage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Wrench className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('maintenance.recordsTitle', 'Service Records')}
+            {t('maintenance.recordsTitle', 'Service records')}
           </PanelTitle>
           {recordsQuery.isLoading ? (
             <div className="space-y-3">
@@ -849,6 +853,7 @@ export default function MaintenancePage() {
           ) : (
             <DataTable<ServiceRecord>
               tableId="vehicle-systems:maintenance-records"
+              enableValueFilters
               columns={serviceColumns}
               data={records}
               keyExtractor={(r) => r.id}

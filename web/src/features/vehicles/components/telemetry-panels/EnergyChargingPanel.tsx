@@ -20,13 +20,13 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
         <BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
-        {t('telemetry.energyCharging', 'Energy & Charging')}
+        {t('telemetry.energyCharging', 'Energy & charging')}
       </h3>
       {chargingTelemetry ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
-              label={t('telemetry.chargerVoltage', 'Charger Voltage')}
+              label={t('telemetry.chargerVoltage', 'Charger voltage')}
               value={
                 chargingTelemetry.charger_voltage != null
                   ? fmtNumber(chargingTelemetry.charger_voltage)
@@ -35,7 +35,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
               subtitle="V"
             />
             <MetricCard
-              label={t('telemetry.chargerCurrent', 'Charger Current')}
+              label={t('telemetry.chargerCurrent', 'Charger current')}
               value={
                 chargingTelemetry.charger_actual_current != null
                   ? fmtNumber(chargingTelemetry.charger_actual_current)
@@ -47,7 +47,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
 
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.chargerPower', 'Charger Power')}
+              {t('telemetry.chargerPower', 'Charger power')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {chargingTelemetry.charger_power_w != null
@@ -58,7 +58,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
 
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.energyAdded', 'Energy Added')}
+              {t('telemetry.energyAdded', 'Energy added')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {chargingTelemetry.charge_energy_added_wh != null
@@ -70,7 +70,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
           {/* Charging State */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.chargingState', 'Charging State')}
+              {t('telemetry.chargingState', 'Charging state')}
             </span>
             <span
               className={cn(
@@ -89,7 +89,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
           {/* Battery level */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.batteryLevel', 'Battery Level')}
+              {t('telemetry.batteryLevel', 'Battery level')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {chargingTelemetry.battery_level != null
@@ -101,7 +101,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
           {/* Charge rate */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-              <Zap className="h-3 w-3" aria-hidden="true" /> {t('telemetry.chargeRate', 'Charge Rate')}
+              <Zap className="h-3 w-3" aria-hidden="true" /> {t('telemetry.chargeRate', 'Charge rate')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {chargingTelemetry.range_added_meters_per_hour != null

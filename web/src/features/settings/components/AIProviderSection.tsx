@@ -156,12 +156,12 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
               ? [
                   { value: 'openai', label: 'OpenAI' },
                   { value: 'anthropic', label: 'Anthropic' },
-                  { value: 'azure', label: 'Microsoft Foundry' },
+                  { value: 'azure', label: 'Microsoft foundry' },
                   { value: 'google', label: 'Google' },
                 ]
               : [
                   { value: 'ollama', label: 'Ollama' },
-                  { value: 'lmstudio', label: 'LM Studio' },
+                  { value: 'lmstudio', label: 'LM studio' },
                   { value: 'llama-cpp', label: 'llama.cpp' },
                 ]
           }
@@ -207,11 +207,11 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             options={[
               {
                 value: 'auto',
-                label: t('ai.settings.provider.azureProtocolAuto', 'Auto (Chat Completions first)'),
+                label: t('ai.settings.provider.azureProtocolAuto', 'Auto (chat completions first)'),
               },
               {
                 value: 'chat_completions',
-                label: t('ai.settings.provider.azureProtocolChat', 'Chat Completions'),
+                label: t('ai.settings.provider.azureProtocolChat', 'Chat completions'),
               },
               {
                 value: 'responses',

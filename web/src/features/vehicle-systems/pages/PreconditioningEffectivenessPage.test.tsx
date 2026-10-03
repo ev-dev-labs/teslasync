@@ -312,7 +312,7 @@ describe('PreconditioningEffectivenessPage', () => {
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Preconditioning Effectiveness',
+      name: 'Preconditioning effectiveness',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.climateHook).toHaveBeenLastCalledWith('7');

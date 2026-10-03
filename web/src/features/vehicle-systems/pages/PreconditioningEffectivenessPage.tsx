@@ -47,7 +47,7 @@ export default function PreconditioningEffectivenessPage() {
   usePageTitle(
     t(
       'preconditioningEffectiveness.title',
-      'Preconditioning Effectiveness',
+      'Preconditioning effectiveness',
     ),
   );
   const { vehicleId } = useSelectedVehicle();
@@ -178,14 +178,14 @@ export default function PreconditioningEffectivenessPage() {
     <PageContainer
       title={t(
         'preconditioningEffectiveness.title',
-        'Preconditioning Effectiveness',
+        'Preconditioning effectiveness',
       )}
       subtitle={t(
         'preconditioningEffectiveness.subtitle',
         'Observational pre-drive cabin readiness with explicit source, exclusion, support, and uncertainty accounting',
       )}
       query={[climateQuery, drivesQuery]}
-      actions={(
+      secondaryActions={(
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
