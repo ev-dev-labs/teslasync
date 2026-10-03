@@ -308,7 +308,7 @@ describe('FeedbackQueuePage', () => {
     ).toBeInTheDocument()
 
     // Category-mix bar for "bug": 6 of 10 → 60%.
-    expect(screen.getByText('6 · 60%')).toBeInTheDocument()
+    expect(screen.getByText('6 · 60.00%')).toBeInTheDocument()
 
     // Bridge is disabled by default → "Not configured".
     expect(screen.getByText('Not configured')).toBeInTheDocument()

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { assertMockApiComplete, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi';
-import { expectNoHorizontalOverflow } from './qualityAssertions';
+import { expectIntegratedGridFooter, expectNoHorizontalOverflow } from './qualityAssertions';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic charging evidence');
 const route = '/charging?from=2026-08-01&to=2026-08-31&density=compact';
@@ -29,6 +29,18 @@ for (const theme of ['light', 'dark'] as const) {
       }));
       await page.goto(route);
       await waitForHarnessReady(page, mocks);
+      const copyLink = page.getByRole('button', { name: 'Copy link to this view', exact: true });
+      await expect(copyLink).toBeVisible();
+      expect((await copyLink.textContent())?.trim()).toBe('');
+      await expect(copyLink.locator('svg')).toHaveCount(1);
+      await expect(page.getByRole('tablist', { name: 'Filter charging sessions by collection' })).toHaveCount(0);
+      const overviewBox = await page.getByTestId('charging-overview').boundingBox();
+      const trendBox = await page.getByRole('region', { name: 'Charging over time', exact: true }).boundingBox();
+      expect(overviewBox).not.toBeNull();
+      expect(trendBox).not.toBeNull();
+      expect(Math.abs(overviewBox!.width - trendBox!.width)).toBeLessThan(2);
+      expect(Math.abs(overviewBox!.x - trendBox!.x)).toBeLessThan(2);
+      expect(trendBox!.y).toBeGreaterThanOrEqual(overviewBox!.y + overviewBox!.height);
       const history = page.getByRole('region', { name: 'All charging sessions', exact: true });
       const insights = page.getByRole('region', { name: 'Charging insights', exact: true });
       await expect(history).toBeVisible();
@@ -42,6 +54,7 @@ for (const theme of ['light', 'dark'] as const) {
       await history.scrollIntoViewIfNeeded();
       if (width >= 1024) {
         await expect(table).toBeVisible();
+        await expectIntegratedGridFooter(table);
         await expect(table.locator('tbody tr')).toHaveCount(2);
         await expect(table.locator('tbody tr').first()).toBeInViewport();
         await expect(table.locator('tbody td[data-column-key="batteryStart"]').first()).toHaveText('0%');

@@ -1,0 +1,18 @@
+{
+  "pagination": {
+    "rows": "Rows",
+    "rowsOption": "{{size}} / page",
+    "page": "Page {{page}}",
+    "goToPage": "Go to page",
+    "go": "Go",
+    "invalidPage": "Enter a page from 1 to {{total}}.",
+    "showing": "Showing {{start}}–{{end}} of {{total}}",
+    "pageSize": "Rows per page",
+    "perPage": "{{count}} / page",
+    "first": "First page",
+    "previous": "Previous page",
+    "currentPage": "Page {{page}} of {{total}}",
+    "next": "Next page",
+    "last": "Last page"
+  }
+}

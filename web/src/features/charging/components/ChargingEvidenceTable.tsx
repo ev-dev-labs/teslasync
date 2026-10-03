@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, DataTable, DataTableValueFilter, Tooltip, buildTableFilterValues, selectedTableValueKeys, type Column } from '@/components/ui';
+import { Badge, Button, DataTable, DataTableValueFilter, Tooltip, buildTableFilterValues, selectedTableValueKeys, type Column, type PaginationProps } from '@/components/ui';
 import { GridMetricIndicator, RouteDisplay } from '@/components/data-display';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -35,12 +35,13 @@ interface ChargingEvidenceTableProps {
   density: 'compact' | 'comfortable';
   toolbarHeading: ReactNode;
   toolbarActions: ReactNode;
+  paginationControls?: PaginationProps;
 }
 
 export function ChargingEvidenceTable({
   sessions, availableSessions, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
   timezone, selectedIds, onSelectionChange, onPreview, anomalies,
-  sortBy, sortDir, onSort, density, toolbarHeading, toolbarActions,
+  sortBy, sortDir, onSort, density, toolbarHeading, toolbarActions, paginationControls,
 }: ChargingEvidenceTableProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -217,6 +218,7 @@ export function ChargingEvidenceTable({
       rowLabel={(s) => `${formatDateTime(s.started_at, { tz: timezone })} · ${s.start_place ?? ''}`}
       toolbarHeading={toolbarHeading}
       toolbarActions={toolbarActions}
+      paginationControls={paginationControls}
       density={density}
       selectable="multi"
       showSelectionSummary={false}

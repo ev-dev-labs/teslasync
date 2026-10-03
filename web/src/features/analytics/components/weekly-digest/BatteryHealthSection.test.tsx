@@ -163,11 +163,11 @@ describe('BatteryHealthSection — populated', () => {
     );
 
     // Avg Charge Gain: fmtNumber(80 - 20, 1) → "60.0%".
-    expect(screen.getByText('60.0%')).toBeInTheDocument();
+    expect(screen.getByText('60.00%')).toBeInTheDocument();
     // Charge Sessions: fmtInt(12) → "12".
     expect(screen.getByText('12')).toBeInTheDocument();
     // Est. Range Added: fmtNumber(40 * 5.5, 0) km → "220 km".
-    expect(screen.getByText('220 km')).toBeInTheDocument();
+    expect(screen.getByText('220.00 km')).toBeInTheDocument();
 
     // Every stat/pill label is present exactly once.
     expect(screen.getByText('Avg charge gain')).toBeInTheDocument();
@@ -198,7 +198,7 @@ describe('BatteryHealthSection — computation & rounding', () => {
     expect(screen.getByText('55%')).toBeInTheDocument();
     expect(screen.getByText('90%')).toBeInTheDocument();
     // fmtNumber(90.4 - 54.6, 1) === "35.8%", NOT the rounded 90 − 55 = 35.
-    expect(screen.getByText('35.8%')).toBeInTheDocument();
+    expect(screen.getByText('35.80%')).toBeInTheDocument();
   });
 
   it('scales estimated range linearly with charge energy (× 5.5 km per unit)', () => {
@@ -206,7 +206,7 @@ describe('BatteryHealthSection — computation & rounding', () => {
       makeMetrics({ chargingSessionCount: 1, batteryStart: 10, batteryEnd: 20, chargeEnergyAddedWh: 100_000 }),
     );
     // 100 × 5.5 = 550, rounded to 0 dp.
-    expect(screen.getByText('550 km')).toBeInTheDocument();
+    expect(screen.getByText('550.00 km')).toBeInTheDocument();
   });
 
   it('groups a large session count through fmtInt (locale thousands separator)', () => {
@@ -312,8 +312,8 @@ describe('BatteryHealthSection — null safety', () => {
     // Both pills collapse to "0%" (Math.round(0)), so there are two of them.
     expect(screen.getAllByText('0%')).toHaveLength(2);
     // Gain fmtNumber(0 - 0, 1) → "0.0%"; range fmtNumber(0 * 5.5, 0) → "0 km".
-    expect(screen.getByText('0.0%')).toBeInTheDocument();
-    expect(screen.getByText('0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
     // Session count still renders from the present field.
     expect(screen.getByText('5')).toBeInTheDocument();
   });

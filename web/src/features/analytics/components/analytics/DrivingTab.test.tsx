@@ -470,7 +470,7 @@ describe('DrivingTab — Fahrenheit preference', () => {
     // Distance/efficiency untouched by the temperature flip (still metric).
     expect(scatterRows()[0].distance).toBe(12);
     // The temperature-stats band re-projects too: inside min 18 °C → 64.4 °F.
-    expect(screen.getByText('64.4')).toBeInTheDocument();
+    expect(screen.getByText('64.40')).toBeInTheDocument();
   });
 });
 

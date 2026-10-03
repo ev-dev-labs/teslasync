@@ -832,8 +832,8 @@ export default function FleetComparePage() {
                   data={drivesChartData}
                   dataColumns={[
                     { key: 'month', label: t('comparison.month', 'Month') },
-                    { key: 'drivesA', label: nameA, format: (value) => fmtNumber(Number(value ?? 0)) },
-                    { key: 'drivesB', label: nameB, format: (value) => fmtNumber(Number(value ?? 0)) },
+                    { key: 'drivesA', label: nameA, format: (value) => fmtInt(Number(value ?? 0)) },
+                    { key: 'drivesB', label: nameB, format: (value) => fmtInt(Number(value ?? 0)) },
                   ]}
                   height={288}
                   mobileHeight={256}
@@ -851,6 +851,7 @@ export default function FleetComparePage() {
                               active={active}
                               payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
                               label={label as string}
+                              valueFormatter={(value) => fmtInt(Number(value ?? 0))}
                             />
                           )}
                         />

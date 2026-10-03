@@ -22,12 +22,13 @@
  *   7. Header controls — the Order-by / Limit selects drive the hook params
  *      (snake_case order keys, numeric limit) exactly.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ApiError } from '@/lib/resilience';
+import { getGlobalPrecision, setGlobalPrecision } from '@/lib/numberFormat';
 import type {
   SlowQueriesResponse,
   SlowQueryRow,
@@ -130,9 +131,9 @@ function metricValue(label: string): string {
 }
 
 // Three rows spanning every formatting/branch axis:
-//  - r101: short fingerprint (verbatim everywhere), sub-10ms mean (2dp),
+//  - r101: short fingerprint (verbatim everywhere), sub-10ms mean,
 //          ≥1s peak (seconds), 90% cache (GOOD tier).
-//  - r102: long fingerprint (truncated), 10–1000ms mean (1dp), 10% cache
+//  - r102: long fingerprint (truncated), 10–1000ms mean, 10% cache
 //          (POOR tier, sorts first in the cache panel).
 //  - r103: no shared-buffer stats → excluded from the cache panel, table-only.
 const ROWS: SlowQueryRow[] = [
@@ -186,10 +187,13 @@ function renderPage() {
   );
 }
 
+let savedPrecision = 2;
 beforeEach(() => {
+  savedPrecision = getGlobalPrecision();
   mockUseSlowQueries.mockReset();
   mockUseSlowQueries.mockReturnValue(makeQuery({ data: response() }));
 });
+afterEach(() => setGlobalPrecision(savedPrecision));
 
 describe('SlowQueriesPage — populated view', () => {
   it('derives honest KPIs from the loaded rows', () => {
@@ -204,11 +208,12 @@ describe('SlowQueriesPage — populated view', () => {
     expect(metricValue('Queries analyzed')).toBe('3');
     expect(metricValue('Total calls')).toBe('1,255'); // 1200 + 50 + 5
     expect(metricValue('Aggregate time')).toBe('7.00 s'); // 7000ms promoted to s
-    expect(metricValue('Slowest mean')).toBe('40.0 ms'); // max mean, 1dp branch
+    expect(metricValue('Slowest mean')).toBe('40.00 ms'); // max mean, Settings precision
     expect(metricValue('Peak max')).toBe('1.50 s'); // max peak promoted to s
-    // Cache ratio KPI is unique (76.7%); its label collides with the table
+    // Weighted cache ratio = (900 + 20) / (900 + 100 + 20 + 180).
+    // Its label collides with the table
     // column header, so assert the value directly.
-    expect(screen.getByText('76.7%')).toBeInTheDocument();
+    expect(screen.getByText('76.67%')).toBeInTheDocument();
   });
 
   it('renders the ranking chart region, cache panel and detail table', () => {
@@ -223,8 +228,8 @@ describe('SlowQueriesPage — populated view', () => {
 
     // Cache-efficiency panel: hint copy + worst-first ratios (10% then 90%).
     expect(screen.getByText(/Lowest hit ratios first/i)).toBeInTheDocument();
-    expect(screen.getAllByText('10.0%').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('90.0%').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('10.00%').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('90.00%').length).toBeGreaterThanOrEqual(1);
 
     // Detail table: a row that only appears in the table (no cache stats).
     expect(
@@ -233,6 +238,29 @@ describe('SlowQueriesPage — populated view', () => {
     // Column headers.
     expect(screen.getByText('Mean (ms)')).toBeInTheDocument();
     expect(screen.getByText('Query fingerprint')).toBeInTheDocument();
+    const detail = within(screen.getByRole('region', { name: 'Top queries' }));
+    expect(detail.getByText('1,200')).toBeInTheDocument();
+    expect(detail.getByText('3,400')).toBeInTheDocument();
+    expect(detail.queryByText('1,200.00')).toBeNull();
+    expect(detail.queryByText('3,400.00')).toBeNull();
+  });
+
+  it('reacts to Settings precision without rounding source measurements or count cells', () => {
+    renderPage();
+
+    act(() => setGlobalPrecision(3));
+    expect(metricValue('Slowest mean')).toBe('40.000 ms');
+    expect(metricValue('Aggregate time')).toBe('7.000 s');
+    expect(screen.getByText('76.667%')).toBeInTheDocument();
+    expect(screen.getByText('1,200')).toBeInTheDocument();
+    expect(screen.getByText('3,400')).toBeInTheDocument();
+
+    act(() => setGlobalPrecision(0));
+    expect(metricValue('Slowest mean')).toBe('40 ms');
+    expect(metricValue('Aggregate time')).toBe('7 s');
+    expect(screen.getByText('77%')).toBeInTheDocument();
+    expect(ROWS[0].mean_time_ms).toBe(4);
+    expect(ROWS[0].shared_blks_hit).toBe(900);
   });
 });
 

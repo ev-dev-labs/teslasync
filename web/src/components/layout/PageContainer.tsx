@@ -233,7 +233,7 @@ export function PageContainer({
           destructive={destructiveActions}
           overflow={
             copyLink || overflowActions
-              ? <>{overflowActions}{copyLink && <CopyLinkButton className={actionLayout === 'scope-first' ? 'h-11 sm:h-9' : undefined} />}</>
+              ? <>{overflowActions}{copyLink && <CopyLinkButton iconOnly />}</>
               : undefined
           }
           primary={primaryAction}

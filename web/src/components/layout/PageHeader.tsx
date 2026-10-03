@@ -109,7 +109,7 @@ export function PageHeader({
           destructive={destructiveActions}
           overflow={
             copyLink || overflowActions
-              ? <>{overflowActions}{copyLink && <CopyLinkButton />}</>
+              ? <>{overflowActions}{copyLink && <CopyLinkButton iconOnly />}</>
               : undefined
           }
           primary={primaryAction}

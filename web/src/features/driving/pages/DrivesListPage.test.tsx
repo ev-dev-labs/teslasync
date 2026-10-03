@@ -708,6 +708,11 @@ describe('DrivesListPage — desktop evidence grid', () => {
     renderPage();
 
     const table = screen.getByRole('table', { name: 'Drive evidence' });
+    const frame = table.closest('[data-grid-frame]');
+    const footer = frame?.querySelector('[data-grid-footer]');
+    expect(footer).toBeInTheDocument();
+    expect(frame?.querySelector('[data-grid-viewport]')?.contains(footer ?? null)).toBe(false);
+    expect(screen.getByRole('button', { name: 'Next page' })).toBe(footer?.querySelector('[aria-label="Next page"]'));
     expect(screen.queryByRole('tablist')).toBeNull();
     expect(screen.queryByPlaceholderText('Min')).toBeNull();
     expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);

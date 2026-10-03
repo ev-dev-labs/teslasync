@@ -23,6 +23,15 @@ scientific diagnostics may retain a minimum number of decimals to avoid hiding
 meaningful detail, while honoring a higher selected precision. This preference
 changes presentation only, not stored SI values, calculations or filter limits.
 
+Numeric alert and automation editors use preferred units and locale-aware
+decimals when the signal's dimension is available. Thresholds are converted
+back to the API's canonical units without rounding; computed metrics retain
+their existing wire-unit contract. Percentage-change thresholds use percentages,
+not the metric's measurement unit. Numeric membership lists use semicolons in
+the editor so decimal commas remain unambiguous. Currency preferences change
+presentation, not exchange rates. Focusing and leaving an unchanged rounded
+field does not replace its precise stored value.
+
 **Fonts & readability** at `/settings#typography` offers a searchable UI and
 monospace font library, live font samples, and a text field for trying your own
 copy. Font selection, reading presets, scale, line height, letter spacing, and

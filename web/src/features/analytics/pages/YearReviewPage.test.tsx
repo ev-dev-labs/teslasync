@@ -353,7 +353,7 @@ describe('YearReviewPage — happy path', () => {
     expect(screen.getByText('128')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     // formatCurrency(gas_savings, 0) → whole-dollar string with the `$` symbol.
-    expect(screen.getByText('$1,875')).toBeInTheDocument();
+    expect(screen.getByText('$1,875.00')).toBeInTheDocument();
     // co2_offset_kg rendered with the `kg` unit suffix on its own tile.
     expect(screen.getByText(/^640(\.\d+)? kg$/)).toBeInTheDocument();
   });

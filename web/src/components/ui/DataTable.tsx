@@ -4,7 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
 import { ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, AlertTriangle, Download, GripVertical } from 'lucide-react'
-import { Pagination } from './Pagination'
+import { Pagination, type PaginationProps } from './Pagination'
 import { Button } from './Button'
 import { Checkbox } from './Checkbox'
 import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
@@ -208,6 +208,12 @@ interface DataTableProps<T> {
    */
   density?: 'compact' | 'comfortable' | 'spacious' | 'auto'
   pagination?: boolean | PaginationConfig
+  /**
+   * Caller-owned paging for already paged rows and a filtered/server total.
+   * Takes precedence over `pagination`: DataTable never slices these rows again.
+   * The footer remains visible even for one page or zero rows.
+   */
+  paginationControls?: PaginationProps
   /**
    * Optional name for the SectionErrorBoundary that wraps row rendering.
    * Surfaces in console logs as `[ErrorBoundary:table:<name>]` when a row
@@ -432,6 +438,7 @@ export function DataTable<T>({
   compact,
   density,
   pagination,
+  paginationControls,
   mobileColumns,
   name,
   tableId,
@@ -516,7 +523,7 @@ export function DataTable<T>({
         : effectiveDensity === 'comfortable'
           ? tableTokens.headCell
           : 'px-d-pad-x py-d-pad-y text-d-base'
-  const paginationEnabled = !!pagination
+  const paginationEnabled = !!pagination && !paginationControls
   const paginationConfig: PaginationConfig = typeof pagination === 'object' ? pagination : {}
   const defaultPageSize =
     paginationConfig.defaultPageSize ?? paginationConfig.pageSizeOptions?.[0] ?? 25
@@ -743,6 +750,12 @@ export function DataTable<T>({
   const paginatedData = paginationEnabled
     ? filteredData.slice((page - 1) * pageSize, page * pageSize)
     : filteredData
+  const footerControls: PaginationProps | undefined = paginationControls ?? (
+    paginationEnabled && filteredData.length > 0 ? {
+      page, pageSize, total: filteredData.length, onPageChange: setPage,
+      onPageSizeChange: handlePageSizeChange, pageSizeOptions,
+    } : undefined
+  )
 
   // ── Selected rows for bulk actions slot ────────────────────────────────
   const selectedRows = useMemo(
@@ -1075,7 +1088,8 @@ export function DataTable<T>({
     'max-w-full overscroll-x-contain',
     effectiveStickyHeader || effectiveMaxHeight != null
       ? tableTokens.scrollContainer
-      : 'overflow-x-auto rounded-panel border border-[var(--border-default)]',
+      : 'overflow-x-auto',
+    'rounded-none border-0',
     className,
   )
 
@@ -1179,10 +1193,11 @@ export function DataTable<T>({
     exportable
 
   return (
-    <div className={tableTokens.frame}>
+    <div className={cn(tableTokens.frame, 'space-y-0 overflow-hidden p-0')}
+      data-grid-frame="">
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
-        <div className={tableTokens.toolbar}>
+        <div className={cn(tableTokens.toolbar, 'border-b border-[var(--border-default)] p-3')}>
           {(toolbarHeading || hasSelectionSummary) && <div className="min-w-0 flex-1 basis-48">
             {toolbarHeading}
             {hasSelectionSummary && (
@@ -1231,14 +1246,33 @@ export function DataTable<T>({
       )}
 
       {hasValueFilters && (
-        <Text as="p" size="xs" color="muted" role="status">
+        <Text as="p" size="xs" color="muted" role="status" className="px-3 py-2">
           {t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
             filtered: filteredData.length, loaded: candidateRows.length,
           })}
         </Text>
       )}
-      <div ref={scrollContainerRef} className={wrapperClass} style={wrapperStyle}>
-        <table className={tableTokens.wrapper} aria-label={accessibleTableName}>
+      <div ref={scrollContainerRef} className={wrapperClass} style={wrapperStyle} data-grid-viewport="">
+        {/* Preserve native table semantics, not an ARIA grid with a different cell-navigation contract. */}
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
+        <table tabIndex={footerControls ? 0 : undefined} className={cn(tableTokens.wrapper, footerControls && 'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]')} aria-label={accessibleTableName}
+          onKeyDown={event => {
+            if (!footerControls || event.defaultPrevented || event.target !== event.currentTarget
+              || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+            const size = Number.isSafeInteger(footerControls.pageSize) && footerControls.pageSize > 0
+              ? footerControls.pageSize : (footerControls.pageSizeOptions?.find(value => Number.isSafeInteger(value) && value > 0) ?? 25)
+            const total = Number.isFinite(footerControls.total)
+              ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(footerControls.total))) : 0
+            const lastPage = Math.max(1, Math.ceil(total / size))
+            const currentPage = Number.isFinite(footerControls.page)
+              ? Math.min(lastPage, Math.max(1, Math.floor(footerControls.page))) : 1
+            const target = event.key === 'PageDown' ? Math.min(lastPage, currentPage + 1)
+              : event.key === 'PageUp' ? Math.max(1, currentPage - 1)
+                : event.key === 'Home' ? 1 : event.key === 'End' ? lastPage : null
+            if (target == null) return
+            event.preventDefault()
+            if (target !== currentPage) footerControls.onPageChange(target)
+          }}>
           {/* A11Y: a `<caption>` is the only table-native accessible name,
               and screen readers announce it when the user enters the grid
               ("Drives, table, 8 columns, 24 rows"). It is visually hidden
@@ -1437,15 +1471,11 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
-      {paginationEnabled && filteredData.length > 0 && (
-        <Pagination
-          page={page}
-          pageSize={pageSize}
-          total={filteredData.length}
-          onPageChange={setPage}
-          onPageSizeChange={handlePageSizeChange}
-          pageSizeOptions={pageSizeOptions}
-        />
+      {footerControls && (
+        <div className="shrink-0 border-t border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-3"
+          data-grid-footer="">
+          <Pagination {...footerControls} />
+        </div>
       )}
     </div>
   )

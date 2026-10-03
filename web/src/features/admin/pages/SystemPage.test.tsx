@@ -288,7 +288,7 @@ describe('SystemPage', () => {
     // and 91.7% peak usage (110/120) rounded to the nearest whole percent.
     expect(overview.getByText('2 / 3')).toBeInTheDocument()
     expect(overview.getByText('49')).toBeInTheDocument()
-    expect(overview.getByText('92%')).toBeInTheDocument()
+    expect(overview.getByText('92.00%')).toBeInTheDocument()
   })
 
   it('holds the loading skeleton + panel spinners until data lands, then swaps to the live band', async () => {

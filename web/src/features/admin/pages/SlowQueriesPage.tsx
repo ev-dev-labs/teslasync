@@ -74,7 +74,7 @@ const CACHE_POOR_HEX = '#ef4444';
 function formatMs(ms: number): string {
   if (!Number.isFinite(ms)) return '—';
   if (ms >= 1000) return `${fmtNumber(ms / 1000)} s`;
-  return `${fmtNumber(ms, ms < 10 ? 2 : 1)} ms`;
+  return `${fmtNumber(ms)} ms`;
 }
 
 /** Clip long SQL fingerprints so axis ticks and bar labels stay one line. */
@@ -194,10 +194,10 @@ export default function SlowQueriesPage() {
       {
         key: 'calls',
         filterValue: (r) => r.calls ?? null,
-        filterValueLabel: (_value, r) => fmtNumber(r.calls),
+        filterValueLabel: (_value, r) => fmtInt(r.calls),
         header: t('admin.slowQueries.colCalls', 'Calls'),
         align: 'right',
-        render: (r) => <span className="tabular-nums">{fmtNumber(r.calls)}</span>,
+        render: (r) => <span className="tabular-nums">{fmtInt(r.calls)}</span>,
       },
       {
         key: 'mean_time_ms',
@@ -227,10 +227,10 @@ export default function SlowQueriesPage() {
       {
         key: 'rows_returned',
         filterValue: (r) => r.rows_returned ?? null,
-        filterValueLabel: (_value, r) => fmtNumber(r.rows_returned),
+        filterValueLabel: (_value, r) => fmtInt(r.rows_returned),
         header: t('admin.slowQueries.colRows', 'Rows'),
         align: 'right',
-        render: (r) => <span className="tabular-nums">{fmtNumber(r.rows_returned)}</span>,
+        render: (r) => <span className="tabular-nums">{fmtInt(r.rows_returned)}</span>,
       },
       {
         key: 'cache',
@@ -239,7 +239,7 @@ export default function SlowQueriesPage() {
         render: (r) => <span className="tabular-nums">{cacheHitRatioLabel(r)}</span>,
       },
     ],
-    [t, fmtNumber, displayPrecision, displayLocale],
+    [t, fmtNumber, fmtInt, displayPrecision, displayLocale],
   );
 
   const actions = (

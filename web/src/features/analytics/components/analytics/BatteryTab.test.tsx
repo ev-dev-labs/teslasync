@@ -315,10 +315,10 @@ describe('BatteryTab — populated', () => {
     renderTab(makeQuery({ data: analytics(TREND) }));
 
     // Values come from the second (latest) row, not the first.
-    expect(screen.getAllByText('92.4').length).toBeGreaterThan(0);     // health_score, 1dp
-    expect(screen.getAllByText('75.0 kWh').length).toBeGreaterThan(0); // capacity_wh via formatEnergy
+    expect(screen.getAllByText('92.40').length).toBeGreaterThan(0);    // health_score, Settings precision
+    expect(screen.getAllByText('75.00 kWh').length).toBeGreaterThan(0); // capacity_wh via formatEnergy
     expect(screen.getAllByText('3.21').length).toBeGreaterThan(0);     // degradation_pct, 2dp
-    expect(screen.getAllByText('480').length).toBeGreaterThan(0);      // range_km → km, 0dp
+    expect(screen.getAllByText('480.00').length).toBeGreaterThan(0);   // range_km → km
     expect(screen.getAllByText('312').length).toBeGreaterThan(0);      // cycle_count int
   });
 
@@ -386,9 +386,8 @@ describe('BatteryTab — null safety', () => {
     });
     renderTab(makeQuery({ data: analytics([nulled]) }));
 
-    expect(screen.getByText('0.0')).toBeInTheDocument();      // health_score → safe(0)
-    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();  // capacity_wh → safe(0)
-    expect(screen.getByText('0.00')).toBeInTheDocument();     // degradation_pct → safe(0)
+    expect(screen.getAllByText('0.00')).toHaveLength(3);     // health, degradation, range → safe(0)
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument(); // capacity_wh → safe(0)
 
     // Charts still render (the row exists) and the range projection is 0, not NaN.
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();
@@ -407,7 +406,7 @@ describe('BatteryTab — miles preference', () => {
     renderTab(makeQuery({ data: analytics(trend) }));
 
     // 480 km → ~298 mi through the REAL convertDistanceFromSI.
-    expect(screen.getByText('298')).toBeInTheDocument();
+    expect(screen.getByText('298.26')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
 
     // The projected chart value is the converted distance, not the raw km.

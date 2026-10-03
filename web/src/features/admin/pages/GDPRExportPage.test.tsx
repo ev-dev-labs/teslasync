@@ -261,7 +261,7 @@ describe('GDPRExportPage — empty + lookup', () => {
     // Status badge + KPI values.
     expect(await screen.findByText('complete')).toBeInTheDocument();
     expect(screen.getByText('zip')).toBeInTheDocument();
-    expect(screen.getByText('1.0 MB')).toBeInTheDocument();
+    expect(screen.getByText('1.00 MB')).toBeInTheDocument();
     expect(screen.getByText('s3')).toBeInTheDocument();
 
     // Metadata panel exposes the id + sha256.
@@ -337,7 +337,7 @@ describe('GDPRExportPage — error branches', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByText('complete')).toBeInTheDocument();
-    expect(screen.getByText('1.0 MB')).toBeInTheDocument();
+    expect(screen.getByText('1.00 MB')).toBeInTheDocument();
   });
 });
 

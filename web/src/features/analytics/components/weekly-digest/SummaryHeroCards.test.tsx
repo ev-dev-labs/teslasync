@@ -210,17 +210,17 @@ describe('SummaryHeroCards — populated KPI grid', () => {
   it('renders the five always-on KPI cards with formatted, unit-suffixed values', () => {
     renderCards();
 
-    expect(within(cardContaining('Total distance')).getByText('120.0 km')).toBeInTheDocument();
+    expect(within(cardContaining('Total distance')).getByText('120.00 km')).toBeInTheDocument();
     expect(within(cardContaining('Total drives')).getByText('8')).toBeInTheDocument();
-    expect(within(cardContaining('Energy used')).getByText('200.0 kWh')).toBeInTheDocument();
+    expect(within(cardContaining('Energy used')).getByText('200.00 kWh')).toBeInTheDocument();
     // Currency comes from the injected formatCurrency double (2 decimals).
     expect(within(cardContaining('Charging cost')).getByText('$12.50')).toBeInTheDocument();
-    expect(within(cardContaining(/saved/)).getByText('42.0 kg')).toBeInTheDocument();
+    expect(within(cardContaining(/saved/)).getByText('42.00 kg')).toBeInTheDocument();
   });
 
   it('shows a positive (emerald / TrendingUp) trend for an increased distance', () => {
     renderCards();
-    const trend = within(cardContaining('Total distance')).getByText('+20.0%');
+    const trend = within(cardContaining('Total distance')).getByText('+20.00%');
 
     expect(trend.className).toContain('text-emerald-300');
     expect(trend.querySelector('svg')?.getAttribute('class')).toContain('trending-up');
@@ -228,7 +228,7 @@ describe('SummaryHeroCards — populated KPI grid', () => {
 
   it('shows a negative (rose / TrendingDown) trend for a decreased drive count', () => {
     renderCards();
-    const trend = within(cardContaining('Total drives')).getByText('-20.0%');
+    const trend = within(cardContaining('Total drives')).getByText('-20.00%');
 
     expect(trend.className).toContain('text-rose-300');
     expect(trend.querySelector('svg')?.getAttribute('class')).toContain('trending-down');
@@ -238,7 +238,7 @@ describe('SummaryHeroCards — populated KPI grid', () => {
     renderCards();
     // The magnitude still reads "+100.0%" (up), but the invertPositive flag
     // flips the semantic to negative → rose colour + TrendingDown glyph.
-    const trend = within(cardContaining('Energy used')).getByText('+100.0%');
+    const trend = within(cardContaining('Energy used')).getByText('+100.00%');
 
     expect(trend.className).toContain('text-rose-300');
     expect(trend.className).not.toContain('text-emerald-300');
@@ -327,10 +327,10 @@ describe('SummaryHeroCards — null-safety hardening', () => {
 
     renderCards({ metrics: sparse });
 
-    expect(within(cardContaining('Total distance')).getByText('0.0 km')).toBeInTheDocument();
-    expect(within(cardContaining('Energy used')).getByText('0.0 kWh')).toBeInTheDocument();
+    expect(within(cardContaining('Total distance')).getByText('0.00 km')).toBeInTheDocument();
+    expect(within(cardContaining('Energy used')).getByText('0.00 kWh')).toBeInTheDocument();
     // formatCurrency double coalesces a non-finite amount to $0.00.
     expect(within(cardContaining('Charging cost')).getByText('$0.00')).toBeInTheDocument();
-    expect(within(cardContaining(/saved/)).getByText('0.0 kg')).toBeInTheDocument();
+    expect(within(cardContaining(/saved/)).getByText('0.00 kg')).toBeInTheDocument();
   });
 });

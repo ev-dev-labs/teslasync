@@ -326,8 +326,8 @@ describe('BackupRestorePage — data rendering', () => {
     expect(screen.getByText('Total size')).toBeInTheDocument();
 
     // Derived values: 3 completed of 4 → 75%, total size 8.0 MB.
-    expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
-    expect(screen.getByText('8.0 MB')).toBeInTheDocument();
+    expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
+    expect(screen.getByText('8.00 MB')).toBeInTheDocument();
   });
 
   it('lists backup configurations and flags disabled ones', async () => {
@@ -348,8 +348,8 @@ describe('BackupRestorePage — data rendering', () => {
     // Completed-vs-total sublabel.
     expect(screen.getByText('3 / 4')).toBeInTheDocument();
     // s3 accumulates 6MB across 2 runs (sorted first by size).
-    expect(screen.getByText('6.0 MB · 2')).toBeInTheDocument();
-    expect(screen.getByText('2.0 MB · 2')).toBeInTheDocument();
+    expect(screen.getByText('6.00 MB · 2')).toBeInTheDocument();
+    expect(screen.getByText('2.00 MB · 2')).toBeInTheDocument();
     // The single failed run surfaces in Recent Errors.
     expect(screen.getByText(/disk full/)).toBeInTheDocument();
   });

@@ -32,6 +32,7 @@
       "button": "Columns",
       "menu": "Show or hide columns",
       "menuReorder": "Reorder or hide columns",
+      "selectAll": "Select all",
       "heading": "Visible columns",
       "headingReorder": "Columns",
       "showAll": "Show all",

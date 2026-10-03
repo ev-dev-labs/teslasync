@@ -286,7 +286,7 @@ describe('FleetComparePage', () => {
 
     // Settle: the table shows real values only once both stats queries resolve.
     // There is a transient auto-select window where the values are still 0.00.
-    await screen.findByText('210.00')
+    await screen.findByText('210')
 
     // The lifetime table renders every metric row label (Avg Efficiency /
     // Charging Cost / CO₂ Saved also appear as KPI-band labels → getAllByText).
@@ -301,7 +301,7 @@ describe('FleetComparePage', () => {
     expect(screen.getAllByText('5,000.00 km').length).toBe(2)
     // KPI band interpolates the i18n "A vs B" connector with live/lifetime data.
     expect(await screen.findByText('72% vs 65%')).toBeInTheDocument()
-    expect(await screen.findByText('$500 vs $650')).toBeInTheDocument()
+    expect(await screen.findByText('$500.00 vs $650.00')).toBeInTheDocument()
 
     // Vehicle names surface as the table's value-column headers.
     expect(screen.getAllByText('Model 3 LR').length).toBeGreaterThan(0)
@@ -316,9 +316,9 @@ describe('FleetComparePage', () => {
 
     // Settle past the transient auto-select window before reading cell values.
     // 'higher' → A (210) beats B (140): ✓ sits with the winner only.
-    const drivesWinner = await screen.findByText('210.00')
+    const drivesWinner = await screen.findByText('210')
     expect(within(drivesWinner).getByText('✓')).toBeInTheDocument()
-    expect(within(screen.getByText('140.00')).queryByText('✓')).toBeNull()
+    expect(within(screen.getByText('140')).queryByText('✓')).toBeNull()
 
     // 'lower' → B (155 Wh/km) beats A (170 Wh/km).
     const effWinner = screen.getByText('155.00 Wh/km')
@@ -395,7 +395,7 @@ describe('FleetComparePage', () => {
 
     // Settle stats first (real drive count), then assert both trend panels
     // degraded to their empty states rather than a transient skeleton.
-    await screen.findByText('210.00')
+    await screen.findByText('210')
     expect(
       await screen.findByText('No monthly data available yet'),
     ).toBeInTheDocument()

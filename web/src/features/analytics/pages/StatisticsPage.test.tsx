@@ -338,7 +338,7 @@ describe('StatisticsPage', () => {
     expect(within(totals).getByText('500 km')).toBeInTheDocument();
     expect(within(totals).getByText('42')).toBeInTheDocument();
     expect(within(totals).getByText('100.00 kWh')).toBeInTheDocument();
-    expect(within(totals).getByText('$250')).toBeInTheDocument();
+    expect(within(totals).getByText('$250.00')).toBeInTheDocument();
     expect(within(totals).getByText('50.00 kg')).toBeInTheDocument();
 
     const averages = screen.getByRole('region', { name: 'Averages' });
@@ -400,10 +400,10 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(screen.getByText('Health')).toBeInTheDocument();
-    expect(screen.getByText('92')).toBeInTheDocument();
+    expect(screen.getByText('92.00')).toBeInTheDocument();
     expect(screen.getByText('Capacity')).toBeInTheDocument();
-    expect(screen.getByText('71.5 kWh')).toBeInTheDocument();
-    expect(screen.getByText('412')).toBeInTheDocument();
+    expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
+    expect(screen.getByText('412.00')).toBeInTheDocument();
     expect(screen.getByText('30 mo')).toBeInTheDocument();
   });
 

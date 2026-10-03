@@ -195,8 +195,8 @@ describe('PageHeader', () => {
     )
     expect(writeText).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Link copied to clipboard')).toBeInTheDocument()
-    // aria-label is stable; the *visible* label flips to "Copied".
-    expect(btn).toHaveTextContent('Copied')
+    expect(btn).toHaveAccessibleName('Copied')
+    expect(btn.textContent).toBe('')
   })
 
   it('surfaces an error toast when the clipboard write is rejected', async () => {

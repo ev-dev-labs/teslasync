@@ -89,7 +89,7 @@ describe('FeatureConfigKpis — resolved', () => {
     expect(metricValue('Total features')).toBe('4');
     expect(metricValue('Enabled')).toBe('2');
     expect(metricValue('Disabled')).toBe('2');
-    expect(metricValue('Enabled rate')).toBe('50%');
+    expect(metricValue('Enabled rate')).toBe('50.00%');
     // Truthful data → no fabricated em-dash placeholders.
     expect(screen.queryByText(EM_DASH)).toBeNull();
   });
@@ -103,7 +103,7 @@ describe('FeatureConfigKpis — resolved', () => {
     expect(metricValue('Enabled')).toBe('10,000');
     expect(metricValue('Disabled')).toBe('2,345');
     // fmtPercent(..., 0) drops the decimals → "81%", not "81.00%".
-    expect(metricValue('Enabled rate')).toBe('81%');
+    expect(metricValue('Enabled rate')).toBe('81.00%');
   });
 
   it('renders honest zeros for a genuinely empty (but successful) summary', () => {
@@ -112,7 +112,7 @@ describe('FeatureConfigKpis — resolved', () => {
     expect(metricValue('Total features')).toBe('0');
     expect(metricValue('Enabled')).toBe('0');
     expect(metricValue('Disabled')).toBe('0');
-    expect(metricValue('Enabled rate')).toBe('0%');
+    expect(metricValue('Enabled rate')).toBe('0.00%');
     // A known-empty payload is a real 0, distinct from the error em-dash.
     expect(screen.queryByText(EM_DASH)).toBeNull();
   });
@@ -121,7 +121,7 @@ describe('FeatureConfigKpis — resolved', () => {
     renderKpis({ summary: SUMMARY, error: null });
 
     expect(metricValue('Total features')).toBe('4');
-    expect(metricValue('Enabled rate')).toBe('50%');
+    expect(metricValue('Enabled rate')).toBe('50.00%');
     expect(screen.queryByText(EM_DASH)).toBeNull();
   });
 });
@@ -138,7 +138,7 @@ describe('FeatureConfigKpis — error', () => {
     expect(screen.getAllByText(EM_DASH)).toHaveLength(4);
     // ...and the real values (and any fabricated 0) are suppressed.
     expect(screen.queryByText('4')).toBeNull();
-    expect(screen.queryByText('50%')).toBeNull();
+    expect(screen.queryByText('50.00%')).toBeNull();
     expect(screen.queryByText('0')).toBeNull();
   });
 });
@@ -150,7 +150,7 @@ describe('FeatureConfigKpis — null-safety & a11y', () => {
 
     expect(metricValue('Total features')).toBe('0');
     expect(metricValue('Enabled')).toBe('0');
-    expect(metricValue('Enabled rate')).toBe('0%');
+    expect(metricValue('Enabled rate')).toBe('0.00%');
     expect(screen.queryByText(EM_DASH)).toBeNull();
   });
 

@@ -17,7 +17,6 @@ import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmpty
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
 import { Skeleton } from '@/components/feedback/Skeleton';
-import { PillFilterBar, type PillItem } from '@/components/forms';
 import { FilterBar } from '@/components/forms/FilterBar';
 import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
 import { DensityToggle, type Density } from '@/components/forms/DensityToggle';
@@ -538,19 +537,17 @@ export default function ChargingListPage() {
     </span>
   ) : null;
 
-  /* ── Collection filters ────────────────────────────────────────── */
-  const collectionPills: PillItem[] = useMemo(() => [
-    { key: 'all',          label: t('charging.coll.all', 'All'),                  count: dateFilteredSessions.length },
-    { key: 'home',         label: t('charging.coll.home', 'Home'),                count: homeSessions.length },
-    { key: 'supercharger', label: t('charging.coll.supercharger', 'Supercharger'), count: scSessions.length },
-    { key: 'dc',           label: t('charging.coll.dc', 'DC fast'),               count: dcSessions.length },
-    { key: 'free',         label: t('charging.coll.free', 'Free'),                count: freeSessions.length },
-    { key: 'anomalies',    label: t('charging.coll.anomalies', 'Anomalies'),      count: anomalies.length },
-    { key: 'notable',      label: t('charging.coll.notable', 'Notable'),          count: notable.length },
-    { key: 'tagged',       label: t('charging.coll.tagged', 'Tagged'),            count: 0, disabled: true },
-  ], [t, dateFilteredSessions.length, homeSessions.length, scSessions.length, dcSessions.length, freeSessions.length, anomalies.length, notable.length]);
-
-  const collectionLabel = collectionPills.find((p) => p.key === collection)?.label ?? 'All';
+  const collectionLabels: Record<Collection, string> = {
+    all: t('charging.coll.all', 'All'),
+    home: t('charging.coll.home', 'Home'),
+    supercharger: t('charging.coll.supercharger', 'Supercharger'),
+    dc: t('charging.coll.dc', 'DC fast'),
+    free: t('charging.coll.free', 'Free'),
+    anomalies: t('charging.coll.anomalies', 'Anomalies'),
+    notable: t('charging.coll.notable', 'Notable'),
+    tagged: t('charging.coll.tagged', 'Tagged'),
+  };
+  const collectionLabel = collectionLabels[collection];
 
   /* ── Sticky summary ──────────────────────────────────────────── */
   const stickySummary = (
@@ -884,7 +881,7 @@ export default function ChargingListPage() {
         </FadeIn>
 
         {/* Overview KPI card */}
-        <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-1 gap-4">
         <FadeIn>
           <section aria-label={t('charging.section.overview', 'Overview')}>
           {currentStats.count > 0 ? (
@@ -892,7 +889,7 @@ export default function ChargingListPage() {
               id="charging-overview"
               testId="charging-overview"
               compact
-              gridClassName="grid-cols-2 lg:grid-cols-3"
+              gridClassName="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6"
               header={{
                 title: t('charging.overview', 'Overview'),
                 currentLabel: periodLabel,
@@ -1011,19 +1008,6 @@ export default function ChargingListPage() {
           </FadeIn>
         </div>
 
-        {/* Collections */}
-        <FadeIn>
-          <section aria-label={t('charging.section.collections', 'Collections')}>
-          <PillFilterBar
-            items={collectionPills}
-            activeKey={collection}
-            onChange={(k) => setUrlBatch({ coll: k === 'all' ? null : k, page: null })}
-            ariaLabel={t('charging.collections.aria', 'Filter charging sessions by collection')}
-            testId="charging-collections"
-          />
-          </section>
-        </FadeIn>
-
         {/* Session list — full-width detail band */}
         {(valueFilter.invalid || (!isDesktopEvidence && hasValueFilters)) && (
           <InlineCallout
@@ -1108,6 +1092,13 @@ export default function ChargingListPage() {
                   else setUrlBatch({ sort: key, sort_desc: 'true', page: null });
                 }}
                 density={density === 'compact' ? 'compact' : 'comfortable'}
+                paginationControls={{
+                  page,
+                  pageSize,
+                  total: sortedSessions.length,
+                  onPageChange: setPage,
+                  onPageSizeChange: (size) => setUrlBatch({ size: String(size), page: null }),
+                }}
                 toolbarHeading={
                   <div>
                     <SectionTitle>{t('charging.allSessions', 'All sessions')} ({fmtCompact(sortedSessions.length)})</SectionTitle>
@@ -1153,13 +1144,13 @@ export default function ChargingListPage() {
                     )}
                   />
                 </StaggerContainer>}
-                <Pagination
+                {!isDesktopEvidence && <Pagination
                   page={page}
                   pageSize={pageSize}
                   total={sortedSessions.length}
                   onPageChange={setPage}
                   onPageSizeChange={(s) => { setUrlBatch({ size: String(s), page: null }); }}
-                />
+                />}
               </>
             ) : !isLoading && (
               <>

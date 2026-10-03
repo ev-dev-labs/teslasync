@@ -24,7 +24,7 @@ export { IconBox } from './IconBox';
 export { Icon, type IconProps, type IconSize } from './Icon';
 export { TabNav, type TabNavProps, type TabNavItem } from './TabNav';
 export { Accordion } from './Accordion';
-export { Pagination } from './Pagination';
+export { Pagination, type PaginationProps } from './Pagination';
 export { DataTable, useSortToggle, useTableSelection, useTableExpansion, type Column, type PaginationConfig } from './DataTable';
 export { DataTableValueFilter, type TableFilterValue } from './DataTableValueFilter';
 export { Table, type TableProps } from './Table';

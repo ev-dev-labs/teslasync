@@ -1758,6 +1758,13 @@ export default function DrivesListPage() {
                 fsdAvailable={fsdDataAvailable}
                 fsdByDriveID={fsdByDriveID}
                 anomalyDriveIds={anomalyDriveIds}
+                paginationControls={{
+                  page: safePage,
+                  pageSize,
+                  total: sortedDrives.length,
+                  onPageChange: setPage,
+                  onPageSizeChange: (size) => setUrlBatch({ size: String(size), page: null }),
+                }}
                 toolbarHeading={(
                   <SectionTitle className="flex items-center gap-2">
                     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)]">
@@ -1806,7 +1813,7 @@ export default function DrivesListPage() {
                 />
               </StaggerContainer>
             )}
-            {sortedDrives.length > 0 && <Pagination
+            {!desktopEvidence && sortedDrives.length > 0 && <Pagination
               page={safePage}
               pageSize={pageSize}
               total={sortedDrives.length}

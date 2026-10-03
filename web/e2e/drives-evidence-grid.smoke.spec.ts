@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { assertMockApiComplete, fulfillApiFixture, installApiMocks, mockAppSettings, mockDrive, seedBrowserState, waitForHarnessReady } from './mockApi';
-import { expectNoHorizontalOverflow } from './qualityAssertions';
+import { expectIntegratedGridFooter, expectNoHorizontalOverflow } from './qualityAssertions';
 
 const evidenceDrives = Array.from({ length: 4 }, (_, index) => ({
   ...mockDrive,
@@ -41,6 +41,7 @@ for (const theme of ['light', 'dark'] as const) {
       } else {
         const table = region.getByRole('table', { name: 'Drive evidence' });
         await expect(table).toBeVisible();
+        await expectIntegratedGridFooter(table);
         await expect(table.getByRole('spinbutton')).toHaveCount(0);
         await expect(page.getByTestId('drives-filters')).toHaveCount(0);
         const exports = region.locator('a[download]');

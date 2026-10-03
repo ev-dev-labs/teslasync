@@ -8131,6 +8131,7 @@
       "button": "Columns",
       "menu": "Show or hide columns",
       "menuReorder": "Reorder or hide columns",
+      "selectAll": "Select all",
       "heading": "Visible columns",
       "headingReorder": "Columns",
       "showAll": "Show all",
@@ -8897,6 +8898,12 @@
     "typeDistributionAria": "Alert distribution by type"
   },
   "pagination": {
+    "rows": "Rows",
+    "rowsOption": "{{size}} / page",
+    "page": "Page {{page}}",
+    "goToPage": "Go to page",
+    "go": "Go",
+    "invalidPage": "Enter a page from 1 to {{total}}.",
     "showing": "Showing {{start}}–{{end}} of {{total}}",
     "pageSize": "Rows per page",
     "perPage": "{{count}} / page",

@@ -267,6 +267,27 @@ describe('GeneralSettings — interaction', () => {
 })
 
 describe('GeneralSettings — save', () => {
+  it('blocks invalid currency input instead of saving a fabricated zero', async () => {
+    renderPanel()
+    const cost = await screen.findByLabelText('Electricity cost (per kWh)')
+    fireEvent.focus(cost)
+    fireEvent.change(cost, { target: { value: 'not a price' } })
+    fireEvent.blur(cost)
+    const save = screen.getByRole('button', { name: /Save settings/i })
+    expect(save).toBeDisabled()
+    expect(screen.getByText('Enter a valid number')).toBeInTheDocument()
+    fireEvent.click(save)
+    expect(mockedRequest.mock.calls.some(call => call[1]?.method === 'PUT')).toBe(false)
+    fireEvent.focus(cost)
+    fireEvent.change(cost, { target: { value: '0.123456' } })
+    fireEvent.blur(cost)
+    expect(save).toBeEnabled()
+    fireEvent.click(save)
+    await waitFor(() => expect(mockedRequest.mock.calls.some(call => call[1]?.method === 'PUT')).toBe(true))
+    const put = mockedRequest.mock.calls.find(call => call[1]?.method === 'PUT')
+    expect(JSON.parse(put?.[1].body).base_cost_per_kwh).toBe(0.123456)
+  })
+
   it('issues PUT /settings with the current form and shows confirmation', async () => {
     renderPanel()
     const distance = (await screen.findByLabelText('Distance unit')) as HTMLSelectElement

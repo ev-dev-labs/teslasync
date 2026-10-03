@@ -1091,14 +1091,19 @@
     }
   },
   "pagination": {
-    "showing": "Showing {{start}}–{{end}} of {{total}}",
-    "pageSize": "Rows per page",
-    "perPage": "{{count}} / page",
-    "first": "First page",
-    "previous": "Previous page",
     "currentPage": "Page {{page}} of {{total}}",
+    "first": "First page",
+    "go": "Go",
+    "goToPage": "Go to page",
+    "invalidPage": "Enter a page from 1 to {{total}}.",
+    "last": "Last page",
     "next": "Next page",
-    "last": "Last page"
+    "page": "Page {{page}}",
+    "pageSize": "Rows per page",
+    "previous": "Previous page",
+    "rows": "Rows",
+    "rowsOption": "{{size}} / page",
+    "showing": "Showing {{start}}–{{end}} of {{total}}"
   },
   "palette": {
     "cmd": {
@@ -1694,6 +1699,7 @@
       "moveUp": "Move {{col}} up",
       "reset": "Reset",
       "resizeLabel": "Resize column {{col}}",
+      "selectAll": "Select all",
       "showAll": "Show all",
       "toggleColumn": "Show or hide {{col}}"
     },

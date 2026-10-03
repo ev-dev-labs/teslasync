@@ -489,6 +489,115 @@ describe('DataTable — pagination persistence', () => {
   })
 })
 
+describe('DataTable — cohesive paging footer', () => {
+  const controls = (onPageChange = vi.fn()) => ({
+    page: 2, pageSize: 25, total: 100, onPageChange,
+  })
+
+  it('renders already paged rows without double slicing even when both paging props are supplied', () => {
+    render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      pagination={{ defaultPageSize: 1 }} paginationControls={controls()} />)
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+    expect(screen.getByText('Charlie')).toBeInTheDocument()
+    expect(screen.getByText('Showing 26–50 of 100')).toBeInTheDocument()
+    expect(screen.getByRole('button', { current: 'page' })).toHaveAttribute('aria-label', 'Page 2 of 4')
+  })
+
+  it.each([0, 1])('keeps the explicit controlled footer visible for %s rows', total => {
+    render(<DataTable columns={REORDER_COLS} data={ROWS.slice(0, total)} keyExtractor={row => row.id}
+      emptyMessage="No matching rows" paginationControls={{ ...controls(), page: 1, total }} />)
+    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeInTheDocument()
+    expect(screen.getByText(total ? 'Showing 1–1 of 1' : 'Showing 0–0 of 0')).toBeInTheDocument()
+    expect(screen.getByRole('button', { current: 'page' })).toHaveAttribute('aria-label', 'Page 1 of 1')
+    if (total === 0) expect(screen.getByText('No matching rows')).toBeInTheDocument()
+  })
+
+  it('keeps toolbar and footer in the frame but outside both scrolling axes', () => {
+    const { container } = render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      toolbarHeading={<span>Drive evidence</span>} maxHeight={120} className="custom-table-viewport"
+      paginationControls={controls()} />)
+    const frame = container.querySelector('[data-grid-frame]')!
+    const viewport = container.querySelector('[data-grid-viewport]')!
+    const footer = container.querySelector('[data-grid-footer]')!
+    expect(footer.parentElement).toBe(frame)
+    expect(viewport.parentElement).toBe(frame)
+    expect(viewport).not.toContainElement(footer)
+    expect(viewport).not.toContainElement(screen.getByText('Drive evidence'))
+    expect(footer).toContainElement(screen.getByRole('navigation'))
+    expect(viewport).toHaveClass('custom-table-viewport', 'overflow-auto', 'border-0', 'rounded-none')
+    expect(viewport).toHaveStyle({ maxHeight: '120px' })
+    expect(container.querySelector('thead tr')).toHaveClass('sticky')
+    expect(frame).toHaveClass('border', 'overflow-hidden', 'p-0', 'space-y-0')
+  })
+
+  it('does not auto-enable pagination or a table paging tab stop', () => {
+    render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).toBeNull()
+    expect(screen.getByRole('table')).not.toHaveAttribute('tabindex')
+  })
+
+  it('navigates local pages with table-focused keyboard shortcuts', () => {
+    render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      pagination={{ defaultPageSize: 1, pageSizeOptions: [1, 2] }} />)
+    const table = screen.getByRole('table')
+    expect(table).toHaveAttribute('tabindex', '0')
+    table.focus()
+    fireEvent.keyDown(table, { key: 'PageDown' })
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).toBeNull()
+    fireEvent.keyDown(table, { key: 'End' })
+    expect(screen.getByText('Charlie')).toBeInTheDocument()
+    fireEvent.keyDown(table, { key: 'PageUp' })
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+    fireEvent.keyDown(table, { key: 'Home' })
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+  })
+
+  it('calls controlled page navigation only from table focus, without hijacking existing navigation', () => {
+    const onPageChange = vi.fn()
+    const { container } = render(<DataTable columns={[{
+      key: 'name', header: 'Name', render: row => <div>
+        <Button>{row.name}</Button><a href="#row">Open row</a>
+        <span contentEditable suppressContentEditableWarning>Editable cell</span>
+      </div>,
+    }]} data={ROWS.slice(0, 1)} keyExtractor={row => row.id} selectable="multi" rowLabel={row => row.name}
+      paginationControls={controls(onPageChange)} />)
+    const table = screen.getByRole('table')
+    for (const [key, target] of [['PageDown', 3], ['PageUp', 1], ['Home', 1], ['End', 4]] as const) {
+      table.focus()
+      fireEvent.keyDown(table, { key })
+      expect(onPageChange).toHaveBeenLastCalledWith(target)
+    }
+    onPageChange.mockClear()
+    const descendants = [
+      screen.getByRole('button', { name: 'Alpha' }), screen.getByRole('link', { name: 'Open row' }),
+      screen.getByText('Editable cell'), container.querySelector('td')!, container.querySelector('tbody tr')!,
+      screen.getByRole('textbox', { name: 'Go to page' }), screen.getByRole('checkbox', { name: 'Select Alpha' }),
+    ]
+    for (const descendant of descendants) {
+      fireEvent.keyDown(descendant, { key: 'PageDown' })
+      fireEvent.keyDown(descendant, { key: 'Home' })
+    }
+    fireEvent.keyDown(table, { key: 'PageDown', ctrlKey: true })
+    fireEvent.keyDown(table, { key: 'End', shiftKey: true })
+    fireEvent.keyDown(table, { key: 'ArrowRight' })
+    expect(onPageChange).not.toHaveBeenCalled()
+    const prevented = new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true, cancelable: true })
+    prevented.preventDefault()
+    fireEvent(table, prevented)
+    expect(onPageChange).not.toHaveBeenCalled()
+  })
+
+  it('does not navigate beyond a keyboard boundary and uses safe nonfinite controls', () => {
+    const onPageChange = vi.fn()
+    render(<DataTable columns={REORDER_COLS} data={[]} keyExtractor={row => row.id}
+      paginationControls={{ ...controls(onPageChange), page: Infinity, pageSize: NaN, total: Infinity }} />)
+    for (const key of ['PageUp', 'PageDown', 'Home', 'End']) fireEvent.keyDown(screen.getByRole('table'), { key })
+    expect(onPageChange).not.toHaveBeenCalled()
+  })
+})
+
 // Virtualization stress tests.
 // Stress test: with `virtualized` enabled on a 5000-row dataset the DOM
 // must contain only the spacer rows + a small visible window — never

@@ -155,7 +155,7 @@ describe('GasPriceHistoryTable — rendering', () => {
     expect(within(table).getAllByText('gal')).toHaveLength(3);
 
     // Efficiency column renders "<n> mpg".
-    expect(within(table).getAllByText('25 mpg')).toHaveLength(3);
+    expect(within(table).getAllByText('25.00 mpg')).toHaveLength(3);
 
     // The open record (effective_to === null) shows the "Current" badge;
     // exactly one of the three is current.
@@ -265,7 +265,7 @@ describe('GasPriceHistoryTable — null safety', () => {
     expect(within(table).getAllByText('—').length).toBeGreaterThanOrEqual(1);
     // Open record → "Current"; closed record → a formatted date, not "Current".
     expect(within(table).getAllByText('Current')).toHaveLength(1);
-    expect(within(table).getByText('30 mpg')).toBeInTheDocument();
+    expect(within(table).getByText('30.00 mpg')).toBeInTheDocument();
     // A closed record's effective_to renders a real (2026) date.
     expect(within(table).getAllByText(/2026/).length).toBeGreaterThanOrEqual(1);
   });

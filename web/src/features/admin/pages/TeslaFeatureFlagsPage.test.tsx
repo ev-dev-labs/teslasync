@@ -232,7 +232,7 @@ describe('TeslaFeatureFlagsPage', () => {
     // Total is unique in the band; enabled + disabled both read "2".
     expect(await within(region).findByText('4')).toBeInTheDocument();
     expect(within(region).getByText('Total features')).toBeInTheDocument();
-    expect(within(region).getByText('50%')).toBeInTheDocument();
+    expect(within(region).getByText('50.00%')).toBeInTheDocument();
     expect(within(region).getAllByText('2')).toHaveLength(2);
     // Truthful data → no fabricated em-dash placeholders in the band.
     expect(within(region).queryByText('—')).toBeNull();
@@ -298,7 +298,7 @@ describe('TeslaFeatureFlagsPage', () => {
 
     const region = kpiRegion();
     // An empty payload is a KNOWN 0 (the fetch succeeded) — not an em-dash.
-    await waitFor(() => expect(within(region).getByText('0%')).toBeInTheDocument());
+    await waitFor(() => expect(within(region).getByText('0.00%')).toBeInTheDocument());
     expect(within(region).getAllByText('0')).toHaveLength(3);
     expect(within(region).queryByText('—')).toBeNull();
 
@@ -327,7 +327,7 @@ describe('TeslaFeatureFlagsPage', () => {
     expect(within(region).getByText('Total features')).toBeInTheDocument();
     expect(within(region).getAllByText('—')).toHaveLength(4);
     expect(within(region).queryByText('0')).toBeNull();
-    expect(within(region).queryByText('0%')).toBeNull();
+    expect(within(region).queryByText('0.00%')).toBeNull();
 
     // Recovery affordance stays available.
     expect(getRefreshButton()).toBeInTheDocument();

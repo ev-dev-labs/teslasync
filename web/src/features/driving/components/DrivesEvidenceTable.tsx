@@ -2,7 +2,7 @@ import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Eye } from 'lucide-react';
-import { Badge, Button, DataTable, DataTableValueFilter, Input, Select, buildTableFilterValues, selectedTableValueKeys, type Column } from '@/components/ui';
+import { Badge, Button, DataTable, DataTableValueFilter, Input, Select, buildTableFilterValues, selectedTableValueKeys, type Column, type PaginationProps } from '@/components/ui';
 import { endpointLabel } from '@/components/data-display';
 import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
 
@@ -59,6 +59,7 @@ interface DrivesEvidenceTableProps {
   anomalyDriveIds: ReadonlySet<number>;
   toolbarActions?: ReactNode;
   toolbarHeading?: ReactNode;
+  paginationControls?: PaginationProps;
 }
 
 export function DrivesEvidenceTable({
@@ -67,7 +68,7 @@ export function DrivesEvidenceTable({
   search, onSearchChange, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange,
   toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost,
   distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit,
-  timezone, fsdAvailable, fsdByDriveID, anomalyDriveIds, toolbarActions, toolbarHeading,
+  timezone, fsdAvailable, fsdByDriveID, anomalyDriveIds, toolbarActions, toolbarHeading, paginationControls,
 }: DrivesEvidenceTableProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -554,6 +555,7 @@ export function DrivesEvidenceTable({
         caption={t('drives.driveEvidence', 'Drive evidence')}
         toolbarActions={toolbarActions}
         toolbarHeading={toolbarHeading}
+        paginationControls={paginationControls}
         columns={valueColumns}
         data={drives}
         keyExtractor={(drive) => drive.id}

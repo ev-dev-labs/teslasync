@@ -195,7 +195,7 @@ describe('DiskForecastPage', () => {
     )
 
     // Totals are summed and byte-formatted.
-    expect(screen.getByText('4.5 GB')).toBeInTheDocument()
+    expect(screen.getByText('4.50 GB')).toBeInTheDocument()
 
     // Uncompressed / compressed carry their share-of-total subtitles. Scope
     // these assertions away from the chart's accessible fallback table.
@@ -203,12 +203,12 @@ describe('DiskForecastPage', () => {
       screen.getByRole('region', { name: 'Fleet disk summary' }),
     )
     expect(summary.getByText('Uncompressed')).toBeInTheDocument()
-    expect(summary.getByText('66.7% of total')).toBeInTheDocument()
+    expect(summary.getByText('66.67% of total')).toBeInTheDocument()
     expect(summary.getByText('Compressed')).toBeInTheDocument()
-    expect(summary.getByText('33.3% of total')).toBeInTheDocument()
+    expect(summary.getByText('33.33% of total')).toBeInTheDocument()
 
     // Daily growth is summed across all rows.
-    expect(screen.getByText('150.0 MB/d')).toBeInTheDocument()
+    expect(screen.getByText('150.00 MB/d')).toBeInTheDocument()
 
     // Soonest quota picks the SMALLEST days-to-quota (5), not the largest (30).
     expect(screen.getByText('Soonest quota')).toBeInTheDocument()
@@ -222,7 +222,7 @@ describe('DiskForecastPage', () => {
 
     const outlook = await screen.findByRole('region', { name: 'Growth and quota outlook' })
     const bar = await within(outlook).findByRole('progressbar', { name: 'table' })
-    expect(within(bar).getByText('10.0 MB/d')).toHaveClass('text-[var(--text-primary)]')
+    expect(within(bar).getByText('10.00 MB/d')).toHaveClass('text-[var(--text-primary)]')
   })
 
   it('renders one detail-table row per hypertable with its chunk count', async () => {

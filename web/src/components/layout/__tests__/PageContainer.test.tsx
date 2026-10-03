@@ -170,6 +170,8 @@ describe('PageContainer', () => {
     const copyAction = screen.getByRole('button', { name: /copy link to this view/i });
     expect(legacyAction.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'secondary');
     expect(copyAction.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'overflow');
+    expect(copyAction.textContent).toBe('');
+    expect(copyAction.querySelector('svg')).not.toBeNull();
     expect(container.querySelector('[data-action-group="metadata"]')).toBeInTheDocument();
   });
 

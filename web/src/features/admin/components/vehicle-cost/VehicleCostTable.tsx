@@ -79,7 +79,7 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
       {
         key: 'failures',
         filterValue: (r) => r.dlq_failures_24h ?? null,
-        filterValueLabel: (_value, r) => r.dlq_failures_24h == null ? '—' : fmtNumber(r.dlq_failures_24h),
+        filterValueLabel: (_value, r) => r.dlq_failures_24h == null ? '—' : fmtInt(r.dlq_failures_24h),
         header: t('admin.vehicleCost.colFailures', 'DLQ (24h)'),
         align: 'right',
         render: (r) => {
@@ -88,7 +88,7 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
             failures > 0
               ? 'tabular-nums text-amber-300'
               : 'tabular-nums text-[var(--text-secondary)]';
-          return <Text className={cls}>{fmtNumber(failures)}</Text>;
+          return <Text className={cls}>{fmtInt(failures)}</Text>;
         },
       },
       {

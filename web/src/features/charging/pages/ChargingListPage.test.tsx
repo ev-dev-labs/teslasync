@@ -468,6 +468,11 @@ describe('ChargingListPage — responsive evidence adoption', () => {
     }));
     renderPage();
     const table = await screen.findByRole('table', { name: 'All charging sessions' });
+    const frame = table.closest('[data-grid-frame]');
+    const footer = frame?.querySelector('[data-grid-footer]');
+    expect(footer).toBeInTheDocument();
+    expect(frame?.querySelector('[data-grid-viewport]')?.contains(footer ?? null)).toBe(false);
+    expect(screen.getByRole('button', { name: 'Next page' })).toBe(footer?.querySelector('[aria-label="Next page"]'));
     expect(table.querySelector('a[href="/charging/1"]')).not.toBeInTheDocument();
     fireEvent.click(within(table).getByRole('button', { name: 'Charge location filter' }));
     const filter = await screen.findByRole('dialog', { name: 'Charge location filter' });
@@ -606,15 +611,11 @@ describe('ChargingListPage — happy path', () => {
       );
   });
 
-  it('shows charger-category collection pills and the by-type secondary summary', async () => {
+  it('omits redundant collection tabs while retaining the by-type secondary summary', async () => {
     renderPage();
-    expect(await screen.findByText('Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('Anomalies')).toBeInTheDocument();
-    const filters = screen.getByRole('tablist', { name: 'Filter charging sessions by collection' });
-    expect(filters.querySelector('svg')).toBeNull();
-    expect(within(filters).getByRole('tab', { name: /All/ })).toHaveClass('bg-[var(--theme-primary)]');
-    expect(within(filters).getByRole('tab', { name: /Home/ })).toHaveClass('border-[var(--control-border)]');
-    expect(within(filters).getByRole('tab', { name: /Tagged/ })).toBeDisabled();
+    expect(await screen.findByText('2 home · 2 SC · 2 DC')).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Filter charging sessions by collection' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('charging-collections')).not.toBeInTheDocument();
     // 2 home (s1,s4) · 2 supercharger (s2,s5) · 2 dc / CCS (s3,s6).
     expect(screen.getByText('2 home · 2 SC · 2 DC')).toBeInTheDocument();
   });
