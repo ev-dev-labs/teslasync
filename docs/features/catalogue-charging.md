@@ -33,6 +33,16 @@ confirmed bulk deletion. Queue planning and all charging insights remain below
 the history rather than obscuring it. The complete live-posture brief follows
 the primary history, so readiness details do not push session evidence away.
 
+Desktop pagination belongs to the evidence grid's bordered footer, outside the
+scrolling rows. It includes row-size selection, numbered pages, first/last
+navigation, and a **Go to page** field showing the current page. With the table
+itself focused, Page Up/Page Down change pages and Home/End jump to the bounds.
+The Columns menu starts with a mixed-state **Select all** checkbox. Clearing
+the selection retains at least one column so the grid stays usable; Reset
+restores the original visibility and order, including initially hidden columns.
+The grid uses the shared Search, Compact/Comfortable, Export, and Columns toolbar.
+Its search and exports preserve the loaded-range scope described below.
+
 The page loads at most 500 sessions for the selected range. Its overview, trends,
 collections, search, and exports describe that loaded window, not an exhaustive
 server-side history. Unknown costs are not classified as free; a recorded zero

@@ -5,7 +5,7 @@ import {
   assertMockApiComplete, fulfillApiFixture, installApiMocks,
   seedBrowserState, waitForHarnessReady,
 } from './mockApi';
-import { expectNoHorizontalOverflow, monitorPage } from './qualityAssertions';
+import { expectIntegratedGridFooter, expectNoHorizontalOverflow, monitorPage } from './qualityAssertions';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic API diagnostic fixtures');
 
@@ -34,7 +34,7 @@ for (const theme of ['light', 'dark'] as const) {
           json: {
             data: noMatch ? [] : [{ ...event, http_method: params.get('method') || 'GET' }],
             total: noMatch ? 0 : params.get('method') ? 1 : 76,
-            limit: 25, offset: Number(params.get('offset') ?? 0),
+            limit: Number(params.get('limit') ?? 25), offset: Number(params.get('offset') ?? 0),
           } satisfies APICallLogResponse,
         });
       });
@@ -59,6 +59,19 @@ for (const theme of ['light', 'dark'] as const) {
       const table = main.getByRole('table', { name: 'API call log', exact: true });
       await expect(table).toContainText('/synthetic/diagnostic');
       await expect.poll(() => requests.some(params => params.get('offset') === '75')).toBe(true);
+      await expectIntegratedGridFooter(table);
+      const frame = table.locator('xpath=ancestor::*[@data-grid-frame][1]');
+      await expect(frame.getByRole('radio', { name: 'Compact', exact: true })).toBeVisible();
+      await frame.getByRole('radio', { name: 'Comfortable', exact: true }).click();
+      await expect(frame.getByRole('radio', { name: 'Comfortable', exact: true })).toBeChecked();
+      await expect(frame.getByRole('button', { name: 'Export list', exact: true })).toBeVisible();
+      await expect(frame.getByRole('button', { name: 'Reorder or hide columns' })).toBeVisible();
+      const search = frame.getByPlaceholder('Filter by endpoint...', { exact: true });
+      await search.fill('/synthetic');
+      await expect.poll(() => requests.some(params =>
+        params.get('endpoint') === '/synthetic' && Number(params.get('offset') ?? 0) === 0)).toBe(true);
+      await search.fill('');
+      await expect.poll(() => new URL(page.url()).searchParams.get('endpoint')).toBeNull();
       await table.getByRole('button', { name: 'Expand row', exact: true }).click();
       await expect(table).toContainText('"recorded": true');
       await expect(table.getByRole('button', { name: 'Copy Request body', exact: true })).toBeVisible();

@@ -479,7 +479,7 @@ describe('TriggerConfigurator — signal (operator + change toggle)', () => {
     );
   });
 
-  it('recovers a numeric value when the operator moves off "changed"', () => {
+  it('requires a numeric value when the operator moves off "changed"', () => {
     const { onChange } = renderConfig({
       kind: 'trigger_signal',
       signal: 'battery_level',
@@ -490,7 +490,7 @@ describe('TriggerConfigurator — signal (operator + change toggle)', () => {
       kind: 'trigger_signal',
       signal: 'battery_level',
       op: '>',
-      value_num: 20,
+      value_num: undefined,
     });
   });
 
@@ -515,7 +515,7 @@ describe('TriggerConfigurator — signal (operator + change toggle)', () => {
       kind: 'trigger_signal',
       signal: 'battery_level',
       op: '=',
-      value_num: 20,
+      value_num: undefined,
     });
   });
 });

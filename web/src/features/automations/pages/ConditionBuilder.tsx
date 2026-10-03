@@ -127,6 +127,9 @@ function conditionValueFromInput(
   value: string,
 ): AutomationConditionStepInput {
   if (BOOL_FIELD_KEYS.has(condition.signal)) {
+    if (condition.op === 'in') {
+      return { kind: 'condition_signal', signal: condition.signal, op: condition.op, value_text: value };
+    }
     return {
       kind: 'condition_signal',
       signal: condition.signal,
@@ -146,12 +149,8 @@ function conditionValueFromInput(
     kind: 'condition_signal',
     signal: condition.signal,
     op: condition.op,
-    value_num: Number.parseFloat(value) || 0,
+    value_num: value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : undefined,
   };
-}
-
-function numericValue(value: number | null | undefined, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps) {
@@ -269,10 +268,12 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
       const isBool = BOOL_FIELD_KEYS.has(condition.signal);
       const isRange = condition.op === 'between';
       const value = isBool
-        ? String(condition.value_bool ?? true)
+        ? condition.op === 'in'
+          ? condition.value_text ?? String(condition.value_bool ?? true)
+          : String(condition.value_bool ?? (condition.value_text === 'false' ? false : true))
         : condition.signal === 'state' || condition.op === 'in'
           ? (condition.value_text ?? '')
-          : String(condition.value_num ?? 20);
+          : String(condition.value_num ?? condition.value_min ?? '');
 
       return (
         <div className="flex flex-1 flex-wrap items-end gap-3">
@@ -310,8 +311,8 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
                   kind: 'condition_signal',
                   signal: condition.signal,
                   op,
-                  value_min: numericValue(condition.value_min ?? condition.value_num, 0),
-                  value_max: numericValue(condition.value_max, 100),
+                  value_min: condition.value_min ?? condition.value_num,
+                  value_max: condition.value_max,
                 });
                 return;
               }
@@ -352,6 +353,10 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
               options={[
                 { value: 'true', label: t('common.true', 'True') },
                 { value: 'false', label: t('common.false', 'False') },
+                ...(condition.op === 'in' ? [{
+                  value: 'true,false',
+                  label: `${t('common.true', 'True')} / ${t('common.false', 'False')}`,
+                }] : []),
               ]}
               value={value}
               onChange={(event) => onChange(conditionValueFromInput(condition, event.target.value))}

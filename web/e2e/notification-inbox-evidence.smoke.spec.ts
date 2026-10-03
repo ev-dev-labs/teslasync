@@ -4,7 +4,7 @@ import {
   assertMockApiComplete, fulfillApiFixture, installApiMocks,
   seedBrowserState, waitForHarnessReady,
 } from './mockApi';
-import { expectNoHorizontalOverflow, monitorPage } from './qualityAssertions';
+import { expectIntegratedGridFooter, expectNoHorizontalOverflow, monitorPage } from './qualityAssertions';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic notification mutation fixtures');
 
@@ -63,6 +63,20 @@ for (const theme of ['light', 'dark'] as const) {
       const table = main.getByRole('table', { name: 'Inbox', exact: true });
       await expect(table).toBeVisible();
       await expect(table.getByRole('button', { name: 'Open notification: Synthetic battery alert' })).toBeVisible();
+      await expectIntegratedGridFooter(table);
+      const frame = table.locator('xpath=ancestor::*[@data-grid-frame][1]');
+      await expect(frame.getByRole('radio', { name: 'Compact', exact: true })).toBeVisible();
+      await frame.getByRole('radio', { name: 'Comfortable', exact: true }).click();
+      await expect(frame.getByRole('radio', { name: 'Comfortable', exact: true })).toBeChecked();
+      await expect(frame.getByRole('button', { name: 'Export list', exact: true })).toBeVisible();
+      await expect(frame.getByRole('button', { name: 'Reorder or hide columns' })).toBeVisible();
+      const search = frame.getByPlaceholder('Search messages…', { exact: true });
+      await search.fill('Synthetic battery');
+      await expect.poll(() => inboxRequests.some(params =>
+        params.get('q') === 'Synthetic battery' && params.get('count_only') !== 'true'
+        && Number(params.get('offset') ?? 0) === 0)).toBe(true);
+      await search.fill('');
+      await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBeNull();
       const header = width < 768 ? 'Notification' : 'Severity';
       const trigger = table.getByRole('button', { name: `${header} filter`, exact: true });
       expect(await trigger.evaluate(element => element.closest('th') != null)).toBe(true);

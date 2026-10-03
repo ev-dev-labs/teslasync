@@ -775,9 +775,6 @@
     },
     "subtitle": "Electricity cost trends, gas savings, and charging economics"
   },
-  "filter": {
-    "pending": "Filtering…"
-  },
   "ocpp": {
     "title": "OCPP charge points",
     "lastSeen": "last seen {{when}}",
@@ -1265,19 +1262,6 @@
   "lifetime": {
     "unlocked": "✓ Unlocked"
   },
-  "listExport": {
-    "button": "Export",
-    "csv": "Download as CSV",
-    "disabledTooltip": "No data to export",
-    "exporting": "Preparing {{format}} export…",
-    "failed": "Could not prepare the {{format}} export.",
-    "json": "Download as JSON",
-    "menuLabel": "Export list",
-    "scopeLegend": "Export scope",
-    "selectedWithCount": "Selected ({{count}})",
-    "visible": "Visible",
-    "visibleWithCount": "Visible ({{count}})"
-  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
@@ -1612,13 +1596,6 @@
     "title": "Saved views",
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
-  },
-  "search": {
-    "history": {
-      "clear": "Clear history",
-      "removeAria": "Remove \"{{query}}\" from search history",
-      "title": "Recent searches"
-    }
   },
   "share": {
     "copy": "Copy link",

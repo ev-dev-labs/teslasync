@@ -21,6 +21,7 @@ export {
 export { PillFilterBar, type PillFilterBarProps, type PillItem } from './PillFilterBar';
 export { PersonaSelect, type PersonaSelectProps } from './PersonaSelect';
 export { SearchInput, type SearchInputProps } from './SearchInput';
+export { TableToolbar, type TableToolbarProps, type TableControls } from './TableToolbar';
 export { TagInput, type TagInputProps, type TagInputHandle, type TagSeparator } from './TagInput';
 export {
   TreeSelect,

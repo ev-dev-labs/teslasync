@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Badge, Button, CopyButton, DataTable, GlassPanel, Input, Label, Select, Text, Caption,
-  type Column, type SelectOption,
+  type Column, type SelectOption, type PaginationProps,
 } from '@/components/ui';
 import { DateTime, FormattedNumber } from '@/components/data-display';
 import type { APICallLog } from '@/api/types';
@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import type { TableControls } from '@/components/forms';
 
 type EvidenceVariant = 'success' | 'info' | 'warning' | 'danger' | 'neutral';
 type Installation = { id: string; platform: string; shortId: string };
@@ -22,7 +23,9 @@ interface ApiLogsEvidenceTableProps {
   serviceConfig: (service: string) => { label: string; variant: EvidenceVariant };
   installationFor: (headers: APICallLog['request_headers']) => Installation | null;
   toolbarHeading: ReactNode;
-  toolbarActions: ReactNode;
+  toolbarActions?: ReactNode;
+  controls?: TableControls;
+  paginationControls?: PaginationProps;
   filters: ApiLogsServerFilters;
   onFilterChange: (key: ApiLogsServerFilterKey, value: string) => void;
   onFiltersClear: () => void;
@@ -159,7 +162,7 @@ function ApiLogDetails({ log, serviceLabel, installation }: {
 
 /** Server-owned page: never infer complete value-filter candidates from these 25 rows. */
 export function ApiLogsEvidenceTable({
-  logs, serviceConfig, installationFor, toolbarHeading, toolbarActions,
+  logs, serviceConfig, installationFor, toolbarHeading, toolbarActions, paginationControls, controls,
   filters, onFilterChange, onFiltersClear, methodOptions, statusOptions, serviceOptions,
 }: ApiLogsEvidenceTableProps) {
   const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
@@ -342,6 +345,9 @@ export function ApiLogsEvidenceTable({
       columnReorder
       columnVisibility
       pagination={false}
+      paginationControls={paginationControls}
+      controls={controls}
+      showDensityControl
       enableValueFilters={false}
       emptyMessage="—"
       expandable

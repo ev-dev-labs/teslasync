@@ -1105,17 +1105,23 @@ export default function ChargingListPage() {
                     <Caption>{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Caption>
                   </div>
                 }
-                toolbarActions={
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ChargingSearchControl
-                      value={search}
-                      onChange={(value) => setUrlBatch({ q: value || null, page: null })}
-                      pending={isSearchPending}
-                    />
-                    <DensityToggle value={density} onChange={setDensity} options={['compact', 'comfortable']} testId="charging-density" />
-                    <ListExportMenu onExportCsv={handleExportCsv} onExportJson={handleExportJson} selectedCount={bulkSelected.size} visibleCount={sortedSessions.length} testId="charging-export" />
-                  </div>
-                }
+                controls={{
+                  search: {
+                    value: search,
+                    onChange: (value) => setUrlBatch({ q: value || null, page: null }),
+                    pending: isSearchPending,
+                    placeholder: t('charging.searchPlaceholder', 'Search charging — try "charger:home", "cost:>5", "kwh:>20", "Costco"'),
+                    historyScope: 'charging',
+                  },
+                  density: { value: density, onChange: setDensity, options: ['compact', 'comfortable'], testId: 'charging-density' },
+                  exports: {
+                    onExportCsv: handleExportCsv,
+                    onExportJson: handleExportJson,
+                    selectedCount: bulkSelected.size,
+                    visibleCount: sortedSessions.length,
+                    testId: 'charging-export',
+                  },
+                }}
               />
             )}
             {isLoading ? (

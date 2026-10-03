@@ -82,6 +82,7 @@
     "resultsCountOne": "1 result"
   },
   "common": {
+    "clearSearch": "Clear search",
     "invalidNumber": "Enter a valid number",
     "unitListHint": "Separate values with semicolons",
     "preferredUnitInputHint": "Enter {{unit}}. Saved thresholds remain canonical SI values.",
@@ -356,6 +357,13 @@
     "showDetails": "Details",
     "hideDetails": "Less"
   },
+  "density": {
+    "table": "Table",
+    "compact": "Compact",
+    "comfortable": "Comfortable",
+    "spacious": "Spacious",
+    "groupLabel": "List density"
+  },
   "draft": {
     "recovery": {
       "close": "Close",
@@ -425,6 +433,9 @@
       "tableTitle": "This table failed to render",
       "widgetTitle": "Widget failed to load"
     }
+  },
+  "filter": {
+    "pending": "Filtering…"
   },
   "form": {
     "required": "required"
@@ -532,6 +543,19 @@
     "zoomOut": "Zoom out",
     "zoomReset": "Reset zoom",
     "zoomPercent": "{{value}}%"
+  },
+  "listExport": {
+    "button": "Export",
+    "csv": "Download as CSV",
+    "disabledTooltip": "No data to export",
+    "exporting": "Preparing {{format}} export…",
+    "failed": "Could not prepare the {{format}} export.",
+    "json": "Download as JSON",
+    "menuLabel": "Export list",
+    "scopeLegend": "Export scope",
+    "selectedWithCount": "Selected ({{count}})",
+    "visible": "Visible",
+    "visibleWithCount": "Visible ({{count}})"
   },
   "mask": {
     "reveal": "Reveal value",
@@ -1480,6 +1504,16 @@
     "wholeHomeEnergy": "Whole home energy",
     "yearReview": "Year review"
   },
+  "search": {
+    "history": {
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history",
+      "title": "Recent searches"
+    },
+    "input": {
+      "label": "Search query"
+    }
+  },
   "serviceMode": {
     "banner": {
       "defaultDegraded": "Some features may be slow or unavailable while we work on it.",
@@ -1709,9 +1743,8 @@
       "expand": "Expand row"
     },
     "export": {
-      "csv": "Download CSV",
-      "csvButton": "Download CSV",
-      "failed": "Could not prepare the table export."
+      "fullResultScope": "Non-selected exports use the full-result handler; selection exports include only selected loaded rows.",
+      "loadedScope": "Exports include only matching loaded rows, or selected loaded rows."
     },
     "filter": {
       "active": "Active",
@@ -1728,6 +1761,12 @@
       "unavailableLoadedValues": "Some saved selections are not present in the loaded rows. Clear the filter to reset them.",
       "valueCount": "{{selected}} of {{total}} loaded values selected",
       "values": "Available values"
+    },
+    "pagination": {
+      "keyboardHint": "With the table focused, Page Up / Page Down change pages; Home / End jump to the first or last page."
+    },
+    "search": {
+      "loadedRows": "Search loaded rows"
     },
     "selection": {
       "deselectAll": "Deselect all rows",
@@ -1871,13 +1910,6 @@
     "statusOnline": "Online",
     "statusIdle": "Idle",
     "statusOffline": "Offline"
-  },
-  "density": {
-    "table": "Table",
-    "compact": "Compact",
-    "comfortable": "Comfortable",
-    "spacious": "Spacious",
-    "groupLabel": "List density"
   },
   "emptyState": {
     "threshold": {

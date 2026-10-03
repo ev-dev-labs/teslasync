@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, Eye } from 'lucide-react';
 import { Badge, Button, DataTable, DataTableValueFilter, Input, Select, buildTableFilterValues, selectedTableValueKeys, type Column, type PaginationProps } from '@/components/ui';
 import { endpointLabel } from '@/components/data-display';
+import type { TableControls } from '@/components/forms';
 import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
 
 import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
@@ -33,7 +34,6 @@ interface DrivesEvidenceTableProps {
   sortDir: 'asc' | 'desc';
   onSort: (key: DriveGridSortKey) => void;
   search: string;
-  onSearchChange: (value: string) => void;
   collection: string;
   onCollectionChange: (value: string) => void;
   onDriveFilterClear: () => void;
@@ -59,16 +59,17 @@ interface DrivesEvidenceTableProps {
   anomalyDriveIds: ReadonlySet<number>;
   toolbarActions?: ReactNode;
   toolbarHeading?: ReactNode;
+  controls?: TableControls;
   paginationControls?: PaginationProps;
 }
 
 export function DrivesEvidenceTable({
   drives, availableDrives, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
   selectedIds, onSelectionChange, onPreview, sortBy, sortDir, onSort,
-  search, onSearchChange, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange,
+  search, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange,
   toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost,
   distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit,
-  timezone, fsdAvailable, fsdByDriveID, anomalyDriveIds, toolbarActions, toolbarHeading, paginationControls,
+  timezone, fsdAvailable, fsdByDriveID, anomalyDriveIds, toolbarActions, toolbarHeading, controls, paginationControls,
 }: DrivesEvidenceTableProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -127,14 +128,6 @@ export function DrivesEvidenceTable({
       onFilterClear: onDriveFilterClear,
       filter: (
         <div className="space-y-1.5">
-          <Input
-            size="sm"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            aria-label={t('drives.grid.search', 'Search drive or route')}
-            placeholder={t('drives.grid.searchPlaceholder', 'Search route or grade')}
-            className="text-xs"
-          />
           <Select
             size="sm"
             value={collection}
@@ -476,7 +469,7 @@ export function DrivesEvidenceTable({
         </Button>
       ),
     },
-  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, search, onSearchChange, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt]);
+  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, search, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt]);
 
   const valueColumns = useMemo<Column<Drive>[]>(() => {
     const label = (key: DriveValueColumn, value: string | number | null): string => {
@@ -555,6 +548,7 @@ export function DrivesEvidenceTable({
         caption={t('drives.driveEvidence', 'Drive evidence')}
         toolbarActions={toolbarActions}
         toolbarHeading={toolbarHeading}
+        controls={controls}
         paginationControls={paginationControls}
         columns={valueColumns}
         data={drives}

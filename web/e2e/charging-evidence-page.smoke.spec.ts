@@ -67,6 +67,23 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(link).toBeVisible();
         const scroll = table.locator('..');
         expect(await scroll.evaluate((node) => getComputedStyle(node).overflowX)).toMatch(/auto|scroll/);
+        await history.getByRole('button', { name: 'Reorder or hide columns' }).click();
+        const columnsMenu = page.getByTestId('datatable-column-menu');
+        const selectAll = columnsMenu.getByRole('checkbox', { name: 'Select all', exact: true });
+        await expect(columnsMenu.getByRole('checkbox').first()).toHaveAccessibleName('Select all');
+        await expect(selectAll).toHaveAttribute('aria-checked', 'mixed');
+        await selectAll.locator('..').click();
+        await expect(selectAll).toBeChecked();
+        const lastColumn = columnsMenu.getByRole('checkbox').last();
+        await lastColumn.locator('..').scrollIntoViewIfNeeded();
+        await expect(lastColumn.locator('..')).toBeInViewport();
+        if (width === 1440) await page.screenshot({ path: test.info().outputPath(`charging-columns-${theme}.png`) });
+        await selectAll.locator('..').click();
+        await expect(selectAll).toHaveAttribute('aria-checked', 'mixed');
+        await expect(table.locator('thead th[data-column-key]')).toHaveCount(1);
+        await columnsMenu.getByRole('button', { name: 'Reset', exact: true }).click();
+        await expect(table.getByRole('button', { name: / filter$/ })).toHaveCount(9);
+        await history.getByRole('button', { name: 'Reorder or hide columns' }).click();
       } else {
         await expect(table).toHaveCount(0);
         await expect(history.locator('a[href="/charging/201"]').first()).toBeVisible();

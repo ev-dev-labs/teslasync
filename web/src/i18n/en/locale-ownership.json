@@ -1240,13 +1240,6 @@
   "requiresAuth": {
     "title": "{{feature}} requires authentication mode"
   },
-  "search": {
-    "history": {
-      "clear": "Clear history",
-      "removeAria": "Remove \"{{query}}\" from search history",
-      "title": "Recent searches"
-    }
-  },
   "shortcuts": {
     "empty": "No shortcuts match your search.",
     "filter": {

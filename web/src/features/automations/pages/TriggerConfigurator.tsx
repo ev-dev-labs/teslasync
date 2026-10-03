@@ -177,7 +177,7 @@ function signalValueFromInput(
     kind: 'trigger_signal',
     signal: trigger.signal,
     op: trigger.op,
-    value_num: Number.parseFloat(value) || 0,
+    value_num: value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : undefined,
   };
 }
 
@@ -427,7 +427,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
         ? String(trigger.value_bool ?? true)
         : trigger.signal === 'state'
           ? (trigger.value_text ?? 'online')
-          : String(trigger.value_num ?? 20);
+          : String(trigger.value_num ?? '');
 
       return (
         <div className="space-y-4">

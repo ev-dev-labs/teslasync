@@ -250,7 +250,7 @@ describe('ConditionBuilder — signal operators', () => {
     expect(options).not.toContain('Between');
   });
 
-  it('switches to Min/Max inputs and seeds them when "between" is chosen', () => {
+  it('switches to Min/Max while preserving the threshold and requiring an explicit maximum', () => {
     const { onChange } = renderBuilder([signalCondition]);
     fireEvent.change(screen.getByLabelText('Operator'), { target: { value: 'between' } });
     expect(lastArg(onChange)).toEqual([
@@ -259,11 +259,11 @@ describe('ConditionBuilder — signal operators', () => {
         signal: 'battery_level',
         op: 'between',
         value_min: 20,
-        value_max: 100,
+        value_max: undefined,
       },
     ]);
     expect(screen.getByLabelText('Min')).toHaveValue('20.00');
-    expect(screen.getByLabelText('Max')).toHaveValue('100.00');
+    expect(screen.getByLabelText('Max')).toHaveValue('');
     expect(screen.queryByLabelText('Value')).not.toBeInTheDocument();
   });
 
@@ -274,6 +274,20 @@ describe('ConditionBuilder — signal operators', () => {
       { kind: 'condition_signal', signal: 'battery_level', op: 'in', value_text: '20' },
     ]);
     expect(screen.getByLabelText('Value')).toHaveAttribute('type', 'text');
+  });
+
+  it('does not resurrect a cleared threshold when switching numeric operators or ranges', () => {
+    const { onChange } = renderBuilder([{ ...signalCondition, value_num: undefined }]);
+    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: '>' } });
+    expect(lastArg(onChange)[0]).toMatchObject({ op: '>', value_num: undefined });
+    expect(screen.getByRole('textbox', { name: /^Value/ })).toHaveValue('');
+    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: 'between' } });
+    expect(lastArg(onChange)[0]).toMatchObject({ value_min: undefined, value_max: undefined });
+    expect(screen.getByLabelText('Min')).toHaveValue('');
+    expect(screen.getByLabelText('Max')).toHaveValue('');
+    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: '=' } });
+    expect(lastArg(onChange)[0]).toMatchObject({ op: '=', value_num: undefined });
+    expect(screen.getByRole('textbox', { name: /^Value/ })).toHaveValue('');
   });
 });
 
@@ -347,6 +361,27 @@ describe('ConditionBuilder — signal value editing', () => {
     expect(lastArg(onChange)).toEqual([
       { kind: 'condition_signal', signal: 'is_locked', op: '=', value_bool: false },
     ]);
+  });
+
+  it('serializes boolean membership as a list and preserves false on return to equality', () => {
+    const { onChange } = renderBuilder([
+      { kind: 'condition_signal', signal: 'is_locked', op: '=', value_bool: false },
+    ]);
+    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: 'in' } });
+    expect(lastArg(onChange)[0]).toEqual({
+      kind: 'condition_signal', signal: 'is_locked', op: 'in', value_text: 'false',
+    });
+    const value = screen.getByLabelText('Value');
+    expect(within(value).getByRole('option', { name: 'True / False' })).toHaveValue('true,false');
+    fireEvent.change(value, { target: { value: 'true,false' } });
+    expect(lastArg(onChange)[0]).toEqual({
+      kind: 'condition_signal', signal: 'is_locked', op: 'in', value_text: 'true,false',
+    });
+    fireEvent.change(value, { target: { value: 'false' } });
+    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: '=' } });
+    expect(lastArg(onChange)[0]).toEqual({
+      kind: 'condition_signal', signal: 'is_locked', op: '=', value_bool: false,
+    });
   });
 
   it('resets to a bool default when switching from a numeric to a boolean signal', () => {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileJson, FileSpreadsheet, ListChecks } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
 import { useOptionalToast } from '@/components/feedback/Toast';
 import { cn } from '@/lib/cn';
 

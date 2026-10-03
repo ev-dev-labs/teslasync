@@ -34,7 +34,6 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
   useEffect(() => {
     setDestination(String(safePage))
     setInvalidDestination(false)
-    setDestination(String(target))
   }, [safePage, safePageSize, safeTotal])
 
   // At most five slots keeps every numbered target at least 44px at 320px.
@@ -112,6 +111,7 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
             return
           }
           setInvalidDestination(false)
+          setDestination(String(target))
           if (target !== safePage) onPageChange(target)
         }}>
           <Text variant="caption">{t('pagination.goToPage', 'Go to page')}</Text>

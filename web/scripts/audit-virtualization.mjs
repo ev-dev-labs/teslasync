@@ -71,7 +71,6 @@ const HOT_TABLE_PAGES = [
 // that starts rendering a long list is caught even though nobody touched this
 // array, and an entry that has since migrated must be pruned.
 const ACKNOWLEDGED_LONG_LIST_SURFACES = [
-  'features/admin/pages/ApiLogsPage.tsx',
   'features/advanced-intelligence/pages/BehavioralSentinelPage.tsx',
   'features/advanced-intelligence/pages/CausalExperimentationPage.tsx',
   'features/advanced-intelligence/pages/ComponentSurvivalPage.tsx',

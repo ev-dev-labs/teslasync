@@ -285,10 +285,10 @@ describe('SystemPage', () => {
     expect(overview.getByText('Failed 24h')).toBeInTheDocument()
 
     // Computed roll-ups: 2 of 3 workers healthy, 49 (42+0+7) jobs succeeded,
-    // and 91.7% peak usage (110/120) rounded to the nearest whole percent.
+    // and peak usage (110/120) formatted with the selected two decimals.
     expect(overview.getByText('2 / 3')).toBeInTheDocument()
     expect(overview.getByText('49')).toBeInTheDocument()
-    expect(overview.getByText('92.00%')).toBeInTheDocument()
+    expect(overview.getByText('91.67%')).toBeInTheDocument()
   })
 
   it('holds the loading skeleton + panel spinners until data lands, then swaps to the live band', async () => {

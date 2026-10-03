@@ -2,7 +2,7 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, AlertTriangle, Mail, MailOpen } from 'lucide-react';
 import { DateTime, SeverityBadge } from '@/components/data-display';
-import { Badge, Button, DataTable, Select, useTableExpansion, type Column, type ContextMenuItem } from '@/components/ui';
+import { Badge, Button, DataTable, Select, useTableExpansion, type Column, type ContextMenuItem, type PaginationProps } from '@/components/ui';
 import type { AlertRule, NotificationLog, Vehicle } from '@/api/types';
 import type { NotificationFilters } from '@/api/hooks/useNotifications';
 import { notificationEventTypeFallback } from '@/lib/notificationEventType';
@@ -11,6 +11,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { NotificationInboxDetails } from './NotificationInboxDetails';
 import { NotificationInboxDelivery } from './NotificationInboxDelivery';
 import { NotificationFilterBar } from './NotificationFilterBar';
+import type { TableControls } from '@/components/forms';
 
 interface NotificationInboxTableProps {
   rows: NotificationLog[];
@@ -23,6 +24,8 @@ interface NotificationInboxTableProps {
   archived: boolean;
   toolbarActions?: ReactNode;
   toolbarHeading?: ReactNode;
+  controls?: TableControls;
+  paginationControls?: PaginationProps;
   filters: NotificationFilters;
   onFiltersChange: (next: NotificationFilters) => void;
 }
@@ -38,6 +41,8 @@ export function NotificationInboxTable({
   archived,
   toolbarActions,
   toolbarHeading,
+  controls,
+  paginationControls,
   filters,
   onFiltersChange,
 }: NotificationInboxTableProps) {
@@ -235,6 +240,9 @@ export function NotificationInboxTable({
       columns={columns}
       toolbarActions={toolbarActions}
       toolbarHeading={toolbarHeading}
+      controls={controls}
+      showDensityControl
+      paginationControls={paginationControls}
       data={rows}
       keyExtractor={log => log.id}
       rowLabel={log => log.title || t('notifications.inbox.columns.title', 'Notification')}

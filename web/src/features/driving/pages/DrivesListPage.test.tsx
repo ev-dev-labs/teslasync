@@ -26,7 +26,7 @@
  *   - sort controls toggle aria-pressed + persist to the URL.
  *   - bulk delete: select → confirm → mutateAsync called with numeric ids.
  *   - pagination clamp: an out-of-range `?page=N` still shows results.
- *   - export links carry snake_case `vehicle_id` + the active range.
+ *   - export actions carry snake_case `vehicle_id` + the active range.
  *   - empty state offers a reset-filters CTA.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -1171,14 +1171,27 @@ describe('DrivesListPage — pagination clamp', () => {
   });
 });
 
-describe('DrivesListPage — export links', () => {
-  it('builds CSV/JSON export URLs with snake_case params and the active range', () => {
-    renderPage();
-
-    const csv = screen.getByRole('link', { name: 'CSV' });
-    const json = screen.getByRole('link', { name: 'JSON' });
-
-    const csvHref = csv.getAttribute('href') ?? '';
+describe('DrivesListPage — standard controls', () => {
+  it.each([false, true])('exports the full vehicle/range without claiming filtered or selected scope (desktop=%s)', (desktop) => {
+    mockMediaQuery.mockReturnValue(desktop);
+    const downloads: HTMLAnchorElement[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      downloads.push(this);
+    });
+    renderPage([`${DEFAULT_RANGE}&q=Office&size=1`]);
+    if (desktop) {
+      fireEvent.click(within(screen.getByRole('table', { name: 'Drive evidence' })).getByRole('checkbox', { name: /Select.*Apr/ }));
+    } else {
+      fireEvent.click(within(listRegion()).getByRole('checkbox'));
+    }
+    expect(screen.getByText('Exports include every drive in the selected vehicle and date range, without list filters or selection.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    expect(screen.queryByRole('radio', { name: /Selected/ })).toBeNull();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+    expect(downloads).toHaveLength(2);
+    const csvHref = downloads[0].href;
     // Param ORDER is deliberately not asserted: `scopedPath` sorts keys so the
     // same scope always yields a byte-identical URL. Only presence + casing
     // are contractual.
@@ -1190,7 +1203,38 @@ describe('DrivesListPage — export links', () => {
     // Never double-prefixed, and never camelCase.
     expect(csvHref).not.toContain('/api/v1/api/v1');
     expect(csvHref.split('?')[1] ?? '').not.toMatch(/[?&]?[a-z]+[A-Z]/);
-    expect(json.getAttribute('href') ?? '').toContain('format=json');
+    expect(csvHref).not.toContain('q=');
+    expect(csvHref).not.toContain('size=');
+    expect(downloads[0].download).toBe('teslasync-drives.csv');
+    expect(downloads[1].href).toContain('format=json');
+    expect(downloads[1].download).toBe('teslasync-drives.json');
+    click.mockRestore();
+  });
+
+  it('places one controlled search and density selector in the continuous desktop frame', async () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage([`${DEFAULT_RANGE}&size=1&page=2`]);
+    const table = screen.getByRole('table', { name: 'Drive evidence' });
+    const frame = table.closest('[data-grid-frame]') as HTMLElement;
+    const search = screen.getByRole('combobox', { name: /Search drives/ });
+    expect(frame).toContainElement(search);
+    expect(screen.getAllByRole('radiogroup', { name: 'List density' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('radio', { name: 'Comfortable' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('density=comfortable');
+    expect(table.querySelector('tbody td[data-column-key="date"]')).toHaveClass('py-3.5');
+    fireEvent.change(search, { target: { value: 'Beach' } });
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('q=Beach'));
+    expect(screen.getByTestId('location')).not.toHaveTextContent('page=2');
+    expect(within(table).getByRole('link', { name: /Apr 20/ })).toHaveAttribute('href', '/drives/4');
+  });
+
+  it('keeps mobile cards and all their evidence when choosing compact density', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('radio', { name: 'Compact' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('density=compact');
+    const row = within(listRegion()).getByText('100.00 km');
+    expect(row.closest('[data-drive-list-density]')).toHaveAttribute('data-drive-list-density', 'compact');
+    expect(row).toBeInTheDocument();
   });
 });
 

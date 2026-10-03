@@ -78,17 +78,24 @@ const ALTERNATIVE_EXPORT_SURFACES = [
   {
     file: 'features/admin/pages/ApiLogsPage.tsx',
     label: 'API logs',
-    markers: ['ListExportMenu', 'onExportCsv=', 'onExportJson='],
+    markers: [
+      'ApiLogsEvidenceTable',
+      'controls={{',
+      'onExportCsv: handleExportCsv',
+      'onExportJson: handleExportJson',
+      'exportAsCSV(exportRows, `${exportFilename}.csv`)',
+      'exportAsJSON(logs, `${exportFilename}.json`)',
+    ],
   },
   {
     file: 'features/driving/pages/DrivesListPage.tsx',
     label: 'Drive history',
     markers: [
-      "scopedPath('/export/drives', exportScope)",
-      "filters: { format: 'csv' }",
-      "filters: { format: 'json' }",
-      'download="teslasync-drives.csv"',
-      'download="teslasync-drives.json"',
+      "scopedPath('/export/drives', { ...exportScope, filters: { format } })",
+      "onExportCsv: () => downloadDriveExport('csv')",
+      "onExportJson: () => downloadDriveExport('json')",
+      'link.download = `teslasync-drives.${format}`',
+      'controls={tableControls}',
     ],
   },
   {

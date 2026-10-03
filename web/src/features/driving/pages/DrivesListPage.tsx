@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Route, Gauge, TrendingUp, Clock, Sparkles,
-  ArrowUpDown, ArrowDown, Download, Activity,
+  ArrowUpDown, ArrowDown, Activity,
   Trash2, AlertTriangle,
   BatteryCharging, Bell, Car, GitCompareArrows, MapPin, Wrench,
 } from 'lucide-react';
@@ -26,9 +26,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
 import { DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
 import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
-import { PillFilterBar, type PillItem } from '@/components/forms';
-import { SearchInput } from '@/components/forms/SearchInput';
-import { FilterBar } from '@/components/forms/FilterBar';
+import { PillFilterBar, TableToolbar, type TableControls, type PillItem } from '@/components/forms';
 import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
 import { useUrlBatch, useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -246,6 +244,7 @@ export default function DrivesListPage() {
   const [page, setPage] = useUrlNumber('page', 1);
   const [pageSize] = useUrlNumber('size', 50);
   const [search] = useUrlString('q', '');
+  const [density, setDensity] = useUrlEnum('density', ['compact', 'comfortable'] as const, desktopEvidence ? 'compact' : 'comfortable');
   const [collection] = useUrlEnum<Collection>('coll', COLLECTIONS, 'all');
   const [fsdFilter] = useUrlEnum<FsdFilter>('fsd', FSD_FILTERS, 'all');
   const [trendMetric, setTrendMetric] = useUrlEnum<TrendMetric>('trend', TREND_METRICS, 'drives');
@@ -407,6 +406,29 @@ export default function DrivesListPage() {
   // responsive while the heavy downstream chain re-renders at non-urgent priority.
   const deferredSearch = useDeferredValue(search);
   const isSearchPending = !Object.is(search, deferredSearch);
+  const downloadDriveExport = useCallback((format: 'csv' | 'json') => {
+    const link = document.createElement('a');
+    link.href = apiUrl(scopedPath('/export/drives', { ...exportScope, filters: { format } }));
+    link.download = `teslasync-drives.${format}`;
+    link.click();
+  }, [exportScope]);
+  const tableControls: TableControls = {
+    search: {
+      value: search,
+      onChange: (value) => setUrlBatch({ q: value || null, page: null }),
+      placeholder: t('drives.searchPlaceholder', 'Search drives — try "grade:D", "Office", "29.1"'),
+      historyScope: 'drives',
+      pending: isSearchPending,
+    },
+    density: { value: density, onChange: (next) => { if (next !== 'table') setDensity(next); }, testId: 'drives-density' },
+    exports: {
+      onExportCsv: () => downloadDriveExport('csv'),
+      onExportJson: () => downloadDriveExport('json'),
+      selectedCount: 0,
+      description: t('drives.exportScope', 'Exports include every drive in the selected vehicle and date range, without list filters or selection.'),
+      testId: 'drives-export',
+    },
+  };
   const searchTokens = useMemo(
     () => parseSearchQuery(deferredSearch),
     [deferredSearch],
@@ -1353,7 +1375,7 @@ export default function DrivesListPage() {
 
         {/* Opt-in natural-language drive search.
             Hidden when ai_mode='off' or the nl-drive-search-replay toggle
-            is off — the typed SearchInput + FilterBar below remain the
+            is off — the typed table search below remains the
             canonical baseline. */}
         <FadeIn>
           <AINLDriveSearch />
@@ -1361,25 +1383,7 @@ export default function DrivesListPage() {
 
         {/* Search + active filter chips */}
         {!desktopEvidence && <FadeIn>
-          <FilterBar>
-            <div className="relative w-full sm:w-96">
-              <SearchInput
-                value={search}
-                onChange={(v) => { setUrlBatch({ q: v || null, page: null }); }}
-                placeholder={t('drives.searchPlaceholder', 'Search drives — try "grade:D", "Office", "29.1"')}
-                className="w-full"
-                historyScope="drives"
-              />
-              {isSearchPending && (
-                <span
-                  role="status"
-                  aria-live="polite"
-                  aria-label={t('filter.pending', 'Filtering…')}
-                  className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 inline-block h-3 w-3 rounded-full border-2 border-cyan-400/40 border-t-cyan-400 animate-spin"
-                />
-              )}
-            </div>
-          </FilterBar>
+          <TableToolbar {...tableControls} />
           <ActiveFilterChips
             className="mt-3"
             filters={
@@ -1667,23 +1671,12 @@ export default function DrivesListPage() {
                     <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
                   </>
                 )}
-                {!desktopEvidence && <a
-                  href={apiUrl(scopedPath('/export/drives', exportScope))}
-                  download="teslasync-drives.csv"
-                >
-                  <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
-                </a>}
-                {!desktopEvidence && <a
-                  href={apiUrl(scopedPath('/export/drives', { ...exportScope, filters: { format: 'json' } }))}
-                  download="teslasync-drives.json"
-                >
-                  <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
-                </a>}
               </div>
             )}
           </div>}
 
         {/* Drive list */}
+        {desktopEvidence && dateFilteredDrives.length === 0 && <TableToolbar {...tableControls} />}
         {(valueFilter.invalid || (!desktopEvidence && hasValueFilters)) && (
           <InlineCallout
             variant={valueFilter.invalid ? 'warning' : 'info'}
@@ -1734,7 +1727,6 @@ export default function DrivesListPage() {
                 sortDir={effectiveSortDirection}
                 onSort={sortGrid}
                 search={search}
-                onSearchChange={(value) => setUrlBatch({ q: value || null, page: null })}
                 collection={collection}
                 onCollectionChange={(value) => setUrlBatch({ coll: value === 'all' ? null : value, fsd: null, page: null })}
                 onDriveFilterClear={() => setUrlBatch({ q: null, coll: null, page: null })}
@@ -1774,18 +1766,10 @@ export default function DrivesListPage() {
                     <Badge variant="neutral" size="sm" className="tabular-nums">{fmtCompact(sortedDrives.length)}</Badge>
                   </SectionTitle>
                 )}
-                toolbarActions={(
-                  <>
-                    <a href={apiUrl(scopedPath('/export/drives', exportScope))} download="teslasync-drives.csv">
-                      <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
-                    </a>
-                    <a href={apiUrl(scopedPath('/export/drives', { ...exportScope, filters: { format: 'json' } }))} download="teslasync-drives.json">
-                      <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
-                    </a>
-                  </>
-                )}
+                controls={tableControls}
               />
             ) : (
+              <div data-drive-list-density={density} className={density === 'compact' ? '[&_.group]:py-2' : undefined}>
               <StaggerContainer>
                 <DateGroupedList
                   groups={groupedDrives}
@@ -1812,6 +1796,7 @@ export default function DrivesListPage() {
                   )}
                 />
               </StaggerContainer>
+              </div>
             )}
             {!desktopEvidence && sortedDrives.length > 0 && <Pagination
               page={safePage}

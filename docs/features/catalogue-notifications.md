@@ -50,4 +50,13 @@ tablets, and four columns on wide screens. Each section retains its own
 loading, retry/error, and no-data presentation; no section is hidden when a
 different history source fails.
 
+The inbox and archive keep pagination inside the grid footer. Changing **Rows**
+requests 25, 50, or 100 records from the server and resets to the first page
+without clearing the active filters. Numbered pages and **Go to page** use the
+server's total, not just the loaded rows. The Columns menu's **Select all**
+reflects partial visibility and always retains at least one usable column.
+Flat tables use the shared Search, Compact/Comfortable, Export, and Columns
+toolbar. Search filters messages on the server and resets pagination; exports
+cover the loaded page or selected loaded records, not the entire server history.
+
 [← All groups](./catalogue.md)

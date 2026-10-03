@@ -5,6 +5,7 @@ import { Badge, Button, DataTable, DataTableValueFilter, Tooltip, buildTableFilt
 import { GridMetricIndicator, RouteDisplay } from '@/components/data-display';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
+import type { TableControls } from '@/components/forms';
 import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
 
@@ -34,14 +35,15 @@ interface ChargingEvidenceTableProps {
   onSort: (key: ChargingEvidenceSort) => void;
   density: 'compact' | 'comfortable';
   toolbarHeading: ReactNode;
-  toolbarActions: ReactNode;
+  toolbarActions?: ReactNode;
+  controls?: TableControls;
   paginationControls?: PaginationProps;
 }
 
 export function ChargingEvidenceTable({
   sessions, availableSessions, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
   timezone, selectedIds, onSelectionChange, onPreview, anomalies,
-  sortBy, sortDir, onSort, density, toolbarHeading, toolbarActions, paginationControls,
+  sortBy, sortDir, onSort, density, toolbarHeading, toolbarActions, paginationControls, controls,
 }: ChargingEvidenceTableProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -218,6 +220,7 @@ export function ChargingEvidenceTable({
       rowLabel={(s) => `${formatDateTime(s.started_at, { tz: timezone })} · ${s.start_place ?? ''}`}
       toolbarHeading={toolbarHeading}
       toolbarActions={toolbarActions}
+      controls={controls}
       paginationControls={paginationControls}
       density={density}
       selectable="multi"

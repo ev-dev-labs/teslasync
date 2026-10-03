@@ -917,8 +917,13 @@ describe('InboxBody — controlled column-header filters', () => {
           route: `/notifications/${archived ? 'archived' : 'inbox'}?from=2026-01-01&to=2026-01-30&read=unread`,
         });
         await screen.findByText('Header evidence');
+        const table = screen.getByRole('table', { name: archived ? 'Archived' : 'Inbox' });
+        const frame = table.closest('[data-grid-frame]');
+        const footer = frame?.querySelector('[data-grid-footer]');
+        expect(footer).toContainElement(screen.getByRole('navigation', { name: 'Pagination' }));
+        expect(frame?.querySelector('[data-grid-viewport]')?.contains(footer ?? null)).toBe(false);
         expect(screen.queryByRole('combobox', { name: 'Source' })).not.toBeInTheDocument();
-        expect(screen.queryByPlaceholderText('Search messages…')).not.toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Search messages…')).toBeInTheDocument();
         const initialParams = new URL(String(flatCalls()[0][0]), 'http://teslasync.local').searchParams;
 
         const assertQueries = async (expected: Record<string, string | null>) => {
@@ -953,14 +958,30 @@ describe('InboxBody — controlled column-header filters', () => {
         fireEvent.click(within(sourceDialog).getByRole('button', { name: 'Done' }));
 
         fireEvent.click(screen.getByRole('button', { name: 'Notification filter' }));
-        fireEvent.change(screen.getByPlaceholderText('Search messages…'), { target: { value: 'battery' } });
+        fireEvent.change(within(screen.getByRole('dialog', { name: 'Notification filter' })).getByPlaceholderText('Search messages…'), { target: { value: 'battery' } });
         await assertQueries({ severity: 'warn', vehicle_id: '1', rule_id: '10', source: 'rule', q: 'battery' });
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
 
         fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
-        fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+        fireEvent.click(within(screen.getByRole('dialog', { name: 'Severity filter' })).getByRole('button', { name: 'Clear' }));
         await assertQueries({ severity: null, vehicle_id: '1', rule_id: '10', source: 'rule', q: 'battery' });
         expect(screen.queryByText('Select all values')).not.toBeInTheDocument();
+      });
+
+      it('changes server-owned page size and resets the notification offset', async () => {
+        installRequest({ total: 200, logs: () => Promise.resolve([makeLog({ title: 'Sized evidence' })]) });
+        renderInbox({ route: '/notifications/inbox?severity=warn' });
+        await screen.findByText('Sized evidence');
+        fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+        await waitFor(() => expect(String(flatCalls().at(-1)?.[0])).toContain('offset=50'));
+        fireEvent.change(screen.getByRole('combobox', { name: 'Rows per page' }), { target: { value: '100' } });
+        await waitFor(() => {
+          const params = new URL(String(flatCalls().at(-1)?.[0]), 'http://teslasync.local').searchParams;
+          expect(params.get('limit')).toBe('100');
+          expect(params.get('offset')).toBe('0');
+          expect(params.get('severity')).toBe('warn');
+        });
+        expect(screen.getByRole('textbox', { name: 'Go to page' })).toHaveValue('1');
       });
 
       it('keeps all filters and reset available from the visible mobile Notification header', async () => {

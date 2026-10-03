@@ -20,7 +20,7 @@
  *      the URL round-trips into a re-fetch. Clear resets them.
  *   7. Export   — creates + revokes an object URL and attaches a real
  *      <a download> to the DOM (the Firefox-safe path).
- *   8. Pagination renders only when total exceeds the page size.
+ *   8. Pagination is integrated in the grid, including single-page results.
  *
  * Network is faked at `@/api/devtools`; react-i18next is stubbed to return
  * fallback strings with {{var}} interpolation. Nothing hits real fetch.
@@ -554,23 +554,38 @@ describe('ApiLogsPage', () => {
     expect(document.body.contains(attached!)).toBe(false);
   });
 
-  it('renders pagination only when the total exceeds the page size', async () => {
+  it('keeps pagination inside the grid for both single and multiple pages', async () => {
     mockedStats.mockResolvedValue(makeStats());
 
-    // total <= limit → no pagination.
     mockedLogs.mockResolvedValue(makeLogsResponse({ total: 5 }));
     const { unmount } = renderPage();
     await screen.findByText('/vehicles');
-    expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'API call log' });
+    const frame = table.closest('[data-grid-frame]');
+    const footer = frame?.querySelector('[data-grid-footer]');
+    expect(footer).toContainElement(screen.getByRole('navigation', { name: 'Pagination' }));
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Go to page' })).toHaveValue('1');
     unmount();
 
-    // total > limit → pagination nav appears.
     mockedLogs.mockResolvedValue(makeLogsResponse({ total: 200 }));
     renderPage();
     await screen.findAllByText('/vehicles');
     await waitFor(() =>
       expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeInTheDocument(),
     );
+  });
+
+  it('changes row size on the server and resets the offset without dropping filters', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({ total: 200 }));
+    renderPage('/api-logs?page=2&method=POST');
+    await screen.findByText('/vehicles');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Rows per page' }), { target: { value: '50' } });
+    await waitFor(() => expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      limit: 50, offset: 0, method: 'POST',
+    })));
+    expect(screen.getByRole('textbox', { name: 'Go to page' })).toHaveValue('1');
   });
 
   it('renders a compact responsive evidence table with persistent column controls, not card buttons', async () => {

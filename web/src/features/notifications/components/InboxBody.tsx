@@ -58,7 +58,7 @@ import { useConfirm } from '@/hooks/useConfirm';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
-import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
+import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch, useUrlNumber } from '@/hooks/useUrlState';
 import {
   useNotificationLogs,
   useNotificationLogCount,
@@ -159,6 +159,8 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
   const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'flat');
   const [page, setPage] = useState(1);
+  const [requestedSize] = useUrlNumber('size', INBOX_PAGE_SIZE);
+  const pageSize = [25, 50, 100].includes(requestedSize) ? requestedSize : INBOX_PAGE_SIZE;
   const setFiltersBatch = useUrlBatch();
   const isGrouped = view === 'grouped' && !archived;
 
@@ -189,14 +191,14 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     from: startInstant,
     to_exclusive: endInstantExclusive,
     read: readState === 'all' ? undefined : readState === 'read',
-    limit: INBOX_PAGE_SIZE,
-    offset: (page - 1) * INBOX_PAGE_SIZE,
-  }), [archived, severity, vehicleIds, ruleIds, source, search, startInstant, endInstantExclusive, readState, page]);
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  }), [archived, severity, vehicleIds, ruleIds, source, search, startInstant, endInstantExclusive, readState, page, pageSize]);
 
   const severityKey = severityRaw.join(',');
   const vehicleKey = vehicleIdsRaw.join(',');
   const ruleKey = ruleIdsRaw.join(',');
-  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, source, search, startInstant, endInstantExclusive, readState, view]);
+  useEffect(() => { setPage(1); }, [archived, severityKey, vehicleKey, ruleKey, source, search, startInstant, endInstantExclusive, readState, view, pageSize]);
 
   const handleFiltersChange = useCallback((next: NotificationFilters) => {
     // Bridge the existing controlled-component contract back into the
@@ -650,14 +652,14 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           { value: 'unread', label: t('notifications.inbox.columns.unread', 'Unread') },
         ]}
       />}
-      <ListExportMenu
+      {isGrouped && <ListExportMenu
         onExportCsv={handleExportCsv}
         onExportJson={handleExportJson}
         selectedCount={isGrouped ? 0 : selected.size}
         visibleCount={visibleExportRows.length}
         disabled={visibleExportRows.length === 0 || initialLoading}
         testId="notification-export"
-      />
+      />}
       {!archived && (
         <div className="flex items-center gap-1 rounded-md border border-[var(--border-subtle)] p-0.5"
           role="group" aria-label={t('notifications.view.label', 'View')}>
@@ -751,8 +753,31 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             archived={archived}
             toolbarHeading={listHeading}
             toolbarActions={listActions}
+            controls={{
+              search: {
+                value: search,
+                onChange: (q) => handleFiltersChange({ ...filters, q: q || undefined }),
+                placeholder: t('notifications.inbox.filter.searchPlaceholder', 'Search messages…'),
+                historyScope: archived ? 'notifications:archived' : 'notifications:inbox',
+              },
+              exports: {
+                onExportCsv: handleExportCsv,
+                onExportJson: handleExportJson,
+                selectedCount: selected.size,
+                visibleCount: visibleExportRows.length,
+                disabled: visibleExportRows.length === 0 || initialLoading,
+                testId: 'notification-export',
+              },
+            }}
             filters={filters}
             onFiltersChange={handleFiltersChange}
+            paginationControls={countData ? {
+              page,
+              pageSize,
+              total: countData.total,
+              onPageChange: setPage,
+              onPageSizeChange: (size) => { setPage(1); setFiltersBatch({ size: String(size) }); },
+            } : undefined}
           />
         )}
         <StaleRefreshWarning state={listState} label={t('notifications.inbox.evidence.title', 'Notification evidence')} />
@@ -832,8 +857,9 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           </div>
         )}
       {countState.fatalError && <Text variant="bodySm">{t('notifications.inbox.countError', 'Could not load the notification count: {{error}}', { error: String(countState.fatalError) })}</Text>}
-      {countData && countData.total > 0 && (
-        <Pagination page={page} pageSize={INBOX_PAGE_SIZE} total={countData.total} onPageChange={setPage} />
+      {isGrouped && countData && countData.total > 0 && (
+        <Pagination page={page} pageSize={pageSize} total={countData.total} onPageChange={setPage}
+          onPageSizeChange={(size) => { setPage(1); setFiltersBatch({ size: String(size) }); }} />
       )}
       </GlassPanel>
       {/* The propose-only assistant remains available below the primary evidence surface. */}

@@ -1,14 +1,12 @@
-import { type ReactNode, type MouseEvent as ReactMouseEvent, isValidElement, useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { type ReactNode, type MouseEvent as ReactMouseEvent, isValidElement, useState, useCallback, useEffect, useMemo, useRef, useId, useDeferredValue } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
-import { ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, AlertTriangle, Download, GripVertical } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, AlertTriangle, GripVertical } from 'lucide-react'
 import { Pagination, type PaginationProps } from './Pagination'
-import { Button } from './Button'
 import { Checkbox } from './Checkbox'
 import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
-import { useOptionalToast } from '../feedback/Toast'
 import { DataTableColumnMenu } from './DataTableColumnMenu'
 import { DataTableBulkBar } from './DataTableBulkBar'
 import { DataTableHeaderFilter } from './DataTableHeaderFilter'
@@ -21,6 +19,8 @@ import { Text } from './Typography'
 import { DataTableResizer } from './DataTableResizer'
 import { useContextMenu, type ContextMenuItem } from './ContextMenu'
 import { VisuallyHidden } from '../a11y/VisuallyHidden'
+import { TableToolbar, type TableControls } from '../forms/TableToolbar'
+import type { ExportScope } from '../forms/ListExportMenu'
 import { useStatusAnnouncer } from '@/hooks/useStatusAnnouncer'
 import {
   applyColumnLayout,
@@ -37,6 +37,7 @@ import {
 import {
   toCSV,
   downloadCSV,
+  downloadJSON,
   defaultExportFilename,
   type CsvColumn,
   type CsvCellValue,
@@ -139,6 +140,8 @@ export interface Column<T> {
   key: string
   header: string
   render: (row: T) => ReactNode
+  /** Canonical export value for computed or component-rendered cells. */
+  exportValue?: (row: T) => CsvCellValue
   /** Optional column-scoped filter opened by the header's filter icon. */
   filter?: ReactNode
   filterActive?: boolean
@@ -195,16 +198,17 @@ interface DataTableProps<T> {
   /**
    * Information density for row heights / cell padding.
    *
-   *   - `'compact'`     — forces tight rows regardless of user setting
-   *   - `'comfortable'` — forces default rows regardless of user setting
-   *   - `'spacious'`    — forces loose rows regardless of user setting
+   *   - `'compact'`     — initially uses tight rows
+   *   - `'comfortable'` — initially uses default rows
+   *   - `'spacious'`    — initially uses loose rows
    *   - `'auto'`        — follows the user's `ui_density` setting via
    *                      density Tailwind utilities (`px-d-pad-x ...`)
    *
    * When omitted, DataTable defaults to `'auto'` (so the global
    * preference flows through every default-styled table). Pass an
-   * explicit value when a specific table should look identical to all
-   * users regardless of preference (e.g. data-dense log viewers).
+   * explicit value for the table's initial density. A saved table-local
+   * choice takes precedence; controls.density delegates ownership to the
+   * caller and takes precedence over both.
    */
   density?: 'compact' | 'comfortable' | 'spacious' | 'auto'
   pagination?: boolean | PaginationConfig
@@ -282,6 +286,12 @@ interface DataTableProps<T> {
   toolbarActions?: ReactNode
   /** Page-owned heading placed on the left of the same toolbar. */
   toolbarHeading?: ReactNode
+  /** Typed, caller-owned search, density and CSV/JSON actions. No implicit loaded-row search or export. */
+  controls?: TableControls
+  /** Defaults to true unless legacy toolbarActions owns the controls. */
+  showDensityControl?: boolean
+  /** Disable default loaded-row search for previews/pickers. Never implicit with paginationControls. */
+  searchable?: boolean
   /** Disable when the page owns a separate selection/action toolbar. */
   showSelectionSummary?: boolean
   /** Called whenever the selection changes. */
@@ -339,16 +349,17 @@ interface DataTableProps<T> {
    *  Shares the same popover as visibility, without overriding its opt-out. */
   columnReorder?: boolean
 
-  // ── Per-table CSV export ───────────────────────────────────────────────
-  /** Show a "Download CSV" button in the table toolbar. The CSV is generated
-   *  from the currently visible columns and the currently sorted/filtered
-   *  data the table has been given. */
+  // ── Per-table CSV / JSON export ────────────────────────────────────────
+  /** Defaults on for local tables, off for caller pagination or legacy action
+   *  toolbars. Pass false for sensitive previews/pickers. exportAll can opt
+   *  server tables into full-result export without inventing a server query. */
   exportable?: boolean
   /** Filename for the exported CSV (without extension). Defaults to a
    *  date-stamped fallback like `table-2026-05-01`. */
   exportFilename?: string
-  /** Override how a row is serialized. Defaults to extracting each visible
-   *  column key from the row. */
+  /** Override serialization. Otherwise uses Column.exportValue. CSV prefers
+   *  readable display text; JSON preserves matching data keys. Rich renderers
+   *  without readable children should provide Column.exportValue. */
   exportRow?: (row: T) => Record<string, CsvCellValue>
   /** Optional async hook for paginated/server-side data: when provided the
    *  export awaits this fetcher to obtain the full row set instead of using
@@ -458,7 +469,7 @@ export function DataTable<T>({
   showColumnsMenu,
   columnVisibility,
   columnReorder = Boolean(tableId),
-  exportable = false,
+  exportable,
   exportFilename,
   exportRow,
   exportAll,
@@ -468,10 +479,16 @@ export function DataTable<T>({
   rowContextMenu,
   toolbarActions,
   toolbarHeading,
+  controls,
+  showDensityControl = !toolbarActions,
+  searchable = !toolbarActions,
   showSelectionSummary = true,
 }: DataTableProps<T>) {
-  const toast = useOptionalToast()
   const { t } = useTranslation()
+  const keyboardHintId = useId()
+  const [localSearch, setLocalSearch] = useState('')
+  const deferredLocalSearch = useDeferredValue(localSearch)
+  const localSearchEnabled = searchable && !paginationControls && !controls?.search
   const [valueSelections, setValueSelections] = useState<TableValueSelections>({})
   const valueColumns = useMemo(() => enableValueFilters
     ? columns.filter(column => column.filterValue != null) : [], [columns, enableValueFilters])
@@ -482,19 +499,64 @@ export function DataTable<T>({
       (value, row) => column.filterValueLabel?.(value, row)
         ?? (value == null ? '—' : extractRenderedText(column.render(row)) ?? String(value))),
   ])), [valueColumns, candidateRows])
-  const filteredData = useMemo(() => valueColumns.length === 0 ? data : data.filter(row => valueColumns.every(column =>
-    matchesTableValueSelection(column.filterValue?.(row) ?? null, valueSelections[column.key]),
-  )), [data, valueColumns, valueSelections])
+  const filteredData = useMemo(() => {
+    const query = localSearchEnabled ? deferredLocalSearch.trim().toLocaleLowerCase() : ''
+    return data.filter(row => valueColumns.every(column =>
+      matchesTableValueSelection(column.filterValue?.(row) ?? null, valueSelections[column.key]),
+    ) && (!query || columns.some(column => {
+      const raw = (row as unknown as Record<string, unknown>)[column.key]
+      const text = extractRenderedText(column.render(row))
+        ?? (typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : '')
+      return text.toLocaleLowerCase().includes(query)
+    })))
+  }, [data, valueColumns, valueSelections, columns, localSearchEnabled, deferredLocalSearch])
+  const searchControls = controls?.search ?? (localSearchEnabled ? {
+    value: localSearch,
+    onChange: setLocalSearch,
+    ariaLabel: t('table.search.loadedRows', 'Search loaded rows'),
+    placeholder: t('table.search.loadedRows', 'Search loaded rows'),
+    pending: !Object.is(localSearch, deferredLocalSearch),
+  } : undefined)
   const hasValueFilters = valueColumns.some(column => valueSelections[column.key] != null)
   // Shared context menu host. We call this once per
   // table render so the imperative `openMenu` reference stays stable
   // across row renders.
   const { openMenu } = useContextMenu()
-  // Resolve effective density. Explicit `density` wins; otherwise the
-  // legacy `compact` boolean maps to 'compact'; otherwise default to
-  // 'auto' so the global setting flows through.
+  // Untouched tables still follow global density; only an explicit local
+  // choice is persisted. Caller-owned density bypasses the local choice.
+  const densityStorageKey = tableId ? `${STORAGE_PREFIX}.${tableId}.density` : null
+  const [localDensity, setLocalDensity] = useState<'compact' | 'comfortable' | null>(() => {
+    const stored = densityStorageKey ? readStored<unknown>(densityStorageKey) : null
+    return stored === 'compact' || stored === 'comfortable' ? stored : null
+  })
+  useEffect(() => {
+    const stored = densityStorageKey ? readStored<unknown>(densityStorageKey) : null
+    setLocalDensity(stored === 'compact' || stored === 'comfortable' ? stored : null)
+  }, [densityStorageKey])
   const effectiveDensity: 'compact' | 'comfortable' | 'spacious' | 'auto' =
-    density ?? (compact ? 'compact' : 'auto')
+    controls?.density
+      ? controls.density.value === 'compact' ? 'compact' : 'comfortable'
+      : localDensity ?? density ?? (compact ? 'compact' : 'auto')
+  const [globalCompact, setGlobalCompact] = useState(() =>
+    typeof document !== 'undefined' && document.body.dataset.density === 'compact')
+  useEffect(() => {
+    if (effectiveDensity !== 'auto') return
+    const syncDensity = () => setGlobalCompact(document.body.dataset.density === 'compact')
+    syncDensity()
+    const observer = new MutationObserver(syncDensity)
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-density'] })
+    return () => observer.disconnect()
+  }, [effectiveDensity])
+  const densityControls = controls?.density ?? (showDensityControl ? {
+    value: effectiveDensity === 'compact' || (effectiveDensity === 'auto'
+      && globalCompact)
+      ? 'compact' as const : 'comfortable' as const,
+    onChange: (next: 'compact' | 'comfortable' | 'table') => {
+      if (next === 'table') return
+      setLocalDensity(next)
+      if (densityStorageKey) writeStored(densityStorageKey, next)
+    },
+  } : undefined)
   // Static density modes use the historical fixed paddings (32 / 44 /
   // 56 px row heights). 'auto' uses density Tailwind utilities that
   // read CSS vars set by `body[data-density="..."]` so the table
@@ -551,7 +613,7 @@ export function DataTable<T>({
   }, [pageSizeOptions, pageSizeStorageKey])
 
   // Reset to page 1 when data length changes (e.g. filters applied).
-  useEffect(() => { setPage(1) }, [data.length, valueSelections, enableValueFilters])
+  useEffect(() => { setPage(1) }, [data.length, valueSelections, enableValueFilters, deferredLocalSearch])
 
   // ── Column layout (order + hidden, persisted by tableId) ───────────────
   // The legacy `visibleKeys` state is unified with a
@@ -763,51 +825,48 @@ export function DataTable<T>({
     [data, isSelectable, selectionSet, keyExtractor],
   )
 
-  // ── CSV export ─────────────────────────────────────────────────────────
-  const [exporting, setExporting] = useState(false)
-  const handleExportCsv = useCallback(async () => {
-    if (exporting) return
-    setExporting(true)
-    try {
-      const sourceRows: T[] = exportAll ? await exportAll() : filteredData
-      const filenameBase = exportFilename ?? defaultExportFilename(tableId ?? name ?? 'table')
-      const csvCols: CsvColumn<T>[] = visibleColumns.map((col) => ({
-        key: col.key,
-        header: col.header || col.key,
-        accessor: exportRow
-          ? (row) => {
-              const obj = exportRow(row)
-              const v = obj[col.key]
-              return v === undefined ? null : v
-            }
-          : (row) => {
-              // Default: shallow lookup. Renders that produce React nodes are
-              // not exportable — callers should pass `exportRow` to flatten
-              // formatted values to plain CSV cells.
-              const v = (row as unknown as Record<string, unknown>)[col.key]
-              if (v == null) return null
-              if (
-                typeof v === 'string' ||
-                typeof v === 'number' ||
-                typeof v === 'boolean'
-              ) {
-                return v
-              }
-              // Fall back to JSON for nested structures so the row still exports.
-              return v as object
-            },
+  const handleExport = useCallback(async (format: 'csv' | 'json', scope: ExportScope) => {
+    const sourceRows = scope === 'selected' ? selectedRows : exportAll ? await exportAll() : filteredData
+    const rows = sourceRows.map(row => {
+      const flattened = exportRow?.(row)
+      const record: Record<string, CsvCellValue> = {}
+      visibleColumns.forEach(column => {
+        if (flattened) {
+          record[column.key] = flattened[column.key] ?? null
+        } else if (column.exportValue) {
+          record[column.key] = column.exportValue(row)
+        } else {
+          const value = (row as unknown as Record<string, unknown>)[column.key]
+          const rendered = extractRenderedText(column.render(row))
+          record[column.key] = format === 'csv' && rendered != null ? rendered
+            : value === null || typeof value === 'string' || typeof value === 'number'
+            || typeof value === 'boolean' || typeof value === 'object'
+            ? value : rendered
+        }
+      })
+      return record
+    })
+    const filename = exportFilename ?? defaultExportFilename(tableId ?? name ?? 'table')
+    if (format === 'json') {
+      downloadJSON(filename, rows)
+    } else {
+      const csvColumns: CsvColumn<Record<string, CsvCellValue>>[] = visibleColumns.map(column => ({
+        key: column.key, header: column.header || column.key,
       }))
-      const csv = toCSV(sourceRows, csvCols)
-      downloadCSV(filenameBase, csv)
-    } catch (error) {
-      console.error('[DataTable] CSV export failed', error)
-      toast?.error(
-        t('table.export.failed', 'Could not prepare the table export.'),
-      )
-    } finally {
-      setExporting(false)
+      downloadCSV(filename, toCSV(rows, csvColumns))
     }
-  }, [exporting, exportAll, filteredData, exportFilename, tableId, name, visibleColumns, exportRow, t, toast])
+  }, [exportAll, filteredData, selectedRows, exportFilename, tableId, name, visibleColumns, exportRow])
+  const exportControls = exportable === false ? undefined : controls?.exports
+    ?? (exportable === true || exportAll || (!paginationControls && !toolbarActions) ? {
+      onExportCsv: (scope: ExportScope) => handleExport('csv', scope),
+      onExportJson: (scope: ExportScope) => handleExport('json', scope),
+      selectedCount: selectedRows.length,
+      visibleCount: exportAll ? undefined : filteredData.length,
+      disabled: !exportAll && filteredData.length === 0 && selectedRows.length === 0,
+      description: exportAll
+        ? t('table.export.fullResultScope', 'Non-selected exports use the full-result handler; selection exports include only selected loaded rows.')
+        : t('table.export.loadedScope', 'Exports include only matching loaded rows, or selected loaded rows.'),
+    } : undefined)
 
   // Total visible column count for colSpan calcs (incl. selection / expand).
   const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
@@ -1187,47 +1246,31 @@ export function DataTable<T>({
 
   const hasSelectionSummary = showSelectionSummary && isSelectable && selectedRows.length > 0
   const showToolbar =
-    Boolean(toolbarActions || toolbarHeading) ||
+    Boolean(toolbarActions || toolbarHeading || controls || densityControls || searchControls || exportControls) ||
     showColumnMenu ||
-    hasSelectionSummary ||
-    exportable
+    hasSelectionSummary
 
   return (
-    <div className={cn(tableTokens.frame, 'space-y-0 overflow-hidden p-0')}
+    <>
+    <div className={cn(tableTokens.frame, 'space-y-0 overflow-visible p-0')}
       data-grid-frame="">
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
-        <div className={cn(tableTokens.toolbar, 'border-b border-[var(--border-default)] p-3')}>
-          {(toolbarHeading || hasSelectionSummary) && <div className="min-w-0 flex-1 basis-48">
+        <TableToolbar
+          className={cn(tableTokens.toolbar, 'rounded-t-xl border-b border-[var(--border-default)] p-3')}
+          search={searchControls}
+          density={densityControls}
+          exports={exportControls}
+          heading={(toolbarHeading || hasSelectionSummary) ? <>
             {toolbarHeading}
             {hasSelectionSummary && (
               <DataTableBulkBar count={selectedRows.length} onClear={clearSelection}>
                 {bulkActions?.(selectedRows)}
               </DataTableBulkBar>
             )}
-          </div>}
-          <div className="ml-auto flex max-w-full flex-wrap items-center gap-2">
-            {toolbarActions}
-            {exportable && (
-              <Button
-                type="button"
-                onClick={handleExportCsv}
-                disabled={exporting || (exportAll ? data.length : filteredData.length) === 0}
-                loading={exporting}
-                variant="ghost"
-                size="sm"
-                aria-label={t('table.export.csv', 'Download CSV')}
-                className={cn(
-                  '!h-8 gap-1.5 rounded-md px-2 py-1 text-xs',
-                  'border border-[var(--border-subtle)] bg-[var(--control-bg)]',
-                  'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]',
-                )}
-                icon={<Download className="h-3.5 w-3.5" aria-hidden="true" />}
-              >
-                <span>{t('table.export.csvButton', 'Download CSV')}</span>
-              </Button>
-            )}
-            {showColumnMenu && (
+          </> : undefined}
+          actions={toolbarActions}
+          columns={showColumnMenu ? (
               <DataTableColumnMenu
                 columns={columns.map(c => ({
                   key: c.key,
@@ -1240,9 +1283,8 @@ export function DataTable<T>({
                 reorderable={reorderRequested}
                 toggleable={visibilityRequested}
               />
-            )}
-          </div>
-        </div>
+            ) : undefined}
+        />
       )}
 
       {hasValueFilters && (
@@ -1252,10 +1294,14 @@ export function DataTable<T>({
           })}
         </Text>
       )}
-      <div ref={scrollContainerRef} className={wrapperClass} style={wrapperStyle} data-grid-viewport="">
+      <div ref={scrollContainerRef} className={cn(wrapperClass,
+        !showToolbar && !footerControls ? 'rounded-xl'
+          : !showToolbar ? 'rounded-t-xl' : !footerControls ? 'rounded-b-xl' : undefined,
+      )} style={wrapperStyle} data-grid-viewport="">
         {/* Preserve native table semantics, not an ARIA grid with a different cell-navigation contract. */}
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
         <table tabIndex={footerControls ? 0 : undefined} className={cn(tableTokens.wrapper, footerControls && 'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]')} aria-label={accessibleTableName}
+          aria-describedby={footerControls ? keyboardHintId : undefined}
           onKeyDown={event => {
             if (!footerControls || event.defaultPrevented || event.target !== event.currentTarget
               || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
@@ -1472,12 +1518,18 @@ export function DataTable<T>({
         </table>
       </div>
       {footerControls && (
-        <div className="shrink-0 border-t border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-3"
+        <div className="shrink-0 rounded-b-xl border-t border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-3"
           data-grid-footer="">
           <Pagination {...footerControls} />
         </div>
       )}
     </div>
+    {footerControls && (
+      <Text as="p" id={keyboardHintId} size="xs" color="muted" className="mt-2 px-1">
+        {t('table.pagination.keyboardHint', 'With the table focused, Page Up / Page Down change pages; Home / End jump to the first or last page.')}
+      </Text>
+    )}
+    </>
   )
 }
 

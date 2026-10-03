@@ -1547,21 +1547,6 @@
     "vehicleId": "Vehicle ID",
     "yes": "Yes"
   },
-  "automations": {
-    "builder": {
-      "signals": {
-        "batteryLevel": "Battery level",
-        "insideTemp": "Inside temperature",
-        "isCharging": "Is charging",
-        "isClimateOn": "Climate on",
-        "isLocked": "Is locked",
-        "outsideTemp": "Outside temperature",
-        "sentryMode": "Sentry Mode",
-        "speed": "Speed",
-        "state": "Vehicle state"
-      }
-    }
-  },
   "bulk": {
     "clear": "Clear selection",
     "itemDefault": "item",
@@ -1611,11 +1596,6 @@
     "noData": "No data available",
     "noDataDescription": "No chartable observations are available for the current selection yet."
   },
-  "combobox": {
-    "maxReached": "Maximum reached",
-    "removeChip": "Remove {{label}}",
-    "removedChip": "Removed {{label}}"
-  },
   "dataState": {
     "refreshBlocked": {
       "message": "The device is offline, so this section is showing the last values it received."
@@ -1627,7 +1607,6 @@
   "date": {
     "preset": {
       "all": "All time",
-      "label": "Quick date range",
       "last1y": "Last year",
       "last24h": "Last 24 hours",
       "last30": "Last 30 days",
@@ -1639,19 +1618,6 @@
       "today": "Today",
       "yesterday": "Yesterday",
       "ytd": "Year to date"
-    },
-    "range": {
-      "apply": "Apply",
-      "cancel": "Cancel",
-      "compare": "Compare to previous period",
-      "end": "End date",
-      "newRange": "New range",
-      "pickRange": "Custom range",
-      "popoverLabel": "Date range picker",
-      "start": "Start date",
-      "summaryDays_one": "{{count}} day",
-      "summaryDays_other": "{{count}} days",
-      "trigger": "Date range"
     }
   },
   "delta": {
@@ -1855,19 +1821,6 @@
   "lifetime": {
     "unlocked": "✓ Unlocked"
   },
-  "listExport": {
-    "button": "Export",
-    "csv": "Download as CSV",
-    "disabledTooltip": "No data to export",
-    "exporting": "Preparing {{format}} export…",
-    "failed": "Could not prepare the {{format}} export.",
-    "json": "Download as JSON",
-    "menuLabel": "Export list",
-    "scopeLegend": "Export scope",
-    "selectedWithCount": "Selected ({{count}})",
-    "visible": "Visible",
-    "visibleWithCount": "Visible ({{count}})"
-  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
@@ -1956,21 +1909,6 @@
     },
     "title": "Live logs"
   },
-  "notifications": {
-    "alertStudio": {
-      "editor": {
-        "vehiclesAllOption": "All vehicles (current + future)",
-        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
-        "vehiclesSummaryAll": "All vehicles",
-        "vehiclesSummaryCount": "{{count}} vehicles",
-        "vehiclesSummaryNone": "No vehicles selected",
-        "vehiclesSummaryOne": "{{name}}",
-        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
-        "vehiclesUnknownBadge": "Unknown",
-        "vehiclesUnknownLabel": "Vehicle #{{id}}"
-      }
-    }
-  },
   "operationalMode": {
     "writeBlocked": "Return to live mode before making operational changes.",
     "writeNotice": {
@@ -2018,29 +1956,6 @@
     "redMulticoat": "Red Multi-Coat",
     "reset": "Reset to auto-detected",
     "solidBlack": "Solid Black"
-  },
-  "productPreferences": {
-    "persona": {
-      "label": "Workspace profile"
-    },
-    "personas": {
-      "administrator": {
-        "description": "Prioritize system administration and operational controls.",
-        "label": "Administrator"
-      },
-      "analyst": {
-        "description": "Prioritize trends, reports, and historical analysis.",
-        "label": "Analyst"
-      },
-      "fleetOperator": {
-        "description": "Prioritize active fleet operations and current vehicle state.",
-        "label": "Fleet operator"
-      },
-      "owner": {
-        "description": "Keep the most useful everyday vehicle information close at hand.",
-        "label": "Owner"
-      }
-    }
   },
   "rbac": {
     "access": {
@@ -2154,13 +2069,6 @@
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
   },
-  "search": {
-    "history": {
-      "clear": "Clear history",
-      "removeAria": "Remove \"{{query}}\" from search history",
-      "title": "Recent searches"
-    }
-  },
   "shortcuts": {
     "empty": "No shortcuts match your search.",
     "filter": {
@@ -2221,19 +2129,6 @@
     "toolbar": {
       "refreshAll": "Refresh all"
     }
-  },
-  "tagInput": {
-    "added": "{{count}} tags added",
-    "addedOne": "Tag added",
-    "duplicate": "{{tag}} is already added",
-    "maxReached": "Tag limit reached",
-    "maxReachedAnnounce": "Tag limit reached",
-    "maxReachedHint": "Maximum {{count}} tags",
-    "placeholder": "Add a tag…",
-    "removeTag": "Remove {{tag}}",
-    "removed": "Removed {{tag}}",
-    "tagsList": "Tags: {{tags}}",
-    "tagsNone": "No tags yet"
   },
   "timeline": {
     "selectVehicle": "Select vehicle"

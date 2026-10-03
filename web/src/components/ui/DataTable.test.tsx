@@ -47,6 +47,98 @@ beforeEach(() => {
   setGlobalPrecision(2)
 })
 
+describe('DataTable — standard toolbar controls', () => {
+  it('offers persistent per-table density without changing untouched global density', async () => {
+    document.body.dataset.density = 'compact'
+    const view = render(<DataTable tableId="test:density" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
+    expect(screen.getByRole('radio', { name: 'Compact' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByText('Alpha').closest('td')).toHaveClass('py-d-pad-y')
+    expect(localStorage.getItem('teslasync.table.test:density.density')).toBeNull()
+    document.body.dataset.density = 'comfortable'
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Comfortable' })).toHaveAttribute('aria-checked', 'true'))
+    document.body.dataset.density = 'compact'
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Compact' })).toHaveAttribute('aria-checked', 'true'))
+    fireEvent.click(screen.getByRole('radio', { name: 'Comfortable' }))
+    expect(screen.getByText('Alpha').closest('td')).toHaveClass('py-3.5')
+    expect(localStorage.getItem('teslasync.table.test:density.density')).toBe('"comfortable"')
+    expect(document.body.dataset.density).toBe('compact')
+    view.unmount()
+    render(<DataTable tableId="test:density" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
+    expect(screen.getByRole('radio', { name: 'Comfortable' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByText('Alpha').closest('td')).toHaveClass('py-3.5')
+    delete document.body.dataset.density
+  })
+
+  it('uses existing explicit density as the initial baseline and isolates stable table ids', () => {
+    const view = render(<DataTable tableId="test:first" density="compact" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
+    expect(screen.getByRole('radio', { name: 'Compact' })).toHaveAttribute('aria-checked', 'true')
+    fireEvent.click(screen.getByRole('radio', { name: 'Comfortable' }))
+    view.rerender(<DataTable tableId="test:second" density="compact" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
+    expect(screen.getByRole('radio', { name: 'Compact' })).toHaveAttribute('aria-checked', 'true')
+    expect(localStorage.getItem('teslasync.table.test:second.density')).toBeNull()
+  })
+
+  it('never invents search or exports for caller-paginated rows with display-only keys', () => {
+    render(<DataTable tableId="test:server" columns={REORDER_COLS} data={[ROWS[1]]} keyExtractor={row => row.id}
+      paginationControls={{ page: 2, pageSize: 1, total: 100, onPageChange: vi.fn() }} />)
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+    expect(screen.queryByRole('searchbox')).toBeNull()
+    expect(screen.queryByRole('button', { name: /Export|Download CSV/ })).toBeNull()
+    expect(screen.getAllByRole('radiogroup', { name: 'List density' })).toHaveLength(1)
+  })
+
+  it('delegates controlled search and density instead of filtering or duplicating controls', async () => {
+    const onSearch = vi.fn()
+    const onDensity = vi.fn()
+    render(<DataTable tableId="test:controlled" columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      controls={{
+        search: { value: '', onChange: onSearch, placeholder: 'Search all server results', debounceMs: 0 },
+        density: { value: 'compact', onChange: onDensity },
+      }} />)
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search all server results' }), { target: { value: 'Alpha' } })
+    await waitFor(() => expect(onSearch).toHaveBeenCalledWith('Alpha'))
+    expect(screen.getByText('Charlie')).toBeInTheDocument()
+    expect(screen.getAllByRole('radiogroup', { name: 'List density' })).toHaveLength(1)
+    fireEvent.click(screen.getByRole('radio', { name: 'Comfortable' }))
+    expect(onDensity).toHaveBeenCalledWith('comfortable')
+    expect(localStorage.getItem('teslasync.table.test:controlled.density')).toBeNull()
+    expect(screen.getByText('Alpha').closest('td')).toHaveClass('py-2')
+  })
+
+  it('does not duplicate density when a legacy caller owns its action toolbar', () => {
+    render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} toolbarActions={<span>Page-owned density</span>} />)
+    expect(screen.queryByRole('radiogroup', { name: 'List density' })).toBeNull()
+    expect(screen.queryByRole('searchbox')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Export list' })).toBeNull()
+  })
+
+  it('searches all loaded rows before local pagination and labels the limited scope', async () => {
+    render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      pagination={{ defaultPageSize: 1, pageSizeOptions: [1] }} />)
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded rows' }), { target: { value: 'CHARLIE' } })
+    await waitFor(() => expect(screen.getByText('Showing 1–1 of 1')).toBeInTheDocument())
+    expect(screen.getByText('Charlie')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).toBeNull()
+    expect(screen.getByText('Exports include only matching loaded rows, or selected loaded rows.')).toBeInTheDocument()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded rows' }), { target: { value: 'missing' } })
+    await waitFor(() => expect(screen.queryByText('Charlie')).toBeNull())
+    expect(screen.getByRole('searchbox', { name: 'Search loaded rows' })).toBeInTheDocument()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded rows' }), { target: { value: '' } })
+    await waitFor(() => expect(screen.getByText('Alpha')).toBeInTheDocument())
+  })
+
+  it('allows sensitive previews to opt out of search, density and export independently', () => {
+    render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      searchable={false} showDensityControl={false} exportable={false} />)
+    expect(screen.queryByRole('searchbox')).toBeNull()
+    expect(screen.queryByRole('radiogroup')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Export list' })).toBeNull()
+  })
+})
+
 describe('DataTable — reusable value filters', () => {
   const columns: Column<Row>[] = [
     { key: 'name', header: 'Name', render: row => <span>{row.name}</span>, filterValue: row => row.name },
@@ -232,7 +324,8 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
 
   it('preserves complete explicit opt-outs and mobile column structure', () => {
     const { container } = render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
-      tableId="fixed-axis" resizable={false} columnReorder={false} columnVisibility={false} mobileColumns={['name']} />)
+      tableId="fixed-axis" resizable={false} columnReorder={false} columnVisibility={false} mobileColumns={['name']}
+      searchable={false} exportable={false} />)
     expect(screen.queryByRole('button')).toBeNull()
     expect(screen.queryByRole('separator')).toBeNull()
     expect(container.querySelector('th[data-column-key=id]')).toHaveClass('hidden', 'md:table-cell')
@@ -241,13 +334,14 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
 
   it('honors a legacy visibility opt-out independently of reorder and resize', () => {
     render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
-      tableId="legacy-opt-out" showColumnsMenu={false} columnReorder={false} resizable={false} />)
+      tableId="legacy-opt-out" showColumnsMenu={false} columnReorder={false} resizable={false}
+      searchable={false} exportable={false} />)
     expect(screen.queryByRole('button')).toBeNull()
   })
 
   it('does not add persistent controls without an identifier or no-op sorting without a handler', () => {
     const { container } = render(<DataTable columns={[{ ...REORDER_COLS[1], sortable: true }]}
-      data={ROWS} keyExtractor={row => row.id} />)
+      data={ROWS} keyExtractor={row => row.id} searchable={false} exportable={false} />)
     expect(screen.queryByRole('button')).toBeNull()
     expect(screen.queryByRole('separator')).toBeNull()
     expect(container.querySelector('th')).not.toHaveAttribute('aria-sort')
@@ -528,13 +622,43 @@ describe('DataTable — cohesive paging footer', () => {
     expect(viewport).toHaveClass('custom-table-viewport', 'overflow-auto', 'border-0', 'rounded-none')
     expect(viewport).toHaveStyle({ maxHeight: '120px' })
     expect(container.querySelector('thead tr')).toHaveClass('sticky')
-    expect(frame).toHaveClass('border', 'overflow-hidden', 'p-0', 'space-y-0')
+    expect(frame).toHaveClass('border', 'overflow-visible', 'p-0', 'space-y-0')
+    expect(screen.getByText('Drive evidence').parentElement?.parentElement).toHaveClass('rounded-t-xl')
+    expect(footer).toHaveClass('rounded-b-xl')
+    const hint = screen.getByText('With the table focused, Page Up / Page Down change pages; Home / End jump to the first or last page.')
+    expect(frame).not.toContainElement(hint)
+    expect(frame.nextElementSibling).toBe(hint)
+    expect(screen.getByRole('table')).toHaveAttribute('aria-describedby', hint.id)
+  })
+
+  it('lets the complete Columns popup escape a short two-row frame without escaping the scrolling viewport', () => {
+    const { container } = render(<DataTable tableId="test:short-popup" columns={REORDER_COLS} data={ROWS.slice(0, 2)}
+      keyExtractor={row => row.id} paginationControls={{ ...controls(), page: 1, total: 2 }} />)
+    const frame = container.querySelector('[data-grid-frame]')!
+    const viewport = container.querySelector('[data-grid-viewport]')!
+    fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
+    const lastColumn = screen.getByRole('checkbox', { name: 'Show or hide Status' })
+    expect(lastColumn).toBeVisible()
+    expect(frame).toContainElement(lastColumn)
+    expect(viewport).not.toContainElement(lastColumn)
+    expect(frame).toHaveClass('overflow-visible')
+    expect(frame).not.toHaveClass('overflow-hidden')
+    fireEvent.click(lastColumn)
+    expect(lastColumn).not.toBeChecked()
+  })
+
+  it('rounds exposed viewport corners when the toolbar and footer are absent', () => {
+    const { container } = render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id}
+      showDensityControl={false} columnVisibility={false} columnReorder={false} searchable={false} exportable={false} />)
+    expect(container.querySelector('[data-grid-viewport]')).toHaveClass('rounded-xl')
+    expect(container.querySelector('[data-grid-frame]')).toHaveClass('overflow-visible')
   })
 
   it('does not auto-enable pagination or a table paging tab stop', () => {
     render(<DataTable columns={REORDER_COLS} data={ROWS} keyExtractor={row => row.id} />)
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).toBeNull()
     expect(screen.getByRole('table')).not.toHaveAttribute('tabindex')
+    expect(screen.queryByText(/With the table focused/)).toBeNull()
   })
 
   it('navigates local pages with table-focused keyboard shortcuts', () => {
@@ -653,15 +777,7 @@ describe('DataTable — virtualization stress (Phase-46 / Prompt 52)', () => {
   })
 })
 
-// DataTable export tests.
-// Long-tail list pages (charging, alerts, etc.) opt into a "Download CSV"
-// button via the `exportable` prop. These tests guard against regressions
-// in the export pipeline:
-//   1. The button is rendered + accessible when `exportable` is true.
-//   2. Clicking it triggers a download with the configured filename.
-//   3. The exported CSV contains the rows currently visible to the user
-//      (post-filter / post-sort), serialized via `exportRow` so React-node
-//      cells flatten to plain strings.
+// Default exports cover loaded rows; caller-owned full exports bypass local filters.
 describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
   // Capture all download attempts triggered by `<a download="…">.click()`.
   // jsdom doesn't navigate, so we intercept via spy on
@@ -704,6 +820,74 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
     return await blob.text()
   }
 
+  function clickExport(format: 'CSV' | 'JSON' = 'CSV', scope: 'visible' | 'selected' = 'visible') {
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
+    const scopeOption = screen.queryByRole('radio', { name: scope === 'selected' ? /Selected \(/ : /^Visible/ })
+    if (scopeOption) fireEvent.click(scopeOption)
+    fireEvent.click(screen.getByRole('menuitem', { name: `Download as ${format}` }))
+  }
+
+  it('keeps CSV display conversion aligned with its headers while JSON preserves numeric data', async () => {
+    const data = [{ id: 1, value: 1250 }]
+    const columns: Column<(typeof data)[number]>[] = [{
+      key: 'value',
+      header: 'Value (thousands)',
+      render: row => <span>{`${row.value / 1000}k`}</span>,
+    }]
+    render(<DataTable tableId="test:display-export" columns={columns} data={data} keyExtractor={row => row.id} />)
+    clickExport('CSV')
+    await waitFor(() => expect(downloads).toHaveLength(1))
+    expect(await latestCsv()).toBe('Value (thousands)\r\n1.25k')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled())
+    clickExport('JSON')
+    await waitFor(() => expect(downloads).toHaveLength(2))
+    expect(JSON.parse(await latestCsv())).toEqual([{ value: 1250 }])
+  })
+
+  it('exports readable computed display keys and typed canonical accessors as CSV and JSON', async () => {
+    const columns: Column<Row>[] = [
+      { key: 'displayName', header: 'Name', render: row => <span>Formatted {row.name}</span> },
+      { key: 'canonical', header: 'Canonical', render: row => <span>{row.id} display units</span>, exportValue: row => row.id * 1000 },
+      { key: 'status', header: 'Status', render: row => row.status, defaultVisible: false },
+    ]
+    render(<DataTable tableId="test:computed-exports" columns={columns} data={ROWS} keyExtractor={row => row.id}
+      selectable="multi" selectedKeys={[1, 999]} pagination={{ defaultPageSize: 1, pageSizeOptions: [1] }} />)
+    clickExport('JSON', 'selected')
+    await waitFor(() => expect(downloads).toHaveLength(1))
+    expect(JSON.parse(await latestCsv())).toEqual([{ displayName: 'Formatted Alpha', canonical: 1000 }])
+    expect(downloads[0].filename).toMatch(/\.json$/)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled())
+    clickExport('CSV')
+    await waitFor(() => expect(downloads).toHaveLength(2))
+    expect(await latestCsv()).toBe('Name,Canonical\r\nFormatted Alpha,1000\r\nFormatted Bravo,2000\r\nFormatted Charlie,3000')
+  })
+
+  it('uses the server full-result handler without adding implicit loaded-row search', async () => {
+    const exportAll = vi.fn(async () => ROWS)
+    render(<DataTable columns={REORDER_COLS} data={[]} keyExtractor={row => row.id} exportAll={exportAll}
+      paginationControls={{ page: 1, pageSize: 1, total: 3, onPageChange: vi.fn() }} />)
+    expect(screen.queryByRole('searchbox')).toBeNull()
+    expect(screen.getByText('Non-selected exports use the full-result handler; selection exports include only selected loaded rows.')).toBeInTheDocument()
+    clickExport('JSON')
+    await waitFor(() => expect(downloads).toHaveLength(1))
+    expect(exportAll).toHaveBeenCalledOnce()
+    expect(JSON.parse(await latestCsv())).toEqual(ROWS)
+  })
+
+  it('does not call exportAll for selected loaded rows or count selected keys absent from the loaded data', async () => {
+    const exportAll = vi.fn(async () => ROWS)
+    render(<DataTable columns={REORDER_COLS} data={[ROWS[1]]} keyExtractor={row => row.id} exportAll={exportAll}
+      selectable="multi" selectedKeys={[1, 2, 999]}
+      paginationControls={{ page: 2, pageSize: 1, total: 3, onPageChange: vi.fn() }} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
+    expect(screen.getByRole('radio', { name: 'Selected (1)' })).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'Selected (3)' })).toBeNull()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
+    await waitFor(() => expect(downloads).toHaveLength(1))
+    expect(await latestCsv()).toBe('ID,Name,Status\r\n2,Bravo,fail')
+    expect(exportAll).not.toHaveBeenCalled()
+  })
+
   const filterColumns: Column<Row>[] = REORDER_COLS.map(column => column.key === 'status'
     ? { ...column, filterValue: row => row.status }
     : column)
@@ -723,7 +907,7 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
     excludeFailedRows()
     expect(screen.getByText('Charlie')).toBeInTheDocument()
     expect(screen.queryByText('Alpha')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
+    clickExport()
     await waitFor(() => expect(downloads).toHaveLength(1))
     expect(await latestCsv()).toBe('ID,Name,Status\r\n3,CHARLIE,ok\r\n1,ALPHA,ok')
   })
@@ -741,7 +925,7 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
     expect(screen.getByRole('region', { name: 'Bulk actions' })).toHaveTextContent('2 selected')
     fireEvent.click(screen.getByRole('button', { name: 'Export selected' }))
     expect(await latestCsv()).toBe('ID,Name,Status\r\n1,Alpha,ok\r\n2,Bravo,fail')
-    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
+    clickExport()
     await waitFor(() => expect(downloads).toHaveLength(2))
     expect(await latestCsv()).toBe('ID,Name,Status\r\n1,Alpha,ok\r\n3,Charlie,ok')
   })
@@ -756,8 +940,8 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'ok' }))
     fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.getByText('0 matching / 3 loaded rows')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /download csv/i })).toBeEnabled()
-    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
+    expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled()
+    clickExport()
     await waitFor(() => expect(downloads).toHaveLength(1))
     expect(exportAll).toHaveBeenCalledOnce()
     expect(await latestCsv()).toBe('ID,Name,Status\r\n99,Server row,fail')
@@ -768,7 +952,7 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
       enableValueFilters exportable />)
     fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }))
-    expect(screen.getByRole('button', { name: /download csv/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'No data to export' })).toBeDisabled()
   })
 
   it('select-all adds and removes matching loaded keys without dropping hidden selections', () => {
@@ -786,7 +970,7 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
     expect(screen.getByText('Selected IDs: 2')).toBeInTheDocument()
   })
 
-  it('renders the "Download CSV" button when `exportable` is set', () => {
+  it('renders the shared export menu when `exportable` is set', () => {
     render(
       <DataTable
         columns={REORDER_COLS}
@@ -796,10 +980,10 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
         exportable
       />,
     )
-    expect(screen.getByRole('button', { name: /download csv/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Export list' })).toBeInTheDocument()
   })
 
-  it('does NOT render the export button when `exportable` is omitted', () => {
+  it('defaults local tables to CSV and JSON export without requiring exportable', () => {
     render(
       <DataTable
         columns={REORDER_COLS}
@@ -808,7 +992,9 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
         tableId="export-2"
       />,
     )
-    expect(screen.queryByRole('button', { name: /download csv/i })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
+    expect(screen.getByRole('menuitem', { name: 'Download as CSV' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Download as JSON' })).toBeInTheDocument()
   })
 
   it('disables the export button when there is no data', () => {
@@ -821,7 +1007,7 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
         exportable
       />,
     )
-    expect(screen.getByRole('button', { name: /download csv/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'No data to export' })).toBeDisabled()
   })
 
   it('clicking export triggers a download with the configured filename', async () => {
@@ -835,9 +1021,8 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
         exportFilename="drives-2024-11"
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
-    // The export handler is async; flush microtasks so the download lands.
-    await new Promise((r) => setTimeout(r, 0))
+    clickExport()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled())
     expect(downloads.length).toBe(1)
     // downloadCSV() appends `.csv` if missing.
     expect(downloads[0].filename).toBe('drives-2024-11.csv')
@@ -853,8 +1038,8 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
         exportable
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
-    await new Promise((r) => setTimeout(r, 0))
+    clickExport()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled())
     expect(downloads.length).toBe(1)
     // Filename pattern: `<tableId>-YYYY-MM-DD.csv`.
     expect(downloads[0].filename).toMatch(/^export-5-\d{4}-\d{2}-\d{2}\.csv$/)
@@ -876,8 +1061,8 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
         })}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
-    await new Promise((r) => setTimeout(r, 0))
+    clickExport()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled())
     expect(downloads.length).toBe(1)
     const csv = await latestCsv()
     // Header derived from column.header values.
@@ -907,8 +1092,8 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
       />,
     )
 
-    const button = screen.getByRole('button', { name: /download csv/i })
-    fireEvent.click(button)
+    const button = screen.getByRole('button', { name: 'Export list' })
+    clickExport()
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
 
@@ -934,11 +1119,11 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
       </ToastProvider>,
     )
 
-    const button = screen.getByRole('button', { name: /download csv/i })
-    fireEvent.click(button)
+    const button = screen.getByRole('button', { name: 'Export list' })
+    clickExport()
 
     expect(
-      await screen.findByText('Could not prepare the table export.'),
+      await screen.findByText('Could not prepare the CSV export.'),
     ).toBeInTheDocument()
     expect(button).toBeEnabled()
     expect(consoleError).toHaveBeenCalled()

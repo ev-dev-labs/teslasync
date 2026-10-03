@@ -345,8 +345,8 @@ describe('StatisticsPage', () => {
     // 500 km / 42 drives = 11.90 km
     expect(within(averages).getByText('11.90 km')).toBeInTheDocument();
     expect(within(averages).getByText('160.00 Wh/km')).toBeInTheDocument();
-    // 250 cost / 500 km = 0.500
-    expect(within(averages).getByText('$0.500')).toBeInTheDocument();
+    // 250 cost / 500 km = 0.50 at the selected two decimals.
+    expect(within(averages).getByText('$0.50')).toBeInTheDocument();
   });
 
   it('shows loading skeletons while the period-stats query is pending', async () => {
@@ -403,7 +403,7 @@ describe('StatisticsPage', () => {
     expect(screen.getByText('92.00')).toBeInTheDocument();
     expect(screen.getByText('Capacity')).toBeInTheDocument();
     expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
-    expect(screen.getByText('412.00')).toBeInTheDocument();
+    expect(screen.getByText('412')).toBeInTheDocument();
     expect(screen.getByText('30 mo')).toBeInTheDocument();
   });
 

@@ -7,14 +7,13 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import {
-  GlassPanel, Button, Badge, Pagination,
+  GlassPanel, Button, Badge,
   PanelTitle, Caption, Text,
 } from '@/components/ui';
 import { StatCard, DateTime } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { FrontendErrorsCard } from '@/components/status';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { ListExportMenu } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -87,7 +86,8 @@ export default function ApiLogsPage() {
   const [service] = useUrlString('service', '');
   const [client] = useUrlString('client', '');
   const [key] = useUrlString('key', '');
-  const limit = 25;
+  const [requestedSize] = useUrlNumber('size', 25);
+  const limit = [25, 50, 100].includes(requestedSize) ? requestedSize : 25;
 
   // The header owns the `from`/`to` window for both KPIs and request rows.
   const { startInstant, endInstantExclusive } = useRangeState({
@@ -134,7 +134,7 @@ export default function ApiLogsPage() {
     key: key || undefined,
     start: startInstant,
     endExclusive: endInstantExclusive,
-  });
+  }, limit);
   const { data, isLoading: logsLoading, refetch: refetchLogs } = logsQuery;
   const logsState = useDataState(logsQuery);
   const runtimeQuery = useSystemErrorStats();
@@ -395,6 +395,13 @@ export default function ApiLogsPage() {
             <StaleRefreshWarning state={logsState} label={t('apiLogs.logTitle', 'API call log')} hideRetry />
             <ApiLogsEvidenceTable
               logs={logs}
+              paginationControls={{
+                page: page + 1,
+                pageSize: limit,
+                total,
+                onPageChange: (next) => setPage(next - 1),
+                onPageSizeChange: (size) => setUrl({ size: String(size), page: null }),
+              }}
               serviceConfig={serviceConfig}
               installationFor={appInstallation}
               filters={serverFilters}
@@ -406,15 +413,22 @@ export default function ApiLogsPage() {
               toolbarHeading={
                 <Caption>{t('apiLogs.inspectHint', 'Expand a request to inspect headers, bodies, and metadata.')}</Caption>
               }
-              toolbarActions={
-                <ListExportMenu
-                  onExportCsv={handleExportCsv}
-                  onExportJson={handleExportJson}
-                  visibleCount={logs.length}
-                  disabled={logs.length === 0}
-                  testId="api-logs-export"
-                />
-              }
+              controls={{
+                search: {
+                  value: endpoint,
+                  onChange: (value) => setFilter('endpoint', value),
+                  ariaLabel: t('apiLogs.filterEndpoint', 'Filter by endpoint...'),
+                  placeholder: t('apiLogs.filterEndpoint', 'Filter by endpoint...'),
+                  historyScope: 'api-logs',
+                },
+                exports: {
+                  onExportCsv: handleExportCsv,
+                  onExportJson: handleExportJson,
+                  visibleCount: logs.length,
+                  disabled: logs.length === 0,
+                  testId: 'api-logs-export',
+                },
+              }}
             />
             {logsLoading && logs.length === 0 ? (
               <div className="divide-y divide-[var(--glass-border)]">
@@ -437,17 +451,6 @@ export default function ApiLogsPage() {
               />
             ) : null}
 
-            {/* Pagination */}
-            {total > limit && (
-              <div className="border-t border-[var(--glass-border)] px-4 pb-2">
-                <Pagination
-                  page={page + 1}
-                  pageSize={limit}
-                  total={total}
-                  onPageChange={(p) => setPage(p - 1)}
-                />
-              </div>
-            )}
           </GlassPanel>
         </section>
       </FadeIn>

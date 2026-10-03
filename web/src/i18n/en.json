@@ -6093,6 +6093,7 @@
     }
   },
   "common": {
+    "clearSearch": "Clear search",
     "invalidNumber": "Enter a valid number",
     "unitListHint": "Separate values with semicolons",
     "preferredUnitInputHint": "Enter {{unit}}. Saved thresholds remain canonical SI values.",
@@ -8099,6 +8100,9 @@
     "helpFor": "Help for {{field}}"
   },
   "table": {
+    "search": {
+      "loadedRows": "Search loaded rows"
+    },
     "filter": {
       "loadedRowCount": "{{filtered}} matching / {{loaded}} loaded rows",
       "unavailableLoadedValues": "Some saved selections are not present in the loaded rows. Clear the filter to reset them.",
@@ -8147,6 +8151,9 @@
       "collapse": "Collapse row",
       "column": "Expand row"
     },
+    "pagination": {
+      "keyboardHint": "With the table focused, Page Up / Page Down change pages; Home / End jump to the first or last page."
+    },
     "bulkActions": {
       "region": "Bulk actions",
       "selected": "{{count}} selected",
@@ -8155,6 +8162,8 @@
       "more": "More…"
     },
     "export": {
+      "fullResultScope": "Non-selected exports use the full-result handler; selection exports include only selected loaded rows.",
+      "loadedScope": "Exports include only matching loaded rows, or selected loaded rows.",
       "csv": "Download CSV",
       "csvAria": "Download visible rows as CSV",
       "loading": "Preparing CSV…",
@@ -16442,6 +16451,7 @@
     }
   },
   "drives": {
+    "exportScope": "Exports include every drive in the selected vehicle and date range, without list filters or selection.",
     "score": "score",
     "date": "Drive",
     "speed": "Speed",

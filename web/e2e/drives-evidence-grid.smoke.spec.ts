@@ -44,14 +44,21 @@ for (const theme of ['light', 'dark'] as const) {
         await expectIntegratedGridFooter(table);
         await expect(table.getByRole('spinbutton')).toHaveCount(0);
         await expect(page.getByTestId('drives-filters')).toHaveCount(0);
-        const exports = region.locator('a[download]');
-        await expect(exports).toHaveCount(2);
+        const exports = region.getByRole('button', { name: 'Export list', exact: true });
+        await expect(exports).toHaveCount(1);
+        await exports.click();
+        await expect(page.getByRole('menuitem', { name: 'Download as CSV' })).toBeVisible();
+        await expect(page.getByRole('menuitem', { name: 'Download as JSON' })).toBeVisible();
+        await exports.press('Escape');
         const columnMenu = region.getByRole('button', { name: 'Reorder or hide columns' });
         const title = region.getByRole('heading', { name: /Drive evidence/ });
         await expect(title).toHaveCount(1);
-        const toolbarBounds = await Promise.all([title, exports.nth(0), exports.nth(1), columnMenu].map((item) => item.boundingBox()));
-        const centers = toolbarBounds.map((box) => box!.y + box!.height / 2);
-        expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(2);
+        await expect.poll(async () => {
+          const bounds = await Promise.all([title, exports, columnMenu].map((item) => item.boundingBox()));
+          if (bounds.some(box => box == null)) return Infinity;
+          const centers = bounds.map(box => box!.y + box!.height / 2);
+          return Math.max(...centers) - Math.min(...centers);
+        }).toBeLessThanOrEqual(2);
         for (const key of ['start', 'destination', 'startBattery', 'battery', 'batteryUsed', 'maxSpeed', 'avgPower', 'outsideTemp', 'regen']) {
           await expect(table.locator(`thead th[data-column-key="${key}"]`)).toHaveCount(1);
         }
@@ -254,9 +261,9 @@ for (const theme of ['light', 'dark'] as const) {
     expect(selectionMatchesTheme).toBe(true);
     await expect(frame.getByRole('region', { name: 'Bulk actions', exact: true })).toHaveCount(0);
     const title = frame.getByRole('heading', { name: /Drive evidence/ });
-    const exports = frame.locator('a[download]');
+    const exports = frame.getByRole('button', { name: 'Export list', exact: true });
     const menu = frame.getByRole('button', { name: 'Reorder or hide columns' });
-    const bounds = await Promise.all([title, exports.nth(0), exports.nth(1), menu].map((item) => item.boundingBox()));
+    const bounds = await Promise.all([title, exports, menu].map((item) => item.boundingBox()));
     const centers = bounds.map((box) => box!.y + box!.height / 2);
     expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(2);
     await rows.nth(2).press('Space');

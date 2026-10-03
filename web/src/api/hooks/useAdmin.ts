@@ -23,10 +23,10 @@ export const adminKeys = {
   apiKeys: ['api-keys'] as const,
   apiLogs: (page: number) => ['api-logs', page] as const,
   apiLogStats: ['api-log-stats'] as const,
-  apiCallLogs: (page: number, filters: APICallLogFilters = {}) => [
+  apiCallLogs: (page: number, filters: APICallLogFilters = {}, pageSize = 25) => [
     'api-logs', page, filters.method || '', filters.status || '',
     filters.endpoint || '', filters.service || '', filters.client || '',
-    filters.key || '', filters.start, filters.endExclusive,
+    filters.key || '', filters.start, filters.endExclusive, pageSize,
   ] as const,
   apiCallLogStats: (start?: string, endExclusive?: string) =>
     ['api-log-stats', start, endExclusive] as const,
@@ -133,12 +133,12 @@ export function useApiLogStats() {
 }
 
 /** Envelope-based evidence queries preserve the page's existing cache and polling semantics. */
-export function useAPICallLogs(page: number, filters: APICallLogFilters = {}) {
+export function useAPICallLogs(page: number, filters: APICallLogFilters = {}, pageSize = 25) {
   return useQuery({
-    queryKey: adminKeys.apiCallLogs(page, filters),
+    queryKey: adminKeys.apiCallLogs(page, filters, pageSize),
     queryFn: ({ signal }) => getAPICallLogs({
-      limit: 25,
-      offset: page * 25,
+      limit: pageSize,
+      offset: page * pageSize,
       ...filters,
     }, { signal }),
     refetchInterval: INTERVALS.FAST,

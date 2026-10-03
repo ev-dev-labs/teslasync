@@ -152,19 +152,28 @@ describe('API log evidence hooks', () => {
     expect(opts.signal).toBeInstanceOf(AbortSignal);
     expect(result.current.data).toEqual(logs);
     const queryKey = ['api-logs', 2, 'POST', '5xx', '/vehicles?a=1', 'tesla-api',
-      'android:installation', 'Living room', start, endExclusive];
+      'android:installation', 'Living room', start, endExclusive, 25];
     expect(adminKeys.apiCallLogs(2, filters)).toEqual(queryKey);
     expect(qc.getQueryCache().find({ queryKey })?.options).toMatchObject({ refetchInterval: 10_000 });
   });
 
   it('separates each page/filter/range cache while preserving empty-filter keys', () => {
-    expect(adminKeys.apiCallLogs(0)).toEqual(['api-logs', 0, '', '', '', '', '', '', undefined, undefined]);
+    expect(adminKeys.apiCallLogs(0)).toEqual(['api-logs', 0, '', '', '', '', '', '', undefined, undefined, 25]);
     expect(adminKeys.apiCallLogs(0, { method: '' })).toEqual(adminKeys.apiCallLogs(0));
     expect(adminKeys.apiCallLogs(3, filters)).not.toEqual(adminKeys.apiCallLogs(2, filters));
     for (const key of Object.keys(filters) as (keyof typeof filters)[]) {
       expect(adminKeys.apiCallLogs(2, { ...filters, [key]: 'different' }))
         .not.toEqual(adminKeys.apiCallLogs(2, filters));
     }
+  });
+
+  it('includes server row size in the offset and query cache identity', async () => {
+    mockedRequest.mockResolvedValueOnce({ ...logs, limit: 50, offset: 100 });
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useAPICallLogs(2, filters, 50), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toContain('/api-logs?limit=50&offset=100&');
+    expect(adminKeys.apiCallLogs(2, filters, 50)).not.toEqual(adminKeys.apiCallLogs(2, filters, 25));
   });
 
   it('forwards both stats bounds and signal, retaining 30s polling and the old scoped key', async () => {

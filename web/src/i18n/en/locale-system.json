@@ -2088,9 +2088,6 @@
       "importDrives": "Import drives"
     }
   },
-  "filter": {
-    "pending": "Filtering…"
-  },
   "freshness": {
     "noData": "No recent data",
     "offline": "Offline",
@@ -2263,19 +2260,6 @@
   "lifetime": {
     "unlocked": "✓ Unlocked"
   },
-  "listExport": {
-    "button": "Export",
-    "csv": "Download as CSV",
-    "disabledTooltip": "No data to export",
-    "exporting": "Preparing {{format}} export…",
-    "failed": "Could not prepare the {{format}} export.",
-    "json": "Download as JSON",
-    "menuLabel": "Export list",
-    "scopeLegend": "Export scope",
-    "selectedWithCount": "Selected ({{count}})",
-    "visible": "Visible",
-    "visibleWithCount": "Visible ({{count}})"
-  },
   "live": {
     "connected": "Live",
     "disconnected": "Offline",
@@ -2423,14 +2407,6 @@
     },
     "filters": {
       "clear": "Clear filters"
-    },
-    "history": {
-      "clear": "Clear history",
-      "removeAria": "Remove \"{{query}}\" from search history",
-      "title": "Recent searches"
-    },
-    "input": {
-      "label": "Search query"
     },
     "noResults": {
       "message": "No matches for \"{{query}}\". Try fewer characters or open the command palette.",
