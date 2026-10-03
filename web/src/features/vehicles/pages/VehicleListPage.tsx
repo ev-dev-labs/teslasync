@@ -57,7 +57,7 @@ import { typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import { statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
-import type { VehicleState } from '@/api/types';
+import type { VehicleState, VehicleStateReadings } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
@@ -72,7 +72,7 @@ import type { TFunction } from 'i18next';
  * fields stay available to consumers that need to distinguish a fresh reading
  * from one retained through a failed refresh.
  */
-type LoadedEntry = FleetStateEntry & { state: VehicleState };
+type LoadedEntry = FleetStateEntry & { state: VehicleStateReadings };
 const FLEET_VIRTUALIZATION_THRESHOLD = 24;
 
 /* ── Preview trust helpers ─────────────────────────────────── */
@@ -91,7 +91,7 @@ const FLEET_VIRTUALIZATION_THRESHOLD = 24;
 function currentFieldValue(
   entry: FleetStateEntry | undefined,
   field: VerifiedVehicleStateField,
-  render: (state: VehicleState) => string,
+  render: (state: VehicleStateReadings) => string,
   t: TFunction,
 ): { value: string; detail?: string } {
   if (entry?.state == null) {
@@ -254,19 +254,19 @@ function FleetKpis({
       className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
     >
       <MetricCard
-        label={t('vehicles.totalVehicles', 'Total Vehicles')}
+        label={t('vehicles.totalVehicles', 'Total vehicles')}
         value={totalVehicles}
         icon={<Car className="h-5 w-5" />}
         color="cyan"
       />
       <MetricCard
-        label={t('vehicles.avgBattery', 'Avg Battery')}
+        label={t('vehicles.avgBattery', 'Avg battery')}
         value={avgBattery == null ? unknownLabel : `${fmtNumber(avgBattery)}%`}
         icon={<Battery className="h-5 w-5" />}
         color="green"
       />
       <MetricCard
-        label={`${t('vehicles.totalRange', 'Total Range')} (${unitPrefs.distance})`}
+        label={`${t('vehicles.totalRange', 'Total range')} (${unitPrefs.distance})`}
         value={totalRange == null
           ? unknownLabel
           : fmtNumber(convertDistanceFromSI(totalRange, unitPrefs.distance))}
@@ -274,7 +274,7 @@ function FleetKpis({
         color="purple"
       />
       <MetricCard
-        label={t('vehicles.chargingLiveState', 'Charging / Live state')}
+        label={t('vehicles.chargingLiveState', 'Charging / live state')}
         value={chargingCoverageCount === 0
           ? unknownLabel
           : `${chargingCount} / ${chargingCoverageCount}`}
@@ -309,7 +309,7 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
       <div className="mb-4 flex items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('vehicles.batteryStatus', 'Fleet Battery Status')}
+          {t('vehicles.batteryStatus', 'Fleet battery status')}
         </PanelTitle>
         <Text variant="bodySm">
           {avgBattery == null ? (
@@ -431,7 +431,7 @@ function FleetStatusPanel({
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-4 flex items-center gap-2">
         <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('vehicles.statusBreakdown', 'Fleet Status')}
+        {t('vehicles.statusBreakdown', 'Fleet status')}
       </PanelTitle>
 
       {showErrorInstead ? (
@@ -1090,7 +1090,7 @@ export default function VehicleListPage() {
           ),
           description: t(
             'operations.vehicles.serviceAttentionDescription',
-            'High- or critical-severity maintenance is still open in Fleet Operations.',
+            'High- or critical-severity maintenance is still open in fleet operations.',
           ),
           tone: 'danger' as const,
         }]
@@ -1151,7 +1151,7 @@ export default function VehicleListPage() {
         recordId: String(workOrder.id),
         method: t(
           'operations.vehicles.narrative.workOrderMethod',
-          'Open high- or critical-severity Fleet Operations work order.',
+          'Open high- or critical-severity fleet operations work order.',
         ),
       },
     })),
@@ -1206,7 +1206,7 @@ export default function VehicleListPage() {
         workOrdersQuery.isError
           ? t(
               'operations.vehicles.narrative.workOrderLimitedBasis',
-              'Fleet Operations work orders were unavailable.',
+              'Fleet operations work orders were unavailable.',
             )
           : t(
               'operations.vehicles.narrative.workOrderBasis',
@@ -1220,7 +1220,7 @@ export default function VehicleListPage() {
       urgentWorkOrders.length > 0
         ? t(
             'operations.vehicles.narrative.serviceResponse',
-            'Review the urgent Fleet Operations work orders before assigning affected vehicles.',
+            'Review the urgent fleet operations work orders before assigning affected vehicles.',
           )
         : offlineCount > 0
           ? t(
@@ -1250,7 +1250,7 @@ export default function VehicleListPage() {
         ? [
             t(
               'operations.vehicles.narrative.workOrderLimitation',
-              'Service readiness is incomplete while Fleet Operations work orders are unavailable.',
+              'Service readiness is incomplete while fleet operations work orders are unavailable.',
             ),
           ]
         : []),
@@ -1493,7 +1493,7 @@ export default function VehicleListPage() {
             metrics={[
               {
                 key: 'vehicles',
-                label: t('vehicles.totalVehicles', 'Total Vehicles'),
+                label: t('vehicles.totalVehicles', 'Total vehicles'),
                 value: vehicleList.length,
                 detail: t(
                   'operations.vehicles.totalDetail',
@@ -1612,7 +1612,7 @@ export default function VehicleListPage() {
             attention={fleetAttention}
             provenance={t(
               'operations.vehicles.provenance',
-              'Based on the registered fleet, the latest independently resolved live state for each vehicle, and Fleet Operations work orders.',
+              'Based on the registered fleet, the latest independently resolved live state for each vehicle, and fleet operations work orders.',
             )}
           />
 
@@ -1667,7 +1667,7 @@ export default function VehicleListPage() {
           <section aria-labelledby="all-vehicles-heading" data-tour="vehicles-list">
             <SectionTitle id="all-vehicles-heading" className="mb-3 flex items-center gap-2">
               <Car className="h-4 w-4 text-purple-300" aria-hidden="true" />
-              {t('vehicles.allVehicles', 'All Vehicles')}
+              {t('vehicles.allVehicles', 'All vehicles')}
             </SectionTitle>
             {sortedVehicleList.length > FLEET_VIRTUALIZATION_THRESHOLD ? (
               <VirtualizedVehicleGrid
@@ -1693,7 +1693,7 @@ export default function VehicleListPage() {
       <ConfirmDialog
         open={deleteTarget !== null}
         loading={deleteMut.isPending}
-        title={t('vehicles.removeTitle', 'Remove Vehicle')}
+        title={t('vehicles.removeTitle', 'Remove vehicle')}
         message={
           deleteTarget
             ? t('vehicles.removeMessage', {

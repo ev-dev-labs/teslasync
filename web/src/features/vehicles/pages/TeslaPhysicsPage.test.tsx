@@ -119,14 +119,14 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(screen.getByRole('heading', { name: 'Charging & range' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Integrity & firmware' })).toBeInTheDocument();
     for (const slug of slugs) expect(document.querySelector(`a[href="/tesla-physics/${slug}"]`)).not.toBeNull();
-    fireEvent.click(screen.getByRole('link', { name: 'Three Clocks' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Three clocks' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/tesla-physics/clocks');
-    expect(screen.getByRole('link', { name: 'Three Clocks' })).toHaveAttribute('aria-current', 'page');
-    expect(await screen.findByRole('heading', { name: 'Three Clocks' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Three clocks' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('heading', { name: 'Three clocks' })).toBeInTheDocument();
     expect(screen.getAllByText('Evidence boundaries')).toHaveLength(1);
-    fireEvent.click(screen.getByRole('link', { name: 'Mode Laws' }));
-    expect(await screen.findByRole('heading', { name: 'Mode Laws' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Three Clocks' })).toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: 'Mode laws' }));
+    expect(await screen.findByRole('heading', { name: 'Mode laws' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Three clocks' })).toBeNull();
     expect(screen.getAllByText('Evidence boundaries')).toHaveLength(1);
   });
 
@@ -137,7 +137,7 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(screen.getByText('At most 60 s: 30')).toBeInTheDocument();
     expect(screen.getByText('Latest six returned samples (second precision)')).toBeInTheDocument();
     expect(screen.queryByText('Showing 1–25 of 30')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Three Clocks (30 rows)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Three clocks (30 rows)' }));
     expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument();
   });
 
@@ -154,8 +154,8 @@ describe('Tesla Physics consolidated workbench', () => {
       expect(screen.getByText('Intervals over five minutes')).toBeInTheDocument();
       expect(screen.getByText('Over 5 min: 1')).toBeInTheDocument();
       fireEvent.change(screen.getByLabelText('Filter event intervals'), { target: { value: 'over300' } });
-      expect(screen.getByRole('button', { name: 'Inspect raw evidence: Three Clocks (1 rows)' })).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Three Clocks (1 rows)' }));
+      expect(screen.getByRole('button', { name: 'Inspect raw evidence: Three clocks (1 rows)' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Three clocks (1 rows)' }));
       expect(screen.getAllByRole('cell').some((cell) => cell.textContent?.includes(':10:00'))).toBe(true);
     } finally { report.clocks.samples = old; }
   });
@@ -178,7 +178,7 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(screen.getByText('Sum of classified intervals / returned window: 16.7%')).toBeInTheDocument();
     expect(screen.getByText(/Longest returned interval: neutral_rolling for 300 s/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Filter by state'), { target: { value: 'charging' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Life Tape (1 rows)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Life tape (1 rows)' }));
     expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('neutral_rolling'))).toBe(false);
   });
 
@@ -196,7 +196,7 @@ describe('Tesla Physics consolidated workbench', () => {
       await renderAt('/tesla-physics/meters');
       expect(screen.getByText(/No meter drops were returned in this bounded window/)).toBeInTheDocument();
       expect(screen.getByText(/Firmware 2026.20.3 observed/)).toBeInTheDocument();
-      expect(screen.getByText('Latest mode context: Valet No, Service No, Transport unknown')).toBeInTheDocument();
+      expect(screen.getByText('Latest mode context: valet No, service No, transport unknown')).toBeInTheDocument();
       expect(screen.getByText(/does not measure engaged FSD driving/)).toBeInTheDocument();
     } finally { report.meters.resets = old; }
   });
@@ -227,12 +227,12 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(screen.getByRole('link', { name: 'Drive →' })).toHaveAttribute('href', '/drives/42');
     expect(screen.getByText('Park')).not.toHaveAttribute('href');
     fireEvent.change(screen.getByLabelText('Filter narrative by evidence kind'), { target: { value: 'gear' } });
-    expect(screen.getByRole('button', { name: 'Inspect raw evidence: Tesla-Language Logbook (1 rows)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Inspect raw evidence: Tesla-language logbook (1 rows)' })).toBeInTheDocument();
   });
 
   it.each([
     ['/tesla-physics/car-kept-living', 'Queue depth unknown.'],
-    ['/tesla-physics/firmware-epochs', 'FSD counter: unknown → unknown · Complete → unplug: unknown'],
+    ['/tesla-physics/firmware-epochs', 'FSD counter: unknown → unknown · complete → unplug: unknown'],
     ['/tesla-physics/dictionary', 'Returned etiquette dwell observations: 2'],
     ['/tesla-physics/modes', 'Returned counter drops for comparison: 1'],
     ['/tesla-physics/nervous-system', 'No recent sample.'],
@@ -259,7 +259,7 @@ describe('Tesla Physics consolidated workbench', () => {
       expect(screen.getByText('Observed charge-state changes: 1')).toBeInTheDocument();
       expect(screen.getByText('Disconnected readings: 1')).toBeInTheDocument();
       fireEvent.change(screen.getByLabelText('Filter charge-port samples by state'), { target: { value: 'Disconnected' } });
-      expect(screen.getByRole('button', { name: 'Inspect raw evidence: Charge-Port Court (1 rows)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Inspect raw evidence: Charge-port court (1 rows)' })).toBeInTheDocument();
     } finally { report.charge_port_court.evidence = saved; }
   });
 
@@ -273,7 +273,7 @@ describe('Tesla Physics consolidated workbench', () => {
       await renderAt('/tesla-physics/black-box');
       expect(screen.getByText('1 observed state, latch or gear changes after the first frame')).toBeInTheDocument();
       expect(screen.getByText('Recorded gears: P')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Inspect raw evidence: Black Box 90s (2 rows)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Inspect raw evidence: Black box 90s (2 rows)' })).toBeInTheDocument();
     } finally { report.black_box.frames = saved; }
   });
 
@@ -285,7 +285,7 @@ describe('Tesla Physics consolidated workbench', () => {
       expect(screen.getByText('Epochs with lower final FSD counter: 1')).toBeInTheDocument();
       expect(screen.getByText(/Latest epoch with two FSD counter bounds/)).toBeInTheDocument();
       fireEvent.change(screen.getByLabelText('Filter observed firmware version'), { target: { value: '2026.20.3' } });
-      expect(screen.getByRole('button', { name: 'Inspect raw evidence: Firmware Epochs (1 rows)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Inspect raw evidence: Firmware epochs (1 rows)' })).toBeInTheDocument();
     } finally { report.firmware_epochs.epochs = saved; }
   });
 
@@ -306,10 +306,10 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(screen.getByText('Meter drops with unknown cause: 1')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Inspect before\/after meter evidence/ })).toHaveAttribute('href', '/tesla-physics/meters');
     await renderAt('/tesla-physics/nervous-system');
-    expect(screen.getByText('Non-alive fields with a same-named Unknown OS budget: 1 / 1')).toBeInTheDocument();
+    expect(screen.getByText('Non-alive fields with a same-named unknown OS budget: 1 / 1')).toBeInTheDocument();
     expect(screen.getByText('FSD: silent now; 14.0 h unknown in returned budget')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Filter returned signals by status'), { target: { value: 'silent' } });
-    expect(screen.getByRole('button', { name: 'Inspect raw evidence: Nervous System (1 rows)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Inspect raw evidence: Nervous system (1 rows)' })).toBeInTheDocument();
   });
 
   it('keeps Car Kept Living lag unknown without a paired ingest reading', async () => {

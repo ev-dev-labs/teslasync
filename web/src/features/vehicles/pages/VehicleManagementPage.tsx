@@ -11,7 +11,7 @@ import { VehicleManagementWorkspace } from '../components/vehicle-management'
 
 export default function VehicleManagementPage() {
   const { t } = useTranslation()
-  usePageTitle(t('vehicleManagement.pageTitle', 'Vehicle Management'))
+  usePageTitle(t('vehicleManagement.pageTitle', 'Vehicle management'))
 
   const vehiclesQuery = useVehicles()
   const {
@@ -29,7 +29,7 @@ export default function VehicleManagementPage() {
 
   return (
     <PageContainer
-      title={t('vehicleManagement.pageTitle', 'Vehicle Management')}
+      title={t('vehicleManagement.pageTitle', 'Vehicle management')}
       subtitle={t(
         'vehicleManagement.pageSubtitle',
         'Review Tesla account metadata, paid specifications, pricing, and enterprise access separately from physical commands.',

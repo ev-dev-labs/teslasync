@@ -122,7 +122,7 @@ describe('VehicleManagementPage', () => {
     renderPage()
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Vehicle Management' }),
+      screen.getByRole('heading', { level: 1, name: 'Vehicle management' }),
     ).toBeInTheDocument()
     expect(screen.getByTestId('vehicle-management-workspace')).toHaveTextContent(
       'management:2',

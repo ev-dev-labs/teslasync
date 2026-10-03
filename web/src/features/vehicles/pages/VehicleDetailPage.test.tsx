@@ -330,6 +330,11 @@ describe('VehicleDetailPage', () => {
     renderPage()
 
     expect(await screen.findByTestId('vehicle-detail-skeleton')).toBeInTheDocument()
+    const title = screen.getByRole('heading', { name: 'Vehicle detail', level: 1 })
+    expect(title).toHaveAttribute('data-route-focus-target', 'true')
+    expect(title).toHaveAttribute('tabindex', '-1')
+    expect(title.closest('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     // No live sections should leak through while the record loads.
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
   })
@@ -341,7 +346,7 @@ describe('VehicleDetailPage', () => {
 
       expect(await screen.findByText('Vehicle not found')).toBeInTheDocument()
       expect(
-        screen.getByRole('link', { name: 'Back to Vehicles' }),
+        screen.getByRole('link', { name: 'Back to vehicles' }),
       ).toHaveAttribute('href', '/vehicles')
       // Queries stay disabled: no record fetch, no skeleton, no sections.
       const paths = H.requestMock.mock.calls.map((c: unknown[]) => String(c[0]))
@@ -355,7 +360,12 @@ describe('VehicleDetailPage', () => {
     renderPage()
 
     // Title uses the nickname override; subtitle uses model + trim badging.
-    expect(await screen.findByRole('heading', { name: 'My Roadster' })).toBeInTheDocument()
+    const title = await screen.findByRole('heading', { name: 'My Roadster' })
+    expect(title).toBeInTheDocument()
+    const header = title.closest('[data-role="page-header"]')
+    expect(header).toHaveClass('border-0', 'bg-transparent')
+    expect(screen.getByTestId('wake-btn').closest('[data-role="page-header"]')).toBe(header)
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     expect(screen.getByText('Model 3 Performance')).toBeInTheDocument()
 
     // Every section + the settings tab + the paint preview must mount — no
@@ -447,7 +457,7 @@ describe('VehicleDetailPage', () => {
     renderPage('/vehicles/not-a-number')
 
     // Title falls back and no vehicle-scoped fetch fires.
-    expect(await screen.findByRole('heading', { name: 'Vehicle Detail' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Vehicle detail' })).toBeInTheDocument()
     expect(H.requestMock).not.toHaveBeenCalled()
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
   })

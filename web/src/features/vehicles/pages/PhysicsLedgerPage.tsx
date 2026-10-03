@@ -38,7 +38,7 @@ export default function PhysicsLedgerPage() {
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
   const { selected: hours, window, pickWindow } = useAnalysisWindow('hours', WINDOW_PRESETS, 24);
 
-  const title = t('physicsLedger.title', 'Physics Ledger');
+  const title = t('physicsLedger.title', 'Physics ledger');
   usePageTitle(title);
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -55,7 +55,7 @@ export default function PhysicsLedgerPage() {
       title={title}
       subtitle={t('physicsLedger.subtitle', 'Predicted vs measured energy and force. Residual is unexplained, never zero-filled.')}
       copyLink
-      contextActions={(
+      metadataActions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <DataProvenanceBadge
             provenance={state.provenance}

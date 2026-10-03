@@ -267,7 +267,7 @@ describe('VehicleAccessPage — populated KPIs', () => {
     expect(within(kpi).getByText('3')).toBeInTheDocument();
     expect(within(kpi).getByText('1')).toBeInTheDocument();
     // Labels are present so the numbers are legible without colour alone.
-    expect(within(kpi).getByText('Expiring Soon')).toBeInTheDocument();
+    expect(within(kpi).getByText('Expiring soon')).toBeInTheDocument();
   });
 });
 
@@ -402,7 +402,7 @@ describe('VehicleAccessPage — remove driver', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove driver' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Remove Driver')).toBeInTheDocument();
+    expect(within(dialog).getByText('Remove driver')).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
 
@@ -458,7 +458,7 @@ describe('VehicleAccessPage — revoke invitation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Revoke invitation' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Revoke Invitation')).toBeInTheDocument();
+    expect(within(dialog).getByText('Revoke invitation')).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Revoke' }));
 

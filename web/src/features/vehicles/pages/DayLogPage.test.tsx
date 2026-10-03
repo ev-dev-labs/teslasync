@@ -206,7 +206,9 @@ describe('DayLogPage', () => {
     expect(within(header).getByTestId('daylog-date')).toHaveValue('2026-09-14');
     expect(within(header).getByRole('button', { name: /copy link/i })).toBeInTheDocument();
     expect(header.querySelector('[data-action-group="metadata"]')).not.toBeNull();
-    expect(within(header).getByText(/Day boundaries in/)).toBeInTheDocument();
+    const timezoneNote = within(header).getByText(/Day boundaries in/);
+    expect(timezoneNote).toBeVisible();
+    expect(timezoneNote.closest('[data-action-group="metadata"]')).not.toBeNull();
     expect(within(screen.getByTestId('daylog-controls')).queryByText(/Day boundaries in/)).not.toBeInTheDocument();
     expect(screen.getByTestId('daylog-date')).toHaveAccessibleDescription(/Day boundaries in/);
     expect(screen.getAllByTestId('daylog-controls')).toHaveLength(1);
@@ -245,6 +247,10 @@ describe('DayLogPage', () => {
     // Source honesty: empty + unavailable rows are explicit.
     expect(screen.getByText('0 rows')).toBeInTheDocument();
     expect(screen.getByText('Unavailable')).toBeInTheDocument();
+    const sources = screen.getByRole('table', { name: 'Sources' });
+    expect(within(sources).getAllByRole('rowheader')).toHaveLength(2);
+    expect(within(sources).getByText('0 rows')).toBeInTheDocument();
+    expect(within(sources).getByText('no signal')).toBeInTheDocument();
   });
 
   it('shows every category by default with deep links and SI summaries', () => {
@@ -315,6 +321,43 @@ describe('DayLogPage', () => {
     expect(screen.getByText('Component:')).toBeInTheDocument();
     expect(screen.getByText('Stored values:')).toBeInTheDocument();
     expect(screen.getByText('1 → 2')).toBeInTheDocument();
+  });
+
+  it('uses sentence case for future payload labels while preserving acronyms and values', () => {
+    const payload = {
+      new_signal_label: 'Midnight Silver Metallic',
+      api_signal_id: 'raw_API_id',
+      FSD_status: 'CALIBRATED',
+      is_recorded: false,
+      sample_count: 0,
+      missing_detail: null,
+    };
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse([{ ...mixedEvents[2], payload }]),
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Show details' }));
+
+    expect(screen.getByText('New signal label:')).toBeInTheDocument();
+    expect(screen.getByText('API signal ID:')).toBeInTheDocument();
+    expect(screen.getByText('FSD status:')).toBeInTheDocument();
+    expect(screen.getByText('Is recorded:')).toBeInTheDocument();
+    expect(screen.getByText('Sample count:')).toBeInTheDocument();
+    expect(screen.queryByText('New Signal Label:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Missing detail:')).not.toBeInTheDocument();
+    expect(screen.getByText('Midnight Silver Metallic')).toBeInTheDocument();
+    expect(screen.getByText('raw_API_id')).toBeInTheDocument();
+    expect(screen.getByText('CALIBRATED')).toBeInTheDocument();
+    expect(screen.getByText('false')).toBeInTheDocument();
+    expect(screen.getByText('Sample count:').parentElement).toHaveTextContent(/^Sample count:\s*0$/);
+    expect(payload).toEqual({
+      new_signal_label: 'Midnight Silver Metallic',
+      api_signal_id: 'raw_API_id',
+      FSD_status: 'CALIBRATED',
+      is_recorded: false,
+      sample_count: 0,
+      missing_detail: null,
+    });
   });
 
   it('renders complete-coverage event types with titles and categories', () => {

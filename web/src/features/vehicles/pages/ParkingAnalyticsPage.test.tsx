@@ -198,7 +198,7 @@ describe('ParkingAnalyticsPage', () => {
     render(<ParkingAnalyticsPage />);
 
     expect(
-      screen.getByRole('heading', { name: 'Parking Analytics' }),
+      screen.getByRole('heading', { name: 'Parking analytics' }),
     ).toBeInTheDocument();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
@@ -267,7 +267,7 @@ describe('ParkingAnalyticsPage', () => {
     render(<ParkingAnalyticsPage />);
 
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent(
-      'Parking Analytics',
+      'Parking analytics',
     );
     expect(screen.queryByTestId('parking-duration')).not.toBeInTheDocument();
   });

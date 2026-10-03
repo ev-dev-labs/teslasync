@@ -290,19 +290,19 @@ describe('DigitalTwinPage', () => {
     renderPage();
 
     // Shell + a11y landmarks.
-    expect(screen.getByRole('heading', { name: 'Digital Twin', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Digital twin', level: 1 })).toBeInTheDocument();
     expect(screen.getByText('Real-time vehicle physical state')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument();
 
     // Section titles + panel titles (no hidden sections).
     for (const title of [
-      'Live Overview',
-      'Component State',
-      'Doors & Openings',
+      'Live overview',
+      'Component state',
+      'Doors & openings',
       'Windows',
-      'Security & Status',
-      'Lights & Signals',
-      'Live Status',
+      'Security & status',
+      'Lights & signals',
+      'Live status',
     ]) {
       expect(screen.getByText(title)).toBeInTheDocument();
     }
@@ -314,24 +314,24 @@ describe('DigitalTwinPage', () => {
     // Live status — two StatusBadges (Live Status panel + Security footer) show
     // the single-source "charging" status; the sentry chip is on.
     expect(screen.getAllByText('charging').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Sentry On')).toBeInTheDocument();
+    expect(screen.getByText('Sentry on')).toBeInTheDocument();
 
     // Doors panel KV rows (from the JSON door_state).
-    expectKv('Driver Front', 'Open');
+    expectKv('Driver front', 'Open');
     expectKv('Frunk', 'Closed');
     expectKv('Trunk', 'Open');
 
     // Windows panel.
-    expectKv('Front Driver', 'Open');
-    expectKv('Front Passenger', 'Closed');
+    expectKv('Front driver', 'Open');
+    expectKv('Front passenger', 'Closed');
 
     // Lights panel.
     expectKv('Headlights', 'On');
     expectKv('Hazards', 'Off');
-    expectKv('Turn Signal', 'Left');
+    expectKv('Turn signal', 'Left');
 
     // Security panel — occupied seat + not driving while charging.
-    expectKv('Driver Seat', 'Occupied');
+    expectKv('Driver seat', 'Occupied');
     expectKv('Driving', 'No');
 
     // Last-updated caption (deterministic via the stubbed formatter).
@@ -345,10 +345,10 @@ describe('DigitalTwinPage', () => {
 
     const { container } = renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Digital Twin', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Digital twin', level: 1 })).toBeInTheDocument();
     // Four panels → at least four skeletons; no KV rows leaked.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
-    expect(screen.queryByText('Driver Front')).not.toBeInTheDocument();
+    expect(screen.queryByText('Driver front')).not.toBeInTheDocument();
     expect(screen.queryByText('No door data available')).not.toBeInTheDocument();
   });
 
@@ -397,8 +397,8 @@ describe('DigitalTwinPage', () => {
       screen.getByText('No vehicles found. Add a vehicle to see its digital twin.'),
     ).toBeInTheDocument();
     // The data scaffolding must NOT render behind the guard.
-    expect(screen.queryByText('Live Overview')).not.toBeInTheDocument();
-    expect(screen.queryByText('Doors & Openings')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live overview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Doors & openings')).not.toBeInTheDocument();
   });
 
   it('renders the shell spinner and no data sections while the vehicles list is loading', () => {
@@ -408,13 +408,13 @@ describe('DigitalTwinPage', () => {
 
     const { container } = renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Digital Twin', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Digital twin', level: 1 })).toBeInTheDocument();
     // PageContainer keeps the real header visible and renders the
     // accessible PageLoadSkeleton (role=status, name="Loading…") instead of
     // a centered spinner while the vehicles list is loading.
     expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
     expect(container.querySelector('[data-testid="page-load-skeleton"]')).not.toBeNull();
-    expect(screen.queryByText('Live Overview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live overview')).not.toBeInTheDocument();
     expect(
       screen.queryByText('No vehicles found. Add a vehicle to see its digital twin.'),
     ).not.toBeInTheDocument();

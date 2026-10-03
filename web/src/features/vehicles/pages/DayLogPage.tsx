@@ -69,13 +69,11 @@ export default function DayLogPage() {
     <PageContainer
       actionLayout="scope-first"
       title={title}
-      subtitle={
-        <>
-          {t('dayLog.subtitle', 'What happened to this vehicle today')}
-          <Text as="span" variant="caption" className="mt-1 block [overflow-wrap:anywhere]" id="daylog-timezone">
-            {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
-          </Text>
-        </>
+      subtitle={t('dayLog.subtitle', 'What happened to this vehicle today')}
+      metadataActions={
+        <Text as="span" variant="caption" className="[overflow-wrap:anywhere]" id="daylog-timezone">
+          {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
+        </Text>
       }
       query={dayLogQuery}
       copyLink

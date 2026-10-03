@@ -101,7 +101,7 @@ export const getTelemetryStatus = () =>
   request<TelemetryStatus>('/telemetry')
 
 // === API Call Logs ===
-export const getAPICallLogs = (params: {
+export interface APICallLogParams {
   limit?: number
   offset?: number
   method?: string
@@ -113,7 +113,9 @@ export const getAPICallLogs = (params: {
   start?: string
   end?: string
   endExclusive?: string
-} = {}) => {
+}
+
+export const getAPICallLogs = (params: APICallLogParams = {}, opts?: { signal?: AbortSignal }) => {
   const query = new URLSearchParams()
   if (params.limit) query.set('limit', String(params.limit))
   if (params.offset) query.set('offset', String(params.offset))
@@ -126,17 +128,17 @@ export const getAPICallLogs = (params: {
   if (params.start) query.set('start', params.start)
   if (params.end) query.set('end', params.end)
   if (params.endExclusive) query.set('end_exclusive', params.endExclusive)
-  return request<APICallLogResponse>(`/api-logs?${query.toString()}`)
+  return request<APICallLogResponse>(`/api-logs?${query.toString()}`, opts)
 }
 
-export const getAPICallLogStats = (start?: string, endExclusive?: string) => {
+export const getAPICallLogStats = (start?: string, endExclusive?: string, opts?: { signal?: AbortSignal }) => {
   if (start === undefined && endExclusive === undefined) {
-    return request<APICallLogStats>('/api-logs/stats')
+    return request<APICallLogStats>('/api-logs/stats', opts)
   }
   if (!start || !endExclusive) {
     throw new Error('API call log stats require both start and endExclusive')
   }
-  return request<APICallLogStats>(`/api-logs/stats?${new URLSearchParams({ start, end_exclusive: endExclusive })}`)
+  return request<APICallLogStats>(`/api-logs/stats?${new URLSearchParams({ start, end_exclusive: endExclusive })}`, opts)
 }
 
 // === System / Admin ===
@@ -151,7 +153,8 @@ export const getExtendedHealth = () =>
 
 export const getBackupStats = () => request<BackupStats>('/system/backup/stats')
 
-export const getErrorStats = () => request<ErrorStats>('/system/errors/stats')
+export const getErrorStats = (opts?: { signal?: AbortSignal }) =>
+  request<ErrorStats>('/system/errors/stats', opts)
 
 // === Workers Health ===
 /** Fetches health status of background worker services. */

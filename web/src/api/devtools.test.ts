@@ -229,6 +229,14 @@ describe('getAPICallLogs', () => {
     await getAPICallLogs({ start: '2026-09-19T07:00:00Z', endExclusive: '2026-09-26T07:00:00Z' })
     expect(call()[0]).toBe('/api-logs?start=2026-09-19T07%3A00%3A00Z&end_exclusive=2026-09-26T07%3A00%3A00Z')
   })
+
+  it('forwards the optional cancellation signal without changing the envelope', async () => {
+    const signal = new AbortController().signal
+    const payload = { data: [], total: 400, limit: 25, offset: 50 }
+    mockedRequest.mockResolvedValueOnce(payload)
+    expect(await getAPICallLogs({ limit: 25, offset: 50 }, { signal })).toBe(payload)
+    expect(call()).toEqual(['/api-logs?limit=25&offset=50', { signal }])
+  })
 })
 
 describe('getAPICallLogStats', () => {
@@ -241,6 +249,17 @@ describe('getAPICallLogStats', () => {
   it('rejects partial windows rather than sending unscoped stats', () => {
     expect(() => getAPICallLogStats('2026-09-19T07:00:00Z')).toThrow(/both start and endExclusive/)
     expect(mockedRequest).not.toHaveBeenCalled()
+  })
+
+  it('forwards signals for scoped and unbounded stats and runtime errors', async () => {
+    const signal = new AbortController().signal
+    mockedRequest.mockResolvedValue({})
+    await getAPICallLogStats(undefined, undefined, { signal })
+    await getAPICallLogStats('2026-09-19T07:00:00Z', '2026-09-26T07:00:00Z', { signal })
+    await getErrorStats({ signal })
+    expect(call(0)).toEqual(['/api-logs/stats', { signal }])
+    expect(call(1)).toEqual(['/api-logs/stats?start=2026-09-19T07%3A00%3A00Z&end_exclusive=2026-09-26T07%3A00%3A00Z', { signal }])
+    expect(call(2)).toEqual(['/system/errors/stats', { signal }])
   })
 })
 

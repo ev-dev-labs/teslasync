@@ -620,6 +620,7 @@ export interface VehicleState {
   longitude: number
   heading?: number | null
   speed: number
+  /** Signed pack power in watts (SI). */
   power: number
   battery_level: number
   rated_range: number
@@ -635,6 +636,13 @@ export interface VehicleState {
   is_locked: boolean
   sentry_mode: boolean
   software_version: string
+}
+
+/** Client readings preserve absent fields without inventing measurements or flags. */
+export type VehicleStateReadings = {
+  [Field in keyof VehicleState]: Field extends 'vehicle_id'
+    ? VehicleState[Field]
+    : VehicleState[Field] | null
 }
 
 export interface AuthStatus {
@@ -1240,7 +1248,13 @@ export type VehicleStatus = _VehicleState
 export const VEHICLE_STATUSES = VEHICLE_STATES as unknown as VehicleStatus[]
 
 /** Derives a display-friendly status from live vehicle state. */
-export function deriveVehicleStatus(state?: VehicleState | null): VehicleStatus {
+export type VehicleStatusInput = {
+  state?: string | null
+  is_charging?: boolean | null
+  speed?: number | null
+}
+
+export function deriveVehicleStatus(state?: VehicleStatusInput | null): VehicleStatus {
   if (!state) return 'offline'
   if (state.is_charging) return 'charging'
   if (state.speed && state.speed > 0) return 'driving'

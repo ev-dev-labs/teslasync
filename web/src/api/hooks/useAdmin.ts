@@ -11,11 +11,26 @@ import type {
   RuntimeStatusSnapshot,
 } from '@/types/admin';
 import type { ExtendedHealthResponse } from '@/api/types';
+import { getAPICallLogs, getAPICallLogStats, getErrorStats } from '@/api/devtools';
+import type { APICallLogParams } from '@/api/devtools';
+
+export type APICallLogFilters = Pick<
+  APICallLogParams,
+  'method' | 'status' | 'endpoint' | 'service' | 'client' | 'key' | 'start' | 'endExclusive'
+>;
 
 export const adminKeys = {
   apiKeys: ['api-keys'] as const,
   apiLogs: (page: number) => ['api-logs', page] as const,
   apiLogStats: ['api-log-stats'] as const,
+  apiCallLogs: (page: number, filters: APICallLogFilters = {}) => [
+    'api-logs', page, filters.method || '', filters.status || '',
+    filters.endpoint || '', filters.service || '', filters.client || '',
+    filters.key || '', filters.start, filters.endExclusive,
+  ] as const,
+  apiCallLogStats: (start?: string, endExclusive?: string) =>
+    ['api-log-stats', start, endExclusive] as const,
+  systemErrorStats: ['system-error-stats'] as const,
   backupConfigs: ['backup-configs'] as const,
   backupRuns: ['backup-runs'] as const,
   systemHealth: ['system-health'] as const,
@@ -113,6 +128,35 @@ export function useApiLogStats() {
   return useQuery({
     queryKey: adminKeys.apiLogStats,
     queryFn: ({ signal }) => request<APICallLogStats>('/api-logs/stats', { signal }),
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/** Envelope-based evidence queries preserve the page's existing cache and polling semantics. */
+export function useAPICallLogs(page: number, filters: APICallLogFilters = {}) {
+  return useQuery({
+    queryKey: adminKeys.apiCallLogs(page, filters),
+    queryFn: ({ signal }) => getAPICallLogs({
+      limit: 25,
+      offset: page * 25,
+      ...filters,
+    }, { signal }),
+    refetchInterval: INTERVALS.FAST,
+  });
+}
+
+export function useAPICallLogStats(start?: string, endExclusive?: string) {
+  return useQuery({
+    queryKey: adminKeys.apiCallLogStats(start, endExclusive),
+    queryFn: ({ signal }) => getAPICallLogStats(start, endExclusive, { signal }),
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+export function useSystemErrorStats() {
+  return useQuery({
+    queryKey: adminKeys.systemErrorStats,
+    queryFn: ({ signal }) => getErrorStats({ signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }

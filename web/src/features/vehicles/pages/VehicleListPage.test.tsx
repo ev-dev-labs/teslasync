@@ -438,9 +438,9 @@ describe('VehicleListPage — happy path', () => {
 
     // KPI band — scoped to its labelled landmark to avoid cross-panel collisions.
     const summary = screen.getByRole('region', { name: 'Fleet summary' });
-    expect(within(summary).getByText('Total Vehicles')).toBeInTheDocument();
-    expect(within(summary).getByText('Avg Battery')).toBeInTheDocument();
-    expect(within(summary).getByText('Total Range (km)')).toBeInTheDocument();
+    expect(within(summary).getByText('Total vehicles')).toBeInTheDocument();
+    expect(within(summary).getByText('Avg battery')).toBeInTheDocument();
+    expect(within(summary).getByText('Total range (km)')).toBeInTheDocument();
     // 1 charging (V1) of 2 vehicles reporting live state (V1, V2).
     expect(within(summary).getByText('1 / 2')).toBeInTheDocument();
 
@@ -498,7 +498,7 @@ describe('VehicleListPage — happy path', () => {
     unitState.length = 'mi';
     renderPage();
     const summary = await screen.findByRole('region', { name: 'Fleet summary' });
-    expect(within(summary).getByText('Total Range (mi)')).toBeInTheDocument();
+    expect(within(summary).getByText('Total range (mi)')).toBeInTheDocument();
     // 650_000 m / 1609.344 ≈ 403.89 mi — read through the real SI converter.
     const expected = fmtNumber(convertDistanceFromSI(650_000, 'mi'));
     expect(within(summary).getByText(expected)).toBeInTheDocument();
@@ -507,8 +507,8 @@ describe('VehicleListPage — happy path', () => {
 
   it('summarises battery bars and a per-status breakdown in the overview bento', async () => {
     renderPage();
-    expect(await screen.findByText('Fleet Battery Status')).toBeInTheDocument();
-    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+    expect(await screen.findByText('Fleet battery status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet status')).toBeInTheDocument();
 
     // Each loaded vehicle contributes a battery bar labelled with its name; the
     // same name also appears on its card, so a loaded vehicle renders ≥ 2 times.
@@ -547,7 +547,7 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
 
     expect(screen.getByRole('region', { name: 'Fleet summary' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Fleet overview' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'All Vehicles' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'All vehicles' })).toBeInTheDocument();
 
     const grid = cardGrid();
     // One labelled battery progressbar per card; aria-valuenow tracks the level.
@@ -865,7 +865,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     // The breakdown bar is a progressbar labelled with the status name.
     expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
     // The panel header still anchors the section — nothing is hidden.
-    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet status')).toBeInTheDocument();
   });
 
   it('keeps the retained status breakdown during a BACKGROUND fleet-state refresh', () => {

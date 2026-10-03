@@ -31,7 +31,7 @@ const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function ParkingAnalyticsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('parking.title', 'Parking Analytics'));
+  usePageTitle(t('parking.title', 'Parking analytics'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -77,13 +77,13 @@ export default function ParkingAnalyticsPage() {
 
   if (vehicleId == null) {
     return (
-      <NoVehicleSelected pageTitle={t('parking.title', 'Parking Analytics')} />
+      <NoVehicleSelected pageTitle={t('parking.title', 'Parking analytics')} />
     );
   }
 
   return (
     <PageContainer
-      title={t('parking.title', 'Parking Analytics')}
+      title={t('parking.title', 'Parking analytics')}
       subtitle={t(
         'parking.subtitle',
         'Where your car spends its time between drives',

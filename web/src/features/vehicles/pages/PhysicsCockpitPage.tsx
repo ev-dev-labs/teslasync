@@ -32,8 +32,8 @@ export default function PhysicsCockpitPage() {
   return (
     <PageContainer
       title={t('vehicles.physicsCockpit.title', 'Tesla physics cockpit')}
-      subtitle={cockpit?.honesty ?? t('vehicles.physicsCockpit.subtitle', 'Live Gear, charge state, port latch, BMS, and trip meters.')}
-      secondaryActions={(
+      subtitle={t('vehicles.physicsCockpit.subtitle', 'Live gear, charge state, port latch, BMS, and trip meters.')}
+      overflowActions={(
         <Button
           variant="secondary"
           size="sm"
@@ -49,6 +49,9 @@ export default function PhysicsCockpitPage() {
       )}
       query={[cockpitQuery, heartbeatQuery]}
     >
+      {cockpit?.honesty && (
+        <Text as="p" variant="bodySm">{cockpit.honesty}</Text>
+      )}
       <StaleRefreshWarning state={cockpitState} />
       {cockpitState.fatalError ? (
         <QueryError error={cockpitState.fatalError} onRetry={() => { void cockpitQuery.refetch(); }} />
@@ -124,8 +127,8 @@ export default function PhysicsCockpitPage() {
           <div className="flex flex-wrap gap-2">
             <Badge variant={cockpit.park.confirmed_park ? 'success' : 'neutral'} size="sm">
               {cockpit.park.confirmed_park
-                ? t('vehicles.physicsCockpit.confirmedPark', 'Confirmed Park')
-                : t('vehicles.physicsCockpit.notPark', 'Not confirmed Park')}
+                ? t('vehicles.physicsCockpit.confirmedPark', 'Confirmed park')
+                : t('vehicles.physicsCockpit.notPark', 'Not confirmed park')}
             </Badge>
             {cockpit.park.neutral_rolling ? (
               <Badge variant="warning" size="sm">{t('vehicles.physicsCockpit.neutral', 'Neutral is rolling')}</Badge>

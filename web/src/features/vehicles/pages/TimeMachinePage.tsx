@@ -250,7 +250,7 @@ const SCRUB_DEBOUNCE_MS = 200;
 export default function TimeMachinePage() {
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
-  usePageTitle(t('timeMachine.title', 'Vehicle Time Machine'));
+  usePageTitle(t('timeMachine.title', 'Vehicle time machine'));
 
   const { vehicle } = useSelectedVehicle();
   const { isLoading: vehiclesLoading } = useVehicles();
@@ -354,7 +354,7 @@ export default function TimeMachinePage() {
 
   return (
     <PageContainer
-      title={t('timeMachine.title', 'Vehicle Time Machine')}
+      title={t('timeMachine.title', 'Vehicle time machine')}
       subtitle={t('timeMachine.subtitle', "Scrub the DVR of your car's mind — reconstruct every signal at any past instant")}
       loading={vehiclesLoading}
       query={freshnessQueries}
@@ -485,7 +485,7 @@ export default function TimeMachinePage() {
           <FadeIn delay={0.1}>
             <section aria-labelledby="tm-signals-heading" className="space-y-3">
               <SectionTitle id="tm-signals-heading">
-                {t('timeMachine.signalState', 'Reconstructed Signal State')}
+                {t('timeMachine.signalState', 'Reconstructed signal state')}
               </SectionTitle>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-5">
                 {CATEGORY_ORDER.map((category) => (

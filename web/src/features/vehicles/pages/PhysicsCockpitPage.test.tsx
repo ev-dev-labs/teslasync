@@ -126,8 +126,11 @@ describe('PhysicsCockpitPage', () => {
     expect(screen.getByText(/398 V/)).toBeInTheDocument();
     expect(screen.getByText('FSD trip meter — not an engagement flag')).toBeInTheDocument();
     expect(screen.getByText('No trip-meter tick in the recent window')).toBeInTheDocument();
-    expect(screen.getByText('Confirmed Park')).toBeInTheDocument();
+    expect(screen.getByText('Confirmed park')).toBeInTheDocument();
     expect(screen.getByText('Sentry')).toBeInTheDocument();
     expect(screen.getByText('Preconditioning reported, not counted')).toBeInTheDocument();
+    const caveat = screen.getByText(cockpit.honesty);
+    expect(caveat).toBeVisible();
+    expect(caveat.closest('[data-role="page-header"]')).toBeNull();
   });
 });

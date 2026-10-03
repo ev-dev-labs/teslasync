@@ -65,7 +65,7 @@ const SEVEN_DAYS_MS = 7 * 86_400_000;
 export default function VehicleAccessPage() {
   const { t } = useTranslation();
   const { id: vehicleId } = useParams<{ id: string }>();
-  usePageTitle(t('vehicleAccess.title', 'Vehicle Access'));
+  usePageTitle(t('vehicleAccess.title', 'Vehicle access'));
 
   const { data: vehicle } = useVehicle(vehicleId ?? '');
 
@@ -181,6 +181,7 @@ export default function VehicleAccessPage() {
     {
       key: 'name',
       header: t('vehicleAccess.drivers.name', 'Name'),
+      filterValue: (row) => row.driver_name ?? null,
       render: (row) => (
         <Text weight="medium" color="primary">
           {row.driver_name ?? '—'}
@@ -190,6 +191,7 @@ export default function VehicleAccessPage() {
     {
       key: 'email',
       header: t('vehicleAccess.drivers.email', 'Email'),
+      filterValue: (row) => row.driver_email ?? null,
       render: (row) => (
         <Text color="secondary">{row.driver_email ?? '—'}</Text>
       ),
@@ -197,6 +199,7 @@ export default function VehicleAccessPage() {
     {
       key: 'role',
       header: t('vehicleAccess.drivers.role', 'Role'),
+      filterValue: (row) => row.role ?? null,
       render: (row) => row.role ? (
         <Badge variant="info">{row.role}</Badge>
       ) : (
@@ -227,6 +230,8 @@ export default function VehicleAccessPage() {
     {
       key: 'status',
       header: t('vehicleAccess.invitations.status', 'Status'),
+      filterValue: (row) => row.status ?? null,
+      filterValueLabel: (_value, row) => t(`vehicleAccess.status.${row.status}`, row.status),
       render: (row) => (
         <Badge variant={INVITATION_STATUS_VARIANT[row.status] ?? 'neutral'}>
           {t(`vehicleAccess.status.${row.status}`, row.status)}
@@ -235,7 +240,8 @@ export default function VehicleAccessPage() {
     },
     {
       key: 'createdBy',
-      header: t('vehicleAccess.invitations.createdBy', 'Created By'),
+      header: t('vehicleAccess.invitations.createdBy', 'Created by'),
+      filterValue: (row) => row.created_by ?? null,
       render: (row) => (
         <Text color="secondary">{row.created_by ?? '—'}</Text>
       ),
@@ -283,7 +289,7 @@ export default function VehicleAccessPage() {
 
   return (
     <PageContainer
-      title={t('vehicleAccess.title', 'Vehicle Access')}
+      title={t('vehicleAccess.title', 'Vehicle access')}
       subtitle={t('vehicleAccess.subtitle', 'Manage drivers and share invitations')}
       query={[driversQuery, invitationsQuery]}
       dataSources={dataSources}
@@ -340,6 +346,7 @@ export default function VehicleAccessPage() {
             ) : (
               <DataTable
                 tableId="vehicles:access-drivers"
+                enableValueFilters
                 columns={driverColumns}
                 mobileColumns={['name', 'role', 'actions']}
                 data={driversList}
@@ -370,7 +377,7 @@ export default function VehicleAccessPage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-cyan-300" aria-hidden="true" />
-              <PanelTitle>{t('vehicleAccess.invitations.title', 'Share Invitations')}</PanelTitle>
+              <PanelTitle>{t('vehicleAccess.invitations.title', 'Share invitations')}</PanelTitle>
               {invitationsList.length > 0 && (
                 <Badge variant="neutral">{invitationsList.length}</Badge>
               )}
@@ -391,7 +398,7 @@ export default function VehicleAccessPage() {
                 aria-label={t('vehicleAccess.invitations.create', 'Create invitation')}
               >
                 <UserPlus className="h-4 w-4" aria-hidden="true" />
-                {t('vehicleAccess.invitations.createBtn', 'Invite Driver')}
+                {t('vehicleAccess.invitations.createBtn', 'Invite driver')}
               </Button>
             </div>
           </div>
@@ -412,6 +419,7 @@ export default function VehicleAccessPage() {
           ) : (
             <DataTable
               tableId="vehicles:access-invitations"
+              enableValueFilters
               columns={invitationColumns}
               mobileColumns={['status', 'expires', 'actions']}
               data={invitationsList}
@@ -427,7 +435,7 @@ export default function VehicleAccessPage() {
       {/* ── Confirm Dialogs ───────────────────────────────────── */}
       <ConfirmDialog
         open={removeTarget !== null}
-        title={t('vehicleAccess.drivers.removeTitle', 'Remove Driver')}
+        title={t('vehicleAccess.drivers.removeTitle', 'Remove driver')}
         message={t('vehicleAccess.drivers.removeMessage', 'Are you sure you want to remove this driver\'s access? This action cannot be undone.')}
         confirmLabel={t('vehicleAccess.drivers.removeConfirm', 'Remove')}
         variant="danger"
@@ -436,7 +444,7 @@ export default function VehicleAccessPage() {
       />
       <ConfirmDialog
         open={revokeTarget !== null}
-        title={t('vehicleAccess.invitations.revokeTitle', 'Revoke Invitation')}
+        title={t('vehicleAccess.invitations.revokeTitle', 'Revoke invitation')}
         message={t('vehicleAccess.invitations.revokeMessage', 'Are you sure you want to revoke this invitation? The invite link will no longer work.')}
         confirmLabel={t('vehicleAccess.invitations.revokeConfirm', 'Revoke')}
         variant="danger"

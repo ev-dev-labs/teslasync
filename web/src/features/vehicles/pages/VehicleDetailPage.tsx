@@ -6,7 +6,7 @@ import { Activity, AlertCircle } from 'lucide-react'
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, PanelTitle, SectionTitle } from '@/components/ui'
 import { DataProvenanceBadge } from '@/components/data-display'
-import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton, QueryError, EmptyState } from '@/components/feedback'
+import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, QueryError, EmptyState } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -52,15 +52,14 @@ import { AIVehiclePaintPreview } from '@/components/ai/AIVehiclePaintPreview'
 /* ─── Loading skeleton ─────────────────────── */
 
 /**
- * Mirrors the VehicleDetailPage layout while the vehicle record loads:
- * page header → battery & range panel → live state indicators →
+ * Mirrors the VehicleDetailPage content beneath its shared loading header:
+ * battery & range panel → live state indicators →
  * 4-card quick-stats grid → motor/climate/security/tire panels →
  * battery-range chart → recent drives + charges tables → quick links.
  */
 function VehicleDetailSkeleton() {
   return (
     <div className="space-y-6" data-testid="vehicle-detail-skeleton">
-      <PageHeaderSkeleton />
       <Skeleton className="h-40 rounded-xl" />
       <StatGridSkeleton cards={4} />
       <StatGridSkeleton cards={4} />
@@ -88,7 +87,7 @@ export default function VehicleDetailPage() {
   const rawId = Number(id)
   const hasValidId = Number.isFinite(rawId) && rawId > 0
   const vehicleId = hasValidId ? rawId : 0
-  usePageTitle(t('vehicles.detail.title', 'Vehicle Detail'))
+  usePageTitle(t('vehicles.detail.title', 'Vehicle detail'))
 
   /* ─── Queries ─── */
 
@@ -194,19 +193,23 @@ export default function VehicleDetailPage() {
 
   /* ─── Loading short-circuit ─────────── */
   if (vehicleLoading) {
-    return <VehicleDetailSkeleton />
+    return (
+      <PageContainer title={t('vehicles.detail.title', 'Vehicle detail')} busy>
+        <VehicleDetailSkeleton />
+      </PageContainer>
+    )
   }
 
   if (!hasValidId) {
     return (
-      <PageContainer title={t('vehicles.detail.title', 'Vehicle Detail')}>
+      <PageContainer title={t('vehicles.detail.title', 'Vehicle detail')}>
         <FadeIn>
           <GlassPanel className="p-4 sm:p-5">
             <EmptyState
               icon={<AlertCircle className="h-8 w-8" aria-hidden="true" />}
               title={t('vehicles.detail.invalidIdTitle', 'Vehicle not found')}
               message={t('vehicles.detail.invalidIdBody', 'That vehicle link looks wrong. Check the URL or pick a vehicle from the list.')}
-              actionTo={{ label: t('vehicles.detail.backToVehicles', 'Back to Vehicles'), to: '/vehicles' }}
+              actionTo={{ label: t('vehicles.detail.backToVehicles', 'Back to vehicles'), to: '/vehicles' }}
             />
           </GlassPanel>
         </FadeIn>
@@ -218,13 +221,13 @@ export default function VehicleDetailPage() {
 
   return (
     <PageContainer
-      title={effectiveName ?? t('vehicles.detail.title', 'Vehicle Detail')}
+      title={effectiveName ?? t('vehicles.detail.title', 'Vehicle detail')}
       subtitle={subtitle}
       error={vehicleError as Error | null}
       breadcrumbLabels={{
         '/vehicles/:id': effectiveName ?? t('vehicles.detail.vehicleNumber', 'Vehicle #{{id}}', { id }),
       }}
-      actions={
+      metadataActions={
         <div className="flex flex-wrap items-center gap-2">
           <DataProvenanceBadge
             provenance={stateDataState.provenance}
@@ -233,6 +236,20 @@ export default function VehicleDetailPage() {
           />
         </div>
       }
+      contextActions={
+        <SectionErrorBoundary name="vehicle-detail:header" fallbackTitle={t('vehicles.detail.section.headerFailed', 'Vehicle header failed to load')}>
+          <FadeIn>
+            <div data-tour="vehicle-detail-tabs">
+              <VehicleHeader
+                vehicle={vehicle}
+                status={status}
+                onWake={() => wakeMutation.mutate()}
+                waking={wakeMutation.isPending}
+              />
+            </div>
+          </FadeIn>
+        </SectionErrorBoundary>
+      }
     >
       <LiveStaleDataBanner />
       <SilenceBanner vehicleId={vehicleId > 0 ? vehicleId : undefined} />
@@ -240,20 +257,6 @@ export default function VehicleDetailPage() {
         vehicleId={vehicleId > 0 ? vehicleId : undefined}
         currentSoc={typeof state?.battery_level === 'number' ? state.battery_level : undefined}
       />
-
-      {/* Hero header — full-width band */}
-      <SectionErrorBoundary name="vehicle-detail:header" fallbackTitle={t('vehicles.detail.section.headerFailed', 'Vehicle header failed to load')}>
-        <FadeIn>
-          <div data-tour="vehicle-detail-tabs">
-            <VehicleHeader
-              vehicle={vehicle}
-              status={status}
-              onWake={() => wakeMutation.mutate()}
-              waking={wakeMutation.isPending}
-            />
-          </div>
-        </FadeIn>
-      </SectionErrorBoundary>
 
       {!state ? (
         <FadeIn delay={0.05}>
@@ -274,7 +277,7 @@ export default function VehicleDetailPage() {
           {/* Live overview — battery hero spans 2 cols, live-state side panel fills the third */}
           <FadeIn delay={0.03}>
             <section className="space-y-4">
-              <SectionTitle>{t('vehicles.detail.overview', 'Live Overview')}</SectionTitle>
+              <SectionTitle>{t('vehicles.detail.overview', 'Live overview')}</SectionTitle>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                 <div className="xl:col-span-2">
                   <SectionErrorBoundary name="vehicle-detail:battery-range" fallbackTitle={t('vehicles.detail.section.batteryRangeFailed', 'Battery & range section failed to load')}>
@@ -285,7 +288,7 @@ export default function VehicleDetailPage() {
                   <GlassPanel className="h-full p-6">
                     <PanelTitle className="mb-4 flex items-center gap-2">
                       <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                      {t('vehicles.detail.liveState', 'Live State')}
+                      {t('vehicles.detail.liveState', 'Live state')}
                     </PanelTitle>
                     <LiveStateIndicators state={state} />
                   </GlassPanel>
@@ -296,8 +299,8 @@ export default function VehicleDetailPage() {
 
           {/* Quick stats — full-width KPI band */}
           <FadeIn delay={0.08}>
-            <section className="space-y-3" aria-label={t('vehicles.detail.quickStats', 'Quick Stats')}>
-              <SectionTitle>{t('vehicles.detail.quickStats', 'Quick Stats')}</SectionTitle>
+            <section className="space-y-3" aria-label={t('vehicles.detail.quickStats', 'Quick stats')}>
+              <SectionTitle>{t('vehicles.detail.quickStats', 'Quick stats')}</SectionTitle>
               <SectionErrorBoundary name="vehicle-detail:quick-stats" fallbackTitle={t('vehicles.detail.section.quickStatsFailed', 'Quick stats failed to load')}>
                 <QuickStatsGrid state={state} status={status} />
               </SectionErrorBoundary>
@@ -307,7 +310,7 @@ export default function VehicleDetailPage() {
           {/* Vehicle systems — telemetry bento: paired panels on wide screens */}
           <FadeIn delay={0.10}>
             <section className="space-y-4">
-              <SectionTitle>{t('vehicles.detail.systems', 'Vehicle Systems')}</SectionTitle>
+              <SectionTitle>{t('vehicles.detail.systems', 'Vehicle systems')}</SectionTitle>
               <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
                 <SectionErrorBoundary name="vehicle-detail:motor" fallbackTitle={t('vehicles.detail.section.motorFailed', 'Motor section failed to load')}>
                   <MotorSection motorData={motorData} />
@@ -333,7 +336,7 @@ export default function VehicleDetailPage() {
           {/* Battery & range charts — full-width, internal 2-col grid */}
           <FadeIn delay={0.12}>
             <section className="space-y-4">
-              <SectionTitle>{t('vehicles.detail.batteryRange', 'Battery & Range')}</SectionTitle>
+              <SectionTitle>{t('vehicles.detail.batteryRange', 'Battery & range')}</SectionTitle>
               <SectionErrorBoundary name="vehicle-detail:battery-charts" fallbackTitle={t('vehicles.detail.section.batteryChartsFailed', 'Battery & range charts failed to load')}>
                 <BatteryRangeCharts state={state} drives={drives} />
               </SectionErrorBoundary>
@@ -343,7 +346,7 @@ export default function VehicleDetailPage() {
           {/* Recent activity — drives + charges side by side on wide screens */}
           <FadeIn delay={0.14}>
             <section className="space-y-4">
-              <SectionTitle>{t('vehicles.detail.recentActivity', 'Recent Activity')}</SectionTitle>
+              <SectionTitle>{t('vehicles.detail.recentActivity', 'Recent activity')}</SectionTitle>
               <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
                 <SectionErrorBoundary name="vehicle-detail:recent-drives" fallbackTitle={t('vehicles.detail.section.recentDrivesFailed', 'Recent drives failed to load')}>
                   <RecentDrivesSection drives={drives} />
