@@ -20,6 +20,14 @@ Matches `tailwind.config.js` (default Tailwind breakpoints, no overrides):
 
 ## Default-Mobile Strategy
 
+Vehicle-state adapters preserve absent measurements and security flags as unknown,
+not zero, offline, locked, or off. Client `VehicleStateReadings` carries this
+nullable projection without changing the wire DTO. Cards, status-bar metrics,
+fleet comparisons, and car visualizations retain their shells and show an em dash
+for missing readings; real zero and false readings remain visible. Rated and
+ideal range are distinct measurements and must not silently substitute for each
+other. Stale real readings remain available with their existing trust metadata.
+
 1. **Grids start at `grid-cols-1`**, escalate at `md` and `lg`:
    ```tsx
    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -97,6 +105,16 @@ export default function ExamplePage() {
 </Modal>
 ```
 
+Shared dialog focus handling keeps Escape and Tab within the topmost dialog
+even when a completed form removes its focused control. Focus in another
+surface is not intercepted.
+
+Shared checkbox labels establish the containing block for their visually hidden
+native inputs. This keeps native focus inside the visible row of scrollable
+checklists instead of scrolling the surrounding popover into blank space.
+Verify an off-page value selection leaves the filter search, selected value,
+and Done action in view, not just that the popover's outer bounds fit.
+
 ### Charts
 ```tsx
 import { ChartContainer, LineChart, Line, XAxis, YAxis } from '@/components/charts';
@@ -106,6 +124,14 @@ import { ChartContainer, LineChart, Line, XAxis, YAxis } from '@/components/char
   <LineChart data={series}>…</LineChart>
 </ChartContainer>
 ```
+
+`LinearGauge` accepts nullable readings. Missing or non-finite values retain
+the track and label, display an em dash, and announce Unknown without claiming
+a numeric meter value. A measured zero remains a zero-valued meter. Convert
+only present SI readings at the display boundary; do not turn missing Celsius
+readings into 0°C or 32°F. The shared vehicle hero follows the same rule for
+gauges and security flags, and converts signed pack power from watts using
+the user's power display preference.
 
 ## Manual Viewport Verification
 

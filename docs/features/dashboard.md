@@ -13,6 +13,8 @@ Every other page in the product is a deeper dive into one of those questions.
 
 The dashboard is a customizable canvas built from a catalogue of widgets organised into 16 categories. Drag widgets to arrange them, or use each widget's **Arrange** menu for one-click and keyboard move/resize controls.
 
+The layout selector, refresh, and customization actions share the compact page header so the widget canvas follows without a separate workspace introduction. Vehicle and date scope remain in the application header.
+
 Select **Customize**, then **Add Widget** to open the docked widget picker. On a wide screen it sits beside the dashboard, not over it; on a narrow screen it follows the dashboard in the page flow. Search by widget name, description, or category, or choose a category. Click a card to add it, drag it onto a desktop grid cell to choose its position (existing widgets move aside), or drop it on the hint above the grid to add and auto-arrange in one step. Touch and keyboard users can add by clicking or pressing Enter; the **Arrange** menu handles positioning without dragging. Newly added widgets grow to fit content when possible, up to their size limit; a manual resize takes precedence.
 
 | Category        | Widgets | Examples                                                                  |
@@ -39,6 +41,8 @@ Every widget that's already on the active dashboard is badged **Added** in the p
 **Fleet Posture** is a System widget on new default dashboards and is available in the picker for existing layouts. It shows verified fleet coverage, the scoped vehicle's last observation, and the evidence taxonomy; the former full-width operational brief and its investigation/workflow sidebar are no longer fixed above every layout. Existing saved layouts are not changed automatically.
 
 Widgets are self-rendering: each one declares which signals it depends on, and if the underlying signal isn't reporting (for example, a fleet without solar will never publish a Powerwall reading), the widget renders an empty state with a one-click path to the first thing you can do. We never collapse the widget away — hiding empty widgets makes the product feel "broken on day one", which is the worst onboarding experience we can ship.
+
+Missing battery readings, degradation trends, motor history, cost forecasts, and signal-health data expose a **Refresh** action that retries their actual source queries. Successful observations with no signal gaps and missing read-only model subsections do not suggest corrective actions. Partial system-health results remain visible while another source loads; unknown readings are not replaced by zeros.
 
 ## Multiple dashboards
 

@@ -38,6 +38,16 @@ Sidebar group **Driving**. In the app, expand this section in the left nav (or s
 | Ghost Racing | `/segments` | Race your historical best on repeated road segments. | Detected segments are displayed 12 at a time with shareable page URLs; switching pages or vehicles clears the selected race. Route detection still uses the complete drive history. Renders an empty state when no data is available. |
 | Drive detail | `/drives/:id` | Route, energy, FSD share, cost, session telemetry, and an on-demand road-surface anomaly review for one drive. | Open a row from /drives. FSD % needs trip-meter ticks; quantized 1-mile Tesla counters are valid. Road-surface analysis reports insufficient evidence when the necessary samples were not recorded. |
 
+## Drive detail
+
+Drive detail is a continuous, tab-free report: journey endpoints and the route
+lead into aggregate metrics, energy and cost evidence, supervised-driving
+observations, synchronized telemetry charts, physics, and diagnostics. Each
+section keeps its own missing-data or error presentation. Share, print, and
+replay remain available; optional Helix sections retain their AI opt-in gates.
+Journey endpoints wrap within the available width rather than clipping the
+destination on a phone or narrow desktop panel.
+
 ## Possible road-surface anomalies
 
 Open a drive and expand **Road-surface anomalies** to review potential jolts. Analysis reads that drive's historical speed, acceleration, and GPS observations; it does not change Fleet Telemetry ingestion or issue any vehicle commands. A candidate is **not a confirmed pothole**: Tesla Fleet Telemetry does not expose a direct vertical acceleration or suspension-travel measurement, and a road seam, speed bump, or driving maneuver may look similar. A quiet result does not mean the road is pothole-free. Sparse or stale acceleration/GPS samples cannot establish an impact and are reported as insufficient evidence rather than guessed. Treat candidate locations as approximate, not turn-by-turn navigation or an automated road-hazard alert. Accuracy cannot be quantified without labeled, independently measured road-impact data.
