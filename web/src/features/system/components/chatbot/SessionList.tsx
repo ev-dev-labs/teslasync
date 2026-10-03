@@ -94,7 +94,7 @@ export function SessionList({
             icon={<Plus className="h-4 w-4" />}
             className="w-full"
           >
-            {t('chatbot.newChat', 'New Chat')}
+            {t('chatbot.newChat', 'New chat')}
           </Button>
         </div>
 
@@ -103,7 +103,7 @@ export function SessionList({
           size="xs"
           weight="semibold"
           color="secondary"
-          className="uppercase tracking-wider px-4 pt-3 pb-1"
+          className="tracking-wider px-4 pt-3 pb-1"
         >
           {t('chatbot.sessions', 'Sessions')}
         </Text>

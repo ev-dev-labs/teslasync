@@ -216,14 +216,14 @@ function kpiBand() {
 /** The GlassPanel (`[data-print-card]`) that owns the command timeline. */
 function timelinePanel(): HTMLElement {
   return screen
-    .getByRole('heading', { name: 'Command Timeline' })
+    .getByRole('heading', { name: 'Command timeline' })
     .closest('[data-print-card]') as HTMLElement;
 }
 
 /** The GlassPanel that owns the status breakdown bars. */
 function statusPanel(): HTMLElement {
   return screen
-    .getByRole('heading', { name: 'Status Breakdown' })
+    .getByRole('heading', { name: 'Status breakdown' })
     .closest('[data-print-card]') as HTMLElement;
 }
 
@@ -252,7 +252,7 @@ describe('CommandHistoryPage — happy path', () => {
 
     await waitForCount(5); // feed resolved for the derived active vehicle
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Command History' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Command history' })).toBeInTheDocument();
     expect(screen.getByText('Audit log of all vehicle commands')).toBeInTheDocument();
 
     expect(historyCalls().some((u) => /\/vehicles\/10\/commands\/history/.test(u))).toBe(true);
@@ -268,12 +268,12 @@ describe('CommandHistoryPage — happy path', () => {
 
     const band = kpiBand();
     for (const label of [
-      'Total Commands',
+      'Total commands',
       'Commands (24h)',
-      'Success Rate',
+      'Success rate',
       'Failed',
-      'Most Used',
-      'Last Sent',
+      'Most used',
+      'Last sent',
     ]) {
       expect(within(band).getByText(label)).toBeInTheDocument();
     }
@@ -290,9 +290,9 @@ describe('CommandHistoryPage — happy path', () => {
 
     await waitForCount(5);
 
-    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily Activity' }).length).toBeGreaterThan(0);
-    expect(screen.getByRole('heading', { level: 3, name: 'Top Commands' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: 'Status Breakdown' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily activity' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { level: 3, name: 'Top commands' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Status breakdown' })).toBeInTheDocument();
 
     // Status breakdown percentages exercise pctLabel(n, total): 3/5 and 2/5.
     // Regex avoids depending on the middle-dot glyph in "3 · 60%".
@@ -310,8 +310,8 @@ describe('CommandHistoryPage — happy path', () => {
     await waitForCount(5);
 
     const tl = timelinePanel();
-    expect(within(tl).getByText('Wake Up')).toBeInTheDocument();
-    expect(within(tl).getByText('Honk Horn')).toBeInTheDocument();
+    expect(within(tl).getByText('Wake up')).toBeInTheDocument();
+    expect(within(tl).getByText('Honk horn')).toBeInTheDocument();
     // Subtitles are timeline-only: JSON params and the error prefix.
     expect(within(tl).getByText(/foo: bar/)).toBeInTheDocument();
     expect(within(tl).getByText(/Error: Vehicle offline/)).toBeInTheDocument();
@@ -331,10 +331,10 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
       expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
     );
     // Panels stay mounted; the KPI band is present even while the feed loads.
-    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily Activity' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily activity' }).length).toBeGreaterThan(0);
     expect(kpiBand()).toBeInTheDocument();
     // … but its cards wait for data: skeletons, never fabricated zeros.
-    expect(within(kpiBand()).queryByText('Total Commands')).not.toBeInTheDocument();
+    expect(within(kpiBand()).queryByText('Total commands')).not.toBeInTheDocument();
     // No analytics empty copy while genuinely loading.
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
   });
@@ -347,7 +347,7 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     await waitFor(() => expect(screen.getAllByText('Server error').length).toBeGreaterThanOrEqual(4));
     // The KPI band joins the error states (no fabricated zeros) …
     expect(within(kpiBand()).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    expect(within(kpiBand()).queryByText('Total Commands')).not.toBeInTheDocument();
+    expect(within(kpiBand()).queryByText('Total commands')).not.toBeInTheDocument();
 
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries.length).toBeGreaterThan(0);
@@ -377,7 +377,7 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     await waitFor(() =>
       expect(screen.getAllByText('Select a vehicle to view command activity').length).toBe(3),
     );
-    expect(screen.getByText('Select a vehicle to view command history')).toBeInTheDocument();
+    expect(screen.getAllByText('Select a vehicle to view command activity')).toHaveLength(3);
     // The command feed is gated off — enabled:!!vehicleId — so it never fires.
     expect(historyCalls().length).toBe(0);
   });
@@ -391,7 +391,7 @@ describe('CommandHistoryPage — daily bucketing timezone', () => {
     installRequest({ commands: [mkCmd({ created_at: '2026-01-15T00:30:00Z' })] });
     renderPage();
 
-    const caption = await screen.findByText('Daily Activity — data table');
+    const caption = await screen.findByText('Daily activity — data table');
     const table = caption.closest('table') as HTMLElement;
     expect(within(table).getByText('01-14')).toBeInTheDocument();
     expect(within(table).queryByText('01-15')).not.toBeInTheDocument();
@@ -412,8 +412,8 @@ describe('CommandHistoryPage — filters & interactions', () => {
     // 2 of 5 commands failed → timeline narrows; the success-only "Wake Up" leaves.
     await screen.findByText('2 commands');
     const tl = timelinePanel();
-    expect(within(tl).getByText('Honk Horn')).toBeInTheDocument();
-    expect(within(tl).queryByText('Wake Up')).not.toBeInTheDocument();
+    expect(within(tl).getByText('Honk horn')).toBeInTheDocument();
+    expect(within(tl).queryByText('Wake up')).not.toBeInTheDocument();
     // KPI band is unaffected by the timeline filter (still full history).
     expect(within(kpiBand()).getByText('5')).toBeInTheDocument();
   });
@@ -431,7 +431,7 @@ describe('CommandHistoryPage — filters & interactions', () => {
 
     await screen.findByText('1 commands');
     const tl = timelinePanel();
-    expect(within(tl).getByText('Wake Up')).toBeInTheDocument();
+    expect(within(tl).getByText('Wake up')).toBeInTheDocument();
     expect(within(tl).queryByText('Honk Horn')).not.toBeInTheDocument();
   });
 
@@ -503,7 +503,7 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     await waitFor(() => expect(search).toHaveValue('wake'));
     await screen.findByText('2 commands');
     const tl = timelinePanel();
-    expect(within(tl).getAllByText('Wake Up')).toHaveLength(2);
+    expect(within(tl).getAllByText('Wake up')).toHaveLength(2);
     expect(within(tl).queryByText('Honk Horn')).not.toBeInTheDocument();
   });
 
@@ -524,7 +524,7 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Failed' }));
 
     await screen.findByText('4 commands');
-    expect(within(timelinePanel()).getAllByText('Honk Horn')).toHaveLength(4);
+    expect(within(timelinePanel()).getAllByText('Honk horn')).toHaveLength(4);
     // <= PAGE_SIZE now, so the pager is gone entirely (not stuck on a blank page 2).
     expect(screen.queryByText('2 / 2')).not.toBeInTheDocument();
   });
@@ -547,9 +547,9 @@ describe('CommandHistoryPage — command name & subtitle formatting', () => {
 
     const tl = timelinePanel();
     // Curated label from COMMAND_LABELS.
-    expect(within(tl).getByText('Set Charge Limit')).toBeInTheDocument();
+    expect(within(tl).getByText('Set charge limit')).toBeInTheDocument();
     // Fallback Title-Case for an unmapped command.
-    expect(within(tl).getByText('Super Secret Mode')).toBeInTheDocument();
+    expect(within(tl).getByText('Super secret mode')).toBeInTheDocument();
     // Subtitle from JSON params.
     expect(within(tl).getByText(/percent: 80/)).toBeInTheDocument();
     // Subtitle from the error field.

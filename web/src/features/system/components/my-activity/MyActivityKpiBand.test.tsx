@@ -58,7 +58,7 @@ describe('MyActivityKpiBand', () => {
     expect(screen.getByText('42')).toBeInTheDocument();
 
     // The band exposes an accessible region name and is not busy when loaded.
-    const region = screen.getByRole('region', { name: /activity summary/i });
+    const region = screen.getByRole('region', { name: /Activity summary/i });
     expect(region).toHaveAttribute('aria-busy', 'false');
     // No loading live region survives into the loaded state.
     expect(screen.queryByRole('status')).toBeNull();
@@ -106,7 +106,7 @@ describe('MyActivityKpiBand', () => {
     );
 
     // aria-busy flips true and a polite live region announces the load.
-    const region = screen.getByRole('region', { name: /activity summary/i });
+    const region = screen.getByRole('region', { name: /Activity summary/i });
     expect(region).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('status')).toHaveTextContent(/loading/i);
 

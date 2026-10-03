@@ -26,12 +26,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   climate: 'Climate',
   location: 'Location',
   powertrain: 'Powertrain',
-  vehicle_state: 'Vehicle State',
-  safety_security: 'Safety & Security',
+  vehicle_state: 'Vehicle state',
+  safety_security: 'Safety & security',
   media: 'Media',
   config: 'Config',
   prefs: 'Preferences',
-  setting_unit: 'Setting Units',
+  setting_unit: 'Setting units',
   metadata: 'Metadata',
 };
 

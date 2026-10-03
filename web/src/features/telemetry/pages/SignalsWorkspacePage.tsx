@@ -37,7 +37,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion, Label, Caption } from '@/components/ui';
 import { GlossaryTerm } from '@/components/ui/GlossaryTerm';
 
@@ -368,13 +368,17 @@ export default function SignalsWorkspacePage() {
         'signalsWorkspace.subtitle',
         'Browse the live catalog, inspect history, monitor live, or compare snapshots — all in one place.',
       )}
-      actions={
+      metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           {isLive ? (
             <Badge variant={live.connected ? 'success' : 'danger'} dot>
               {live.connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}
             </Badge>
           ) : null}
+        </div>
+      }
+      overflowActions={
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <SavedViewMenu route="/signals" currentQuery={currentQuery} onApply={apply} />
           {permalinkUrl ? (
             <CopyButton text={permalinkUrl} label={t('signalsWorkspace.share', 'Share')} size="sm" />
@@ -476,7 +480,7 @@ export default function SignalsWorkspacePage() {
               <div className="flex flex-wrap items-end gap-2">
                 {!isLive && !isCompare ? (
                   <Select
-                    label={t('signalsWorkspace.perPage', 'Per Page')}
+                    label={t('signalsWorkspace.perPage', 'Per page')}
                     value={String(perPage)}
                     onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
                     options={PER_PAGE_OPTIONS}
@@ -685,7 +689,7 @@ export default function SignalsWorkspacePage() {
                       title={t('signalsWorkspace.emptyTitle', 'Pick signals and run a query')}
                       message={t(
                         'signalsWorkspace.emptyDesc',
-                        'Pick signals from the catalog, choose a time range, then click Run for historical data — or toggle Live to stream in real time.',
+                        'Pick signals from the catalog, choose a time range, then click run for historical data — or toggle live to stream in real time.',
                       )}
                     />
                     {/* HELP-02 — a sleeping vehicle is the single most common

@@ -67,7 +67,7 @@ describe('ActivityBreakdownPanel', () => {
       slices: [slice()],
     });
 
-    expect(screen.getByRole('heading', { name: /by category/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /By category/i })).toBeInTheDocument();
     expect(screen.getByTestId('title-icon')).toBeInTheDocument();
     expect(container.querySelector('.custom-panel-class')).not.toBeNull();
   });

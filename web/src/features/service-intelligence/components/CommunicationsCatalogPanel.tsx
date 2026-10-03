@@ -16,7 +16,7 @@ import {
 } from '@/api/hooks/useServiceIntelligence';
 import { DateTime } from '@/components/data-display';
 import { AlertBanner, EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Badge, Button, Caption, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Table, Badge, Button, Caption, GlassPanel, PanelTitle, Text } from '@/components/ui';
 
 const catalogFreshnessMs = 8 * 24 * 60 * 60 * 1000;
 
@@ -103,32 +103,32 @@ export function CommunicationsCatalogPanel({
         <QueryError error={error} onRetry={onRetry} />
       ) : (
         <div className="space-y-4">
-          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
-              <dt>
+          <Table aria-label={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}><tbody>
+            <tr>
+              <th scope="row">
                 <Caption>{t('serviceIntelligence.catalog.records', 'Normalized Tesla records')}</Caption>
-              </dt>
-              <dd><Text variant="metricValue">{status?.record_count ?? 0}</Text></dd>
-            </div>
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
-              <dt>
+              </th>
+              <td><Text variant="metricValue">{status?.record_count ?? 0}</Text></td>
+            </tr>
+            <tr>
+              <th scope="row">
                 <Caption>{t('serviceIntelligence.catalog.coverage', 'Official period artifacts')}</Caption>
-              </dt>
-              <dd><Text variant="metricValue">{OFFICIAL_NHTSA_COMMUNICATION_ARTIFACTS.length}</Text></dd>
-            </div>
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
-              <dt>
+              </th>
+              <td><Text variant="metricValue">{OFFICIAL_NHTSA_COMMUNICATION_ARTIFACTS.length}</Text></td>
+            </tr>
+            <tr>
+              <th scope="row">
                 <Caption>{t('serviceIntelligence.catalog.lastSuccess', 'Last successful import')}</Caption>
-              </dt>
-              <dd>
+              </th>
+              <td>
                 {latest?.completed_at ? (
                   <DateTime value={latest.completed_at} variant="full" />
                 ) : (
                   <Text variant="body">{t('serviceIntelligence.catalog.never', 'Never')}</Text>
                 )}
-              </dd>
-            </div>
-          </dl>
+              </td>
+            </tr>
+          </tbody></Table>
 
           {freshness === 'unavailable' && (
             <EmptyState

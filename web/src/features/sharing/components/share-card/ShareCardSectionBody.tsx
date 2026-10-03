@@ -57,7 +57,7 @@ export function ShareCardSectionBody({
       <div
         className={cn('min-h-28', className)}
         role="status"
-        aria-label={t('shareCard.states.loadingLabel', 'Loading Share Card evidence')}
+        aria-label={t('shareCard.states.loadingLabel', 'Loading share card evidence')}
       >
         <Skeleton height={skeletonHeight} />
       </div>

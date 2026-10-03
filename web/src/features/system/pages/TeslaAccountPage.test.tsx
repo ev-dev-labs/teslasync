@@ -228,12 +228,12 @@ describe('TeslaAccountPage — shell', () => {
     setup(makeQuery({ data: envelope(PROFILE) }));
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Tesla Account' }),
+      screen.getByRole('heading', { level: 1, name: 'Tesla account' }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Your Tesla account profile synced from the Fleet API'),
     ).toBeInTheDocument();
-    expect(mockUsePageTitle).toHaveBeenCalledWith('Tesla Account');
+    expect(mockUsePageTitle).toHaveBeenCalledWith('Tesla account');
   });
 });
 
@@ -286,7 +286,7 @@ describe('TeslaAccountPage — populated', () => {
 
   it('renders the account-details KVList including the "Available" image branch', () => {
     setup(makeQuery({ data: envelope(PROFILE) }));
-    const details = panel('Account Details');
+    const details = panel('Account details');
 
     expect(within(details).getByText('Ada Lovelace')).toBeInTheDocument();
     expect(within(details).getByText('driver@example.com')).toBeInTheDocument();
@@ -320,7 +320,7 @@ describe('TeslaAccountPage — populated', () => {
     // No <img>; avatar renders deterministic initials instead.
     expect(screen.queryByRole('img', { name: 'Ada Lovelace' })).not.toBeInTheDocument();
     expect(screen.getByTestId('avatar-initials')).toHaveTextContent('AL');
-    expect(within(panel('Account Details')).getByText('Not set')).toBeInTheDocument();
+    expect(within(panel('Account details')).getByText('Not set')).toBeInTheDocument();
   });
 
   it('falls back to the generic "Tesla Driver" label for an unnamed profile', () => {
@@ -330,11 +330,11 @@ describe('TeslaAccountPage — populated', () => {
       }),
     );
 
-    expect(within(panel('Profile')).getByText('Tesla Driver')).toBeInTheDocument();
+    expect(within(panel('Profile')).getByText('Tesla driver')).toBeInTheDocument();
     // With no name and no image the avatar renders the generic glyph.
     expect(screen.getByTestId('avatar-glyph')).toBeInTheDocument();
     // The details "Name" row shows the em-dash placeholder, not a blank cell.
-    expect(within(panel('Account Details')).getAllByText('—').length).toBeGreaterThanOrEqual(1);
+    expect(within(panel('Account details')).getAllByText('—').length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -421,7 +421,7 @@ describe('TeslaAccountPage — loading + empty branches', () => {
     // Every section keeps a visible empty state.
     expect(within(panel('Profile')).getByText('No profile synced yet')).toBeInTheDocument();
     expect(
-      within(panel('Account Details')).getByText(/No account details yet/i),
+      within(panel('Account details')).getByText(/no Account details yet/i),
     ).toBeInTheDocument();
     expect(
       within(panel('Activity')).getByText('No account activity to show yet.'),
@@ -439,7 +439,7 @@ describe('TeslaAccountPage — null-safety + a11y', () => {
 
     // Account id collapses to the placeholder rather than "#null" or a crash.
     expect(within(kpiBand()).getByText('—')).toBeInTheDocument();
-    expect(within(panel('Account Details')).getByText('—')).toBeInTheDocument();
+    expect(within(panel('Account details')).getByText('—')).toBeInTheDocument();
     // The rest of the page still renders.
     expect(within(panel('Profile')).getByText('driver@example.com')).toBeInTheDocument();
   });

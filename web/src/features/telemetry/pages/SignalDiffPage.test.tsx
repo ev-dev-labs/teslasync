@@ -274,7 +274,7 @@ describe('SignalDiffPage', () => {
   it('renders the header, KPI band, and derived counts when the diff resolves', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Signal Diff' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Signal diff' })).toBeInTheDocument();
     expect(
       screen.getByText('Compare signal values between two snapshots in time'),
     ).toBeInTheDocument();
@@ -479,7 +479,7 @@ describe('SignalDiffPage', () => {
 
     expect(screen.getByRole('region', { name: 'Diff summary' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Vehicle' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Signal Diff' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Signal diff' })).toBeInTheDocument();
   });
 });
 

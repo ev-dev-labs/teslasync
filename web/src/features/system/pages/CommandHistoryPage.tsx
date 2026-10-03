@@ -47,66 +47,66 @@ import {
 const COMMAND_LABELS: Record<string, string> = {
   lock: 'Lock',
   unlock: 'Unlock',
-  wake_up: 'Wake Up',
+  wake_up: 'Wake up',
   climate_on: 'Climate ON',
   climate_off: 'Climate OFF',
-  honk_horn: 'Honk Horn',
-  flash_lights: 'Flash Lights',
-  charge_start: 'Start Charging',
-  charge_stop: 'Stop Charging',
-  set_charge_limit: 'Set Charge Limit',
-  set_temps: 'Set Temperature',
-  actuate_trunk: 'Open/Close Trunk',
-  actuate_frunk: 'Open Frunk',
-  window_control: 'Window Control',
-  sun_roof_control: 'Sunroof Control',
-  remote_start_drive: 'Remote Start',
-  set_sentry_mode: 'Sentry Mode',
-  set_speed_limit: 'Speed Limit',
-  clear_speed_limit: 'Clear Speed Limit',
-  set_valet_mode: 'Valet Mode',
-  reset_valet_pin: 'Reset Valet PIN',
-  schedule_software_update: 'Schedule Update',
-  cancel_software_update: 'Cancel Update',
-  media_toggle_playback: 'Media Play/Pause',
-  media_next_track: 'Next Track',
-  media_prev_track: 'Previous Track',
-  media_volume_up: 'Volume Up',
-  media_volume_down: 'Volume Down',
-  adjust_volume: 'Adjust Volume',
+  honk_horn: 'Honk horn',
+  flash_lights: 'Flash lights',
+  charge_start: 'Start charging',
+  charge_stop: 'Stop charging',
+  set_charge_limit: 'Set charge limit',
+  set_temps: 'Set temperature',
+  actuate_trunk: 'Open/close trunk',
+  actuate_frunk: 'Open frunk',
+  window_control: 'Window control',
+  sun_roof_control: 'Sunroof control',
+  remote_start_drive: 'Remote start',
+  set_sentry_mode: 'Sentry mode',
+  set_speed_limit: 'Speed limit',
+  clear_speed_limit: 'Clear speed limit',
+  set_valet_mode: 'Valet mode',
+  reset_valet_pin: 'Reset valet PIN',
+  schedule_software_update: 'Schedule update',
+  cancel_software_update: 'Cancel update',
+  media_toggle_playback: 'Media play/pause',
+  media_next_track: 'Next track',
+  media_prev_track: 'Previous track',
+  media_volume_up: 'Volume up',
+  media_volume_down: 'Volume down',
+  adjust_volume: 'Adjust volume',
   navigation_request: 'Navigate',
-  share: 'Share to Vehicle',
+  share: 'Share to vehicle',
   trigger_homelink: 'Trigger HomeLink',
-  set_bioweapon_mode: 'Bioweapon Defense',
-  set_climate_keeper: 'Climate Keeper',
-  set_cop_temp: 'Cabin Overheat Protection',
-  dog_mode_on: 'Dog Mode ON',
-  dog_mode_off: 'Dog Mode OFF',
-  camp_mode_on: 'Camp Mode ON',
-  camp_mode_off: 'Camp Mode OFF',
-  set_scheduled_departure: 'Scheduled Departure',
-  set_scheduled_charging: 'Scheduled Charging',
-  set_preconditioning_max: 'Max Preconditioning',
-  auto_conditioning_start: 'Start Preconditioning',
-  auto_conditioning_stop: 'Stop Preconditioning',
-  remote_seat_heater_request: 'Seat Heater',
-  remote_seat_cooler_request: 'Seat Cooler',
-  remote_steering_wheel_heater_request: 'Steering Wheel Heater',
-  close_charge_port: 'Close Charge Port',
-  open_charge_port: 'Open Charge Port',
-  set_pin_to_drive: 'PIN to Drive',
+  set_bioweapon_mode: 'Bioweapon defense',
+  set_climate_keeper: 'Climate keeper',
+  set_cop_temp: 'Cabin overheat protection',
+  dog_mode_on: 'Dog mode ON',
+  dog_mode_off: 'Dog mode OFF',
+  camp_mode_on: 'Camp mode ON',
+  camp_mode_off: 'Camp mode OFF',
+  set_scheduled_departure: 'Scheduled departure',
+  set_scheduled_charging: 'Scheduled charging',
+  set_preconditioning_max: 'Max preconditioning',
+  auto_conditioning_start: 'Start preconditioning',
+  auto_conditioning_stop: 'Stop preconditioning',
+  remote_seat_heater_request: 'Seat heater',
+  remote_seat_cooler_request: 'Seat cooler',
+  remote_steering_wheel_heater_request: 'Steering wheel heater',
+  close_charge_port: 'Close charge port',
+  open_charge_port: 'Open charge port',
+  set_pin_to_drive: 'PIN to drive',
 };
 
 /** Component `t` function type — lets module-level helpers resolve i18n keys. */
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
-/** Curated English fallback (finally a Title-Cased version of the raw command). */
+/** Curated English fallback, with sentence case for unknown commands. */
 function commandFallbackLabel(cmd: string): string {
   return (
     COMMAND_LABELS[cmd] ??
     cmd
       .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .replace(/^\w/, (c) => c.toUpperCase())
   );
 }
 
@@ -136,7 +136,7 @@ const pctLabel = (n: number, total: number): string =>
 
 export default function CommandHistoryPage() {
   const { t } = useTranslation();
-  usePageTitle(t('commandHistory.title', 'Command History'));
+  usePageTitle(t('commandHistory.title', 'Command history'));
 
   const { vehicleId } = useSelectedVehicle();
   const activeVehicleId = vehicleId != null ? String(vehicleId) : undefined;
@@ -326,10 +326,10 @@ export default function CommandHistoryPage() {
 
   return (
     <PageContainer
-      title={t('commandHistory.title', 'Command History')}
+      title={t('commandHistory.title', 'Command history')}
       subtitle={t('commandHistory.subtitle', 'Audit log of all vehicle commands')}
       query={commandsQuery}
-      actions={
+      secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Link
             to="/commands"
@@ -360,7 +360,7 @@ export default function CommandHistoryPage() {
           ) : (
             <>
           <MetricCard
-            label={t('commandHistory.total', 'Total Commands')}
+            label={t('commandHistory.total', 'Total commands')}
             value={stats.total}
             icon={<Terminal className="h-4 w-4" />}
             color="cyan"
@@ -372,7 +372,7 @@ export default function CommandHistoryPage() {
             color="blue"
           />
           <MetricCard
-            label={t('commandHistory.successRate', 'Success Rate')}
+            label={t('commandHistory.successRate', 'Success rate')}
             value={`${stats.successRate}%`}
             icon={<TrendingUp className="h-4 w-4" />}
             color="green"
@@ -384,13 +384,13 @@ export default function CommandHistoryPage() {
             color="red"
           />
           <MetricCard
-            label={t('commandHistory.mostUsed', 'Most Used')}
+            label={t('commandHistory.mostUsed', 'Most used')}
             value={stats.mostUsed ? formatCommandName(stats.mostUsed, t) : '—'}
             icon={<Award className="h-4 w-4" />}
             color="purple"
           />
           <MetricCard
-            label={t('commandHistory.lastSent', 'Last Sent')}
+            label={t('commandHistory.lastSent', 'Last sent')}
             value={
               stats.lastCommand
                 ? formatRelative(stats.lastCommand.created_at, { tz: 'UTC' })
@@ -441,11 +441,11 @@ export default function CommandHistoryPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('commandHistory.dailyActivity', 'Daily Activity')}
+              {t('commandHistory.dailyActivity', 'Daily activity')}
             </PanelTitle>
             <EmbeddedChart
               chartKey="system-command-daily-activity"
-              title={t('commandHistory.dailyActivity', 'Daily Activity')}
+              title={t('commandHistory.dailyActivity', 'Daily activity')}
               ariaLabel={t('commandHistory.dailyActivityAria', 'Stacked bar chart of daily command success and failure counts')}
               loading={isLoading}
               error={error ?? undefined}
@@ -479,7 +479,7 @@ export default function CommandHistoryPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('commandHistory.topCommands', 'Top Commands')}
+              {t('commandHistory.topCommands', 'Top commands')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={240} />
@@ -515,7 +515,7 @@ export default function CommandHistoryPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <div className="mb-4 flex items-center gap-2">
               <History className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-              <PanelTitle>{t('commandHistory.timelineTitle', 'Command Timeline')}</PanelTitle>
+              <PanelTitle>{t('commandHistory.timelineTitle', 'Command timeline')}</PanelTitle>
               <Badge variant="neutral" size="sm" className="ml-auto">
                 {t('commandHistory.showing', '{{count}} commands', { count: filtered.length })}
               </Badge>
@@ -553,7 +553,7 @@ export default function CommandHistoryPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('commandHistory.statusBreakdown', 'Status Breakdown')}
+              {t('commandHistory.statusBreakdown', 'Status breakdown')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={200} />

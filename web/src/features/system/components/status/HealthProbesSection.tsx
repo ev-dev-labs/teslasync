@@ -27,7 +27,7 @@ export function HealthProbesSection() {
     return (
       <AccordionSection
         icon={<HeartPulse className="h-5 w-5" />}
-        title={t('systemStatus.probes.title', 'Health Probes')}
+        title={t('systemStatus.probes.title', 'Health probes')}
         description={t('systemStatus.probes.desc', 'Liveness and readiness checks')}
         defaultOpen
       >
@@ -46,7 +46,7 @@ export function HealthProbesSection() {
     return (
       <AccordionSection
         icon={<HeartPulse className="h-5 w-5" />}
-        title={t('systemStatus.probes.title', 'Health Probes')}
+        title={t('systemStatus.probes.title', 'Health probes')}
         description={t('systemStatus.probes.desc', 'Liveness and readiness checks')}
         defaultOpen
       >
@@ -65,7 +65,7 @@ export function HealthProbesSection() {
   return (
     <AccordionSection
       icon={<HeartPulse className="h-5 w-5" />}
-      title={t('systemStatus.probes.title', 'Health Probes')}
+      title={t('systemStatus.probes.title', 'Health probes')}
       description={t('systemStatus.probes.desc', 'Liveness and readiness checks')}
       badges={
         <>
@@ -99,7 +99,7 @@ export function HealthProbesSection() {
             items={[
               { label: t('systemStatus.database', 'Database'), value: dbStatus },
               { label: t('systemStatus.latency', 'Latency'), value: dbLatency != null ? `${fmtNumber(dbLatency, 1)} ms` : '—' },
-              { label: t('systemStatus.probes.poolConns', 'Pool Connections'), value: fmtInt(pool?.total_conns ?? 0) },
+              { label: t('systemStatus.probes.poolConns', 'Pool connections'), value: fmtInt(pool?.total_conns ?? 0) },
             ]}
           />
         </Card>

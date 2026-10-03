@@ -166,7 +166,7 @@ describe('MQTTInspectorPage — connected happy path', () => {
     setQuery({ data: makeStatus() });
     renderPage();
 
-    expect(document.title).toContain('MQTT Inspector');
+    expect(document.title).toContain('MQTT inspector');
 
     // The opt-in AI card is gated off by the global useSettings stub.
     expect(

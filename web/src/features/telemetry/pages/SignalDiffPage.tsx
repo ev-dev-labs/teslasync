@@ -69,7 +69,7 @@ export function formatSpan(totalSeconds: number): string {
 export default function SignalDiffPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  usePageTitle(t('signalDiff.title', 'Signal Diff'));
+  usePageTitle(t('signalDiff.title', 'Signal diff'));
   const { currentQuery, apply } = useSavedViewUrl();
 
   // Vehicle picker — kept page-local (not the global VehicleSelect) so
@@ -253,10 +253,10 @@ export default function SignalDiffPage() {
 
   return (
     <PageContainer
-      title={t('signalDiff.title', 'Signal Diff')}
+      title={t('signalDiff.title', 'Signal diff')}
       subtitle={t('signalDiff.subtitle', 'Compare signal values between two snapshots in time')}
       query={diffQuery}
-      actions={
+      overflowActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <SavedViewMenu route="/telemetry/signal-diff" currentQuery={currentQuery} onApply={apply} />
           {permalinkUrl ? (

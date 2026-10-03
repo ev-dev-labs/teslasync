@@ -60,6 +60,7 @@ export function BackendStatusSection() {
     () => [
       {
         key: 'status',
+        filterValue: (row) => row.status ?? null,
         header: t('common.status', 'Status'),
         render: (row) => (
           <div className="flex items-center gap-2">
@@ -70,25 +71,35 @@ export function BackendStatusSection() {
       },
       {
         key: 'name',
+        filterValue: (row) => row.name ?? null,
         header: t('systemStatus.backend.component', 'Component'),
         sortable: true,
         render: (row) => <span className="font-medium text-[var(--text-primary)]">{row.name}</span>,
       },
       {
         key: 'latency_ms',
+        filterValue: (row) => row.latency_ms ?? null,
+        filterValueLabel: (_value, row) => `${fmtNumber(row.latency_ms, 1)} ms`,
+        align: 'right',
+        groupStart: true,
         header: t('systemStatus.latency', 'Latency'),
         sortable: true,
         render: (row) => `${fmtNumber(row.latency_ms, 1)} ms`,
       },
       {
         key: 'failures',
+        filterValue: (row) => row.failures ?? null,
+        filterValueLabel: (_value, row) => fmtInt(row.failures),
+        align: 'right',
         header: t('systemStatus.backend.failures', 'Failures'),
         sortable: true,
         render: (row) => <span className={cn(row.failures > 0 && 'text-red-400')}>{fmtInt(row.failures)}</span>,
       },
       {
         key: 'lastCheck',
-        header: t('systemStatus.backend.lastCheck', 'Last Check'),
+        filterValue: (row) => row.lastCheck || null,
+        filterValueLabel: (_value, row) => row.lastCheck ? formatDateTime(row.lastCheck) : '—',
+        header: t('systemStatus.backend.lastCheck', 'Last check'),
         render: (row) => (row.lastCheck ? formatDateTime(row.lastCheck) : '—'),
       },
     ],
@@ -103,7 +114,7 @@ export function BackendStatusSection() {
   return (
     <AccordionSection
       icon={<Server className="h-5 w-5" />}
-      title={t('systemStatus.backend.title', 'Backend Status')}
+      title={t('systemStatus.backend.title', 'Backend status')}
       description={t('systemStatus.backend.desc', 'Component health, database pool, and runtime info')}
       badges={
         componentRows.length > 0 ? (
@@ -127,12 +138,13 @@ export function BackendStatusSection() {
             </AlertBanner>
           )}
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.backend.healthTitle', 'Component Health')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.backend.healthTitle', 'Component health')}</h4>
             <DataTable
               tableId="system:backend-components"
               columns={componentColumns}
               mobileColumns={['status', 'name']}
               data={componentRows}
+              enableValueFilters
               keyExtractor={(r) => r.name}
               compact
               pagination
@@ -142,27 +154,27 @@ export function BackendStatusSection() {
 
           {pool && (
             <div>
-              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.backend.poolTitle', 'Database Connection Pool')}</h4>
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.backend.poolTitle', 'Database connection pool')}</h4>
               <Grid cols={{ default: 2, md: 5 }} gap={3}>
-                <StatCard label={t('systemStatus.backend.maxOpen', 'Max Open')} value={fmtInt(pool.maxOpen)} icon={<Database className="h-4 w-4" />} />
+                <StatCard label={t('systemStatus.backend.maxOpen', 'Max open')} value={fmtInt(pool.maxOpen)} icon={<Database className="h-4 w-4" />} />
                 <StatCard label={t('common.open', 'Open')} value={fmtInt(pool.open)} icon={<Database className="h-4 w-4" />} />
-                <StatCard label={t('systemStatus.backend.inUse', 'In Use')} value={fmtInt(pool.inUse)} icon={<Activity className="h-4 w-4" />} />
+                <StatCard label={t('systemStatus.backend.inUse', 'In use')} value={fmtInt(pool.inUse)} icon={<Activity className="h-4 w-4" />} />
                 <StatCard label={t('systemStatus.idle', 'Idle')} value={fmtInt(pool.idle)} icon={<Clock className="h-4 w-4" />} />
-                <StatCard label={t('systemStatus.backend.waitCount', 'Wait Count')} value={fmtInt(pool.waitCount)} icon={<Gauge className="h-4 w-4" />} />
+                <StatCard label={t('systemStatus.backend.waitCount', 'Wait count')} value={fmtInt(pool.waitCount)} icon={<Gauge className="h-4 w-4" />} />
               </Grid>
             </div>
           )}
 
           {(system || version) && (
             <div>
-              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.backend.runtimeTitle', 'System Runtime')}</h4>
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.backend.runtimeTitle', 'System runtime')}</h4>
               <KVList
                 columns={2}
                 items={[
-                  { label: t('systemStatus.backend.goVersion', 'Go Version'), value: version?.go_version ?? system?.go_version ?? '—' },
+                  { label: t('systemStatus.backend.goVersion', 'Go version'), value: version?.go_version ?? system?.go_version ?? '—' },
                   { label: t('systemStatus.uptime', 'Uptime'), value: formatUptime(version?.uptime_seconds ?? system?.uptime_seconds ?? 0) },
                   { label: t('systemStatus.goroutines', 'Goroutines'), value: fmtInt(version?.goroutines ?? system?.goroutines ?? 0) },
-                  { label: t('systemStatus.backend.osArch', 'OS / Arch'), value: version ? `${version.os} / ${version.arch}` : '—' },
+                  { label: t('systemStatus.backend.osArch', 'OS / arch'), value: version ? `${version.os} / ${version.arch}` : '—' },
                 ]}
               />
             </div>

@@ -23,6 +23,7 @@ export function ShareCardRepresentativeDirectory({
     () => [
       {
         key: 'rank',
+        align: 'right',
         header: t('shareCard.directory.rank', 'Rank'),
         render: (drive) => t('shareCard.directory.rankValue', '#{{rank}}', {
           rank: drive.rank,

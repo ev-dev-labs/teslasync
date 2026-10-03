@@ -53,7 +53,7 @@ export function FleetSetupGuide() {
     [t],
   )
 
-  const title = t('fleetSetup.guide.title', 'How Fleet Setup works') || '—'
+  const title = t('fleetSetup.guide.title', 'How fleet setup works') || '—'
   const subtitle =
     t('fleetSetup.guide.subtitle', 'Connect → domain TLS → subscribe VIN → stream on wake.') || '—'
 

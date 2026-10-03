@@ -32,7 +32,7 @@ import { analyzeShareCard } from '../lib/shareCard';
 
 export default function ShareCardPage() {
   const { t } = useTranslation();
-  usePageTitle(t('shareCard.title', 'Share Card Studio'));
+  usePageTitle(t('shareCard.title', 'Share card studio'));
   const { vehicleId } = useSelectedVehicle();
   const timezone = useTimezone('vehicle');
   const display = useShareCardDisplay();
@@ -73,17 +73,13 @@ export default function ShareCardPage() {
 
   return (
     <PageContainer
-      title={t('shareCard.title', 'Share Card Studio')}
+      title={t('shareCard.title', 'Share card studio')}
       subtitle={t(
         'shareCard.subtitle',
         'Compose a local, evidence-backed SVG without overstating selected-window coverage',
       )}
       query={vehicleId != null ? drivesQuery : undefined}
       copyLink
-      actions={(
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-        </div>
-      )}
     >
       <FadeIn><ShareCardEvidenceLedger {...sectionProps} /></FadeIn>
       <FadeIn delay={0.02}><ShareCardSourceScopeLedger {...sectionProps} /></FadeIn>

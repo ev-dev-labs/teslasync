@@ -75,14 +75,14 @@ export function LiveMonitorKpiBand({
         icon={<Activity className="h-5 w-5" aria-hidden="true" />}
       />
       <MetricCard
-        label={t('liveMonitor.bufferSize', 'Buffer Size')}
+        label={t('liveMonitor.bufferSize', 'Buffer size')}
         value={fmtInt(safeBufferCount)}
         subtitle={`/ ${fmtInt(safeMax)} · ${fmtPercent(fillPct, 0)}`}
         color="blue"
         icon={<Boxes className="h-5 w-5" aria-hidden="true" />}
       />
       <MetricCard
-        label={t('liveMonitor.uniqueSignals', 'Unique Signals')}
+        label={t('liveMonitor.uniqueSignals', 'Unique signals')}
         value={fmtInt(uniqueSignals ?? 0)}
         color="purple"
         icon={<Fingerprint className="h-5 w-5" aria-hidden="true" />}

@@ -215,7 +215,7 @@ describe('TelemetryPipelineCard', () => {
     expect(within(row).getByText(/12s ago/)).toBeInTheDocument()
     // Polling-engine disabled is rendered as informational only (not amber warning)
     expect(screen.getByText(/polling engine off \(streaming-only\)/)).toBeInTheDocument()
-    expect(screen.queryByText(/polling engine disabled/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Polling engine disabled/)).not.toBeInTheDocument()
   })
 
   it('uses the most recent timestamp when both stream and poll have data', () => {
@@ -318,8 +318,8 @@ describe('TelemetryPipelineCard', () => {
       />,
     )
     expect(screen.getByRole('link', { name: 'Daily Driver' })).toHaveAttribute('href', '/vehicles/42')
-    expect(screen.getByRole('link', { name: /Open Telemetry Coverage/ })).toHaveAttribute('href', '/admin/telemetry/coverage')
-    expect(screen.getByRole('link', { name: /MQTT Inspector/ })).toHaveAttribute('href', '/mqtt-inspector')
+    expect(screen.getByRole('link', { name: /Open telemetry coverage/ })).toHaveAttribute('href', '/admin/telemetry/coverage')
+    expect(screen.getByRole('link', { name: /MQTT inspector/ })).toHaveAttribute('href', '/mqtt-inspector')
     expect(screen.getByRole('link', { name: /All vehicles/ })).toHaveAttribute('href', '/vehicles')
   })
 })

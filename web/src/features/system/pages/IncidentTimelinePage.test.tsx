@@ -106,7 +106,7 @@ function baseIncident(overrides?: Partial<Incident>): Incident {
     title: 'API gateway intermittent 502s',
     description:
       'Customers report bursty 502 responses from the public API gateway.',
-    severity: 'major',
+    severity: 'Major',
     status: 'monitoring',
     source: 'auto',
     affected_components: ['api-gateway', 'edge-cache'],
@@ -263,7 +263,7 @@ describe('IncidentTimelinePage', () => {
 
     // The error branch must win over the not-found empty state.
     expect(
-      screen.queryByText(/Incident not found/i),
+      screen.queryByText(/Incident Not found/i),
     ).not.toBeInTheDocument();
   });
 
@@ -272,9 +272,9 @@ describe('IncidentTimelinePage', () => {
 
     renderAt();
 
-    expect(screen.getByText(/Incident not found/i)).toBeInTheDocument();
+    expect(screen.getByText(/Incident Not found/i)).toBeInTheDocument();
     const link = screen.getByRole('link', {
-      name: /Back to System Status/i,
+      name: /Back to System status/i,
     });
     expect(link).toHaveAttribute('href', '/system-status');
   });

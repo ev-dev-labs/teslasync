@@ -75,7 +75,7 @@ export default function IncidentTimelinePage() {
 
   if (isLoading) {
     return (
-      <PageContainer title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.loading', 'Loading incident…')} actions={backAction}>
+      <PageContainer title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.loading', 'Loading incident…')} secondaryActions={backAction}>
         <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} height={84} />
@@ -91,7 +91,7 @@ export default function IncidentTimelinePage() {
 
   if (error || !incident) {
     return (
-      <PageContainer title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.notFound', 'Not found')} actions={backAction}>
+      <PageContainer title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.notFound', 'Not found')} secondaryActions={backAction}>
         <FadeIn>
           <GlassPanel className="p-4 sm:p-5">
             {error ? (
@@ -106,7 +106,7 @@ export default function IncidentTimelinePage() {
                 icon={<AlertCircle className="h-8 w-8" aria-hidden="true" />}
                 title={t('incidentTimeline.notFoundTitle', 'Incident not found')}
                 message={t('incidentTimeline.notFoundBody', "It may have been deleted or you don't have access.")}
-                actionTo={{ label: t('incidentTimeline.backToStatus', 'Back to System Status'), to: '/system-status' }}
+                actionTo={{ label: t('incidentTimeline.backToStatus', 'Back to system status'), to: '/system-status' }}
               />
             )}
           </GlassPanel>
@@ -144,7 +144,7 @@ export default function IncidentTimelinePage() {
     <PageContainer
       title={incident.title}
       subtitle={`${t('incidentTimeline.idPrefix', 'Incident')} #${incident.id}`}
-      actions={backAction}
+      secondaryActions={backAction}
       query={incidentQuery}
     >
       {/* 1 — KPI band */}

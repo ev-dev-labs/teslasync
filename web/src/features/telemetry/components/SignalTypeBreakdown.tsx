@@ -59,7 +59,7 @@ export function SignalTypeBreakdown({
       <div className="mb-3 flex items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <PieChartIcon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('liveMonitor.typeBreakdown', 'Value Types')}
+          {t('liveMonitor.typeBreakdown', 'Value types')}
         </PanelTitle>
         {total > 0 ? <Caption>{fmtInt(total)}</Caption> : null}
       </div>

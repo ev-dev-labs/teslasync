@@ -76,7 +76,7 @@ describe('TransportAgreementPanel', () => {
       />,
     );
 
-    expect(screen.getByRole('region', { name: 'HTTP / MQTT Agreement' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'HTTP / MQTT agreement' })).toBeInTheDocument();
     expect(screen.getAllByText('99.5%').length).toBeGreaterThan(0);
     expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
     expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
@@ -217,7 +217,7 @@ describe('TransportAgreementPanel seven-day limit', () => {
     );
 
     expect(screen.queryByText('Agreement is limited to seven days')).toBeNull();
-    expect(screen.getByRole('region', { name: 'HTTP / MQTT Agreement' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'HTTP / MQTT agreement' })).toBeInTheDocument();
   });
 });
 

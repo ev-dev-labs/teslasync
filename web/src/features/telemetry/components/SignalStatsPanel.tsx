@@ -123,6 +123,8 @@ export function SignalStatsPanel({
     {
       key: 'signal',
       header: t('signalStats.signal', 'Signal'),
+      filterValue: (s) => s.signal,
+      filterValueLabel: (_value, s) => s.signal,
       render: (s) => {
         const idx = signalIndex?.[s.signal] ?? positionIndex.get(s.signal) ?? 0;
         const color = CHART_COLORS[Math.max(0, idx) % CHART_COLORS.length];
@@ -140,12 +142,15 @@ export function SignalStatsPanel({
         );
       },
     },
-    { key: 'min', header: t('signalStats.min', 'Min'), render: (s) => renderNumeric(s.min, 'text-[var(--text-secondary)]') },
-    { key: 'max', header: t('signalStats.max', 'Max'), render: (s) => renderNumeric(s.max, 'text-[var(--text-secondary)]') },
-    { key: 'avg', header: t('signalStats.avg', 'Avg'), render: (s) => renderNumeric(s.avg, 'text-[var(--text-primary)]') },
+    { key: 'min', header: t('signalStats.min', 'Min'), align: 'right', groupStart: true, filterValue: (s) => Number.isFinite(s.min) ? s.min : null, filterValueLabel: (_value, s) => Number.isFinite(s.min) ? fmtNumber(s.min) : '—', render: (s) => renderNumeric(s.min, 'text-[var(--text-secondary)]') },
+    { key: 'max', header: t('signalStats.max', 'Max'), align: 'right', filterValue: (s) => Number.isFinite(s.max) ? s.max : null, filterValueLabel: (_value, s) => Number.isFinite(s.max) ? fmtNumber(s.max) : '—', render: (s) => renderNumeric(s.max, 'text-[var(--text-secondary)]') },
+    { key: 'avg', header: t('signalStats.avg', 'Avg'), align: 'right', filterValue: (s) => Number.isFinite(s.avg) ? s.avg : null, filterValueLabel: (_value, s) => Number.isFinite(s.avg) ? fmtNumber(s.avg) : '—', render: (s) => renderNumeric(s.avg, 'text-[var(--text-primary)]') },
     {
       key: 'count',
       header: t('signalStats.count', 'Count'),
+      align: 'right',
+      filterValue: (s) => s.count,
+      filterValueLabel: (_value, s) => fmtInt(s.count),
       render: (s) => (
         <span className="font-mono text-[var(--text-muted)]">{fmtInt(s.count)}</span>
       ),
@@ -156,7 +161,7 @@ export function SignalStatsPanel({
     <FadeIn>
       <GlassPanel className={cn('p-4 sm:p-5', className)}>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <SectionTitle>{title ?? t('signalStats.title', 'Stats Summary')}</SectionTitle>
+          <SectionTitle>{title ?? t('signalStats.title', 'Stats summary')}</SectionTitle>
           {emptyCount > 0 && (
             <Toggle
               checked={hideEmpty}
@@ -175,6 +180,8 @@ export function SignalStatsPanel({
         ) : visibleStats.length > 0 ? (
           <DataTable
             tableId="telemetry:signal-stats"
+            enableValueFilters
+            filterData={displayStats}
             columns={columns}
             mobileColumns={['signal', 'avg', 'count']}
             data={visibleStats}

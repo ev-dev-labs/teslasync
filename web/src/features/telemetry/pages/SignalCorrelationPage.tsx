@@ -27,7 +27,7 @@ const HOURS = 24;
 
 export default function SignalCorrelationPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalCorrelation.title', 'Signal Correlation'));
+  usePageTitle(t('signalCorrelation.title', 'Signal correlation'));
 
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
@@ -118,7 +118,7 @@ export default function SignalCorrelationPage() {
   }, [result]);
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalCorrelation.title', 'Signal Correlation')} />;
+    return <NoVehicleSelected pageTitle={t('signalCorrelation.title', 'Signal correlation')} />;
   }
 
   const historyAHasData = historyA.data !== undefined;
@@ -149,7 +149,7 @@ export default function SignalCorrelationPage() {
 
   return (
     <PageContainer
-      title={t('signalCorrelation.title', 'Signal Correlation')}
+      title={t('signalCorrelation.title', 'Signal correlation')}
       subtitle={t(
         'signalCorrelation.subtitle',
         'Sweep one telemetry signal against another across time shifts to find not just whether they move together, but which one moves first',
@@ -162,7 +162,7 @@ export default function SignalCorrelationPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <GitCompareArrows className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalCorrelation.pick', 'Choose Two Signals')}
+            {t('signalCorrelation.pick', 'Choose two signals')}
             <HelpTooltip
               size="sm"
               i18nKey="help.signalCorrelation.pick"
@@ -239,7 +239,7 @@ export default function SignalCorrelationPage() {
           ) : (
             <>
               <MetricCard
-                label={t('signalCorrelation.bestR', 'Peak Correlation')}
+                label={t('signalCorrelation.bestR', 'Peak correlation')}
                 value={result != null ? result.bestR.toFixed(3) : '—'}
                 subtitle={t('signalCorrelation.zeroLag', 'at zero lag: {{r}}', {
                   r: result != null ? result.zeroLagR.toFixed(3) : '—',
@@ -253,7 +253,7 @@ export default function SignalCorrelationPage() {
                 }}
               />
               <MetricCard
-                label={t('signalCorrelation.bestLag', 'Best Lag')}
+                label={t('signalCorrelation.bestLag', 'Best lag')}
                 value={result != null ? `${result.bestLagS} s` : '—'}
                 subtitle={leadLabel}
                 icon={<Timer className="h-5 w-5" />}
@@ -275,7 +275,7 @@ export default function SignalCorrelationPage() {
                 color={result?.significant ? 'green' : 'amber'}
               />
               <MetricCard
-                label={t('signalCorrelation.effectiveN', 'Effective Samples')}
+                label={t('signalCorrelation.effectiveN', 'Effective samples')}
                 value={result != null ? Math.round(result.effectiveN) : '—'}
                 subtitle={t('signalCorrelation.rawN', 'from {{n}} raw points', {
                   n: result?.bestN ?? 0,
@@ -309,7 +309,7 @@ export default function SignalCorrelationPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('signalCorrelation.correlogram', 'Lagged Correlogram')}
+            title={t('signalCorrelation.correlogram', 'Lagged correlogram')}
             subtitle={t(
               'signalCorrelation.correlogramHint',
               'Correlation at every time shift; the dashed lines are the significance threshold',
@@ -373,7 +373,7 @@ export default function SignalCorrelationPage() {
       {/* 4 — Normalised overlay */}
       <FadeIn delay={0.3}>
         <ChartContainer
-          title={t('signalCorrelation.overlay', 'Normalised Overlay')}
+          title={t('signalCorrelation.overlay', 'Normalised overlay')}
           subtitle={t(
             'signalCorrelation.overlayHint',
             'Both signals rescaled to 0–1 so their shapes can be compared directly',
@@ -434,7 +434,7 @@ export default function SignalCorrelationPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Timer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalCorrelation.reading', 'Reading the Result')}
+            {t('signalCorrelation.reading', 'Reading the result')}
           </PanelTitle>
           {result == null ? (
             <EmptyState /* no-action: the interpretation follows from the correlogram above. */

@@ -90,11 +90,12 @@ export function OperationsSection() {
 
   const auditColumns = useMemo<Column<AuditLog>[]>(
     () => [
-      { key: 'created_at', header: t('systemStatus.operations.time', 'Time'), render: (row) => formatDateTime(row.created_at) },
-      { key: 'action', header: t('systemStatus.operations.action', 'Action'), render: (row) => <Badge variant="info" size="sm">{row.action ?? '—'}</Badge> },
-      { key: 'resource', header: t('systemStatus.operations.resource', 'Resource'), render: (row) => <span className="font-mono text-xs">{row.resource ?? '—'}</span> },
+      { key: 'created_at', filterValue: (row) => row.created_at ?? null, filterValueLabel: (_value, row) => formatDateTime(row.created_at), header: t('systemStatus.operations.time', 'Time'), render: (row) => formatDateTime(row.created_at) },
+      { key: 'action', filterValue: (row) => row.action ?? null, header: t('systemStatus.operations.action', 'Action'), render: (row) => <Badge variant="info" size="sm">{row.action ?? '—'}</Badge> },
+      { key: 'resource', filterValue: (row) => row.resource ?? null, header: t('systemStatus.operations.resource', 'Resource'), render: (row) => <span className="font-mono text-xs">{row.resource ?? '—'}</span> },
       {
         key: 'details', header: t('systemStatus.operations.details', 'Details'),
+        filterValue: (row) => row.details ?? null,
         render: (row) => <span className="text-xs text-[var(--text-muted)] truncate max-w-[250px] block">{row.details ?? '—'}</span>,
       },
     ],
@@ -125,15 +126,15 @@ export function OperationsSection() {
       ) : (
         <div className="space-y-6">
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.operations.notifTitle', 'Notification Delivery')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.operations.notifTitle', 'Notification delivery')}</h4>
             {statsError ? (
               <QueryError error={statsErrorObj} onRetry={() => void refetchStats()} />
             ) : notifStats ? (
               <>
                 <Grid cols={{ default: 2, md: 4 }} gap={3} className="mb-4">
-                  <MetricCard label={t('systemStatus.operations.totalSent', 'Total Sent')} value={fmtInt(notifStats.total_sent ?? 0)} icon={<Send className="h-4 w-4" />} color="cyan" />
+                  <MetricCard label={t('systemStatus.operations.totalSent', 'Total sent')} value={fmtInt(notifStats.total_sent ?? 0)} icon={<Send className="h-4 w-4" />} color="cyan" />
                   <MetricCard label={t('systemStatus.failed', 'Failed')} value={fmtInt(notifStats.failed ?? 0)} icon={<XCircle className="h-4 w-4" />} color="red" />
-                  <MetricCard label={t('systemStatus.operations.successRate', 'Success Rate')} value={fmtPercent(successRate, 1)} icon={<CheckCircle className="h-4 w-4" />} color="green" />
+                  <MetricCard label={t('systemStatus.operations.successRate', 'Success rate')} value={fmtPercent(successRate, 1)} icon={<CheckCircle className="h-4 w-4" />} color="green" />
                   <MetricCard label={t('systemStatus.operations.channels', 'Channels')} value={`${notifStats.enabled_channels ?? 0}/${notifStats.total_channels ?? 0}`} icon={<Bell className="h-4 w-4" />} color="purple" />
                 </Grid>
 
@@ -169,6 +170,7 @@ export function OperationsSection() {
             ) : (
               <DataTable
                 tableId="system:operations-notifications"
+                enableValueFilters={false}
                 columns={notifLogColumns}
                 mobileColumns={['status', 'title']}
                 data={notifRows}
@@ -181,7 +183,7 @@ export function OperationsSection() {
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.operations.auditTitle', 'Audit Log')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('systemStatus.operations.auditTitle', 'Audit log')}</h4>
             {auditError ? (
               <QueryError error={auditErrorObj} onRetry={() => void refetchAudit()} />
             ) : (
@@ -190,6 +192,7 @@ export function OperationsSection() {
                 columns={auditColumns}
                 mobileColumns={['action', 'resource']}
                 data={auditRows}
+                enableValueFilters
                 keyExtractor={(l) => l.id}
                 compact
                 pagination={{ defaultPageSize: 50 }}

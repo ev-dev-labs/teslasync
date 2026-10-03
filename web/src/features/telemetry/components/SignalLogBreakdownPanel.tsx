@@ -64,7 +64,7 @@ export function SignalLogBreakdownPanel({
       <GlassPanel className={cn('p-4 sm:p-5', className)}>
         <PanelTitle className="mb-3 flex items-center gap-2">
           <PieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('signalLog.composition', 'Value Composition')}
+          {t('signalLog.composition', 'Value composition')}
         </PanelTitle>
 
         {loading ? (

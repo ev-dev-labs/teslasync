@@ -177,13 +177,13 @@ export function LiveSignalTail({
               icon={<Activity className="h-4 w-4" />}
             />
             <StatCard
-              label={t('liveMonitor.bufferSize', 'Buffer Size')}
+              label={t('liveMonitor.bufferSize', 'Buffer size')}
               value={items.length}
               unit={`/ ${bufferMax ?? 0}`}
               icon={<ArrowUpDown className="h-4 w-4" />}
             />
             <StatCard
-              label={t('liveMonitor.uniqueSignals', 'Unique Signals')}
+              label={t('liveMonitor.uniqueSignals', 'Unique signals')}
               value={uniqueSignals}
               icon={<Activity className="h-4 w-4" />}
             />

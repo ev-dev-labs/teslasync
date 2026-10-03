@@ -97,7 +97,7 @@ export default function SharingTripsPage() {
         'sharing.trips.subtitle',
         'Pick a recent trip to share as a static link, postcard, or image.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={tripsQuery}
     >
       {/* 1 — KPI band: full-width responsive metric grid. On a hard error
@@ -218,7 +218,7 @@ export default function SharingTripsPage() {
               <Text as="p" size="sm" color="secondary" className="max-w-prose">
                 {t(
                   'sharing.trips.staticHint.body',
-                  'Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click "Share", and copy the public link \u2014 anyone with the link can view the static card, no AI required.',
+                  'Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click "share", and copy the public link \u2014 anyone with the link can view the static card, no AI required.',
                 )}
               </Text>
             </GlassPanel>

@@ -39,7 +39,7 @@ const ACTIVITY_LIMIT = 200;
 
 export default function MyActivityPage() {
   const { t } = useTranslation();
-  usePageTitle(t('activity.myActivity.title', 'My Activity'));
+  usePageTitle(t('activity.myActivity.title', 'My activity'));
 
   const { start, end } = useRangeState({
     persistKey: 'my-activity.range',
@@ -75,7 +75,7 @@ export default function MyActivityPage() {
 
   return (
     <PageContainer
-      title={t('activity.myActivity.title', 'My Activity')}
+      title={t('activity.myActivity.title', 'My activity')}
       subtitle={t(
         'activity.myActivity.subtitle',
         'Recent actions you have taken in TeslaSync.',

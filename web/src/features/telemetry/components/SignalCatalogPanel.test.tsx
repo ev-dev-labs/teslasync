@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -98,7 +98,7 @@ function renderPanel(props?: Partial<SignalCatalogPanelProps>) {
 
 // StatCard renders <label span> then a sibling value row; hop across.
 function statValue(label: string): string {
-  const labelEl = screen.getByText(label);
+  const labelEl = screen.getAllByText(label).find((element) => !element.closest('table'))!;
   return labelEl.parentElement?.nextElementSibling?.textContent?.trim() ?? '';
 }
 
@@ -168,11 +168,11 @@ describe('formatStaleness', () => {
 describe('SignalCatalogPanel — summary + rows', () => {
   it('renders the four KPI cards partitioned by staleness category', () => {
     renderPanel();
-    expect(statValue('Total Signals')).toBe('4');
+    expect(statValue('Total signals')).toBe('4');
     // "Active" card counts the active category (fresh + aging).
     expect(statValue('Active (<30s)')).toBe('2');
     expect(statValue('Stale (>5min)')).toBe('1');
-    expect(statValue('Never Received')).toBe('1');
+    expect(statValue('Never received')).toBe('1');
   });
 
   it('renders every signal row with a per-window status badge', () => {
@@ -183,12 +183,12 @@ describe('SignalCatalogPanel — summary + rows', () => {
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByText('Aging')).toBeInTheDocument();
     expect(screen.getByText('Stale')).toBeInTheDocument();
-    expect(screen.getByText('Never received')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('Never received')).toBeInTheDocument();
   });
 
   it('hides the summary band when showSummary is false', () => {
     renderPanel({ showSummary: false });
-    expect(screen.queryByText('Total Signals')).toBeNull();
+    expect(screen.queryByText('Total signals')).toBeNull();
     // Rows still render.
     expect(screen.getByText('vehicle_speed')).toBeInTheDocument();
   });
@@ -240,7 +240,7 @@ describe('SignalCatalogPanel — search, filter & sort', () => {
 
   it('narrows to stale+never and reflects pressed state via aria-pressed', () => {
     renderPanel();
-    const staleBtn = screen.getByRole('button', { name: 'Stale Only' });
+    const staleBtn = screen.getByRole('button', { name: 'Stale only' });
     expect(staleBtn).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(staleBtn);
@@ -254,7 +254,7 @@ describe('SignalCatalogPanel — search, filter & sort', () => {
 
   it('narrows to the active category only', () => {
     renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: 'Active Only' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Active only' }));
     const names = signalNames();
     expect(names).toContain('vehicle_speed');
     expect(names).toContain('battery_level');
@@ -313,8 +313,8 @@ describe('SignalCatalogPanel — invalid timestamp hardening', () => {
     h.gaps.data = { flaky_signal: { value: 1, timestamp: 'not-a-real-date' } };
     renderPanel();
 
-    expect(statValue('Never Received')).toBe('1');
+    expect(statValue('Never received')).toBe('1');
     expect(statValue('Active (<30s)')).toBe('0');
-    expect(screen.getByText('Never received')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('Never received')).toBeInTheDocument();
   });
 });

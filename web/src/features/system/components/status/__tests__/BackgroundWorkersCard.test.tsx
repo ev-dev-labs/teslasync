@@ -30,12 +30,12 @@ function makeHealth(workers: WorkerStatus[]): WorkersHealth {
 describe('BackgroundWorkersCard', () => {
   it('renders an empty state when no workers are reporting', () => {
     harness(<BackgroundWorkersCard health={makeHealth([])} />)
-    expect(screen.getByText(/No background workers reporting/i)).toBeInTheDocument()
+    expect(screen.getByText(/No Background workers reporting/i)).toBeInTheDocument()
   })
 
   it('renders an empty state when health is undefined', () => {
     harness(<BackgroundWorkersCard health={undefined} />)
-    expect(screen.getByText(/No background workers reporting/i)).toBeInTheDocument()
+    expect(screen.getByText(/No Background workers reporting/i)).toBeInTheDocument()
   })
 
   it('renders one row per worker for the single-instance default', () => {

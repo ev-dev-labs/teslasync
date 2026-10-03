@@ -193,7 +193,7 @@ describe('SignalTrendPage partial-data contract', () => {
     expect(screen.getByText('Cached · refresh failed')).toBeInTheDocument();
     expect(screen.getByText('Selected signal history')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
-    expect(screen.getByText('Robust Baseline & Forecast Band')).toBeInTheDocument();
+    expect(screen.getByText('Robust baseline & forecast band')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
     expect(H.signals.current.refetch).toHaveBeenCalledTimes(1);

@@ -39,7 +39,7 @@ export default function ServiceIntelligencePage() {
   const warrantyQuery = useWarrantyOutlook(vehicleId);
   const catalogQuery = useCommunicationsCatalogStatus();
   const catalogImport = useImportCommunicationsCatalog();
-  usePageTitle(t('serviceIntelligence.page.title', 'Recall & Service Intelligence'));
+  usePageTitle(t('serviceIntelligence.page.title', 'Recall & service intelligence'));
 
   const retry = useCallback(() => {
     void query.refetch();
@@ -71,19 +71,19 @@ export default function ServiceIntelligencePage() {
           )
         }
       >
-        {t('serviceIntelligence.actions.evidencePack', 'Open Service Evidence Pack')}
+        {t('serviceIntelligence.actions.evidencePack', 'Open service evidence pack')}
       </Button>
     </div>
   );
 
   return (
     <PageContainer
-      title={t('serviceIntelligence.page.title', 'Recall & Service Intelligence')}
+      title={t('serviceIntelligence.page.title', 'Recall & service intelligence')}
       subtitle={t(
         'serviceIntelligence.page.subtitle',
         'Compare decoded vehicle context and observed signal patterns with NHTSA safety records.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={selected ? query : undefined}
     >
       <AlertBanner

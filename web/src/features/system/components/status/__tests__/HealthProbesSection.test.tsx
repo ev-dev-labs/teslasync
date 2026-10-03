@@ -81,7 +81,7 @@ describe('HealthProbesSection', () => {
     mockGetExtendedHealth.mockReturnValue(new Promise(() => {}))
     const { container } = renderSection()
 
-    expect(screen.getByText('Health Probes')).toBeInTheDocument()
+    expect(screen.getByText('Health probes')).toBeInTheDocument()
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(2)
     // The probe cards ("/healthz") must not be present until data resolves.
     expect(screen.queryByText(/healthz/)).toBeNull()

@@ -27,7 +27,7 @@ const HOURS = 72;
 
 export default function SignalChangePointsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalChangePoints.title', 'Signal Change Points'));
+  usePageTitle(t('signalChangePoints.title', 'Signal change points'));
 
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
@@ -85,7 +85,7 @@ export default function SignalChangePointsPage() {
   );
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalChangePoints.title', 'Signal Change Points')} />;
+    return <NoVehicleSelected pageTitle={t('signalChangePoints.title', 'Signal change points')} />;
   }
 
   const historyHasData = historyQuery.data !== undefined;
@@ -97,10 +97,10 @@ export default function SignalChangePointsPage() {
 
   return (
     <PageContainer
-      title={t('signalChangePoints.title', 'Signal Change Points')}
+      title={t('signalChangePoints.title', 'Signal change points')}
       subtitle={t(
         'signalChangePoints.subtitle',
-        'Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (Signal Trend) and drive-week regime clustering',
+        'Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (signal trend) and drive-week regime clustering',
       )}
       query={[signalsQuery, historyQuery]}
       dataSources={dataSources}
@@ -110,7 +110,7 @@ export default function SignalChangePointsPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <GitCommitHorizontal className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalChangePoints.pick', 'Choose a Signal')}
+            {t('signalChangePoints.pick', 'Choose a signal')}
             <HelpTooltip
               size="sm"
               i18nKey="help.signalChangePoints.pick"
@@ -154,7 +154,7 @@ export default function SignalChangePointsPage() {
           ) : (
             <>
               <MetricCard
-                label={t('signalChangePoints.count', 'Change Points')}
+                label={t('signalChangePoints.count', 'Change points')}
                 value={hasData ? summary.changePoints.length : '—'}
                 subtitle={t('signalChangePoints.minSegment', 'min segment {{n}} samples', { n: summary.minSegmentSamples })}
                 icon={<GitCommitHorizontal className="h-5 w-5" />}
@@ -165,7 +165,7 @@ export default function SignalChangePointsPage() {
                 }}
               />
               <MetricCard
-                label={t('signalChangePoints.biggest', 'Biggest Shift')}
+                label={t('signalChangePoints.biggest', 'Biggest shift')}
                 value={biggest != null ? fmtNumber(biggest.magnitude, 3) : '—'}
                 subtitle={
                   biggest != null
@@ -186,7 +186,7 @@ export default function SignalChangePointsPage() {
                 color="blue"
               />
               <MetricCard
-                label={t('signalChangePoints.samples', 'Samples Analyzed')}
+                label={t('signalChangePoints.samples', 'Samples analyzed')}
                 value={summary.samples}
                 subtitle={t('signalChangePoints.noiseScale', 'noise scale {{n}}', { n: fmtNumber(summary.globalSpread, 3) })}
                 icon={<Waypoints className="h-5 w-5" />}
@@ -209,7 +209,7 @@ export default function SignalChangePointsPage() {
         ) : (
           // chart-legend-audit:skip two named series (actual + segment level) kept always visible together so the step-level context is never accidentally hidden
           <ChartContainer
-            title={t('signalChangePoints.timeline', 'Regime Timeline')}
+            title={t('signalChangePoints.timeline', 'Regime timeline')}
             subtitle={t('signalChangePoints.timelineHint', 'Raw values against each segment\u2019s mean; dashed markers are detected change points')}
             ariaLabel={t('signalChangePoints.timelineAria', 'Line chart of raw signal values overlaid with segment mean levels and detected abrupt change points')}
             loading={isLoading}
@@ -244,7 +244,7 @@ export default function SignalChangePointsPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <ArrowUpDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalChangePoints.reading', 'Reading the Result')}
+            {t('signalChangePoints.reading', 'Reading the result')}
           </PanelTitle>
           {!hasData ? (
             <EmptyState /* no-action: the interpretation follows from the detected segments above. */

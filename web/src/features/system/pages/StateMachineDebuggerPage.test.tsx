@@ -241,7 +241,7 @@ describe('StateMachineDebuggerPage — query branches', () => {
     expect(
       within(screen.getByRole('region', { name: 'FSM summary metrics' })).queryByRole('button', { name: 'Retry' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('Transition Log')).toBeInTheDocument();
+    expect(screen.getByText('Transition log')).toBeInTheDocument();
   });
 
   it('renders honest zeros and empty states (no retries) when the queries succeed empty', () => {

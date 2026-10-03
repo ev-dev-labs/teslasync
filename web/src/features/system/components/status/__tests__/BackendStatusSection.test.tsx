@@ -106,10 +106,10 @@ describe('BackendStatusSection', () => {
     const { container } = harness()
 
     // The accordion header always renders; the body is skeletons only.
-    expect(screen.getByText('Backend Status')).toBeInTheDocument()
+    expect(screen.getByText('Backend status')).toBeInTheDocument()
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2)
-    expect(screen.queryByText('Component Health')).not.toBeInTheDocument()
-    expect(screen.queryByText('Database Connection Pool')).not.toBeInTheDocument()
+    expect(screen.queryByText('Component health')).not.toBeInTheDocument()
+    expect(screen.queryByText('Database connection pool')).not.toBeInTheDocument()
   })
 
   it('renders every panel for a fully-healthy fleet and prefers version info over extHealth.system', async () => {
@@ -122,9 +122,9 @@ describe('BackendStatusSection', () => {
     const { container } = harness()
 
     // Component health table with all five headers.
-    expect(await screen.findByText('Component Health')).toBeInTheDocument()
+    expect(await screen.findByText('Component health')).toBeInTheDocument()
     expect(screen.getByRole('table')).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /^Status\b/ })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Component' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Latency' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Failures' })).toBeInTheDocument()
@@ -143,8 +143,8 @@ describe('BackendStatusSection', () => {
     expect(badge).toHaveClass('bg-green-100')
 
     // DB connection pool stat cards.
-    expect(screen.getByText('Database Connection Pool')).toBeInTheDocument()
-    for (const label of ['Max Open', 'Open', 'In Use', 'Idle', 'Wait Count']) {
+    expect(screen.getByText('Database connection pool')).toBeInTheDocument()
+    for (const label of ['Max open', 'Open', 'In use', 'Idle', 'Wait count']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
     expect(screen.getByText('100')).toBeInTheDocument()
@@ -172,7 +172,7 @@ describe('BackendStatusSection', () => {
 
     harness()
 
-    expect(await screen.findByText('Component Health')).toBeInTheDocument()
+    expect(await screen.findByText('Component health')).toBeInTheDocument()
 
     // Partial health → warning variant with the correct count.
     const badge = screen.getByText(/^1\/2 healthy$/)
@@ -198,14 +198,14 @@ describe('BackendStatusSection', () => {
 
     harness()
 
-    expect(await screen.findByText('Component Health')).toBeInTheDocument()
+    expect(await screen.findByText('Component health')).toBeInTheDocument()
     // Go version falls back to extHealth.components.system.go_version.
     expect(await screen.findByText('go1.24.0')).toBeInTheDocument()
     // Uptime + goroutines also come from extHealth.components.system.
     expect(screen.getByText('1d 2h 3m')).toBeInTheDocument()
     expect(screen.getByText('137')).toBeInTheDocument()
     // OS / Arch has no extHealth fallback → em-dash placeholder.
-    const osRow = screen.getByText('OS / Arch').closest('div') as HTMLElement
+    const osRow = screen.getByText('OS / arch').closest('div') as HTMLElement
     expect(within(osRow).getByText('—')).toBeInTheDocument()
   })
 
@@ -222,7 +222,7 @@ describe('BackendStatusSection', () => {
     // No components → the header carries no "N/N healthy" badge.
     expect(screen.queryByText(/^\d+\/\d+ healthy$/)).not.toBeInTheDocument()
     // Pool section still renders independently.
-    expect(screen.getByText('Database Connection Pool')).toBeInTheDocument()
+    expect(screen.getByText('Database connection pool')).toBeInTheDocument()
   })
 
   it('does not crash when the health payload omits the components map (null-safety guard)', async () => {
@@ -239,7 +239,7 @@ describe('BackendStatusSection', () => {
     harness()
 
     expect(await screen.findByText('No components found')).toBeInTheDocument()
-    expect(screen.getByText('Backend Status')).toBeInTheDocument()
+    expect(screen.getByText('Backend status')).toBeInTheDocument()
   })
 
   it('surfaces an error banner and empty table when the health endpoint fails', async () => {
@@ -254,7 +254,7 @@ describe('BackendStatusSection', () => {
     // The table degrades to its empty state rather than a blank panel.
     expect(screen.getByText('No components found')).toBeInTheDocument()
     // Pool section is hidden when there is no pool data.
-    expect(screen.queryByText('Database Connection Pool')).not.toBeInTheDocument()
+    expect(screen.queryByText('Database connection pool')).not.toBeInTheDocument()
   })
 
   it('is a keyboard-operable accordion that collapses and re-opens its content', async () => {
@@ -266,7 +266,7 @@ describe('BackendStatusSection', () => {
 
     harness()
 
-    expect(await screen.findByText('Component Health')).toBeInTheDocument()
+    expect(await screen.findByText('Component health')).toBeInTheDocument()
 
     // Header exposes an accessible expanded toggle (defaultOpen).
     const header = screen.getByRole('button', { expanded: true })
@@ -274,11 +274,11 @@ describe('BackendStatusSection', () => {
 
     // Click collapses the body.
     fireEvent.click(header)
-    expect(screen.queryByText('Component Health')).not.toBeInTheDocument()
+    expect(screen.queryByText('Component health')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { expanded: false })).toHaveAttribute('aria-expanded', 'false')
 
     // Enter re-opens it (keyboard operability).
     fireEvent.keyDown(screen.getByRole('button', { expanded: false }), { key: 'Enter' })
-    expect(await screen.findByText('Component Health')).toBeInTheDocument()
+    expect(await screen.findByText('Component health')).toBeInTheDocument()
   })
 })

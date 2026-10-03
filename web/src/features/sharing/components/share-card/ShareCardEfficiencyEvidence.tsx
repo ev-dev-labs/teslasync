@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import type { ShareCardCoverage } from '../../lib/shareCard';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
@@ -72,16 +72,14 @@ export function ShareCardEfficiencyEvidence({
               color="amber"
             />
           </Grid>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <Table className="mt-4" aria-label={t('shareCard.efficiency.title', 'Efficiency, regen, and field coverage')}>
+            <tbody>
             {(Object.keys(analysis.coverage) as Array<keyof ShareCardCoverage>).map((key) => {
               const field = analysis.coverage[key];
               return (
-                <div
-                  key={key}
-                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-                >
-                  <Text as="p" variant="label">{coverageLabels[key]}</Text>
-                  <Text as="p" variant="caption" className="mt-1">
+                <tr key={key}>
+                  <th scope="row"><Text variant="label">{coverageLabels[key]}</Text></th>
+                  <td className="text-right"><Text variant="caption">
                     {t(
                       'shareCard.efficiency.coverageCounts',
                       '{{valid}} valid · {{missing}} missing',
@@ -90,11 +88,12 @@ export function ShareCardEfficiencyEvidence({
                         missing: field.missingRows,
                       },
                     )}
-                  </Text>
-                </div>
+                  </Text></td>
+                </tr>
               );
             })}
-          </div>
+            </tbody>
+          </Table>
         </ShareCardSectionBody>
       </GlassPanel>
     </section>

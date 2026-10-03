@@ -207,16 +207,16 @@ describe('DBHealthPage — populated view', () => {
 
     // Page scaffolding.
     expect(
-      screen.getByRole('heading', { name: 'DB Health Dashboard', level: 1 }),
+      screen.getByRole('heading', { name: 'DB health dashboard', level: 1 }),
     ).toBeInTheDocument();
 
     // KPI band — real aggregates.
-    expect(metricValue('Total DB Size')).toBe('360.0 MB');
+    expect(metricValue('Total DB size')).toBe('360.0 MB');
     expect(metricValue('Tables')).toBe('3');
-    expect(metricValue('Total Rows')).toBe('905,100'); // 100 + 5,000 + 900,000
-    expect(metricValue('Large Tables')).toBe('1'); // only zebra_events > 100 MB
+    expect(metricValue('Total rows')).toBe('905,100'); // 100 + 5,000 + 900,000
+    expect(metricValue('Large tables')).toBe('1'); // only zebra_events > 100 MB
     expect(metricValue('Migration')).toBe('185');
-    expect(metricValue('Pool Usage')).toBe('20%'); // 5 / 25
+    expect(metricValue('Pool usage')).toBe('20%'); // 5 / 25
   });
 
   it('renders the chart region and the migration-status panel', () => {
@@ -225,14 +225,14 @@ describe('DBHealthPage — populated view', () => {
     // The bar chart exposes its accessible name via role="img".
     expect(
       screen.getByRole('img', {
-        name: /database table sizes/i,
+        name: /database Table sizes/i,
       }),
     ).toBeInTheDocument();
 
     // Migration panel: current version + clean status + recent list entry.
-    const versionRow = screen.getByText('Current Version').closest('div')!;
+    const versionRow = screen.getByText('Current version').closest('div')!;
     expect(within(versionRow).getByText('185')).toBeInTheDocument();
-    expect(screen.getByText('Recent Migrations')).toBeInTheDocument();
+    expect(screen.getByText('Recent migrations')).toBeInTheDocument();
     expect(screen.getByText(/v185 si_canonical/)).toBeInTheDocument();
     // "Clean" appears both as the KPI subtitle and the panel status.
     expect(screen.getAllByText('Clean').length).toBeGreaterThanOrEqual(1);
@@ -243,7 +243,7 @@ describe('DBHealthPage — populated view', () => {
 
     // Detail grid carries the full column set + all three rows.
     const grid = tablesGrid();
-    expect(within(grid).getByText('Last Vacuum')).toBeInTheDocument();
+    expect(within(grid).getByText('Last vacuum')).toBeInTheDocument();
     expect(within(grid).getByText('zebra_events')).toBeInTheDocument();
     expect(within(grid).getByText('alpha_drives')).toBeInTheDocument();
     expect(within(grid).getByText('mid_charging')).toBeInTheDocument();
@@ -251,9 +251,9 @@ describe('DBHealthPage — populated view', () => {
     expect(within(grid).getByText('300.0 MB')).toBeInTheDocument();
 
     // Connection-pool panel: labelled stats + the usage progressbar.
-    expect(screen.getByText('Max Open')).toBeInTheDocument();
+    expect(screen.getByText('Max open')).toBeInTheDocument();
     expect(screen.getByText('120ms')).toBeInTheDocument();
-    const bar = screen.getByRole('progressbar', { name: 'Pool Usage' });
+    const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '20');
     expect(bar).toHaveAttribute('aria-valuemax', '100');
   });
@@ -309,9 +309,9 @@ describe('DBHealthPage — loading', () => {
 
     // Page heading still renders; the KPI labels do not exist yet.
     expect(
-      screen.getByRole('heading', { name: 'DB Health Dashboard', level: 1 }),
+      screen.getByRole('heading', { name: 'DB health dashboard', level: 1 }),
     ).toBeInTheDocument();
-    expect(kpiRegion().queryByText('Total DB Size')).toBeNull();
+    expect(kpiRegion().queryByText('Total DB size')).toBeNull();
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
   });
 });
@@ -377,9 +377,9 @@ describe('DBHealthPage — empty states', () => {
     expect(screen.getByText('No tables found')).toBeInTheDocument();
     // KPI band reads 0 rather than hiding.
     expect(metricValue('Tables')).toBe('0');
-    expect(metricValue('Total Rows')).toBe('0');
-    expect(metricValue('Large Tables')).toBe('0');
-    expect(metricValue('Total DB Size')).toBe('0 B');
+    expect(metricValue('Total rows')).toBe('0');
+    expect(metricValue('Large tables')).toBe('0');
+    expect(metricValue('Total DB size')).toBe('0 B');
   });
 
   it('shows the migration + pool "unavailable" placeholders when their data is missing', () => {
@@ -400,7 +400,7 @@ describe('DBHealthPage — empty states', () => {
     renderPage();
 
     // The panel still renders its version/status; only the list is empty.
-    expect(screen.getByText('Current Version')).toBeInTheDocument();
+    expect(screen.getByText('Current version')).toBeInTheDocument();
     expect(screen.getByText('No migration history available')).toBeInTheDocument();
   });
 });
@@ -417,11 +417,11 @@ describe('DBHealthPage — hardening', () => {
 
     renderPage();
 
-    const bar = screen.getByRole('progressbar', { name: 'Pool Usage' });
+    const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '0');
     const fill = bar.querySelector('div');
     expect(fill).toHaveStyle({ width: '0%' });
-    expect(metricValue('Pool Usage')).toBe('0%');
+    expect(metricValue('Pool usage')).toBe('0%');
   });
 
   it('flips the usage bar to the danger color once the pool is ≥80% busy', () => {
@@ -431,10 +431,10 @@ describe('DBHealthPage — hardening', () => {
 
     renderPage();
 
-    const bar = screen.getByRole('progressbar', { name: 'Pool Usage' });
+    const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '88');
     expect(bar.querySelector('div')?.className).toContain('bg-rose-400');
-    expect(metricValue('Pool Usage')).toBe('88%');
+    expect(metricValue('Pool usage')).toBe('88%');
   });
 
   it('honors the backend numeric `version` field over currentVersion, plus dirty + pending', () => {
@@ -478,7 +478,7 @@ describe('DBHealthPage — hardening', () => {
 
     renderPage();
 
-    expect(metricValue('Total DB Size')).toBe('2.00 GB');
+    expect(metricValue('Total DB size')).toBe('2.00 GB');
     const grid = tablesGrid();
     expect(within(grid).getByText('512 B')).toBeInTheDocument();
     expect(within(grid).getByText('2.0 KB')).toBeInTheDocument();

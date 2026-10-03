@@ -72,7 +72,7 @@ const STALE_BACKUP_DAYS = 7
 
 export default function SystemStatusPage() {
   const { t } = useTranslation()
-  usePageTitle(t('systemStatus.title', 'System Status'))
+  usePageTitle(t('systemStatus.title', 'System status'))
   const qc = useQueryClient()
   const location = useLocation()
   const operatorDetails = useRef<HTMLDetailsElement>(null)
@@ -404,22 +404,22 @@ export default function SystemStatusPage() {
 
   return (
     <PageContainer
-      title={t('systemStatus.title', 'System Status')}
+      title={t('systemStatus.title', 'System status')}
       subtitle={t('systemStatus.subtitle', 'At-a-glance health for your TeslaSync instance')}
       loading={false}
       error={null}
-      actions={
+      metadataActions={<LiveStatusPill state={liveState} lastUpdateAt={liveLastUpdate} now={now} />}
+      secondaryActions={
         <div className="flex items-center gap-2">
-          <LiveStatusPill state={liveState} lastUpdateAt={liveLastUpdate} now={now} />
           <Button
             variant="ghost"
             size="sm"
             onClick={handleRefresh}
             disabled={isFetching}
             className="gap-2"
-            aria-label={t('systemStatus.refreshAria', 'Refresh (R)')}
+            aria-label={t('systemStatus.refreshAria', 'Refresh (r)')}
             aria-busy={isFetching}
-            title="Press R to refresh"
+            title="Press r to refresh"
           >
             <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
             {t('common.refresh', 'Refresh')}
@@ -481,7 +481,7 @@ export default function SystemStatusPage() {
                 <GlassPanel className="p-4 sm:p-5">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                     <SectionTitle>{t('systemStatus.currentComponents', 'Current component status')}</SectionTitle>
-                    <DetailLink to="/live-monitor" label={t('systemStatus.openLiveMonitor', 'Open Live Monitor')} />
+                    <DetailLink to="/live-monitor" label={t('systemStatus.openLiveMonitor', 'Open live monitor')} />
                   </div>
                   {components.length > 0 ? (
                     <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -687,7 +687,7 @@ export default function SystemStatusPage() {
                 { label: t('systemStatus.totalRows', 'Total rows'), value: totalRows > 0 ? fmtInt(totalRows) : '—' },
               ]}
             />
-            <DetailLink to="/db-health" label={t('systemStatus.openDbHealth', 'Open DB Health')} />
+            <DetailLink to="/db-health" label={t('systemStatus.openDbHealth', 'Open DB health')} />
           </AccordionSection>
         </section>
 
@@ -781,7 +781,7 @@ export default function SystemStatusPage() {
                   to="/docs/status-api"
                   className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
                 >
-                  {t('systemStatus.stableStatusApi', 'Stable Status API for your own dashboards')} →
+                  {t('systemStatus.stableStatusApi', 'Stable status API for your own dashboards')} →
                 </Link>
               </div>
             </section>

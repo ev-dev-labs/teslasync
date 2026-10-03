@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -271,6 +271,18 @@ beforeEach(() => {
 });
 
 describe('ShareCardPage persistent composition', () => {
+  it('retains all six deterministic slots and all field and calendar coverage evidence as table rows', () => {
+    renderPage();
+
+    const inventory = within(screen.getByTestId('share-card-line-inventory')).getByRole('table');
+    expect(within(inventory).getAllByRole('rowheader')).toHaveLength(6);
+    const fields = within(screen.getByTestId('share-card-efficiency-evidence')).getByRole('table');
+    expect(within(fields).getAllByRole('rowheader')).toHaveLength(8);
+    const calendar = within(screen.getByTestId('share-card-coverage-disclosure')).getByRole('table');
+    expect(within(calendar).getAllByRole('rowheader')).toHaveLength(4);
+    expect(screen.getByText(/A sub-cap response is not a guarantee/)).toBeInTheDocument();
+  });
+
   it('mounts all 14 evidence section shells without duplicate header controls', () => {
     renderPage();
     for (const id of SECTION_IDS) {
@@ -311,7 +323,7 @@ describe('ShareCardPage query states', () => {
   it('distinguishes initial loading from empty evidence', () => {
     h.query = query(undefined);
     renderPage();
-    expect(screen.getAllByLabelText('Loading Share Card evidence').length).toBeGreaterThan(5);
+    expect(screen.getAllByLabelText('Loading share card evidence').length).toBeGreaterThan(5);
     expect(screen.queryByText(/valid empty array/)).not.toBeInTheDocument();
     expect(screen.getAllByTestId('chart-export-data').every(
       (node) => node.textContent === '[]',

@@ -104,7 +104,7 @@ describe('TopSignalsPanel — header', () => {
     const { container } = render(<TopSignalsPanel signals={[]} />);
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Most Active Signals' }),
+      screen.getByRole('heading', { level: 3, name: 'Most active signals' }),
     ).toBeInTheDocument();
     // The header glyph is decorative so a screen reader announces the title,
     // not the icon.

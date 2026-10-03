@@ -35,7 +35,7 @@ function heatClass(contribution: number, maximum: number): string {
 }
 export default function SignalMutualInformationPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalMutualInformation.title', 'Signal Mutual Information'));
+  usePageTitle(t('signalMutualInformation.title', 'Signal mutual information'));
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
   const [signalA, setSignalA] = useState('');
@@ -98,7 +98,7 @@ export default function SignalMutualInformationPage() {
     [result, t],
   );
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalMutualInformation.title', 'Signal Mutual Information')} />;
+    return <NoVehicleSelected pageTitle={t('signalMutualInformation.title', 'Signal mutual information')} />;
   }
   const historyAHasData = historyA.data !== undefined;
   const historyBHasData = historyB.data !== undefined;
@@ -120,7 +120,7 @@ export default function SignalMutualInformationPage() {
   );
   return (
     <PageContainer
-      title={t('signalMutualInformation.title', 'Signal Mutual Information')}
+      title={t('signalMutualInformation.title', 'Signal mutual information')}
       subtitle={t(
         'signalMutualInformation.subtitle',
         'Detect nonlinear dependence between quantile states after robust cadence alignment — not linear signal correlation',
@@ -132,7 +132,7 @@ export default function SignalMutualInformationPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Network className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalMutualInformation.selection.title', 'Signals to Compare')}
+            {t('signalMutualInformation.selection.title', 'Signals to compare')}
           </PanelTitle>
           {signalsQuery.isError ? (
             <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
@@ -195,7 +195,7 @@ export default function SignalMutualInformationPage() {
           ) : (
             <>
               <MetricCard
-                label={t('signalMutualInformation.kpis.samples', 'Aligned Samples')}
+                label={t('signalMutualInformation.kpis.samples', 'Aligned samples')}
                 value={result != null ? fmtNumber(result.alignedCount, 0) : '—'}
                 subtitle={t('signalMutualInformation.kpis.cadence', '{{seconds}} s robust cadence', {
                   seconds: result != null ? fmtNumber(result.cadenceMs / 1_000, 1) : '—',
@@ -204,7 +204,7 @@ export default function SignalMutualInformationPage() {
                 color="cyan"
               />
               <MetricCard
-                label={t('signalMutualInformation.kpis.mi', 'Mutual Information')}
+                label={t('signalMutualInformation.kpis.mi', 'Mutual information')}
                 value={result != null ? fmtNumber(result.mutualInformation, 3) : '—'}
                 subtitle={t('signalMutualInformation.kpis.bits', 'bits of shared state information')}
                 icon={<Grid3X3 className="h-5 w-5" />}
@@ -220,7 +220,7 @@ export default function SignalMutualInformationPage() {
                 color="blue"
               />
               <MetricCard
-                label={t('signalMutualInformation.kpis.signal', 'Permutation Test')}
+                label={t('signalMutualInformation.kpis.signal', 'Permutation test')}
                 value={result == null
                   ? '—'
                   : result.significant
@@ -243,7 +243,7 @@ export default function SignalMutualInformationPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('signalMutualInformation.contributions.title', 'Top Joint-State Contributions')}
+            title={t('signalMutualInformation.contributions.title', 'Top joint-state contributions')}
             subtitle={t(
               'signalMutualInformation.contributions.subtitle',
               'Positive cells occur more often together than their marginal frequencies predict',
@@ -284,7 +284,7 @@ export default function SignalMutualInformationPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Grid3X3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalMutualInformation.heatmap.title', 'Contribution Heatmap')}
+            {t('signalMutualInformation.heatmap.title', 'Contribution heatmap')}
           </PanelTitle>
           {result == null ? (
             <EmptyState /* no-action: the two signal selectors above are the relevant next action. */

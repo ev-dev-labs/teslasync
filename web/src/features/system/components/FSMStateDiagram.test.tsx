@@ -45,7 +45,7 @@ describe('FSMStateDiagram', () => {
     render(<FSMStateDiagram fsmType="all" transitions={[]} />);
 
     expect(
-      screen.getByRole('heading', { name: 'State Diagram' }),
+      screen.getByRole('heading', { name: 'State diagram' }),
     ).toBeInTheDocument();
     // EmptyState renders with role="status".
     expect(screen.getByRole('status')).toBeInTheDocument();

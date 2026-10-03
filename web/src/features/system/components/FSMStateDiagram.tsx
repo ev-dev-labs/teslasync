@@ -51,7 +51,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
   }, [fsmType, latestState]);
 
   const stateSummary = describeStateMachine({
-    label: t('fsm.stateDiagram', 'State Diagram'),
+    label: t('fsm.stateDiagram', 'State diagram'),
     current: latestState || t('fsm.noObservedState', 'No observed state'),
     next: reachableFromLatest,
   });
@@ -59,7 +59,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
   if (!states || !edges) {    return (
       <GlassPanel className="p-5">
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
-          {t('fsm.stateDiagram', 'State Diagram')}
+          {t('fsm.stateDiagram', 'State diagram')}
         </h2>
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.selectFsmType', 'Select a specific FSM type to view its state diagram')} />
       </GlassPanel>
@@ -69,7 +69,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
   return (
     <GlassPanel className="p-5">
       <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-        {t('fsm.stateDiagram', 'State Diagram')}
+        {t('fsm.stateDiagram', 'State diagram')}
       </h2>
       {/* A11Y-10: the diagram encodes the machine's position with colour
           and left-to-right placement, both invisible to assistive tech.

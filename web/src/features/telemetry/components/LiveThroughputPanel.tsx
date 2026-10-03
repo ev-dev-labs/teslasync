@@ -71,7 +71,7 @@ export function LiveThroughputPanel({
             className={connected ? 'h-4 w-4 text-rose-400' : 'h-4 w-4 text-[var(--text-muted)]'}
             aria-hidden="true"
           />
-          {t('liveMonitor.throughputTitle', 'Signal Throughput')}
+          {t('liveMonitor.throughputTitle', 'Signal throughput')}
         </PanelTitle>
         <Caption className="sm:ml-auto">
           {t('liveMonitor.throughputNow', 'Now')}: {fmtInt(rate ?? 0)}/s ·{' '}
@@ -87,7 +87,7 @@ export function LiveThroughputPanel({
       </div>
 
       <EmbeddedChart
-        title={t('liveMonitor.throughputTitle', 'Signal Throughput')}
+        title={t('liveMonitor.throughputTitle', 'Signal throughput')}
         ariaLabel={t(
           'liveMonitor.throughputAria',
           'Live signals per second over the recent window',

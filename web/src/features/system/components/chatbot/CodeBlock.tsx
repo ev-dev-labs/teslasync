@@ -46,7 +46,7 @@ export function CodeBlock({ language, text, children, className }: CodeBlockProp
         className,
       )}
     >
-      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-1.5 text-2xs uppercase tracking-wider text-[var(--text-secondary)]">
+      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-1.5 text-2xs tracking-wider text-[var(--text-secondary)]">
         <span className="font-mono">{langLabel}</span>
         <CopyButton text={rawText} iconOnly variant="ghost" size="sm" />
       </div>

@@ -74,7 +74,7 @@ export function FleetSetupReadiness({ publicKey }: FleetSetupReadinessProps) {
           },
           {
             label: t('fleetSetup.readiness.ca', 'Default telemetry CA'),
-            value: t('fleetSetup.readiness.caValue', 'Let’s Encrypt ISRG Root X1'),
+            value: t('fleetSetup.readiness.caValue', 'Let’s encrypt ISRG root X1'),
           },
         ]}
       />

@@ -62,7 +62,7 @@ const PER_PAGE_OPTIONS = [
 
 export default function SignalExplorerPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalExplorer.title', 'Signal Explorer'));
+  usePageTitle(t('signalExplorer.title', 'Signal explorer'));
   const { preferences } = useProductPreferences();
 
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
@@ -233,9 +233,9 @@ export default function SignalExplorerPage() {
 
   return (
     <PageContainer
-      title={t('signalExplorer.title', 'Signal Explorer')}
+      title={t('signalExplorer.title', 'Signal explorer')}
       subtitle={t('signalExplorer.subtitle', 'Visualise signal history with chart and stats — or stream live')}
-      actions={
+      metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           {isLive ? (
             <Badge variant={live.connected ? 'success' : 'danger'} dot>
@@ -276,14 +276,14 @@ export default function SignalExplorerPage() {
                 color="cyan"
               />
               <MetricCard
-                label={isLive ? t('signalExplorer.kpi.liveEvents', 'Live Events') : t('signalExplorer.kpi.records', 'Records')}
+                label={isLive ? t('signalExplorer.kpi.liveEvents', 'Live events') : t('signalExplorer.kpi.records', 'Records')}
                 value={fmtInt(pointCount)}
                 subtitle={isLive ? t('signalExplorer.kpi.streaming', 'Streaming') : t('signalExplorer.kpi.loaded', 'Loaded')}
                 icon={<Database className="h-5 w-5" aria-hidden="true" />}
                 color="purple"
               />
               <MetricCard
-                label={t('signalExplorer.kpi.timeSpan', 'Time Span')}
+                label={t('signalExplorer.kpi.timeSpan', 'Time span')}
                 value={
                   isLive
                     ? t('signalExplorer.kpi.live', 'Live')
@@ -325,7 +325,7 @@ export default function SignalExplorerPage() {
                 <div className="flex flex-wrap items-end gap-2 sm:gap-3">
                   {!isLive ? (
                     <Select
-                      label={t('signalExplorer.perPage', 'Per Page')}
+                      label={t('signalExplorer.perPage', 'Per page')}
                       value={String(perPage)}
                       onChange={(e) => {
                         // Atomic update — resetting to page 1 alongside the new
@@ -386,14 +386,14 @@ export default function SignalExplorerPage() {
               <GlassPanel className="p-4 sm:p-5">
                 <EmptyState
                   icon={<Database className="h-10 w-10" aria-hidden="true" />}
-                  title={t('signalExplorer.start.title', 'Pick signals and click Explore')}
+                  title={t('signalExplorer.start.title', 'Pick signals and click explore')}
                   message={t(
                     'signalExplorer.start.message',
-                    'Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.',
+                    'Choose up to 5 signals, set a date range, then hit explore — or toggle live to stream in real time.',
                   )}
                   description={t(
                     'signalExplorer.start.description',
-                    'Historical queries use the selected range; Live begins streaming new samples without changing it.',
+                    'Historical queries use the selected range; live begins streaming new samples without changing it.',
                   )}
                 />
               </GlassPanel>

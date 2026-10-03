@@ -129,8 +129,8 @@ export function RepairFormActions({
           className="min-h-11"
         >
           {isDrive
-            ? t('dataRepair.action.closeDrive', 'Close Drive')
-            : t('dataRepair.action.closeSession', 'Close Session')}
+            ? t('dataRepair.action.closeDrive', 'Close drive')
+            : t('dataRepair.action.closeSession', 'Close session')}
         </Button>
         <Button
           variant="danger"

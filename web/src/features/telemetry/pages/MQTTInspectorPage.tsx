@@ -65,42 +65,58 @@ function buildVehicleColumns(
     {
       key: 'vin',
       header: t('mqtt.vin', 'VIN'),
+      filterValue: (v) => v.vin ?? null,
       render: (v) => <Text as="span" mono color="primary">{v.vin}</Text>,
     },
     {
       key: 'state',
       header: t('mqtt.state', 'State'),
+      filterValue: (v) => v.state ?? null,
       render: (v) => v.state
         ? <Badge variant={v.state === 'online' ? 'success' : 'neutral'} size="sm">{v.state}</Badge>
         : <Text as="span" color="muted">—</Text>,
     },
     {
       key: 'signals',
+      groupStart: true,
       header: t('mqtt.signals', 'Signals'),
+      align: 'right',
+      filterValue: (v) => v.signalCount ?? null,
+      filterValueLabel: (_value, v) => v.signalCount == null ? '—' : fmtInt(v.signalCount),
       className: 'text-right',
-      render: (v) => <Text as="span" mono color="secondary">{fmtInt(v.signalCount ?? 0)}</Text>,
+      render: (v) => <Text as="span" mono color="secondary">{v.signalCount == null ? '—' : fmtInt(v.signalCount)}</Text>,
     },
     {
       key: 'batches',
       header: t('mqtt.batches', 'Batches'),
+      align: 'right',
+      filterValue: (v) => v.batchCount ?? null,
+      filterValueLabel: (_value, v) => v.batchCount == null ? '—' : fmtInt(v.batchCount),
       className: 'text-right',
-      render: (v) => <Text as="span" mono color="secondary">{fmtInt(v.batchCount ?? 0)}</Text>,
+      render: (v) => <Text as="span" mono color="secondary">{v.batchCount == null ? '—' : fmtInt(v.batchCount)}</Text>,
     },
     {
       key: 'sigPerSec',
       header: t('mqtt.sigPerSec', 'Sig/sec'),
+      align: 'right',
+      filterValue: (v) => v.signalsPerSecond ?? null,
+      filterValueLabel: (_value, v) => v.signalsPerSecond == null ? '—' : fmtNumber(v.signalsPerSecond),
       className: 'text-right',
       render: (v) => <Text as="span" mono color="secondary">{v.signalsPerSecond != null ? fmtNumber(v.signalsPerSecond) : '—'}</Text>,
     },
     {
       key: 'lastReceived',
-      header: t('mqtt.lastReceived', 'Last Received'),
+      groupStart: true,
+      header: t('mqtt.lastReceived', 'Last received'),
       className: 'text-right',
       render: (v) => <Text as="span" color="muted" className="whitespace-nowrap">{v.lastReceived ? formatRelative(v.lastReceived) : '—'}</Text>,
     },
     {
       key: 'status',
       header: t('mqtt.status', 'Status'),
+      align: 'center',
+      filterValue: (v) => isVehicleStale(v),
+      filterValueLabel: (_value, v) => isVehicleStale(v) ? t('mqtt.stale', 'Stale') : t('mqtt.live', 'Live'),
       className: 'text-center',
       render: (v) => {
         const isStale = isVehicleStale(v);
@@ -117,7 +133,7 @@ function buildVehicleColumns(
 export default function MQTTInspectorPage() {
   const { t } = useTranslation();
   const { formatTime, formatRelative } = useDateFormat();
-  usePageTitle(t('mqtt.title', 'MQTT Inspector'));
+  usePageTitle(t('mqtt.title', 'MQTT inspector'));
 
   const { data: status, isLoading, error } = useMQTTStatus();
 
@@ -164,9 +180,9 @@ export default function MQTTInspectorPage() {
 
   return (
     <PageContainer
-      title={t('mqtt.title', 'MQTT Inspector')}
+      title={t('mqtt.title', 'MQTT inspector')}
       subtitle={t('mqtt.subtitle', 'MQTT connection status and streaming telemetry')}
-      actions={
+      metadataActions={
         <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end sm:gap-3">
           <Caption className="inline-flex items-center gap-1">
             <RefreshCw className="h-3 w-3" aria-hidden="true" />
@@ -195,19 +211,19 @@ export default function MQTTInspectorPage() {
           className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         >
           <MetricCard
-            label={t('mqtt.streamingVehicles', 'Streaming Vehicles')}
+            label={t('mqtt.streamingVehicles', 'Streaming vehicles')}
             value={isLoading ? '—' : vehicles.length}
             icon={<Radio className="h-5 w-5" />}
             color="cyan"
           />
           <MetricCard
-            label={t('mqtt.totalSignals', 'Total Signals')}
+            label={t('mqtt.totalSignals', 'Total signals')}
             value={isLoading ? '—' : fmtInt(totalSignals)}
             icon={<Activity className="h-5 w-5" />}
             color="green"
           />
           <MetricCard
-            label={t('mqtt.totalBatches', 'Total Batches')}
+            label={t('mqtt.totalBatches', 'Total batches')}
             value={isLoading ? '—' : fmtInt(totalBatches)}
             icon={<Layers className="h-5 w-5" />}
             color="purple"
@@ -231,13 +247,13 @@ export default function MQTTInspectorPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mqtt.signalThroughput', 'Signal Throughput')}
+              {t('mqtt.signalThroughput', 'Signal throughput')}
             </PanelTitle>
             {error && !status ? (
               <QueryError error={error} />
             ) : (
               <EmbeddedChart
-                title={t('mqtt.signalThroughput', 'Signal Throughput')}
+                title={t('mqtt.signalThroughput', 'Signal throughput')}
                 ariaLabel={t('mqtt.throughputAria', 'MQTT signal throughput over time')}
                 loading={isLoading && throughputHistory.length === 0}
                 error={!status && error != null ? error : undefined}
@@ -300,7 +316,7 @@ export default function MQTTInspectorPage() {
                   </div>
                 </div>
                 <div>
-                  <Caption className="mb-1.5 block">{t('mqtt.topicPatterns', 'Topic Patterns')}</Caption>
+                  <Caption className="mb-1.5 block">{t('mqtt.topicPatterns', 'Topic patterns')}</Caption>
                   {topics.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {topics.map((topic) => (
@@ -337,7 +353,7 @@ export default function MQTTInspectorPage() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <PanelTitle className="flex items-center gap-2">
               <Radio className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mqtt.vehicleBreakdown', 'Vehicle Breakdown')}
+              {t('mqtt.vehicleBreakdown', 'Vehicle breakdown')}
               {vehicles.length > 0 && (
                 <Text as="span" variant="caption" className="font-normal">
                   {vehicles.length} {t('mqtt.vehicles', 'vehicles')}
@@ -361,6 +377,7 @@ export default function MQTTInspectorPage() {
           ) : (
             <DataTable<VehicleTelemetry>
               tableId="telemetry:mqtt-inspector"
+              enableValueFilters
               columns={vehicleColumns}
               mobileColumns={['vin', 'status', 'lastReceived']}
               data={vehicles}

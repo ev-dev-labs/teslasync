@@ -360,7 +360,7 @@ describe('SystemStatusPage — healthy populated view', () => {
   it('renders the page scaffolding, hero, sticky chrome, chip bar and live pill', () => {
     renderPage()
 
-    expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     // healthy + fresh → the real StatusHero shows its default headline.
     expect(screen.getByText('All systems operational')).toBeInTheDocument()
     // subline reports recency, not an error/stale banner.
@@ -484,7 +484,7 @@ describe('SystemStatusPage — operator action items', () => {
     expect(a.getByText('Update available — v1.3.0')).toBeInTheDocument()
     expect(a.getByText('Tesla token expires in 3 day(s)')).toBeInTheDocument()
     expect(a.getByText('Last backup is 10 days old')).toBeInTheDocument()
-    expect(a.queryByText(/Tesla API estimated cost/)).not.toBeInTheDocument()
+    expect(a.queryByText(/Tesla API Estimated cost/)).not.toBeInTheDocument()
     expect(a.getByText('2 of 3 workers unhealthy')).toBeInTheDocument()
     expect(a.getByText('export, geocode')).toBeInTheDocument()
   })
@@ -543,7 +543,7 @@ describe('SystemStatusPage — loading / stale / error', () => {
 
     expect(screen.getByTestId('status-skeleton')).toBeInTheDocument()
     // scaffolding stays, rich content does not.
-    expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     expect(screen.queryByText('All systems operational')).not.toBeInTheDocument()
     expect(screen.queryByTestId('sticky-compact-hero')).not.toBeInTheDocument()
   })
@@ -627,7 +627,7 @@ describe('SystemStatusPage — missing data placeholders', () => {
     renderPage()
 
     // The page still mounts (crash guard: Object.entries(health.components ?? {})).
-    expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     expect(screen.getByText('Current component status is unavailable.')).toBeInTheDocument()
     expect(healthRegion().getByText('no data')).toBeInTheDocument()
   })
@@ -637,7 +637,7 @@ describe('SystemStatusPage — interactions', () => {
   it('fans the header refresh button out to refetch + invalidate + reconnect', () => {
     renderPage()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh (R)' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh (r)' }))
 
     expect(refetchHealth).toHaveBeenCalledTimes(1)
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['system-status'] })
@@ -678,7 +678,7 @@ describe('SystemStatusPage — interactions', () => {
     )
     renderPage()
 
-    const btn = screen.getByRole('button', { name: 'Refresh (R)' })
+    const btn = screen.getByRole('button', { name: 'Refresh (r)' })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('aria-busy', 'true')
   })

@@ -182,7 +182,7 @@ export function SignalCompareControls({
                   size="sm"
                   aria-pressed={active}
                   onClick={() => onCategoryChange(active ? null : c.id)}
-                  className="rounded-shape-sm px-2.5 text-xs uppercase tracking-wide"
+                  className="rounded-shape-sm px-2.5 text-xs tracking-wide"
                 >
                   {t(c.labelKey, c.defaultLabel)}
                 </Button>

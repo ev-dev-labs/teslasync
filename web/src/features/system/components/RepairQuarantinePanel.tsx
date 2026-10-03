@@ -150,6 +150,7 @@ export function RepairQuarantinePanel({
             ) : null}
             <DataTable
               tableId="data-repair:quarantine"
+              enableValueFilters={false}
               columns={columns}
               data={records}
               keyExtractor={(item) => item.id}

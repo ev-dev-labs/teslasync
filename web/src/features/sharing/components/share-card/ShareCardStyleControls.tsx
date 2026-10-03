@@ -15,7 +15,7 @@ export function ShareCardStyleControls({
   return (
     <section
       data-testid="share-card-style-controls"
-      aria-label={t('shareCard.style.aria', 'Share Card SVG style controls')}
+      aria-label={t('shareCard.style.aria', 'Share card SVG style controls')}
     >
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="mb-3 flex items-center gap-2">

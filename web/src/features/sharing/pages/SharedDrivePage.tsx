@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import {
   MapPin, Clock, Zap, Battery, Mountain, Gauge, TrendingUp,
 } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
-import { Grid } from '@/components/layout';
+import { GlassPanel, Logo, Text } from '@/components/ui';
+import { Grid, PageHeader } from '@/components/layout';
 import { StatCard } from '@/components/data-display';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import {
@@ -19,7 +19,6 @@ import {
   MapTileLayer,
   type LatLngExpression,
 } from '@/components/maps';
-import Logo from '@/components/ui/Logo';
 import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
@@ -81,18 +80,12 @@ function ExpiredShareView() {
     <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
       <div className="text-center space-y-4 max-w-md px-4">
         <div className="w-16 h-16 mx-auto rounded-full bg-white/[0.03] flex items-center justify-center">
-          <MapPin className="h-8 w-8 text-[var(--text-muted)]" />
+          <MapPin className="h-8 w-8 text-[var(--text-muted)]" aria-hidden="true" />
         </div>
-        <h1
-          className="text-xl font-bold text-[var(--text-primary)] outline-none"
-          tabIndex={-1}
-          data-route-focus-target="true"
-        >
-          {t('share.expired.title', 'Share Link Unavailable')}
-        </h1>
-        <p className="text-[var(--text-secondary)] text-sm">
+        <PageHeader title={t('share.expired.title', 'Share link unavailable')} />
+        <Text as="p" variant="bodySm" color="secondary">
           {t('share.expired.description', 'This shared drive link has expired or been revoked.')}
-        </p>
+        </Text>
         <a
           href="/"
           className="inline-block text-sm text-[var(--theme-primary)] hover:underline"
@@ -114,20 +107,11 @@ function SharedDriveLoading() {
       aria-label={t('share.loading', 'Loading shared drive report…')}
       className="min-h-screen bg-[var(--bg-primary)]"
     >
-      <header className="border-b border-[var(--border-subtle)] p-4">
-        <div className="flex items-center gap-2">
-          <Logo />
-          <span className="text-sm text-[var(--text-muted)]">
-            {t('share.header', 'Shared Drive Report')}
-          </span>
-        </div>
-      </header>
+      <div className="mx-auto max-w-4xl px-4 py-4">
+        <PageHeader title={t('share.header', 'Shared drive report')} icon={<Logo />} />
+      </div>
       <Skeleton className="h-[50vh] rounded-none" />
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-72 max-w-full" />
-          <Skeleton className="h-4 w-48" />
-        </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-24 rounded-xl" />
@@ -227,15 +211,24 @@ export default function SharedDrivePage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="p-4 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2">
-          <Logo />
-          <span className="text-[var(--text-muted)] text-sm">
-            {t('share.header', 'Shared Drive Report')}
-          </span>
-        </div>
-      </header>
+      <div className="mx-auto max-w-4xl px-4 py-4">
+        <PageHeader
+          title={data.title}
+          icon={<Logo />}
+          metadataActions={<Text variant="caption">{t('share.header', 'Shared drive report')}</Text>}
+          contextActions={
+            <>
+              <Text variant="caption">{drive.date}</Text>
+              {drive.start_address && drive.end_address && (
+                <Text variant="caption">{drive.start_address} → {drive.end_address}</Text>
+              )}
+            </>
+          }
+        />
+        {data.description && (
+          <Text as="p" variant="bodySm" color="secondary">{data.description}</Text>
+        )}
+      </div>
 
       {/* Hero map */}
       {mapPoints.length > 1 && (
@@ -273,31 +266,6 @@ export default function SharedDrivePage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        {/* Title */}
-        <FadeIn>
-          <div className="space-y-1">
-            {/* a11y-landmark-ok: the "share link unavailable" heading above
-                lives in a mutually-exclusive early-return branch, so only
-                one of the two <h1> elements can ever be rendered. */}
-            <h1
-              className="text-2xl font-bold text-[var(--text-primary)] outline-none"
-              tabIndex={-1}
-              data-route-focus-target="true"
-            >
-              {data.title}
-            </h1>
-            {data.description && (
-              <p className="text-[var(--text-secondary)]">{data.description}</p>
-            )}
-            <div className="flex items-center gap-3 text-sm text-[var(--text-muted)] mt-2">
-              <span>{drive.date}</span>
-              {drive.start_address && drive.end_address && (
-                <span>{drive.start_address} → {drive.end_address}</span>
-              )}
-            </div>
-          </div>
-        </FadeIn>
-
         {/* Stats grid */}
         <FadeIn delay={0.05}>
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
@@ -327,21 +295,21 @@ export default function SharedDrivePage() {
             )}
             {drive.max_speed_mps != null && (
               <StatCard
-                label={t('share.maxSpeed', 'Max Speed')}
+                label={t('share.maxSpeed', 'Max speed')}
                 value={formatSpeed(drive.max_speed_mps, { precision: 0 })}
                 icon={<Gauge className="h-4 w-4" />}
               />
             )}
             {drive.avg_speed_mps != null && (
               <StatCard
-                label={t('share.avgSpeed', 'Avg Speed')}
+                label={t('share.avgSpeed', 'Avg speed')}
                 value={formatSpeed(drive.avg_speed_mps, { precision: 0 })}
                 icon={<TrendingUp className="h-4 w-4" />}
               />
             )}
             {drive.elevation_gain != null && (
               <StatCard
-                label={t('share.elevGain', 'Elevation Gain')}
+                label={t('share.elevGain', 'Elevation gain')}
                 value={`${Math.round(convertElevation(drive.elevation_gain, distancePref))} ${elevPref}`}
                 icon={<Mountain className="h-4 w-4" />}
               />
@@ -371,7 +339,7 @@ export default function SharedDrivePage() {
           <FadeIn delay={0.15}>
             {/* chart-a11y:no-table dense per-sample shared-drive trace */}
             <ChartContainer
-              title={t('share.elevation', 'Elevation Profile')}
+              title={t('share.elevation', 'Elevation profile')}
               ariaLabel={t('share.elevation.aria', 'Shared drive elevation profile area chart by distance')}
               height={200}
             >
@@ -409,7 +377,7 @@ export default function SharedDrivePage() {
           <FadeIn delay={0.2}>
             {/* chart-a11y:no-table dense per-sample shared-drive trace */}
             <ChartContainer
-              title={t('share.speed', 'Speed Profile')}
+              title={t('share.speed', 'Speed profile')}
               ariaLabel={t('share.speed.aria', 'Shared drive speed profile line chart by distance')}
               height={200}
             >
@@ -451,7 +419,7 @@ export default function SharedDrivePage() {
         {/* Footer */}
         <FadeIn delay={0.25}>
           <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] text-center text-[var(--text-muted)] text-xs space-y-1">
-            <p>{t('share.footer', 'Shared via TeslaSync — Self-hosted Tesla Fleet Intelligence')}</p>
+            <p>{t('share.footer', 'Shared via TeslaSync — self-hosted Tesla fleet intelligence')}</p>
             <a
               href="https://github.com/ev-dev-labs/teslasync"
               target="_blank"

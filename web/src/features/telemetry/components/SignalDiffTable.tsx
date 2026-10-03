@@ -114,6 +114,7 @@ export function SignalDiffTable({
       },
       {
         key: 'value_a',
+        align: 'right',
         header: t('signalDiff.valueA', 'Window A'),
         className: 'text-right',
         render: (row) => (
@@ -124,6 +125,7 @@ export function SignalDiffTable({
       },
       {
         key: 'value_b',
+        align: 'right',
         header: t('signalDiff.valueB', 'Window B'),
         className: 'text-right',
         render: (row) => (
@@ -134,6 +136,7 @@ export function SignalDiffTable({
       },
       {
         key: 'delta',
+        align: 'right',
         header: t('signalDiff.delta', 'Δ'),
         className: 'text-right w-28',
         sortable: true,
@@ -167,6 +170,7 @@ export function SignalDiffTable({
       },
       {
         key: 'source_a',
+        align: 'center',
         header: t('signalDiff.sourceA', 'Src A'),
         className: 'w-16 text-center',
         render: (row) => (
@@ -175,6 +179,7 @@ export function SignalDiffTable({
       },
       {
         key: 'source_b',
+        align: 'center',
         header: t('signalDiff.sourceB', 'Src B'),
         className: 'w-16 text-center',
         render: (row) => (
@@ -206,7 +211,7 @@ export function SignalDiffTable({
           so the per-column tooltips live here above the header row. */}
       <div className="mb-2 flex flex-wrap items-center gap-3 px-1 text-xs text-[var(--text-muted)]">
         <span className="inline-flex items-center gap-1">
-          <span className="font-mono uppercase tracking-wide">{t('signalDiff.legend.delta', 'Δ')}</span>
+          <span className="font-mono tracking-wide">{t('signalDiff.legend.delta', 'Δ')}</span>
           <HelpTooltip
             size="xs"
             i18nKey="help.signal.deltaCol"
@@ -215,7 +220,7 @@ export function SignalDiffTable({
           />
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="font-mono uppercase tracking-wide">
+          <span className="font-mono tracking-wide">
             {t('signalDiff.legend.source', 'Src A / Src B')}
           </span>
           <HelpTooltip

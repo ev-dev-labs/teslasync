@@ -68,32 +68,32 @@ export default function CommandsPage() {
 
   return (
     <PageContainer
-      title={t('commands.pageTitle', 'Vehicle Command Center')}
+      title={t('commands.pageTitle', 'Vehicle command center')}
       subtitle={t(
         'commands.subtitle',
         'Review vehicle readiness, send remote actions, and verify recent outcomes.',
       )}
-      actions={
+      metadataActions={
+        vehicles.length > 0 && (
+          <Badge
+            variant="neutral"
+            size="lg"
+            className="min-h-11"
+          >
+            <Icons.wifi className="h-3.5 w-3.5" aria-hidden="true" />
+            {t(
+              'commands.lastKnownActiveCount',
+              '{{active}}/{{total}} last reported active',
+              {
+                active: lastKnownActiveCount,
+                total: vehicles.length,
+              },
+            )}
+          </Badge>
+        )
+      }
+      secondaryActions={
         <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:justify-end">
-          {vehicles.length > 0 && (
-            <Badge
-              variant="neutral"
-              size="lg"
-              className="min-h-11"
-            >
-              <Icons.wifi className="h-3.5 w-3.5" aria-hidden="true" />
-              {t(
-                'commands.lastKnownActiveCount',
-                '{{active}}/{{total}} last reported active',
-                {
-                  active: lastKnownActiveCount,
-                  total: vehicles.length,
-                },
-              )}
-            </Badge>
-          )}
-
-
           <Button
             type="button"
             variant="ghost"

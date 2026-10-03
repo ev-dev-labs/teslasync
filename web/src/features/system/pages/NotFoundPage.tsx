@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Compass, Home, Search } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { Button, GlassPanel } from '@/components/ui'
+import { Button, GlassPanel, SectionTitle } from '@/components/ui'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry'
 import { closestRoutes } from '@/lib/closestRoute'
@@ -57,14 +57,14 @@ export default function NotFoundPage() {
 
   return (
     <PageContainer title={t('notFound.title', 'Page not found')}>
-      <GlassPanel className="mx-auto max-w-2xl px-6 py-12 text-center">
+      <GlassPanel className="mx-auto max-w-2xl p-4 text-center sm:p-6">
         <Compass
           className="mx-auto mb-4 h-12 w-12 text-[var(--text-muted)]"
           aria-hidden="true"
         />
-        <h2 className="text-2xl font-semibold text-[var(--text-primary)]">
+        <SectionTitle>
           {t('notFound.heading', "We couldn't find that page")}
-        </h2>
+        </SectionTitle>
         <p className="mt-2 break-all text-[var(--text-secondary)]">
           {t('notFound.body', {
             defaultValue: "{{path}} doesn't match any route.",

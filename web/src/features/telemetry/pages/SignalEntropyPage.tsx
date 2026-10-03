@@ -27,7 +27,7 @@ const HOURS = 48;
 
 export default function SignalEntropyPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalEntropy.title', 'Signal Entropy'));
+  usePageTitle(t('signalEntropy.title', 'Signal entropy'));
 
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
@@ -84,7 +84,7 @@ export default function SignalEntropyPage() {
   );
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalEntropy.title', 'Signal Entropy')} />;
+    return <NoVehicleSelected pageTitle={t('signalEntropy.title', 'Signal entropy')} />;
   }
 
   const historyHasData = historyQuery.data !== undefined;
@@ -95,7 +95,7 @@ export default function SignalEntropyPage() {
 
   return (
     <PageContainer
-      title={t('signalEntropy.title', 'Signal Entropy')}
+      title={t('signalEntropy.title', 'Signal entropy')}
       subtitle={t(
         'signalEntropy.subtitle',
         'Quantile-bins a numeric signal and measures how much genuine information it carries, in bits — distinct from gap detection or cross-signal correlation',
@@ -108,7 +108,7 @@ export default function SignalEntropyPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Binary className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalEntropy.pick', 'Choose a Signal')}
+            {t('signalEntropy.pick', 'Choose a signal')}
             <HelpTooltip
               size="sm"
               i18nKey="help.signalEntropy.pick"
@@ -152,7 +152,7 @@ export default function SignalEntropyPage() {
           ) : (
             <>
               <MetricCard
-                label={t('signalEntropy.entropy', 'Shannon Entropy')}
+                label={t('signalEntropy.entropy', 'Shannon entropy')}
                 value={hasData ? `${fmtNumber(summary.entropyBits, 2)} bits` : '—'}
                 subtitle={t('signalEntropy.normalized', '{{n}} normalized', { n: hasData ? fmtPercent(summary.normalizedEntropy * 100, 0) : '—' })}
                 icon={<Binary className="h-5 w-5" />}
@@ -163,21 +163,21 @@ export default function SignalEntropyPage() {
                 }}
               />
               <MetricCard
-                label={t('signalEntropy.effectiveStates', 'Effective States')}
+                label={t('signalEntropy.effectiveStates', 'Effective states')}
                 value={hasData ? fmtNumber(summary.effectiveStates, 2) : '—'}
                 subtitle={t('signalEntropy.effectiveBins', '{{n}} of {{r}} bins populated', { n: summary.effectiveBins, r: summary.requestedBins })}
                 icon={<Gauge className="h-5 w-5" />}
                 color="purple"
               />
               <MetricCard
-                label={t('signalEntropy.stuck', 'Dominant-State Fraction')}
+                label={t('signalEntropy.stuck', 'Dominant-state fraction')}
                 value={hasData ? fmtPercent(summary.dominantBinFraction * 100, 0) : '—'}
                 subtitle={t('signalEntropy.stuckHint', 'occupancy of the single most common bin')}
                 icon={<Repeat className="h-5 w-5" />}
                 color={hasData && summary.dominantBinFraction >= 0.9 ? 'amber' : 'blue'}
               />
               <MetricCard
-                label={t('signalEntropy.changeRate', 'Change Rate')}
+                label={t('signalEntropy.changeRate', 'Change rate')}
                 value={hasData ? fmtPercent(summary.changeRate * 100, 0) : '—'}
                 subtitle={t('signalEntropy.changeRateHint', '{{n}} samples analyzed', { n: summary.samples })}
                 icon={<Waypoints className="h-5 w-5" />}
@@ -204,7 +204,7 @@ export default function SignalEntropyPage() {
         ) : (
           // chart-legend-audit:skip single series (one rolling-entropy line, no sibling series to toggle)
           <ChartContainer
-            title={t('signalEntropy.rolling', 'Rolling Information Density')}
+            title={t('signalEntropy.rolling', 'Rolling information density')}
             subtitle={t('signalEntropy.rollingHint', 'Entropy recomputed over a sliding window using the same global bin edges, so spikes reflect genuinely eventful stretches')}
             ariaLabel={t('signalEntropy.rollingAria', 'Line chart of rolling Shannon entropy in bits over time for the selected signal')}
             loading={isLoading}
@@ -233,7 +233,7 @@ export default function SignalEntropyPage() {
       <FadeIn delay={0.3}>
         {/* chart-legend-audit:skip single series (one bar series across bin categories, not stacked/grouped series) */}
         <ChartContainer
-          title={t('signalEntropy.distribution', 'Quantile Bin Distribution')}
+          title={t('signalEntropy.distribution', 'Quantile bin distribution')}
           subtitle={t('signalEntropy.distributionHint', 'Sample counts per equal-frequency bin — a lopsided distribution here explains a low entropy score')}
           ariaLabel={t('signalEntropy.distributionAria', 'Bar chart of sample counts across quantile bins for the selected signal')}
           loading={isLoading}
@@ -262,7 +262,7 @@ export default function SignalEntropyPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Repeat className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalEntropy.reading', 'Reading the Result')}
+            {t('signalEntropy.reading', 'Reading the result')}
           </PanelTitle>
           {!hasData ? (
             <EmptyState /* no-action: the interpretation follows from the entropy computed above. */

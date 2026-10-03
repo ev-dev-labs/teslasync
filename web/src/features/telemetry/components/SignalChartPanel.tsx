@@ -132,7 +132,7 @@ export function SignalChartPanel({
     return selectedSignals.length > gridAutoThreshold ? 'grid' : 'overlay';
   }, [chartMode, selectedSignals.length, gridAutoThreshold]);
 
-  const resolvedTitle = title ?? (isLive ? t('signalChart.liveTitle', 'Live Signal Stream') : t('signalChart.histTitle', 'Signal Chart'));
+  const resolvedTitle = title ?? (isLive ? t('signalChart.liveTitle', 'Live signal stream') : t('signalChart.histTitle', 'Signal chart'));
   const accessibleRows = useMemo(
     () => data.map((point) => {
       const row: Record<string, AccessibleChartValue> = {

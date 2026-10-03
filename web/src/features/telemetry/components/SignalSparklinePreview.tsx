@@ -98,7 +98,7 @@ export function SignalSparklinePreview({
     return (
       <span
         className={cn(
-          'inline-flex items-center rounded px-1.5 py-0.5 text-2xs uppercase tracking-wide',
+          'inline-flex items-center rounded px-1.5 py-0.5 text-2xs tracking-wide',
           'text-[var(--text-muted)] border border-[var(--glass-border)]',
           className,
         )}

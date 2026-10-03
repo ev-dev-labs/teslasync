@@ -376,7 +376,7 @@ export function TelemetryPipelineCard({
                     {source === 'stream' ? <Radio className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
                     {cls.label}
                     {sourceLabel && (
-                      <span className="ml-1 text-2xs uppercase tracking-wide opacity-70">{sourceLabel}</span>
+                      <span className="ml-1 text-2xs tracking-wide opacity-70">{sourceLabel}</span>
                     )}
                   </span>
                   <div className="text-xs tabular-nums text-[var(--text-muted)]">
@@ -401,7 +401,8 @@ export function TelemetryPipelineCard({
           to="/admin/telemetry/coverage"
           className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20 min-h-[36px]"
         >
-          Open Telemetry Coverage
+
+          Open telemetry coverage
           <ExternalLink className="h-3.5 w-3.5" />
         </Link>
         <Link
@@ -409,7 +410,8 @@ export function TelemetryPipelineCard({
           className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-white/[0.04] min-h-[36px]"
         >
           <Radio className="h-3.5 w-3.5" />
-          MQTT Inspector
+
+          MQTT inspector
         </Link>
         <Link
           to="/vehicles"

@@ -43,7 +43,7 @@ interface LiveAnalytics {
 
 export default function LiveSignalMonitorPage() {
   const { t } = useTranslation();
-  usePageTitle(t('liveMonitor.title', 'Live Monitor'));
+  usePageTitle(t('liveMonitor.title', 'Live monitor'));
 
   const { vehicleId } = useSelectedVehicle();
 
@@ -110,9 +110,9 @@ export default function LiveSignalMonitorPage() {
 
   return (
     <PageContainer
-      title={t('liveMonitor.title', 'Live Monitor')}
+      title={t('liveMonitor.title', 'Live monitor')}
       subtitle={t('liveMonitor.subtitle', 'Real-time scrolling view of incoming vehicle signals')}
-      actions={
+      metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {connectionBadge}
         </div>
@@ -176,7 +176,7 @@ export default function LiveSignalMonitorPage() {
         onClear={live.clearTail}
         bufferMax={TAIL_MAX}
         showStats={false}
-        title={t('liveMonitor.tailTitle', 'Live Signal Tail')}
+        title={t('liveMonitor.tailTitle', 'Live signal tail')}
         headerExtra={connectionBadge}
       />
     </PageContainer>

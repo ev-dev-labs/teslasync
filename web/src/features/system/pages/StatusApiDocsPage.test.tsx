@@ -144,9 +144,9 @@ describe('StatusApiDocsPage — overview & integrations', () => {
     renderPage()
 
     expect(screen.getByText('Base path')).toBeInTheDocument()
-    expect(screen.getByText('Content-Type')).toBeInTheDocument()
+    expect(screen.getByText('Content-type')).toBeInTheDocument()
     expect(
-      screen.getByText('ForwardAuth or Authorization header'),
+      screen.getByText('ForwardAuth or authorization header'),
     ).toBeInTheDocument()
     // The base path is documented both as an overview fact AND as the
     // `/status` endpoint path, so it appears at least twice.
@@ -266,7 +266,7 @@ describe('StatusApiDocsPage — navigation & footer', () => {
     renderPage()
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Back to System Status/i }),
+      screen.getByRole('button', { name: /Back to System status/i }),
     )
 
     expect(navigateMock).toHaveBeenCalledWith('/system-status')

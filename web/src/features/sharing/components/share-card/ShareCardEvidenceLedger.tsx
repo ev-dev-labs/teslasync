@@ -19,7 +19,7 @@ export function ShareCardEvidenceLedger({
   return (
     <section
       data-testid="share-card-evidence-ledger"
-      aria-label={t('shareCard.evidence.aria', 'Share Card KPI and evidence ledger')}
+      aria-label={t('shareCard.evidence.aria', 'Share card KPI and evidence ledger')}
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">

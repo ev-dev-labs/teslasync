@@ -166,8 +166,8 @@ export default function StatusApiDocsPage() {
           </Text>
         ),
       },
-      { label: t('statusApi.facts.auth', 'Authentication'), value: t('statusApi.facts.authValue', 'ForwardAuth or Authorization header') },
-      { label: t('statusApi.facts.contentType', 'Content-Type'), value: 'application/json' },
+      { label: t('statusApi.facts.auth', 'Authentication'), value: t('statusApi.facts.authValue', 'ForwardAuth or authorization header') },
+      { label: t('statusApi.facts.contentType', 'Content-type'), value: 'application/json' },
       { label: t('statusApi.facts.versioning', 'Versioning'), value: t('statusApi.facts.versioningValue', 'Additive-only (v1)') },
     ],
     [t],
@@ -177,7 +177,7 @@ export default function StatusApiDocsPage() {
   const integrations = useMemo<IntegrationTarget[]>(
     () => [
       { name: 'Grafana', how: t('statusApi.integrations.grafana', 'JSON datasource'), icon: BarChart3 },
-      { name: 'Uptime Kuma', how: t('statusApi.integrations.kuma', 'HTTP(s) JSON Query monitor'), icon: Activity },
+      { name: 'Uptime Kuma', how: t('statusApi.integrations.kuma', 'HTTP(s) JSON query monitor'), icon: Activity },
       { name: 'Home Assistant', how: t('statusApi.integrations.hass', 'REST sensor'), icon: Home },
       { name: 'Healthchecks.io', how: t('statusApi.integrations.healthchecks', 'Synthetic monitor'), icon: HeartPulse },
     ],
@@ -191,7 +191,7 @@ export default function StatusApiDocsPage() {
       icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
       onClick={() => navigate('/system-status')}
     >
-      {t('statusApi.back', 'Back to System Status')}
+      {t('statusApi.back', 'Back to system status')}
     </Button>
   )
 
@@ -199,7 +199,7 @@ export default function StatusApiDocsPage() {
     <PageContainer
       title={t('statusApi.title', 'Status API')}
       subtitle={t('statusApi.subtitle', 'Stable contract for external integrations')}
-      actions={actions}
+      secondaryActions={actions}
     >
       {/* 1 — Quick-reference KPI band */}
       <FadeIn>

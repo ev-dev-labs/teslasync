@@ -193,7 +193,7 @@ describe('SearchPage', () => {
 
     // Idle guidance, no KPI band, and — critically — no network call.
     expect(screen.getByText('Start typing to search')).toBeInTheDocument();
-    expect(screen.queryByText('Total Results')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total results')).not.toBeInTheDocument();
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 
@@ -203,7 +203,7 @@ describe('SearchPage', () => {
     renderPage('/search?q=a');
 
     expect(screen.getByText('Type at least 2 characters')).toBeInTheDocument();
-    expect(screen.queryByText('Total Results')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total results')).not.toBeInTheDocument();
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 
@@ -218,7 +218,7 @@ describe('SearchPage', () => {
       expect.anything(),
     );
     // Resolved KPI labels are absent; the band is skeletonised instead.
-    expect(screen.queryByText('Total Results')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total results')).not.toBeInTheDocument();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
   });
 
@@ -248,9 +248,9 @@ describe('SearchPage', () => {
     expect(txt.indexOf('Drives')).toBeLessThan(txt.indexOf('Charging'));
 
     // KPI band: 6 total hits across 3 categories, no active filters.
-    expect(metricCard('Total Results')).toHaveTextContent('6');
+    expect(metricCard('Total results')).toHaveTextContent('6');
     expect(metricCard('Categories')).toHaveTextContent('3');
-    expect(metricCard('Active Filters')).toHaveTextContent('0');
+    expect(metricCard('Active filters')).toHaveTextContent('0');
   });
 
   it('surfaces the LARGEST group (not the first) as the Top Match KPI', async () => {
@@ -269,7 +269,7 @@ describe('SearchPage', () => {
 
     await screen.findByRole('region', { name: 'Search results' });
     // Drives (3) beats Vehicles (2) even though Vehicles sorts first.
-    const top = metricCard('Top Match');
+    const top = metricCard('Top match');
     expect(top).toHaveTextContent('Drives');
     expect(top).toHaveTextContent('3 results');
   });
@@ -283,8 +283,8 @@ describe('SearchPage', () => {
     expect(screen.getByText(/No matches for "zzz"/)).toBeInTheDocument();
 
     // The KPI band still renders (never gated) with zeroed derivations.
-    expect(metricCard('Total Results')).toHaveTextContent('0');
-    expect(metricCard('Top Match')).toHaveTextContent('—');
+    expect(metricCard('Total results')).toHaveTextContent('0');
+    expect(metricCard('Top match')).toHaveTextContent('—');
   });
 
   it('shows the QueryError banner on a failed fetch and re-issues on Retry', async () => {
@@ -331,7 +331,7 @@ describe('SearchPage', () => {
     // Chip is now pressed, Clear appears, and the KPI reflects one filter.
     expect(screen.getByRole('button', { name: 'Drives' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
-    expect(metricCard('Active Filters')).toHaveTextContent('1');
+    expect(metricCard('Active filters')).toHaveTextContent('1');
 
     // The refined query threads the selected type to the backend.
     await waitFor(() =>
@@ -344,7 +344,7 @@ describe('SearchPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(screen.getByRole('button', { name: 'Drives' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
-    expect(metricCard('Active Filters')).toHaveTextContent('0');
+    expect(metricCard('Active filters')).toHaveTextContent('0');
   });
 
   it('restores an active type filter from the URL on first mount', async () => {
@@ -355,7 +355,7 @@ describe('SearchPage', () => {
     // The Charging chip is pre-pressed and the KPI shows one active filter.
     expect(screen.getByRole('button', { name: 'Charging' })).toHaveAttribute('aria-pressed', 'true');
     await screen.findByRole('region', { name: 'Search results' });
-    expect(metricCard('Active Filters')).toHaveTextContent('1');
+    expect(metricCard('Active filters')).toHaveTextContent('1');
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.stringContaining('types=charging'),
       expect.anything(),

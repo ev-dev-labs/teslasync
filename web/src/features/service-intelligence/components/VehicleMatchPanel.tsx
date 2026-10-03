@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { CarFront } from 'lucide-react';
-import { GlassPanel, PanelTitle, Caption, Text } from '@/components/ui';
+import { Table, GlassPanel, PanelTitle, Caption, Text } from '@/components/ui';
 import type {
   ServiceIntelligenceSummary,
   ServiceIntelligenceVehicleContext,
@@ -59,43 +59,43 @@ export function VehicleMatchPanel({
         onRetry={onRetry}
       >
         <div className="space-y-4">
-          <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <div>
-              <dt><Caption>{t('serviceIntelligence.vehicle.model', 'Vehicle')}</Caption></dt>
-              <dd><Text variant="body">{context ? `${context.make} ${context.model}` : unavailable}</Text></dd>
-            </div>
-            <div>
-              <dt><Caption>{t('serviceIntelligence.vehicle.modelYear', 'Model year')}</Caption></dt>
-              <dd><Text variant="body">{display(context?.model_year ?? null, unavailable)}</Text></dd>
-            </div>
-            <div>
-              <dt><Caption>{t('serviceIntelligence.vehicle.assemblyPlant', 'Assembly plant')}</Caption></dt>
-              <dd><Text variant="body">{display(plant, unavailable)}</Text></dd>
-            </div>
-            <div>
-              <dt><Caption>{t('serviceIntelligence.vehicle.firmware', 'Observed firmware')}</Caption></dt>
-              <dd><Text variant="body" mono>{display(context?.firmware_version ?? null, unavailable)}</Text></dd>
-            </div>
-          </dl>
+          <Table aria-label={t('serviceIntelligence.vehicle.title', 'Vehicle match context')}><tbody>
+            <tr>
+              <th scope="row"><Caption>{t('serviceIntelligence.vehicle.model', 'Vehicle')}</Caption></th>
+              <td><Text variant="body">{context ? `${context.make} ${context.model}` : unavailable}</Text></td>
+            </tr>
+            <tr>
+              <th scope="row"><Caption>{t('serviceIntelligence.vehicle.modelYear', 'Model year')}</Caption></th>
+              <td className="text-right"><Text variant="body">{display(context?.model_year ?? null, unavailable)}</Text></td>
+            </tr>
+            <tr>
+              <th scope="row"><Caption>{t('serviceIntelligence.vehicle.assemblyPlant', 'Assembly plant')}</Caption></th>
+              <td><Text variant="body">{display(plant, unavailable)}</Text></td>
+            </tr>
+            <tr>
+              <th scope="row"><Caption>{t('serviceIntelligence.vehicle.firmware', 'Observed firmware')}</Caption></th>
+              <td><Text variant="body" mono>{display(context?.firmware_version ?? null, unavailable)}</Text></td>
+            </tr>
+          </tbody></Table>
           <Text as="p" variant="helper">{context?.build_match_basis ?? unavailable}</Text>
-          <dl className="grid grid-cols-2 gap-3 border-t border-[var(--border-subtle)] pt-3 lg:grid-cols-4">
-            <div>
-              <dt><Caption>{t('serviceIntelligence.summary.recallCandidates', 'Recall candidates')}</Caption></dt>
-              <dd><Text variant="metricValue">{summary?.recall_candidates ?? 0}</Text></dd>
-            </div>
-            <div>
-              <dt><Caption>{t('serviceIntelligence.summary.applicable', 'Potentially applicable')}</Caption></dt>
-              <dd><Text variant="metricValue">{summary?.potentially_applicable_recalls ?? 0}</Text></dd>
-            </div>
-            <div>
-              <dt><Caption>{t('serviceIntelligence.summary.communications', 'Communications')}</Caption></dt>
-              <dd><Text variant="metricValue">{summary?.manufacturer_communications ?? 0}</Text></dd>
-            </div>
-            <div>
-              <dt><Caption>{t('serviceIntelligence.summary.symptoms', 'Symptom matches')}</Caption></dt>
-              <dd><Text variant="metricValue">{summary?.symptom_matches ?? 0}</Text></dd>
-            </div>
-          </dl>
+          <Table aria-label={t('serviceIntelligence.vehicle.title', 'Vehicle match context')}><tbody>
+            <tr>
+              <th scope="row"><Caption>{t('serviceIntelligence.summary.recallCandidates', 'Recall candidates')}</Caption></th>
+              <td className="text-right"><Text variant="metricValue">{summary?.recall_candidates ?? 0}</Text></td>
+            </tr>
+            <tr>
+              <th scope="row"><Caption>{t('serviceIntelligence.summary.applicable', 'Potentially applicable')}</Caption></th>
+              <td className="text-right"><Text variant="metricValue">{summary?.potentially_applicable_recalls ?? 0}</Text></td>
+            </tr>
+            <tr>
+              <th scope="row"><Caption>{t('serviceIntelligence.summary.communications', 'Communications')}</Caption></th>
+              <td className="text-right"><Text variant="metricValue">{summary?.manufacturer_communications ?? 0}</Text></td>
+            </tr>
+            <tr>
+              <th scope="row"><Caption>{t('serviceIntelligence.summary.symptoms', 'Symptom matches')}</Caption></th>
+              <td className="text-right"><Text variant="metricValue">{summary?.symptom_matches ?? 0}</Text></td>
+            </tr>
+          </tbody></Table>
         </div>
       </PanelState>
     </GlassPanel>

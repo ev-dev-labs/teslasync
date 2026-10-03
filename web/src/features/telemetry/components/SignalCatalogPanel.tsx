@@ -25,6 +25,8 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import type { SignalRow } from '@/types/telemetry';
 
+type CatalogRow = SignalRow & { rawValue: string | number | boolean | null };
+
 export type CatalogFilterMode = 'all' | 'stale' | 'active';
 export type CatalogSortMode = 'staleness' | 'alpha' | 'category';
 
@@ -88,7 +90,7 @@ export function SignalCatalogPanel({
   const [sortMode, setSortMode] = useState<CatalogSortMode>('staleness');
 
   const now = Date.now();
-  const signals: SignalRow[] = useMemo(() => {
+  const signals: CatalogRow[] = useMemo(() => {
     if (!liveData) return [];
     return Object.entries(liveData).map(([name, entry]) => {
       const raw = entry && typeof entry === 'object' ? entry : { value: entry, timestamp: null };
@@ -104,6 +106,7 @@ export function SignalCatalogPanel({
       return {
         name,
         value: value != null ? String(value) : '—',
+        rawValue: value == null ? null : typeof value === 'number' || typeof value === 'boolean' ? value : String(value),
         timestamp: hasValidTs ? ts : null,
         staleness,
         category,
@@ -135,8 +138,8 @@ export function SignalCatalogPanel({
   const selectedSet = useMemo(() => new Set(selection?.selectedSignals ?? []), [selection?.selectedSignals]);
   const selectionMax = selection?.max;
 
-  const columns: Column<SignalRow>[] = useMemo(() => {
-    const cols: Column<SignalRow>[] = [];
+  const columns: Column<CatalogRow>[] = useMemo(() => {
+    const cols: Column<CatalogRow>[] = [];
     if (selection) {
       cols.push({
         key: 'select',
@@ -174,6 +177,11 @@ export function SignalCatalogPanel({
       {
         key: 'status',
         header: t('signalGap.status', 'Status'),
+        filterValue: (signal) => getCatalogStalenessStyle(signal.staleness, !!signal.timestamp).key,
+        filterValueLabel: (_value, signal) => {
+          const style = getCatalogStalenessStyle(signal.staleness, !!signal.timestamp);
+          return t(`signalCatalog.staleness.${style.key}`, style.label);
+        },
         className: 'w-24',
         render: (signal) => {
           const style = getCatalogStalenessStyle(signal.staleness, !!signal.timestamp);
@@ -183,22 +191,26 @@ export function SignalCatalogPanel({
       {
         key: 'signal',
         header: t('signalGap.signal', 'Signal'),
+        filterValue: (signal) => signal.name,
         render: (signal) => <Code>{signal.name}</Code>,
         visibleOnMobile: true,
       },
       {
         key: 'value',
-        header: t('signalGap.lastValue', 'Last Value'),
+        header: t('signalGap.lastValue', 'Last value'),
+        filterValue: (signal) => signal.rawValue,
+        filterValueLabel: (_value, signal) => signal.value,
         render: (signal) => <Text mono size="xs" color="secondary" className="block max-w-[200px] truncate">{signal.value}</Text>,
       },
       {
         key: 'lastUpdated',
-        header: t('signalGap.lastUpdated', 'Last Updated'),
+        header: t('signalGap.lastUpdated', 'Last updated'),
         render: (signal) => <Text variant="bodySm" className="whitespace-nowrap">{signal.timestamp ? formatDateTime(signal.timestamp) : '—'}</Text>,
       },
       {
         key: 'timeSince',
-        header: t('signalGap.timeSince', 'Time Since'),
+        header: t('signalGap.timeSince', 'Time since'),
+        align: 'right',
         className: 'text-right',
         render: (signal) => {
           const style = getCatalogStalenessStyle(signal.staleness, !!signal.timestamp);
@@ -214,10 +226,10 @@ export function SignalCatalogPanel({
       {showSummary ? (
         <FadeIn delay={0.05}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <StatCard label={t('signalGap.totalSignals',  'Total Signals')}     value={signals.length} icon={<ArrowUpDown className="h-4 w-4" />} />
+            <StatCard label={t('signalGap.totalSignals',  'Total signals')}     value={signals.length} icon={<ArrowUpDown className="h-4 w-4" />} />
             <StatCard label={t('signalGap.active',        'Active (<30s)')}     value={activeCount}    icon={<RefreshCw className="h-4 w-4" />} />
             <StatCard label={t('signalGap.stale',         'Stale (>5min)')}     value={staleCount}     icon={<AlertTriangle className="h-4 w-4" />} />
-            <StatCard label={t('signalGap.neverReceived', 'Never Received')}    value={neverCount}     icon={<AlertTriangle className="h-4 w-4" />} />
+            <StatCard label={t('signalGap.neverReceived', 'Never received')}    value={neverCount}     icon={<AlertTriangle className="h-4 w-4" />} />
           </div>
         </FadeIn>
       ) : null}
@@ -257,7 +269,7 @@ export function SignalCatalogPanel({
                     : 'text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]',
                 )}
               >
-                {mode === 'all' ? t('signalGap.all', 'All') : mode === 'stale' ? t('signalGap.staleOnly', 'Stale Only') : t('signalGap.activeOnly', 'Active Only')}
+                {mode === 'all' ? t('signalGap.all', 'All') : mode === 'stale' ? t('signalGap.staleOnly', 'Stale only') : t('signalGap.activeOnly', 'Active only')}
               </Button>
             ))}
           </div>
@@ -277,7 +289,7 @@ export function SignalCatalogPanel({
                     : 'text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]',
                 )}
               >
-                {mode === 'staleness' ? t('signalGap.mostStale', 'Most Stale') : mode === 'alpha' ? t('signalGap.az', 'A-Z') : t('signalGap.category', 'Category')}
+                {mode === 'staleness' ? t('signalGap.mostStale', 'Most stale') : mode === 'alpha' ? t('signalGap.az', 'A-Z') : t('signalGap.category', 'Category')}
               </Button>
             ))}
           </div>
@@ -290,8 +302,10 @@ export function SignalCatalogPanel({
             </div>
           ) : filtered.length > 0 ? (
             <div className="overflow-auto rounded border border-[var(--border-subtle)]" style={{ maxHeight: tableMaxHeight }}>
-              <DataTable<SignalRow>
+              <DataTable<CatalogRow>
                 tableId="telemetry:signal-catalog"
+                enableValueFilters
+                filterData={signals}
                 columns={columns}
                 data={filtered}
                 keyExtractor={(signal) => signal.name}

@@ -31,7 +31,7 @@ import { useSignalGapAnalysis } from '../hooks/useSignalGapAnalysis';
 
 export default function SignalGapDetectorPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalGap.title', 'Signal Gaps'));
+  usePageTitle(t('signalGap.title', 'Signal gaps'));
 
   const { vehicleId } = useSelectedVehicle();
   const vid = vehicleId != null && vehicleId > 0 ? vehicleId : 0;
@@ -55,9 +55,9 @@ export default function SignalGapDetectorPage() {
 
   return (
     <PageContainer
-      title={t('signalGap.title', 'Signal Gaps')}
+      title={t('signalGap.title', 'Signal gaps')}
       subtitle={t('signalGap.subtitle', 'Identify signals that have stopped arriving or have gaps')}
-      actions={actions}
+      secondaryActions={actions}
       query={hasVehicle ? query : undefined}
     >
       {!hasVehicle && (
@@ -87,7 +87,7 @@ export default function SignalGapDetectorPage() {
         <SignalCatalogPanel
           vehicleId={vid}
           showSummary={false}
-          title={t('signalGap.catalogTitle', 'Signal Catalog')}
+          title={t('signalGap.catalogTitle', 'Signal catalog')}
         />
       </FadeIn>
     </PageContainer>

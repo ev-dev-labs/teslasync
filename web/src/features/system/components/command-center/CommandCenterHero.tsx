@@ -10,14 +10,14 @@ import {
 import { MetricTile, TimeStamp } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { deriveTrustedVehicleStatus } from '@/api/hooks/useVehicles';
-import type { VehicleState } from '@/api/types';
+import type { VehicleStateReadings } from '@/api/types';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import type { Vehicle } from '../../commands';
 
 interface CommandCenterHeroProps {
   vehicle: Vehicle;
-  state: VehicleState | null;
+  state: VehicleStateReadings | null;
   stateTrust: Parameters<typeof deriveTrustedVehicleStatus>[1];
   loading: boolean;
   error: unknown;
@@ -51,7 +51,7 @@ export function CommandCenterHero({
   const status = verifiedStatus ?? rawStatus;
   const knownStatus = t(
     `commands.status.${status}`,
-    status.replace(/_/g, ' ').replace(/\b\w/g, (value) => value.toUpperCase()),
+    status.replace(/_/g, ' ').replace(/^\w/, (value) => value.toUpperCase()),
   );
   const statusLabel = verifiedStatus
     ? knownStatus
@@ -89,7 +89,7 @@ export function CommandCenterHero({
               {t('commands.hero.selectedVehicle', 'Selected vehicle')}
             </Badge>
             <div>
-              <Heading level="page" as="h2" className="truncate">
+              <Heading level="section" as="h2" className="truncate">
                 {name}
               </Heading>
               <Caption className="mt-1 block break-all">

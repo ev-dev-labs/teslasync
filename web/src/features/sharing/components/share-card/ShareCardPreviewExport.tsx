@@ -21,7 +21,7 @@ export function ShareCardPreviewExport({
   return (
     <section
       data-testid="share-card-preview-export"
-      aria-label={t('shareCard.preview.aria', 'Share Card preview and local SVG export')}
+      aria-label={t('shareCard.preview.aria', 'Share card preview and local SVG export')}
     >
       <GlassPanel className="min-h-[360px] p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">

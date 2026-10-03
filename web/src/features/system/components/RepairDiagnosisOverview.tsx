@@ -34,21 +34,21 @@ export function RepairDiagnosisOverview({
           className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         >
           <MetricCard
-            label={t('dataRepair.kpi.suggestions', 'Suggested Repairs')}
+            label={t('dataRepair.kpi.suggestions', 'Suggested repairs')}
             value={totalSuggestions}
             icon={<Wrench className="h-4 w-4" />}
             color="amber"
             wrapLabel
           />
           <MetricCard
-            label={t('dataRepair.kpi.driveSuggestions', 'Drive Boundaries')}
+            label={t('dataRepair.kpi.driveSuggestions', 'Drive boundaries')}
             value={driveSuggestions}
             icon={<Route className="h-4 w-4" />}
             color="purple"
             wrapLabel
           />
           <MetricCard
-            label={t('dataRepair.kpi.chargingSuggestions', 'Charging Boundaries')}
+            label={t('dataRepair.kpi.chargingSuggestions', 'Charging boundaries')}
             value={chargingSuggestions}
             icon={<BatteryCharging className="h-4 w-4" />}
             color="cyan"

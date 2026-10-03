@@ -62,6 +62,13 @@ describe('SharedSessionReport', () => {
     expect(screen.getByText('45.0 kWh')).toBeInTheDocument();
     expect(screen.getByText('20% → 80%')).toBeInTheDocument();
     expect(screen.getByText('250.0 kW')).toBeInTheDocument();
+    const title = screen.getByRole('heading', { level: 1, name: 'Baker Supercharger Stop' });
+    expect(title).toHaveAttribute('tabindex', '-1');
+    expect(title).toHaveAttribute('data-route-focus-target', 'true');
+    expect(title.closest('header')).toHaveAttribute('data-role', 'page-header');
+    expect(title.closest('header')).toHaveClass('border-0', 'rounded-none');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByText('Baker, CA').closest('[data-action-group="context"]')).not.toBeNull();
   });
 
   it('renders the vehicle badge and cost when present', () => {
@@ -72,7 +79,7 @@ describe('SharedSessionReport', () => {
 
   it('renders the charge curve chart when points exist', () => {
     render(<SharedSessionReport data={sessionData} />);
-    expect(screen.getByText('Charge Curve')).toBeInTheDocument();
+    expect(screen.getByText('Charge curve')).toBeInTheDocument();
   });
 
   it('shows the no-curve fallback when the curve was not shared', () => {
@@ -84,7 +91,7 @@ describe('SharedSessionReport', () => {
     expect(
       screen.getByText('The charge curve was not included in this share.'),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Charge Curve')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge curve')).not.toBeInTheDocument();
     expect(screen.queryByText('Cost')).not.toBeInTheDocument();
   });
 
@@ -105,7 +112,7 @@ describe('SharedSessionReport', () => {
       />,
     );
     expect(screen.queryByText('Tesla Model 3')).not.toBeInTheDocument();
-    expect(screen.queryByText('Energy Added')).not.toBeInTheDocument();
+    expect(screen.queryByText('Energy added')).not.toBeInTheDocument();
     expect(screen.queryByText('Battery')).not.toBeInTheDocument();
     // Duration always renders.
     expect(screen.getByText('Duration')).toBeInTheDocument();

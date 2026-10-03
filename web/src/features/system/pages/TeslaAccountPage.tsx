@@ -24,7 +24,7 @@ const ACTIVITY_COLORS = {
 
 export default function TeslaAccountPage() {
   const { t } = useTranslation();
-  usePageTitle(t('teslaAccount.title', 'Tesla Account'));
+  usePageTitle(t('teslaAccount.title', 'Tesla account'));
 
   const profileQuery = useTeslaUserProfile();
   const { data, isLoading, isError, error, refetch } = profileQuery;
@@ -56,9 +56,9 @@ export default function TeslaAccountPage() {
 
   return (
     <PageContainer
-      title={t('teslaAccount.title', 'Tesla Account')}
+      title={t('teslaAccount.title', 'Tesla account')}
       subtitle={t('teslaAccount.subtitle', 'Your Tesla account profile synced from the Fleet API')}
-      actions={actions}
+      secondaryActions={actions}
       query={profileQuery}
     >
       {/* 1 — KPI band */}
@@ -76,7 +76,7 @@ export default function TeslaAccountPage() {
           ) : (
             <>
               <MetricCard
-                label={t('teslaAccount.kpi.sync', 'Sync Status')}
+                label={t('teslaAccount.kpi.sync', 'Sync status')}
                 value={fetchedAt ? t('teslaAccount.synced', 'Synced') : t('teslaAccount.never', 'Never synced')}
                 color={fetchedAt ? 'green' : 'amber'}
                 icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
@@ -90,14 +90,14 @@ export default function TeslaAccountPage() {
                 subtitle={t('teslaAccount.kpi.accountIdSub', 'Fleet API identity')}
               />
               <MetricCard
-                label={t('teslaAccount.kpi.memberSince', 'Member Since')}
+                label={t('teslaAccount.kpi.memberSince', 'Member since')}
                 value={memberSince}
                 color="purple"
                 icon={<CalendarClock className="h-5 w-5" aria-hidden="true" />}
                 subtitle={profile?.created_at ? formatRelative(profile.created_at) : '—'}
               />
               <MetricCard
-                label={t('teslaAccount.kpi.updated', 'Last Updated')}
+                label={t('teslaAccount.kpi.updated', 'Last updated')}
                 value={lastUpdated}
                 color="blue"
                 icon={<Clock className="h-5 w-5" aria-hidden="true" />}
@@ -138,7 +138,7 @@ export default function TeslaAccountPage() {
                 />
                 <div className="min-w-0 space-y-2">
                   <Text as="p" size="xl" weight="bold" color="primary" className="truncate">
-                    {profile.full_name || t('teslaAccount.unnamed', 'Tesla Driver')}
+                    {profile.full_name || t('teslaAccount.unnamed', 'Tesla driver')}
                   </Text>
                   <div className="flex items-center gap-2 text-[var(--text-secondary)]">
                     <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -208,7 +208,7 @@ export default function TeslaAccountPage() {
           <GlassPanel className="p-4 sm:p-5">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
               <ContactRound className="h-4 w-4 text-indigo-300" aria-hidden="true" />
-              {t('teslaAccount.details.title', 'Account Details')}
+              {t('teslaAccount.details.title', 'Account details')}
             </Heading>
             {isLoading ? (
               <Skeleton height={180} />
@@ -224,12 +224,12 @@ export default function TeslaAccountPage() {
                     value: <Text as="span" mono>{accountId}</Text>,
                   },
                   {
-                    label: t('teslaAccount.image', 'Profile Image'),
+                    label: t('teslaAccount.image', 'Profile image'),
                     value: profile.profile_image_url
                       ? t('teslaAccount.imageAvailable', 'Available')
                       : t('teslaAccount.imageNone', 'Not set'),
                   },
-                  { label: t('teslaAccount.fetchedAt', 'Fetched At'), value: formatDateTime(profile.fetched_at) },
+                  { label: t('teslaAccount.fetchedAt', 'Fetched at'), value: formatDateTime(profile.fetched_at) },
                 ]}
               />
             ) : (

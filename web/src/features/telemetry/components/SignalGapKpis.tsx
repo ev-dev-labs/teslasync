@@ -43,7 +43,7 @@ export function SignalGapKpis({ buckets, freshnessPct, hasVehicle }: SignalGapKp
         className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
       >
         <MetricCard
-          label={t('signalGap.totalSignals', 'Total Signals')}
+          label={t('signalGap.totalSignals', 'Total signals')}
           value={num(b.total)}
           icon={<Activity className="h-5 w-5" aria-hidden="true" />}
         />
@@ -66,7 +66,7 @@ export function SignalGapKpis({ buckets, freshnessPct, hasVehicle }: SignalGapKp
           icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
         />
         <MetricCard
-          label={t('signalGap.neverReceived', 'Never Received')}
+          label={t('signalGap.neverReceived', 'Never received')}
           value={num(b.never)}
           icon={<WifiOff className="h-5 w-5" aria-hidden="true" />}
         />

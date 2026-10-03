@@ -1,7 +1,7 @@
 import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -33,7 +33,7 @@ export function ShareCardAccountingIdentities({
   return (
     <section
       data-testid="share-card-accounting-identities"
-      aria-label={t('shareCard.accounting.aria', 'Exact Share Card accounting identities')}
+      aria-label={t('shareCard.accounting.aria', 'Exact share card accounting identities')}
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-2 flex items-center gap-2">
@@ -61,29 +61,29 @@ export function ShareCardAccountingIdentities({
                       : t('shareCard.accounting.outside', 'Outside tolerance')}
                   </Badge>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                  <Text as="span" variant="caption">
+                <Table className="mt-2" aria-label={labels[check.id] ?? check.id}>
+
+                  <tbody>
+                  <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.expected', 'Expected')}
-                  </Text>
-                  <Text as="span" variant="caption" mono>
+                  </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
                     {display.formatNumber(check.expected, 6)}
-                  </Text>
-                  <Text as="span" variant="caption">
+                  </Text></td></tr>
+                  <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.actual', 'Actual')}
-                  </Text>
-                  <Text as="span" variant="caption" mono>
+                  </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
                     {display.formatNumber(check.actual, 6)}
-                  </Text>
-                  <Text as="span" variant="caption">
+                  </Text></td></tr>
+                  <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.residual', 'Residual / tolerance')}
-                  </Text>
-                  <Text as="span" variant="caption" mono>
+                  </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
                     {t('shareCard.accounting.residualValue', '{{residual}} / {{tolerance}}', {
                       residual: display.formatNumber(check.residual, 6),
                       tolerance: display.formatNumber(check.tolerance, 6),
                     })}
-                  </Text>
-                </div>
+                  </Text></td></tr>
+                  </tbody>
+                </Table>
               </li>
             ))}
           </ul>

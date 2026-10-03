@@ -42,7 +42,7 @@ export function ShareCardMethodology({
   return (
     <section
       data-testid="share-card-methodology"
-      aria-label={t('shareCard.method.aria', 'Share Card methodology privacy and export limits')}
+      aria-label={t('shareCard.method.aria', 'Share card methodology privacy and export limits')}
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">

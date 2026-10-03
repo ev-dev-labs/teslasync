@@ -92,8 +92,8 @@ describe('SignalHistoryTable', () => {
     const { container } = renderTable({ page: 3, totalRows: 1234 });
 
     // Region + heading share the same accessible name via aria-labelledby.
-    expect(screen.getByRole('region', { name: 'Signal Data' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Signal Data' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Signal data' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Signal data' })).toBeInTheDocument();
 
     // Caption reads through the shared int formatter (locale separators).
     expect(
@@ -108,7 +108,7 @@ describe('SignalHistoryTable', () => {
     renderTable({ title: 'Signal history' });
     expect(screen.getByRole('region', { name: 'Signal history' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Signal history' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Signal Data' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Signal data' })).toBeNull();
   });
 
   it('renders all four columns with the timestamp formatted through the shared formatter', () => {

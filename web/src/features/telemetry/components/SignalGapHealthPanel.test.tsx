@@ -162,7 +162,7 @@ describe('SignalGapHealthPanel — header', () => {
     const { container } = renderPanel({ hasVehicle: false });
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Signal Health Distribution' }),
+      screen.getByRole('heading', { level: 3, name: 'Signal health distribution' }),
     ).toBeInTheDocument();
     // The header Activity glyph is decorative so a screen reader announces the
     // title, not the icon.
@@ -282,7 +282,7 @@ describe('SignalGapHealthPanel — distribution strip', () => {
     renderPanel({ buckets: POPULATED_BUCKETS });
 
     // `never` is 0 here — it must not paint a strip segment...
-    expect(screen.queryByTitle(/^Never Received:/)).toBeNull();
+    expect(screen.queryByTitle(/^Never received:/)).toBeNull();
   });
 });
 
@@ -294,7 +294,7 @@ describe('SignalGapHealthPanel — distribution legend', () => {
     expect(screen.getByText('Active (<30s)')).toBeInTheDocument();
     expect(screen.getByText('Aging (<5min)')).toBeInTheDocument();
     expect(screen.getByText('Stale (>5min)')).toBeInTheDocument();
-    expect(screen.getByText('Never Received')).toBeInTheDocument();
+    expect(screen.getByText('Never received')).toBeInTheDocument();
 
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();

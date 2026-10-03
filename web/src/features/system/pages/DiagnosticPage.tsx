@@ -63,6 +63,12 @@ import { cn } from '@/lib/cn';
 
 type StatusTone = 'success' | 'warning' | 'danger';
 
+const CHECK_STATUS_LABELS: Record<DiagnosticCheckStatus, string> = {
+  ok: 'OK',
+  warn: 'Warning',
+  fail: 'Fail',
+};
+
 /** Aggregate derived from the report's checks — computed once in the
  *  page and shared by the hero band + KPI strip (DRY, null-safe). */
 interface DiagnosticSummary {
@@ -216,7 +222,7 @@ function CheckCard({ check }: { check: DiagnosticCheck }) {
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           <Badge variant={tone}>
-            {t(`diagnostic.status.${check.status}`, check.status.toUpperCase())}
+            {t(`diagnostic.status.${check.status}`, CHECK_STATUS_LABELS[check.status] ?? check.status)}
           </Badge>
           <Caption className="tabular-nums">
             {t('diagnostic.duration', { ms: check.duration_ms })}
@@ -474,7 +480,7 @@ export default function DiagnosticPage() {
         'diagnostic.subtitle',
         'Run an aggregated self-test against the database, MQTT broker, Redis, Tesla API, and resilience monitors.',
       )}
-      actions={runButton}
+      primaryAction={runButton}
     >
       <div className="space-y-4 sm:space-y-6">
         {latestError ? (

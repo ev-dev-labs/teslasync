@@ -203,13 +203,13 @@ describe('SignalExplorerPage', () => {
     renderPage();
 
     // The page shell (title) still renders...
-    expect(screen.getByRole('heading', { name: 'Signal Explorer' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Signal explorer' })).toBeInTheDocument();
     // ...but the body is the "pick a vehicle" prompt, not the KPI/results UI.
     expect(screen.getByText('Select a vehicle to begin')).toBeInTheDocument();
     expect(
       screen.queryByRole('region', { name: 'Exploration summary' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('Pick signals and click Explore')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pick signals and click explore')).not.toBeInTheDocument();
     // No signals catalog fetch is meaningful without a vehicle.
     expect(mockedRequest).not.toHaveBeenCalled();
   });
@@ -225,7 +225,7 @@ describe('SignalExplorerPage', () => {
     expect(screen.getByText('Records')).toBeInTheDocument();
     // Deterministic guidance before Explore, and Explore is disabled with no
     // signals selected.
-    expect(screen.getByText('Pick signals and click Explore')).toBeInTheDocument();
+    expect(screen.getByText('Pick signals and click explore')).toBeInTheDocument();
     expect(screen.getByText(/Historical queries use the selected range/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Explore' })).toBeDisabled();
     // No historical query fired.
@@ -292,7 +292,7 @@ describe('SignalExplorerPage', () => {
 
     // Historical mode uses the "Records" KPI, not the live "Live Events" one.
     expect(screen.getByText('Records')).toBeInTheDocument();
-    expect(screen.queryByText('Live Events')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live events')).not.toBeInTheDocument();
   });
 
   it('applies a changed page size atomically so the query limit reflects it (regression)', async () => {
@@ -306,12 +306,12 @@ describe('SignalExplorerPage', () => {
 
     renderPage(['/signals/explorer?signals=battery_level']);
 
-    const perPage = screen.getByLabelText('Per Page') as HTMLSelectElement;
+    const perPage = screen.getByLabelText('Per page') as HTMLSelectElement;
     fireEvent.change(perPage, { target: { value: '100' } });
 
     // Before the fix the second (page) setter clobbered the size setter, so
     // the controlled select snapped back to 25. It must now stick at 100.
-    await waitFor(() => expect(screen.getByLabelText('Per Page')).toHaveValue('100'));
+    await waitFor(() => expect(screen.getByLabelText('Per page')).toHaveValue('100'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Explore' }));
 
@@ -340,12 +340,12 @@ describe('SignalExplorerPage', () => {
     // KPI band flips to the streaming vocabulary — the Status value and the
     // events subtitle both read "Streaming" when connected.
     expect(screen.getAllByText('Streaming').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Live Events')).toBeInTheDocument();
+    expect(screen.getByText('Live events')).toBeInTheDocument();
     expect(screen.queryByText('Records')).not.toBeInTheDocument();
     // The live chart shows its waiting state and the history table (historical
     // only) is absent.
     expect(screen.getByText('Waiting for live signal data…')).toBeInTheDocument();
-    expect(screen.queryByText('Signal Data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Signal data')).not.toBeInTheDocument();
     // No historical fetch in live mode.
     expect(mockedRequest).not.toHaveBeenCalled();
   });
@@ -355,7 +355,7 @@ describe('SignalExplorerPage', () => {
 
     // Sanity: nothing selected yet, default size.
     expect(screen.getByText(/Signals \(0 \/ 5\)/)).toBeInTheDocument();
-    expect(screen.getByLabelText('Per Page')).toHaveValue('25');
+    expect(screen.getByLabelText('Per page')).toHaveValue('25');
 
     fireEvent.click(screen.getByTestId('mock-ai-apply'));
 
@@ -363,6 +363,6 @@ describe('SignalExplorerPage', () => {
     // and size were dropped. Now both the two-signal selection and the size
     // land together.
     expect(screen.getByText(/Signals \(2 \/ 5\)/)).toBeInTheDocument();
-    expect(screen.getByLabelText('Per Page')).toHaveValue('100');
+    expect(screen.getByLabelText('Per page')).toHaveValue('100');
   });
 });

@@ -20,7 +20,7 @@ export default function TeslaApiUsagePage() {
   return (
     <PageContainer
       title={title}
-      subtitle={t('teslaUsage.pageSubtitle', 'Observed Tesla Fleet traffic, estimated spend and historical trends')}
+      subtitle={t('teslaUsage.pageSubtitle', 'Observed Tesla fleet traffic, estimated spend and historical trends')}
     >
       <div className="space-y-6">
         <FadeIn>

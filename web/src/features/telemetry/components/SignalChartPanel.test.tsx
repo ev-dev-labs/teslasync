@@ -162,7 +162,7 @@ describe('SignalChartPanel — header & title', () => {
     const { container } = renderPanel();
 
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Signal Chart' }),
+      screen.getByRole('heading', { level: 2, name: 'Signal chart' }),
     ).toBeInTheDocument();
     expect(container.querySelector('.lucide-bar-chart3')).not.toBeNull();
     expect(container.querySelector('.lucide-radio')).toBeNull();
@@ -172,7 +172,7 @@ describe('SignalChartPanel — header & title', () => {
     const { container } = renderPanel({ isLive: true, data: [] });
 
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Live Signal Stream' }),
+      screen.getByRole('heading', { level: 2, name: 'Live signal stream' }),
     ).toBeInTheDocument();
     expect(container.querySelector('.lucide-radio')).not.toBeNull();
     expect(container.querySelector('.lucide-bar-chart3')).toBeNull();
@@ -184,7 +184,7 @@ describe('SignalChartPanel — header & title', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: 'Custom Title' }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Live Signal Stream')).toBeNull();
+    expect(screen.queryByText('Live signal stream')).toBeNull();
   });
 
   it('marks the header status glyph aria-hidden so screen readers skip it', () => {

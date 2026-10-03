@@ -254,37 +254,37 @@ describe('DataExportPage — Project Apex elevation', () => {
 
     // The KPI tiles only leave their loading skeletons once the jobs query
     // resolves — gate on one of them before the synchronous assertions.
-    expect(await screen.findByText('Total Exports')).toBeInTheDocument();
-    expect(screen.getByText('New Export')).toBeInTheDocument();
+    expect(await screen.findByText('Total exports')).toBeInTheDocument();
+    expect(screen.getByText('New export')).toBeInTheDocument();
 
-    expect(screen.getByText('Total Size')).toBeInTheDocument();
-    expect(screen.getByText('Most Exported')).toBeInTheDocument();
-    expect(screen.getByText('Last Export')).toBeInTheDocument();
+    expect(screen.getByText('Total size')).toBeInTheDocument();
+    expect(screen.getByText('Most exported')).toBeInTheDocument();
+    expect(screen.getByText('Last export')).toBeInTheDocument();
 
-    expect(screen.getByText('Export History')).toBeInTheDocument();
+    expect(screen.getByText('Export history')).toBeInTheDocument();
     // Failed row surfaces its error message as visible + title text.
     expect(screen.getByText('disk full')).toBeInTheDocument();
   });
 
   it('aggregates the stat tiles from job data (count, summed bytes, top type)', async () => {
     renderPage();
-    await screen.findByText('Total Exports');
+    await screen.findByText('Total exports');
 
     // 3 jobs total.
-    expect(within(metricCard('Total Exports')).getByText('3')).toBeInTheDocument();
+    expect(within(metricCard('Total exports')).getByText('3')).toBeInTheDocument();
     // 2048 + 0 + 5_000_000 bytes → "4.8 MB".
-    expect(within(metricCard('Total Size')).getByText('4.8 MB')).toBeInTheDocument();
+    expect(within(metricCard('Total size')).getByText('4.8 MB')).toBeInTheDocument();
     // drives x2 beats charging x1 — rendered lower-cased from the type key.
-    expect(within(metricCard('Most Exported')).getByText('drives')).toBeInTheDocument();
+    expect(within(metricCard('Most exported')).getByText('drives')).toBeInTheDocument();
   });
 
   it('submits a new export with the chosen type, format and default 30-day window', async () => {
     renderPage();
-    await screen.findByText('New Export');
+    await screen.findByText('New export');
 
     fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Charging' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start Export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
 
     await waitFor(() => {
       expect(postCalls.some((c) => c.url === '/export/jobs')).toBe(true);
@@ -300,10 +300,10 @@ describe('DataExportPage — Project Apex elevation', () => {
 
   it('omits the date range when the "All Time" preset is selected', async () => {
     renderPage();
-    await screen.findByText('New Export');
+    await screen.findByText('New export');
 
-    fireEvent.click(screen.getByRole('button', { name: 'All Time' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start Export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'All time' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
 
     await waitFor(() => {
       expect(postCalls.some((c) => c.url === '/export/jobs')).toBe(true);
@@ -317,11 +317,11 @@ describe('DataExportPage — Project Apex elevation', () => {
 
   it('forwards a custom date range when the user supplies one', async () => {
     renderPage();
-    await screen.findByText('New Export');
+    await screen.findByText('New export');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Custom Range' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Custom range' }));
     fireEvent.change(screen.getByLabelText('Start'), { target: { value: '2025-03-01' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Start Export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
 
     await waitFor(() => {
       expect(postCalls.some((c) => c.url === '/export/jobs')).toBe(true);
@@ -345,7 +345,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     expect(screen.getByTestId('export-column-select-all')).toBeDisabled();
 
     fireEvent.click(screen.getByTestId('export-column-checkbox-distance_m'));
-    fireEvent.click(screen.getByRole('button', { name: 'Start Export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
 
     await waitFor(() => {
       expect(postCalls.some((c) => c.url === '/export/jobs')).toBe(true);
@@ -373,9 +373,9 @@ describe('DataExportPage — Project Apex elevation', () => {
     jobsData = [];
     renderPage();
 
-    expect(await screen.findByText('No Exports Yet')).toBeInTheDocument();
+    expect(await screen.findByText('No exports yet')).toBeInTheDocument();
     expect(screen.getByText('Create your first export above to get started.')).toBeInTheDocument();
-    expect(within(metricCard('Total Exports')).getByText('0')).toBeInTheDocument();
+    expect(within(metricCard('Total exports')).getByText('0')).toBeInTheDocument();
   });
 
   it('surfaces a load-error banner without crashing the rest of the page', async () => {
@@ -384,7 +384,7 @@ describe('DataExportPage — Project Apex elevation', () => {
 
     expect(await screen.findByText('Failed to load export jobs')).toBeInTheDocument();
     // The wizard (fed by the still-successful vehicles query) keeps working.
-    expect(screen.getByText('New Export')).toBeInTheDocument();
+    expect(screen.getByText('New export')).toBeInTheDocument();
   });
 
   it('opens the artifact URL for a ready job', async () => {
@@ -440,7 +440,7 @@ describe('DataExportPage — Project Apex elevation', () => {
 
   it('gates the scheduled-exports section behind auth mode (open mode → placeholder)', async () => {
     renderPage();
-    await screen.findByText('New Export');
+    await screen.findByText('New export');
 
     // In open mode the RequiresAuth wrapper renders its stable placeholder and
     // never mounts the underlying scheduled-exports panel.

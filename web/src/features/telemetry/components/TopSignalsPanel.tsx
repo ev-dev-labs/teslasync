@@ -67,7 +67,7 @@ export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('liveMonitor.topSignals', 'Most Active Signals')}
+        {t('liveMonitor.topSignals', 'Most active signals')}
       </PanelTitle>
 
       {rows.length === 0 ? (

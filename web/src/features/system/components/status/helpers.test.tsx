@@ -46,9 +46,9 @@ describe('getStatusColor', () => {
   })
 
   it('is case-insensitive', () => {
-    expect(getStatusColor('HEALTHY')).toBe('#22c55e')
+    expect(getStatusColor('Healthy')).toBe('#22c55e')
     expect(getStatusColor('Warning')).toBe('#f59e0b')
-    expect(getStatusColor('ERROR')).toBe('#ef4444')
+    expect(getStatusColor('Error')).toBe('#ef4444')
   })
 
   it('falls back to grey for unknown, empty, and nullish input', () => {
@@ -63,8 +63,8 @@ describe('getStatusColor', () => {
 describe('statusTextClass', () => {
   it('returns the matching tone class per severity bucket', () => {
     expect(statusTextClass('online')).toBe('text-green-400')
-    expect(statusTextClass('pending')).toBe('text-amber-400')
-    expect(statusTextClass('failed')).toBe('text-red-400')
+    expect(statusTextClass('Pending')).toBe('text-amber-400')
+    expect(statusTextClass('Failed')).toBe('text-red-400')
   })
 
   it('uses the theme muted var (not a raw text-white/gray) for the default', () => {
@@ -81,14 +81,14 @@ describe('getStatusIcon', () => {
   })
 
   it('defaults unknown/nullish status to the warning triangle', () => {
-    expect(getStatusIcon('unknown').type).toBe(AlertTriangle)
+    expect(getStatusIcon('Unknown').type).toBe(AlertTriangle)
     expect(getStatusIcon(null as unknown as string).type).toBe(AlertTriangle)
   })
 
   it('threads the status tone class through to the icon', () => {
-    expect(getStatusIcon('healthy').props.className).toContain('text-green-400')
-    expect(getStatusIcon('healthy').props.className).toContain('h-4 w-4')
-    expect(getStatusIcon('error').props.className).toContain('text-red-400')
+    expect(getStatusIcon('Healthy').props.className).toContain('text-green-400')
+    expect(getStatusIcon('Healthy').props.className).toContain('h-4 w-4')
+    expect(getStatusIcon('Error').props.className).toContain('text-red-400')
   })
 
   it('marks the decorative icon aria-hidden and renders an actual <svg>', () => {
@@ -170,7 +170,7 @@ describe('statusToBadgeVariant', () => {
   it('treats "connected" as success alongside the other healthy statuses', () => {
     // Regression: 'connected' (a real DB/MQTT status) used to fall through to
     // 'neutral' while the sibling helpers all treated it as success.
-    expect(statusToBadgeVariant('connected')).toBe('success')
+    expect(statusToBadgeVariant('Connected')).toBe('success')
     for (const s of SUCCESS) expect(statusToBadgeVariant(s)).toBe('success')
   })
 

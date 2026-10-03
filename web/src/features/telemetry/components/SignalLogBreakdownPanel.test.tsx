@@ -107,7 +107,7 @@ describe('SignalLogBreakdownPanel — loading', () => {
     // No bar sublabels while loading.
     expect(screen.queryByText(/60 \u00b7 60%/)).toBeNull();
     // The panel title always renders regardless of state.
-    expect(screen.getByRole('heading', { name: /Value Composition/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Value composition/ })).toBeInTheDocument();
   });
 });
 

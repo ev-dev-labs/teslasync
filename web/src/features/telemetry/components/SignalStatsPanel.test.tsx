@@ -120,9 +120,31 @@ describe('isEmptyStat', () => {
 
 // ── populated ────────────────────────────────────────────────────────────
 describe('SignalStatsPanel — populated', () => {
+  it('keeps unrecorded aggregates separate from true zero in the value checklist', () => {
+    renderPanel({
+      stats: [{ signal: 'recorded_zero', min: 0, max: 0, avg: 0, count: 1 }],
+      selectedSignals: ['recorded_zero', 'unrecorded'],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Filter Avg' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('checkbox', { name: '0.00' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('checkbox', { name: '—' })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: '—' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(screen.getByText('recorded_zero')).toBeInTheDocument();
+    expect(screen.queryByText('unrecorded')).toBeNull();
+  });
+
+  it('preserves complete selected-signal candidates when empty rows are locally hidden', () => {
+    renderPanel({ selectedSignals: SELECTED });
+    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('button', { name: 'Filter Signal' }));
+    expect(within(screen.getByRole('dialog')).getByRole('checkbox', { name: 'phantom' })).toBeInTheDocument();
+  });
+
   it('renders the default title and the full column header set', () => {
     renderPanel();
-    expect(screen.getByRole('heading', { name: 'Stats Summary' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Stats summary' })).toBeInTheDocument();
     for (const header of ['Signal', 'Min', 'Max', 'Avg', 'Count']) {
       expect(screen.getByText(header)).toBeInTheDocument();
     }
@@ -141,7 +163,7 @@ describe('SignalStatsPanel — populated', () => {
   it('honours a title override', () => {
     renderPanel({ title: 'Live Aggregates' });
     expect(screen.getByRole('heading', { name: 'Live Aggregates' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Stats Summary' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Stats summary' })).toBeNull();
   });
 
   it('does not render the hide-empty toggle when no rows are empty', () => {
@@ -161,7 +183,7 @@ describe('SignalStatsPanel — loading', () => {
 
   it('keeps the panel title visible during loading', () => {
     renderPanel({ loading: true });
-    expect(screen.getByRole('heading', { name: 'Stats Summary' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Stats summary' })).toBeInTheDocument();
   });
 });
 

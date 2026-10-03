@@ -28,7 +28,7 @@ const HOURS = 168;
 
 export default function SignalTrendPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalTrend.title', 'Signal Trend'));
+  usePageTitle(t('signalTrend.title', 'Signal trend'));
 
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
@@ -93,7 +93,7 @@ export default function SignalTrendPage() {
   }, [historyQuery.data, summary.slopePerHour, summary.interceptAtStart, summary.forecast]);
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalTrend.title', 'Signal Trend')} />;
+    return <NoVehicleSelected pageTitle={t('signalTrend.title', 'Signal trend')} />;
   }
 
   const historyHasData = historyQuery.data !== undefined;
@@ -105,7 +105,7 @@ export default function SignalTrendPage() {
 
   return (
     <PageContainer
-      title={t('signalTrend.title', 'Signal Trend')}
+      title={t('signalTrend.title', 'Signal trend')}
       subtitle={t(
         'signalTrend.subtitle',
         'Robust slope and significance for slow, monotonic drift in a numeric signal — distinct from abrupt change points, anomaly scoring, or cross-signal correlation',
@@ -118,7 +118,7 @@ export default function SignalTrendPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalTrend.pick', 'Choose a Signal')}
+            {t('signalTrend.pick', 'Choose a signal')}
             <HelpTooltip
               size="sm"
               i18nKey="help.signalTrend.pick"
@@ -162,7 +162,7 @@ export default function SignalTrendPage() {
           ) : (
             <>
               <MetricCard
-                label={t('signalTrend.slope', 'Drift Rate')}
+                label={t('signalTrend.slope', 'Drift rate')}
                 value={hasData ? `${fmtNumber(summary.slopePerDay ?? 0, 4)}/day` : '—'}
                 subtitle={t('signalTrend.slopePerHour', '{{v}}/hour', { v: hasData ? fmtNumber(summary.slopePerHour ?? 0, 5) : '—' })}
                 icon={<TrendingUp className="h-5 w-5" />}
@@ -184,7 +184,7 @@ export default function SignalTrendPage() {
                 }}
               />
               <MetricCard
-                label={t('signalTrend.spread', 'Residual Spread')}
+                label={t('signalTrend.spread', 'Residual spread')}
                 value={hasData ? fmtNumber(summary.residualSpread ?? 0, 3) : '—'}
                 subtitle={t('signalTrend.spreadHint', 'robust MAD around the fitted line')}
                 icon={<Ruler className="h-5 w-5" />}
@@ -213,7 +213,7 @@ export default function SignalTrendPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('signalTrend.chart', 'Robust Baseline & Forecast Band')}
+            title={t('signalTrend.chart', 'Robust baseline & forecast band')}
             subtitle={t('signalTrend.chartHint', 'The forecast is never projected further ahead than the signal has actually been observed, and only appears when the trend is significant')}
             ariaLabel={t('signalTrend.chartAria', 'Composed chart of actual signal values, the fitted robust baseline, and an evidence-limited forecast band')}
             chartKey="signal-trend-forecast"
@@ -250,7 +250,7 @@ export default function SignalTrendPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalTrend.reading', 'Reading the Result')}
+            {t('signalTrend.reading', 'Reading the result')}
           </PanelTitle>
           {!hasData ? (
             <EmptyState /* no-action: the interpretation follows from the trend fit above. */

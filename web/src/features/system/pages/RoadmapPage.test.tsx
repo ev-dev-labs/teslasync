@@ -132,7 +132,7 @@ describe('RoadmapPage — scaffolding & a11y', () => {
     expect(screen.getByText('This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')).toBeInTheDocument();
     expect(
       screen.getByText(
-        "What's been built, what's in progress, and what's coming next",
+        "What's been built, What's in progress, and What's coming next",
       ),
     ).toBeInTheDocument();
 
@@ -142,9 +142,9 @@ describe('RoadmapPage — scaffolding & a11y', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Completed' })).toBeInTheDocument();
     expect(
-      screen.getByRole('region', { name: 'Active Focus' }),
+      screen.getByRole('region', { name: 'Active focus' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Up Next' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Up next' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Future' })).toBeInTheDocument();
 
     // usePageTitle wired the document title through the title store.
@@ -157,19 +157,19 @@ describe('RoadmapPage — KPI band', () => {
     renderPage();
 
     expect(metricValue('Completed')).toBe('10');
-    expect(metricValue('Active Focus')).toBe('1');
-    expect(metricValue('Up Next')).toBe('2');
+    expect(metricValue('Active focus')).toBe('1');
+    expect(metricValue('Up next')).toBe('2');
     expect(metricValue('Future')).toBe('4');
-    expect(metricValue('Total Initiatives')).toBe('17');
-    expect(metricValue('Features Shipped')).toBe('70');
+    expect(metricValue('Total initiatives')).toBe('17');
+    expect(metricValue('Features shipped')).toBe('70');
 
     // Invariant: the four phase counts reconcile with the total.
     const phaseSum =
       Number(metricValue('Completed')) +
-      Number(metricValue('Active Focus')) +
-      Number(metricValue('Up Next')) +
+      Number(metricValue('Active focus')) +
+      Number(metricValue('Up next')) +
       Number(metricValue('Future'));
-    expect(phaseSum).toBe(Number(metricValue('Total Initiatives')));
+    expect(phaseSum).toBe(Number(metricValue('Total initiatives')));
   });
 
   it('counts Features Shipped as the total feature bullets in the completed phase, not the initiative count', () => {
@@ -180,11 +180,11 @@ describe('RoadmapPage — KPI band', () => {
     expect(shippedFeatureBullets).toHaveLength(70);
 
     // The KPI reflects the summed bullets (guards the reduce()) …
-    expect(Number(metricValue('Features Shipped'))).toBe(
+    expect(Number(metricValue('Features shipped'))).toBe(
       shippedFeatureBullets.length,
     );
     // … and is emphatically not the initiative count.
-    expect(Number(metricValue('Features Shipped'))).toBeGreaterThan(
+    expect(Number(metricValue('Features shipped'))).toBeGreaterThan(
       Number(metricValue('Completed')),
     );
   });
@@ -195,7 +195,7 @@ describe('RoadmapPage — delivery progress', () => {
     renderPage();
 
     const panel = screen
-      .getByRole('heading', { level: 2, name: 'Delivery Progress' })
+      .getByRole('heading', { level: 2, name: 'Delivery progress' })
       .closest('[data-print-card]');
     expect(panel).not.toBeNull();
     const scope = within(panel as HTMLElement);
@@ -245,7 +245,7 @@ describe('RoadmapPage — phase bands', () => {
       ).toBeInTheDocument(),
     );
 
-    const current = phase('Active Focus');
+    const current = phase('Active focus');
     expect(
       current.getByText('Areas receiving attention; priorities may change.'),
     ).toBeInTheDocument();
@@ -284,10 +284,10 @@ describe('RoadmapPage — card contents', () => {
       within(cardByTitle('Core Platform')).getByText('Completed'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Reliability & Data Trust')).getByText('Active Focus'),
+      within(cardByTitle('Reliability & Data Trust')).getByText('Active focus'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Helix Quality & Cost Controls')).getByText('Up Next'),
+      within(cardByTitle('Helix Quality & Cost Controls')).getByText('Up next'),
     ).toBeInTheDocument();
     expect(
       within(cardByTitle('Energy Ecosystem')).getByText('Future'),
@@ -310,7 +310,7 @@ describe('RoadmapPage — data integrity', () => {
     // One card heading per initiative …
     expect(cardHeadings).toHaveLength(17);
     // … reconciling with the Total Initiatives KPI.
-    expect(cardHeadings).toHaveLength(Number(metricValue('Total Initiatives')));
+    expect(cardHeadings).toHaveLength(Number(metricValue('Total initiatives')));
 
     // No card is a blank panel — each owns at least one feature bullet.
     cardHeadings.forEach((heading) => {

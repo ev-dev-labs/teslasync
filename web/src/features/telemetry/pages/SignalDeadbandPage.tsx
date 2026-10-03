@@ -25,7 +25,7 @@ const HISTORY_HOURS = 24;
 
 export default function SignalDeadbandPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalDeadband.title', 'Signal Deadband'));
+  usePageTitle(t('signalDeadband.title', 'Signal deadband'));
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
   const [signal, setSignal] = useState('');
@@ -69,7 +69,7 @@ export default function SignalDeadbandPage() {
   );
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalDeadband.title', 'Signal Deadband')} />;
+    return <NoVehicleSelected pageTitle={t('signalDeadband.title', 'Signal deadband')} />;
   }
 
   const historyHasData = historyQuery.data !== undefined;
@@ -79,7 +79,7 @@ export default function SignalDeadbandPage() {
 
   return (
     <PageContainer
-      title={t('signalDeadband.title', 'Signal Deadband')}
+      title={t('signalDeadband.title', 'Signal deadband')}
       subtitle={t(
         'signalDeadband.subtitle',
         'Estimate a robust numeric noise floor and retain material telemetry changes with fewer redundant emissions',
@@ -91,7 +91,7 @@ export default function SignalDeadbandPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <RadioTower className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalDeadband.selection.title', 'Signal Under Test')}
+            {t('signalDeadband.selection.title', 'Signal under test')}
           </PanelTitle>
           {signalsQuery.isError ? (
             <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
@@ -141,14 +141,14 @@ export default function SignalDeadbandPage() {
           ) : (
             <>
               <MetricCard
-                label={t('signalDeadband.kpis.noise', 'MAD Noise Band')}
+                label={t('signalDeadband.kpis.noise', 'MAD noise band')}
                 value={analysis != null ? fmtNumber(analysis.noiseThreshold, 4) : '—'}
                 subtitle={t('signalDeadband.kpis.siUnits', 'canonical SI signal units')}
                 icon={<Waves className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
-                label={t('signalDeadband.kpis.redundant', 'Redundant Emissions')}
+                label={t('signalDeadband.kpis.redundant', 'Redundant emissions')}
                 value={analysis != null ? fmtPercent(analysis.redundantEmissionRatio * 100, 1) : '—'}
                 subtitle={t('signalDeadband.kpis.unchanged', '{{value}} exactly unchanged', {
                   value: analysis != null
@@ -159,7 +159,7 @@ export default function SignalDeadbandPage() {
                 color="purple"
               />
               <MetricCard
-                label={t('signalDeadband.kpis.threshold', 'Recommended Deadband')}
+                label={t('signalDeadband.kpis.threshold', 'Recommended deadband')}
                 value={recommended != null ? fmtNumber(recommended.threshold, 4) : '—'}
                 subtitle={t('signalDeadband.kpis.suppression', '{{value}} noise suppressed', {
                   value: recommended != null
@@ -170,7 +170,7 @@ export default function SignalDeadbandPage() {
                 color="blue"
               />
               <MetricCard
-                label={t('signalDeadband.kpis.reduction', 'Projected Reduction')}
+                label={t('signalDeadband.kpis.reduction', 'Projected reduction')}
                 value={recommended != null ? fmtPercent(recommended.reduction * 100, 1) : '—'}
                 subtitle={t('signalDeadband.kpis.fidelity', '{{value}} reconstruction fidelity', {
                   value: recommended != null ? fmtPercent(recommended.fidelity * 100, 1) : '—',
@@ -190,7 +190,7 @@ export default function SignalDeadbandPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('signalDeadband.curve.title', 'Cumulative Retained Updates')}
+            title={t('signalDeadband.curve.title', 'Cumulative retained updates')}
             subtitle={t(
               'signalDeadband.curve.subtitle',
               'Each candidate is simulated against the last retained value, not filtered as isolated adjacent deltas',
@@ -237,7 +237,7 @@ export default function SignalDeadbandPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalDeadband.recommendation.title', 'Retention Audit')}
+            {t('signalDeadband.recommendation.title', 'Retention audit')}
           </PanelTitle>
           {analysis == null ? (
             <EmptyState /* no-action: the signal selector above is the relevant next action. */

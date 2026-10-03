@@ -73,11 +73,11 @@ const DASH = '—';
 
 // The six card labels, in render order, keyed by the facet they surface.
 const LABELS = {
-  total: 'Total Signals',
+  total: 'Total signals',
   active: 'Active (<30s)',
   aging: 'Aging (<5min)',
   stale: 'Stale (>5min)',
-  never: 'Never Received',
+  never: 'Never received',
   freshness: 'Freshness',
 } as const;
 

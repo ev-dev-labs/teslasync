@@ -202,7 +202,7 @@ describe('TestSignalExplorerNLAIOffManualFiltersWork (signal-explorer-nl-filter 
     renderSignalExplorerPage();
 
     // 1) Page title surfaces.
-    expect(await screen.findByText(/^Signal Explorer$/)).toBeInTheDocument();
+    expect(await screen.findByText(/^Signal explorer$/)).toBeInTheDocument();
 
     // 2) Header range updates this route without mounting a second picker.
     const originalRange = screen.getByTestId('header-range-window').textContent;
@@ -221,7 +221,7 @@ describe('TestSignalExplorerNLAIOffManualFiltersWork (signal-explorer-nl-filter 
     // 4) The deterministic empty-state copy renders before the user
     //    selects signals and clicks Explore.
     expect(
-      screen.getByText(/Pick signals and click Explore/i),
+      screen.getByText(/Pick signals and click explore/i),
     ).toBeInTheDocument();
 
     // 5) The AI natural-language filter surface must be absent from

@@ -80,7 +80,7 @@ export function SignalLogKpiBand({ summary, loading = false }: SignalLogKpiBandP
     <FadeIn>
       <section aria-label={t('signalLog.kpis', 'Query summary')} className={gridClass}>
         <MetricCard
-          label={t('signalLog.kpi.totalRecords', 'Total Records')}
+          label={t('signalLog.kpi.totalRecords', 'Total records')}
           value={fmtInt(s.totalRecords)}
           icon={<Database className="h-5 w-5" aria-hidden="true" />}
           color="cyan"
@@ -95,25 +95,25 @@ export function SignalLogKpiBand({ summary, loading = false }: SignalLogKpiBandP
           color="blue"
         />
         <MetricCard
-          label={t('signalLog.kpi.numeric', 'Numeric Points')}
+          label={t('signalLog.kpi.numeric', 'Numeric points')}
           value={fmtInt(s.numericPoints)}
           icon={<Hash className="h-5 w-5" aria-hidden="true" />}
           color="green"
         />
         <MetricCard
-          label={t('signalLog.kpi.text', 'Text Points')}
+          label={t('signalLog.kpi.text', 'Text points')}
           value={fmtInt(s.textPoints)}
           icon={<Type className="h-5 w-5" aria-hidden="true" />}
           color="amber"
         />
         <MetricCard
-          label={t('signalLog.kpi.boolean', 'Boolean Points')}
+          label={t('signalLog.kpi.boolean', 'Boolean points')}
           value={fmtInt(s.boolPoints)}
           icon={<ToggleRight className="h-5 w-5" aria-hidden="true" />}
           color="purple"
         />
         <MetricCard
-          label={t('signalLog.kpi.timeSpan', 'Time Span')}
+          label={t('signalLog.kpi.timeSpan', 'Time span')}
           value={formatSpan(s.earliest, s.latest)}
           icon={<Clock className="h-5 w-5" aria-hidden="true" />}
           color="blue"

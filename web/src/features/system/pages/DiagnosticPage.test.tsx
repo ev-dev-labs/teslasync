@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -136,6 +136,9 @@ describe('DiagnosticPage — Phase-46 / Prompt 33', () => {
     // future check additions/removals.
     const cards = screen.getAllByTestId(/^diagnostic-check-/);
     expect(cards.length).toBeGreaterThanOrEqual(8);
+    expect(within(screen.getByTestId('diagnostic-check-db.connectivity')).getByText('OK')).toBeInTheDocument();
+    expect(within(screen.getByTestId('diagnostic-check-telemetry.signal_log_freshness')).getByText('Warning')).toBeInTheDocument();
+    expect(screen.queryByText('WARN')).not.toBeInTheDocument();
 
     expect(mockedRequest).toHaveBeenCalledWith(
       '/system/diagnostic',
@@ -240,7 +243,7 @@ describe('DiagnosticPage — Phase-46 / Prompt 33', () => {
     });
 
     expect(
-      screen.getByRole('button', { name: /Re-run diagnostic/i }),
+      screen.getByRole('button', { name: /Re-Run diagnostic/i }),
     ).toBeInTheDocument();
   });
 });

@@ -51,7 +51,7 @@ const GRADE_COLOR: Record<ReliabilityGrade, number> = {
 
 export default function CommandReliabilityPage() {
   const { t } = useTranslation();
-  usePageTitle(t('commandReliability.title', 'Command Reliability'));
+  usePageTitle(t('commandReliability.title', 'Command reliability'));
 
   const { vehicleId } = useSelectedVehicle();
   const { preferences } = useProductPreferences();
@@ -89,7 +89,7 @@ export default function CommandReliabilityPage() {
   );
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('commandReliability.title', 'Command Reliability')} />;
+    return <NoVehicleSelected pageTitle={t('commandReliability.title', 'Command reliability')} />;
   }
 
   const isLoading = historyQuery.isLoading;
@@ -97,10 +97,10 @@ export default function CommandReliabilityPage() {
 
   return (
     <PageContainer
-      title={t('commandReliability.title', 'Command Reliability')}
+      title={t('commandReliability.title', 'Command reliability')}
       subtitle={t(
         'commandReliability.subtitle',
-        'Which remote commands you can actually trust, graded on Wilson confidence bounds rather than a raw success percentage',
+        'Which remote commands you can actually trust, graded on wilson confidence bounds rather than a raw success percentage',
       )}
       query={historyQuery}
     >
@@ -121,7 +121,7 @@ export default function CommandReliabilityPage() {
           ) : (
             <>
               <MetricCard
-                label={t('commandReliability.overall', 'Overall Success')}
+                label={t('commandReliability.overall', 'Overall success')}
                 value={`${Math.round(summary.overallSuccessRate * 100)}%`}
                 subtitle={t('commandReliability.attempts', '{{n}} attempts', {
                   n: summary.totalAttempts,
@@ -135,7 +135,7 @@ export default function CommandReliabilityPage() {
                 }}
               />
               <MetricCard
-                label={t('commandReliability.unreliable', 'Unreliable Commands')}
+                label={t('commandReliability.unreliable', 'Unreliable commands')}
                 value={summary.unreliableCount}
                 subtitle={
                   summary.worstCommand != null
@@ -146,14 +146,14 @@ export default function CommandReliabilityPage() {
                 color={summary.unreliableCount > 0 ? 'red' : 'green'}
               />
               <MetricCard
-                label={t('commandReliability.intents', 'Distinct Intents')}
+                label={t('commandReliability.intents', 'Distinct intents')}
                 value={summary.totalIntents}
                 subtitle={t('commandReliability.intentsHint', 'after collapsing retry storms')}
                 icon={<Radio className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
-                label={t('commandReliability.storms', 'Retry Storms')}
+                label={t('commandReliability.storms', 'Retry storms')}
                 value={summary.storms.length}
                 subtitle={t('commandReliability.stormsHint', 'you pressed it again, and again')}
                 icon={<RefreshCw className="h-5 w-5" />}
@@ -178,14 +178,14 @@ export default function CommandReliabilityPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('commandReliability.chart', 'Confidence-Weighted Success')}
+            title={t('commandReliability.chart', 'Confidence-weighted success')}
             subtitle={t(
               'commandReliability.chartHint',
               'Bars are the pessimistic lower bound; the dot is the raw success rate the log shows',
             )}
             ariaLabel={t(
               'commandReliability.chart.aria',
-              'Bar chart of the Wilson lower confidence bound for each command with the naive success rate overlaid',
+              'Bar chart of the wilson lower confidence bound for each command with the naive success rate overlaid',
             )}
             loading={isLoading}
             empty={chartData.length === 0}
@@ -247,7 +247,7 @@ export default function CommandReliabilityPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <CheckCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('commandReliability.detail', 'Command Breakdown')}
+            {t('commandReliability.detail', 'Command breakdown')}
             <HelpTooltip
               size="sm"
               i18nKey="help.commandReliability.detail"

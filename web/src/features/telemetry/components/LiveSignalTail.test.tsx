@@ -117,11 +117,11 @@ describe('LiveSignalTail — stat band', () => {
 
     expect(statCard('Signals / sec').getByText('7')).toBeInTheDocument();
 
-    const buffer = statCard('Buffer Size');
+    const buffer = statCard('Buffer size');
     expect(buffer.getByText('3')).toBeInTheDocument();
     expect(buffer.getByText('/ 500')).toBeInTheDocument();
 
-    expect(statCard('Unique Signals').getByText('2')).toBeInTheDocument();
+    expect(statCard('Unique signals').getByText('2')).toBeInTheDocument();
     expect(statCard('Filtered').getByText('3')).toBeInTheDocument();
   });
 
@@ -133,7 +133,7 @@ describe('LiveSignalTail — stat band', () => {
     });
 
     expect(screen.queryByText('Signals / sec')).not.toBeInTheDocument();
-    expect(screen.queryByText('Buffer Size')).not.toBeInTheDocument();
+    expect(screen.queryByText('Buffer size')).not.toBeInTheDocument();
     // The tail itself (title + row) still renders.
     expect(screen.getByText('Live Signal Tail')).toBeInTheDocument();
     expect(screen.getByText('battery_level')).toBeInTheDocument();
@@ -184,7 +184,7 @@ describe('LiveSignalTail — filtering + empty states', () => {
   it('shows the waiting message and a zero buffer when there are no entries', () => {
     renderTail({ entries: [] });
     expect(screen.getByText('Waiting for signals…')).toBeInTheDocument();
-    expect(statCard('Buffer Size').getByText('0')).toBeInTheDocument();
+    expect(statCard('Buffer size').getByText('0')).toBeInTheDocument();
   });
 
   it('filters rows case-insensitively and updates the Filtered stat', () => {
@@ -274,6 +274,6 @@ describe('LiveSignalTail — optional slots + resilience', () => {
     ).not.toThrow();
 
     expect(screen.getByText('Waiting for signals…')).toBeInTheDocument();
-    expect(statCard('Buffer Size').getByText('0')).toBeInTheDocument();
+    expect(statCard('Buffer size').getByText('0')).toBeInTheDocument();
   });
 });

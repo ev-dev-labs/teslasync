@@ -157,9 +157,9 @@ describe('LiveSignalMonitorPage', () => {
 
     // Page title (usePageTitle) + heading fall back to the same canonical
     // default that matches the i18n catalog value ("Live Monitor").
-    expect(document.title).toContain('Live Monitor');
+    expect(document.title).toContain('Live monitor');
     expect(document.title).toContain('TeslaSync');
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Live Monitor');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Live monitor');
 
     // Named landmark regions for the summary + analytics bento.
     expect(screen.getByRole('region', { name: 'Live stream summary' })).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe('LiveSignalMonitorPage', () => {
     expect(screen.getByText('Waiting for live throughput…')).toBeInTheDocument();
 
     // Unique-signals KPI reads 0 (null-safe) rather than blank.
-    const uniqueCard = screen.getByText('Unique Signals').closest('div');
+    const uniqueCard = screen.getByText('Unique signals').closest('div');
     expect(uniqueCard).not.toBeNull();
     expect(within(uniqueCard as HTMLElement).getByText('0')).toBeInTheDocument();
   });
@@ -205,11 +205,11 @@ describe('LiveSignalMonitorPage', () => {
     expect(screen.getAllByText('1×')).toHaveLength(2);
 
     // Unique-signals KPI counts distinct names (3), not raw buffer entries (5).
-    const uniqueCard = screen.getByText('Unique Signals').closest('div');
+    const uniqueCard = screen.getByText('Unique signals').closest('div');
     expect(within(uniqueCard as HTMLElement).getByText('3')).toBeInTheDocument();
 
     // The top-signal row carries the LATEST (newest-first) value, 55 not 40.
-    const topPanel = screen.getByText('Most Active Signals').closest('[data-print-card]');
+    const topPanel = screen.getByText('Most active signals').closest('[data-print-card]');
     expect(topPanel).not.toBeNull();
     expect(within(topPanel as HTMLElement).getByText('speed')).toBeInTheDocument();
     expect(within(topPanel as HTMLElement).getByText('55')).toBeInTheDocument();

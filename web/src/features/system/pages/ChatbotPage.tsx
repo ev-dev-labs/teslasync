@@ -762,9 +762,9 @@ export default function ChatbotPage() {
         'chatbot.subtitle',
         'Evidence-grounded intelligence across your fleet and TeslaSync knowledge',
       )}
-      actions={
+      metadataActions={<AIChatbotIndicator />}
+      secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <AIChatbotIndicator />
           <Button
             onClick={() => setShowSessions((s) => !s)}
             variant="ghost"

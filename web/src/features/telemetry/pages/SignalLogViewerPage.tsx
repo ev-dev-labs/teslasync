@@ -24,7 +24,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, AlertCircle, Activity } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel, Button, Select, Caption } from '@/components/ui';
 import { EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -73,7 +73,7 @@ interface SubmittedSignalQuery {
 
 export default function SignalLogViewerPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalLog.title', 'Signal Log Viewer'));
+  usePageTitle(t('signalLog.title', 'Signal log viewer'));
   const { preferences } = useProductPreferences();
 
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
@@ -152,7 +152,7 @@ export default function SignalLogViewerPage() {
 
   return (
     <PageContainer
-      title={t('signalLog.title', 'Signal Log Viewer')}
+      title={t('signalLog.title', 'Signal log viewer')}
       subtitle={t('signalLog.subtitle', 'Query signal history from Postgres')}
       query={hasQueried ? signalLogQuery : undefined}
       copyLink
@@ -185,7 +185,7 @@ export default function SignalLogViewerPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex flex-wrap items-end gap-3">
                   <Select
-                    label={t('signalLog.perPage', 'Per Page')}
+                    label={t('signalLog.perPage', 'Per page')}
                     value={String(perPage)}
                     onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
                     options={PER_PAGE_OPTIONS}
@@ -236,7 +236,7 @@ export default function SignalLogViewerPage() {
                 stats={chartStats}
                 loading={isLoading}
                 pointsLoaded={totalRecords}
-                title={t('signalLog.chart', 'Signal Chart')}
+                title={t('signalLog.chart', 'Signal chart')}
               />
             </div>
             <SignalLogBreakdownPanel

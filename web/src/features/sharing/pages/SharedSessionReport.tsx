@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, Clock, Battery, Gauge, DollarSign, MapPin } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
-import { Grid } from '@/components/layout';
+import { GlassPanel, Logo, Text } from '@/components/ui';
+import { Grid, PageHeader } from '@/components/layout';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import {
@@ -11,7 +11,6 @@ import {
   Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
-import Logo from '@/components/ui/Logo';
 import { FadeIn } from '@/components/motion';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { useUnits } from '@/hooks/useUnits';
@@ -24,7 +23,7 @@ import type { SharedSessionData } from '@/types/sharing';
 
 /**
  * Renders a `charging_session` share payload. Mirrors SharedDrivePage's
- * structure (branded header → title → stat grid → vehicle badge → curve
+ * structure (compact branded header → stat grid → vehicle badge → curve
  * chart → footer) so both link kinds read as one product. All quantities
  * convert to display units at this render boundary.
  */
@@ -51,48 +50,32 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="p-4 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2">
-          <Logo />
-          <span className="text-[var(--text-muted)] text-sm">
-            {t('share.sessionHeader', 'Shared Charging Report')}
-          </span>
-        </div>
-      </header>
-
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        {/* Title */}
-        <FadeIn>
-          <div className="space-y-1">
-            {/* a11y-landmark-ok: the "share link unavailable" heading lives
-                in a mutually-exclusive early-return branch, so only one <h1>
-                can ever be rendered. */}
-            <h1
-              className="text-2xl font-bold text-[var(--text-primary)] outline-none"
-              tabIndex={-1}
-              data-route-focus-target="true"
-            >
-              {data.title}
-            </h1>
-            {data.description && (
-              <p className="text-[var(--text-secondary)]">{data.description}</p>
-            )}
-            <div className="flex items-center gap-3 text-sm text-[var(--text-muted)] mt-2">
-              <span>{session.date}</span>
-              {session.place && <span>{session.place}</span>}
-              {session.charger_type && <span>{session.charger_type}</span>}
-            </div>
-          </div>
-        </FadeIn>
+        <div>
+          <PageHeader
+            title={data.title}
+            icon={<Logo />}
+            metadataActions={<Text variant="caption">{t('share.sessionHeader', 'Shared charging report')}</Text>}
+            contextActions={
+              <>
+                <Text variant="caption">{session.date}</Text>
+                {session.place && <Text variant="caption">{session.place}</Text>}
+                {session.charger_type && <Text variant="caption">{session.charger_type}</Text>}
+              </>
+            }
+          />
+          {data.description && (
+            <Text as="p" variant="bodySm" color="secondary">{data.description}</Text>
+          )}
+        </div>
 
         {/* Stats grid */}
         <FadeIn delay={0.05}>
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
             {session.energy_added_wh != null && (
               <StatCard
-                label={t('share.energyAdded', 'Energy Added')}
+                label={t('share.energyAdded', 'Energy added')}
                 value={formatEnergy(session.energy_added_wh)}
                 icon={<Zap className="h-4 w-4" />}
               />
@@ -111,7 +94,7 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
             )}
             {session.peak_power_w != null && (
               <StatCard
-                label={t('share.peakPower', 'Peak Power')}
+                label={t('share.peakPower', 'Peak power')}
                 value={formatPower(session.peak_power_w)}
                 icon={<Gauge className="h-4 w-4" />}
               />
@@ -156,7 +139,7 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
             {/* chart-a11y:no-table dense per-sample shared-session trace */}
             {/* chart-legend-audit:skip public share-link report has no URL state; power+SoC stay visible together */}
             <ChartContainer
-              title={t('share.curve', 'Charge Curve')}
+              title={t('share.curve', 'Charge curve')}
               ariaLabel={t('share.curve.aria', 'Shared session power and battery chart by minute')}
               height={220}
             >
@@ -223,7 +206,7 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
         {/* Footer */}
         <FadeIn delay={0.25}>
           <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] text-center text-[var(--text-muted)] text-xs space-y-1">
-            <p>{t('share.footer', 'Shared via TeslaSync — Self-hosted Tesla Fleet Intelligence')}</p>
+            <p>{t('share.footer', 'Shared via TeslaSync — self-hosted Tesla fleet intelligence')}</p>
             <a
               href="https://github.com/ev-dev-labs/teslasync"
               target="_blank"

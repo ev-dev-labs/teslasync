@@ -76,7 +76,7 @@ export function SignalHistoryTable({
   const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);
 
   const headingId = useId();
-  const heading = title ?? t('signalHistory.title', 'Signal Data');
+  const heading = title ?? t('signalHistory.title', 'Signal data');
 
   // Null-safe locals — callers should never hand us undefined, but a bad
   // upstream value must degrade to the empty state, not crash on `.length`
@@ -163,7 +163,7 @@ export function SignalHistoryTable({
     <FadeIn>
       <GlassPanel role="region" aria-labelledby={headingId} className={cn('p-4 sm:p-5', className)}>
         <div className="flex items-center gap-2 mb-3">
-          <Activity aria-hidden="true" className="h-4 w-4 text-neon-cyan" />
+          <Activity aria-hidden="true" className="h-4 w-4 text-cyan-300" />
           <SectionTitle id={headingId}>{heading}</SectionTitle>
           {showHeaderMeta ? (
             <span className="ml-auto text-2xs text-[var(--text-muted)]">

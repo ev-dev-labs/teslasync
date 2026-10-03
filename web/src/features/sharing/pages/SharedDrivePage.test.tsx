@@ -344,29 +344,36 @@ describe('SharedDrivePage — loading / error / empty branches', () => {
       screen.getByRole('status', { name: 'Loading shared drive report…' }),
     ).toHaveAttribute('aria-busy', 'true')
     // Stable report chrome renders immediately; fetched content does not.
-    expect(screen.getByText('Shared Drive Report')).toBeInTheDocument()
+    expect(screen.getByText('Shared drive report')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Morning Commute' })).toBeNull()
+    const title = screen.getByRole('heading', { level: 1, name: 'Shared drive report' })
+    expect(title).toHaveAttribute('data-route-focus-target', 'true')
+    expect(title.closest('header')).toHaveAttribute('data-role', 'page-header')
   })
 
   it('shows the expired/unavailable view when the query errors', () => {
     setData(undefined, { error: new Error('gone') })
     renderPage()
 
-    expect(screen.getByRole('heading', { name: 'Share Link Unavailable' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Share link unavailable' })).toBeInTheDocument()
     expect(
       screen.getByText('This shared drive link has expired or been revoked.'),
     ).toBeInTheDocument()
     const home = screen.getByRole('link', { name: 'Go to TeslaSync' })
     expect(home).toHaveAttribute('href', '/')
+    expect(screen.getByRole('heading', { name: 'Share link unavailable' }).closest('header'))
+      .toHaveAttribute('data-role', 'page-header')
+    home.focus()
+    expect(home).toHaveFocus()
     // The success chrome is withheld.
-    expect(screen.queryByText('Shared Drive Report')).toBeNull()
+    expect(screen.queryByText('Shared drive report')).toBeNull()
   })
 
   it('shows the expired view when there is no data (revoked token / empty response)', () => {
     setData(undefined) // not loading, no error, no data
     renderPage()
 
-    expect(screen.getByRole('heading', { name: 'Share Link Unavailable' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Share link unavailable' })).toBeInTheDocument()
     expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull()
   })
 })
@@ -376,11 +383,22 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
     setData(makeV2())
     renderPage()
 
-    expect(screen.getByText('Shared Drive Report')).toBeInTheDocument()
+    expect(screen.getByText('Shared drive report')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Morning Commute' })).toBeInTheDocument()
     expect(screen.getByText('A scenic drive')).toBeInTheDocument()
     expect(screen.getByText('2025-03-01')).toBeInTheDocument()
     expect(screen.getByText('Seattle → Tacoma')).toBeInTheDocument()
+    const title = screen.getByRole('heading', { level: 1, name: 'Morning Commute' })
+    const header = title.closest('header')
+    expect(header).toHaveAttribute('data-role', 'page-header')
+    expect(header).toHaveClass('border-0', 'rounded-none')
+    expect(title).toHaveAttribute('tabindex', '-1')
+    expect(title).toHaveAttribute('data-route-focus-target', 'true')
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.getByText('Seattle → Tacoma').closest('[data-action-group="context"]'))
+      .not.toBeNull()
+    expect(title.compareDocumentPosition(screen.getByTestId('map-container')) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy()
   })
 
   it('renders every stat card with SI→km/display-converted values', () => {
@@ -409,8 +427,8 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
     renderPage()
 
     // Accessible chart regions (section[aria-label]) with headings.
-    expect(screen.getByRole('heading', { name: 'Elevation Profile' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Speed Profile' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Elevation profile' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Speed profile' })).toBeInTheDocument()
     expect(
       screen.getByRole('region', {
         name: 'Shared drive elevation profile area chart by distance',
@@ -445,7 +463,7 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
     renderPage()
 
     expect(
-      screen.getByText('Shared via TeslaSync — Self-hosted Tesla Fleet Intelligence'),
+      screen.getByText('Shared via TeslaSync — self-hosted Tesla fleet intelligence'),
     ).toBeInTheDocument()
     const link = screen.getByRole('link', { name: 'Learn more →' })
     expect(link).toHaveAttribute('href', 'https://github.com/ev-dev-labs/teslasync')
@@ -533,9 +551,9 @@ describe('SharedDrivePage — optional cards + empty states', () => {
     // Nullable cards are withheld (never rendered blank).
     expect(screen.queryByText('Battery')).toBeNull()
     expect(screen.queryByText('Efficiency')).toBeNull()
-    expect(screen.queryByText('Max Speed')).toBeNull()
-    expect(screen.queryByText('Avg Speed')).toBeNull()
-    expect(screen.queryByText('Elevation Gain')).toBeNull()
+    expect(screen.queryByText('Max speed')).toBeNull()
+    expect(screen.queryByText('Avg speed')).toBeNull()
+    expect(screen.queryByText('Elevation gain')).toBeNull()
   })
 
   it('shows the honest "no route data" empty state when all profiles are absent', () => {
@@ -602,11 +620,11 @@ describe('SharedDrivePage — session share branch', () => {
     renderPage()
 
     expect(screen.getByText('Baker Supercharger Stop')).toBeInTheDocument()
-    expect(screen.getByText('Shared Charging Report')).toBeInTheDocument()
+    expect(screen.getByText('Shared charging report')).toBeInTheDocument()
     expect(screen.getByText('20% → 80%')).toBeInTheDocument()
     expect(screen.getByTestId('composed-chart')).toHaveAttribute('data-count', '1')
     // Drive chrome stays out: no map, no drive header.
     expect(screen.queryByTestId('map-container')).toBeNull()
-    expect(screen.queryByText('Shared Drive Report')).toBeNull()
+    expect(screen.queryByText('Shared drive report')).toBeNull()
   })
 })

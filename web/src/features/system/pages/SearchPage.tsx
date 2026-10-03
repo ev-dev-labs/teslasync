@@ -153,7 +153,7 @@ export default function SearchPage() {
         'Find vehicles, drives, charging, alerts and more across your fleet',
       )}
       query={isActiveSearch ? searchQuery : undefined}
-      actions={
+      secondaryActions={
         isActiveSearch ? (
           <Button
             variant="ghost"
@@ -240,7 +240,7 @@ export default function SearchPage() {
             ) : (
               <>
                 <MetricCard
-                  label={t('search.kpi.totalResults', 'Total Results')}
+                  label={t('search.kpi.totalResults', 'Total results')}
                   value={hits.length}
                   icon={<SearchIcon className="h-5 w-5" />}
                   color="cyan"
@@ -256,7 +256,7 @@ export default function SearchPage() {
                   })}
                 />
                 <MetricCard
-                  label={t('search.kpi.topMatch', 'Top Match')}
+                  label={t('search.kpi.topMatch', 'Top match')}
                   value={topGroup ? searchSectionLabel(topGroup.type, t) : '—'}
                   icon={<Star className="h-5 w-5" />}
                   color="green"
@@ -267,7 +267,7 @@ export default function SearchPage() {
                   }
                 />
                 <MetricCard
-                  label={t('search.kpi.activeFilters', 'Active Filters')}
+                  label={t('search.kpi.activeFilters', 'Active filters')}
                   value={typesFilter.length}
                   icon={<Filter className="h-5 w-5" />}
                   color="amber"

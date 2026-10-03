@@ -70,13 +70,13 @@ export function TransportAgreementPanel({
       <GlassPanel
         className="space-y-4 p-4 sm:p-5"
         role="region"
-        aria-label={t('signalTransportAgreement.title', 'HTTP / MQTT Agreement')}
+        aria-label={t('signalTransportAgreement.title', 'HTTP / MQTT agreement')}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <PanelTitle className="flex items-center gap-2">
               <GitCompareArrows className="h-4 w-4 text-cyan-600 dark:text-cyan-300" aria-hidden="true" />
-              {t('signalTransportAgreement.title', 'HTTP / MQTT Agreement')}
+              {t('signalTransportAgreement.title', 'HTTP / MQTT agreement')}
             </PanelTitle>
             <Text as="p" variant="bodySm" color="muted">
               {t(

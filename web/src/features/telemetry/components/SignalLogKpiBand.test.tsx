@@ -91,12 +91,12 @@ function makeSummary(overrides: Partial<SignalLogSummary> = {}): SignalLogSummar
 
 /** The six card labels, in render order. */
 const LABELS = [
-  'Total Records',
+  'Total records',
   'Signals',
-  'Numeric Points',
-  'Text Points',
-  'Boolean Points',
-  'Time Span',
+  'Numeric points',
+  'Text points',
+  'Boolean points',
+  'Time span',
 ] as const;
 
 /**
@@ -123,8 +123,8 @@ describe('SignalLogKpiBand', () => {
     // The labelled region is still announced during loading…
     expect(screen.getByRole('region', { name: 'Query summary' })).toBeInTheDocument();
     // …but none of the metric tiles have rendered yet.
-    expect(screen.queryByText('Total Records')).not.toBeInTheDocument();
-    expect(screen.queryByText('Time Span')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total records')).not.toBeInTheDocument();
+    expect(screen.queryByText('Time span')).not.toBeInTheDocument();
   });
 
   it('keeps showing data (not skeletons) when a refetch loads over existing rows', () => {
@@ -134,8 +134,8 @@ describe('SignalLogKpiBand', () => {
 
     // loading is true but totalRecords > 0 → the guard falls through to data.
     expect(container.querySelector('.animate-pulse')).toBeNull();
-    expect(screen.getByText('Total Records')).toBeInTheDocument();
-    expect(metricValue('Total Records')).toBe('5');
+    expect(screen.getByText('Total records')).toBeInTheDocument();
+    expect(metricValue('Total records')).toBe('5');
   });
 
   it('renders all six honest-zero placeholders before any query runs', () => {
@@ -144,9 +144,9 @@ describe('SignalLogKpiBand', () => {
     for (const label of LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
-    expect(metricValue('Total Records')).toBe('0');
-    expect(metricValue('Numeric Points')).toBe('0');
-    expect(metricValue('Time Span')).toBe('—');
+    expect(metricValue('Total records')).toBe('0');
+    expect(metricValue('Numeric points')).toBe('0');
+    expect(metricValue('Time span')).toBe('—');
     // subtitle: "{{count}} with data" with distinctSignals = 0.
     expect(screen.getByText('0 with data')).toBeInTheDocument();
   });
@@ -167,12 +167,12 @@ describe('SignalLogKpiBand', () => {
       />,
     );
 
-    expect(metricValue('Total Records')).toBe('12,500');
+    expect(metricValue('Total records')).toBe('12,500');
     expect(metricValue('Signals')).toBe('8');
-    expect(metricValue('Numeric Points')).toBe('10,000');
-    expect(metricValue('Text Points')).toBe('1,500');
-    expect(metricValue('Boolean Points')).toBe('1,000');
-    expect(metricValue('Time Span')).toBe('2h 30m');
+    expect(metricValue('Numeric points')).toBe('10,000');
+    expect(metricValue('Text points')).toBe('1,500');
+    expect(metricValue('Boolean points')).toBe('1,000');
+    expect(metricValue('Time span')).toBe('2h 30m');
     expect(screen.getByText('6 with data')).toBeInTheDocument();
   });
 
@@ -194,9 +194,9 @@ describe('SignalLogKpiBand', () => {
       />,
     );
 
-    expect(screen.getByText('Total Records')).toBeInTheDocument();
-    expect(metricValue('Total Records')).toBe('0');
-    expect(metricValue('Time Span')).toBe('—');
+    expect(screen.getByText('Total records')).toBeInTheDocument();
+    expect(metricValue('Total records')).toBe('0');
+    expect(metricValue('Time span')).toBe('—');
     expect(screen.getByText('0 with data')).toBeInTheDocument();
   });
 
@@ -206,7 +206,7 @@ describe('SignalLogKpiBand', () => {
     );
 
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
-    expect(screen.queryByText('Total Records')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total records')).not.toBeInTheDocument();
   });
 
   // ── formatSpan: exercised through the rendered "Time Span" tile ─────
@@ -231,7 +231,7 @@ describe('SignalLogKpiBand', () => {
   for (const [name, earliest, latest, expected] of spanCases) {
     it(`formats the time span for ${name}`, () => {
       render(<SignalLogKpiBand summary={makeSummary({ earliest, latest })} />);
-      expect(metricValue('Time Span')).toBe(expected);
+      expect(metricValue('Time span')).toBe(expected);
     });
   }
 });

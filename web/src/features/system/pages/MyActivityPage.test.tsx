@@ -192,7 +192,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
 
     // The page header + every panel title mount immediately (never gated on
     // data), while the KPI numbers stay hidden behind their skeletons.
-    expect(screen.getByText('My Activity')).toBeInTheDocument();
+    expect(screen.getByText('My activity')).toBeInTheDocument();
     expect(screen.getAllByText('Activity over time').length).toBeGreaterThan(0);
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
     expect(screen.queryByText('Total actions')).toBeNull();

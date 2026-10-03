@@ -69,7 +69,7 @@ export function resolveActivityWindow(
  */
 export default function ActivityTimelinePage() {
   const { t } = useTranslation();
-  usePageTitle(t('activity.timeline.title', 'Activity Timeline'));
+  usePageTitle(t('activity.timeline.title', 'Activity timeline'));
 
   const { vehicleId, vehicles } = useSelectedVehicle();
   const operationalMode = useOperationalMode();
@@ -106,7 +106,7 @@ export default function ActivityTimelinePage() {
   if (vehicles.length === 0) {
     return (
       <NoVehicleSelected
-        pageTitle={t('activity.timeline.title', 'Activity Timeline')}
+        pageTitle={t('activity.timeline.title', 'Activity timeline')}
       />
     );
   }
@@ -117,7 +117,7 @@ export default function ActivityTimelinePage() {
 
   return (
     <PageContainer
-      title={t('activity.timeline.title', 'Activity Timeline')}
+      title={t('activity.timeline.title', 'Activity timeline')}
       subtitle={t(
         'activity.timeline.subtitle',
         'A unified timeline of drives, charging, alerts, software updates, and your annotations.',

@@ -13,13 +13,13 @@ import {
   isVehicleStateFieldCurrent,
   resolveVehicleStateFreshness,
 } from '@/api/hooks/useVehicles';
-import type { VehicleState } from '@/api/types';
+import type { VehicleStateReadings } from '@/api/types';
 import type { Vehicle } from '../../commands';
 import type { CommandExecutionFeedback } from './types';
 
 interface CommandReadinessStripProps {
   vehicle: Vehicle;
-  state: VehicleState | null;
+  state: VehicleStateReadings | null;
   stateTrust: Parameters<typeof deriveTrustedVehicleStatus>[1];
   stateLoading: boolean;
   stateError: unknown;
@@ -50,7 +50,7 @@ export function CommandReadinessStrip({
   const offline = status === 'offline';
   const statusLabel = t(
     `commands.status.${status}`,
-    status.replace(/_/g, ' ').replace(/\b\w/g, (value) => value.toUpperCase()),
+    status.replace(/_/g, ' ').replace(/^\w/, (value) => value.toUpperCase()),
   );
   const connection = verifiedStatus
     ? statusLabel

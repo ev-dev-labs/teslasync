@@ -72,8 +72,8 @@ function renderBand(overrides: Partial<LiveMonitorKpiBandProps> = {}) {
 function expectAllSixLabels() {
   expect(screen.getByText('Connection')).toBeInTheDocument();
   expect(screen.getByText('Signals / sec')).toBeInTheDocument();
-  expect(screen.getByText('Buffer Size')).toBeInTheDocument();
-  expect(screen.getByText('Unique Signals')).toBeInTheDocument();
+  expect(screen.getByText('Buffer size')).toBeInTheDocument();
+  expect(screen.getByText('Unique signals')).toBeInTheDocument();
   expect(screen.getByText('Numeric')).toBeInTheDocument();
   expect(screen.getByText('Categorical')).toBeInTheDocument();
 }

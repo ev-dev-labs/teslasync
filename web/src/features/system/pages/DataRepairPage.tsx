@@ -17,19 +17,19 @@ const RepairDiagnosticsWorkspace = lazy(async () => {
 
 export default function DataRepairPage() {
   const { t } = useTranslation();
-  usePageTitle(t('dataRepair.title', 'Data Repair'));
+  usePageTitle(t('dataRepair.title', 'Data repair'));
 
   const operationalMode = useOperationalMode();
   const { vehicleId } = useSelectedVehicle();
 
   return (
     <PageContainer
-      title={t('dataRepair.title', 'Data Repair')}
+      title={t('dataRepair.title', 'Data repair')}
       subtitle={t(
         'dataRepair.subtitle.workspace',
         'Review evidence-backed anomalies, coordinate decisions, and apply reversible corrections.',
       )}
-      actions={<VehicleSelect withIcon />}
+      contextActions={<VehicleSelect withIcon />}
     >
       <OperationalWriteNotice
         title={t('dataRepair.readOnly.title', 'Data repair is read-only')}

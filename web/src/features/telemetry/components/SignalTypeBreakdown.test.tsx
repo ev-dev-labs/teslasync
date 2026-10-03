@@ -120,7 +120,7 @@ describe('SignalTypeBreakdown', () => {
 
     // Semantic <h3> panel heading; the icon inside it is aria-hidden so the
     // accessible name is just the title text.
-    expect(screen.getByRole('heading', { level: 3, name: 'Value Types' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Value types' })).toBeInTheDocument();
     // In the data branch there is exactly one decorative icon (the title's).
     expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1);
     // className is merged onto the panel root alongside its base padding.
