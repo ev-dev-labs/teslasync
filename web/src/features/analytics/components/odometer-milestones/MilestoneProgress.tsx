@@ -9,12 +9,13 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const DETAIL_COLUMNS = { default: 2, lg: 4 } as const;
 
@@ -27,6 +28,7 @@ export function MilestoneProgress({
   summary,
   state,
 }: MilestoneProgressProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistanceKm } = useOdometerMilestoneDisplay();
   const { segment, primaryPace, accounting } = summary;
@@ -48,7 +50,7 @@ export function MilestoneProgress({
               'Forecast evidence uses {{count}} drives across {{days}} observed days; projections can change.',
               {
                 count: primaryPace.sampleCount,
-                days: fmtNumber(primaryPace.observedDays, 1),
+                days: fmtNumber(primaryPace.observedDays),
               },
             )
           : t(
@@ -84,7 +86,7 @@ export function MilestoneProgress({
               value={percent}
               size={136}
               strokeWidth={9}
-              centerLabel={`${fmtNumber(percent, 1)}%`}
+              centerLabel={`${fmtNumber(percent)}%`}
               centerSubLabel={t(
                 'milestones.progress.complete',
                 'complete',
@@ -92,7 +94,7 @@ export function MilestoneProgress({
               ariaLabel={t(
                 'milestones.progress.aria',
                 '{{percent}} percent progress toward the next milestone',
-                { percent: fmtNumber(percent, 1) },
+                { percent: fmtNumber(percent) },
               )}
             />
             <Grid cols={DETAIL_COLUMNS} gap={3}>

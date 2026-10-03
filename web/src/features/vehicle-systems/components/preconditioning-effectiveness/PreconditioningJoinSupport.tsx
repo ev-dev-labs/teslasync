@@ -11,10 +11,11 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
 import type { PreconditioningQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningJoinSupportProps {
   summary: PreconditioningSummary;
@@ -27,6 +28,7 @@ export function PreconditioningJoinSupport({
   state,
   formatDuration,
 }: PreconditioningJoinSupportProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const support = summary.windowSupport;
   const items = [
@@ -38,9 +40,9 @@ export function PreconditioningJoinSupport({
     [t('preconditioningEffectiveness.join.reused', 'Climate rows reused'), fmtInt(support.climateRowsReused)],
     [t('preconditioningEffectiveness.join.medianRows', 'Median window rows'), support.medianWindowRows != null ? fmtInt(support.medianWindowRows) : '—'],
     [t('preconditioningEffectiveness.join.medianThermal', 'Median distinct cabin states'), support.medianThermalSamples != null ? fmtInt(support.medianThermalSamples) : '—'],
-    [t('preconditioningEffectiveness.join.medianSpan', 'Median observation span'), formatDuration(support.medianObservationSpanS, { precision: 2 })],
-    [t('preconditioningEffectiveness.join.medianLead', 'Median final-state lead'), formatDuration(support.medianLastSampleLeadS, { precision: 2 })],
-    [t('preconditioningEffectiveness.join.p90Lead', 'P90 final-state lead'), formatDuration(support.p90LastSampleLeadS, { precision: 2 })],
+    [t('preconditioningEffectiveness.join.medianSpan', 'Median observation span'), formatDuration(support.medianObservationSpanS)],
+    [t('preconditioningEffectiveness.join.medianLead', 'Median final-state lead'), formatDuration(support.medianLastSampleLeadS)],
+    [t('preconditioningEffectiveness.join.p90Lead', 'P90 final-state lead'), formatDuration(support.p90LastSampleLeadS)],
   ] as const;
 
   return (

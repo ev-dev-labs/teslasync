@@ -3,11 +3,13 @@ import type {
 } from '@/api/types';
 import { Badge, Caption, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { unknownLabel, useT } from './helpers';
 import { TermRow } from './TermRow';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
+  const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const { formatEnergy, formatDuration } = useUnits();
   const c = ledger.charge;
@@ -57,7 +59,7 @@ export function ChargeLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
       </Table>
       <Caption>
         {t('physicsLedger.charge.efficiency', 'Efficiency')}:{' '}
-        {c.efficiency_known && c.efficiency_pct != null ? `${fmtNumber(c.efficiency_pct, 1)} %` : unknownLabel(t)}
+        {c.efficiency_known && c.efficiency_pct != null ? `${fmtNumber(c.efficiency_pct)} %` : unknownLabel(t)}
         {' · '}
         {t('physicsLedger.drive.session', 'Session')}: {c.session_wh != null ? formatEnergy(c.session_wh) : unknownLabel(t)}
       </Caption>

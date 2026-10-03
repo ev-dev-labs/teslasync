@@ -10,12 +10,13 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeHistoryCoverageProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -26,6 +27,7 @@ export function ArchetypeHistoryCoverage({
   state,
   display,
 }: ArchetypeHistoryCoverageProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = summary.coverage;
   const metrics = [
@@ -33,7 +35,7 @@ export function ArchetypeHistoryCoverage({
     [t('archetypes.coverage.timestamped', 'Timestamp-valid rows'), fmtInt(coverage.timestampedRows)],
     [t('archetypes.coverage.earliest', 'Earliest observed start'), display.formatDateTime(coverage.earliestMs)],
     [t('archetypes.coverage.latest', 'Latest observed start'), display.formatDateTime(coverage.latestMs)],
-    [t('archetypes.coverage.span', 'Observed time span'), display.formatDuration(coverage.spanS, { precision: 1 })],
+    [t('archetypes.coverage.span', 'Observed time span'), display.formatDuration(coverage.spanS)],
     [t('archetypes.coverage.limit', 'Request row limit'), fmtInt(coverage.historyLimit)],
   ] as const;
 

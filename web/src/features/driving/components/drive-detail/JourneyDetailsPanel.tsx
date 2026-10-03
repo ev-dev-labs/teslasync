@@ -5,6 +5,7 @@ import { FadeIn } from '@/components/motion';
 import { DateTime } from '@/components/data-display';
 import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface JourneyDetailsPanelProps {
   drive: DriveDetail;
@@ -33,6 +34,7 @@ export function formatCoordinates(
 }
 
 export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const startCoords = formatCoordinates(drive.startLat, drive.startLon);

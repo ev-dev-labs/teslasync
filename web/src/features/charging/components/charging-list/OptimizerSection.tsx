@@ -5,16 +5,18 @@ import { LinearGauge } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { AlertBanner } from '@/components/feedback';
-import { fmtNumber, safeNumber } from '@/lib/numberFormat';
+import { safeNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { ChargingOptimizerData } from '@/types/charging';
 import { CostHeatmap } from './CostHeatmap';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface OptimizerSectionProps {
   optimizer: ChargingOptimizerData;
 }
 
 export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   // Neutralise NaN/undefined so the gauge never emits a NaN stroke-dashoffset
   // (which renders a broken arc) and the threshold branches stay deterministic.
@@ -28,7 +30,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
           <AlertBanner
             variant="success"
             icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
-            title={t('charging.optimizer.savingsBanner', 'Save ~${{amount}}/month by adjusting your charging schedule', { amount: fmtNumber(optimizer.cost_analysis.potential_monthly_savings, 0) })}
+            title={t('charging.optimizer.savingsBanner', 'Save ~${{amount}}/month by adjusting your charging schedule', { amount: fmtNumber(optimizer.cost_analysis.potential_monthly_savings) })}
           >
             {t('charging.optimizer.savingsDetail', 'Based on your charging patterns, shifting to off-peak hours could reduce your monthly costs.')}
           </AlertBanner>
@@ -46,9 +48,9 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
             </h3>
             <div className="space-y-3">
               {[
-                { label: t('charging.optimizer.sessionsWeek', 'Sessions/week'), value: fmtNumber(optimizer.current_schedule.avg_sessions_per_week, 1) },
-                { label: t('charging.optimizer.homePct', 'Home charging'), value: `${fmtNumber(optimizer.current_schedule.home_charging_pct, 0)}%` },
-                { label: t('charging.optimizer.avgTarget', 'Avg charge target'), value: `${fmtNumber(optimizer.current_schedule.avg_charge_to_pct, 0)}%` },
+                { label: t('charging.optimizer.sessionsWeek', 'Sessions/week'), value: fmtNumber(optimizer.current_schedule.avg_sessions_per_week) },
+                { label: t('charging.optimizer.homePct', 'Home charging'), value: `${fmtNumber(optimizer.current_schedule.home_charging_pct)}%` },
+                { label: t('charging.optimizer.avgTarget', 'Avg charge target'), value: `${fmtNumber(optimizer.current_schedule.avg_charge_to_pct)}%` },
                 { label: t('charging.optimizer.commonHour', 'Common start hour'), value: optimizer.current_schedule.most_common_start_hour != null ? `${optimizer.current_schedule.most_common_start_hour}:00` : '—' },
                 { label: t('charging.optimizer.commonDay', 'Most common'), value: optimizer.current_schedule.most_common_day ?? '—' },
               ].map((item) => (
@@ -94,18 +96,18 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[var(--text-secondary)]">{t('charging.optimizer.peakRate', 'Peak rate')}</span>
-                <span className="font-semibold text-red-400">${fmtNumber(optimizer.cost_analysis.peak_cost_per_kwh, 3)}/kWh</span>
+                <span className="font-semibold text-red-400">${fmtNumber(optimizer.cost_analysis.peak_cost_per_kwh)}/kWh</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[var(--text-secondary)]">{t('charging.optimizer.offpeakRate', 'Off-peak rate')}</span>
-                <span className="font-semibold text-emerald-300">${fmtNumber(optimizer.cost_analysis.offpeak_cost_per_kwh, 3)}/kWh</span>
+                <span className="font-semibold text-emerald-300">${fmtNumber(optimizer.cost_analysis.offpeak_cost_per_kwh)}/kWh</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[var(--text-secondary)]">{t('charging.optimizer.peakSessions', 'Sessions during peak')}</span>
                 <span className={cn('font-semibold',
                   optimizer.cost_analysis.sessions_during_peak_pct > 30 ? 'text-red-400' : 'text-emerald-300',
                 )}>
-                  {fmtNumber(optimizer.cost_analysis.sessions_during_peak_pct, 0)}%
+                  {fmtNumber(optimizer.cost_analysis.sessions_during_peak_pct)}%
                 </span>
               </div>
               <div className="mt-2 pt-2 border-t border-white/[0.06]">
@@ -167,7 +169,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                       </span>
                       {rec.estimated_savings != null && rec.estimated_savings > 0 && (
                         <span className="text-2xs px-1.5 py-0.5 rounded-full bg-neon-green/20 text-emerald-300 font-medium">
-                          ~${fmtNumber(rec.estimated_savings, 0)}/mo
+                          ~${fmtNumber(rec.estimated_savings)}/mo
                         </span>
                       )}
                     </div>

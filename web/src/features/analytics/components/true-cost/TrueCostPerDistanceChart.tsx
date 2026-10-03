@@ -75,7 +75,6 @@ export function TrueCostPerDistanceChart({
             }),
             format: (value) => display.formatCurrency(
               typeof value === 'number' ? value : null,
-              4,
             ),
           },
         ]}
@@ -91,11 +90,11 @@ export function TrueCostPerDistanceChart({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value: number) => display.formatCurrency(value, 3)}
+                  tickFormatter={(value: number) => display.formatCurrency(value)}
                 />
                 <Tooltip
                   content={<ChartTooltip valueFormatter={(value) =>
-                    display.formatCurrency(Number(value), 4)} />}
+                    display.formatCurrency(Number(value))} />}
                 />
                 <Bar dataKey="cost" name={t('tco.perDistance.series', 'Cost per {{unit}}', {
                   unit: display.distanceUnit,

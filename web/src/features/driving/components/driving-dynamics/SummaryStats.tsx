@@ -10,10 +10,11 @@ import {
 
 import { StatCard } from '@/components/data-display';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { useMotorStats } from './useMotorStats';
 import type { MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SummaryStatsProps {
   vehicleId: number | null | undefined;
@@ -29,6 +30,7 @@ export default function SummaryStats({
   tempUnit,
   historyQuery,
 }: SummaryStatsProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { motorStats } = useMotorStats(vehicleId, historyQuery);
 
@@ -45,28 +47,28 @@ export default function SummaryStats({
         <StaggerItem>
           <StatCard
             label={t('dynamics.avgTorque', 'Avg Torque')}
-            value={`${fmtNumber(motorStats?.avgTorque ?? 0, 1)} Nm`}
+            value={`${fmtNumber(motorStats?.avgTorque ?? 0)} Nm`}
             icon={<Zap className="h-4 w-4" aria-hidden="true" />}
           />
         </StaggerItem>
         <StaggerItem>
           <StatCard
             label={t('dynamics.peakPower', 'Peak Power')}
-            value={`${fmtNumber(motorStats?.peakPower ?? 0, 1)} kW`}
+            value={`${fmtNumber(motorStats?.peakPower ?? 0)} kW`}
             icon={<CornerDownRight className="h-4 w-4" aria-hidden="true" />}
           />
         </StaggerItem>
         <StaggerItem>
           <StatCard
             label={t('dynamics.peakRegen', 'Peak Regen')}
-            value={`${fmtNumber(motorStats?.peakRegen ?? 0, 1)} kW`}
+            value={`${fmtNumber(motorStats?.peakRegen ?? 0)} kW`}
             icon={<TrendingDown className="h-4 w-4" aria-hidden="true" />}
           />
         </StaggerItem>
         <StaggerItem>
           <StatCard
             label={t('dynamics.avgPower', 'Avg Power')}
-            value={`${fmtNumber(motorStats?.avgPower ?? 0, 1)} kW`}
+            value={`${fmtNumber(motorStats?.avgPower ?? 0)} kW`}
             icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
           />
         </StaggerItem>
@@ -74,7 +76,7 @@ export default function SummaryStats({
           <StatCard
             label={t('dynamics.avgMotorTemp', 'Avg Motor Temp')}
             value={motorStats
-              ? `${fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}${tempUnit}`
+              ? `${fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp))}${tempUnit}`
               : '—'}
             icon={<Thermometer className="h-4 w-4" aria-hidden="true" />}
           />

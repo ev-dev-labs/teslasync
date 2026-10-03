@@ -5,9 +5,10 @@ import {
 
 import { MetricCard } from '@/components/data-display'
 import { useUnits } from '@/hooks/useUnits'
-import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat'
+import { isFiniteNumber } from '@/lib/numberFormat'
 import type { NeonColor } from '@/lib/tokens'
 import type { VehicleState, VehicleStatus } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface QuickStatsGridProps {
   state: VehicleState
@@ -34,6 +35,7 @@ export function formatBatteryLevel(level: number | null | undefined): string {
 }
 
 export function QuickStatsGrid({ state, status }: QuickStatsGridProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatDistance, formatSpeed, formatTemperature } = useUnits()
 
@@ -47,19 +49,19 @@ export function QuickStatsGrid({ state, status }: QuickStatsGridProps) {
       />
       <MetricCard
         label={t('common.range', 'Range')}
-        value={formatDistance(state.rated_range, { precision: 0 })}
+        value={formatDistance(state.rated_range)}
         icon={<Navigation className="h-4 w-4" aria-hidden="true" />}
         color="cyan"
       />
       <MetricCard
         label={t('common.odometer', 'Odometer')}
-        value={formatDistance(state.odometer, { precision: 0 })}
+        value={formatDistance(state.odometer)}
         icon={<Car className="h-4 w-4" aria-hidden="true" />}
         color="purple"
       />
       <MetricCard
         label={t('common.speed', 'Speed')}
-        value={formatSpeed(state.speed, { precision: 0 })}
+        value={formatSpeed(state.speed)}
         icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
         color="cyan"
         subtitle={state.speed > 0 ? t('common.driving', 'Driving') : t('common.parked', 'Parked')}

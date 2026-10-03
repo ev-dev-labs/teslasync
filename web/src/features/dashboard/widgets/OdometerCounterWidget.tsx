@@ -7,11 +7,12 @@ import { useDrivingStats } from '@/api/hooks/useDriving';
 import { knownNumber } from '@/api/dataState';
 import { useCombinedDataState, useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Convert the live odometer to the user's display unit. `VehicleState.odometer`
@@ -39,6 +40,7 @@ export function toTotalDrivenDisplay(totalDistanceKm: number, to: DistanceUnitPr
 }
 
 export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -95,7 +97,7 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
           <WidgetBigNumber
             value={convertedOdometer}
             unit={distanceUnit}
-            decimals={0}
+            decimals={displayPrecision}
           />
         ) : (
           <ExpandedView
@@ -119,7 +121,7 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
             <Skeleton className="h-16 rounded-xl" />
           ) : (
             <WidgetStatGrid cols={2} stats={[
-              { label: t('widget.odometer.totalDriven', 'Total driven'), value: convertedTotalDriven == null ? null : `${fmtNumber(convertedTotalDriven, 0)} ${distanceUnit}`, icon: <TrendingUp className="h-3.5 w-3.5" /> },
+              { label: t('widget.odometer.totalDriven', 'Total driven'), value: convertedTotalDriven == null ? null : `${fmtNumber(convertedTotalDriven)} ${distanceUnit}`, icon: <TrendingUp className="h-3.5 w-3.5" /> },
               { label: t('widget.odometer.unit', 'Unit'), value: distanceUnit, icon: <Calendar className="h-3.5 w-3.5" /> },
             ]} />
           )}
@@ -136,9 +138,10 @@ function ExpandedView({
   odometer: number;
   unit: string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
 
   return (
-    <WidgetBigNumber value={`${fmtNumber(odometer, 0)} ${unit}`} label={t('widget.odometer.total', 'Total odometer')} />
+    <WidgetBigNumber value={`${fmtNumber(odometer)} ${unit}`} label={t('widget.odometer.total', 'Total odometer')} />
   );
 }

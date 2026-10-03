@@ -4,8 +4,9 @@ import { ListChecks, Search, Flag } from 'lucide-react';
 
 import { GlassPanel, Badge, Input, Select, DataTable, PanelTitle, Caption, Code, useSortToggle, type Column } from '@/components/ui';
 import { EmptyState, QueryError, TableSkeleton } from '@/components/feedback';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { FeatureFlagEntry, FeatureFlagKind } from './parseFeatureFlags';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FeatureConfigTableProps {
   entries: FeatureFlagEntry[];
@@ -23,6 +24,7 @@ type StatusFilter = 'all' | 'enabled' | 'disabled';
  * filter. Owns loading / error / empty states independently.
  */
 export function FeatureConfigTable({ entries, isLoading, error, onRetry }: FeatureConfigTableProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');

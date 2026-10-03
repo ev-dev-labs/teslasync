@@ -18,11 +18,12 @@ import {
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { DriveCalendar } from '../../lib/driveCalendar';
 import { formatCalendarMonth, getWeekdayLabels } from './labels';
 import type { DriveCalendarSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RhythmInsightsPanelProps extends DriveCalendarSectionState {
   calendar: DriveCalendar;
@@ -44,6 +45,7 @@ export function RhythmInsightsPanel({
   error,
   onRetry,
 }: RhythmInsightsPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance, unitPrefs } = useUnits();
   const longWeekdays = getWeekdayLabels(t, true);
@@ -65,7 +67,7 @@ export function RhythmInsightsPanel({
     },
     {
       label: t('driveCalendar.rhythm.activeRate', 'Calendar activity'),
-      value: `${fmtNumber(calendar.activityRate * 100, 0)}%`,
+      value: `${fmtNumber(calendar.activityRate * 100)}%`,
       detail: t(
         'driveCalendar.rhythm.activeRateDetail',
         'of days included at least one drive',
@@ -76,14 +78,14 @@ export function RhythmInsightsPanel({
       label: t('driveCalendar.rhythm.typicalDay', 'Typical active day'),
       value:
         calendar.averageDistancePerActiveDayM != null
-          ? formatDistance(calendar.averageDistancePerActiveDayM, { precision: 1 })
+          ? formatDistance(calendar.averageDistancePerActiveDayM)
           : '—',
       detail:
         calendar.averageDrivesPerActiveDay != null
           ? t(
               'driveCalendar.rhythm.typicalDayDetail',
               '{{average}} drives on average',
-              { average: fmtNumber(calendar.averageDrivesPerActiveDay, 1) },
+              { average: fmtNumber(calendar.averageDrivesPerActiveDay) },
             )
           : '—',
       icon: Route,
@@ -92,7 +94,7 @@ export function RhythmInsightsPanel({
       label: t('driveCalendar.rhythm.weekendShare', 'Weekend distance'),
       value:
         calendar.weekendDistanceShare != null
-          ? `${fmtNumber(calendar.weekendDistanceShare * 100, 0)}%`
+          ? `${fmtNumber(calendar.weekendDistanceShare * 100)}%`
           : '—',
       detail: t(
         'driveCalendar.rhythm.weekendShareDetail',
@@ -110,7 +112,7 @@ export function RhythmInsightsPanel({
             'driveCalendar.rhythm.peakMonthDetail',
             '{{distance}} · {{count}} drives',
             {
-              distance: formatDistance(peakMonth.distanceM, { precision: 0 }),
+              distance: formatDistance(peakMonth.distanceM),
               count: peakMonth.drives,
             },
           )

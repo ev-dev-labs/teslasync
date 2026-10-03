@@ -71,8 +71,8 @@ it('does not allow alerts on places awaiting review', async () => {
 it('uses the shared entry-value checklist without changing the place alert settings', async () => {
   vi.mocked(request).mockResolvedValue([place, { ...place, id: 8, name: 'Depot', alert_on_entry: true }]);
   renderPanel();
-  fireEvent.click(await screen.findByRole('button', { name: 'Filter On entry' }));
-  const dialog = screen.getByRole('dialog', { name: 'Filter On entry' });
+  fireEvent.click(await screen.findByRole('button', { name: 'On entry filter' }));
+  const dialog = screen.getByRole('dialog', { name: 'On entry filter' });
   fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Disabled' }));
   fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
   expect(screen.queryByRole('switch', { name: 'Alert on entry: Home' })).not.toBeInTheDocument();

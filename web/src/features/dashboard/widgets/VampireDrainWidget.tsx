@@ -11,6 +11,7 @@ import { cn } from '@/lib/cn';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Idle-drain severity colour ramp (hex, for inline SVG/icon fills):
@@ -31,11 +32,12 @@ export function drainColor(pctPerDay: number): string {
  */
 export function formatDuration(hours: number, t: (k: string, d: string) => string): string {
   const h = Number.isFinite(hours) && hours > 0 ? hours : 0;
-  if (h < 1) return `${fmtNumber(h * 60, 0)}${t('widget.vampireDrain.min', 'm')}`;
-  return `${fmtNumber(h, 1)}${t('widget.vampireDrain.hr', 'h')}`;
+  if (h < 1) return `${fmtNumber(h * 60)}${t('widget.vampireDrain.min', 'm')}`;
+  return `${fmtNumber(h)}${t('widget.vampireDrain.hr', 'h')}`;
 }
 
 export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -85,14 +87,14 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
         return {
           id: ev.started_at,
           icon: <BatteryWarning className="h-3.5 w-3.5" style={{ color: drainColor(drainDay) }} />,
-          title: `${fmtNumber(ev.drain_pct ?? 0, 1)}% · ${formatDuration(ev.duration_hours ?? 0, t)}`,
-          subtitle: `${fmtNumber(drainDay, 1)}%/${t('widget.vampireDrain.perDay', '/day').replace('/', '')}`,
+          title: `${fmtNumber(ev.drain_pct ?? 0)}% · ${formatDuration(ev.duration_hours ?? 0, t)}`,
+          subtitle: `${fmtNumber(drainDay)}%/${t('widget.vampireDrain.perDay', '/day').replace('/', '')}`,
           timestamp: ev.started_at,
           color: drainColor(drainDay),
           severity: drainDay >= 3 ? 'critical' as const : drainDay >= 1 ? 'warning' as const : 'info' as const,
         };
       }),
-    [events, t],
+    [events, t, fmtNumber, displayPrecision, displayLocale],
   );
 
   // Sparkline: daily drain rate from events (most recent 30)
@@ -156,7 +158,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
               )}
               style={hasMeasuredAverage ? { color: drainColor(measuredAverage) } : undefined}
             >
-              {hasMeasuredAverage ? `${fmtNumber(measuredAverage, 1)}%` : '—'}
+              {hasMeasuredAverage ? `${fmtNumber(measuredAverage)}%` : '—'}
             </p>
             <p className="text-2xs text-[var(--text-muted)]">
               {hasMeasuredAverage
@@ -170,13 +172,13 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
             {/* Stat card row */}
             <StatCard
               label={t('widget.vampireDrain.avgDrain', 'Avg drain')}
-              value={hasMeasuredAverage ? `${fmtNumber(measuredAverage, 1)}%/day` : '—'}
+              value={hasMeasuredAverage ? `${fmtNumber(measuredAverage)}%/day` : '—'}
               icon={<BatteryWarning className="h-4 w-4" style={{ color: drainColor(sparklineColorRate) }} />}
               sublabel={
                 stats
                   ? t('widget.vampireDrain.eventCount', '{{count}} events · {{hours}}h total', {
                       count: stats.event_count ?? 0,
-                      hours: fmtNumber(stats.total_observed_hours ?? 0, 0),
+                      hours: fmtNumber(stats.total_observed_hours ?? 0),
                     })
                   : undefined
               }

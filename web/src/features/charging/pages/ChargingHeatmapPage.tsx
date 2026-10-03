@@ -21,7 +21,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { DAYS } from '@/lib/constants';
 import { chartTokens } from '@/lib/tokens';
 
@@ -33,8 +33,10 @@ import {
   deriveInsights,
   formatHourLabel,
 } from '../components/charging-heatmap';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ChargingHeatmapPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('charging.heatmap.title', 'Charging Patterns'));
 

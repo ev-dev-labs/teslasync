@@ -9,15 +9,17 @@ import {
   Table,
   Text,
 } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeSeparation({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtScientificNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -40,10 +42,10 @@ export function ArchetypeSeparation({
                 (candidate) => candidate.index === cluster.nearestClusterIndex,
               );
               const metrics = [
-                [t('archetypes.separation.meanDistance', 'Mean assignment distance'), fmtNumber(cluster.meanAssignmentDistance, 3)],
-                [t('archetypes.separation.p90Distance', 'P90 assignment distance'), fmtNumber(cluster.p90AssignmentDistance, 3)],
-                [t('archetypes.separation.nearestDistance', 'Nearest centroid distance'), cluster.nearestCentroidDistance != null ? fmtNumber(cluster.nearestCentroidDistance, 3) : '—'],
-                [t('archetypes.separation.medianMargin', 'Median assignment margin'), fmtPercent(cluster.medianAssignmentMargin * 100, 1)],
+                [t('archetypes.separation.meanDistance', 'Mean assignment distance'), fmtScientificNumber(cluster.meanAssignmentDistance, 3)],
+                [t('archetypes.separation.p90Distance', 'P90 assignment distance'), fmtScientificNumber(cluster.p90AssignmentDistance, 3)],
+                [t('archetypes.separation.nearestDistance', 'Nearest centroid distance'), cluster.nearestCentroidDistance != null ? fmtScientificNumber(cluster.nearestCentroidDistance, 3) : '—'],
+                [t('archetypes.separation.medianMargin', 'Median assignment margin'), fmtPercent(cluster.medianAssignmentMargin * 100)],
               ] as const;
               return (
                 <li

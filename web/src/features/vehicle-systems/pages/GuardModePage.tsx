@@ -69,6 +69,7 @@ import {
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { typography, type NeonColor } from '@/lib/tokens';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ── Event type display metadata ─────────────────────────────────────────
 //
@@ -662,6 +663,7 @@ function LiveMap({
 }
 
 function MapPopup({ vehicleName, lat, lng }: { vehicleName: string; lat: number; lng: number }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   return (
     <Popup>
@@ -669,7 +671,7 @@ function MapPopup({ vehicleName, lat, lng }: { vehicleName: string; lat: number;
         {vehicleName || t('guard.vehicle', 'Vehicle')}
       </Text>
       <Text as="span" variant="caption">
-        {lat.toFixed(6)}, {lng.toFixed(6)}
+        {fmtNumber(lat)}, {fmtNumber(lng)}
       </Text>
     </Popup>
   );

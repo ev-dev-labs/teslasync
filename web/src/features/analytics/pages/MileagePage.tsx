@@ -25,12 +25,13 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import {
   useMileageStats,
   useMonthlyMileage,
   useDailyMileage,
 } from '@/api/hooks/useAnalytics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -48,6 +49,7 @@ interface MonthRow {
 /* ------------------------------------------------------------------ */
 
 export default function MileagePage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('mileage.title', 'Mileage'));
 
@@ -129,7 +131,7 @@ export default function MileagePage() {
       { label: t('mileage.lifetimeDrives', 'Lifetime drives'), value: fmtInt(totalDrives) },
       { label: t('mileage.drives30d', 'Drives (30d)'), value: fmtInt(stats?.drive_count_30d ?? 0) },
     ],
-    [t, stats?.first_drive_at, stats?.last_drive_at, stats?.drive_count_30d, totalDrives],
+    [t, stats?.first_drive_at, stats?.last_drive_at, stats?.drive_count_30d, totalDrives, fmtInt],
   );
 
   /* Odometer over time — end-of-day absolute reading (end_odometer_km).
@@ -176,7 +178,7 @@ export default function MileagePage() {
       { key: 'drives', header: t('mileage.drives', 'Drives'), render: (r) => fmtInt(r.drives), sortable: true, align: 'right', filterValue: (r) => r.drives, filterValueLabel: (_value, r) => fmtInt(r.drives) },
       { key: 'dailyAvg', header: `${t('mileage.distancePerDrive', 'Distance / drive')} (${distanceUnit})`, render: (r) => fmtNumber(r.dailyAvg), sortable: true, align: 'right' },
     ],
-    [t, distanceUnit],
+    [t, distanceUnit, fmtNumber, fmtInt],
   );
 
   // Defensive guard: no vehicle selected.

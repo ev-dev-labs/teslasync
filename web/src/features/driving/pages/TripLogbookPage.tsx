@@ -167,7 +167,7 @@ export default function TripLogbookPage() {
       sortable: true,
       render: (r) => (
         <Text variant="body" className="font-mono tabular-nums">
-          {formatDistance(r.distanceM, { precision: 1 })}
+          {formatDistance(r.distanceM)}
         </Text>
       ),
     },
@@ -254,7 +254,7 @@ export default function TripLogbookPage() {
                   <MetricCard
                     key={cat}
                     label={t(meta.i18nKey, meta.fallback)}
-                    value={formatDistance(totals.distanceM, { precision: 1 })}
+                    value={formatDistance(totals.distanceM)}
                     subtitle={
                       totals.amount > 0
                         ? formatCurrency(totals.amount)
@@ -310,7 +310,7 @@ export default function TripLogbookPage() {
                       value={totals.distanceM}
                       max={Math.max(summary.totalDistanceM, 1)}
                       color={meta.barColor}
-                      sublabel={formatDistance(totals.distanceM, { precision: 1 })}
+                      sublabel={formatDistance(totals.distanceM)}
                     />
                     <Input
                       type="number"
@@ -401,7 +401,7 @@ export default function TripLogbookPage() {
                   // exportRow(row)[column.key] under each visible column header.
                   date: r.date.slice(0, 10),
                   route: r.route,
-                  distanceM: formatDistance(r.distanceM, { precision: 1 }),
+                  distanceM: formatDistance(r.distanceM),
                   category: r.category ?? '',
                   amount: r.amount > 0 ? Math.round(r.amount * 100) / 100 : 0,
                 })}

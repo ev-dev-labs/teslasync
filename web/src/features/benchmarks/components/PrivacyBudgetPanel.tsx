@@ -2,14 +2,16 @@ import { Gauge } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { UsageCard } from '@/components/data-display';
 import { GlassPanel } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { BenchmarkPrivacyStatus } from '@/api/hooks/useBenchmarks';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function PrivacyBudgetPanel({
   status,
 }: {
   status: BenchmarkPrivacyStatus | null;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const spent = status?.epsilon_spent ?? 0;
   const budget = status?.epsilon_budget ?? 0;
@@ -26,12 +28,12 @@ export function PrivacyBudgetPanel({
         budget={{
           headline: status
             ? t('benchmarks.budget.headline', 'ε {{spent}} of {{budget}}', {
-                spent: fmtNumber(spent, 2),
-                budget: fmtNumber(budget, 2),
+                spent: fmtNumber(spent),
+                budget: fmtNumber(budget),
               })
             : t('benchmarks.budget.unavailable', 'Budget unavailable'),
           rightLabel: t('benchmarks.budget.remaining', 'ε {{value}} remaining', {
-            value: fmtNumber(status?.epsilon_remaining ?? 0, 2),
+            value: fmtNumber(status?.epsilon_remaining ?? 0),
           }),
           caption: t(
             'benchmarks.budget.caption',

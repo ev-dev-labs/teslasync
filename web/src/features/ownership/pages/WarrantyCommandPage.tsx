@@ -20,7 +20,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   ClaimStatus,
   ReadinessCheck,
@@ -46,6 +46,7 @@ import {
   fromDateInput,
   toDateInput,
 } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KINDS: WarrantyKind[] = [
   'basic',
@@ -75,6 +76,7 @@ function severityTone(severity: string): 'danger' | 'warning' | 'neutral' {
 }
 
 function UsageBar({ label, pct, hint }: { label: string; pct: number; hint: string }) {
+  useNumberFormatting();
   const clamped = Math.min(100, Math.max(0, pct));
   const tone = clamped >= 90 ? 'bg-rose-400/70' : clamped >= 70 ? 'bg-amber-400/70' : 'bg-cyan-400/70';
   return (
@@ -84,7 +86,7 @@ function UsageBar({ label, pct, hint }: { label: string; pct: number; hint: stri
           {label}
         </Text>
         <span className="tabular-nums text-xs text-[var(--text-secondary)]">
-          {formatPct(clamped, 0)}
+          {formatPct(clamped)}
         </span>
       </div>
       <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
@@ -98,6 +100,7 @@ function UsageBar({ label, pct, hint }: { label: string; pct: number; hint: stri
 }
 
 export default function WarrantyCommandPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -363,10 +366,10 @@ export default function WarrantyCommandPage() {
       key: 'floor',
       align: 'right',
       filterValue: (row) => row.capacity_floor_pct,
-      filterValueLabel: (_value, row) => row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct, 0) : '—',
+      filterValueLabel: (_value, row) => row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct) : '—',
       header: t('ownership.warranty.row.floor', 'Capacity floor'),
       render: (row) =>
-        row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct, 0) : '—',
+        row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct) : '—',
     },
     {
       key: 'deductible',
@@ -438,7 +441,7 @@ export default function WarrantyCommandPage() {
                   : 'text-rose-300'
             }`}
           >
-            {fmtNumber(coverage.readiness_score, 0)}/100
+            {fmtNumber(coverage.readiness_score)}/100
           </p>
         </div>
       </div>
@@ -552,13 +555,13 @@ export default function WarrantyCommandPage() {
               {
                 key: 'active',
                 label: t('ownership.warranty.stat.active', 'Active coverages'),
-                value: fmtNumber(overview?.active_count ?? 0, 0),
+                value: fmtInt(overview?.active_count ?? 0),
                 tone: 'positive',
               },
               {
                 key: 'expiring',
                 label: t('ownership.warranty.stat.expiring', 'Expiring within 90 days'),
-                value: fmtNumber(overview?.expiring_soon_count ?? 0, 0),
+                value: fmtInt(overview?.expiring_soon_count ?? 0),
                 tone: (overview?.expiring_soon_count ?? 0) > 0 ? 'warning' : 'default',
               },
               {

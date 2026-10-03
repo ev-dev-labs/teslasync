@@ -23,9 +23,10 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertPressureFromSI } from '@/lib/unitConversion';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { request } from '@/api/client';
 import { AITirePressureTrendReasoning } from '@/components/ai/AITirePressureTrendReasoning';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types (snake_case from backend)                                    */
@@ -199,6 +200,7 @@ const LINE_COLORS: Record<TirePosition, string> = {
 /* ------------------------------------------------------------------ */
 
 export default function TirePressurePage() {
+  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('tirePressure.title', 'Tire pressure'));
   const { unitPrefs } = useUnits();
@@ -466,7 +468,7 @@ export default function TirePressurePage() {
     // pressureUnit rebuilds the render closures with the correct display unit
     // when the user flips their pressure preference; between changes the deps
     // are stable so the columns keep their identity.
-    [t, tireLabel, pressureUnit],
+    [t, tireLabel, pressureUnit, fmtNumber],
   );
 
   /* ---- Render ---- */
@@ -595,7 +597,7 @@ export default function TirePressurePage() {
                       statusLabel={statusLabel(pressureStatus(value))}
                       label={tireLabel(pos)}
                       unit={pressureUnit}
-                      decimals={1}
+                      decimals={displayPrecision}
                     />
                   );
                 })}
@@ -647,7 +649,7 @@ export default function TirePressurePage() {
                         <YAxis
                           domain={['auto', 'auto']}
                           tick={axisTickSm}
-                          tickFormatter={(v: number) => fmtNumber(v, 1)}
+                          tickFormatter={(v: number) => fmtNumber(v)}
                         />
                         <Tooltip content={<ChartTooltip />} />
                         <ChartLegend wrapperStyle={{ fontSize: 11 }} />

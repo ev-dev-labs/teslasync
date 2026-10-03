@@ -344,12 +344,11 @@ describe('SafetyFeaturesWidget', () => {
     expect(screen.getByText('No safety data')).toBeInTheDocument();
   });
 
-  it('shows the active-feature count and hides the title + grid in compact layout', () => {
+  it('keeps its title and active-feature count without the detailed grid in compact layout', () => {
     // All eight features active ⇒ activeCount 8.
     renderWidget(<SafetyFeaturesWidget size={SIZE_COMPACT} />);
 
-    // 1×1 widget: the title chrome is suppressed by design.
-    expect(screen.queryByText('Safety features')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Safety features' })).toBeInTheDocument();
     // The compact hero shows the count + label...
     expect(screen.getByText('8')).toBeInTheDocument();
     expect(screen.getByText('Active features')).toBeInTheDocument();

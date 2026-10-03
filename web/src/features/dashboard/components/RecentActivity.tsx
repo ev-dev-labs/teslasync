@@ -7,10 +7,11 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Timeline } from '@/components/data-display/Timeline';
 import { Currency } from '@/components/data-display';
 import { AreaChartWrapper } from '@/components/charts/AreaChartWrapper';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { formatDateShort } from '@/lib/dateFormat';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import type { FleetAnalytics, Drive, ChargingSession } from '../types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type ActivityKind = 'drive' | 'charge';
 
@@ -62,6 +63,7 @@ export function RecentActivity({
   recentDrives, recentCharges, analytics,
   toEfficiencyDisplay, distanceUnit, efficiencyUnit,
 }: RecentActivityProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatCurrency } = useFormatting();
 
@@ -74,7 +76,7 @@ export function RecentActivity({
     (recentDrives ?? []).forEach((d) =>
       items.push({
         type: 'drive',
-        title: `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit === 'mi' ? 'mi' : 'km'), 1)} ${distanceUnit} ${t('activity.drive', 'drive')}`,
+        title: `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit === 'mi' ? 'mi' : 'km'))} ${distanceUnit} ${t('activity.drive', 'drive')}`,
         subtitle: `${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m · ${d.start_soc_pct ?? '?'}% → ${d.end_soc_pct ?? '?'}%`,
         timeMs: toEpochMs(d.started_at),
       }),
@@ -82,15 +84,15 @@ export function RecentActivity({
     (recentCharges ?? []).forEach((s) =>
       items.push({
         type: 'charge',
-        title: `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'), 1)} kWh ${t('activity.charged', 'charged')}`,
-        subtitle: `${s.start_soc_pct ?? '?'}% → ${s.end_soc_pct ?? '?'}%${typeof s.cost === 'number' ? ` · ${formatCurrency(s.cost, 2)}` : ''}`,
+        title: `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh ${t('activity.charged', 'charged')}`,
+        subtitle: `${s.start_soc_pct ?? '?'}% → ${s.end_soc_pct ?? '?'}%${typeof s.cost === 'number' ? ` · ${formatCurrency(s.cost)}` : ''}`,
         timeMs: toEpochMs(s.started_at),
       }),
     );
     const rank = (ms: number) => (Number.isFinite(ms) ? ms : -Infinity);
     items.sort((a, b) => rank(b.timeMs) - rank(a.timeMs));
     return items;
-  }, [recentDrives, recentCharges, distanceUnit, t, formatCurrency]);
+  }, [recentDrives, recentCharges, distanceUnit, t, formatCurrency, fmtNumber, fmtInt]);
 
   // Battery trend for chart (oldest → newest along the x-axis).
   const batteryTrend = useMemo(

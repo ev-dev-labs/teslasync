@@ -4,7 +4,8 @@ import { CircleHelp } from 'lucide-react';
 import type { TransportAgreementField } from '@/api/types';
 import { EmptyState } from '@/components/feedback';
 import { PanelTitle, Text } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface TransportAgreementFieldListProps {
   fields: TransportAgreementField[];
@@ -13,6 +14,7 @@ export interface TransportAgreementFieldListProps {
 const MAX_VISIBLE_FIELDS = 20;
 
 export function TransportAgreementFieldList({ fields }: TransportAgreementFieldListProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const visibleFields = fields.slice(0, MAX_VISIBLE_FIELDS);
 
@@ -68,7 +70,7 @@ export function TransportAgreementFieldList({ fields }: TransportAgreementFieldL
                 <Text as="p" variant="bodySm" weight="semibold">
                   {field.agreement_pct == null
                     ? t('signalTransportAgreement.notMeasured', 'Not measured')
-                    : fmtPercent(field.agreement_pct, 1)}
+                    : fmtPercent(field.agreement_pct)}
                 </Text>
                 <Text as="p" variant="caption">
                   {t(

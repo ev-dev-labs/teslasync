@@ -10,7 +10,7 @@
  *      useSettings stub reports metric units).
  *   3. Section-local loading / error / empty branches for EVERY panel (KPI band,
  *      % change chart, insights, comparison table) — no panel is gated away.
- *   4. Deterministic percent-change derivations (`fmtNumber(pct, 1)`) surfaced in
+ *   4. Settings-based percent-change presentation surfaced in
  *      the insight sentences, KPI pills, and table.
  *   5. The disambiguation banner: shown for multi-vehicle accounts, hidden for
  *      single-vehicle accounts, and hidden once dismissed (persisted to
@@ -25,7 +25,7 @@
  * reproduces the banner-suppression bug the fix addresses.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -106,6 +106,7 @@ vi.mock('react-i18next', async () => {
 
 import PeriodComparePage from './PeriodComparePage';
 import { ApiError } from '@/lib/resilience';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 const BANNER_KEY = 'phase40.compareBanner.dismissed.period';
 
@@ -195,6 +196,8 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   mockRequest.mockReset();
   aiCapture.props = null;
   window.localStorage.clear();
@@ -205,12 +208,41 @@ afterEach(() => {
 });
 
 describe('PeriodComparePage — happy path', () => {
+  it('keeps drive counts integer while mounted measurements and percentages follow settings', async () => {
+    installRequest();
+    renderPage();
+    await screen.findByText(/Distance traveled was -50\.00% less/);
+    const calls = periodStatsCalls();
+    const counts = () => within(screen.getByRole('row', { name: /Total drives/ }));
+    expect(counts().getByText('50')).toBeInTheDocument();
+    expect(counts().getByText('90')).toBeInTheDocument();
+    expect(counts().getByText('↓ 40')).toBeInTheDocument();
+    expect(counts().getByText('-44.44%')).toBeInTheDocument();
+
+    act(() => setGlobalPrecision(0));
+    expect(screen.getByText(/Distance traveled was -50% less/)).toBeInTheDocument();
+    expect(counts().getByText('50')).toBeInTheDocument();
+    expect(counts().getByText('↓ 40')).toBeInTheDocument();
+    expect(counts().getByText('-44%')).toBeInTheDocument();
+
+    act(() => {
+      setGlobalPrecision(3);
+      setGlobalLocale('de-DE');
+    });
+    expect(screen.getByText(/Distance traveled was -50,000% less/)).toBeInTheDocument();
+    expect(counts().getByText('50')).toBeInTheDocument();
+    expect(counts().getByText('90')).toBeInTheDocument();
+    expect(counts().getByText('↓ 40')).toBeInTheDocument();
+    expect(counts().getByText('-44,444%')).toBeInTheDocument();
+    expect(periodStatsCalls()).toEqual(calls);
+  });
+
   it('renders the page shell, all six KPI metrics, and every analytics panel heading', async () => {
     installRequest();
     renderPage();
 
     // Insight sentence proves BOTH feeds resolved and derivations ran.
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Period comparison' }),
@@ -245,18 +277,18 @@ describe('PeriodComparePage — happy path', () => {
     installRequest();
     renderPage();
 
-    // fmtNumber(pct, 1) → always one decimal, independent of the global precision.
+    // The fixture's selected precision is two decimals.
     expect(
-      await screen.findByText(/Distance traveled was -50\.0% less in period A vs period B\./),
+      await screen.findByText(/Distance traveled was -50\.00% less in period A vs period B\./),
     ).toBeInTheDocument();
     // Fixture: A=200 Wh/km beats B=210 Wh/km, so efficiency IMPROVED — lower
     // consumption is better (the old "declined by -4.8%" expectation had the
     // direction inverted). Magnitude is unsigned so the sentence reads naturally.
     expect(
-      screen.getByText(/Efficiency improved by 4\.8% compared to period B\./),
+      screen.getByText(/Efficiency improved by 4\.76% compared to period B\./),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Costs were -54\.5% lower in period A\./),
+      screen.getByText(/Costs were -54\.55% lower in period A\./),
     ).toBeInTheDocument();
   });
 
@@ -264,7 +296,7 @@ describe('PeriodComparePage — happy path', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
     const calls = periodStatsCalls();
     // Active vehicle falls back to the first vehicle (id 10); both windows fetched.
@@ -278,7 +310,7 @@ describe('PeriodComparePage — happy path', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
     expect(screen.getByTestId('ai-narration-stub')).toBeInTheDocument();
     expect(aiCapture.props).toMatchObject({ vehicleId: '10', daysA: 30, daysB: 90 });
   });
@@ -385,7 +417,7 @@ describe('PeriodComparePage — disambiguation banner', () => {
     renderPage();
 
     // Wait until the vehicle list has resolved (KPI band populated).
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
     expect(
       screen.getByText(/Looking to compare two vehicles instead\?/),
@@ -397,7 +429,7 @@ describe('PeriodComparePage — disambiguation banner', () => {
     installRequest({ vehicles: ONE_VEHICLE });
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
     await waitFor(() =>
       expect(screen.queryByText(/Looking to compare two vehicles instead\?/)).toBeNull(),
     );
@@ -422,7 +454,7 @@ describe('PeriodComparePage — disambiguation banner', () => {
     installRequest({ vehicles: TWO_VEHICLES });
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
     expect(screen.queryByText(/Looking to compare two vehicles instead\?/)).toBeNull();
   });
 });
@@ -432,7 +464,7 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
     expect(screen.getByRole('combobox', { name: 'Vehicle' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Period A' })).toBeInTheDocument();
@@ -451,7 +483,7 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
     expect(periodStatsCalls().some((u) => /days=7(?:&|$)/.test(u))).toBe(false);
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Period A' }), {
@@ -469,7 +501,7 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), {
       target: { value: '20' },

@@ -64,34 +64,38 @@ export const glassCardClasses = {
 // expanded-row tokens used by DataTable's optional features.
 
 export const tableTokens = {
-  wrapper: 'w-full text-sm',
-  head: 'border-b border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-muted)] text-xs uppercase tracking-wider',
+  frame: 'min-w-0 max-w-full space-y-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-3 shadow-e1',
+  toolbar: 'flex flex-wrap items-center justify-between gap-2',
+  wrapper: 'w-full border-collapse text-sm text-[var(--text-primary)]',
+  head: 'border-b border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)] text-xs normal-case tracking-normal',
   headCell: 'px-4 py-3.5 text-left font-semibold',
   body: 'divide-y divide-[var(--border-subtle)]',
-  row: 'hover:bg-[var(--surface-2)] transition-colors duration-fast',
+  row: 'align-middle even:bg-[var(--surface-2)] hover:!bg-[var(--control-bg-hover)] transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--text-secondary)]',
   cell: 'px-4 py-3.5',
   /** Wrapper applied when stickyHeader / maxHeight is in use — needs scroll + relative for sticky thead. */
   scrollContainer: 'relative overflow-auto rounded-panel border border-[var(--border-default)]',
   /** Applied to <thead> rows when stickyHeader is true. The bg matches GlassPanel
    *  surface so rows scrolling underneath don't bleed through. z-20 keeps the
    *  sticky thead above selected-row z-10 hover states. */
-  stickyHead: 'sticky top-0 z-20 bg-[var(--surface-elevated)] backdrop-blur-sm',
+  stickyHead: 'sticky top-0 z-20 bg-[var(--surface-2)] backdrop-blur-sm',
   /** Visual treatment for selected rows. */
-  rowSelected: 'bg-cyan-500/10 hover:bg-cyan-500/15',
+  rowSelected: '!bg-[var(--control-bg)] [&>td:first-child]:shadow-[inset_3px_0_0_var(--text-secondary)]',
+  groupStart: 'border-l border-[var(--border-subtle)]',
+  semantic: '[&_thead]:border-b [&_thead]:border-[var(--border-default)] [&_thead]:bg-[var(--surface-2)] [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_th]:normal-case [&_th]:tracking-normal [&_th]:text-[var(--text-secondary)] [&_td]:px-3 [&_td]:py-2 [&_tbody_tr]:align-middle [&_tbody_tr]:border-b [&_tbody_tr]:border-[var(--border-subtle)] [&_tbody_tr:nth-child(even)]:bg-[var(--surface-2)] [&_tbody_tr:hover]:bg-[var(--control-bg-hover)] [&_tbody_tr:focus-within]:bg-[var(--control-bg-hover)]',
   /** Container for the bulk-action toolbar that appears above the table. */
   bulkBar:
     'flex flex-wrap items-center gap-2 px-3 py-2 mb-2 rounded-lg ' +
-    'border border-cyan-500/20 bg-cyan-500/[0.06] text-sm text-[var(--text-primary)]',
+    'border border-[var(--border-default)] bg-[var(--control-bg)] text-sm text-[var(--text-primary)]',
   /** Width of the leading checkbox/chevron columns. */
   leadingColWidth: 'w-10',
   /** The drag handle on the right edge of resizable column headers. */
   resizer:
     'absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none ' +
-    'opacity-0 hover:opacity-100 hover:bg-cyan-400/40 transition-opacity ' +
-    'focus-visible:opacity-100 focus-visible:bg-cyan-400/60 outline-none',
+    'opacity-0 hover:opacity-100 hover:bg-[var(--text-muted)] transition-opacity ' +
+    'focus-visible:opacity-100 focus-visible:bg-[var(--text-secondary)] outline-none',
   /** Cell holding `renderExpanded` content under an expanded row. */
   expandedCell:
-    'px-4 py-3 bg-white/[0.02] border-l-2 border-cyan-500/40',
+    'px-4 py-3 bg-[var(--surface-2)] border-l-2 border-[var(--border-default)]',
 } as const
 
 // ── Animation ──
@@ -220,9 +224,9 @@ export const typography = {
     body: 'text-sm text-[var(--text-primary)]',
     bodySm: 'text-sm text-[var(--text-secondary)]',
     caption: 'text-xs text-[var(--text-muted)]',
-    label: 'text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
+    label: 'text-xs font-medium tracking-wider text-[var(--text-muted)]',
     metricValue: 'text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums',
-    metricLabel: 'text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
+    metricLabel: 'text-xs font-medium tracking-wider text-[var(--text-muted)]',
     code: 'text-xs font-mono text-[var(--text-primary)]',
     helper: 'text-xs text-[var(--text-muted)]',
     error: 'text-xs text-rose-300',

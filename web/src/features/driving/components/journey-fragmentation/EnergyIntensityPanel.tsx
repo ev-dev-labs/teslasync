@@ -23,7 +23,7 @@ export function EnergyIntensityPanel({ result }: JourneyFragmentationSectionProp
   const displayIntensity = (value: number | null): string => {
     if (value == null || !Number.isFinite(value)) return '—';
     const metersPerDisplayUnit = 1 / convertDistanceFromSI(1, unitPrefs.distance);
-    return `${formatEnergy(value * metersPerDisplayUnit, { precision: 2 })} / ${unitPrefs.distance}`;
+    return `${formatEnergy(value * metersPerDisplayUnit)} / ${unitPrefs.distance}`;
   };
   const comparison = result.energyComparison;
   return (
@@ -48,7 +48,7 @@ export function EnergyIntensityPanel({ result }: JourneyFragmentationSectionProp
                 <Text as="p" variant="caption">
                   {t('journeyFragmentation.energy.completeDistance', '{{distance}} complete-energy distance', {
                     distance: group.completeEnergyDistanceM > 0
-                      ? formatDistance(group.completeEnergyDistanceM, { precision: 1 })
+                      ? formatDistance(group.completeEnergyDistanceM)
                       : '—',
                   })}
                 </Text>

@@ -175,8 +175,8 @@ describe('Tesla Physics consolidated workbench', () => {
 
   it('filters life states and retains meter nulls', async () => {
     await renderAt('/tesla-physics/life-tape');
-    expect(screen.getByText('Sum of classified intervals / returned window: 16.7%')).toBeInTheDocument();
-    expect(screen.getByText(/Longest returned interval: neutral_rolling for 300 s/)).toBeInTheDocument();
+    expect(screen.getByText('Sum of classified intervals / returned window: 16.67%')).toBeInTheDocument();
+    expect(screen.getByText(/Longest returned interval: neutral_rolling for 300\.00 s/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Filter by state'), { target: { value: 'charging' } });
     fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Life tape (1 rows)' }));
     expect(screen.getAllByRole('row').some((row) => row.textContent?.includes('neutral_rolling'))).toBe(false);
@@ -215,8 +215,8 @@ describe('Tesla Physics consolidated workbench', () => {
     report.unknown_os.sample_hours = 7;
     try {
       await renderAt('/tesla-physics/unknown');
-      expect(screen.getByText('Accepted telemetry: 50.0%')).toBeInTheDocument();
-      expect(screen.getByText('100.0% of requested window')).toBeInTheDocument();
+      expect(screen.getByText('Accepted telemetry: 50.00%')).toBeInTheDocument();
+      expect(screen.getByText('100.00% of requested window')).toBeInTheDocument();
     } finally { report.unknown_os.sample_hours = old; }
   });
 
@@ -292,7 +292,7 @@ describe('Tesla Physics consolidated workbench', () => {
   it('compares only usable Dictionary dwells and handles a missing Vault source', async () => {
     await renderAt('/tesla-physics/dictionary');
     expect(screen.getByText('At most one minute')).toBeInTheDocument();
-    expect(screen.getByText('Returned dwell median: 83 s')).toBeInTheDocument();
+    expect(screen.getByText('Returned dwell median: 82.50 s')).toBeInTheDocument();
     const saved = report.vault;
     try {
       Object.assign(report, { vault: null });
@@ -307,7 +307,7 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(screen.getByRole('link', { name: /Inspect before\/after meter evidence/ })).toHaveAttribute('href', '/tesla-physics/meters');
     await renderAt('/tesla-physics/nervous-system');
     expect(screen.getByText('Non-alive fields with a same-named unknown OS budget: 1 / 1')).toBeInTheDocument();
-    expect(screen.getByText('FSD: silent now; 14.0 h unknown in returned budget')).toBeInTheDocument();
+    expect(screen.getByText('FSD: silent now; 14.00 h unknown in returned budget')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Filter returned signals by status'), { target: { value: 'silent' } });
     expect(screen.getByRole('button', { name: 'Inspect raw evidence: Nervous system (1 rows)' })).toBeInTheDocument();
   });
@@ -331,7 +331,7 @@ describe('Tesla Physics consolidated workbench', () => {
     await renderAt('/tesla-physics/range');
     expect(screen.getByText('Estimate spread: 90.0 km')).toBeInTheDocument();
     expect(screen.getByText('Rated vs Typical: 40.0 km apart')).toBeInTheDocument();
-    expect(screen.getByText('Difference relative to Rated: 10.0%')).toBeInTheDocument();
+    expect(screen.getByText('Difference relative to Rated: 10.00%')).toBeInTheDocument();
     expect(screen.getByText(/No true range/)).toBeInTheDocument();
   });
 

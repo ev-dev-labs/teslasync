@@ -6,13 +6,15 @@ import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -75,12 +77,12 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
           {
             label: range.usesRated ? t('widget.idealRange', 'Ideal range') : t('widget.ratedRange', 'Rated range'),
             value: range.usesRated
-              ? range.idealConverted != null ? `${fmtNumber(range.idealConverted, 0)} ${distanceUnit}` : null
-              : range.ratedConverted != null ? `${fmtNumber(range.ratedConverted, 0)} ${distanceUnit}` : null,
+              ? range.idealConverted != null ? `${fmtNumber(range.idealConverted)} ${distanceUnit}` : null
+              : range.ratedConverted != null ? `${fmtNumber(range.ratedConverted)} ${distanceUnit}` : null,
           },
           ...(range.variancePct != null ? [{
             label: t('widget.epaComparison', 'EPA variance'),
-            value: `${range.variancePct >= 0 ? '+' : ''}${fmtNumber(range.variancePct, 1)}%`,
+            value: `${range.variancePct >= 0 ? '+' : ''}${fmtNumber(range.variancePct)}%`,
           }] : []),
         ]} />}
         {!range.hasData && (

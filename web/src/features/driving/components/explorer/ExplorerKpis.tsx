@@ -5,13 +5,14 @@ import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import type { ExplorerSummary } from '../../lib/explorer';
 import type {
   ExplorerDistanceDisplay,
   ExplorerSectionState,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, xl: 4 } as const;
 
@@ -25,6 +26,7 @@ export function ExplorerKpis({
   state,
   formatDistance,
 }: ExplorerKpisProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const base = summary.inferredBase;
   const farthestName =
@@ -70,7 +72,7 @@ export function ExplorerKpis({
               )}
               value={
                 summary.radiusM != null
-                  ? formatDistance(summary.radiusM, { precision: 0 })
+                  ? formatDistance(summary.radiusM)
                   : '—'
               }
               subtitle={
@@ -94,9 +96,7 @@ export function ExplorerKpis({
               )}
               value={
                 summary.farthest != null
-                  ? formatDistance(summary.farthest.distanceFromBaseM, {
-                      precision: 0,
-                    })
+                  ? formatDistance(summary.farthest.distanceFromBaseM)
                   : '—'
               }
               subtitle={farthestName}

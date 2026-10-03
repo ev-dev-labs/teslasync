@@ -22,6 +22,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import type { VehicleTelemetry } from '@/types/telemetry';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Constants & helpers                                                */
@@ -131,6 +132,7 @@ function buildVehicleColumns(
 /* ------------------------------------------------------------------ */
 
 export default function MQTTInspectorPage() {
+  const { fmtInt, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTime, formatRelative } = useDateFormat();
   usePageTitle(t('mqtt.title', 'MQTT inspector'));
@@ -164,7 +166,7 @@ export default function MQTTInspectorPage() {
 
   const staleVehicles = useMemo(() => vehicles.filter(isVehicleStale), [vehicles]);
 
-  const vehicleColumns = useMemo(() => buildVehicleColumns(t, formatRelative), [t, formatRelative]);
+  const vehicleColumns = useMemo(() => buildVehicleColumns(t, formatRelative), [t, formatRelative, displayPrecision, displayLocale]);
 
   // AI explainer window: derive (from_unix, to_unix) from the current time so
   // the in-scope window covers the most recent 30 minutes of broker activity.

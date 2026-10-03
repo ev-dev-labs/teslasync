@@ -29,8 +29,10 @@ import {
   useShareCardDisplay,
 } from '../components/share-card';
 import { analyzeShareCard } from '../lib/shareCard';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ShareCardPage() {
+  useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('shareCard.title', 'Share card studio'));
   const { vehicleId } = useSelectedVehicle();

@@ -1,7 +1,8 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Single pill descriptor for {@link PillFilterBar}.
@@ -75,6 +76,7 @@ export function PillFilterBar({
   className,
   testId,
 }: PillFilterBarProps) {
+  const { fmtInt } = useNumberFormatting();
   const tablistId = useId();
   const refs = useRef<Map<string, HTMLButtonElement>>(new Map());
 

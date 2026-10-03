@@ -44,6 +44,10 @@ Widgets are self-rendering: each one declares which signals it depends on, and i
 
 Missing battery readings, degradation trends, motor history, cost forecasts, and signal-health data expose a **Refresh** action that retries their actual source queries. Successful observations with no signal gaps and missing read-only model subsections do not suggest corrective actions. Partial system-health results remain visible while another source loads; unknown readings are not replaced by zeros.
 
+Energy-flow widgets format signed pack power directly from canonical watts. The animated flow retains its 500 W idle threshold; charger power is converted separately from its existing kW response field.
+
+The energy-statistics, safety-feature, and system-monitoring cards keep visible names at compact widths. The energy-statistics chart has its own bounded height, with summary metrics laid out below, not over, the plot.
+
 ## Multiple dashboards
 
 Use **New blank layout** or **New from template** in the Personal workspace layout menu to open one creation flow. Choose **Blank Dashboard** to start with no widgets, or search and preview a starter such as Operations Desk, Battery Care, Winter Ready, Daily Commuter, or Fleet Manager; name it before creating it. When the `nl-dashboard-composer` Helix feature is enabled, you can also describe the layout in the creation dialog. Helix proposes up to 16 widgets from the available catalog; review the responsive preview and name, then choose **Create layout** to save it. Helix never replaces the current layout automatically. The starter creates its widgets and responsive grid positions together. **Add Widget** adds individual widgets to the current layout instead. The **Personal workspace** menu also lets you switch, rename, and duplicate layouts; **Customize** reveals the drag handles and always-visible **Arrange**, settings, and remove controls. **Auto Arrange** fills the earliest available cells at each breakpoint without resetting widget widths or heights. Each dashboard has its own widgets and layout. Common patterns:

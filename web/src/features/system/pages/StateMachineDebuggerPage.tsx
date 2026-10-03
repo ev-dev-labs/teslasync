@@ -22,7 +22,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useTimezone } from '@/lib/timezone';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { FSMTransition, FSMType } from '@/types/fsm';
 import { FSM_TYPE_OPTIONS } from '@/types/fsm';
@@ -40,6 +40,7 @@ import {
   windowTransitions,
   nextWiderPreset,
 } from '../components/state-machine/windowTransitions';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── Vehicle state styling (for live state hero) ─── */
 const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string }> = {
@@ -90,6 +91,7 @@ interface StatSummaryRow {
 
 /* ─── Page Component ─── */
 export default function StateMachineDebuggerPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('fsm.title', 'FSM debugger'));
 
@@ -267,7 +269,7 @@ export default function StateMachineDebuggerPage() {
         ),
       },
     ],
-    [t, fsmType],
+    [t, fsmType, fmtInt],
   );
 
   /* ─── DataTable columns — transition timeline with color-coded state badges ─── */

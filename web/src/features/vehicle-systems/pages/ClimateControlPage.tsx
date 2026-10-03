@@ -65,7 +65,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { formatDateTime, formatTime } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { CHART_COLORS } from '@/lib/colors';
 import { getErrorMessage } from '@/lib/errorMessage';
 
@@ -73,6 +73,7 @@ import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { AIPreheatPrecoolRecommender } from '@/components/ai/AIPreheatPrecoolRecommender';
 import { useClimate, useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import type { ClimateState } from '@/types/vehicle-systems';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── Types ─── */
 
@@ -405,6 +406,7 @@ function SeatCoolingCard({
    ═══════════════════════════════════════════════════════ */
 
 export default function ClimateControlPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('widget.climatePanel.title', 'Climate control'));
 
@@ -491,32 +493,32 @@ export default function ClimateControlPage() {
         key: 'insideTemp',
         align: 'right',
         filterValue: (row) => row.insideTemp ?? null,
-        filterValueLabel: (_value, row) => row.insideTemp == null ? '—' : `${fmtNumber(toTemperatureDisplay(row.insideTemp), 1)} ${tempUnit}`,
+        filterValueLabel: (_value, row) => row.insideTemp == null ? '—' : `${fmtNumber(toTemperatureDisplay(row.insideTemp))} ${tempUnit}`,
         header: `${t('common.inside', 'Inside')} ${tempUnit}`,
         sortable: true,
         render: (row) =>
-          row.insideTemp != null ? fmtNumber(toTemperatureDisplay(row.insideTemp), 1) : '—',
+          row.insideTemp != null ? fmtNumber(toTemperatureDisplay(row.insideTemp)) : '—',
       },
       {
         key: 'outsideTemp',
         align: 'right',
         filterValue: (row) => row.outsideTemp ?? null,
-        filterValueLabel: (_value, row) => row.outsideTemp == null ? '—' : `${fmtNumber(toTemperatureDisplay(row.outsideTemp), 1)} ${tempUnit}`,
+        filterValueLabel: (_value, row) => row.outsideTemp == null ? '—' : `${fmtNumber(toTemperatureDisplay(row.outsideTemp))} ${tempUnit}`,
         header: `${t('common.outside', 'Outside')} ${tempUnit}`,
         sortable: true,
         render: (row) =>
-          row.outsideTemp != null ? fmtNumber(toTemperatureDisplay(row.outsideTemp), 1) : '—',
+          row.outsideTemp != null ? fmtNumber(toTemperatureDisplay(row.outsideTemp)) : '—',
       },
       {
         key: 'driverTempSetting',
         align: 'right',
         filterValue: (row) => row.driverTempSetting ?? null,
-        filterValueLabel: (_value, row) => row.driverTempSetting == null ? '—' : `${fmtNumber(toTemperatureDisplay(row.driverTempSetting), 1)} ${tempUnit}`,
+        filterValueLabel: (_value, row) => row.driverTempSetting == null ? '—' : `${fmtNumber(toTemperatureDisplay(row.driverTempSetting))} ${tempUnit}`,
         header: `${t('climate.page.setTemp', 'Set temp')} ${tempUnit}`,
         sortable: true,
         render: (row) =>
           row.driverTempSetting != null
-            ? fmtNumber(toTemperatureDisplay(row.driverTempSetting), 1)
+            ? fmtNumber(toTemperatureDisplay(row.driverTempSetting))
             : '—',
       },
       {
@@ -552,7 +554,7 @@ export default function ClimateControlPage() {
     ],
     // tempUnit + toTemperatureDisplay are captured by the render closures; the
     // component re-renders (and rebuilds columns) whenever the unit changes.
-    [t, tempUnit],
+    [t, tempUnit, fmtNumber],
   );
 
   /* ─── Chronological history (backend returns newest-first) ─── */
@@ -589,8 +591,8 @@ export default function ClimateControlPage() {
 
   const tempDelta = useMemo(() => {
     if (latest?.insideTemp == null || latest?.driverTempSetting == null) return null;
-    return +fmtNumber(latest.insideTemp - latest.driverTempSetting, 1);
-  }, [latest?.insideTemp, latest?.driverTempSetting]);
+    return +fmtNumber(latest.insideTemp - latest.driverTempSetting);
+  }, [latest?.insideTemp, latest?.driverTempSetting, fmtNumber]);
 
   /* ─── Climate efficiency stats ─── */
   // HvacPower is an enum signal (not kW), so numeric power stats are
@@ -1174,7 +1176,7 @@ export default function ClimateControlPage() {
                 label={t('climate.page.passengerSetting', 'Passenger setting')}
                 value={
                   latest?.passengerTempSetting != null
-                    ? `${fmtNumber(toTemperatureDisplay(latest.passengerTempSetting), 1)}${tempUnit}`
+                    ? `${fmtNumber(toTemperatureDisplay(latest.passengerTempSetting))}${tempUnit}`
                     : '—'
                 }
                 color="purple"
@@ -1297,14 +1299,14 @@ export default function ClimateControlPage() {
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <MetricCard
                   label={t('climate.page.avgFanSpeed', 'Avg fan speed')}
-                  value={efficiencyStats ? fmtNumber(efficiencyStats.avgFan, 1) : '—'}
+                  value={efficiencyStats ? fmtNumber(efficiencyStats.avgFan) : '—'}
                   subtitle={t('climate.page.levelRange', 'Level 0–10')}
                   icon={<Wind className="h-4 w-4" />}
                   color="cyan"
                 />
                 <MetricCard
                   label={t('climate.page.peakFanSpeed', 'Peak fan speed')}
-                  value={efficiencyStats ? fmtNumber(efficiencyStats.peakFan, 1) : '—'}
+                  value={efficiencyStats ? fmtNumber(efficiencyStats.peakFan) : '—'}
                   subtitle={t('climate.page.levelRange', 'Level 0–10')}
                   icon={<Wind className="h-4 w-4" />}
                   color="purple"

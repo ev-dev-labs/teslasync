@@ -5,10 +5,11 @@ import { StatCard } from '@/components/data-display';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useTeslaBackupHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Format seconds into human-readable duration (e.g. "2h 15m", "45m", "30s"). */
 export function fmtDuration(seconds: number): string {
@@ -40,6 +41,7 @@ function toTime(ts?: string): number {
 }
 
 export default function BackupHistoryWidget({ size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDateTime: fmtEventTime } = useDateFormat();
 

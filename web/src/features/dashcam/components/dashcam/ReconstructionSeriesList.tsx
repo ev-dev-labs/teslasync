@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import type { AlignedSignalSeries } from '../../lib/timelineAlignment';
 import { COVERAGE_BADGE_VARIANT, COVERAGE_LABELS } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface ReconstructionSeriesListProps {
   series: AlignedSignalSeries[];
@@ -15,6 +16,7 @@ export interface ReconstructionSeriesListProps {
  * telemetry catalog is fully dynamic), so no unit conversion is applied.
  */
 export function ReconstructionSeriesList({ series }: ReconstructionSeriesListProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   if (series.length === 0) return null;
 
@@ -40,9 +42,9 @@ export function ReconstructionSeriesList({ series }: ReconstructionSeriesListPro
               <p className="mt-1 text-xs text-[var(--text-muted)]">
                 {t('dashcam.reconstruction.firstLast', 'First: {{first}} at t={{firstAt}}s · last: {{last}} at t={{lastAt}}s', {
                   first: String(first.value ?? '—'),
-                  firstAt: first.atSeconds.toFixed(1),
+                  firstAt: fmtNumber(first.atSeconds),
                   last: String(last.value ?? '—'),
-                  lastAt: last.atSeconds.toFixed(1),
+                  lastAt: fmtNumber(last.atSeconds),
                 })}
               </p>
             )}

@@ -28,8 +28,9 @@ import { useUnits } from '@/hooks/useUnits';
 import { formatDate, formatDateTime, formatDayKey } from '@/lib/dateFormat';
 import { localDayKey } from '@/lib/drivesAggregation';
 import { useTimezone } from '@/lib/timezone';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { request } from '@/api/client';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Types (match internal/api/vampiredrain/handler.go — SI canonical) ── */
 
@@ -96,6 +97,7 @@ const GAUGE_MAX = 5;
 /* ── Component ── */
 
 export default function VampireDrainPage() {
+  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('vampireDrain.title', 'Vampire drain'));
 
@@ -160,7 +162,7 @@ export default function VampireDrainPage() {
     [events, timeZone],
   );
 
-  const pct = (v: number | null | undefined) => (v == null ? '—' : `${fmtNumber(v, 2)}%`);
+  const pct = (v: number | null | undefined) => (v == null ? '—' : `${fmtNumber(v)}%`);
   const avg = stats?.avg_drain_pct_per_day ?? null;
   const gaugeColor = avg == null
     ? CHART_COLORS[0]
@@ -168,19 +170,19 @@ export default function VampireDrainPage() {
 
   const columns: Column<VampireDrainEvent>[] = useMemo(() => [
     { key: 'started_at', header: t('vampireDrain.columns.started', 'Started'), sortable: true, render: (r) => formatDateTime(r.started_at) },
-    { key: 'duration_hours', align: 'right', header: t('vampireDrain.columns.duration', 'Duration'), sortable: true, render: (r) => `${fmtNumber(r.duration_hours, 1)}h` },
-    { key: 'start_battery_pct', align: 'right', header: t('vampireDrain.columns.startPct', 'Start %'), sortable: true, render: (r) => `${fmtNumber(r.start_battery_pct, 0)}%` },
-    { key: 'end_battery_pct', align: 'right', header: t('vampireDrain.columns.endPct', 'End %'), sortable: true, render: (r) => `${fmtNumber(r.end_battery_pct, 0)}%` },
+    { key: 'duration_hours', align: 'right', header: t('vampireDrain.columns.duration', 'Duration'), sortable: true, render: (r) => `${fmtNumber(r.duration_hours)}h` },
+    { key: 'start_battery_pct', align: 'right', header: t('vampireDrain.columns.startPct', 'Start %'), sortable: true, render: (r) => `${fmtNumber(r.start_battery_pct)}%` },
+    { key: 'end_battery_pct', align: 'right', header: t('vampireDrain.columns.endPct', 'End %'), sortable: true, render: (r) => `${fmtNumber(r.end_battery_pct)}%` },
     {
       key: 'drain_pct', header: t('vampireDrain.columns.loss', 'Loss %'), sortable: true, render: (r) => (
         <Badge variant={r.drain_pct > 5 ? 'danger' : r.drain_pct > 2 ? 'warning' : 'success'}>
-          {fmtNumber(r.drain_pct, 1)}%
+          {fmtNumber(r.drain_pct)}%
         </Badge>
       ), align: 'right',
     },
-    { key: 'drain_pct_per_day', align: 'right', header: t('vampireDrain.columns.rate', 'Rate %/day'), sortable: true, render: (r) => fmtNumber(r.drain_pct_per_day, 2) },
+    { key: 'drain_pct_per_day', align: 'right', header: t('vampireDrain.columns.rate', 'Rate %/day'), sortable: true, render: (r) => fmtNumber(r.drain_pct_per_day) },
     { key: 'ambient_temp_c_avg', align: 'right', header: t('vampireDrain.columns.temp', 'Ambient'), sortable: true, render: (r) => formatTemperature(r.ambient_temp_c_avg) },
-  ], [t, formatTemperature]);
+  ], [t, formatTemperature, fmtNumber]);
 
   const tips = useMemo(() => [
     { icon: <ShieldAlert className="h-4 w-4" aria-hidden="true" />, text: t('vampireDrain.tips.sentry', 'Disable Sentry Mode when parked at home to save 1–2 % per day.') },
@@ -269,7 +271,7 @@ export default function VampireDrainPage() {
               />
               <MetricCard
                 label={t('vampireDrain.kpi.observed', 'Observed hours')}
-                value={fmtNumber(stats?.total_observed_hours, 1)}
+                value={fmtNumber(stats?.total_observed_hours)}
                 subtitle={t('vampireDrain.kpi.sessions', '{{count}} sessions', { count: stats?.event_count ?? 0 })}
                 icon={<Clock className="h-4 w-4" aria-hidden="true" />}
                 color="amber"
@@ -377,7 +379,7 @@ export default function VampireDrainPage() {
                   unit="%"
                   color={gaugeColor}
                   size={168}
-                  decimals={2}
+                  decimals={displayPrecision}
                 />
                 <div className="w-full space-y-1">
                   <div className="flex items-center justify-between">

@@ -202,8 +202,7 @@ describe('MQTTStatusWidget — compact layout (1×N)', () => {
     expect(screen.getByText('Online')).toBeInTheDocument();
     expect(screen.getByText('12.5')).toBeInTheDocument();
     expect(screen.getByText('msg/s')).toBeInTheDocument();
-    // Compact is title-less and omits the standard stat cards.
-    expect(screen.queryByText('MQTT status')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'MQTT status' })).toBeInTheDocument();
     expect(screen.queryByText('Total messages')).not.toBeInTheDocument();
   });
 });

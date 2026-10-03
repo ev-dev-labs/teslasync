@@ -5,11 +5,13 @@ import { QueryError, Skeleton, InlineCallout } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { useVisitedPlaceCandidates } from '@/api/hooks/useLocations';
 import type { VisitedPlaceCandidate } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function VisitedCandidates({ onReview, onSelectForTemplate }: {
   onReview: (candidate: VisitedPlaceCandidate) => void;
   onSelectForTemplate?: (id: number) => void;
 }) {
+  const { fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const query = useVisitedPlaceCandidates();
   const candidates = query.data ?? [];
@@ -36,7 +38,7 @@ export function VisitedCandidates({ onReview, onSelectForTemplate }: {
           {candidates.map((candidate) => (
             <div key={candidate.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] p-3">
               <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
-                <Text variant="body" className="font-medium">{candidate.name || `${candidate.latitude.toFixed(4)}, ${candidate.longitude.toFixed(4)}`}</Text>
+                <Text variant="body" className="font-medium">{candidate.name || `${fmtScientificNumber(candidate.latitude, 4)}, ${fmtScientificNumber(candidate.longitude, 4)}`}</Text>
                 <Text size="sm" color="muted">
                   {t('geofences.visits.evidence', '{{visits}} visits · {{charges}} confirmed charges', { visits: candidate.visit_count, charges: candidate.charge_count })}
                   {' · '}<TimeStamp value={candidate.last_visited} format="relative" />

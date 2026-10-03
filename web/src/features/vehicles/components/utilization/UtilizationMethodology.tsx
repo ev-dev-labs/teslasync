@@ -19,11 +19,12 @@ import {
   Table,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { UtilizationSectionBody } from './UtilizationSectionBody';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface UtilizationMethodologyProps {
   summary: UtilizationSummary;
@@ -36,11 +37,12 @@ export function UtilizationMethodology({
   historyLimit,
   state,
 }: UtilizationMethodologyProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const accounting = summary.accounting;
   const observedDays =
     summary.observedDays != null
-      ? fmtNumber(summary.observedDays, 1)
+      ? fmtNumber(summary.observedDays)
       : '—';
   const coverage = [
     {

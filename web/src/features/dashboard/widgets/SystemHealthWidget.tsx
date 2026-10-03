@@ -4,11 +4,12 @@ import { Server } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useSystemHealth, useDBStats, useConnectionPool } from '@/api/hooks/useAdmin';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid, type StatusCell } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type Translate = (key: string, fallback: string) => string;
 
@@ -77,6 +78,7 @@ export function overallBadgeStatus(status: string): 'online' | 'away' | 'offline
 }
 
 export default function SystemHealthWidget({ size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
 
   const health = useSystemHealth();
@@ -132,7 +134,7 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.systemHealth.title', 'System health')}
+      title={t('widget.systemHealth.title', 'System health')}
       icon={<Server className="h-3.5 w-3.5" />}
       loading={isLoading}
       dataState={state}

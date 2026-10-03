@@ -6,6 +6,7 @@ import type { TimelineItemData } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import type { ClipRecord } from '../../lib/types';
 import { CONFIDENCE_BADGE_VARIANT, EVENT_TYPE_LABELS } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface EventEvidencePanelProps {
   clip: ClipRecord;
@@ -19,6 +20,7 @@ export interface EventEvidencePanelProps {
  * (and none of this feature's candidates ever do).
  */
 export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   if (clip.eventCandidates.length === 0) {
@@ -49,7 +51,7 @@ export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
     subtitle: candidate.basis.join(' — '),
     time:
       candidate.atSeconds != null
-        ? t('dashcam.events.atSeconds', 't={{seconds}}s', { seconds: candidate.atSeconds.toFixed(1) })
+        ? t('dashcam.events.atSeconds', 't={{seconds}}s', { seconds: fmtNumber(candidate.atSeconds) })
         : t('dashcam.events.wholeClip', 'whole clip'),
   }));
 

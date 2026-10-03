@@ -17,7 +17,8 @@ import {
   axisTick,
   chartGrid,
 } from '@/components/charts';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyRhythmPlotProps {
   rows: {
@@ -36,6 +37,7 @@ export function MonthlyRhythmPlot({
   rows,
   isHidden: externalIsHidden,
 }: MonthlyRhythmPlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const drivesName = t('rhythm.monthly.drives', 'Valid drives');
   const scoreName = t(
@@ -54,10 +56,10 @@ export function MonthlyRhythmPlot({
       {
         key: 'predictability',
         label: scoreName,
-        format: (v) => (v != null ? fmtNumber(v as number, 0) : '—'),
+        format: (v) => (v != null ? fmtNumber(v as number) : '—'),
       },
     ],
-    [t, drivesName, scoreName],
+    [t, drivesName, scoreName, fmtNumber],
   );
 
   return (
@@ -114,7 +116,7 @@ export function MonthlyRhythmPlot({
                           : t(
                               'rhythm.monthly.scoreValue',
                               '{{score}} of 100',
-                              { score: fmtNumber(value, 0) },
+                              { score: fmtNumber(value) },
                             )
                       }
                     />

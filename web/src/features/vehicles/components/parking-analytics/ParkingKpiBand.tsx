@@ -6,10 +6,11 @@ import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
 import type { ParkingSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, xl: 4 } as const;
 
@@ -24,6 +25,7 @@ export function ParkingKpiBand({
   error,
   onRetry,
 }: ParkingKpiBandProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
   const knownLocations = summary.locations.filter(
@@ -58,7 +60,7 @@ export function ParkingKpiBand({
               label={t('parking.parkedShare', 'Time parked')}
               value={
                 summary.parkedShare != null
-                  ? `${fmtNumber(summary.parkedShare * 100, 0)}%`
+                  ? `${fmtNumber(summary.parkedShare * 100)}%`
                   : '—'
               }
               subtitle={commonSample}
@@ -69,7 +71,7 @@ export function ParkingKpiBand({
               label={t('parking.nightShare', 'Overnight share')}
               value={
                 summary.nightShare != null
-                  ? `${fmtNumber(summary.nightShare * 100, 0)}%`
+                  ? `${fmtNumber(summary.nightShare * 100)}%`
                   : '—'
               }
               subtitle={t(
@@ -84,9 +86,7 @@ export function ParkingKpiBand({
               label={t('parking.longestStint', 'Longest stint')}
               value={
                 summary.longestStint
-                  ? formatDuration(summary.longestStint.durationMs / 1_000, {
-                      precision: 1,
-                    })
+                  ? formatDuration(summary.longestStint.durationMs / 1_000)
                   : '—'
               }
               subtitle={

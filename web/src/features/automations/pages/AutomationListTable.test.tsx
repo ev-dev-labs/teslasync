@@ -162,8 +162,8 @@ describe('AutomationListTable — shared loaded-value filters', () => {
     }));
     renderTable({ automations: rows, totalCount: rows.length });
     expect(screen.queryByRole('link', { name: 'Automation 59' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Runs' }));
-    const dialog = screen.getByRole('dialog', { name: 'Filter Runs' });
+    fireEvent.click(screen.getByRole('button', { name: 'Runs filter' }));
+    const dialog = screen.getByRole('dialog', { name: 'Runs filter' });
     fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Select all shown values' }));
     fireEvent.click(within(dialog).getByRole('checkbox', { name: '999' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
@@ -178,8 +178,8 @@ describe('AutomationListTable — shared loaded-value filters', () => {
         makeAutomation({ id: 3, name: 'Fleet-wide', vehicle_id: null }),
       ],
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Vehicle' }));
-    const dialog = screen.getByRole('dialog', { name: 'Filter Vehicle' });
+    fireEvent.click(screen.getByRole('button', { name: 'Vehicle filter' }));
+    const dialog = screen.getByRole('dialog', { name: 'Vehicle filter' });
     expect(within(dialog).getByRole('checkbox', { name: 'Model 3' })).toBeInTheDocument();
     expect(within(dialog).getByRole('checkbox', { name: 'Vehicle #99' })).toBeInTheDocument();
     expect(within(dialog).getByRole('checkbox', { name: 'All vehicles' })).toBeInTheDocument();
@@ -195,8 +195,8 @@ describe('AutomationListTable — shared loaded-value filters', () => {
         makeAutomation({ id: 2, name: 'Unknown runs', execution_count: null } as unknown as Partial<Automation>),
       ],
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Runs' }));
-    const dialog = screen.getByRole('dialog', { name: 'Filter Runs' });
+    fireEvent.click(screen.getByRole('button', { name: 'Runs filter' }));
+    const dialog = screen.getByRole('dialog', { name: 'Runs filter' });
     expect(within(dialog).getByRole('checkbox', { name: '—' })).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('checkbox', { name: '0' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));

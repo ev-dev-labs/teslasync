@@ -5,7 +5,7 @@
  * surface under test:
  *
  *   1. Responsive layout branches keyed off `size.cols`:
- *        - compact (cols ≤ 1) → a title-less shell with This-Month + Sessions
+ *        - compact (cols ≤ 1) → a titled shell with This-Month + Sessions
  *          stats and NO chart (the per-session average is dropped).
  *        - standard (2 cols)  → a titled shell + a 3-up stat row (This Month /
  *          Sessions / Avg-per-Session) + a bar chart, using the *small* ticks.
@@ -378,7 +378,7 @@ describe('WallConnectorWidget', () => {
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-ticksize', 'lg');
   });
 
-  it('compact layout shows This-Month + Sessions, no title, no chart, no average', () => {
+  it('compact layout retains its title and icon with This-Month + Sessions, no chart or average', () => {
     const ym = currentMonthPrefix();
     historyMock.mockReturnValue(
       makeQuery({ data: [makeEntry(`${ym}-10T12:00:00Z`, 3000)] }), // 3 kWh, 1 session
@@ -392,9 +392,10 @@ describe('WallConnectorWidget', () => {
     // Only the This-Month stat carries a unit in compact.
     expect(screen.getAllByText('kWh')).toHaveLength(1);
 
-    // Compact is title-less, drops the per-session average, and never mounts
-    // the chart.
-    expect(screen.queryByText('Wall connector')).not.toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: 'Wall connector', level: 3 });
+    expect(heading).toBeVisible();
+    expect(heading.parentElement?.querySelector('svg.lucide-plug')).toBeInTheDocument();
+    // Compact drops the per-session average and never mounts the chart.
     expect(screen.queryByText('Avg / session')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
@@ -403,6 +404,7 @@ describe('WallConnectorWidget', () => {
     historyMock.mockReturnValue(makeQuery({ data: [] }));
     renderWidget({ cols: 1, rows: 2 });
 
+    expect(screen.getByRole('heading', { name: 'Wall connector', level: 3 })).toBeVisible();
     expect(screen.getByText('No wall connector data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByText('This month (loaded)')).not.toBeInTheDocument();

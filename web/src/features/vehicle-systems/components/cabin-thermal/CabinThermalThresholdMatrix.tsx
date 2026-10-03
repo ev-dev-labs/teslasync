@@ -9,7 +9,7 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 import type {
   CabinThermalSummary,
@@ -18,6 +18,7 @@ import type {
 import { formatTemperatureDelta } from './labels';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalThresholdMatrixProps {
   summary: CabinThermalSummary;
@@ -41,12 +42,13 @@ export function CabinThermalThresholdMatrix({
   temperatureUnit,
   formatDuration,
 }: CabinThermalThresholdMatrixProps) {
+  const { fmtInt, fmtScientificNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const threshold = summary.thresholds;
   const rejectedAt = (reason: CandidateRejectionReason) =>
     summary.rejectionReasonCounts.find((item) => item.reason === reason)?.count ?? 0;
   const duration = (minutes: number) =>
-    formatDuration(minutes * 60, { precision: 1 });
+    formatDuration(minutes * 60);
   const cards: GateCard[] = [
     {
       key: 'gap',
@@ -102,7 +104,7 @@ export function CabinThermalThresholdMatrix({
       key: 'slope',
       label: t('cabinThermal.thresholds.slope', 'Relaxation slope'),
       value: t('cabinThermal.thresholds.lessThanSlope', '< −{{value}} / min', {
-        value: fmtNumber(threshold.relaxingSlopeEpsilon, 6, locale),
+        value: fmtScientificNumber(threshold.relaxingSlopeEpsilon, 6, locale),
       }),
       failures: rejectedAt('non_relaxing_gap'),
     },
@@ -110,7 +112,7 @@ export function CabinThermalThresholdMatrix({
       key: 'r2',
       label: t('cabinThermal.thresholds.r2', 'Minimum R²'),
       value: t('cabinThermal.thresholds.atLeast', '≥ {{value}}', {
-        value: fmtPercent(threshold.minR2 * 100, 0),
+        value: fmtPercent(threshold.minR2 * 100),
       }),
       failures: rejectedAt('r2_below_gate'),
     },

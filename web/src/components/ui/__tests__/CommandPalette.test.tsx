@@ -326,7 +326,7 @@ describe('CommandPalette search', () => {
     expect(await screen.findByRole('option', { name: /Asistente virtual/i })).toBeInTheDocument()
   })
 
-  it('matches "btr" → "Battery Health" via fuzzy subsequence', async () => {
+  it('matches "btr" → "Battery health" via fuzzy subsequence', async () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
 
@@ -334,7 +334,8 @@ describe('CommandPalette search', () => {
     const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
     fireEvent.change(input, { target: { value: 'btr' } })
 
-    expect(await screen.findByText('Battery Health')).toBeInTheDocument()
+    const result = await screen.findByText('Battery health')
+    expect(result.closest('[role="option"]')).toBeInTheDocument()
   })
 
   it('surfaces vehicle-switch entries when fleet has 2+ vehicles', async () => {

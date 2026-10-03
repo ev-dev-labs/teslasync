@@ -144,7 +144,7 @@ describe('PlacesTable — rows', () => {
       ),
     });
     const header = screen.getByRole('columnheader', { name: /Category/ });
-    fireEvent.click(within(header).getByRole('button', { name: /Filter/ }));
+    fireEvent.click(within(header).getByRole('button', { name: / filter$/ }));
     const dialog = screen.getByRole('dialog');
     fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Home' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
@@ -156,7 +156,7 @@ describe('PlacesTable — rows', () => {
     const home = makePlace();
     const office = makePlace({ id: 2, name: 'Office', category: 'work' });
     renderTable({ places: [home], filterData: [home, office] });
-    fireEvent.click(within(screen.getByRole('columnheader', { name: /Place/ })).getByRole('button', { name: /Filter/ }));
+    fireEvent.click(within(screen.getByRole('columnheader', { name: /Place/ })).getByRole('button', { name: / filter$/ }));
     expect(within(screen.getByRole('dialog')).getByRole('checkbox', { name: 'Office' })).toBeInTheDocument();
     expect(screen.queryByRole('row', { name: /Office/ })).toBeNull();
   });

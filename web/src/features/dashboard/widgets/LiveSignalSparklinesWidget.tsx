@@ -5,10 +5,11 @@ import { Sparkline } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignals, useSignalGaps, useSignalHistory } from '@/api/hooks/useTelemetry';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { NEON_COLORS } from '@/components/charts';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const DEFAULT_SIGNALS = [
   'BatteryLevel',
@@ -56,6 +57,7 @@ interface SignalRowProps {
 }
 
 function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: SignalRowProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { data: history } = useSignalHistory(vehicleId, encodeURIComponent(signal), 1);
   const { t } = useTranslation('dashboard');
 
@@ -108,7 +110,7 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
           {label}
         </p>
         <p className="text-xs font-bold text-[var(--text-primary)] leading-tight">
-          {currentValue != null ? fmtNumber(currentValue, 1) : '—'}
+          {currentValue != null ? fmtNumber(currentValue) : '—'}
         </p>
       </div>
 

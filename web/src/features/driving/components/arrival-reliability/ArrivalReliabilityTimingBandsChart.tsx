@@ -60,9 +60,7 @@ export function ArrivalReliabilityTimingBandsChart({
   );
   const ready = state.isResolved && !state.error && rows.length > 0;
   const duration = (value: unknown) =>
-    formatDuration(typeof value === 'number' ? value : null, {
-      precision: 1,
-    });
+    formatDuration(typeof value === 'number' ? value : null);
 
   return (
     <section data-testid="arrival-timing-bands">
@@ -165,7 +163,6 @@ export function ArrivalReliabilityTimingBandsChart({
                   tickFormatter={(value) =>
                     formatDuration(
                       typeof value === 'number' ? value : null,
-                      { precision: 0 },
                     )
                   }
                 />

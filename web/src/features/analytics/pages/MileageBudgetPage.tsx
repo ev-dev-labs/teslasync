@@ -145,7 +145,7 @@ export default function MileageBudgetPage() {
                       )
                     : t('mileageBudget.used', 'Driven this term')
                 }
-                value={formatDistance(budget.usedM, { precision: 0 })}
+                value={formatDistance(budget.usedM)}
                 subtitle={
                   historyCapped
                     ? t(
@@ -158,7 +158,6 @@ export default function MileageBudgetPage() {
                         {
                           allowed: formatDistance(
                             budget.allowedToDateM,
-                            { precision: 0 },
                           ),
                         },
                       )
@@ -190,7 +189,7 @@ export default function MileageBudgetPage() {
                 label={t('mileageBudget.projected', 'Projected term total')}
                 value={
                   !historyCapped && budget.projectedTotalM != null
-                    ? formatDistance(budget.projectedTotalM, { precision: 0 })
+                    ? formatDistance(budget.projectedTotalM)
                     : '—'
                 }
                 subtitle={
@@ -203,9 +202,7 @@ export default function MileageBudgetPage() {
                         'mileageBudget.ofAllowance',
                         'allowance: {{total}}',
                         {
-                          total: formatDistance(budget.totalAllowanceM, {
-                            precision: 0,
-                          }),
+                          total: formatDistance(budget.totalAllowanceM),
                         },
                       )
                 }
@@ -228,7 +225,7 @@ export default function MileageBudgetPage() {
                         'unavailable while history is capped',
                       )
                     : budget.projectedOverageM > 0
-                    ? formatDistance(budget.projectedOverageM, { precision: 0 })
+                    ? formatDistance(budget.projectedOverageM)
                     : t('mileageBudget.noOverage', 'no overage projected')
                 }
                 icon={<Wallet className="h-5 w-5" />}
@@ -331,7 +328,7 @@ export default function MileageBudgetPage() {
                     value={budget.usedM}
                     max={Math.max(budget.totalAllowanceM, 1)}
                     color={paceOver ? chartTokens.series[3] : chartTokens.series[1]}
-                    sublabel={formatDistance(budget.usedM, { precision: 0 })}
+                    sublabel={formatDistance(budget.usedM)}
                   />
                 </div>
               </div>

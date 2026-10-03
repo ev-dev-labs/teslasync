@@ -64,7 +64,7 @@ export function CalendarSummaryCards({
             />
             <MetricCard
               label={t('driveCalendar.distance', 'Distance')}
-              value={formatDistance(calendar.totalDistanceM, { precision: 0 })}
+              value={formatDistance(calendar.totalDistanceM)}
               subtitle={t('driveCalendar.driveCount', '{{count}} drives', {
                 count: calendar.totalDrives,
               })}
@@ -75,7 +75,7 @@ export function CalendarSummaryCards({
               label={t('driveCalendar.busiestDay', 'Busiest day')}
               value={
                 calendar.busiestDay
-                  ? formatDistance(calendar.busiestDay.distanceM, { precision: 0 })
+                  ? formatDistance(calendar.busiestDay.distanceM)
                   : '—'
               }
               subtitle={

@@ -699,8 +699,8 @@ describe('DrivesListPage — desktop evidence grid', () => {
     const table = screen.getByRole('table', { name: 'Drive evidence' });
     expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
     expect(table.querySelector('tbody [data-column-key="batteryUsed"]')).toHaveTextContent('-5.00');
-    fireEvent.click(within(table).getByRole('button', { name: 'Filter Battery used (pp)' }));
-    expect(within(screen.getByRole('dialog', { name: 'Filter Battery used (pp)' })).getByRole('spinbutton')).not.toHaveAttribute('min');
+    fireEvent.click(within(table).getByRole('button', { name: 'Battery used (pp) filter' }));
+    expect(within(screen.getByRole('dialog', { name: 'Battery used (pp) filter' })).getByRole('spinbutton')).not.toHaveAttribute('min');
   });
 
   it('keeps column filters hidden until opened and filters the whole result before pagination', async () => {
@@ -711,8 +711,8 @@ describe('DrivesListPage — desktop evidence grid', () => {
     expect(screen.queryByRole('tablist')).toBeNull();
     expect(screen.queryByPlaceholderText('Min')).toBeNull();
     expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
-    fireEvent.click(within(table).getByRole('button', { name: 'Filter Distance (km)' }));
-    const filter = screen.getByRole('dialog', { name: 'Filter Distance (km)' });
+    fireEvent.click(within(table).getByRole('button', { name: 'Distance (km) filter' }));
+    const filter = screen.getByRole('dialog', { name: 'Distance (km) filter' });
     fireEvent.click(within(filter).getByRole('button', { name: 'Number condition' }));
     fireEvent.change(within(filter).getByRole('spinbutton', { name: 'Minimum Distance (km)' }), { target: { value: '50' } });
 
@@ -720,14 +720,14 @@ describe('DrivesListPage — desktop evidence grid', () => {
       expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
       expect(within(table).getByRole('link', { name: /Apr 20/ })).toHaveAttribute('href', '/drives/4');
     });
-    expect(within(table).getByRole('button', { name: 'Filter Distance (km)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(table).getByRole('button', { name: 'Distance (km) filter' })).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.change(within(filter).getByRole('spinbutton', { name: 'Minimum Distance (km)' }), { target: { value: '500' } });
     expect(within(table).getByText('No drives match these filters')).toBeInTheDocument();
     fireEvent.change(within(filter).getByRole('spinbutton', { name: 'Minimum Distance (km)' }), { target: { value: '' } });
     expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog', { name: 'Filter Distance (km)' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Distance (km) filter' })).toBeNull();
   });
 
   it('sorts from column headers in both directions and keeps selection and preview', async () => {
@@ -758,15 +758,15 @@ describe('DrivesListPage — desktop evidence grid', () => {
     }));
     renderPage();
     const table = screen.getByRole('table', { name: 'Drive evidence' });
-    fireEvent.click(within(table).getByRole('button', { name: 'Filter Date / time' }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Filter Date / time' })).getByRole('button', { name: 'Other conditions' }));
-    fireEvent.change(within(screen.getByRole('dialog', { name: 'Filter Date / time' })).getByRole('combobox', { name: 'Filter drives by collection' }), { target: { value: 'anomalies' } });
+    fireEvent.click(within(table).getByRole('button', { name: 'Date / time filter' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Date / time filter' })).getByRole('button', { name: 'Other conditions' }));
+    fireEvent.change(within(screen.getByRole('dialog', { name: 'Date / time filter' })).getByRole('combobox', { name: 'Filter drives by collection' }), { target: { value: 'anomalies' } });
     expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
     expect(within(table).getByRole('link', { name: /Apr 20/ })).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
-    fireEvent.click(within(table).getByRole('button', { name: 'Filter FSD', exact: true }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Filter FSD' })).getByRole('button', { name: 'Conditions' }));
-    fireEvent.change(within(screen.getByRole('dialog', { name: 'Filter FSD' })).getByRole('combobox', { name: 'Filter drives by FSD evidence' }), { target: { value: 'high' } });
+    fireEvent.click(within(table).getByRole('button', { name: 'FSD filter', exact: true }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'FSD filter' })).getByRole('button', { name: 'Conditions' }));
+    fireEvent.change(within(screen.getByRole('dialog', { name: 'FSD filter' })).getByRole('combobox', { name: 'Filter drives by FSD evidence' }), { target: { value: 'high' } });
     expect(screen.getByTestId('location')).toHaveTextContent('fsd=high');
     expect(screen.getByTestId('location')).not.toHaveTextContent('coll=anomalies');
     expect(within(table).getByRole('link', { name: /Apr 24/ })).toBeInTheDocument();
@@ -777,7 +777,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
     renderPage();
     const table = screen.getByRole('table', { name: 'Drive evidence' });
     for (const label of ['Energy', 'Regen', 'FSD']) {
-      expect(within(table).getByRole('button', { name: `Filter ${label}`, exact: true })).toBeInTheDocument();
+      expect(within(table).getByRole('button', { name: `${label} filter`, exact: true })).toBeInTheDocument();
     }
     for (const key of ['distance', 'duration', 'speed', 'maxSpeed', 'avgPower', 'outsideTemp', 'energy', 'regen', 'batteryUsed']) {
       expect(table.querySelector(`tbody [data-column-key="${key}"] [data-indicator]`)).toBeNull();
@@ -790,8 +790,8 @@ describe('DrivesListPage — desktop evidence grid', () => {
     mockMediaQuery.mockReturnValue(true);
     renderPage([`${DEFAULT_RANGE}&size=1&page=2`]);
     const table = () => screen.getByRole('table', { name: 'Drive evidence' });
-    const filter = () => screen.getByRole('dialog', { name: 'Filter Distance (km)' });
-    fireEvent.click(within(table()).getByRole('button', { name: 'Filter Distance (km)' }));
+    const filter = () => screen.getByRole('dialog', { name: 'Distance (km) filter' });
+    fireEvent.click(within(table()).getByRole('button', { name: 'Distance (km) filter' }));
     expect(within(filter()).getByRole('checkbox', { name: '40.00 km' })).toBeChecked();
     expect(within(filter()).getByRole('checkbox', { name: '100.00 km' })).toBeChecked();
     expect(within(filter()).getByRole('checkbox', { name: '40.00 km' }).closest('label')).toHaveTextContent('3');
@@ -808,7 +808,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
     fireEvent.click(within(filter()).getByRole('button', { name: 'Clear', exact: true }));
     expect(screen.getByTestId('location')).not.toHaveTextContent('grid_values');
     expect(screen.getByTestId('location')).not.toHaveTextContent('grid_distance');
-    expect(within(table()).getByRole('button', { name: 'Filter Distance (km)' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(table()).getByRole('button', { name: 'Distance (km) filter' })).toHaveAttribute('aria-pressed', 'false');
     expect(within(table()).getByRole('link', { name: /Apr 24/ })).toBeInTheDocument();
   });
 
@@ -819,10 +819,10 @@ describe('DrivesListPage — desktop evidence grid', () => {
     const table = () => screen.getByRole('table', { name: 'Drive evidence' });
     expect(within(table()).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
     expect(within(table()).getByRole('link', { name: /Apr 20/ })).toBeInTheDocument();
-    fireEvent.click(within(table()).getByRole('button', { name: 'Filter Destination' }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Filter Destination' })).getByRole('button', { name: 'Clear', exact: true }));
+    fireEvent.click(within(table()).getByRole('button', { name: 'Destination filter' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Destination filter' })).getByRole('button', { name: 'Clear', exact: true }));
     expect(within(table()).getAllByRole('link', { name: /Apr/ })).toHaveLength(3);
-    expect(within(table()).getByRole('button', { name: 'Filter Start' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(table()).getByRole('button', { name: 'Start filter' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it.each(['km', 'mi'] as const)('keeps canonical distance selections with %s display units', (unit) => {
@@ -832,8 +832,8 @@ describe('DrivesListPage — desktop evidence grid', () => {
     renderPage([`${DEFAULT_RANGE}&grid_values=${values}`]);
     const table = screen.getByRole('table', { name: 'Drive evidence' });
     expect(within(table).getByRole('link', { name: /Apr 20/ })).toHaveAttribute('href', '/drives/4');
-    fireEvent.click(within(table).getByRole('button', { name: `Filter Distance (${unit})` }));
-    const filter = screen.getByRole('dialog', { name: `Filter Distance (${unit})` });
+    fireEvent.click(within(table).getByRole('button', { name: `Distance (${unit}) filter` }));
+    const filter = screen.getByRole('dialog', { name: `Distance (${unit}) filter` });
     expect(within(filter).getByRole('checkbox', { name: `${fmtNumber(convertDistanceFromSI(100000, unit))} ${unit}` })).toBeChecked();
   });
 
@@ -843,8 +843,8 @@ describe('DrivesListPage — desktop evidence grid', () => {
     expect(screen.getAllByText('This saved value filter is invalid. Clear it to reset.').length).toBeGreaterThan(0);
     const table = () => screen.getByRole('table', { name: 'Drive evidence' });
     expect(within(table()).queryByRole('link', { name: /Apr/ })).toBeNull();
-    fireEvent.click(within(table()).getByRole('button', { name: 'Filter Start' }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Filter Start' })).getByRole('button', { name: 'Clear', exact: true }));
+    fireEvent.click(within(table()).getByRole('button', { name: 'Start filter' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Start filter' })).getByRole('button', { name: 'Clear', exact: true }));
     expect(within(table()).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
   });
 
@@ -854,8 +854,8 @@ describe('DrivesListPage — desktop evidence grid', () => {
     renderPage([`${DEFAULT_RANGE}&grid_values=${values}`]);
     const table = () => screen.getByRole('table', { name: 'Drive evidence' });
     expect(within(table()).getByText('No drives match these filters')).toBeInTheDocument();
-    fireEvent.click(within(table()).getByRole('button', { name: 'Filter Distance (km)' }));
-    const filter = screen.getByRole('dialog', { name: 'Filter Distance (km)' });
+    fireEvent.click(within(table()).getByRole('button', { name: 'Distance (km) filter' }));
+    const filter = screen.getByRole('dialog', { name: 'Distance (km) filter' });
     expect(within(filter).getByText(/Some saved selections are not present/)).toBeInTheDocument();
     fireEvent.click(within(filter).getByRole('button', { name: 'Clear', exact: true }));
     expect(within(table()).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
@@ -878,7 +878,7 @@ describe('DrivesListPage — FSD evidence', () => {
     }));
     renderPage();
 
-    expect(within(listRegion()).getByText('FSD 72%')).toBeInTheDocument();
+    expect(within(listRegion()).getByText('FSD 72.00%')).toBeInTheDocument();
     expect(within(listRegion()).queryByText('FSD data unknown')).toBeNull();
 
     const bar = filtersBar();

@@ -11,11 +11,13 @@ import {
   Text
 } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { EntryDetail } from './EntryDetail';
 import { asList, useT } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function NotebookPanel({ window }: { window: ScienceWindow }) {
+  const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const query = useScienceNotebook(window);
   const state = useDataState(query, { provenance: 'historical' });
@@ -44,7 +46,7 @@ export function NotebookPanel({ window }: { window: ScienceWindow }) {
                   title={`${entry.domain} · ${entry.hypothesis || entry.id}`}
                   badge={(
                     <Badge variant={entry.unknown ? 'warning' : 'neutral'} size="sm">
-                      n={fmtNumber(entry.n, 0)}
+                      n={fmtNumber(entry.n)}
                     </Badge>
                   )}
                 >

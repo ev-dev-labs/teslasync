@@ -9,7 +9,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { formatDurationMinutes } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { fmtNumber, fmtInt, isFiniteNumber } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
@@ -18,6 +18,7 @@ import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 import type { Drive } from '../types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Truncate a display address to `maxLen` chars with an ellipsis; "—" when absent. */
 export function truncateAddress(addr: string | null | undefined, maxLen: number): string {
@@ -41,6 +42,7 @@ export function batteryUsedPct(
 }
 
 export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -89,7 +91,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
             const distance = knownNumber(d.distance_m);
             const duration = knownNumber(d.duration_s);
             const dist = distance == null ? null : convertDistanceFromSI(distance, unitPrefs.distance);
-            const distanceLabel = dist == null ? '—' : `${fmtNumber(dist, 1)} ${unitPrefs.distance}`;
+            const distanceLabel = dist == null ? '—' : `${fmtNumber(dist)} ${unitPrefs.distance}`;
             const dateLabel = formatDateShort(d.start_ts);
             const batteryUsed = batteryUsedPct(d.start_soc_pct, d.end_soc_pct);
 

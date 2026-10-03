@@ -27,11 +27,12 @@ import {
 } from '@/api/hooks/useExports';
 import { Icons } from '@/lib/icons';
 import { formatDateTime } from '@/lib/dateFormat';
-import { formatBytes } from '@/lib/numberFormat';
+
 
 import { ExportKpiBand } from '../components/ExportKpiBand';
 import { ExportStatusBreakdown } from '../components/ExportStatusBreakdown';
 import { deriveExportStats, statusBadgeVariant } from '../components/exportStats';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * ExportsPage — full-width command view over past export jobs.
@@ -43,6 +44,7 @@ import { deriveExportStats, statusBadgeVariant } from '../components/exportStats
  * `POST /export/jobs/bulk` for bulk deletion.
  */
 export default function ExportsPage() {
+  const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('exportsList.title', 'Exports'));
 
@@ -170,7 +172,7 @@ export default function ExportsPage() {
           ),
       },
     ],
-    [t],
+    [t, formatBytes],
   );
 
   const actions = (

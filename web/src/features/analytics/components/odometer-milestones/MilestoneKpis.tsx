@@ -10,11 +10,12 @@ import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, xl: 4 } as const;
 
@@ -28,13 +29,14 @@ export function MilestoneKpis({
   error,
   onRetry,
 }: MilestoneKpisProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateMs, formatDistanceKm } =
     useOdometerMilestoneDisplay();
   const next = summary.upcoming[0] ?? null;
   const pace = summary.primaryPace;
   const observedDays =
-    pace.observedDays != null ? fmtNumber(pace.observedDays, 1) : '—';
+    pace.observedDays != null ? fmtNumber(pace.observedDays) : '—';
 
   return (
     <section
@@ -71,7 +73,7 @@ export function MilestoneKpis({
               value={
                 pace.paceKmPerDay != null
                   ? t('milestones.kpi.perDay', '{{distance}} / day', {
-                      distance: formatDistanceKm(pace.paceKmPerDay, 1),
+                      distance: formatDistanceKm(pace.paceKmPerDay),
                     })
                   : '—'
               }

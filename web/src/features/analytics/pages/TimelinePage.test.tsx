@@ -220,13 +220,13 @@ describe('TimelinePage', () => {
   it('filters loaded transitions without recomputing dwell from the remaining rows', async () => {
     renderPage()
     await screen.findByText('10', {}, { timeout: 8000 })
-    const filterButton = screen.getByRole('button', { name: 'Filter To state' })
+    const filterButton = screen.getByRole('button', { name: 'To state filter' })
     const table = screen.getByRole('table')
     const firstRow = (await within(table).findByText('asleep')).closest('tr')!
     expect(within(firstRow).getByText('1h')).toBeInTheDocument()
 
     fireEvent.click(filterButton)
-    const filter = screen.getByRole('dialog', { name: 'Filter To state' })
+    const filter = screen.getByRole('dialog', { name: 'To state filter' })
     fireEvent.click(within(filter).getByRole('checkbox', { name: 'charging' }))
     fireEvent.click(within(filter).getByRole('button', { name: 'Done' }))
 
@@ -238,7 +238,7 @@ describe('TimelinePage', () => {
     })
 
     fireEvent.click(filterButton)
-    const reopened = screen.getByRole('dialog', { name: 'Filter To state' })
+    const reopened = screen.getByRole('dialog', { name: 'To state filter' })
     expect(within(reopened).getByRole('checkbox', { name: 'charging' })).not.toBeChecked()
     fireEvent.click(within(reopened).getByRole('button', { name: 'Clear' }))
     fireEvent.click(within(reopened).getByRole('button', { name: 'Done' }))

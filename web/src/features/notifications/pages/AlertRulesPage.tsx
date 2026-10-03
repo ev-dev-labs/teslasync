@@ -50,8 +50,9 @@ import {
 import type { AlertRule, AlertRuleKind } from '@/api/types';
 import { Icons } from '@/lib/icons';
 import { normalizeSeverity, chartTokens } from '@/lib/tokens';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { AlertRuleEditor } from '../components/AlertRuleEditor';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── Constants ──────────────────────────────────────────── */
 
@@ -105,6 +106,7 @@ export function isSnoozed(r: AlertRule, now: number): boolean {
  * Rule creation lives in Studio; this page owns edits and bulk management.
  */
 export default function AlertRulesPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const kindLabels: Record<AlertRuleKind, string> = {
     signal: t('alertRules.kind.signal', 'Signal'),

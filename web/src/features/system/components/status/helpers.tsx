@@ -64,7 +64,7 @@ export function formatBytes(bytes: number): string {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
   const i = Math.min(Math.max(Math.floor(Math.log(bytes) / Math.log(k)), 0), sizes.length - 1);
-  return `${fmtNumber(bytes / Math.pow(k, i), 1)} ${sizes[i]}`;
+  return `${fmtNumber(bytes / Math.pow(k, i))} ${sizes[i]}`;
 }
 
 export function statusToBadgeVariant(

@@ -17,12 +17,14 @@ import {
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { formatTemperatureDelta } from '@/lib/unitConversion';
 import { asList, unknown, useT } from './helpers';
 import { MissingBadges } from './MissingBadges';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ThermalPanel({ window }: { window: ScienceWindow }) {
+  const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const query = useScienceThermal(window);
   const state = useDataState(query, { provenance: 'historical' });
@@ -31,13 +33,13 @@ export function ThermalPanel({ window }: { window: ScienceWindow }) {
   const columns: Column<ScienceThermalFit>[] = [
     { key: 'start', header: t('science.thermal.start', 'Park start'), render: (r) => formatDateTime(r.start) },
     { key: 'kind', header: t('science.thermal.kind', 'Fit'), render: (r) => r.kind },
-    { key: 'samples', align: 'right', header: t('science.thermal.samples', 'Samples'), render: (r) => fmtNumber(r.n, 0) },
+    { key: 'samples', align: 'right', header: t('science.thermal.samples', 'Samples'), render: (r) => fmtNumber(r.n) },
     { key: 'tau', align: 'right', header: t('science.thermal.tau', 'Cooldown τ'), render: (r) => r.tau_s != null ? formatDuration(r.tau_s) : unknown(t) },
     { key: 'interval', align: 'right', header: t('science.thermal.interval', '95% CI for τ'), render: (r) =>
       r.tau_ci95_low != null && r.tau_ci95_high != null
         ? `${formatDuration(r.tau_ci95_low)}…${formatDuration(r.tau_ci95_high)}`
         : unknown(t) },
-    { key: 'r2', align: 'right', header: t('science.thermal.r2', 'R²'), render: (r) => r.r2 != null ? fmtNumber(r.r2, 2) : unknown(t) },
+    { key: 'r2', align: 'right', header: t('science.thermal.r2', 'R²'), render: (r) => r.r2 != null ? fmtNumber(r.r2) : unknown(t) },
     { key: 'rmse', align: 'right', header: t('science.thermal.rmse', 'Residual RMSE'), render: (r) =>
       r.residual_rmse_c != null ? formatTemperatureDelta(r.residual_rmse_c, unitPrefs, { precision: 2 }) : unknown(t) },
     { key: 'ambient', align: 'right', header: t('science.thermal.ambient', 'Fitted ambient'), render: (r) =>

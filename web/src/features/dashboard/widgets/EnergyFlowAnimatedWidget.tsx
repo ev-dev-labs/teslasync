@@ -33,8 +33,8 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
   const chargerPower = verified && !verified.includes('charger_power') ? null : knownNumber(state?.charger_power);
   const batteryLevel = verified && !verified.includes('battery_level') ? null : knownNumber(state?.battery_level);
   const isCharging = (!verified || verified.includes('is_charging')) && (state?.is_charging ?? false);
-  const isConsuming = power != null && power > 0.5;
-  const isRegen = power != null && power < -0.5;
+  const isConsuming = power != null && power > 500;
+  const isRegen = power != null && power < -500;
   const absPower = power == null ? null : Math.abs(power);
   const loading = isLoading || (!id && vehiclesLoading);
   const queryError = error ?? (!id ? vehiclesError : null);
@@ -55,9 +55,9 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
       : power == null
         ? t('hero.unknownStatus', 'Unknown')
         : t('widget.energyFlowAnimated.idle', 'Idle');
-  // The established VehicleState wire contract uses kW, unlike site snapshots.
-  const driveValue = formatPower(absPower == null ? null : absPower * 1000, { precision: 1 });
-  const chargerValue = formatPower(chargerPower == null ? null : chargerPower * 1000, { precision: 1 });
+  const driveValue = formatPower(absPower);
+  // charger_power still uses kW; pack power is already canonical W.
+  const chargerValue = formatPower(chargerPower == null ? null : chargerPower * 1000);
 
   const nodes = useMemo<FlowNode[]>(() => [
     {

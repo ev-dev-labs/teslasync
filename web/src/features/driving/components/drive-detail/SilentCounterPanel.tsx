@@ -7,9 +7,11 @@ import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/compone
 import { useSilentCounter } from '@/api/hooks/useTeslaPhysics';
 import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SilentCounterPanel({ driveId }: { driveId: string | undefined }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const query = useSilentCounter(driveId);
   const state = useDataState(query, { provenance: 'historical' });
@@ -47,7 +49,7 @@ export function SilentCounterPanel({ driveId }: { driveId: string | undefined })
                 { key: 'label', header: t('driveDetail.report.evidence', 'Evidence'), render: (interval) => <Badge variant="warning" size="sm">{interval.label}</Badge>, visibleOnMobile: true },
                 { key: 'start', header: t('driveDetail.start', 'Start'), render: (interval) => formatDateTime(interval.started_at), visibleOnMobile: true },
                 { key: 'end', header: t('driveDetail.end', 'End'), render: (interval) => formatDateTime(interval.ended_at), visibleOnMobile: true },
-                { key: 'duration', header: t('driveDetail.duration', 'Duration'), render: (interval) => `${fmtNumber(interval.duration_s / 60, 1)} ${t('driveDetail.minutesShort', 'min')}`, visibleOnMobile: true },
+                { key: 'duration', header: t('driveDetail.duration', 'Duration'), render: (interval) => `${fmtNumber(interval.duration_s / 60)} ${t('driveDetail.minutesShort', 'min')}`, visibleOnMobile: true },
               ]}
               pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
             />

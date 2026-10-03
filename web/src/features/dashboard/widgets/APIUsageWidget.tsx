@@ -2,15 +2,17 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart2, Clock, AlertTriangle, Activity, Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { useApiLogStats } from '@/api/hooks/useAdmin';
 import { deriveDataState, knownNumber } from '@/api/dataState';
 import { severityTokens } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function APIUsageWidget({ size }: WidgetProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const query = useApiLogStats();
   const {
@@ -49,13 +51,13 @@ export default function APIUsageWidget({ size }: WidgetProps) {
       },
       {
         label: t('widget.apiUsage.avgResponse', 'Avg response'),
-        value: avgResponseMs == null ? '—' : fmtNumber(avgResponseMs, 1),
+        value: avgResponseMs == null ? '—' : fmtNumber(avgResponseMs),
         unit: 'ms',
         icon: <Clock className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.apiUsage.errorRate', 'Error rate'),
-        value: errorRate == null ? '—' : fmtNumber(errorRate, 1),
+        value: errorRate == null ? '—' : fmtNumber(errorRate),
         unit: '%',
         icon: <AlertTriangle className="h-3.5 w-3.5" />,
         valueColor: errorRate != null && errorRate > 5 ? severityTokens.critical.fg : undefined,
@@ -70,12 +72,14 @@ export default function APIUsageWidget({ size }: WidgetProps) {
         valueColor: errorCount != null && errorCount > 0 ? severityTokens.critical.fg : undefined,
       },
     ];
-  }, [data, totalCalls, avgResponseMs, errorRate, errorCount, t]);
+  }, [data, totalCalls, avgResponseMs, errorRate, errorCount, t, fmtInt, fmtNumber]);
 
   // Compact layout: single big number
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.apiUsage.title', 'API usage')}
+        icon={<BarChart2 className="h-3.5 w-3.5" />}
         loading={isLoading}
         dataState={state}
         error={blockingError}
@@ -90,7 +94,7 @@ export default function APIUsageWidget({ size }: WidgetProps) {
             value={totalCalls == null ? null : fmtInt(totalCalls)}
             label={t('widget.apiUsage.calls24h', 'Calls (24h)')}
             badge={errorRate != null && errorRate > 5 ? {
-              text: `${fmtNumber(errorRate, 1)}% ${t('widget.apiUsage.errors', 'errors')}`,
+              text: `${fmtNumber(errorRate)}% ${t('widget.apiUsage.errors', 'errors')}`,
               variant: 'error',
             } : undefined}
           />

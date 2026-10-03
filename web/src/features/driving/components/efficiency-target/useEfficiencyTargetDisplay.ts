@@ -3,10 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useUnits } from '@/hooks/useUnits';
 import { formatDayKey } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceToSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export function useEfficiencyTargetDisplay() {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t, i18n } = useTranslation();
   const { unitPrefs, formatDistance } = useUnits();
   const distanceUnit = unitPrefs.distance === 'mi' ? 'mi' : 'km';
@@ -21,7 +24,7 @@ export function useEfficiencyTargetDisplay() {
     [efficiencyScale],
   );
   const formatEfficiency = useCallback(
-    (whPerKm: number | null, precision = 0) =>
+    (whPerKm: number | null, precision = getGlobalPrecision()) =>
       whPerKm == null
         ? '—'
         : `${fmtNumber(
@@ -29,10 +32,10 @@ export function useEfficiencyTargetDisplay() {
             precision,
             unitPrefs.locale,
           )} ${efficiencyUnit}`,
-    [convertEfficiency, efficiencyUnit, unitPrefs.locale],
+    [convertEfficiency, efficiencyUnit, unitPrefs.locale, fmtNumber, displayPrecision, displayLocale],
   );
   const formatSignedEfficiency = useCallback(
-    (whPerKm: number | null, precision = 0) => {
+    (whPerKm: number | null, precision = getGlobalPrecision()) => {
       if (whPerKm == null) return '—';
       const sign = whPerKm > 0 ? '+' : whPerKm < 0 ? '−' : '';
       return `${sign}${fmtNumber(
@@ -41,7 +44,7 @@ export function useEfficiencyTargetDisplay() {
         unitPrefs.locale,
       )} ${efficiencyUnit}`;
     },
-    [convertEfficiency, efficiencyUnit, unitPrefs.locale],
+    [convertEfficiency, efficiencyUnit, unitPrefs.locale, fmtNumber, displayPrecision, displayLocale],
   );
   const formatWeek = useCallback(
     (weekStart: string) =>

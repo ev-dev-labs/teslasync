@@ -12,8 +12,9 @@
 import { useMemo } from 'react'
 import { GlassPanel, Tooltip, Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import { fmtPercent } from '@/lib/numberFormat'
+
 import type { HeroStatus } from './StatusHero'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface UptimeDay {
   /** ISO date (yyyy-mm-dd). */
@@ -56,6 +57,7 @@ export function UptimeHeatmap({
   className,
   id,
 }: UptimeHeatmapProps) {
+  const { fmtPercent } = useNumberFormatting();
   const uptimePct = useMemo(() => {
     if (days.length === 0) return null
     const healthy = days.filter((d) => d.status === 'healthy' || d.status === 'maintenance').length
@@ -75,7 +77,7 @@ export function UptimeHeatmap({
             : uptimePct >= 95 ? 'text-amber-400'
             : 'text-red-400',
           )}>
-            {fmtPercent(uptimePct, 2)} uptime
+            {fmtPercent(uptimePct)} uptime
           </Text>
         )}
       </div>

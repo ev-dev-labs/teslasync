@@ -17,9 +17,10 @@ import { StaggerItem } from '@/components/motion/StaggerItem';
 import { SearchInput } from '@/components/forms';
 import { useAutomationPresets } from '@/api/hooks/useAutomations';
 import { Icons } from '@/lib/icons';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { AutomationPreset } from '@/api/types';
 import type { AutomationTriggerKind } from '@/types/automations';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const iconMap: Record<string, ElementType> = {
   shield: Icons.security,
@@ -164,6 +165,7 @@ export function PresetGallery({
   actionsDisabled,
   actionsDisabledReason,
 }: PresetGalleryProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useAutomationPresets(category);
   const [activeCategory, setActiveCategory] = useState(category ?? 'all');

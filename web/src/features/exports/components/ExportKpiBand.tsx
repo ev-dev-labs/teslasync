@@ -4,9 +4,10 @@ import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { Icons } from '@/lib/icons';
-import { fmtInt, formatBytes } from '@/lib/numberFormat';
+
 
 import type { ExportStats } from './exportStats';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ExportKpiBandProps {
   stats: ExportStats;
@@ -18,6 +19,7 @@ interface ExportKpiBandProps {
  * on phones up to 5 on ultra-wide monitors so it fills the shell width.
  */
 export function ExportKpiBand({ stats, isLoading }: ExportKpiBandProps) {
+  const { fmtInt, formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
 
   if (isLoading) {

@@ -9,7 +9,7 @@ import { Grid } from '@/components/layout';
 import { Badge, GlassPanel, Pagination, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type {
   FsdAttributionConfidence,
   FsdInsights,
@@ -19,6 +19,7 @@ import type {
 import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
 import { useClientPagination } from './useClientPagination';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FsdObservatoryPanelProps {
   insights: FsdInsights | undefined;
@@ -42,6 +43,7 @@ const confidenceVariant: Record<
  * distance stay first-class. This is not an engagement map.
  */
 export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const observatory = insights?.drive_analytics?.observatory;
@@ -78,7 +80,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
               label={t('fsd.observatory.stitched', 'Stitched reported FSD')}
               value={totals?.stitched_fsd_distance_m == null
                 ? '—'
-                : formatDistance(totals.stitched_fsd_distance_m, { precision: 1 })}
+                : formatDistance(totals.stitched_fsd_distance_m)}
               subtitle={
                 totals?.stitched_fsd_distance_m == null
                   ? t(
@@ -98,7 +100,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
               label={t('fsd.observatory.ambiguous', 'Ambiguous FSD')}
               value={totals?.ambiguous_fsd_distance_m == null
                 ? '—'
-                : formatDistance(totals.ambiguous_fsd_distance_m, { precision: 1 })}
+                : formatDistance(totals.ambiguous_fsd_distance_m)}
               subtitle={t(
                 'fsd.observatory.ambiguousHint',
                 'Counter increased across overlapping drives',
@@ -107,7 +109,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
             <MetricCard
               wrapLabel
               label={t('fsd.observatory.unknown', 'Unknown drive distance')}
-              value={formatDistance(totals?.unknown_drive_distance_m ?? null, { precision: 1 })}
+              value={formatDistance(totals?.unknown_drive_distance_m ?? null)}
               subtitle={t(
                 'fsd.observatory.unknownHint',
                 '{{count}} drives with no measured FSD',
@@ -206,12 +208,12 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
                             <span className="tabular-nums">
                               {chapter.fsd_distance_m == null
                                 ? t('fsd.notMeasured', 'Not measured')
-                                : formatDistance(chapter.fsd_distance_m, { precision: 1 })}
+                                : formatDistance(chapter.fsd_distance_m)}
                             </span>
                             {chapter.fsd_share_pct != null ? (
                               <Text as="span" color="muted">
                                 {t('fsd.kpi.sharePct', '{{value}}%', {
-                                  value: fmtNumber(chapter.fsd_share_pct, 1),
+                                  value: fmtNumber(chapter.fsd_share_pct),
                                 })}
                               </Text>
                             ) : null}
@@ -302,7 +304,7 @@ function ObservatoryEventRow({
   const confidence = event.confidence ?? 'unknown';
   const fsdLabel = event.fsd_distance_m == null
     ? t('fsd.notMeasured', 'Not measured')
-    : `${confidence === 'high' ? '' : '~'}${formatDistance(event.fsd_distance_m, { precision: 1 })}`;
+    : `${confidence === 'high' ? '' : '~'}${formatDistance(event.fsd_distance_m)}`;
 
   return (
     <li className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 text-sm">

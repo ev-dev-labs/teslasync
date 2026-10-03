@@ -40,6 +40,7 @@ import { ResetSection } from '../components/ResetSection'
 import { ServerSection } from '../components/ServerSection'
 import { SettingsNavigation, type SettingsSection } from '../components/SettingsNavigation'
 import { SANS_LABELS } from '../components/fontChoices'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // The Tesla integration redirect cluster (Tesla Account, Feature Flags,
 // Region & API, Active Orders, Gas Price Auto-Poll), the Fleet API link
@@ -76,6 +77,7 @@ function orDash(value: string | null | undefined): string {
 }
 
 export default function SettingsPage() {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('settings')
   usePageTitle(t('title', 'Settings'))
   const settingsQuery = useSettings()
@@ -180,7 +182,7 @@ export default function SettingsPage() {
       {
         icon: <Zap className="h-5 w-5" aria-hidden="true" />,
         label: t('overview.energyCost', 'Energy cost'),
-        value: settings ? `${currencySymbol}${(settings.base_cost_per_kwh ?? 0).toFixed(2)}` : '—',
+        value: settings ? `${currencySymbol}${fmtNumber((settings.base_cost_per_kwh ?? 0))}` : '—',
         sublabel: t('overview.perKwh', 'per kWh'),
       },
       {
@@ -190,7 +192,7 @@ export default function SettingsPage() {
         sublabel: `${Math.round((fontPrefs.scale ?? 1) * 100)}%`,
       },
     ]
-  }, [settings, fontPrefs, t])
+  }, [settings, fontPrefs, t, displayPrecision, displayLocale, fmtNumber])
 
   return (
     <PageContainer

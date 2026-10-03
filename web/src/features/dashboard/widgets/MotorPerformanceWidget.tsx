@@ -8,12 +8,13 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const TORQUE_MAX = 600;
 
@@ -38,6 +39,7 @@ export function torqueColor(nm: number): string {
 }
 
 export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
@@ -123,7 +125,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
           <WidgetStatGrid cols={2} stats={[
             {
               label: t('widget.motorPerformance.statorTemp', 'Stator temp'),
-              value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp), 0) : null,
+              value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp)) : null,
               unit: statorTemp != null ? tempUnit : undefined,
             },
             {
@@ -132,12 +134,12 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
             },
             {
               label: t('widget.motorPerformance.lateralG', 'Lateral G'),
-              value: lateralG != null ? fmtNumber(lateralG, 2) : null,
+              value: lateralG != null ? fmtNumber(lateralG) : null,
               unit: lateralG != null ? 'g' : undefined,
             },
             {
               label: t('widget.motorPerformance.longitudinalG', 'Longitudinal G'),
-              value: longitudinalG != null ? fmtNumber(longitudinalG, 2) : null,
+              value: longitudinalG != null ? fmtNumber(longitudinalG) : null,
               unit: longitudinalG != null ? 'g' : undefined,
             },
           ]} />

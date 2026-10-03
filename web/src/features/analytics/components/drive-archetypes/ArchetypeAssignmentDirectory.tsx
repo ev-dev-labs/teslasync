@@ -9,13 +9,14 @@ import {
   Table,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeAssignmentDirectoryProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -26,6 +27,7 @@ export function ArchetypeAssignmentDirectory({
   state,
   display,
 }: ArchetypeAssignmentDirectoryProps) {
+  const { fmtInt, fmtScientificNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const items = summary.directory.items ?? [];
 
@@ -76,9 +78,9 @@ export function ArchetypeAssignmentDirectory({
                 [t('archetypes.directory.energy', 'Energy used'), display.formatEnergy(assignment.energyUsedWh)],
                 [t('archetypes.directory.efficiency', 'Efficiency'), display.formatEfficiency(assignment.efficiencyWhPerM)],
                 [t('archetypes.directory.temperature', 'Clustering temperature'), display.formatTemperature(assignment.tempC)],
-                [t('archetypes.directory.assignmentDistance', 'Assignment distance'), fmtNumber(assignment.assignmentDistance, 3)],
-                [t('archetypes.directory.secondDistance', 'Second-centroid distance'), assignment.secondClusterDistance != null ? fmtNumber(assignment.secondClusterDistance, 3) : '—'],
-                [t('archetypes.directory.margin', 'Relative margin'), fmtPercent(assignment.assignmentMargin * 100, 1)],
+                [t('archetypes.directory.assignmentDistance', 'Assignment distance'), fmtScientificNumber(assignment.assignmentDistance, 3)],
+                [t('archetypes.directory.secondDistance', 'Second-centroid distance'), assignment.secondClusterDistance != null ? fmtScientificNumber(assignment.secondClusterDistance, 3) : '—'],
+                [t('archetypes.directory.margin', 'Relative margin'), fmtPercent(assignment.assignmentMargin * 100)],
               ] as const;
               return (
                 <li

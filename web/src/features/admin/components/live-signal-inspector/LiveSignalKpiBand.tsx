@@ -12,12 +12,14 @@ import { Radio, Zap, Clock, Database, Hash, Timer } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
 import { formatAge, type LiveSignalStats } from './liveSignalStats';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface LiveSignalKpiBandProps {
   stats: LiveSignalStats;
 }
 
 export function LiveSignalKpiBand({ stats }: LiveSignalKpiBandProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
 
   return (

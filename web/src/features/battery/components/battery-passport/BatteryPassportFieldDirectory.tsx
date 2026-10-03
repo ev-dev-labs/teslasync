@@ -10,10 +10,11 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportFieldDirectoryProps {
   analysis: BatteryPassportAnalysis;
@@ -29,7 +30,7 @@ interface FieldRow {
 
 function finiteSummary(
   value: unknown,
-  decimals: number,
+  decimals = getGlobalPrecision(),
 ): string {
   return typeof value === 'number' && Number.isFinite(value)
     ? fmtNumber(value, decimals)
@@ -40,6 +41,7 @@ export function BatteryPassportFieldDirectory({
   analysis,
   state,
 }: BatteryPassportFieldDirectoryProps) {
+  const { fmtPercent, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const passport = state.passport;
   const rawTrend = Array.isArray(passport?.degradation_trend)
@@ -91,7 +93,7 @@ export function BatteryPassportFieldDirectory({
       },
       {
         field: t('batteryPassport.fields.soh', 'soh_pct'),
-        summary: finiteSummary(passport?.soh_pct, 1),
+        summary: finiteSummary(passport?.soh_pct),
         source: t(
           'batteryPassport.fields.sohSource',
           'Server-derived estimate from reported capacity and the server-selected reference.',
@@ -103,7 +105,7 @@ export function BatteryPassportFieldDirectory({
           'batteryPassport.fields.capacity',
           'capacity_kwh',
         ),
-        summary: finiteSummary(passport?.capacity_kwh, 2),
+        summary: finiteSummary(passport?.capacity_kwh),
         source: t(
           'batteryPassport.fields.capacitySource',
           'Median-derived reported capacity estimate in kWh.',
@@ -117,7 +119,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.original_capacity_kwh,
-          1,
         ),
         source: t(
           'batteryPassport.fields.originalCapacitySource',
@@ -132,7 +133,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.equivalent_full_cycles,
-          1,
         ),
         source: t(
           'batteryPassport.fields.efcSource',
@@ -148,7 +148,7 @@ export function BatteryPassportFieldDirectory({
         summary:
           typeof passport?.fast_charge_ratio === 'number'
           && Number.isFinite(passport.fast_charge_ratio)
-            ? fmtPercent(passport.fast_charge_ratio * 100, 2)
+            ? fmtPercent(passport.fast_charge_ratio * 100)
             : '—',
         source: t(
           'batteryPassport.fields.fastRatioSource',
@@ -164,7 +164,7 @@ export function BatteryPassportFieldDirectory({
         summary:
           typeof passport?.avg_charge_limit_pct === 'number'
           && Number.isFinite(passport.avg_charge_limit_pct)
-            ? fmtPercent(passport.avg_charge_limit_pct, 1)
+            ? fmtPercent(passport.avg_charge_limit_pct)
             : '—',
         source: t(
           'batteryPassport.fields.avgLimitSource',
@@ -181,7 +181,7 @@ export function BatteryPassportFieldDirectory({
           ? t(
               'batteryPassport.fields.thermalSummary',
               '{{sum}} total across 3 bands',
-              { sum: fmtPercent(analysis.thermal.sumPct, 1) },
+              { sum: fmtPercent(analysis.thermal.sumPct) },
             )
           : '—',
         source: t(
@@ -197,7 +197,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.thermal_exposure?.cold_pct,
-          1,
         ),
         source: t(
           'batteryPassport.fields.thermalColdSource',
@@ -212,7 +211,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.thermal_exposure?.nominal_pct,
-          1,
         ),
         source: t(
           'batteryPassport.fields.thermalNominalSource',
@@ -227,7 +225,6 @@ export function BatteryPassportFieldDirectory({
         ),
         summary: finiteSummary(
           passport?.thermal_exposure?.hot_pct,
-          1,
         ),
         source: t(
           'batteryPassport.fields.thermalHotSource',
@@ -341,7 +338,7 @@ export function BatteryPassportFieldDirectory({
       passport,
       rawRecommendations.length,
       rawTrend.length,
-      t,
+      t, fmtPercent, displayPrecision, displayLocale,
     ],
   );
   const columns = useMemo<Column<FieldRow>[]>(

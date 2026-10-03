@@ -6,10 +6,11 @@ import { MetricCard } from '@/components/data-display';
 import { StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 
 import type { HealthStatus, TempSensor } from './constants';
 import { tempNeonColor, displayTemp } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TemperatureMetricCardsProps {
   sensors: TempSensor[];
@@ -26,6 +27,7 @@ export function TemperatureMetricCards({
   peakPower,
   loading = false,
 }: TemperatureMetricCardsProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTemperature: formatTemperatureUnit } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
@@ -73,7 +75,7 @@ export function TemperatureMetricCards({
           Number.isFinite(reading) &&
           Number.isFinite(maxTemp) &&
           maxTemp > 0
-            ? `${fmtNumber((reading / maxTemp) * 100, 0)}% ${t('drivetrain.ofMax', 'of max')}`
+            ? `${fmtNumber((reading / maxTemp) * 100)}% ${t('drivetrain.ofMax', 'of max')}`
             : t('drivetrain.noData', 'No data');
         return (
           <StaggerItem key={sensor.key}>

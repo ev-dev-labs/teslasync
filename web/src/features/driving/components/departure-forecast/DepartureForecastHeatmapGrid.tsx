@@ -2,12 +2,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type {
   DepartureForecast,
   DepartureMatrixCell,
 } from '../../lib/departureForecast';
 import { departureWeekdayShortLabel } from './labels';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DepartureForecastHeatmapGridProps {
   forecast: DepartureForecast;
@@ -35,6 +36,7 @@ export function DepartureForecastHeatmapGrid({
   forecast,
   locale,
 }: DepartureForecastHeatmapGridProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const maximum = Math.max(
     0,
@@ -100,7 +102,7 @@ export function DepartureForecastHeatmapGrid({
                           profile.weekday,
                         ),
                         hour: hourLabel,
-                        likelihood: fmtNumber(cell.p * 100, 1, locale),
+                        likelihood: fmtNumber(cell.p * 100, undefined, locale),
                         departures: fmtInt(cell.departures),
                         occurrences: fmtInt(cell.occurrences),
                       },

@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   convertDistanceFromSI,
   convertDistanceToSI,
@@ -11,8 +11,10 @@ import {
   convertTempFromSI,
 } from '@/lib/unitConversion';
 import type { ArchetypeDisplay } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function useDriveArchetypeDisplay(timeZone: string): ArchetypeDisplay {
+  const { fmtNumber } = useNumberFormatting();
   const {
     unitPrefs,
     formatDistance,
@@ -61,7 +63,7 @@ export function useDriveArchetypeDisplay(timeZone: string): ArchetypeDisplay {
       unitPrefs.distance,
       unitPrefs.energy,
       unitPrefs.locale,
-      unitPrefs.precision,
+      unitPrefs.precision, fmtNumber,
     ],
   );
   const formatDateMs = useCallback(

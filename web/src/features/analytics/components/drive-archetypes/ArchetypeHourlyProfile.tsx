@@ -16,15 +16,17 @@ import {
   axisTick,
   type ChartDataColumn,
 } from '@/components/charts';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeHourlyProfile({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -57,7 +59,7 @@ export function ArchetypeHourlyProfile({
         format: (value: unknown) => fmtInt(value),
       })),
     ],
-    [summary.clusters, t],
+    [summary.clusters, t, fmtInt],
   );
 
   return (

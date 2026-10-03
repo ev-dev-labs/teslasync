@@ -6,8 +6,9 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { TripDetail } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TripKpiBandProps {
   trip: TripDetail | undefined;
@@ -41,6 +42,7 @@ export function safeMetric(value: number | null | undefined): number {
  * user's distance unit) so no magic mile/km factor is needed.
  */
 export function TripKpiBand({ trip, isLoading }: TripKpiBandProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();

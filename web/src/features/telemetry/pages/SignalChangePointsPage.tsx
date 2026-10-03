@@ -18,14 +18,16 @@ import {
 import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
 import { summarizeSignalChangePoints, toNumericPoints } from '../lib/signalChangePoints';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HOURS = 72;
 
 export default function SignalChangePointsPage() {
+  const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('signalChangePoints.title', 'Signal change points'));
 
@@ -166,12 +168,12 @@ export default function SignalChangePointsPage() {
               />
               <MetricCard
                 label={t('signalChangePoints.biggest', 'Biggest shift')}
-                value={biggest != null ? fmtNumber(biggest.magnitude, 3) : '—'}
+                value={biggest != null ? fmtScientificNumber(biggest.magnitude, 3) : '—'}
                 subtitle={
                   biggest != null
                     ? t('signalChangePoints.biggestHint', '{{dir}} · confidence {{conf}}', {
                         dir: biggest.direction === 'up' ? t('signalChangePoints.up', 'up') : t('signalChangePoints.down', 'down'),
-                        conf: fmtNumber(biggest.confidence, 2),
+                        conf: fmtNumber(biggest.confidence),
                       })
                     : t('signalChangePoints.noShift', 'no shift detected')
                 }
@@ -188,7 +190,7 @@ export default function SignalChangePointsPage() {
               <MetricCard
                 label={t('signalChangePoints.samples', 'Samples analyzed')}
                 value={summary.samples}
-                subtitle={t('signalChangePoints.noiseScale', 'noise scale {{n}}', { n: fmtNumber(summary.globalSpread, 3) })}
+                subtitle={t('signalChangePoints.noiseScale', 'noise scale {{n}}', { n: fmtScientificNumber(summary.globalSpread, 3) })}
                 icon={<Waypoints className="h-5 w-5" />}
                 color="cyan"
               />

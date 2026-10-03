@@ -16,12 +16,13 @@ import {
 } from '@/components/charts';
 import { QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import type { CalendarWeekday } from '../../lib/driveCalendar';
 import { getWeekdayLabels } from './labels';
 import type { DriveCalendarSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface WeekdayPatternChartProps extends DriveCalendarSectionState {
   weekdays: CalendarWeekday[];
@@ -36,6 +37,7 @@ export function WeekdayPatternChart({
   error,
   onRetry,
 }: WeekdayPatternChartProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const labels = getWeekdayLabels(t);
@@ -87,7 +89,7 @@ export function WeekdayPatternChart({
         {
           key: 'distance',
           label: distanceName,
-          format: (value) => fmtNumber(value, 1),
+          format: (value) => fmtNumber(value),
         },
         {
           key: 'drives',
@@ -120,13 +122,13 @@ export function WeekdayPatternChart({
               tick={axisTick}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => fmtNumber(value, 0)}
+              tickFormatter={(value) => fmtNumber(value)}
             />
             <Tooltip
               content={
                 <ChartTooltip
                   valueFormatter={(value) =>
-                    `${fmtNumber(value, 1)} ${distanceUnit}`
+                    `${fmtNumber(value)} ${distanceUnit}`
                   }
                 />
               }

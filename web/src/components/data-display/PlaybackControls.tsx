@@ -4,6 +4,7 @@ import { Play, Pause, Square, SkipBack, Keyboard } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { ReplaySpeed } from '@/hooks/useTripReplay';
 import { PlaybackSpeedMenu, shiftSpeed } from './PlaybackSpeedMenu';
 import {
@@ -102,6 +103,7 @@ export function PlaybackControls({
   className,
 }: PlaybackControlsProps) {
   const { t } = useTranslation();
+  const { fmtPercent } = useNumberFormatting();
   const [shortcutToast, setShortcutToast] = useState<ShortcutToast | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -210,7 +212,7 @@ export function PlaybackControls({
           e.preventDefault();
           const pct = Number(e.key) / 10;
           onSeek(pct);
-          showShortcutToast(`${Math.round(pct * 100)}%`);
+          showShortcutToast(fmtPercent(pct * 100));
           break;
         }
         case 'j':
@@ -267,6 +269,7 @@ export function PlaybackControls({
     showShortcutToast,
     speed,
     t,
+    fmtPercent,
   ]);
 
   useEffect(() => {

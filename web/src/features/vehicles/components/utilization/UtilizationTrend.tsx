@@ -19,11 +19,12 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { useUtilizationDisplay } from './useUtilizationDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface UtilizationTrendProps {
   summary: UtilizationSummary;
@@ -34,6 +35,7 @@ export function UtilizationTrend({
   summary,
   state,
 }: UtilizationTrendProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const {
     distanceUnit,
@@ -126,7 +128,7 @@ export function UtilizationTrend({
               'Distance ({{unit}})',
               { unit: distanceUnit },
             ),
-            format: (value) => fmtNumber(value, 1),
+            format: (value) => fmtNumber(value),
           },
           {
             key: 'activeDays',
@@ -142,7 +144,7 @@ export function UtilizationTrend({
               'utilization.columns.observedDays',
               'Observed days',
             ),
-            format: (value) => fmtNumber(value, 1),
+            format: (value) => fmtNumber(value),
           },
           {
             key: 'drives',
@@ -155,7 +157,7 @@ export function UtilizationTrend({
               'utilization.columns.drivingHours',
               'Driving hours',
             ),
-            format: (value) => fmtNumber(value, 1),
+            format: (value) => fmtNumber(value),
           },
         ]}
       >
@@ -200,7 +202,7 @@ export function UtilizationTrend({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => fmtNumber(value, 0)}
+                  tickFormatter={(value) => fmtNumber(value)}
                 />
                 <YAxis
                   yAxisId="days"
@@ -220,7 +222,7 @@ export function UtilizationTrend({
                               'utilization.value.distance',
                               '{{value}} {{unit}}',
                               {
-                                value: fmtNumber(value, 1),
+                                value: fmtNumber(value),
                                 unit: distanceUnit,
                               },
                             )

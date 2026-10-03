@@ -12,7 +12,7 @@ import {
   type Column,
 } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { ValidSleepDrainEvent } from '../../lib/sleepEfficiencyAnalysis';
 import { eventRecencyLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
@@ -20,6 +20,7 @@ import type {
   SleepEfficiencyFormatters,
   SleepEfficiencySectionProps,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type DrainEventDirectoryProps =
   SleepEfficiencySectionProps
@@ -30,6 +31,7 @@ export function DrainEventDirectory({
   state,
   formatTemperature,
 }: DrainEventDirectoryProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () => [...analysis.events.directory],
@@ -157,7 +159,7 @@ export function DrainEventDirectory({
         ),
       },
     ],
-    [formatTemperature, t],
+    [formatTemperature, t, fmtNumber],
   );
 
   return (

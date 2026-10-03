@@ -14,8 +14,9 @@ import { Database, Layers, Hash, Type, ToggleRight, Clock } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { SignalLogSummary } from './signalLogSummary';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface SignalLogKpiBandProps {
   summary: SignalLogSummary;
@@ -58,6 +59,7 @@ function formatSpan(earliest: string | null, latest: string | null): string {
 }
 
 export function SignalLogKpiBand({ summary, loading = false }: SignalLogKpiBandProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const s = summary ?? ZERO_SUMMARY;
 

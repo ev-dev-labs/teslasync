@@ -9,7 +9,7 @@ import { type PhysicsPage, seconds, time, unknown } from './PhysicsPageShell';
 export default function PhysicsFirmwareEpochsSection({ physics }: { physics: PhysicsPage }) {
   const { report, t } = physics;
   const { formatDistance } = useUnits();
-  const distance = (m: number | null | undefined) => m == null ? unknown(t) : formatDistance(m, { precision: 1 });
+  const distance = (m: number | null | undefined) => m == null ? unknown(t) : formatDistance(m);
   const epochs = report?.firmware_epochs?.epochs ?? [];
   const last = epochs.length ? epochs[epochs.length - 1] : undefined;
   const [filter, setFilter] = useState('');

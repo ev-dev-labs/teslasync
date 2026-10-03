@@ -1,12 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import {
-  ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useThemeChartPalette,
-  areaGradient,
-  ChartLegend, EmbeddedChart, type ChartDataRow,
-} from '@/components/charts';
+import { ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, axisTick, axisTickSm, chartAnimation, useThemeChartPalette, areaGradient, ChartLegend, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
@@ -14,13 +9,14 @@ import { useDrives, useDriveTelemetry } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertSpeedFromSI, convertPowerFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -31,6 +27,8 @@ interface ChartDatum extends ChartDataRow {
 }
 
 export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -119,7 +117,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
     const items: ChartSummaryStat[] = [
       {
         label: t('widget.driveTelemetry.distance', 'Distance'),
-        value: knownNumber(latestDrive.distanceM) == null ? null : fmtNumber(convertDistanceFromSI(latestDrive.distanceM, unitPrefs.distance), 1),
+        value: knownNumber(latestDrive.distanceM) == null ? null : fmtNumber(convertDistanceFromSI(latestDrive.distanceM, unitPrefs.distance)),
         unit: unitPrefs.distance,
       },
       {
@@ -135,12 +133,12 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
       const efficiency = distance > 0 ? energy / distance : null;
       items.push({
         label: t('widget.driveTelemetry.efficiency', 'Efficiency'),
-        value: efficiency != null ? fmtNumber(efficiency, 0) : '—',
+        value: efficiency != null ? fmtNumber(efficiency) : '—',
         unit: efficiencyUnit,
       });
     }
     return items;
-  }, [latestDrive, unitPrefs.distance, efficiencyUnit, t]);
+  }, [latestDrive, unitPrefs.distance, efficiencyUnit, t, fmtNumber, fmtInt]);
 
   const tick = isWide ? axisTick : axisTickSm;
 
@@ -194,7 +192,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             axisLine={false}
             width={isCompact ? 0 : 36}
             domain={[0, 'dataMax + 10']}
-            tickFormatter={(v: number) => fmt(v, 0)}
+            tickFormatter={(v: number) => fmt(v)}
           />
 
           {/* Right axis: power */}
@@ -205,7 +203,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             tickLine={false}
             axisLine={false}
             width={isCompact ? 0 : 36}
-            tickFormatter={(v: number) => fmt(v, 0)}
+            tickFormatter={(v: number) => fmt(v)}
           />
 
           <Tooltip content={<ChartTooltip />} />
@@ -268,7 +266,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         )}
       </EmbeddedChart>
     );
-  }, [chartData, isCompact, isWide, tick, unitPrefs.speed, unitPrefs.power, unitPrefs.distance, t, palette]);
+  }, [chartData, isCompact, isWide, tick, unitPrefs.speed, unitPrefs.power, unitPrefs.distance, t, palette, fmt]);
 
   // Compact layout
   if (isCompact) {

@@ -12,11 +12,12 @@ import {
 import { Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { PIE_COLORS } from './constants';
 import type { FleetAnalyticsQuery } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KM_PER_MILE = 1.609344;
 
@@ -26,6 +27,7 @@ const KM_PER_MILE = 1.609344;
  * (a fragment) so they flow into the Overview tab's single bento grid.
  */
 export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuery }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -162,7 +164,7 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
                   #{idx + 1} {v.name}
                 </Text>
                 <Text size="xs" color="muted">
-                  {fmtNumber(whPerKmToDisplay(safe(v.efficiency)), 1)} {efficiencyUnit}
+                  {fmtNumber(whPerKmToDisplay(safe(v.efficiency)))} {efficiencyUnit}
                 </Text>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden="true">

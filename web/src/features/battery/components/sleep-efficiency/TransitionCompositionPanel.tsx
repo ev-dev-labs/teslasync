@@ -5,15 +5,17 @@ import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { CHART_COLORS } from '@/lib/colors';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { sleepStateLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function TransitionCompositionPanel({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = analysis.transitions.states;
 

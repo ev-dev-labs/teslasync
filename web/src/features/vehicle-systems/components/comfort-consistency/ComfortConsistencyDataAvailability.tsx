@@ -9,10 +9,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyDataAvailabilityProps {
   summary: ComfortConsistencySummary;
@@ -30,6 +31,7 @@ export function ComfortConsistencyDataAvailability({
   summary,
   state,
 }: ComfortConsistencyDataAvailabilityProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items: Availability[] = [
     {

@@ -372,6 +372,9 @@ describe('CostBreakdownWidget — compact layout', () => {
   it('shows the current-month cost, savings subtitle, and "Saving" badge', () => {
     renderWidget(COMPACT);
 
+    const heading = screen.getByRole('heading', { name: 'Cost breakdown', level: 3 });
+    expect(heading).toBeVisible();
+    expect(heading.parentElement?.querySelector('svg.lucide-pie-chart')).toBeInTheDocument();
     // Current month = last breakdown entry (2025-03, ev_cost 45).
     expect(screen.getByText('$45.00')).toBeInTheDocument();
     expect(screen.getByText('Latest recorded month')).toBeInTheDocument();

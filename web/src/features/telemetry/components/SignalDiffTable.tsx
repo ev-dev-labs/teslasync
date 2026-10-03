@@ -5,6 +5,7 @@ import { SourceLayerBadge, type SignalSource } from '@/components/data-display';
 import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { SignalDiffRow } from '@/api/hooks/useTelemetry';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Virtualized diff table for the SignalDiff page.
@@ -78,6 +79,7 @@ export function SignalDiffTable({
   pinnedSignals,
   className,
 }: SignalDiffTableProps) {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
 
   const sortedRows = useMemo(() => {
@@ -162,7 +164,7 @@ export function SignalDiffTable({
               {positive ? '+' : ''}
               {fmtNumber(lbl.delta ?? 0)}
               {lbl.pct != null
-                ? ` (${lbl.pct >= 0 ? '+' : ''}${fmtNumber(lbl.pct, 1)}%)`
+                ? ` (${lbl.pct >= 0 ? '+' : ''}${fmtNumber(lbl.pct)}%)`
                 : ''}
             </span>
           );
@@ -187,7 +189,7 @@ export function SignalDiffTable({
         ),
       },
     ],
-    [t, vehicleId],
+    [t, vehicleId, fmtNumber, displayPrecision, displayLocale],
   );
 
   const emptyMessage = filterActive

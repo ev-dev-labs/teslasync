@@ -1,11 +1,7 @@
 import { useCallback, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sun } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartTooltip, EmbeddedChart, type ChartDataRow,
-} from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { useTeslaEnergyHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { averageKnown, knownNumber, sumKnown } from '@/api/dataState';
 import { DataProvenanceBadge } from '@/components/data-display';
@@ -13,11 +9,12 @@ import { Skeleton } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   date: string;
@@ -41,6 +38,8 @@ function todayKey(): string {
 }
 
 export default function SolarProductionWidget({ size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const gradientId = useId();
@@ -131,6 +130,10 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
     dataUpdatedAt: siteId ? historyUpdatedAt : sitesUpdatedAt,
     refetch: handleRefresh,
   }, { provenance: 'historical', partial: chartData.some((d) => d.solar_kwh == null) });
+  const shellProps = {
+    title: t('widget.solarProduction.title', 'Solar production'),
+    icon: <Sun className="h-3.5 w-3.5 text-yellow-400" />,
+  };
 
   // ── No energy sites linked ──
   // Guard on `!sitesError` so a *failed* sites fetch surfaces the shared error
@@ -139,6 +142,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
   if (!hasSites && !isLoading && !sitesError) {
     return (
       <WidgetShell
+        {...(isCompact ? shellProps : {})}
         loading={false}
         dataState={dataState}
         updatedAt={sitesUpdatedAt}
@@ -163,6 +167,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
+        {...shellProps}
         loading={isLoading}
         dataState={dataState}
         loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
@@ -180,12 +185,12 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
           stats={hasData ? [
             {
               label: t('widget.solarProduction.today', 'Today'),
-              value: todayKwh == null ? null : fmtNumber(todayKwh, 1),
+              value: todayKwh == null ? null : fmtNumber(todayKwh),
               unit: unitPrefs.energy,
             },
             {
               label: t('widget.solarProduction.avg', 'Daily avg'),
-              value: avgKwh == null ? null : fmtNumber(avgKwh, 1),
+              value: avgKwh == null ? null : fmtNumber(avgKwh),
               unit: unitPrefs.energy,
             },
           ] : []}
@@ -200,7 +205,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
     ? [
         {
           label: t('widget.solarProduction.today', 'Today'),
-          value: todayKwh == null ? null : fmtNumber(todayKwh, 1),
+          value: todayKwh == null ? null : fmtNumber(todayKwh),
           unit: unitPrefs.energy,
         },
         {
@@ -210,7 +215,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
         },
         {
           label: t('widget.solarProduction.avg', 'Daily avg'),
-          value: avgKwh == null ? null : fmtNumber(avgKwh, 1),
+          value: avgKwh == null ? null : fmtNumber(avgKwh),
           unit: unitPrefs.energy,
         },
       ]
@@ -220,8 +225,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.solarProduction.title', 'Solar production')}
-      icon={<Sun className="h-3.5 w-3.5 text-yellow-400" />}
+      {...shellProps}
       loading={isLoading}
       dataState={dataState}
       loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
@@ -264,12 +268,12 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
                   tickLine={false}
                   axisLine={false}
                   width={40}
-                  tickFormatter={(v: number) => fmt(v, 0)}
+                  tickFormatter={(v: number) => fmt(v)}
                 />
                 <Tooltip
                   content={<ChartTooltip />}
                   formatter={(value: number) => [
-                    `${fmtNumber(value, 1)} ${unitPrefs.energy}`,
+                    `${fmtNumber(value)} ${unitPrefs.energy}`,
                     t('widget.solarProduction.solar', 'Solar'),
                   ]}
                   cursor={{ fill: chartTokens.gridStroke }}

@@ -7,7 +7,7 @@ import { MetricCard } from '@/components/data-display'
 import { StatGridSkeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { fmtInt } from '@/lib/numberFormat'
+
 import { cn } from '@/lib/cn'
 import {
   isImpersonationActive,
@@ -18,6 +18,7 @@ import {
 import { SubjectsTable } from '../components/SubjectsTable'
 import { ImpersonationStatusPanel } from '../components/ImpersonationStatusPanel'
 import { ImpersonationPolicyPanel } from '../components/ImpersonationPolicyPanel'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Admin Subjects page — modern-UI, full-width cockpit for the impersonation
@@ -34,6 +35,7 @@ import { ImpersonationPolicyPanel } from '../components/ImpersonationPolicyPanel
  * (GET /admin/impersonate, GET /admin/impersonate/candidates).
  */
 export default function UsersPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   usePageTitle(t('impersonation.users.title', 'Subjects'))
 

@@ -14,11 +14,12 @@ import { Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { TwinScenarioInput } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, TwinScenarioForm } from '../components';
 import { formatEfficiencyFromSI } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const createScenario = (index: number, name: string): TwinScenarioInput => ({
   name,
@@ -30,6 +31,7 @@ const createScenario = (index: number, name: string): TwinScenarioInput => ({
 });
 
 export default function TwinLabPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -135,7 +137,7 @@ export default function TwinLabPage() {
             />
             <StatCard
               label={t('advancedIntelligence.twin.baseline.samples', 'Calibration samples')}
-              value={result ? fmtNumber(result.baseline.calibration_sample_count, 0) : null}
+              value={result ? fmtInt(result.baseline.calibration_sample_count) : null}
             />
           </Grid>
         </InsightPanel>
@@ -194,7 +196,7 @@ export default function TwinLabPage() {
                 {(scenario.sensitivity_drivers ?? []).map((driver) => (
                   <div key={driver.driver} className="mt-2 flex justify-between gap-3 text-sm">
                     <span className="text-[var(--text-muted)]">{driver.driver}</span>
-                    <span>{fmtNumber(driver.effect_pct, 1)}%</span>
+                    <span>{fmtNumber(driver.effect_pct)}%</span>
                   </div>
                 ))}
               </div>

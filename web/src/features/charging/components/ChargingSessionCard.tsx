@@ -15,7 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
 import { formatDurationMinutes } from '@/lib/dateFormat';
-import { fmtNumber, fmtWithUnit, fmtInt } from '@/lib/numberFormat';
+
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from './charging-curve/helpers';
 import {
@@ -28,6 +28,7 @@ import {
   type ChargingAnomaly,
 } from '@/lib/chargingAggregation';
 import { Icons } from '@/lib/icons';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export { getChargerCategory };
 export { formatDurationMinutes as formatDuration };
@@ -63,6 +64,7 @@ export function ChargingSessionCard({
   anomaly,
   density = 'comfortable',
 }: ChargingSessionCardProps) {
+  const { fmtWithUnit, fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('charging');
   const { formatCurrency } = useFormatting();
   const cat = getChargerCategory(session.charger_type);
@@ -173,7 +175,7 @@ export function ChargingSessionCard({
         />
       )}
       {cpk != null && (
-        <span className="text-[var(--text-muted)]">({formatCurrency(cpk, 2)}/kWh)</span>
+        <span className="text-[var(--text-muted)]">({formatCurrency(cpk)}/kWh)</span>
       )}
       {typeof rangeAddedDisplay === 'number' && rangeAddedDisplay > 0 && (
         <span className="flex items-center gap-1 text-purple-300">

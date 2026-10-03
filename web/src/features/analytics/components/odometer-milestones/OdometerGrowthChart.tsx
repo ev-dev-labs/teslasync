@@ -17,11 +17,12 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface OdometerGrowthChartProps {
   summary: OdometerMilestoneResult;
@@ -34,6 +35,7 @@ export function OdometerGrowthChart({
   state,
   className,
 }: OdometerGrowthChartProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const {
     distanceUnit,
@@ -86,7 +88,7 @@ export function OdometerGrowthChart({
           {
             key: 'odometer',
             label: `${odometerName} (${distanceUnit})`,
-            format: (value) => fmtNumber(value, 1),
+            format: (value) => fmtNumber(value),
           },
           {
             key: 'observedDistance',
@@ -95,7 +97,7 @@ export function OdometerGrowthChart({
               'Observed distance ({{unit}})',
               { unit: distanceUnit },
             ),
-            format: (value) => fmtNumber(value, 1),
+            format: (value) => fmtNumber(value),
           },
           {
             key: 'drives',
@@ -141,7 +143,7 @@ export function OdometerGrowthChart({
                 tick={axisTick}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => fmtNumber(value, 0)}
+                tickFormatter={(value) => fmtNumber(value)}
                 width={54}
               />
               <Tooltip
@@ -149,8 +151,8 @@ export function OdometerGrowthChart({
                   <ChartTooltip
                     valueFormatter={(value, name) =>
                       name === odometerName
-                        ? `${fmtNumber(value, 1)} ${distanceUnit}`
-                        : fmtNumber(value, 1)
+                        ? `${fmtNumber(value)} ${distanceUnit}`
+                        : fmtNumber(value)
                     }
                   />
                 }

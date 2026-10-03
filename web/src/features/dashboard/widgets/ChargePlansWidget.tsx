@@ -8,10 +8,11 @@ import { useChargePlans, useRatePlans } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Maps a charge-plan status to a semantic <Badge> variant. Exported for direct
@@ -63,6 +64,7 @@ export function joinDateTime(datePart: string, timePart: string): string {
 }
 
 export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -133,7 +135,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
 
     items.push({
       label: t('widget.chargePlans.estEnergy', 'Est. energy'),
-      value: activePlan.estimated_kwh != null ? `${fmtNumber(activePlan.estimated_kwh, 1)} kWh` : '—',
+      value: activePlan.estimated_kwh != null ? `${fmtNumber(activePlan.estimated_kwh)} kWh` : '—',
     });
 
     items.push({
@@ -155,7 +157,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
     });
 
     return items;
-  }, [activePlan, t, formatCurrency, formatTime, formatDate]);
+  }, [activePlan, t, formatCurrency, formatTime, formatDate, fmtInt, fmtNumber]);
 
   const rateEntries: DetailEntry[] = useMemo(() => {
     return safeRates.map((rp) => ({

@@ -8,9 +8,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, EmbeddedChart,
 } from '@/components/charts';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { CostSection } from './CostSection';
 import type { HourBucket, TouInsights } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Utility time-of-use rate period for an hour-of-day bucket. */
 export type TouPeriod = 'peak' | 'mid-peak' | 'off-peak';
@@ -82,6 +83,7 @@ function InsightCard({ label, value, valueClass, sub }: InsightCardProps) {
 export function TimeOfUseAnalysis({
   hourlyData, touInsights, isLoading, error, onRetry,
 }: TimeOfUseAnalysisProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   // Null-safe before any `.length` / `.map`: an undefined prop must render the
   // section's empty state, never crash the whole Cost Analysis page.
@@ -164,13 +166,13 @@ export function TimeOfUseAnalysis({
                 label={t('costAnalysis.tou.cheapestHour', 'Cheapest Hour')}
                 value={touInsights.cheapest.label}
                 valueClass="text-emerald-300"
-                sub={`${t('costAnalysis.tou.avgCost', 'avg')} ${fmtNumber(touInsights.cheapest.avgCost, 3)} ${t('costAnalysis.tou.perSession', '/ session')}`}
+                sub={`${t('costAnalysis.tou.avgCost', 'avg')} ${fmtNumber(touInsights.cheapest.avgCost)} ${t('costAnalysis.tou.perSession', '/ session')}`}
               />
               <InsightCard
                 label={t('costAnalysis.tou.priciestHour', 'Priciest Hour')}
                 value={touInsights.priciest.label}
                 valueClass="text-rose-300"
-                sub={`${t('costAnalysis.tou.avgCost', 'avg')} ${fmtNumber(touInsights.priciest.avgCost, 3)} ${t('costAnalysis.tou.perSession', '/ session')}`}
+                sub={`${t('costAnalysis.tou.avgCost', 'avg')} ${fmtNumber(touInsights.priciest.avgCost)} ${t('costAnalysis.tou.perSession', '/ session')}`}
               />
               <InsightCard
                 label={t('costAnalysis.tou.busiestHour', 'Busiest Hour')}
@@ -180,7 +182,7 @@ export function TimeOfUseAnalysis({
               />
               <InsightCard
                 label={t('costAnalysis.tou.offPeakRatio', 'Off-Peak Charging')}
-                value={`${fmtNumber(touInsights.offPeakPct, 1)}%`}
+                value={`${fmtNumber(touInsights.offPeakPct)}%`}
                 valueClass="text-emerald-300"
                 sub={t('costAnalysis.tou.offPeakDesc', 'of sessions between 10 PM–6 AM')}
               />

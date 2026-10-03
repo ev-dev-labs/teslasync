@@ -10,10 +10,11 @@ import {
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { Table, Text } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { useUnits } from '@/hooks/useUnits';
 import type { ChartDataPoint, DriveStats } from './types';
 import type { DriveDetail } from '@/types/driving';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PowerProfileChartProps {
   chartData: ChartDataPoint[];
@@ -22,6 +23,7 @@ interface PowerProfileChartProps {
 }
 
 export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const syncProps = useSyncedCursor();

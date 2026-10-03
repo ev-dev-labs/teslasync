@@ -10,8 +10,9 @@ import { Table, Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatRelative } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { EvidencePanel, InsightPanel } from '../components';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 18;
 
@@ -22,6 +23,7 @@ function severityVariant(severity: string) {
 }
 
 export default function RoadHazardMeshPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const [page, setPage] = useState(1);
@@ -86,13 +88,13 @@ export default function RoadHazardMeshPage() {
                     <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.hazards.confidence', 'Confidence')}
                     </th>
-                    <td className="text-right">{fmtNumber(cluster.confidence_pct, 1)}%</td>
+                    <td className="text-right">{fmtNumber(cluster.confidence_pct)}%</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.hazards.coverage', 'Observations')}
                     </th>
-                    <td className="text-right">{fmtNumber(cluster.observation_count, 0)}</td>
+                    <td className="text-right">{fmtInt(cluster.observation_count)}</td>
                   </tr>
                   <tr>
                     <th scope="row" className="flex items-center gap-1 text-[var(--text-muted)]">

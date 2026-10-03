@@ -8,11 +8,12 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { INTERVALS } from '@/lib/constants';
 
 import { latestNumeric, latestText } from '@/lib/signalObservation';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AutopilotSectionProps {
   vehicleId: number | null | undefined;
@@ -55,6 +56,7 @@ function parseFollowDistance(raw: string | null): string | null {
  *     "FollowDistance" prefix.
  */
 export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
@@ -105,7 +107,7 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
             label={t('dynamics.currentSpeed', 'Current Speed')}
             value={
               currentSpeedDisplay != null
-                ? fmtNumber(currentSpeedDisplay, 0)
+                ? fmtNumber(currentSpeedDisplay)
                 : '—'
             }
             unit={speedUnit}
@@ -115,7 +117,7 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
             label={t('dynamics.cruiseSetSpeed', 'Cruise Set Speed')}
             value={
               cruiseSetDisplay != null
-                ? fmtNumber(cruiseSetDisplay, 0)
+                ? fmtNumber(cruiseSetDisplay)
                 : '—'
             }
             unit={speedUnit}

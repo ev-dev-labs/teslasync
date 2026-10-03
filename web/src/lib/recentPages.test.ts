@@ -252,8 +252,8 @@ describe('recentPages — resolvePageLabel', () => {
   })
 
   it('returns the registry label for a parameterized match', () => {
-    expect(resolvePageLabel('/vehicles/3')).toBe('Vehicle Detail')
-    expect(resolvePageLabel('/drives/42/replay')).toBe('Trip Replay')
+    expect(resolvePageLabel('/vehicles/3')).toBe('Vehicle detail')
+    expect(resolvePageLabel('/drives/42/replay')).toBe('Trip replay')
   })
 
   it('returns null for an unknown path', () => {

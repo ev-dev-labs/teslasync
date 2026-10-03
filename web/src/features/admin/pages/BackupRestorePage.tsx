@@ -30,8 +30,8 @@ import {
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
-import { formatDurationMsCompact, formatRelative } from '@/lib/dateFormat';
-import { formatBytes, fmtInt, fmtPercent } from '@/lib/numberFormat';
+import { formatRelative } from '@/lib/dateFormat';
+
 import { cn } from '@/lib/cn';
 import { chartTokens } from '@/lib/tokens';
 import { request, apiUrl } from '@/api/client';
@@ -41,6 +41,7 @@ import { Icons } from '@/lib/icons';
 // restore" surfaces (was previously also rendered as <section id="backup">
 // inside SettingsPage, which read as a duplicate of this page).
 import { SettingsExportImport } from '@/features/settings/components/SettingsExportImport';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -191,6 +192,8 @@ const PROVIDER_FIELDS: Record<string, { key: string; label: string; type?: strin
 /* ------------------------------------------------------------------ */
 
 export default function BackupRestorePage() {
+  const { formatDurationMsCompact } = useNumberFormatting();
+  const { formatBytes, fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const toast = useToast();
   const qc = useQueryClient();
@@ -742,7 +745,7 @@ export default function BackupRestorePage() {
               />
               <MetricCard
                 label={t('backup.successRate', 'Success rate')}
-                value={stats.totalBackups > 0 ? fmtPercent(stats.successRate, 0) : '—'}
+                value={stats.totalBackups > 0 ? fmtPercent(stats.successRate) : '—'}
                 icon={<Icons.successFilled className="h-5 w-5" />}
                 color="green"
               />
@@ -836,7 +839,7 @@ export default function BackupRestorePage() {
                   <div className="mb-2 flex items-baseline justify-between gap-2">
                     <PanelTitle>{t('backup.successRate', 'Success rate')}</PanelTitle>
                     <Text as="span" size="2xl" weight="bold" color="primary" className="tabular-nums">
-                      {stats.totalBackups > 0 ? fmtPercent(stats.successRate, 0) : '—'}
+                      {stats.totalBackups > 0 ? fmtPercent(stats.successRate) : '—'}
                     </Text>
                   </div>
                   <MetricBar

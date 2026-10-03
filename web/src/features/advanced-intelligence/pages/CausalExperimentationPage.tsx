@@ -14,7 +14,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime, toLocalDatetimeStr } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   CausalExperiment,
   CausalMetric,
@@ -22,6 +22,7 @@ import type {
 } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError } from '../components';
 import { formatEfficiencyFromSI } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 10;
 type ExperimentForm = Omit<CreateCausalExperimentRequest, 'vehicle_id' | 'confirmed'>;
@@ -33,6 +34,7 @@ function isoLocal(daysAgo: number): string {
 }
 
 export default function CausalExperimentationPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -64,7 +66,7 @@ export default function CausalExperimentationPage() {
       return units.formatSpeed(item[`${phase}_speed_mps`]);
     }
     const value = item[`${phase}_success_pct`];
-    return value != null ? `${fmtNumber(value, 2)}%` : '—';
+    return value != null ? `${fmtNumber(value)}%` : '—';
   };
 
   const requestConfirmation = (event: FormEvent) => {
@@ -149,7 +151,7 @@ export default function CausalExperimentationPage() {
                     <Text as="p" variant="caption">{t('advancedIntelligence.causal.confounders', 'Confounder coverage')}</Text>
                     <Text as="p" variant="metricValue">
                       {item.confounder_coverage_pct != null
-                        ? `${fmtNumber(item.confounder_coverage_pct, 1)}%` : '—'}
+                        ? `${fmtNumber(item.confounder_coverage_pct)}%` : '—'}
                     </Text>
                   </div>
                 </div>

@@ -9,13 +9,14 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
 import type {
   PreconditioningQueryState,
   PreconditioningSourceQueryState,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningDataAvailabilityProps {
   summary: PreconditioningSummary;
@@ -33,6 +34,7 @@ export function PreconditioningDataAvailability({
   summary,
   state,
 }: PreconditioningDataAvailabilityProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const result = (
     label: string,

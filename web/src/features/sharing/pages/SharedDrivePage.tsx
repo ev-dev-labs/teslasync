@@ -23,7 +23,7 @@ import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
@@ -31,6 +31,7 @@ import {
 } from '@/lib/unitConversion';
 import { normalizeSharedDriveData, isSharedSession } from '@/types/sharing';
 import { SharedSessionReport } from './SharedSessionReport';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Boundary constants                                                */
@@ -132,6 +133,7 @@ function SharedDriveLoading() {
 
 // EXCEPTION: public share route is chrome-less so unauthenticated recipients see only the branded report.
 export default function SharedDrivePage() {
+  const { fmtNumber } = useNumberFormatting();
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();
   const { data: rawData, isLoading, error } = useSharedDrive(token ?? '');
@@ -271,7 +273,7 @@ export default function SharedDrivePage() {
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
             <StatCard
               label={t('share.distance', 'Distance')}
-              value={formatDistance(drive.distance_m, { precision: 1 })}
+              value={formatDistance(drive.distance_m)}
               icon={<MapPin className="h-4 w-4" />}
             />
             <StatCard
@@ -296,14 +298,14 @@ export default function SharedDrivePage() {
             {drive.max_speed_mps != null && (
               <StatCard
                 label={t('share.maxSpeed', 'Max speed')}
-                value={formatSpeed(drive.max_speed_mps, { precision: 0 })}
+                value={formatSpeed(drive.max_speed_mps)}
                 icon={<Gauge className="h-4 w-4" />}
               />
             )}
             {drive.avg_speed_mps != null && (
               <StatCard
                 label={t('share.avgSpeed', 'Avg speed')}
-                value={formatSpeed(drive.avg_speed_mps, { precision: 0 })}
+                value={formatSpeed(drive.avg_speed_mps)}
                 icon={<TrendingUp className="h-4 w-4" />}
               />
             )}
@@ -357,7 +359,7 @@ export default function SharedDrivePage() {
                   <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)} ${elevPref}`} />
                   <Tooltip
                     contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
-                    labelFormatter={(v: number) => `${fmtNumber(v, 1)} ${distancePref}`}
+                    labelFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
                     formatter={(v: number) => [`${Math.round(v)} ${elevPref}`, t('share.elevTooltipLabel', 'Elevation')]}
                   />
                   <Area
@@ -392,7 +394,7 @@ export default function SharedDrivePage() {
                   <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)}`} />
                   <Tooltip
                     contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
-                    labelFormatter={(v: number) => `${fmtNumber(v, 1)} ${distancePref}`}
+                    labelFormatter={(v: number) => `${fmtNumber(v)} ${distancePref}`}
                     formatter={(v: number) => [`${Math.round(v)} ${speedPref}`, t('share.speedTooltipLabel', 'Speed')]}
                   />
                   <Line

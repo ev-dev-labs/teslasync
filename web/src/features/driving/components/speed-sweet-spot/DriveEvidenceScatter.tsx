@@ -14,6 +14,7 @@ import {
 } from './DriveEvidencePlot';
 import type { SpeedSweetSpotSectionState } from './types';
 import { useSpeedSweetSpotDisplay } from './useSpeedSweetSpotDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DriveEvidenceScatterProps {
   summary: SweetSpotResult;
@@ -24,6 +25,7 @@ export function DriveEvidenceScatter({
   summary,
   state,
 }: DriveEvidenceScatterProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const {
     convertDistance,

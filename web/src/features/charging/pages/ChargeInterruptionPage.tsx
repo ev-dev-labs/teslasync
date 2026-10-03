@@ -20,9 +20,10 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
-import { fmtPercent } from '@/lib/numberFormat';
+
 
 import { analyzeChargeInterruptions, type InterruptionCause, type InterruptionTrend } from '../lib/chargeInterruption';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const CAUSE_DEFAULTS: Record<InterruptionCause, string> = {
   no_end_timestamp: 'No end timestamp recorded',
@@ -49,6 +50,7 @@ const TREND_DEFAULTS: Record<InterruptionTrend, string> = {
 const CHART_KEY = 'charge-interruption-risk-by-site';
 
 export default function ChargeInterruptionPage() {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('chargeInterruption.title', 'Charge Interruption Risk'));
 
@@ -105,7 +107,7 @@ export default function ChargeInterruptionPage() {
             <>
               <MetricCard
                 label={t('chargeInterruption.overallRisk', 'Overall Risk')}
-                value={fmtPercent(summary.overallPosteriorMean * 100, 0)}
+                value={fmtPercent(summary.overallPosteriorMean * 100)}
                 subtitle={t('chargeInterruption.overallRiskHint', 'pooled across {{n}} evaluable sessions', {
                   n: summary.evaluableSessions,
                 })}
@@ -130,7 +132,7 @@ export default function ChargeInterruptionPage() {
                 label={t('chargeInterruption.highestRisk', 'Highest-Risk Site')}
                 value={
                   summary.highestRiskSite != null
-                    ? fmtPercent(summary.highestRiskSite.posteriorMean * 100, 0)
+                    ? fmtPercent(summary.highestRiskSite.posteriorMean * 100)
                     : '\u2014'
                 }
                 subtitle={summary.highestRiskSite?.label ?? t('chargeInterruption.none', 'None yet')}
@@ -254,10 +256,10 @@ export default function ChargeInterruptionPage() {
                   <div className="mb-2 grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
                     <Text variant="caption">{t('chargeInterruption.risk', 'Posterior risk')}</Text>
                     <Text variant="bodySm" className="sm:col-span-2">
-                      {fmtPercent(s.posteriorMean * 100, 0)}
+                      {fmtPercent(s.posteriorMean * 100)}
                       {' '}
                       <Text as="span" variant="caption">
-                        ({fmtPercent(s.posteriorLow * 100, 0)}–{fmtPercent(s.posteriorHigh * 100, 0)})
+                        ({fmtPercent(s.posteriorLow * 100)}–{fmtPercent(s.posteriorHigh * 100)})
                       </Text>
                     </Text>
                     <Text variant="caption">{t('chargeInterruption.evidence', 'Evidence')}</Text>

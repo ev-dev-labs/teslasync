@@ -8,9 +8,10 @@ import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtInt, fmtNumber, safeNumber } from '@/lib/numberFormat';
+import { safeNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { VehicleComparisonEntry } from '@/types/analytics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Backend `vehicle_comparison[].distance` is SI kilometres; efficiency is Wh/km. */
 const METERS_PER_KM = 1000;
@@ -38,6 +39,7 @@ export function FleetComparisonPanel({
   onRetry,
   className,
 }: FleetComparisonPanelProps) {
+  const { fmtInt, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const palette = useChartPalette();
@@ -62,7 +64,7 @@ export function FleetComparisonPanel({
     // `|| 1` guards MetricBar's `value / max` when every vehicle is at 0 km.
     const peak = mapped.reduce((m, r) => Math.max(m, r.distance), 0) || 1;
     return { rows: mapped, maxDistance: peak };
-  }, [entries, distanceUnit, t]);
+  }, [entries, distanceUnit, t, displayPrecision, displayLocale]);
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading || undefined}>

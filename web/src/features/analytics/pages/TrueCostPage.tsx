@@ -31,8 +31,10 @@ import {
   useTrueCostDisplay,
 } from '../components/true-cost';
 import { analyzeTrueCost } from '../lib/trueCost';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function TrueCostPage() {
+  useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('tco.title', 'Lifetime operating cost'));
   const { vehicleId } = useSelectedVehicle();

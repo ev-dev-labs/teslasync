@@ -40,7 +40,7 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
@@ -58,6 +58,7 @@ import {
   type GeofenceFormData,
   type GeofencePayload,
 } from '../schemas/geofence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -112,6 +113,7 @@ function isGeolocationError(err: unknown): boolean {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function GeofencesPage() {
+  const { fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('geofences.title', 'Geofences'));
   const queryClient = useQueryClient();
@@ -405,11 +407,11 @@ export default function GeofencesPage() {
     if (savedName) return savedName;
     try {
       const res = await request<ReverseGeocodeResult>(`/geocode/reverse?lat=${lat}&lon=${lon}`);
-      return res.display_name || `${fmtNumber(lat, 4)}, ${fmtNumber(lon, 4)}`;
+      return res.display_name || `${fmtScientificNumber(lat, 4)}, ${fmtScientificNumber(lon, 4)}`;
     } catch {
-      return `${fmtNumber(lat, 4)}, ${fmtNumber(lon, 4)}`;
+      return `${fmtScientificNumber(lat, 4)}, ${fmtScientificNumber(lon, 4)}`;
     }
-  }, []);
+  }, [fmtScientificNumber]);
 
   const handleGetLocation = useCallback(async () => {
     setLocationLoading(true);
@@ -597,7 +599,7 @@ export default function GeofencesPage() {
                   { value: '', label: t('geofences.visits.select', 'Select a visited place') },
                   ...(candidateQuery.data ?? []).filter((item) => item.name.trim()).map((item) => ({
                     value: String(item.id),
-                    label: item.name || `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`,
+                    label: item.name || `${fmtScientificNumber(item.latitude, 4)}, ${fmtScientificNumber(item.longitude, 4)}`,
                   })),
                 ]}
               />

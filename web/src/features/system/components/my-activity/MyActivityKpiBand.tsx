@@ -9,9 +9,10 @@ import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { formatRelative } from '@/lib/dateFormat';
 import type { ActivityKpis } from './myActivityAnalytics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface MyActivityKpiBandProps {
   kpis: ActivityKpis;
@@ -34,6 +35,7 @@ const EMPTY_KPIS: ActivityKpis = {
 };
 
 export function MyActivityKpiBand({ kpis, isLoading }: MyActivityKpiBandProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   const { total, activeDays, actionTypes, entitiesTouched, lastActivityTs } =

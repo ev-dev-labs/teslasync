@@ -31,7 +31,7 @@ export function ShareCardEvidenceLedger({
             <MetricCard
               label={t('shareCard.evidence.returned', 'Returned rows')}
               value={hasReturnedData
-                ? display.formatNumber(analysis.returnedRows, 0)
+                ? display.formatNumber(analysis.returnedRows)
                 : '—'}
               subtitle={t('shareCard.evidence.returnedHint', 'Before runtime validation')}
               icon={<Activity className="h-5 w-5" aria-hidden="true" />}
@@ -40,7 +40,7 @@ export function ShareCardEvidenceLedger({
             <MetricCard
               label={t('shareCard.evidence.eligible', 'Eligible drives')}
               value={hasReturnedData
-                ? display.formatNumber(analysis.eligibleRows, 0)
+                ? display.formatNumber(analysis.eligibleRows)
                 : '—'}
               subtitle={t('shareCard.evidence.eligibleHint', 'Unique ID and in-window timestamp')}
               icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
@@ -76,7 +76,7 @@ export function ShareCardEvidenceLedger({
             <MetricCard
               label={t('shareCard.evidence.activeDays', 'Active vehicle days')}
               value={hasReturnedData
-                ? display.formatNumber(analysis.activeDays, 0)
+                ? display.formatNumber(analysis.activeDays)
                 : '—'}
               subtitle={t('shareCard.evidence.requestedDays', '{{value}} requested calendar days', {
                 value: analysis.window.requestedCalendarDays ?? '—',

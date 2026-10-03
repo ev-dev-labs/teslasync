@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 import { GlassPanel, DataTable, type Column } from '@/components/ui';
 import { Currency } from '@/components/data-display';
-import { fmtPercent, fmtWithUnit } from '@/lib/numberFormat';
+import { fmtWithUnit } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { formatDuration } from '../ChargingSessionCard';
 import type { AcDcBreakdown, AcDcBucket } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AcDcStatsPanelProps {
   breakdown: AcDcBreakdown;
@@ -46,6 +47,7 @@ export function formatEnergyDisplay(kwh: number | null | undefined): string {
 }
 
 export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
+  const { fmtPercent, fmtWithUnit } = useNumberFormatting();
   const { t } = useTranslation();
 
   const acEnergy = breakdown?.ac?.energy ?? 0;
@@ -124,6 +126,7 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
 }
 
 function AcDcTable({ ac, dc }: { ac?: AcDcBucket; dc?: AcDcBucket }) {
+  const { fmtWithUnit } = useNumberFormatting();
   const { t } = useTranslation();
   const data: AcDcTableRow[] = [
     { label: t('charging.table.acCharging', 'AC charging'), color: AC_COLOR, ...(ac ?? EMPTY_BUCKET) },

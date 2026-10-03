@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Leaf, Trees } from 'lucide-react';
 import { Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { CostSection } from './CostSection';
 import type { CoreStats } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EnvironmentalImpactProps {
   coreStats: CoreStats | null;
@@ -13,6 +14,7 @@ interface EnvironmentalImpactProps {
 }
 
 export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry }: EnvironmentalImpactProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Null-safe reads at the boundary: dirty upstream rows may carry null /
@@ -41,7 +43,7 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry }: En
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg bg-emerald-500/10 p-4 text-center">
               <Text as="p" size="2xl" weight="bold" className="text-emerald-300">
-                {fmtNumber(co2SavedKg, 1)}
+                {fmtNumber(co2SavedKg)}
               </Text>
               <Text as="p" variant="caption" className="mt-1">
                 {t('costAnalysis.environment.kgCo2', 'kg CO₂ saved')}
@@ -49,7 +51,7 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry }: En
             </div>
             <div className="rounded-lg bg-emerald-500/10 p-4 text-center">
               <Text as="p" size="2xl" weight="bold" className="text-emerald-300">
-                {fmtNumber(treeEquiv, 1)}
+                {fmtNumber(treeEquiv)}
               </Text>
               <Text as="p" variant="caption" className="mt-1">
                 {t('costAnalysis.environment.treeEquiv', 'tree-years equivalent')}
@@ -65,12 +67,12 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry }: En
                   'By driving electric instead of a gas car, you have avoided the equivalent of',
                 )}{' '}
                 <Text weight="semibold" className="text-emerald-300">
-                  {fmtNumber(co2SavedKg, 0)} kg
+                  {fmtNumber(co2SavedKg)} kg
                 </Text>{' '}
                 {t('costAnalysis.environment.ofCo2', 'of CO₂ emissions.')}{' '}
                 {t('costAnalysis.environment.treeNote', "That's the same as")}{' '}
                 <Text weight="semibold" className="text-emerald-300">
-                  {fmtNumber(treeEquiv, 1)}
+                  {fmtNumber(treeEquiv)}
                 </Text>{' '}
                 {t(
                   'costAnalysis.environment.treesAbsorbing',
@@ -82,7 +84,7 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry }: En
           <div className="grid grid-cols-3 gap-2">
             <div className="text-center">
               <Text as="p" size="lg" weight="semibold" color="primary">
-                {fmtNumber(gallonsEquiv, 1)}
+                {fmtNumber(gallonsEquiv)}
               </Text>
               <Text as="p" variant="caption">
                 {t('costAnalysis.environment.gallons', 'gallons avoided')}
@@ -90,7 +92,7 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry }: En
             </div>
             <div className="text-center">
               <Text as="p" size="lg" weight="semibold" color="primary">
-                {fmtNumber(metricTonsCo2, 2)}
+                {fmtNumber(metricTonsCo2)}
               </Text>
               <Text as="p" variant="caption">
                 {t('costAnalysis.environment.metricTons', 'metric tons CO₂')}
@@ -98,7 +100,7 @@ export function EnvironmentalImpact({ coreStats, isLoading, error, onRetry }: En
             </div>
             <div className="text-center">
               <Text as="p" size="lg" weight="semibold" color="primary">
-                {fmtNumber(savings, 0)}
+                {fmtNumber(savings)}
               </Text>
               <Text as="p" variant="caption">
                 {t('costAnalysis.environment.dollarsSaved', '$ saved total')}

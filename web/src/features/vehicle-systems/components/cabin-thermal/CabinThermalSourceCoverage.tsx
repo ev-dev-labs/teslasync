@@ -10,10 +10,11 @@ import {
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalSourceCoverageProps {
   summary: CabinThermalSummary;
@@ -45,10 +46,11 @@ export function CabinThermalSourceCoverage({
   locale,
   formatDuration,
 }: CabinThermalSourceCoverageProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = summary.coverage;
   const duration = (minutes: number | null) =>
-    minutes != null ? formatDuration(minutes * 60, { precision: 1 }) : '—';
+    minutes != null ? formatDuration(minutes * 60) : '—';
 
   return (
     <section data-testid="cabin-thermal-source-coverage">

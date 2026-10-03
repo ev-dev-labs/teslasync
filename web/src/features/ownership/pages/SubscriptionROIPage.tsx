@@ -34,7 +34,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   BillingPeriod,
   Subscription,
@@ -57,6 +57,7 @@ import {
   fromDateInput,
   toDateInput,
 } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const WINDOW_OPTIONS = [30, 90, 180, 365];
 
@@ -97,6 +98,7 @@ const VERDICT_FILL: Record<string, string> = {
 };
 
 export default function SubscriptionROIPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -187,7 +189,7 @@ export default function SubscriptionROIPage() {
         <div className="flex items-center gap-2">
           <VerdictBadge value={row.verdict} />
           <span className="tabular-nums text-xs text-[var(--text-muted)]">
-            {formatPct(row.confidence * 100, 0)}
+            {formatPct(row.confidence * 100)}
           </span>
         </div>
       ),
@@ -222,12 +224,12 @@ export default function SubscriptionROIPage() {
       render: (row) => (
         <div>
           <span className="tabular-nums">
-            {row.usage_quantity != null ? fmtNumber(row.usage_quantity, 1) : '—'} {row.usage_unit}
+            {row.usage_quantity != null ? fmtNumber(row.usage_quantity) : '—'} {row.usage_unit}
           </span>
           <Text as="p" variant="caption">
             {row.usage_per_month != null
               ? t('ownership.subscription.row.perMonth', '{{value}} / month', {
-                  value: fmtNumber(row.usage_per_month, 1),
+                  value: fmtNumber(row.usage_per_month),
                 })
               : '—'}
           </Text>
@@ -277,13 +279,13 @@ export default function SubscriptionROIPage() {
         <div>
           <span className="tabular-nums">
             {row.break_even_usage_per_month != null
-              ? `${fmtNumber(row.break_even_usage_per_month, 1)} ${row.usage_unit}`
+              ? `${fmtNumber(row.break_even_usage_per_month)} ${row.usage_unit}`
               : '—'}
           </span>
           <Text as="p" variant="caption">
             {row.utilisation_pct != null
               ? t('ownership.subscription.row.utilisation', '{{value}} of break-even', {
-                  value: formatPct(row.utilisation_pct, 0),
+                  value: formatPct(row.utilisation_pct),
                 })
               : '—'}
           </Text>
@@ -487,7 +489,7 @@ export default function SubscriptionROIPage() {
               {
                 key: 'roi',
                 label: t('ownership.subscription.chart.col.roi', 'Return on spend'),
-                format: (v) => formatPct(v as number, 1),
+                format: (v) => formatPct(v as number),
               },
               { key: 'verdict', label: t('ownership.subscription.chart.col.verdict', 'Verdict') },
             ]}

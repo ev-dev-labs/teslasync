@@ -6,12 +6,13 @@ import { useDataState } from '@/hooks/useDataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { useSafetyHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cleanSafetyEnum, isSafetyEnumActive } from '@/lib/safetyEnum';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, WidgetStatGrid } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export type Severity = 'info' | 'warning' | 'critical';
 
@@ -129,6 +130,7 @@ function CompactView({
   trend: string;
   t: (key: string, fallback: string) => string;
 }) {
+  const { fmtInt } = useNumberFormatting();
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 min-h-[44px]">

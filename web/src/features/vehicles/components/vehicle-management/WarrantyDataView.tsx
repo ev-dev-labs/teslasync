@@ -3,13 +3,14 @@ import { EmptyState } from '@/components/feedback'
 import { Badge, Code, Heading, Text } from '@/components/ui'
 import { formatDate } from '@/lib/dateFormat'
 import { Icons } from '@/lib/icons'
-import { fmtInt } from '@/lib/numberFormat'
+
 import {
   parseWarrantyDetails,
   type WarrantyCoverageData,
   type WarrantyCoverageState,
 } from './managementData'
 import { ManagementRawDetails } from './ManagementRawDetails'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface WarrantyDataViewProps {
   data: unknown
@@ -28,6 +29,7 @@ function coverageIcon(state: WarrantyCoverageState) {
 }
 
 function CoverageCard({ coverage }: { coverage: WarrantyCoverageData }) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const CoverageIcon = coverageIcon(coverage.state)
   const stateLabel = {

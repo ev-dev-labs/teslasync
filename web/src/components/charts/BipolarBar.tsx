@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
-import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface BipolarBarProps {
   /** Signed reading. Negative values fill leftwards from the zero rule. */
@@ -27,6 +27,8 @@ export interface BipolarBarProps {
   /** Caption rendered under the bar for the positive direction. */
   positiveLabel?: string;
   decimals?: number;
+  /** Unit-bearing values default to measurements; use count for counted units. */
+  kind?: 'measurement' | 'count';
   className?: string;
 }
 
@@ -59,6 +61,7 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
       negativeLabel,
       positiveLabel,
       decimals,
+      kind,
       className,
     },
     ref,
@@ -87,8 +90,10 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
 
     const isNegative = clamped < 0;
     const color = isNegative ? negativeColor : positiveColor;
-    const d = decimals ?? (Number.isInteger(clamped) ? 0 : getGlobalPrecision());
-    const display = fmtNumber(clamped, d);
+    const { fmtNumber, fmtInt } = useNumberFormatting();
+    const isCount = kind === 'count' || (kind == null && !unit && Number.isInteger(clamped));
+    const display = !Number.isFinite(value) ? '—' : decimals == null && isCount
+      ? fmtInt(clamped) : fmtNumber(clamped, decimals);
 
     return (
       <div

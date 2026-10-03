@@ -10,10 +10,11 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportProvenanceMatrixProps {
   analysis: BatteryPassportAnalysis;
@@ -31,6 +32,7 @@ export function BatteryPassportProvenanceMatrix({
   analysis,
   state,
 }: BatteryPassportProvenanceMatrixProps) {
+  const { fmtInt, fmtScientificNumber, fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const passport = state.passport;
   const facts = analysis.hashFacts;
@@ -49,7 +51,7 @@ export function BatteryPassportProvenanceMatrix({
           'vehicle_id',
         ),
         value: facts.vehicleId != null
-          ? fmtNumber(facts.vehicleId, 0)
+          ? fmtInt(facts.vehicleId)
           : '—',
         source: t(
           'batteryPassport.provenance.vehicleIdSource',
@@ -72,7 +74,7 @@ export function BatteryPassportProvenanceMatrix({
       {
         field: t('batteryPassport.provenance.soh', 'soh_pct'),
         value: facts.sohPct != null
-          ? fmtNumber(facts.sohPct, 4)
+          ? fmtScientificNumber(facts.sohPct, 4)
           : '—',
         source: t(
           'batteryPassport.provenance.sohSource',
@@ -86,7 +88,7 @@ export function BatteryPassportProvenanceMatrix({
           'capacity_kwh',
         ),
         value: facts.capacityKwh != null
-          ? fmtNumber(facts.capacityKwh, 4)
+          ? fmtScientificNumber(facts.capacityKwh, 4)
           : '—',
         source: t(
           'batteryPassport.provenance.capacitySource',
@@ -100,7 +102,7 @@ export function BatteryPassportProvenanceMatrix({
           'equivalent_full_cycles',
         ),
         value: facts.equivalentFullCycles != null
-          ? fmtNumber(facts.equivalentFullCycles, 4)
+          ? fmtScientificNumber(facts.equivalentFullCycles, 4)
           : '—',
         source: t(
           'batteryPassport.provenance.efcSource',
@@ -114,7 +116,7 @@ export function BatteryPassportProvenanceMatrix({
           'fast_charge_ratio',
         ),
         value: facts.fastChargeRatio != null
-          ? fmtNumber(facts.fastChargeRatio, 4)
+          ? fmtScientificNumber(facts.fastChargeRatio, 4)
           : '—',
         source: t(
           'batteryPassport.provenance.fastRatioSource',
@@ -152,7 +154,7 @@ export function BatteryPassportProvenanceMatrix({
           'original_capacity_kwh',
         ),
         value: analysis.metrics.originalCapacityKwh != null
-          ? fmtNumber(analysis.metrics.originalCapacityKwh, 1)
+          ? fmtNumber(analysis.metrics.originalCapacityKwh)
           : '—',
         source: t(
           'batteryPassport.provenance.originalCapacitySource',
@@ -166,7 +168,7 @@ export function BatteryPassportProvenanceMatrix({
           'avg_charge_limit_pct',
         ),
         value: analysis.metrics.avgChargeLimitPct != null
-          ? fmtPercent(analysis.metrics.avgChargeLimitPct, 1)
+          ? fmtPercent(analysis.metrics.avgChargeLimitPct)
           : '—',
         source: t(
           'batteryPassport.provenance.avgLimitSource',
@@ -179,7 +181,7 @@ export function BatteryPassportProvenanceMatrix({
           'batteryPassport.provenance.thermal',
           'thermal_exposure',
         ),
-        value: thermal != null ? fmtPercent(thermal, 1) : '—',
+        value: thermal != null ? fmtPercent(thermal) : '—',
         source: t(
           'batteryPassport.provenance.thermalSource',
           'Three ambient-temperature drive shares; value shown is their exact sum.',
@@ -240,7 +242,7 @@ export function BatteryPassportProvenanceMatrix({
       recommendationCount,
       t,
       thermal,
-      trendCount,
+      trendCount, fmtNumber, fmtPercent, fmtInt, fmtScientificNumber,
     ],
   );
   const columns = useMemo<Column<ProvenanceRow>[]>(

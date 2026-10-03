@@ -1,21 +1,18 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartTooltip, EmbeddedChart,
-} from '@/components/charts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart } from '@/components/charts';
 import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BarDatum {
   month: string;
@@ -41,6 +38,8 @@ export function currentMonthKey(): string {
 }
 
 export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -122,7 +121,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
             },
           ]
         : [],
-    [hasData, currentMonthDistance, totalDistance, distanceUnit, t],
+    [hasData, currentMonthDistance, totalDistance, distanceUnit, t, fmtInt],
   );
 
   const dataState = data != null || isLoading || isError || error ? trust : undefined;
@@ -201,12 +200,12 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                 tickLine={false}
                 axisLine={false}
                 width={40}
-                tickFormatter={(v: number) => fmt(v, 0)}
+                tickFormatter={(v: number) => fmt(v)}
               />
               <Tooltip
                 content={<ChartTooltip />}
                 formatter={(value: number) => [
-                  `${fmtNumber(value, 1)} ${distanceUnit}`,
+                  `${fmtNumber(value)} ${distanceUnit}`,
                   t('widget.monthlyMileage.distance', 'Distance'),
                 ]}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}

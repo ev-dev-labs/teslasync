@@ -10,12 +10,13 @@ import {
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const COVERAGE_COLUMNS = { default: 1, sm: 3 } as const;
 
@@ -28,6 +29,7 @@ export function MilestoneMethodology({
   summary,
   state,
 }: MilestoneMethodologyProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { accounting, method } = summary;
   const { distanceUnit, formatDateMs } = useOdometerMilestoneDisplay();

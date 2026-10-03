@@ -6,6 +6,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { updateScenario, resetScenario, type OrchestrationScenario } from '../hooks/useOrchestrationScenario';
 import type { ObjectiveWeights } from '../lib/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ScenarioControlsProps {
   scenario: OrchestrationScenario;
@@ -23,6 +24,7 @@ const WEIGHT_PRESETS: Record<string, Partial<ObjectiveWeights>> = {
 
 /** Scenario/assumption controls: horizon, tariff shape, grid limits, Powerwall spec, and objective weight preset. */
 export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: ScenarioControlsProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatPower } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -87,7 +89,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
             max={1}
             step={0.01}
             value={scenario.tariff.importPeakPerKwh}
-            formatValue={(n) => `${formatCurrency(n, 2)}/kWh`}
+            formatValue={(n) => `${formatCurrency(n)}/kWh`}
             onChange={(n) => updateScenario({ tariff: { ...scenario.tariff, importPeakPerKwh: n } })}
           />
           <Slider
@@ -96,7 +98,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
             max={1}
             step={0.01}
             value={scenario.tariff.importOffPeakPerKwh}
-            formatValue={(n) => `${formatCurrency(n, 2)}/kWh`}
+            formatValue={(n) => `${formatCurrency(n)}/kWh`}
             onChange={(n) => updateScenario({ tariff: { ...scenario.tariff, importOffPeakPerKwh: n } })}
           />
           <Slider
@@ -105,7 +107,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
             max={1}
             step={0.01}
             value={scenario.tariff.exportPerKwh}
-            formatValue={(n) => `${formatCurrency(n, 2)}/kWh`}
+            formatValue={(n) => `${formatCurrency(n)}/kWh`}
             onChange={(n) => updateScenario({ tariff: { ...scenario.tariff, exportPerKwh: n } })}
           />
           <Slider
@@ -168,7 +170,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
                 max={40_000}
                 step={500}
                 value={scenario.powerwall.capacityWh}
-                formatValue={(n) => `${(n / 1000).toFixed(1)} kWh`}
+                formatValue={(n) => `${fmtNumber((n / 1000))} kWh`}
                 onChange={(n) => updateScenario({ powerwall: { ...scenario.powerwall, capacityWh: n } })}
               />
               <Slider

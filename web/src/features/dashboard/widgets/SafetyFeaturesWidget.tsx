@@ -138,7 +138,7 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.safety.title', 'Safety features')}
+      title={t('widget.safety.title', 'Safety features')}
       icon={<ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />}
       loading={isLoading}
       dataState={{ ...displayState, status: displayState.status === 'initial' && !isLoading && !vehicleQuery.isLoading ? 'unavailable' : displayState.status }}

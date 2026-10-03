@@ -10,6 +10,7 @@ import type { UseReconstructionResult } from '../../hooks/useReconstruction';
 import { toReconstructionMarkers } from '../../lib/timelineAlignment';
 import { SignalPicker } from './SignalPicker';
 import { ReconstructionSeriesList } from './ReconstructionSeriesList';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface ReconstructionTimelineProps {
   clip: ClipRecord;
@@ -39,6 +40,7 @@ export function ReconstructionTimeline({
   onSelectedSignalsChange,
   result,
 }: ReconstructionTimelineProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
 
@@ -69,7 +71,7 @@ export function ReconstructionTimeline({
   const incidentItems: TimelineItemData[] = (result.reconstruction?.incidentSequence ?? []).map((evt) => ({
     title: evt.signal,
     subtitle: evt.description,
-    time: t('dashcam.events.atSeconds', 't={{seconds}}s', { seconds: evt.atSeconds.toFixed(1) }),
+    time: t('dashcam.events.atSeconds', 't={{seconds}}s', { seconds: fmtNumber(evt.atSeconds) }),
   }));
 
   return (

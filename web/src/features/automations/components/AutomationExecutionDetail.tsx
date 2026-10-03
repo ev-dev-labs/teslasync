@@ -3,12 +3,14 @@ import { useAutomationExecutionDetail } from '@/api/hooks/useAutomations';
 import { DateTime } from '@/components/data-display';
 import { QueryError, Skeleton } from '@/components/feedback';
 import { Modal, PanelTitle, Text } from '@/components/ui';
-import { formatDurationMs } from '@/lib/dateFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function AutomationExecutionDetail({ id, onClose }: {
   id: number | null;
   onClose: () => void;
 }) {
+  const { formatDurationMs } = useNumberFormatting();
   const { t } = useTranslation();
   const query = useAutomationExecutionDetail(id);
   const detail = query.data;

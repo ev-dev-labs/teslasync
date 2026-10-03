@@ -12,13 +12,14 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencyQueryStatus } from './ComfortConsistencyQueryStatus';
 import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyEvidenceKpiLedgerProps {
   summary: ComfortConsistencySummary;
@@ -33,6 +34,7 @@ export function ComfortConsistencyEvidenceKpiLedger({
   formatDuration,
   formatDelta,
 }: ComfortConsistencyEvidenceKpiLedgerProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const unavailable = !state.vehicleSelected
@@ -66,7 +68,7 @@ export function ComfortConsistencyEvidenceKpiLedger({
             value={resolved ? summary.consistencyScore ?? '—' : '—'}
             subtitle={resolved
               ? t('comfortConsistency.kpis.scoreHint', '{{confidence}} evidence confidence', {
-                  confidence: fmtPercent(summary.confidence * 100, 0),
+                  confidence: fmtPercent(summary.confidence * 100),
                 })
               : unavailable}
             icon={<ShieldCheck className="h-5 w-5" />}
@@ -94,9 +96,7 @@ export function ComfortConsistencyEvidenceKpiLedger({
           <MetricCard
             label={t('comfortConsistency.kpis.observed', 'Observed active duration')}
             value={resolved
-              ? formatDuration(summary.intervalComposition.observedActiveS, {
-                  precision: 1,
-                })
+              ? formatDuration(summary.intervalComposition.observedActiveS)
               : '—'}
             subtitle={resolved
               ? t('comfortConsistency.kpis.observedHint', '{{count}} qualified intervals', {
@@ -112,7 +112,6 @@ export function ComfortConsistencyEvidenceKpiLedger({
               resolved && summary.intervalComposition.withinBandShare != null
                 ? fmtPercent(
                     summary.intervalComposition.withinBandShare * 100,
-                    1,
                   )
                 : '—'
             }
@@ -137,7 +136,7 @@ export function ComfortConsistencyEvidenceKpiLedger({
             label={t('comfortConsistency.kpis.stabilized', 'Observed stabilization share')}
             value={
               resolved && stabilizationShare != null
-                ? fmtPercent(stabilizationShare * 100, 1)
+                ? fmtPercent(stabilizationShare * 100)
                 : '—'
             }
             subtitle={resolved

@@ -6,11 +6,12 @@ import { GlassPanel, Badge, PanelTitle, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { getThrottleStyle } from './helpers';
 import { useMotorStats } from './useMotorStats';
 import type { MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MotorEfficiencyInsightsProps {
   vehicleId: number | null | undefined;
@@ -30,6 +31,7 @@ export default function MotorEfficiencyInsights({
   toTemperatureDisplay,
   tempUnit,
 }: MotorEfficiencyInsightsProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { motorStats } = useMotorStats(vehicleId, historyQuery);
   const throttleStyle = motorStats ? getThrottleStyle(motorStats.avgPower) : null;
@@ -49,9 +51,9 @@ export default function MotorEfficiencyInsights({
           </PanelTitle>
           {motorStats ? (
             <div className="space-y-2 text-sm text-[var(--text-secondary)]">
-              <div className="flex justify-between"><span>{t('dynamics.avgTorque', 'Avg Torque')}</span><Text as="span" mono>{fmtNumber(motorStats.avgTorque, 1)} Nm</Text></div>
-              <div className="flex justify-between"><span>{t('dynamics.maxTorque', 'Max Torque')}</span><Text as="span" mono>{fmtNumber(motorStats.maxTorque, 1)} Nm</Text></div>
-              <div className="flex justify-between"><span>{t('dynamics.highTorqueTime', 'High Torque Time')}</span><Text as="span" mono>{fmtNumber(motorStats.highTorquePct, 1)}%</Text></div>
+              <div className="flex justify-between"><span>{t('dynamics.avgTorque', 'Avg Torque')}</span><Text as="span" mono>{fmtNumber(motorStats.avgTorque)} Nm</Text></div>
+              <div className="flex justify-between"><span>{t('dynamics.maxTorque', 'Max Torque')}</span><Text as="span" mono>{fmtNumber(motorStats.maxTorque)} Nm</Text></div>
+              <div className="flex justify-between"><span>{t('dynamics.highTorqueTime', 'High Torque Time')}</span><Text as="span" mono>{fmtNumber(motorStats.highTorquePct)}%</Text></div>
             </div>
           ) : noData}
         </GlassPanel>
@@ -66,7 +68,7 @@ export default function MotorEfficiencyInsights({
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.avgPower', 'Avg Power')}</span>
-                <Text as="span" mono>{fmtNumber(motorStats.avgPower, 1)} kW</Text>
+                <Text as="span" mono>{fmtNumber(motorStats.avgPower)} kW</Text>
               </div>
               <div className="flex items-center justify-between">
                 <Text as="span" size="sm" color="secondary">{t('dynamics.drivingStyle', 'Style')}</Text>
@@ -107,11 +109,11 @@ export default function MotorEfficiencyInsights({
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.avgMotorTemp', 'Avg Motor Temp')}</span>
-                <Text as="span" mono>{fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}{tempUnit}</Text>
+                <Text as="span" mono>{fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp))}{tempUnit}</Text>
               </div>
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.maxMotorTemp', 'Max Motor Temp')}</span>
-                <Text as="span" mono>{fmtNumber(toTemperatureDisplay(motorStats.maxMotorTemp), 1)}{tempUnit}</Text>
+                <Text as="span" mono>{fmtNumber(toTemperatureDisplay(motorStats.maxMotorTemp))}{tempUnit}</Text>
               </div>
               <Badge
                 variant={motorStats.maxMotorTemp < 100 ? 'success' : motorStats.maxMotorTemp < 140 ? 'warning' : 'danger'}

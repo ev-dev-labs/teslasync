@@ -53,7 +53,7 @@ import { PullToRefresh } from '@/components/mobile';
 import { AINLDriveSearch } from '@/components/ai/AINLDriveSearch';
 import { formatDateTime, formatRelativeDayKey, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
-import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { buildContextHref } from '@/lib/contextNavigation';
 import { calendarRangeToInstants } from '@/lib/dateRange';
@@ -71,6 +71,7 @@ import { DriveCard } from '../components/DriveCard';
 import { DRIVE_GRID_SORT_KEYS, DrivesEvidenceTable, type DriveGridFilters, type DriveGridFilterKey, type DriveGridSortKey } from '../components/DrivesEvidenceTable';
 import { driveAverageSpeed, driveBattery } from '../components/driveGridMetrics';
 import { DRIVE_VALUE_COLUMNS, compactDriveValueSelection, driveColumnValue, driveValueKey, parseDriveValueSelections, type DriveValueColumn } from '../components/driveGridValues';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 
 /* ------------------------------------------------------------------ */
@@ -97,6 +98,7 @@ function inclusiveDateKeySpan(start: string, end: string): number {
 }
 
 export default function DrivesListPage() {
+  const { fmtNumber, fmtInt, fmtCompact } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('drives.title', 'Drive History'));
@@ -484,7 +486,7 @@ export default function DrivesListPage() {
       });
     });
   }, [fsdFiltered, searchTokens, toDistanceDisplay, toSpeedDisplay, tz, desktopEvidence, gridFilters, unitPrefs.power, unitPrefs.temperature,
-    valueFilter.invalid, valuePredicates, fsdByDriveID, fsdDataAvailable, anomalyDriveIds]);
+    valueFilter.invalid, valuePredicates, fsdByDriveID, fsdDataAvailable, anomalyDriveIds, fmtNumber]);
 
   /* ---- Sort ---- */
   const sortedDrives = useMemo(() => {
@@ -589,7 +591,7 @@ export default function DrivesListPage() {
         items: g.items,
       };
     });
-  }, [paginatedDrives, sortBy, toDistanceDisplay, distanceUnit, t, tz]);
+  }, [paginatedDrives, sortBy, toDistanceDisplay, distanceUnit, t, tz, fmtNumber]);
 
   /* ---- Trend-chart series (one entry per available metric) ---- */
   const trendSeries = useMemo(() => ({
@@ -613,17 +615,17 @@ export default function DrivesListPage() {
       formatValue: (v) => gradeFromNumeric(v).label,
       // Numeric ticks for the score axis — letter grades on the axis
       // would make every tick read "B" / "C" / "—", obscuring the trend.
-      formatTick: (v) => fmtNumber(v, 1) },
+      formatTick: (v) => fmtNumber(v) },
     { key: 'efficiency', label: t('drives.metric.efficiency', 'Efficiency'), chart: 'line', color: '#f59e0b', accent: 'amber',
       getValue: (p) => toEfficiencyDisplay(p.value),
       formatValue: (v) => `${fmtInt(v)} ${efficiencyUnit}`,
       formatTick: (v) => fmtInt(v) },
     { key: 'cost',       label: t('drives.metric.cost', 'Cost'),             chart: 'bar',  color: '#ef4444', accent: 'red',
       getValue: (p) => (p.value / 1_000) * costPerKwh,
-      formatValue: (v) => formatCurrency(v, 2),
+      formatValue: (v) => formatCurrency(v),
       // Compact axis label so the Y-axis doesn't show "$0.0833" on each tick.
-      formatTick: (v) => formatCurrency(v, 2) },
-  ], [t, toDistanceDisplay, toEfficiencyDisplay, distanceUnit, efficiencyUnit, costPerKwh, formatCurrency]);
+      formatTick: (v) => formatCurrency(v) },
+  ], [t, toDistanceDisplay, toEfficiencyDisplay, distanceUnit, efficiencyUnit, costPerKwh, formatCurrency, fmtInt, fmtNumber]);
 
   /** X-axis tick formatter for the trend chart — render `2026-04-24` as
  * "Apr 24" using the vehicle's tz so the axis label matches the row
@@ -776,14 +778,14 @@ export default function DrivesListPage() {
       efficiencyMovementValue = t(
         'drives.decision.improved',
         '{{value}}% lower',
-        { value: fmtNumber(efficiencyMovementPct, 1) },
+        { value: fmtNumber(efficiencyMovementPct) },
       );
       efficiencyMovementTone = 'success';
     } else {
       efficiencyMovementValue = t(
         'drives.decision.regressed',
         '{{value}}% higher',
-        { value: fmtNumber(Math.abs(efficiencyMovementPct), 1) },
+        { value: fmtNumber(Math.abs(efficiencyMovementPct)) },
       );
       efficiencyMovementTone = 'warning';
     }
@@ -990,11 +992,11 @@ export default function DrivesListPage() {
           '{{date}}: {{distance}} at {{efficiency}}; {{route}}.',
           {
             date: drive.startTs,
-            distance: `${fmtNumber(toDistanceDisplay(drive.distanceM ?? 0), 1)} ${distanceUnit}`,
+            distance: `${fmtNumber(toDistanceDisplay(drive.distanceM ?? 0))} ${distanceUnit}`,
             efficiency:
               efficiency == null
                 ? t('operations.drives.narrative.efficiencyMissing', 'efficiency unavailable')
-                : `${fmtNumber(toEfficiencyDisplay(efficiency), 0)} ${efficiencyUnit}`,
+                : `${fmtNumber(toEfficiencyDisplay(efficiency))} ${efficiencyUnit}`,
             route:
               drive.startAddress && drive.endAddress
                 ? `${drive.startAddress} → ${drive.endAddress}`
@@ -1023,11 +1025,11 @@ export default function DrivesListPage() {
       '{{drives}} drives covered {{distance}} at {{efficiency}} average energy intensity; {{exceptions}} records were flagged.',
       {
         drives: currentStats.count,
-        distance: `${fmtNumber(toDistanceDisplay(currentStats.totalDistanceM), 1)} ${distanceUnit}`,
+        distance: `${fmtNumber(toDistanceDisplay(currentStats.totalDistanceM))} ${distanceUnit}`,
         efficiency:
           currentStats.avgEfficiencyWhKm == null
             ? t('operations.drives.narrative.efficiencyMissing', 'efficiency unavailable')
-            : `${fmtNumber(toEfficiencyDisplay(currentStats.avgEfficiencyWhKm), 0)} ${efficiencyUnit}`,
+            : `${fmtNumber(toEfficiencyDisplay(currentStats.avgEfficiencyWhKm))} ${efficiencyUnit}`,
         exceptions: anomalyDrives.length,
       },
     ),

@@ -16,14 +16,16 @@ import { GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
 import { analyzeSignalDeadband } from '../lib/signalDeadband';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HISTORY_HOURS = 24;
 
 export default function SignalDeadbandPage() {
+  const { fmtScientificNumber, fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('signalDeadband.title', 'Signal deadband'));
   const { vehicleId } = useSelectedVehicle();
@@ -142,17 +144,17 @@ export default function SignalDeadbandPage() {
             <>
               <MetricCard
                 label={t('signalDeadband.kpis.noise', 'MAD noise band')}
-                value={analysis != null ? fmtNumber(analysis.noiseThreshold, 4) : '—'}
+                value={analysis != null ? fmtScientificNumber(analysis.noiseThreshold, 4) : '—'}
                 subtitle={t('signalDeadband.kpis.siUnits', 'canonical SI signal units')}
                 icon={<Waves className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('signalDeadband.kpis.redundant', 'Redundant emissions')}
-                value={analysis != null ? fmtPercent(analysis.redundantEmissionRatio * 100, 1) : '—'}
+                value={analysis != null ? fmtPercent(analysis.redundantEmissionRatio * 100) : '—'}
                 subtitle={t('signalDeadband.kpis.unchanged', '{{value}} exactly unchanged', {
                   value: analysis != null
-                    ? fmtPercent(analysis.unchangedEmissionRatio * 100, 1)
+                    ? fmtPercent(analysis.unchangedEmissionRatio * 100)
                     : '—',
                 })}
                 icon={<Activity className="h-5 w-5" />}
@@ -160,10 +162,10 @@ export default function SignalDeadbandPage() {
               />
               <MetricCard
                 label={t('signalDeadband.kpis.threshold', 'Recommended deadband')}
-                value={recommended != null ? fmtNumber(recommended.threshold, 4) : '—'}
+                value={recommended != null ? fmtScientificNumber(recommended.threshold, 4) : '—'}
                 subtitle={t('signalDeadband.kpis.suppression', '{{value}} noise suppressed', {
                   value: recommended != null
-                    ? fmtPercent(recommended.noiseSuppression * 100, 1)
+                    ? fmtPercent(recommended.noiseSuppression * 100)
                     : '—',
                 })}
                 icon={<Filter className="h-5 w-5" />}
@@ -171,9 +173,9 @@ export default function SignalDeadbandPage() {
               />
               <MetricCard
                 label={t('signalDeadband.kpis.reduction', 'Projected reduction')}
-                value={recommended != null ? fmtPercent(recommended.reduction * 100, 1) : '—'}
+                value={recommended != null ? fmtPercent(recommended.reduction * 100) : '—'}
                 subtitle={t('signalDeadband.kpis.fidelity', '{{value}} reconstruction fidelity', {
-                  value: recommended != null ? fmtPercent(recommended.fidelity * 100, 1) : '—',
+                  value: recommended != null ? fmtPercent(recommended.fidelity * 100) : '—',
                 })}
                 icon={<Gauge className="h-5 w-5" />}
                 color={(recommended?.fidelity ?? 0) >= 0.95 ? 'green' : 'amber'}
@@ -249,10 +251,10 @@ export default function SignalDeadbandPage() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                [t('signalDeadband.audit.samples', 'Numeric samples'), fmtNumber(analysis.sampleCount, 0)],
-                [t('signalDeadband.audit.noise', 'Noise suppression'), fmtPercent(recommended!.noiseSuppression * 100, 1)],
-                [t('signalDeadband.audit.material', 'Material retention'), fmtPercent(recommended!.materialRetention * 100, 1)],
-                [t('signalDeadband.audit.fidelity', 'Fidelity'), fmtPercent(recommended!.fidelity * 100, 1)],
+                [t('signalDeadband.audit.samples', 'Numeric samples'), fmtInt(analysis.sampleCount)],
+                [t('signalDeadband.audit.noise', 'Noise suppression'), fmtPercent(recommended!.noiseSuppression * 100)],
+                [t('signalDeadband.audit.material', 'Material retention'), fmtPercent(recommended!.materialRetention * 100)],
+                [t('signalDeadband.audit.fidelity', 'Fidelity'), fmtPercent(recommended!.fidelity * 100)],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                   <Text as="p" variant="caption">{label}</Text>

@@ -57,14 +57,14 @@ export function MonthlyCostChart({ data, vehicleId, isLoading, error, onRetry }:
       {
         key: 'cost',
         label: t('costAnalysis.charts.col.cost', 'Cost ($)'),
-        format: (v: unknown) => formatCurrency(typeof v === 'number' ? v : 0, 2),
+        format: (v: unknown) => formatCurrency(typeof v === 'number' ? v : 0),
       },
     ],
     [t, formatCurrency],
   );
 
   const formatCostTick = useCallback(
-    (v: number) => formatCurrency(v, 0),
+    (v: number) => formatCurrency(v),
     [formatCurrency],
   );
 

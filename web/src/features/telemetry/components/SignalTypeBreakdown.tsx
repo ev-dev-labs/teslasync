@@ -15,8 +15,9 @@ import { GlassPanel, PanelTitle, Caption } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
-import { fmtInt, fmtPercent, safeNumber } from '@/lib/numberFormat';
+import { safeNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface SignalTypeBreakdownProps {
   numericCount: number;
@@ -31,6 +32,7 @@ export function SignalTypeBreakdown({
   stringCount,
   className,
 }: SignalTypeBreakdownProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Coerce each count to a finite, non-negative integer. `?? 0` alone let a
@@ -79,7 +81,7 @@ export function SignalTypeBreakdown({
               value={row.value}
               max={total}
               color={row.color}
-              sublabel={`${fmtInt(row.value)} · ${fmtPercent((row.value / total) * 100, 0)}`}
+              sublabel={`${fmtInt(row.value)} · ${fmtPercent((row.value / total) * 100)}`}
             />
           ))}
         </div>

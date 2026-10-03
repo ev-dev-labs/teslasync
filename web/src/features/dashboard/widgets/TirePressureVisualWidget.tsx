@@ -5,11 +5,12 @@ import { deriveDataState } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useLatestTirePressure } from '@/api/hooks/useVehicles';
 import { usePressureFormat } from '@/hooks/usePressureFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { tirePressureVariant } from '@/features/vehicles/components/vehicle-detail/helpers';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type TireVariant = ReturnType<typeof tirePressureVariant>;
 
@@ -92,6 +93,7 @@ function formatTimestamp(iso: string | undefined, t: (k: string, fb: string) => 
 }
 
 export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -124,7 +126,7 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
 
   const formatPressure = (val: number | null): string => {
     const v = toPressureValue(val);
-    return v != null ? `${fmtNumber(v, 1)}` : '—';
+    return v != null ? `${fmtNumber(v)}` : '—';
   };
 
   // Most recent reading time across all tires

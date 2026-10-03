@@ -43,10 +43,11 @@ import {
   projectSmallMultipleSeries,
 } from '@/components/charts';
 import { CHART_COLORS } from '@/lib/colors';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export type SignalChartMode = 'overlay' | 'grid' | 'auto';
 
@@ -114,6 +115,7 @@ export function SignalChartPanel({
   gridCellHeight = 140,
   className,
 }: SignalChartPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTime, formatDateTime } = useDateFormat();
 

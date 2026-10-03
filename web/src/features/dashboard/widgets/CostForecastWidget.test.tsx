@@ -5,7 +5,7 @@
  * test:
  *
  *   1. Responsive layout branches keyed off `size.cols`:
- *        - compact (cols ≤ 1) → a title-less shell with the next-month cost and
+ *        - compact (cols ≤ 1) → a titled shell with the next-month cost and
  *          a bare trend arrow (↑ / ↓), no chart.
  *        - standard (2 cols)  → a titled shell + a 3-up stat row (Next Month /
  *          Avg $/kWh / Trend) + a bar chart, using the *small* axis ticks.
@@ -384,15 +384,17 @@ describe('CostForecastWidget', () => {
     expect(axes.some((a) => a.getAttribute('data-ticksize') === 'lg')).toBe(true);
   });
 
-  it('compact layout shows the next-month cost + a bare trend arrow, no title or chart', () => {
+  it('compact layout retains its title and trend icon with next-month cost, no chart', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     expect(screen.getByText('Next month')).toBeInTheDocument();
     expect(screen.getByText('$130')).toBeInTheDocument();
     expect(screen.getByText('↑')).toBeInTheDocument();
 
-    // Compact is title-less and never mounts the chart.
-    expect(screen.queryByText('Cost forecast')).not.toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: 'Cost forecast', level: 3 });
+    expect(heading).toBeVisible();
+    expect(heading.parentElement?.querySelector('svg.lucide-trending-up')).toBeInTheDocument();
+    // Compact never mounts the chart.
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
     expect(screen.queryByText('Avg $/kWh')).not.toBeInTheDocument();
   });
@@ -415,6 +417,7 @@ describe('CostForecastWidget', () => {
     forecastMock.mockReturnValue(makeQuery({ data: undefined, refetch }));
     renderWidget({ cols: 1, rows: 1 });
 
+    expect(screen.getByRole('heading', { name: 'Cost forecast', level: 3 })).toBeVisible();
     expect(screen.getByText('No forecast data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByText('$130')).not.toBeInTheDocument();

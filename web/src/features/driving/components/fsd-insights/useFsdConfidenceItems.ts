@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
 import { formatDateTime, formatDayKey } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { FsdInsightsPeriod, FsdInsightsQuality } from '@/types/fsd';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** One label/value row of the confidence table. */
 export interface FsdConfidenceItem {
@@ -23,6 +24,7 @@ export function useFsdConfidenceItems(
   period: FsdInsightsPeriod | undefined,
   locale: string | undefined,
 ): FsdConfidenceItem[] {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   if (quality == null || period == null) return [];
 
@@ -61,7 +63,7 @@ export function useFsdConfidenceItems(
       value: t('fsd.confidence.coverageValue', '{{observed}} of {{total}} ({{pct}}%)', {
         observed: fmtInt(quality.counter_observation_days),
         total: fmtInt(period.days),
-        pct: fmtNumber(quality.counter_observation_day_pct, 1),
+        pct: fmtNumber(quality.counter_observation_day_pct),
       }),
     },
     {

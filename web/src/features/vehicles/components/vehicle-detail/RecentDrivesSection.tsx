@@ -8,9 +8,10 @@ import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion'
 import { formatDateTime } from '@/lib/dateFormat'
-import { fmtNumber } from '@/lib/numberFormat'
+
 import type { Drive } from '@/api/types'
 import { durationStr } from './helpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RecentDrivesSectionProps {
   drives: Drive[] | undefined
@@ -20,6 +21,7 @@ interface RecentDrivesSectionProps {
 const EMPTY_DRIVES: Drive[] = []
 
 function useDriveColumns(distanceUnit: DistanceUnitPref): Column<Drive>[] {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   return useMemo(
     () => [
@@ -51,7 +53,7 @@ function useDriveColumns(distanceUnit: DistanceUnitPref): Column<Drive>[] {
             : '—',
       },
     ],
-    [t, distanceUnit],
+    [t, distanceUnit, fmtNumber, displayPrecision, displayLocale],
   )
 }
 

@@ -72,7 +72,7 @@ export function CarbonEvidenceLedger({
             <MetricCard
               label={t('carbon.evidence.sessions', 'Sessions scored')}
               value={resolved
-                ? display.formatNumber(period.sessionsScored, 0)
+                ? display.formatNumber(period.sessionsScored)
                 : '—'}
               subtitle={t(
                 'carbon.evidence.sessionsHint',

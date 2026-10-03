@@ -11,10 +11,11 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyExactAccountingProps {
   summary: ComfortConsistencySummary;
@@ -52,6 +53,7 @@ export function ComfortConsistencyExactAccounting({
   state,
   formatDuration,
 }: ComfortConsistencyExactAccountingProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = summary.rows;
   const intervals = summary.intervals;
@@ -147,10 +149,10 @@ export function ComfortConsistencyExactAccounting({
                 'comfortConsistency.accounting.durationEquation',
                 '{{total}} observed = {{below}} below + {{within}} within + {{above}} above.',
                 {
-                  total: formatDuration(composition.observedActiveS, { precision: 2 }),
-                  below: formatDuration(composition.belowBandS, { precision: 2 }),
-                  within: formatDuration(composition.withinBandS, { precision: 2 }),
-                  above: formatDuration(composition.aboveBandS, { precision: 2 }),
+                  total: formatDuration(composition.observedActiveS),
+                  below: formatDuration(composition.belowBandS),
+                  within: formatDuration(composition.withinBandS),
+                  above: formatDuration(composition.aboveBandS),
                 },
               )}
               balanced={summary.identities.intervalDurationBalanced}

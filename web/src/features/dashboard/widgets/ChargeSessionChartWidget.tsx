@@ -2,12 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Zap } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartTooltip, EmbeddedChart,
-  type ChartDataRow,
-} from '@/components/charts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
 import { averageKnown, deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
@@ -20,6 +15,7 @@ import type { ChargingSession } from '@/api/types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { dashboardTokens } from '../lib/dashboardTokens';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Classify a charging session into a charger-type bucket for color-coding. */
 export function classifyChargerType(session: ChargingSession): string {
@@ -43,6 +39,7 @@ interface ChartDatum extends ChartDataRow {
 }
 
 export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -80,11 +77,11 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
     const total = sumKnown(chartData.map(d => d.energy));
     const avg = averageKnown(chartData.map(d => d.energy));
     return [
-      { label: t('widget.chargeSessionChart.total', 'Total'), value: total == null ? null : fmt(total, 1), unit: unitPrefs.energy },
-      { label: t('widget.chargeSessionChart.avg', 'Avg'), value: avg == null ? null : fmt(avg, 1), unit: unitPrefs.energy },
+      { label: t('widget.chargeSessionChart.total', 'Total'), value: total == null ? null : fmt(total), unit: unitPrefs.energy },
+      { label: t('widget.chargeSessionChart.avg', 'Avg'), value: avg == null ? null : fmt(avg), unit: unitPrefs.energy },
       { label: t('widget.chargeSessionChart.sessions', 'Sessions'), value: String(chartData.length) },
     ];
-  }, [chartData, hasData, t, unitPrefs.energy]);
+  }, [chartData, hasData, t, unitPrefs.energy, fmt]);
 
   if (isCompact) {
     return (
@@ -154,12 +151,12 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
                     tickLine={false}
                     axisLine={false}
                     width={36}
-                    tickFormatter={(v: number) => `${fmt(v, 0)}`}
+                    tickFormatter={(v: number) => `${fmt(v)}`}
                   />
                   <Tooltip
                     content={<ChartTooltip />}
                     formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
-                      `${fmt(value, 1)} ${unitPrefs.energy}`,
+                      `${fmt(value)} ${unitPrefs.energy}`,
                       t(`widget.chargeSessionChart.type.${props.payload?.type ?? ''}`, CHARGER_TYPE_LABEL[props.payload?.type ?? ''] ?? props.payload?.type ?? ''),
                     ]}
                     labelFormatter={(label: string) => label}

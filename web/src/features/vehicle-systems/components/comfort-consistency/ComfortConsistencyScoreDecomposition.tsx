@@ -9,13 +9,14 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyScoreDecompositionProps {
   summary: ComfortConsistencySummary;
@@ -48,10 +49,11 @@ export function ComfortConsistencyScoreDecomposition({
   formatDuration,
   formatDelta,
 }: ComfortConsistencyScoreDecompositionProps) {
+  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const score = summary.score;
   const percent = (value: number | null) =>
-    value != null ? fmtPercent(value * 100, 1) : '—';
+    value != null ? fmtPercent(value * 100) : '—';
 
   return (
     <section data-testid="comfort-consistency-score-decomposition">
@@ -102,20 +104,18 @@ export function ComfortConsistencyScoreDecomposition({
                 'comfortConsistency.score.stabilizationWeight',
                 '10% weight; zero at {{value}}',
                 {
-                  value: formatDuration(score.stabilizationZeroS, {
-                    precision: 2,
-                  }),
+                  value: formatDuration(score.stabilizationZeroS),
                 },
               )}
             />
             <ScoreMetric
               label={t('comfortConsistency.score.raw', 'Raw blended score')}
-              value={score.rawScore != null ? fmtNumber(score.rawScore, 1) : '—'}
+              value={score.rawScore != null ? fmtNumber(score.rawScore) : '—'}
               note={t('comfortConsistency.score.rawHint', 'before confidence shrinkage')}
             />
             <ScoreMetric
               label={t('comfortConsistency.score.adjusted', 'Published adjusted score')}
-              value={score.adjustedScore != null ? fmtNumber(score.adjustedScore, 0) : '—'}
+              value={score.adjustedScore != null ? fmtNumber(score.adjustedScore) : '—'}
               note={t('comfortConsistency.score.adjustedHint', 'shrunk toward neutral 50')}
             />
             <ScoreMetric

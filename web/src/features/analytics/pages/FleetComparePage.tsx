@@ -31,10 +31,11 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { useChartPalette } from '@/hooks/useChartPalette';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleStateReadings } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Types ─────────────────────────────────────────────── */
 
@@ -260,6 +261,7 @@ function VehicleStatusCard({
 /* ── Main Component ────────────────────────────────────── */
 
 export default function FleetComparePage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('comparison.title', 'Fleet comparison'));
@@ -470,8 +472,8 @@ export default function FleetComparePage() {
     return [
       {
         metric: t('comparison.totalDrives', 'Total drives'),
-        valueA: fmtNumber(dsA?.totalDrives ?? 0),
-        valueB: fmtNumber(dsB?.totalDrives ?? 0),
+        valueA: fmtInt(dsA?.totalDrives ?? 0),
+        valueB: fmtInt(dsB?.totalDrives ?? 0),
         rawA: dsA?.totalDrives ?? 0,
         rawB: dsB?.totalDrives ?? 0,
         winner: 'higher' as WinnerSemantic,
@@ -510,8 +512,8 @@ export default function FleetComparePage() {
       },
       {
         metric: t('comparison.regenRatio', 'Regen ratio'),
-        valueA: `${fmtNumber((dsA?.regenRatio ?? 0) * 100, 1)}%`,
-        valueB: `${fmtNumber((dsB?.regenRatio ?? 0) * 100, 1)}%`,
+        valueA: `${fmtNumber((dsA?.regenRatio ?? 0) * 100)}%`,
+        valueB: `${fmtNumber((dsB?.regenRatio ?? 0) * 100)}%`,
         rawA: dsA?.regenRatio ?? 0,
         rawB: dsB?.regenRatio ?? 0,
         winner: 'higher' as WinnerSemantic,
@@ -526,8 +528,8 @@ export default function FleetComparePage() {
       },
       {
         metric: t('comparison.chargingCost', 'Charging cost'),
-        valueA: formatCurrency(cA?.total_charging_cost ?? 0, 0),
-        valueB: formatCurrency(cB?.total_charging_cost ?? 0, 0),
+        valueA: formatCurrency(cA?.total_charging_cost ?? 0),
+        valueB: formatCurrency(cB?.total_charging_cost ?? 0),
         rawA: cA?.total_charging_cost ?? 0,
         rawB: cB?.total_charging_cost ?? 0,
         winner: 'lower' as WinnerSemantic,
@@ -542,8 +544,8 @@ export default function FleetComparePage() {
       },
       {
         metric: t('comparison.chargeSessions', 'Charge sessions'),
-        valueA: fmtNumber(cA?.total_sessions ?? 0),
-        valueB: fmtNumber(cB?.total_sessions ?? 0),
+        valueA: fmtInt(cA?.total_sessions ?? 0),
+        valueB: fmtInt(cB?.total_sessions ?? 0),
         rawA: cA?.total_sessions ?? 0,
         rawB: cB?.total_sessions ?? 0,
         winner: 'neutral' as WinnerSemantic,
@@ -552,7 +554,7 @@ export default function FleetComparePage() {
   }, [
     drivingStatsA, drivingStatsB, costA, costB,
     t, fromKm, fromKmh, whPerKmToDisplay, formatCurrency, formatEnergy,
-    distanceUnit, speedUnit, efficiencyUnit, currencySymbol,
+    distanceUnit, speedUnit, efficiencyUnit, currencySymbol, fmtNumber, fmtInt,
   ]);
 
   const tableColumns: Column<ComparisonRow>[] = useMemo(
@@ -698,8 +700,8 @@ export default function FleetComparePage() {
             <StatCard
               label={t('comparison.costDiff', 'Charging cost')}
               value={vs(
-                formatCurrency(costA?.total_charging_cost ?? 0, 0),
-                formatCurrency(costB?.total_charging_cost ?? 0, 0),
+                formatCurrency(costA?.total_charging_cost ?? 0),
+                formatCurrency(costB?.total_charging_cost ?? 0),
               )}
               icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
               loading={costQueryA.isLoading || costQueryB.isLoading}

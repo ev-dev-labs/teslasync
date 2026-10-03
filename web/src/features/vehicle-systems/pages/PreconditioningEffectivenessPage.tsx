@@ -11,7 +11,7 @@ import { Button } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   convertTempFromSI,
   type TemperatureUnitPref,
@@ -37,12 +37,14 @@ import {
   type TemperatureDeltaFormatter,
 } from '../components/preconditioning-effectiveness';
 import { summarizePreconditioningEffectiveness } from '../lib/preconditioningEffectiveness';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function convertDeltaC(valueC: number, unit: TemperatureUnitPref): number {
   return convertTempFromSI(valueC, unit) - convertTempFromSI(0, unit);
 }
 
 export default function PreconditioningEffectivenessPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(
     t(
@@ -169,7 +171,7 @@ export default function PreconditioningEffectivenessPage() {
       const prefix = options?.signed && value > 0 ? '+' : '';
       return `${prefix}${fmtNumber(value, precision)} ${unitPrefs.temperature}`;
     },
-    [convertDelta, unitPrefs.precision, unitPrefs.temperature],
+    [convertDelta, unitPrefs.precision, unitPrefs.temperature, fmtNumber],
   );
   const locale = unitPrefs.locale ?? 'en-US';
   const refreshing = climateQuery.isFetching || drivesQuery.isFetching;

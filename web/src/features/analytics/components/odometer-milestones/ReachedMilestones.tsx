@@ -9,6 +9,7 @@ import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ReachedMilestonesProps {
   summary: OdometerMilestoneResult;
@@ -21,6 +22,7 @@ export function ReachedMilestones({
   state,
   className,
 }: ReachedMilestonesProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateMs, formatDistanceKm } =
     useOdometerMilestoneDisplay();

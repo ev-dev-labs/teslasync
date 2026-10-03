@@ -8,11 +8,12 @@ import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { LinearGauge } from '@/components/charts/LinearGauge';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 
 import { HEALTH_COLOR, type HealthStatus, type TempSensor } from './constants';
 import type { DrivingStats } from '@/types/driving';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HealthGaugeGridProps {
   overallHealth: HealthStatus;
@@ -36,6 +37,7 @@ export function HealthGaugeGrid({
   loading = false,
   statsLoading = false,
 }: HealthGaugeGridProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
@@ -128,11 +130,11 @@ export function HealthGaugeGrid({
                 },
                 {
                   label: t('drivetrain.avgSpeed', 'Avg Speed'),
-                  value: `${fmtNumber(toSpeedDisplay(stats.avgSpeedKmh ?? 0), 1)} ${speedUnit}`,
+                  value: `${fmtNumber(toSpeedDisplay(stats.avgSpeedKmh ?? 0))} ${speedUnit}`,
                 },
                 {
                   label: t('drivetrain.topSpeed', 'Top Speed'),
-                  value: `${fmtNumber(toSpeedDisplay(stats.topSpeedKmh ?? 0), 1)} ${speedUnit}`,
+                  value: `${fmtNumber(toSpeedDisplay(stats.topSpeedKmh ?? 0))} ${speedUnit}`,
                 },
               ]}
             />

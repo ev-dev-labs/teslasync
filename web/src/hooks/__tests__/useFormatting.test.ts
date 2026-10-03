@@ -117,6 +117,19 @@ describe('useFormatting — formatEnergyCost', () => {
 })
 
 describe('useFormatting — formatCurrency', () => {
+  it('updates precision and locale on an existing mounted consumer without changing calculations', () => {
+    const { result, rerender } = renderHook(() => useFormatting())
+    const previousFormatter = result.current.formatCurrency
+    const estimate = result.current.estimateGasCost(HUNDRED_MILES_M)
+    expect(result.current.formatCurrency(12.3456)).toBe('$12.35')
+
+    mockSettings = { ...BASE, decimal_precision: 3, locale: 'de-DE' }
+    rerender()
+    expect(result.current.formatCurrency(12.3456)).toBe('$12,346')
+    expect(result.current.formatCurrency).not.toBe(previousFormatter)
+    expect(result.current.estimateGasCost(HUNDRED_MILES_M)).toBe(estimate)
+  })
+
   it('formats with locale grouping at the default precision', () => {
     const { result } = renderHook(() => useFormatting())
     expect(result.current.formatCurrency(1234.5)).toBe('$1,234.50')

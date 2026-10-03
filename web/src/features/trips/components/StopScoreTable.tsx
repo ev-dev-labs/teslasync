@@ -3,9 +3,10 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { DataTable, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { ScoredStop } from '@/api/hooks/useJourney';
 import { safeArray } from '@/lib/safeArray';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Ranked stop table shared by initial scoring and replans: identical
@@ -13,6 +14,7 @@ import { safeArray } from '@/lib/safeArray';
  * rankings read the same.
  */
 export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableId: string }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const units = useUnits();
   const { formatCurrency } = useFormatting();
@@ -39,7 +41,7 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
       key: 'score',
       align: 'right',
       filterValue: (row) => row.score ?? null,
-      filterValueLabel: (_, row) => fmtNumber(row.score, 0),
+      filterValueLabel: (_, row) => fmtNumber(row.score),
       header: t('journey.scoring.col.score', 'Score'),
       render: (row) => (
         <div className="flex min-w-[6rem] items-center gap-2">
@@ -50,7 +52,7 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
             />
           </div>
           <Text as="span" variant="caption" className="tabular-nums">
-            {fmtNumber(row.score, 0)}
+            {fmtNumber(row.score)}
           </Text>
         </div>
       ),
@@ -59,13 +61,13 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
       key: 'wait',
       align: 'right',
       filterValue: (row) => row.wait_s ?? null,
-      filterValueLabel: (_, row) => row.wait_s == null ? '—' : t('journey.scoring.min', '{{min}} min', { min: fmtNumber(row.wait_s / 60, 0) }),
+      filterValueLabel: (_, row) => row.wait_s == null ? '—' : t('journey.scoring.min', '{{min}} min', { min: fmtNumber(row.wait_s / 60) }),
       header: t('journey.scoring.col.wait', 'Wait'),
       render: (row) => (
         <Text as="span" className="tabular-nums">
           {row.wait_s == null
             ? '—'
-            : t('journey.scoring.min', '{{min}} min', { min: fmtNumber(row.wait_s / 60, 0) })}
+            : t('journey.scoring.min', '{{min}} min', { min: fmtNumber(row.wait_s / 60) })}
         </Text>
       ),
     },
@@ -73,11 +75,11 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
       key: 'price',
       align: 'right',
       filterValue: (row) => row.unit_price ?? null,
-      filterValueLabel: (_, row) => row.unit_price == null ? '—' : formatCurrency(row.unit_price, 2),
+      filterValueLabel: (_, row) => row.unit_price == null ? '—' : formatCurrency(row.unit_price),
       header: t('journey.scoring.col.price', '$/kWh'),
       render: (row) => (
         <Text as="span" className="tabular-nums">
-          {row.unit_price == null ? '—' : formatCurrency(row.unit_price, 2)}
+          {row.unit_price == null ? '—' : formatCurrency(row.unit_price)}
         </Text>
       ),
     },
@@ -85,11 +87,11 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
       key: 'health',
       align: 'right',
       filterValue: (row) => row.health ?? null,
-      filterValueLabel: (_, row) => row.health == null ? '—' : fmtNumber(row.health, 0),
+      filterValueLabel: (_, row) => row.health == null ? '—' : fmtNumber(row.health),
       header: t('journey.scoring.col.health', 'Health'),
       render: (row) => (
         <Text as="span" className="tabular-nums">
-          {row.health == null ? '—' : fmtNumber(row.health, 0)}
+          {row.health == null ? '—' : fmtNumber(row.health)}
         </Text>
       ),
     },

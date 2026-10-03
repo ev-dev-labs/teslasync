@@ -7,12 +7,13 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { sessionAveragePowerW, batteryFriendlyScore, durationMinutes, getChargerCategory, type ChargingAnomaly } from '@/lib/chargingAggregation';
 import { Icons } from '@/lib/icons';
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from './charging-curve/helpers';
 import { CHARGING_VALUE_COLUMNS, chargingColumnValue, type ChargingValueColumn, type ChargingValueSelections } from './chargingGridValues';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export type ChargingEvidenceSort = 'date' | 'energy' | 'cost' | 'duration' | 'power';
 
@@ -41,6 +42,7 @@ export function ChargingEvidenceTable({
   timezone, selectedIds, onSelectionChange, onPreview, anomalies,
   sortBy, sortDir, onSort, density, toolbarHeading, toolbarActions,
 }: ChargingEvidenceTableProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy, formatPower, formatDistance } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -142,7 +144,7 @@ export function ChargingEvidenceTable({
         key: 'rate', header: t('charging.grid.costPerEnergy', 'Cost per kWh'),
         defaultWidth: 130, minWidth: 100, align: 'right', defaultVisible: false,
         render: (s) => s.cost_decimal != null && s.total_energy_added_wh > 0
-          ? formatCurrency(s.cost_decimal / (s.total_energy_added_wh / 1000), 2) : '—',
+          ? formatCurrency(s.cost_decimal / (s.total_energy_added_wh / 1000)) : '—',
       },
       {
         key: 'score', header: t('charging.grid.batteryScore', 'Battery-friendly score'),
@@ -178,7 +180,7 @@ export function ChargingEvidenceTable({
         case 'batteryEnd': return `${fmtInt(value)}%`;
         case 'range': return formatDistance(value);
         case 'cost': return value === 0 ? t('charging.free', 'Free') : formatCurrency(value);
-        case 'rate': return formatCurrency(value, 2);
+        case 'rate': return formatCurrency(value);
         case 'score': return `${fmtInt(value)}/100`;
         default: return String(value);
       }
@@ -202,7 +204,7 @@ export function ChargingEvidenceTable({
       };
     });
   }, [t, timezone, anomalies, onPreview, formatCurrency, formatEnergy, formatPower, formatDistance,
-    availableSessions, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear]);
+    availableSessions, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear, fmtInt]);
 
   return (
     <DataTable

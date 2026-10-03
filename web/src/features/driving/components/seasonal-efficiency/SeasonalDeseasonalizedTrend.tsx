@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatDisplayIntensity, formatLocalDate, toDisplayIntensity } from './formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalDeseasonalizedTrend({
   analysis,
@@ -14,6 +15,7 @@ export function SeasonalDeseasonalizedTrend({
   timeZone,
   units,
 }: SeasonalSectionProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const data = analysis.timeline.map((row) => ({
     dateKey: `${row.timestampMs}-${row.driveId}`,

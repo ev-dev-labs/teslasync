@@ -34,10 +34,11 @@ import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
 import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
 import { chartTokens } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Compute duration in minutes between two ISO timestamps. */
 export function durationMinutes(start: string, stop: string | null): number | null {
@@ -97,6 +98,7 @@ export function buildTopLocations(entries: TeslaChargingHistoryEntry[]): Locatio
 const KPI_GRID = 'grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 xl:grid-cols-6';
 
 export default function TeslaChargingHistoryPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
   const { settings, locale } = useSettings();
@@ -208,11 +210,11 @@ export default function TeslaChargingHistoryPage() {
       key: 'energy',
       align: 'right',
       filterValue: (row) => row.usage_wh ?? null,
-      filterValueLabel: (_, row) => row.usage_wh != null ? formatEnergy(row.usage_wh, { precision: 1 }) : '—',
+      filterValueLabel: (_, row) => row.usage_wh != null ? formatEnergy(row.usage_wh) : '—',
       header: t('tesla_charging.col.energy', 'Energy'),
       render: (row) => (
         <Text size="sm" weight="medium" className="text-cyan-300">
-          {row.usage_wh != null ? formatEnergy(row.usage_wh, { precision: 1 }) : '—'}
+          {row.usage_wh != null ? formatEnergy(row.usage_wh) : '—'}
         </Text>
       ),
       sortable: true,
@@ -241,7 +243,7 @@ export default function TeslaChargingHistoryPage() {
       render: (row) => (
         <Text size="sm" color="secondary">
           {row.rate_base != null
-            ? `${fmtNumber(row.rate_base, 3)}/${row.pricing_type ?? 'kWh'}`
+            ? `${fmtNumber(row.rate_base)}/${row.pricing_type ?? 'kWh'}`
             : '—'}
         </Text>
       ),
@@ -269,7 +271,7 @@ export default function TeslaChargingHistoryPage() {
         </Text>
       ),
     },
-  ], [formatEnergy, t, userCurrency, locale]);
+  ], [formatEnergy, t, userCurrency, locale, fmtNumber]);
 
   const [sortKey, setSortKey] = useUrlEnum<'date' | 'energy' | 'cost'>(
     'sort',
@@ -424,19 +426,19 @@ export default function TeslaChargingHistoryPage() {
                 color="amber"
                 icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
                 label={t('tesla_charging.stats.energy', 'Total energy')}
-                value={summary.total_wh != null ? formatEnergy(summary.total_wh, { precision: 1 }) : '—'}
+                value={summary.total_wh != null ? formatEnergy(summary.total_wh) : '—'}
               />
               <MetricCard
                 color="green"
                 icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
                 label={t('tesla_charging.stats.spend', 'Total spend')}
-                value={summary.total_spend != null ? formatCurrency(summary.total_spend, 2) : '—'}
+                value={summary.total_spend != null ? formatCurrency(summary.total_spend) : '—'}
               />
               <MetricCard
                 color="purple"
                 icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />}
                 label={t('tesla_charging.stats.avgCost', 'Avg cost/kWh')}
-                value={summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh, 3) : '—'}
+                value={summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh) : '—'}
               />
               <MetricCard
                 color="blue"
@@ -493,7 +495,7 @@ export default function TeslaChargingHistoryPage() {
                     </defs>
                     {chartGrid}
                     <XAxis dataKey="month" tick={axisTickSm} />
-                    <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v, 0)} />
+                    <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v)} />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar dataKey="total" fill="url(#spendGrad)" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -526,7 +528,7 @@ export default function TeslaChargingHistoryPage() {
                     value={loc.total}
                     max={topLocationsMax || loc.total}
                     color={chartTokens.series[i % chartTokens.series.length]}
-                    sublabel={`${formatCurrency(loc.total, 2)} · ${fmtInt(loc.count)}×`}
+                    sublabel={`${formatCurrency(loc.total)} · ${fmtInt(loc.count)}×`}
                   />
                 ))}
               </div>

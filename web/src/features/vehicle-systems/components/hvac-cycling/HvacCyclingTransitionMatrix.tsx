@@ -9,10 +9,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingTransitionMatrixProps {
   summary: HvacCyclingSummary;
@@ -20,6 +21,7 @@ interface HvacCyclingTransitionMatrixProps {
 }
 
 function MatrixCell({ label, value }: { label: string; value: number }) {
+  const { fmtInt } = useNumberFormatting();
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
       <MetricLabel>{label}</MetricLabel>

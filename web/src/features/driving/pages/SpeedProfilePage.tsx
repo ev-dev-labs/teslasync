@@ -21,10 +21,11 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { getEfficiency } from '@/lib/drivesAggregation';
 import { neonColorMap, type NeonColor } from '@/lib/tokens';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -58,6 +59,7 @@ export { getEfficiency };
 /* ------------------------------------------------------------------ */
 
 export default function SpeedProfilePage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('speedProfile.title', 'Speed Profile'));
 
@@ -187,7 +189,7 @@ export default function SpeedProfilePage() {
   const hasDistribution = distributionChartData.length > 0;
 
   const kpiSpeed = (mps: number | null | undefined) =>
-    data ? fmtNumber(toSpeedDisplay(mps ?? 0), 0) : '—';
+    data ? fmtNumber(toSpeedDisplay(mps ?? 0)) : '—';
 
   return (
     <PageContainer
@@ -224,7 +226,7 @@ export default function SpeedProfilePage() {
           />
           <MetricCard
             label={t('speedProfile.samples', 'Samples')}
-            value={data ? fmtNumber(totalReadings, 0) : '—'}
+            value={data ? fmtNumber(totalReadings) : '—'}
             subtitle={t('speedProfile.drivesAnalyzed', '{{count}} drives analysed', {
               count: drives.length,
             })}
@@ -371,13 +373,13 @@ export default function SpeedProfilePage() {
                       <div className="flex items-center justify-between gap-2">
                         <Text as="dt" variant="caption">{t('speedProfile.timeShare', 'Time share')}</Text>
                         <Text as="dd" size="sm" weight="bold" className={chip.text}>
-                          {fmtNumber(bucket.pct, 1)}%
+                          {fmtNumber(bucket.pct)}%
                         </Text>
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <Text as="dt" variant="caption">{t('speedProfile.readings', 'Readings')}</Text>
                         <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                          {fmtNumber(bucket.readings, 0)}
+                          {fmtNumber(bucket.readings)}
                         </Text>
                       </div>
                       {effData ? (
@@ -385,7 +387,7 @@ export default function SpeedProfilePage() {
                           <div className="flex items-center justify-between gap-2">
                             <Text as="dt" variant="caption">{t('speedProfile.avgSpeed', 'Avg Speed')}</Text>
                             <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                              {fmtNumber(toSpeedDisplay(effData.avgSpeedMps), 0)} {speedUnit}
+                              {fmtNumber(toSpeedDisplay(effData.avgSpeedMps))} {speedUnit}
                             </Text>
                           </div>
                           <div className="flex items-center justify-between gap-2">
@@ -396,7 +398,7 @@ export default function SpeedProfilePage() {
                               weight="bold"
                               className={cn('tabular-nums', efficiencyClass(effData.avgEff))}
                             >
-                              {fmtNumber(toEfficiencyDisplay(effData.avgEff), 0)}
+                              {fmtNumber(toEfficiencyDisplay(effData.avgEff))}
                             </Text>
                           </div>
                         </>
@@ -482,7 +484,7 @@ export default function SpeedProfilePage() {
                 <Zap className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
                 <Text as="p" size="sm" color="secondary">
                   {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
-                    speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0), 0),
+                    speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0)),
                     unit: speedUnit,
                   })}
                 </Text>

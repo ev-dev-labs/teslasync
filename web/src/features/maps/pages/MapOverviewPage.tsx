@@ -30,10 +30,11 @@ import { useUnits } from '@/hooks/useUnits';
 import { useUrlEnum } from '@/hooks/useUrlState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import { request } from '@/api/client';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -92,6 +93,7 @@ function StatusRow({ icon, label, children }: { icon: ReactNode; label: string; 
 /* ------------------------------------------------------------------ */
 
 export default function MapOverviewPage() {
+  const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('maps');
   usePageTitle(t('mapOverview.pageTitle', 'Map overview'));
 
@@ -213,7 +215,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colLat', 'Lat'),
         render: (r) => (
           <Text variant="code">
-            {r.latitude !== 0 || r.longitude !== 0 ? fmtNumber(r.latitude, 5) : '—'}
+            {r.latitude !== 0 || r.longitude !== 0 ? fmtScientificNumber(r.latitude, 5) : '—'}
           </Text>
         ),
       },
@@ -223,7 +225,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colLon', 'Lon'),
         render: (r) => (
           <Text variant="code">
-            {r.latitude !== 0 || r.longitude !== 0 ? fmtNumber(r.longitude, 5) : '—'}
+            {r.latitude !== 0 || r.longitude !== 0 ? fmtScientificNumber(r.longitude, 5) : '—'}
           </Text>
         ),
       },
@@ -232,7 +234,7 @@ export default function MapOverviewPage() {
         align: 'right',
         header: t('mapOverview.colSpeed', 'Speed'),
         render: (r) => (
-          <Text variant="bodySm">{formatSpeed(r.speed ?? null, { precision: 1 })}</Text>
+          <Text variant="bodySm">{formatSpeed(r.speed ?? null)}</Text>
         ),
       },
       {
@@ -240,11 +242,11 @@ export default function MapOverviewPage() {
         align: 'right',
         header: t('mapOverview.colHeading', 'Heading'),
         render: (r) => (
-          <Text variant="bodySm">{r.heading != null ? `${fmtNumber(r.heading, 0)}°` : '—'}</Text>
+          <Text variant="bodySm">{r.heading != null ? `${fmtNumber(r.heading)}°` : '—'}</Text>
         ),
       },
     ],
-    [t, formatSpeed],
+    [t, formatSpeed, fmtNumber, fmtScientificNumber],
   );
 
   // Defensive guard: only surface the "no vehicle" empty state once the fleet
@@ -291,19 +293,19 @@ export default function MapOverviewPage() {
             <>
               <MetricCard
                 label={t('mapOverview.currentSpeed', 'Current speed')}
-                value={formatSpeed(latest?.speed ?? null, { precision: 1 })}
+                value={formatSpeed(latest?.speed ?? null)}
                 icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('mapOverview.heading', 'Heading')}
-                value={latest?.heading != null ? `${fmtNumber(latest.heading, 0)}°` : '—'}
+                value={latest?.heading != null ? `${fmtNumber(latest.heading)}°` : '—'}
                 icon={<Compass className="h-4 w-4" aria-hidden="true" />}
                 color="purple"
               />
               <MetricCard
                 label={t('mapOverview.latLon', 'Lat / lon')}
-                value={hasValidLocation && latest ? `${fmtNumber(latest.latitude, 4)}, ${fmtNumber(latest.longitude, 4)}` : '—'}
+                value={hasValidLocation && latest ? `${fmtScientificNumber(latest.latitude, 4)}, ${fmtScientificNumber(latest.longitude, 4)}` : '—'}
                 icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
                 color="green"
               />

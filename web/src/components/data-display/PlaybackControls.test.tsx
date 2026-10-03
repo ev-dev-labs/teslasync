@@ -22,12 +22,14 @@
 
 import type { ComponentProps } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import '@/i18n';
 import { PlaybackControls } from './PlaybackControls';
 import { _resetShortcutRegistry } from '@/hooks/useShortcutRegistry';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 type Props = ComponentProps<typeof PlaybackControls>;
+let previousPreferences: ReturnType<typeof getFormatterPreferences>;
 
 function makeProps(overrides: Partial<Props> = {}): Props {
   return {
@@ -55,6 +57,9 @@ function pressKey(key: string, init: KeyboardEventInit = {}) {
 }
 
 beforeEach(() => {
+  previousPreferences = getFormatterPreferences();
+  setGlobalPrecision(0);
+  setGlobalLocale('en-US');
   // jsdom has no matchMedia; framer-motion's useReducedMotion (via the
   // scrubber) reads it. Default to "motion allowed" for deterministic renders.
   Object.defineProperty(window, 'matchMedia', {
@@ -74,8 +79,11 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   vi.useRealTimers();
   _resetShortcutRegistry();
+  setGlobalPrecision(previousPreferences.precision);
+  setGlobalLocale(previousPreferences.locale);
 });
 
 describe('PlaybackControls — transport controls (render + a11y)', () => {
@@ -181,6 +189,17 @@ describe('PlaybackControls — keyboard shortcuts are opt-in', () => {
 });
 
 describe('PlaybackControls — keyboard shortcuts (enabled)', () => {
+  it('refreshes the mounted shortcut formatter while retaining seek math and clock strings', () => {
+    const props = makeProps({ enableKeyboardShortcuts: true })
+    render(<PlaybackControls {...props} />)
+    pressKey('3')
+    expect(screen.getByText('30%')).toBeInTheDocument()
+    act(() => setGlobalPrecision(3))
+    pressKey('3')
+    expect(screen.getByText('30.000%')).toBeInTheDocument()
+    expect(props.onSeek).toHaveBeenLastCalledWith(0.3)
+    expect(screen.getByText(/0:00/)).toBeInTheDocument()
+  })
   it('toggles play/pause on Space and on K', () => {
     const onPlay = vi.fn();
     const onPause = vi.fn();

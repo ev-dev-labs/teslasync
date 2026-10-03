@@ -9,12 +9,14 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { Button, DataTable, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { MapContainer, MapTileLayer, MapInvalidator, MarkerCluster } from '@/components/maps';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RoadAnomalyPanelProps {
   driveId: string;
 }
 
 export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
+  const { fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatSpeed } = useUnits();
   const [expanded, setExpanded] = useState(true);
@@ -131,7 +133,7 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
                 <Text as="p" variant="bodySm" role="status">
                   {t('driveDetail.road.possibleJolt', 'Possible jolt')}
                   {' · '}{formatDateTime(selectedCandidate.ts)}
-                  {' · '}{selectedCandidate.latitude.toFixed(5)}, {selectedCandidate.longitude.toFixed(5)}
+                  {' · '}{fmtScientificNumber(selectedCandidate.latitude, 5)}, {fmtScientificNumber(selectedCandidate.longitude, 5)}
                 </Text>
               )}
               <DataTable
@@ -141,7 +143,7 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
                 columns={[
                   { key: 'time', header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'), render: (candidate) => <Button variant="ghost" size="sm" onClick={() => setSelectedCandidateId(`${candidate.ts}-${candidate.index}`)}>{formatDateTime(candidate.ts)}</Button>, visibleOnMobile: true },
                   { key: 'speed', header: t('driveDetail.road.speed', 'Recorded speed'), render: (candidate) => formatSpeed(candidate.speed_mps), visibleOnMobile: true },
-                  { key: 'location', header: t('driveDetail.road.position', 'Approximate location'), render: (candidate) => `${candidate.latitude.toFixed(5)}, ${candidate.longitude.toFixed(5)}`, visibleOnMobile: true },
+                  { key: 'location', header: t('driveDetail.road.position', 'Approximate location'), render: (candidate) => `${fmtScientificNumber(candidate.latitude, 5)}, ${fmtScientificNumber(candidate.longitude, 5)}`, visibleOnMobile: true },
                 ]}
                 pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
               />

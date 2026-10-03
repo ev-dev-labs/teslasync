@@ -10,7 +10,7 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import {
   preconditioningEvidenceLabel,
@@ -22,6 +22,7 @@ import type {
   PreconditioningQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningStrataProps {
   summary: PreconditioningSummary;
@@ -34,6 +35,7 @@ export function PreconditioningStrata({
   state,
   formatDelta,
 }: PreconditioningStrataProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -107,9 +109,9 @@ export function PreconditioningStrata({
                           'preconditioningEffectiveness.strata.confidence',
                           '{{confidence}} combined confidence from balance {{balance}} and volume {{volume}}.',
                           {
-                            confidence: fmtPercent(row.confidence * 100, 0),
-                            balance: fmtPercent(row.balanceConfidence * 100, 0),
-                            volume: fmtPercent(row.volumeConfidence * 100, 0),
+                            confidence: fmtPercent(row.confidence * 100),
+                            balance: fmtPercent(row.balanceConfidence * 100),
+                            volume: fmtPercent(row.volumeConfidence * 100),
                           },
                         )
                       : t(

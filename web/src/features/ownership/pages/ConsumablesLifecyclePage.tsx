@@ -20,7 +20,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   ConsumableCategory,
   ConsumableEventKind,
@@ -45,6 +45,7 @@ import {
   fromDateInput,
   toDateInput,
 } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const CATEGORIES: ConsumableCategory[] = [
   'tire',
@@ -77,6 +78,7 @@ function healthTone(pct: number): string {
 }
 
 export default function ConsumablesLifecyclePage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -202,7 +204,7 @@ export default function ConsumablesLifecyclePage() {
       header: t('ownership.consumables.stress.observed', 'Your vehicle'),
       render: (row) => (
         <span className="tabular-nums">
-          {fmtNumber(row.observed_value, 2)} {row.si_unit}
+          {fmtNumber(row.observed_value)} {row.si_unit}
         </span>
       ),
     },
@@ -212,7 +214,7 @@ export default function ConsumablesLifecyclePage() {
       header: t('ownership.consumables.stress.baseline', 'Reference'),
       render: (row) => (
         <span className="tabular-nums">
-          {fmtNumber(row.baseline_value, 2)} {row.si_unit}
+          {fmtNumber(row.baseline_value)} {row.si_unit}
         </span>
       ),
     },
@@ -224,7 +226,7 @@ export default function ConsumablesLifecyclePage() {
         <span
           className={`tabular-nums ${row.multiplier > 1.15 ? 'text-rose-300' : row.multiplier < 0.9 ? 'text-emerald-300' : ''}`}
         >
-          ×{fmtNumber(row.multiplier, 2)}
+          ×{fmtNumber(row.multiplier)}
         </span>
       ),
       sortable: true,
@@ -370,7 +372,7 @@ export default function ConsumablesLifecyclePage() {
                   : 'text-rose-300'
             }`}
           >
-            {formatPct(lifecycle.health_pct, 0)}
+            {formatPct(lifecycle.health_pct)}
           </p>
         </div>
       </div>
@@ -393,7 +395,7 @@ export default function ConsumablesLifecyclePage() {
           <Text as="p" variant="caption">
             {lifecycle.distance_life_used_pct != null
               ? t('ownership.consumables.card.ofRated', '{{value}} of rated life', {
-                  value: formatPct(lifecycle.distance_life_used_pct, 0),
+                  value: formatPct(lifecycle.distance_life_used_pct),
                 })
               : '—'}
           </Text>
@@ -409,7 +411,7 @@ export default function ConsumablesLifecyclePage() {
           </p>
           <Text as="p" variant="caption">
             {t('ownership.consumables.card.multiplier', 'Wear ×{{value}}', {
-              value: fmtNumber(lifecycle.stress_multiplier, 2),
+              value: fmtNumber(lifecycle.stress_multiplier),
             })}
           </Text>
         </div>
@@ -484,13 +486,13 @@ export default function ConsumablesLifecyclePage() {
               {
                 key: 'due',
                 label: t('ownership.consumables.stat.due', 'Due soon'),
-                value: fmtNumber(report?.due_soon_count ?? 0, 0),
+                value: fmtInt(report?.due_soon_count ?? 0),
                 tone: (report?.due_soon_count ?? 0) > 0 ? 'warning' : 'default',
               },
               {
                 key: 'overdue',
                 label: t('ownership.consumables.stat.overdue', 'Overdue'),
-                value: fmtNumber(report?.overdue_count ?? 0, 0),
+                value: fmtInt(report?.overdue_count ?? 0),
                 tone: (report?.overdue_count ?? 0) > 0 ? 'critical' : 'default',
               },
               {
@@ -519,7 +521,7 @@ export default function ConsumablesLifecyclePage() {
               {
                 key: 'stress',
                 label: t('ownership.consumables.stat.stress', 'Average duty stress'),
-                value: `×${fmtNumber(report?.fleet_stress_average ?? 1, 2)}`,
+                value: `×${fmtNumber(report?.fleet_stress_average ?? 1)}`,
                 tone: (report?.fleet_stress_average ?? 1) > 1.2 ? 'warning' : 'default',
                 hint: t('ownership.consumables.stat.stressHint', '1.00 is the reference profile'),
               },
@@ -802,7 +804,7 @@ export default function ConsumablesLifecyclePage() {
               {
                 key: 'parts',
                 label: t('ownership.consumables.econ.parts', 'Parts tracked'),
-                value: fmtNumber(lifecycles.length, 0),
+                value: fmtInt(lifecycles.length),
               },
             ]}
           />

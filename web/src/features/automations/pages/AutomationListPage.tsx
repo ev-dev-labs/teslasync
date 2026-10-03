@@ -14,11 +14,12 @@ import { useAutomations, useBulkAutomationsUpdate } from '@/api/hooks/useAutomat
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { Automation } from '@/api/types';
 import { Icons } from '@/lib/icons';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import { AutomationListTable } from './AutomationListTable';
 import { AutomationStatusPanel } from './AutomationStatusPanel';
 import { RoutineWizard } from '../components/RoutineWizard';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type RowKey = string | number;
 type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
@@ -33,6 +34,7 @@ type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
  * page is the bulk-control alternative for users with dozens of automations.
  */
 export default function AutomationListPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('automationList.title', 'Automation rules'));

@@ -13,6 +13,7 @@ import { chartTokens } from '@/lib/tokens';
 import { ChartTooltip } from './ChartTooltip';
 import { ChartLegend } from './ChartLegend';
 import { resolveChartHeights } from './chartSizing';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface SeriesConfig {
   key: string;
@@ -27,6 +28,8 @@ export interface AreaChartWrapperProps {
   height?: number;
   xFormatter?: (value: string) => string;
   yFormatter?: (value: number) => string;
+  /** Numeric Y-axis/tooltip semantics; count preserves integer tick labels. */
+  kind?: 'measurement' | 'count';
   className?: string;
   /**
    * Accessible name for the chart. When provided the wrapper exposes
@@ -58,10 +61,14 @@ export function resolveAreaTooltip(
 
 export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps>(
   function AreaChartWrapper(
-    { data, xKey, series, height = 300, xFormatter, yFormatter, className, ariaLabel },
+    { data, xKey, series, height = 300, xFormatter, yFormatter, kind, className, ariaLabel },
     ref,
   ) {
     const safeSeries = series ?? [];
+    const { fmtNumber, fmtInt } = useNumberFormatting();
+    const formatY = yFormatter ?? (kind === 'count'
+      ? (value: number) => fmtInt(value)
+      : kind === 'measurement' ? (value: number) => fmtNumber(value) : undefined);
     const safeData = data ?? [];
     const instanceId = useId().replace(/:/g, '');
     const chartHeight = resolveChartHeights('standard', height).desktop;
@@ -104,15 +111,15 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
             />
             <YAxis
               tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
-              tickFormatter={yFormatter}
+              tickFormatter={formatY}
             />
 
             <Tooltip
               content={(
                 <ChartTooltip
                   valueFormatter={
-                    yFormatter
-                      ? (value) => yFormatter(Number(value))
+                    formatY
+                      ? (value) => value == null || !Number.isFinite(Number(value)) ? '—' : formatY(Number(value))
                       : undefined
                   }
                   labelFormatter={

@@ -13,7 +13,7 @@ import {
 // So we test the real pipeline end-to-end (real provider, real hook, real
 // child) driven by the router, rather than mocking the seam. i18n is left
 // uninitialised in unit tests, so route labels resolve to their English
-// fallbacks ('Drives', 'Drive Detail') — the same convention the sibling
+// fallbacks ('Drives', 'Drive detail') — the same convention the sibling
 // Breadcrumbs.test.tsx relies on.
 
 /** Registers a per-page override map into the surrounding provider. */
@@ -98,7 +98,7 @@ describe('LayoutBreadcrumbs', () => {
     // Intermediate crumb is a link to its route pattern's concrete href.
     expect(screen.getByText('Drives').closest('a')).toHaveAttribute('href', '/drives');
     // Trailing (current) crumb is plain text, never a link.
-    const current = screen.getByText('Drive Detail');
+    const current = screen.getByText('Drive detail');
     expect(current.closest('a')).toBeNull();
   });
 
@@ -127,9 +127,9 @@ describe('LayoutBreadcrumbs', () => {
       pattern: '/drives/:id',
       register: { '/drives/:id': 'Trip to office' },
     });
-    // Override replaces the default 'Drive Detail' label for the matched key.
+    // Override replaces the default 'Drive detail' label for the matched key.
     expect(await screen.findByText('Trip to office')).toBeInTheDocument();
-    expect(screen.queryByText('Drive Detail')).toBeNull();
+    expect(screen.queryByText('Drive detail')).toBeNull();
     // Parent crumb is untouched by the override.
     expect(screen.getByText('Drives').closest('a')).toHaveAttribute('href', '/drives');
   });
@@ -141,7 +141,7 @@ describe('LayoutBreadcrumbs', () => {
       register: { '/charging/:id': 'Should not appear' },
     });
     // Non-matching key must not leak into an unrelated route's breadcrumb.
-    expect(await screen.findByText('Drive Detail')).toBeInTheDocument();
+    expect(await screen.findByText('Drive detail')).toBeInTheDocument();
     expect(screen.queryByText('Should not appear')).toBeNull();
   });
 
@@ -162,6 +162,6 @@ describe('LayoutBreadcrumbs', () => {
     // useBreadcrumbOverrides() falls back to {} with no provider, so the
     // component degrades gracefully to the un-overridden chain.
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
-    expect(screen.getByText('Drive Detail')).toBeInTheDocument();
+    expect(screen.getByText('Drive detail')).toBeInTheDocument();
   });
 });

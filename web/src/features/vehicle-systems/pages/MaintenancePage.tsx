@@ -45,8 +45,9 @@ import { cn } from '@/lib/cn';
 import { buildContextHref } from '@/lib/contextNavigation';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { localDayKey } from '@/lib/drivesAggregation';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { typography } from '@/lib/tokens';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ─── Types (snake_case, matching the Go maintenance handler JSON tags) ───────
 
@@ -275,6 +276,7 @@ function MaintenanceItemCard({
   item: MaintenanceItem;
   formatDistance: DistanceFormatter;
 }) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const pct = computeProgress(item);
   const derivedStatus = item.status === 'completed' ? 'completed' : statusFromPct(pct);
@@ -302,7 +304,7 @@ function MaintenanceItemCard({
               {item.due_date
                 ? `${t('maintenance.due', 'Due')}: ${formatDate(item.due_date)}`
                 : item.due_mileage
-                  ? `${t('maintenance.due', 'Due')}: ${formatDistance(item.due_mileage, { precision: 0 })}`
+                  ? `${t('maintenance.due', 'Due')}: ${formatDistance(item.due_mileage)}`
                   : null}
             </span>
           </div>
@@ -317,7 +319,7 @@ function MaintenanceItemCard({
         {item.current_mileage > 0 && (
           <span className="flex items-center gap-1">
             <Gauge className="h-3 w-3" aria-hidden="true" />
-            {formatDistance(item.current_mileage, { precision: 0 })}
+            {formatDistance(item.current_mileage)}
           </span>
         )}
         {item.last_service_date && (
@@ -380,9 +382,9 @@ function buildServiceColumns(
       header: t('maintenance.col.mileage', 'Mileage'),
       align: 'right',
       filterValue: (r) => r.mileage ?? null,
-      filterValueLabel: (_value, r) => formatDistance(r.mileage, { precision: 0 }),
+      filterValueLabel: (_value, r) => formatDistance(r.mileage),
       sortable: true,
-      render: (r) => <Text as="span" size="sm" className="tabular-nums">{formatDistance(r.mileage, { precision: 0 })}</Text>,
+      render: (r) => <Text as="span" size="sm" className="tabular-nums">{formatDistance(r.mileage)}</Text>,
     },
     {
       key: 'cost',
@@ -421,6 +423,7 @@ function buildServiceColumns(
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function MaintenancePage() {
+  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('maintenance.title', 'Maintenance'));
   const { formatDistance } = useUnits();
@@ -548,7 +551,7 @@ export default function MaintenancePage() {
 
   const serviceColumns = useMemo(
     () => buildServiceColumns(t, formatDistance, setPreviewRecord),
-    [t, formatDistance],
+    [t, formatDistance, displayPrecision, displayLocale],
   );
 
   const handleSchedule = useCallback(() => {
@@ -734,7 +737,7 @@ export default function MaintenancePage() {
                     <span className="flex shrink-0 items-center gap-2">
                       {p.metersRemaining != null && (
                         <Text variant="caption" as="span" className="tabular-nums">
-                          {formatDistance(p.metersRemaining, { precision: 0 })}
+                          {formatDistance(p.metersRemaining)}
                         </Text>
                       )}
                       {p.dueDate && (
@@ -767,17 +770,17 @@ export default function MaintenancePage() {
                 <div className="grid grid-cols-3 gap-3">
                   <MetricCard
                     label={t('maintenance.totalSpent', 'Total spent')}
-                    value={formatCurrency(costStats.totalCost, 0)}
+                    value={formatCurrency(costStats.totalCost)}
                     color="green"
                   />
                   <MetricCard
                     label={t('maintenance.annualEst', 'Annual est.')}
-                    value={`${formatCurrency(costStats.annualCost, 0)}${t('maintenance.perYear', '/yr')}`}
+                    value={`${formatCurrency(costStats.annualCost)}${t('maintenance.perYear', '/yr')}`}
                     color="cyan"
                   />
                   <MetricCard
                     label={t('maintenance.avgService', 'Avg / service')}
-                    value={formatCurrency(costStats.avgPerService, 0)}
+                    value={formatCurrency(costStats.avgPerService)}
                     color="purple"
                   />
                 </div>
@@ -887,12 +890,12 @@ export default function MaintenancePage() {
                 {
                   key: 'mileage',
                   label: t('maintenance.col.mileage', 'Mileage'),
-                  value: formatDistance(previewRecord.mileage, { precision: 0 }),
+                  value: formatDistance(previewRecord.mileage),
                 },
                 {
                   key: 'cost',
                   label: t('maintenance.col.cost', 'Cost'),
-                  value: formatCurrency(previewRecord.cost, 2),
+                  value: formatCurrency(previewRecord.cost),
                 },
                 {
                   key: 'provider',

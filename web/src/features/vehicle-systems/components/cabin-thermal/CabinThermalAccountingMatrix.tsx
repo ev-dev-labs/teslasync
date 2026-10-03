@@ -10,7 +10,7 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import {
   CABIN_ROW_EXCLUSION_REASONS,
   type CabinThermalSummary,
@@ -18,6 +18,7 @@ import {
 import { cabinRowExclusionLabel } from './labels';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalAccountingMatrixProps {
   summary: CabinThermalSummary;
@@ -61,6 +62,7 @@ export function CabinThermalAccountingMatrix({
   summary,
   state,
 }: CabinThermalAccountingMatrixProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const accounting = summary.accounting;
   const rejectionSum = summary.rejectionReasonCounts.reduce(

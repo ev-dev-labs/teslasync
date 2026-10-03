@@ -8,10 +8,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencySourceAvailabilityProps {
   summary: ComfortConsistencySummary;
@@ -29,6 +30,7 @@ function AvailabilityCard({
   denominator: number;
   note?: string;
 }) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
       <MetricLabel>{label}</MetricLabel>
@@ -36,7 +38,7 @@ function AvailabilityCard({
         {fmtInt(count)}
         {' · '}
         {denominator > 0
-          ? fmtPercent((count / denominator) * 100, 1)
+          ? fmtPercent((count / denominator) * 100)
           : '—'}
       </Text>
       {note ? <Text as="p" variant="caption" className="mt-1">{note}</Text> : null}

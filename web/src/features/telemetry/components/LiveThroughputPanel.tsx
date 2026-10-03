@@ -28,9 +28,10 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { formatTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { ThroughputPoint } from '../hooks/useThroughputHistory';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const LINE_COLOR = chartTokens.series[5];
 const GRADIENT_ID = 'live-throughput-gradient';
@@ -55,6 +56,7 @@ export function LiveThroughputPanel({
   connected,
   className,
 }: LiveThroughputPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const points = history ?? [];
   const hasData = points.length >= 2;

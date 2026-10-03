@@ -15,13 +15,14 @@ import {
 import { InlineCallout, QueryError, Skeleton } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { useSettings } from '@/hooks/useSettings';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   GEOFENCE_CATEGORY_LABELS,
   type GeofenceCategoryValue,
 } from '../../geofenceCategories';
 import { formatRatePerWh } from './helpers';
 import type { Geofence, GeofenceRate } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface PlacesTableProps {
   places?: Geofence[];
@@ -56,6 +57,7 @@ export function PlacesTable({
   includesArchived = false,
   emptyMessage,
 }: PlacesTableProps) {
+  const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { locale } = useSettings();
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc');
@@ -129,7 +131,7 @@ export function PlacesTable({
               </div>
               <Text size="xs" color="muted" mono className="mt-1 flex items-center gap-1">
                 <Globe className="h-3 w-3" aria-hidden="true" />
-                {fmtNumber(place.latitude ?? 0, 5)}, {fmtNumber(place.longitude ?? 0, 5)}
+                {fmtScientificNumber(place.latitude, 5)}, {fmtScientificNumber(place.longitude, 5)}
               </Text>
             </div>
           </div>
@@ -281,7 +283,7 @@ export function PlacesTable({
         ),
       },
     ],
-    [t, rateByGeofenceId, locale, onSelect, onEdit, onDelete],
+    [t, rateByGeofenceId, locale, onSelect, onEdit, onDelete, fmtNumber, fmtScientificNumber],
   );
 
   if (error) {

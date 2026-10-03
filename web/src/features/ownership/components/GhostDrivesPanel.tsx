@@ -7,10 +7,11 @@ import { Badge, Button, DataTable, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { GhostDrive } from '@/types/ownership';
 import { OwnershipPanel } from './OwnershipPanel';
 import { formatPct, formatSpan } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface GhostDrivesPanelProps {
   vehicleId: number | null;
@@ -28,6 +29,7 @@ function scoreTone(score: number): 'warning' | 'info' {
  * labelling a drive here re-anchors the cluster everywhere else.
  */
 export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrivesPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const units = useUnits();
   const ghostsQuery = useGhostDrives(vehicleId, windowDays);
@@ -63,7 +65,7 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
               style={{ width: `${Math.min(100, Math.max(0, row.score))}%` }}
             />
           </div>
-          <Badge variant={scoreTone(row.score)}>{fmtNumber(row.score, 0)}</Badge>
+          <Badge variant={scoreTone(row.score)}>{fmtNumber(row.score)}</Badge>
         </div>
       ),
       sortable: true,
@@ -89,12 +91,12 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
         <div>
           <span className="tabular-nums">
             {t('ownership.ghost.ratio', '{{ratio}}× typical', {
-              ratio: fmtNumber(row.distance_ratio, 1),
+              ratio: fmtNumber(row.distance_ratio),
             })}
           </span>
           <Text as="p" variant="caption">
             {t('ownership.ghost.confidence', '{{pct}} confidence', {
-              pct: formatPct(row.confidence_pct, 0),
+              pct: formatPct(row.confidence_pct),
             })}
           </Text>
         </div>

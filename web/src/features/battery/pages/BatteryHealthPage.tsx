@@ -38,7 +38,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { cn } from '@/lib/cn';
-import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
+
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import DeferredBatterySection from '../components/battery-health/DeferredBatterySection';
 import {
@@ -48,6 +48,7 @@ import {
   healthVariant,
   isProjectionTrustworthy,
 } from '../components/battery-health/helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export {
   buildInsights,
@@ -172,6 +173,7 @@ function BatteryHealthSkeleton() {
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 export default function BatteryHealthPage() {
+  const { fmtNumber, fmtPercent, fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('battery.title', 'Battery Health'));
   const { unitPrefs, formatEnergy } = useUnits();
@@ -196,7 +198,7 @@ export default function BatteryHealthPage() {
   /* ── Derived: insights & recommendations ───────────────────────── */
   const insights = useMemo(
     () => (health ? buildInsights(health, health.charging_analysis, t) : []),
-    [health, t],
+    [health, t, displayPrecision, displayLocale],
   );
   const recommendations = useMemo(
     () => (health ? buildRecommendations(health, t) : []),
@@ -212,7 +214,7 @@ export default function BatteryHealthPage() {
   const projectionTrustworthy = isProjectionTrustworthy(health?.prediction);
 
   const yearsTo80 = projectionTrustworthy
-    ? fmtNumber(health!.prediction.years_to_80_pct, 1)
+    ? fmtNumber(health!.prediction.years_to_80_pct)
     : '—';
 
   /* ── No vehicle: defensive guard ─────────────────────────────── */
@@ -354,7 +356,7 @@ export default function BatteryHealthPage() {
       'Modeled pack health is {{health}}, with {{rate}} annualized degradation across the available history.',
       {
         health: fmtPercent(health.current_soh),
-        rate: `${fmtNumber(health.degradation_rate_pct_per_year, 2)}%`,
+        rate: `${fmtNumber(health.degradation_rate_pct_per_year)}%`,
       },
     ),
     whyItMatters:
@@ -507,7 +509,7 @@ export default function BatteryHealthPage() {
           {
             key: 'degradation',
             label: t('operations.battery.degradationPace', 'Degradation pace'),
-            value: `${fmtNumber(health.degradation_rate_pct_per_year, 2)}%/${t('battery.yr', 'yr')}`,
+            value: `${fmtNumber(health.degradation_rate_pct_per_year)}%/${t('battery.yr', 'yr')}`,
             detail: t(
               'operations.battery.degradationDetail',
               'Annualized capacity change inferred from available history.',
@@ -560,7 +562,7 @@ export default function BatteryHealthPage() {
           {
             key: 'cycles',
             label: t('operations.battery.cycleExposure', 'Cycle exposure'),
-            value: fmtNumber(health.total_cycles, 0),
+            value: fmtNumber(health.total_cycles),
             detail: t(
               'operations.battery.cyclesDetail',
               'Equivalent full cycles accumulated across charging activity.',
@@ -612,25 +614,25 @@ export default function BatteryHealthPage() {
             />
             <MetricCard
               label={t('battery.metric.currentCap', 'Current Capacity')}
-              value={formatEnergy(health.estimated_capacity_wh, { precision: 1 })}
+              value={formatEnergy(health.estimated_capacity_wh)}
               icon={<Battery className="h-5 w-5" aria-hidden="true" />}
               color="green"
             />
             <MetricCard
               label={t('battery.metric.originalCap', 'Original Capacity')}
-              value={formatEnergy(health.original_capacity_wh, { precision: 1 })}
+              value={formatEnergy(health.original_capacity_wh)}
               icon={<BatteryFull className="h-5 w-5" aria-hidden="true" />}
               color="blue"
             />
             <MetricCard
               label={t('battery.metric.degradation', 'Degradation Rate')}
-              value={`${fmtNumber(health.degradation_rate_pct_per_year, 2)}%/${t('battery.yr', 'yr')}`}
+              value={`${fmtNumber(health.degradation_rate_pct_per_year)}%/${t('battery.yr', 'yr')}`}
               icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
               color="amber"
             />
             <MetricCard
               label={t('battery.metric.cycles', 'Total Cycles')}
-              value={fmtNumber(health.total_cycles, 0)}
+              value={fmtNumber(health.total_cycles)}
               icon={<RefreshCcw className="h-5 w-5" aria-hidden="true" />}
               color="purple"
             />
@@ -732,7 +734,7 @@ export default function BatteryHealthPage() {
                     color={gaugeTone.info}
                   />
                   <Text as="p" size="2xs" color="muted" className="mt-1">
-                    {formatEnergy(health.estimated_capacity_wh, { precision: 1 })} / {formatEnergy(health.original_capacity_wh, { precision: 1 })}
+                    {formatEnergy(health.estimated_capacity_wh)} / {formatEnergy(health.original_capacity_wh)}
                   </Text>
                 </div>
                 <div>
@@ -743,7 +745,7 @@ export default function BatteryHealthPage() {
                     color={gaugeTone[degradationTone(health.degradation_rate_pct_per_year)]}
                   />
                   <Text as="p" size="2xs" color="muted" className="mt-1">
-                    {fmtNumber(health.degradation_rate_pct_per_year, 2)}% {t('battery.perYear', 'per year')}
+                    {fmtNumber(health.degradation_rate_pct_per_year)}% {t('battery.perYear', 'per year')}
                   </Text>
                 </div>
                 <div>
@@ -793,7 +795,7 @@ export default function BatteryHealthPage() {
                   label={t('battery.thermal.moduleTempMax', 'Module Temp (Max)')}
                   value={
                     chargingLive?.module_temp_max != null
-                      ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_max), 1)} ${tempUnit}`
+                      ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_max))} ${tempUnit}`
                       : '—'
                   }
                   subtitle={
@@ -810,7 +812,7 @@ export default function BatteryHealthPage() {
                   label={t('battery.thermal.moduleTempMin', 'Module Temp (Min)')}
                   value={
                     chargingLive?.module_temp_min != null
-                      ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_min), 1)} ${tempUnit}`
+                      ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_min))} ${tempUnit}`
                       : '—'
                   }
                   subtitle={
@@ -842,7 +844,6 @@ export default function BatteryHealthPage() {
                       ? `${fmtNumber(
                           toTemperatureDisplay(chargingLive.module_temp_max) -
                             toTemperatureDisplay(chargingLive.module_temp_min),
-                          1,
                         )} ${tempUnit}`
                       : '—'
                   }
@@ -862,17 +863,16 @@ export default function BatteryHealthPage() {
               <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <StatCell
                   label={t('battery.newVsNow.capNew', 'Capacity When New')}
-                  value={formatEnergy(health.original_capacity_wh, { precision: 1 })}
+                  value={formatEnergy(health.original_capacity_wh)}
                 />
                 <StatCell
                   label={t('battery.newVsNow.capNow', 'Capacity Now')}
-                  value={formatEnergy(health.estimated_capacity_wh, { precision: 1 })}
+                  value={formatEnergy(health.estimated_capacity_wh)}
                   accent="text-cyan-300"
                   note={
                     <Text as="p" size="2xs" className="mt-1 text-rose-300">
                       -{formatEnergy(
                         Math.max(0, health.original_capacity_wh - health.estimated_capacity_wh),
-                        { precision: 1 },
                       )}
                     </Text>
                   }

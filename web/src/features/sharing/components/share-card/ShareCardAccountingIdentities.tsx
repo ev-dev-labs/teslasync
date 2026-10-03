@@ -67,19 +67,19 @@ export function ShareCardAccountingIdentities({
                   <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.expected', 'Expected')}
                   </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
-                    {display.formatNumber(check.expected, 6)}
+                    {display.formatNumber(check.expected)}
                   </Text></td></tr>
                   <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.actual', 'Actual')}
                   </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
-                    {display.formatNumber(check.actual, 6)}
+                    {display.formatNumber(check.actual)}
                   </Text></td></tr>
                   <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.residual', 'Residual / tolerance')}
                   </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
                     {t('shareCard.accounting.residualValue', '{{residual}} / {{tolerance}}', {
-                      residual: display.formatNumber(check.residual, 6),
-                      tolerance: display.formatNumber(check.tolerance, 6),
+                      residual: display.formatNumber(check.residual),
+                      tolerance: display.formatNumber(check.tolerance),
                     })}
                   </Text></td></tr>
                   </tbody>

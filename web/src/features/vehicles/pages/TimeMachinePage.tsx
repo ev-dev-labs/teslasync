@@ -31,7 +31,8 @@ import { Badge, Button, GlassPanel, PanelTitle, SectionTitle, Slider, Text } fro
 import { DateTime, MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber, fmtScientificNumber } from '@/lib/numberFormat';
 
 // Minimal translate signature (subset of react-i18next's `t`) so the pure
 // formatting helpers below can be unit-reasoned without the full TFunction
@@ -132,10 +133,7 @@ export function formatDuration(seconds: number, t: TFn): string {
 // ── Value rendering ────────────────────────────────────────────────────────
 function formatFloat(n: number): string {
   if (!Number.isFinite(n)) return '—';
-  const abs = Math.abs(n);
-  if (abs >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  if (abs >= 1) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
+  return Math.abs(n) < 1 ? fmtScientificNumber(n, 4) : fmtNumber(n);
 }
 
 export function humanizeField(field: string): string {
@@ -154,6 +152,7 @@ function formatScalar(field: TimeMachineField, t: TFn): string {
 
 // ── Field row ──────────────────────────────────────────────────────────────
 function FieldRow({ field }: { field: TimeMachineField }) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const isNull = field.value === null;
 

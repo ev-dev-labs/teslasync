@@ -14,11 +14,12 @@ import {
 } from '@/components/charts';
 import { GlassPanel, MetricLabel, PanelTitle, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingHourlyDutyProps {
   summary: HvacCyclingSummary;
@@ -31,6 +32,7 @@ export function HvacCyclingHourlyDuty({
   state,
   formatDuration,
 }: HvacCyclingHourlyDutyProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const data = summary.hourlyProfile.map((bucket) => ({
     hourIndex: bucket.hour,
@@ -76,7 +78,7 @@ export function HvacCyclingHourlyDuty({
                 key: 'duty',
                 label: t('hvacCycling.hourly.duty', 'Duty cycle'),
                 format: (value) =>
-                  typeof value === 'number' ? fmtPercent(value, 1) : '—',
+                  typeof value === 'number' ? fmtPercent(value) : '—',
               },
               {
                 key: 'observedS',
@@ -84,7 +86,6 @@ export function HvacCyclingHourlyDuty({
                 format: (value) =>
                   formatDuration(
                     typeof value === 'number' ? value : null,
-                    { precision: 1 },
                   ),
               },
               { key: 'starts', label: t('hvacCycling.hourly.starts', 'Observed on transitions') },
@@ -124,7 +125,7 @@ export function HvacCyclingHourlyDuty({
               >
                 <MetricLabel>{bucket.hour}</MetricLabel>
                 <Text as="p" variant="caption" className="mt-1">
-                  {formatDuration(bucket.observedS, { precision: 1 })}
+                  {formatDuration(bucket.observedS)}
                 </Text>
                 <Text as="p" variant="caption">
                   {t('hvacCycling.hourly.transitionCount', '{{count}} starts', {

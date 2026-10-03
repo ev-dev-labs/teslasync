@@ -10,7 +10,9 @@ import {
 } from '@/components/ui';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
-import { buildSignalFieldOptions, BOOL_FIELD_KEYS } from '@/lib/signals';
+import { buildSignalFieldOptions, BOOL_FIELD_KEYS, unitKindForSignal } from '@/lib/signals';
+import { UnitInput } from '@/components/forms';
+import { useSettings } from '@/hooks/useSettings';
 import {
   Clock,
   Zap,
@@ -181,6 +183,7 @@ function signalValueFromInput(
 
 export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorProps) {
   const { t } = useTranslation();
+  const { settings } = useSettings();
   const { data: geofences, isLoading: geofencesLoading, isError: geofencesError, refetch: refetchGeofences } = useGeofences();
   const [advancedMode, setAdvancedMode] = useState(false);
 
@@ -216,7 +219,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
     [t],
   );
 
-  const signalFieldOptions = useMemo(() => buildSignalFieldOptions(t), [t]);
+  const signalFieldOptions = useMemo(() => buildSignalFieldOptions(t, settings), [t, settings]);
 
   const handleDayToggle = useCallback((days: number[], day: number) => {
     if (days.length === 0) {
@@ -466,15 +469,30 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
                 value={value}
                 onChange={(event) => onChange(signalValueFromInput(trigger, event.target.value))}
               />
-            ) : (
+            ) : trigger.signal === 'state' ? (
               <UiInput
                 label={t('automations.builder.value', 'Value')}
-                type={trigger.signal === 'state' ? 'text' : 'number'}
+                type="text"
                 value={value}
                 onChange={(event) => onChange(signalValueFromInput(trigger, event.target.value))}
                 placeholder={trigger.signal === 'state'
                   ? t('automations.builder.statePlaceholder', 'online')
                   : undefined}
+              />
+            ) : (
+              <UnitInput
+                key={trigger.signal}
+                label={t('automations.builder.value', 'Value')}
+                unit={unitKindForSignal(trigger.signal)}
+                value={trigger.value_num ?? null}
+                commitOnChange
+                onChange={(next) => onChange({
+                  kind: 'trigger_signal',
+                  signal: trigger.signal,
+                  op: trigger.op,
+                  value_num: next ?? undefined,
+                })}
+                required
               />
             )
           )}

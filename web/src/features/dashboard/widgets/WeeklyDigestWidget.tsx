@@ -5,13 +5,15 @@ import { EmptyState } from '@/components/feedback';
 import { useWeeklyDigest } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetComparisonCard, type ComparisonMetric } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -54,7 +56,7 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
         label: t('widget.weeklyDigest.distance', 'Distance'),
         current: dist,
         previous: prevDist,
-        formattedCurrent: fmtNumber(dist, 1),
+        formattedCurrent: fmtNumber(dist),
         unit: distanceUnit,
         higherIsBetter: true,
       },
@@ -69,7 +71,7 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
         label: t('widget.weeklyDigest.energy', 'Energy'),
         current: energy,
         previous: prevEnergy,
-        formattedCurrent: fmtNumber(energy, 1),
+        formattedCurrent: fmtNumber(energy),
         unit: 'kWh',
         higherIsBetter: true,
       },
@@ -77,12 +79,12 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
         label: t('widget.weeklyDigest.efficiency', 'Efficiency'),
         current: eff,
         previous: prevEff,
-        formattedCurrent: fmtNumber(eff, 0),
+        formattedCurrent: fmtNumber(eff),
         unit: efficiencyUnit,
         higherIsBetter: false,
       },
     ];
-  }, [data, distanceUnit, efficiencyUnit, t]);
+  }, [data, distanceUnit, efficiencyUnit, t, fmtNumber, fmtInt]);
 
   const handleRefresh = useCallback(() => {
     void refetch();

@@ -33,6 +33,15 @@ vi.mock('react-i18next', () => ({
     },
   }),
 }));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: vi.fn(() => ({
+    locale: 'en-US',
+    settings: { locale: 'en-US', timezone_user: 'UTC', tz_display_default: 'user' },
+  })),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
 
 // PinButton's data hooks — stub so the card mounts without real network / a
 // live QueryClient query. The card under test owns no query hooks itself.

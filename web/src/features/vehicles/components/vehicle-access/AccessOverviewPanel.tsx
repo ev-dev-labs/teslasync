@@ -6,7 +6,8 @@ import { GlassPanel, Badge, PanelTitle, Subhead, Caption, Text } from '@/compone
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
-import { fmtPercent } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** One invitation-status slice with a resolved display color for its bar. */
 export interface AccessStatusSlice {
@@ -52,6 +53,7 @@ export function AccessOverviewPanel({
   error,
   onRetry,
 }: AccessOverviewPanelProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Null-safe views of the breakdown arrays — the contract types them as
@@ -109,7 +111,7 @@ export function AccessOverviewPanel({
                       value={count}
                       max={invitations || count || 1}
                       color={slice.color}
-                      sublabel={`${count} · ${fmtPercent(pct, 0)}`}
+                      sublabel={`${count} · ${fmtPercent(pct)}`}
                     />
                   );
                 })}

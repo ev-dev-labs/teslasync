@@ -34,7 +34,7 @@ import {
   EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber, formatBytes } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import { useDiskForecast } from '@/api/hooks/useOperatorConfidence';
@@ -43,6 +43,8 @@ import type {
   DiskForecastSeverity,
   HypertableSize,
 } from '@/types/admin-operator-confidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 const SEVERITY_VARIANT: Record<DiskForecastSeverity, 'success' | 'warning' | 'danger' | 'neutral'> = {
   ok: 'success',
@@ -66,7 +68,7 @@ const SEVERITY_ORDER: DiskForecastSeverity[] = ['critical', 'warn', 'ok', 'unkno
 
 /** Percentage of `part` within `whole`, or an em-dash when `whole` is zero. */
 function pctOf(part: number, whole: number): string {
-  return whole > 0 ? `${((part / whole) * 100).toFixed(1)}%` : '—';
+  return whole > 0 ? `${fmtNumber(((part / whole) * 100))}%` : '—';
 }
 
 /** Clip long hypertable names so axis ticks and cards stay one line. */
@@ -75,6 +77,7 @@ function truncate(value: string, max = 18): string {
 }
 
 export default function DiskForecastPage() {
+  const { formatBytes, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('admin.diskForecast.pageTitle', 'Disk forecast'));
 
@@ -236,7 +239,7 @@ export default function DiskForecastPage() {
         ),
       },
     ],
-    [t, severityLabel],
+    [t, severityLabel, formatBytes, fmtNumber],
   );
 
   const retry = () => query.refetch();

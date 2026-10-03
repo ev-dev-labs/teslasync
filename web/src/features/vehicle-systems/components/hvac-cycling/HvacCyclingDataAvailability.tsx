@@ -9,10 +9,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingDataAvailabilityProps {
   summary: HvacCyclingSummary;
@@ -30,6 +31,7 @@ export function HvacCyclingDataAvailability({
   summary,
   state,
 }: HvacCyclingDataAvailabilityProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items: Availability[] = [
     {

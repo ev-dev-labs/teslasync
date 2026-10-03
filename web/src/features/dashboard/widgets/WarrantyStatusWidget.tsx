@@ -8,13 +8,14 @@ import { useWarrantyDetails } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetDetailCard, WidgetStatGrid, type DetailEntry } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Safely extract a string from an unknown value */
 export function asString(val: unknown): string | null {
@@ -63,6 +64,7 @@ const COVERAGE_TYPES = [
 ] as const;
 
 export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const { formatDate, locale } = useDateFormat();
@@ -163,7 +165,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
       const converted = mileageLimitM == null ? null : toDistanceDisplay(mileageLimitM);
       items.push({
         label: t('widget.warranty.mileageLimit', 'Mileage limit'),
-        value: converted == null ? null : `${fmtNumber(converted, 0)} ${distanceUnit}`,
+        value: converted == null ? null : `${fmtNumber(converted)} ${distanceUnit}`,
         mono: true,
       });
     }
@@ -173,7 +175,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
       const converted = currentMileageM == null ? null : toDistanceDisplay(currentMileageM);
       items.push({
         label: t('widget.warranty.currentMileage', 'Current mileage'),
-        value: converted == null ? null : `${fmtNumber(converted, 0)} ${distanceUnit}`,
+        value: converted == null ? null : `${fmtNumber(converted)} ${distanceUnit}`,
         mono: true,
       });
     }
@@ -203,7 +205,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
     }
 
     return items;
-  }, [warrantyData, expiryDate, daysRemaining, effectiveDays, variant, mileageLimitM, currentMileageM, toDistanceDisplay, distanceUnit, t, formatDate, locale]);
+  }, [warrantyData, expiryDate, daysRemaining, effectiveDays, variant, mileageLimitM, currentMileageM, toDistanceDisplay, distanceUnit, t, formatDate, locale, fmtInt, fmtNumber]);
 
   const shellProps = {
     loading: isLoading,
@@ -252,7 +254,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
         <div className="h-full flex flex-col gap-3 overflow-y-auto">
           <WidgetStatGrid cols={2} stats={[
             { label: t('widget.warranty.daysRemaining', 'Days remaining'), value: daysRemaining == null ? null : fmtInt(Math.max(daysRemaining, 0)) },
-            { label: t('widget.warranty.mileageRemaining', 'Mileage remaining'), value: mileageLimitM == null || currentMileageM == null ? null : fmtNumber(toDistanceDisplay(Math.max(mileageLimitM - currentMileageM, 0)), 0), unit: mileageLimitM == null || currentMileageM == null ? undefined : distanceUnit },
+            { label: t('widget.warranty.mileageRemaining', 'Mileage remaining'), value: mileageLimitM == null || currentMileageM == null ? null : fmtNumber(toDistanceDisplay(Math.max(mileageLimitM - currentMileageM, 0))), unit: mileageLimitM == null || currentMileageM == null ? undefined : distanceUnit },
           ]} />
           {/* Time remaining progress bar */}
           {totalDays != null && totalDays > 0 && daysUsed != null && (
@@ -282,7 +284,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                     : '#10b981'
               }
               label={t('widget.warranty.mileageRemaining', 'Mileage remaining')}
-              sublabel={`${fmtNumber(toDistanceDisplay(Math.max(mileageLimitM - currentMileageM, 0)), 0)} ${distanceUnit}`}
+              sublabel={`${fmtNumber(toDistanceDisplay(Math.max(mileageLimitM - currentMileageM, 0)))} ${distanceUnit}`}
             />
           )}
 

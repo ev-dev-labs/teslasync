@@ -5,7 +5,7 @@ import { CHART_COLORS } from '@/components/charts';
 import { MetricBar } from '@/components/data-display';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 
 import type {
   RegenEfficiencyModel,
@@ -14,6 +14,7 @@ import type {
 import { DetailScopeNotice } from './DetailScopeNotice';
 import { RegenSectionBody } from './RegenSectionBody';
 import type { RegenSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AmbientTemperatureContextProps {
   model: RegenEfficiencyModel;
@@ -24,32 +25,33 @@ export function AmbientTemperatureContext({
   model,
   state,
 }: AmbientTemperatureContextProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTemperature } = useUnits();
   const bucketLabel = (key: RegenTemperatureBucketKey): string => {
     switch (key) {
       case 'below0':
         return t('regen.temperature.below', 'Below {{value}}', {
-          value: formatTemperature(0, { precision: 0 }),
+          value: formatTemperature(0),
         });
       case 'from0To10':
         return t('regen.temperature.range', '{{low}} to under {{high}}', {
-          low: formatTemperature(0, { precision: 0 }),
-          high: formatTemperature(10, { precision: 0 }),
+          low: formatTemperature(0),
+          high: formatTemperature(10),
         });
       case 'from10To20':
         return t('regen.temperature.range', '{{low}} to under {{high}}', {
-          low: formatTemperature(10, { precision: 0 }),
-          high: formatTemperature(20, { precision: 0 }),
+          low: formatTemperature(10),
+          high: formatTemperature(20),
         });
       case 'from20To30':
         return t('regen.temperature.range', '{{low}} to under {{high}}', {
-          low: formatTemperature(20, { precision: 0 }),
-          high: formatTemperature(30, { precision: 0 }),
+          low: formatTemperature(20),
+          high: formatTemperature(30),
         });
       case 'from30':
         return t('regen.temperature.andAbove', '{{value}} and above', {
-          value: formatTemperature(30, { precision: 0 }),
+          value: formatTemperature(30),
         });
     }
   };
@@ -103,7 +105,7 @@ export function AmbientTemperatureContext({
                   color={CHART_COLORS[index % CHART_COLORS.length]}
                   sublabel={
                     bucket.energyWeightedRatioPct != null
-                      ? fmtPercent(bucket.energyWeightedRatioPct, 1)
+                      ? fmtPercent(bucket.energyWeightedRatioPct)
                       : '—'
                   }
                 />

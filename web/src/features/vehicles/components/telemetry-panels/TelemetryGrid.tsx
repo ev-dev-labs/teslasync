@@ -4,15 +4,17 @@ import {
 } from 'lucide-react'
 import { StaggerContainer, StaggerItem } from '@/components/motion'
 import { useUnits } from '@/hooks/useUnits'
-import { fmtInt, fmtNumber } from '@/lib/numberFormat'
+
 import { InfoTile } from './InfoTile'
 import type { VehicleState } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TelemetryGridProps {
   state: VehicleState
 }
 
 export function TelemetryGrid({ state }: TelemetryGridProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatDistance, formatSpeed, formatTemperature } = useUnits()
 
@@ -53,7 +55,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Navigation}
           label={t('common.odometer', 'Odometer')}
-          value={formatDistance(state.odometer, { precision: 0 })}
+          value={formatDistance(state.odometer)}
         />
       </StaggerItem>
       <StaggerItem>
@@ -69,7 +71,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           sub={
             state.is_charging && state.time_to_full_charge != null && state.time_to_full_charge > 0
               ? t('telemetry.fullInHours', 'Full in {{hours}}h', {
-                  hours: fmtNumber(state.time_to_full_charge, 1),
+                  hours: fmtNumber(state.time_to_full_charge),
                 })
               : undefined
           }

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
-import { AreaChartWrapper, fmt } from '@/components/charts';
+import { AreaChartWrapper } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
 import { averageKnown, deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
@@ -12,8 +12,10 @@ import type { WidgetProps } from './types';
 import type { ChargingSession } from '../types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -50,10 +52,10 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
     const total = sumKnown(chartData.map(d => d.energy));
     const avg = averageKnown(chartData.map(d => d.energy));
     return [
-      { label: t('widget.chargeHistory.total', 'Total'), value: total == null ? null : fmt(total, 1), unit: unitPrefs.energy },
-      { label: t('widget.chargeHistory.avg', 'Avg'), value: avg == null ? null : fmt(avg, 1), unit: unitPrefs.energy },
+      { label: t('widget.chargeHistory.total', 'Total'), value: total == null ? null : fmt(total), unit: unitPrefs.energy },
+      { label: t('widget.chargeHistory.avg', 'Avg'), value: avg == null ? null : fmt(avg), unit: unitPrefs.energy },
     ];
-  }, [chartData, hasData, t, unitPrefs.energy]);
+  }, [chartData, hasData, t, unitPrefs.energy, fmt]);
 
   if (isCompact) {
     return (

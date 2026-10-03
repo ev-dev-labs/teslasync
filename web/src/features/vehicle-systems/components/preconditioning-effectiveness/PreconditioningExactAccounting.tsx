@@ -9,10 +9,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
 import type { PreconditioningQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningExactAccountingProps {
   summary: PreconditioningSummary;
@@ -48,6 +49,7 @@ export function PreconditioningExactAccounting({
   summary,
   state,
 }: PreconditioningExactAccountingProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const climate = summary.climateRows;
   const drives = summary.driveRows;

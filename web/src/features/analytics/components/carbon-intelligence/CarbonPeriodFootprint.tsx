@@ -95,7 +95,6 @@ export function CarbonPeriodFootprint({
               label={t('carbon.footprint.distance', 'Implied baseline distance')}
               value={display.formatDistance(
                 period.inferredGasBaselineDistanceM,
-                { precision: 1 },
               )}
               subtitle={t(
                 'carbon.footprint.distanceHint',

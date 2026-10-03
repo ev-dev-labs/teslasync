@@ -9,12 +9,14 @@ import {
   convertTempFromSI,
   convertPressureFromSI,
 } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { LatLngExpression } from '@/components/maps';
 import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function useDriveDetailData(id: string) {
+  const { fmtNumber } = useNumberFormatting();
   const driveQuery = useDrive(id);
   const { data: drive, isLoading, error } = driveQuery;
   const { data: vehicle } = useVehicle(String(drive?.vehicleId ?? ''));
@@ -289,7 +291,7 @@ export function useDriveDetailData(id: string) {
     return buckets
       .filter((b) => b.count > 0)
       .map((b) => ({ range: b.range, pct: observedSpeeds.length > 0 ? Math.round((b.count / observedSpeeds.length) * 100) : 0 }));
-  }, [chartData]);
+  }, [chartData, fmtNumber]);
 
   return {
     drive: drive ?? null,

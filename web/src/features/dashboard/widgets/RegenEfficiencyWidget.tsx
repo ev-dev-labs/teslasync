@@ -7,10 +7,11 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetGaugeHero, WidgetStatGrid, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function regenColor(pct: number): string {
   if (pct > 30) return '#10b981';
@@ -19,6 +20,7 @@ function regenColor(pct: number): string {
 }
 
 export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatEnergy } = useUnits();
   const { data: vehicles } = useVehicles();
@@ -42,19 +44,19 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   const stats: GaugeHeroStat[] = useMemo(() => [
     {
       label: t('widget.regenEfficiency.totalKwh', 'Total recovered'),
-      value: formatEnergy(data?.totalRegenWh, { precision: 1 }),
+      value: formatEnergy(data?.totalRegenWh),
     },
     // Do not surface `monthlyAvgRegen`: despite its legacy name, the backend
     // field is average absolute drive power, not measured regenerative power.
     {
       label: t('widget.regenEfficiency.driveEnergy', 'Drive energy'),
-      value: formatEnergy(data?.totalDriveWh, { precision: 1 }),
+      value: formatEnergy(data?.totalDriveWh),
     },
     {
       label: t('widget.regenEfficiency.freeCharges', 'Free charges'),
       value: knownNumber(data?.freeCharges) == null ? '—' : fmtInt(data?.freeCharges),
     },
-  ], [data, t, formatEnergy]);
+  ], [data, t, formatEnergy, fmtInt]);
 
   const gaugeConfig = useMemo(() => ({
     value: Math.round(regenPct ?? 0),

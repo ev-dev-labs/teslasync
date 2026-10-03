@@ -21,7 +21,7 @@ import {
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 import {
@@ -30,6 +30,7 @@ import {
 } from '@/api/hooks/useAnalytics';
 import { AICabinTemperatureImpactNarrative } from '@/components/ai/AICabinTemperatureImpactNarrative';
 import { EfficiencyDetectivePanel } from '../components/EfficiencyDetectivePanel';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ----------------------------------------------------------------*/
 /*  Types */
@@ -96,6 +97,7 @@ function bucketLabel(
 /* ----------------------------------------------------------------*/
 
 export default function TemperatureImpactPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('tempImpact.title', 'Temperature impact'));
 
@@ -247,7 +249,7 @@ export default function TemperatureImpactPage() {
         ),
       },
     ],
-    [t, formatTemperature, formatDistance, toDispEff, effLabel],
+    [t, formatTemperature, formatDistance, toDispEff, effLabel, fmtNumber],
   );
 
   /* --- contextual tips --- */

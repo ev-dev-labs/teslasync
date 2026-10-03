@@ -6,10 +6,11 @@ import { KVList } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt, isFiniteNumber } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import type { DrivetrainHealthData, DrivingStats } from '@/types/driving';
 import { displayTemp } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DetailCardsProps {
   health: DrivetrainHealthData | null | undefined;
@@ -28,6 +29,7 @@ export function DetailCards({
   stats,
   loading = false,
 }: DetailCardsProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTemperature: formatTemperatureUnit, formatEnergy } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
@@ -65,24 +67,24 @@ export function DetailCards({
               },
               {
                 label: t('drivetrain.avgPowerLabel', 'Avg Peak Power'),
-                value: isFiniteNumber(avgPowerMax) && avgPowerMax > 0 ? `${fmtNumber(avgPowerMax, 1)} kW` : '—',
+                value: isFiniteNumber(avgPowerMax) && avgPowerMax > 0 ? `${fmtNumber(avgPowerMax)} kW` : '—',
               },
               {
                 label: t('drivetrain.maxRegenLabel', 'Max Regen'),
                 value:
                   isFiniteNumber(minRegenPower) && minRegenPower < 0
-                    ? `${fmtNumber(Math.abs(minRegenPower), 1)} kW`
+                    ? `${fmtNumber(Math.abs(minRegenPower))} kW`
                     : '—',
               },
               {
                 label: t('drivetrain.regenLabel', 'Total Regen'),
-                value: stats ? formatEnergy(stats.regenEnergyWh, { precision: 1 }) : '—',
+                value: stats ? formatEnergy(stats.regenEnergyWh) : '—',
               },
               {
                 label: t('drivetrain.co2Label', 'CO₂ Saved'),
                 value:
                   stats && isFiniteNumber(stats.co2SavedKg)
-                    ? `${fmtNumber(stats.co2SavedKg, 1)} kg`
+                    ? `${fmtNumber(stats.co2SavedKg)} kg`
                     : '—',
               },
             ]}

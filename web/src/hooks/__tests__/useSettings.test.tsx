@@ -104,6 +104,15 @@ afterEach(() => {
 // ── 1. Derivation branches ────────────────────────────────────────────────────
 
 describe('useSettings — derived flags', () => {
+  it('revalidates unit preferences when a page mounts with a still-fresh settings cache', async () => {
+    const { Wrapper, qc } = makeWrapper()
+    qc.setQueryData(['settings'], { unit_of_length: 'km', locale: 'en-US', decimal_precision: 2 })
+    nextSettings = { unit_of_length: 'mi', locale: 'en-US', decimal_precision: 2 }
+    const { result } = renderHook(() => useSettings(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.isMiles).toBe(true))
+    expect(request).toHaveBeenCalledWith('/settings')
+  })
+
   it('derives the metric branch (km / C / bar / rated) from resolved settings', async () => {
     nextSettings = {
       unit_of_length: 'km',

@@ -17,24 +17,27 @@ import {
 } from '@/components/charts';
 import { useDBStats, useMigrations, useConnectionPool } from '@/api/hooks/useAdmin';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { typography, type NeonColor } from '@/lib/tokens';
 import type { TableInfo } from '@/types/admin';
 import { VisuallyHidden } from '@/components/a11y';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024; // 100MB
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  if (bytes < 1024 * 1024) return `${fmtNumber((bytes / 1024))} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${fmtNumber((bytes / (1024 * 1024)))} MB`;
+  return `${fmtNumber((bytes / (1024 * 1024 * 1024)))} GB`;
 }
 
 type SortKey = 'size' | 'rows' | 'name';
 
 export default function DBHealthPage() {
+  const { fmtInt, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('dbHealth.title', 'DB health'));
   const [sortKey, setSortKey] = useState<SortKey>('size');
@@ -256,7 +259,7 @@ export default function DBHealthPage() {
         className: 'text-right',
       },
     ],
-    [t],
+    [t, fmtInt, displayPrecision, displayLocale],
   );
 
   const sortOptions: SortKey[] = ['size', 'rows', 'name'];

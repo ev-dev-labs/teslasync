@@ -11,7 +11,7 @@
  * the component that owns it and checks the DERIVED render output — never the
  * fixture asserted back against itself:
  *
- *   Vehicle / VehicleState              → <VehicleHero>       (header + gauges + asleep)
+ *   Vehicle / VehicleState              → <VehicleHero>       (header + gauges + unknown readings)
  *   FleetAnalytics / Drive / Charging…  → <FleetStatsBar>     (KPI tiles + raw-value converters)
  *   Drive / ChargingSession / Fleet…    → <RecentActivity>    (SI→display timeline + perf)
  *   Motor/Climate/Security/Tire/Media/  → <LiveTelemetry>     (six panels, null-safety)
@@ -19,7 +19,7 @@
  *   Alert                               → inbox reducer       (no component consumes it)
  *
  * Every consumer is exercised across multiple facets: full data, empty/undefined
- * (no hidden panels), null-heavy frames (em-dash / 0 fallbacks), and the
+ * (no hidden panels), null-heavy frames (explicit unknown readings), and the
  * unit-converter contract (each converter must receive the RAW SI/base value off
  * the DTO, so a double-conversion or wrong-field bug is caught). `react-i18next`
  * is stubbed with a passthrough `t(key, default)` (repo convention) and
@@ -158,14 +158,21 @@ describe('Vehicle + VehicleState (via <VehicleHero>)', () => {
     expect(toDistanceDisplay).toHaveBeenCalledWith(400);
   });
 
-  it('shows the asleep placeholder (no gauges) when VehicleState is null', () => {
-    const { toSpeedDisplay } = renderHero(null);
+  it('preserves unknown status and visible unknown gauges when VehicleState is null', () => {
+    const { toSpeedDisplay, toDistanceDisplay } = renderHero(null);
 
-    expect(screen.getByText('Vehicle asleep — wake to see live data')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Wake up' })).toBeInTheDocument();
-    // Gauges + their converters must not run without a live state.
-    expect(screen.queryByText('Battery')).toBeNull();
+    expect(screen.getByText('No vehicle readings available')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Vehicle asleep — wake to see live data')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Wake up' })).toBeNull();
+    for (const name of ['Battery', 'Range', 'Inside', 'Outside']) {
+      const gauge = screen.getByRole('group', { name });
+      expect(gauge).toHaveTextContent('—');
+      expect(gauge).not.toHaveAttribute('aria-valuenow');
+    }
+    expect(screen.queryByRole('meter')).toBeNull();
     expect(toSpeedDisplay).not.toHaveBeenCalled();
+    expect(toDistanceDisplay).not.toHaveBeenCalled();
   });
 });
 

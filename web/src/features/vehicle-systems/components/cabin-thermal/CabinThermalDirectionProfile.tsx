@@ -9,12 +9,13 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 import type { CabinThermalSummary, SoakEvent } from '../../lib/cabinThermal';
 import { formatTemperatureDelta } from './labels';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalDirectionProfileProps {
   summary: CabinThermalSummary;
@@ -48,6 +49,7 @@ function DirectionCard({
   temperatureUnit: TemperatureUnitPref;
   formatDuration: UnitFormatter;
 }) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const meanR2 = events.length > 0
     ? events.reduce((sum, event) => sum + event.r2, 0) / events.length
@@ -79,7 +81,7 @@ function DirectionCard({
             color="primary"
             className="mt-1"
           >
-            {tauMin != null ? formatDuration(tauMin * 60, { precision: 1 }) : '—'}
+            {tauMin != null ? formatDuration(tauMin * 60) : '—'}
           </Text>
         </div>
         <div>
@@ -91,7 +93,7 @@ function DirectionCard({
             color="primary"
             className="mt-1"
           >
-            {meanR2 != null ? fmtPercent(meanR2 * 100, 1) : '—'}
+            {meanR2 != null ? fmtPercent(meanR2 * 100) : '—'}
           </Text>
         </div>
       </Grid>

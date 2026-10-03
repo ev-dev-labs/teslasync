@@ -121,7 +121,7 @@ export default function EnergyAnatomyPage() {
             <>
               <MetricCard
                 label={t('energyAnatomy.total', 'Energy Used')}
-                value={formatEnergy(anatomy.totalWh, { precision: 1 })}
+                value={formatEnergy(anatomy.totalWh)}
                 subtitle={t('energyAnatomy.driveCount', '{{count}} drives', { count: anatomy.drives })}
                 icon={<Zap className="h-5 w-5" />}
                 color="cyan"
@@ -136,13 +136,13 @@ export default function EnergyAnatomyPage() {
               <MetricCard
                 label={t('energyAnatomy.climateCard', 'Climate Overhead')}
                 value={share(anatomy.climateWh)}
-                subtitle={formatEnergy(anatomy.climateWh, { precision: 1 })}
+                subtitle={formatEnergy(anatomy.climateWh)}
                 icon={<Waypoints className="h-5 w-5" />}
                 color="amber"
               />
               <MetricCard
                 label={t('energyAnatomy.regen', 'Regen Credit')}
-                value={formatEnergy(anatomy.regenWh, { precision: 1 })}
+                value={formatEnergy(anatomy.regenWh)}
                 subtitle={
                   anatomy.totalWh > 0
                     ? t('energyAnatomy.regenShare', '{{pct}}% recovered', {
@@ -188,7 +188,7 @@ export default function EnergyAnatomyPage() {
                 className="min-w-[560px]"
                 role="img"
                 aria-label={t('energyAnatomy.sankey.aria', 'Sankey diagram splitting {{total}} into aero drag, rolling resistance, climate, and other losses', {
-                  total: formatEnergy(anatomy.totalWh, { precision: 1 }),
+                  total: formatEnergy(anatomy.totalWh),
                 })}
               >
                 <g transform="translate(90, 10)">
@@ -253,7 +253,7 @@ export default function EnergyAnatomyPage() {
                     />
                     <Text variant="caption">{t(COMPONENT_META[f.key]!.i18nKey, COMPONENT_META[f.key]!.fallback)}</Text>
                     <Text variant="caption" className="font-mono tabular-nums">
-                      {formatEnergy(f.value, { precision: 1 })}
+                      {formatEnergy(f.value)}
                     </Text>
                   </li>
                 ))}

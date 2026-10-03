@@ -449,6 +449,18 @@ export function useSecurityLatest(vehicleId: number, refetchInterval?: number) {
   });
 }
 
+export function useSentryEvents(vehicleId: number, limit: number) {
+  return useQuery({
+    queryKey: ['security-events', vehicleId, `sentry-log-${limit}`],
+    queryFn: ({ signal }) => request<import('../types').SecurityEvent[]>(
+      `/security?vehicle_id=${vehicleId}&limit=${limit}`, { signal },
+    ),
+    enabled: vehicleId > 0,
+    refetchInterval: 30_000,
+    select: safeArray,
+  });
+}
+
 export function useLatestTirePressure(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['tire-latest', vehicleId],

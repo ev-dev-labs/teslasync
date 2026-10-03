@@ -52,11 +52,11 @@ export function ComfortConsistencyDeviationDistribution({
     band:
       bin.upperC == null
         ? t('comfortConsistency.deviation.over', '> {{value}}', {
-            value: formatDelta(bin.lowerC, { precision: 2 }),
+            value: formatDelta(bin.lowerC),
           })
         : t('comfortConsistency.deviation.range', '{{lower}}-{{upper}}', {
-            lower: formatDelta(bin.lowerC, { precision: 2 }),
-            upper: formatDelta(bin.upperC, { precision: 2 }),
+            lower: formatDelta(bin.lowerC),
+            upper: formatDelta(bin.upperC),
           }),
     samples: bin.samples,
   }));

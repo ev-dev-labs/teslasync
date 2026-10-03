@@ -8,12 +8,14 @@ import { useDashboardStats } from '@/api/hooks/useDashboard';
 import { useVehicleStateMachine, useStateTimeline } from '@/api/hooks/useAdmin';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { formatRelative } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -46,7 +48,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
       label: t('widget.dashboardStats.fsmState', 'FSM state'),
       value: fsmState,
     },
-  ], [dashStats, fsmState, t]);
+  ], [dashStats, fsmState, t, fmtInt]);
 
   const recentTransitions = useMemo(
     () => (isWide ? (timeline.data?.transitions ?? []).slice(0, 5) : []),

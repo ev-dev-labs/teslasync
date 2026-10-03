@@ -1,29 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import {
-  ChartContainer,
-  ChartLegend,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ChartTooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  ChartTimeRangeProvider,
-  useSyncedCursor,
-  useSyncedReferenceLineX,
-  chartGrid,
-  axisTick,
-  fmt,
-  CHART_COLORS,
-  AREA_DEFAULTS,
-  areaGradient,
-} from '@/components/charts';
+import { ChartContainer, ChartLegend, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ChartTooltip, ResponsiveContainer, ReferenceLine, ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX, chartGrid, axisTick, CHART_COLORS, AREA_DEFAULTS, areaGradient } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Trip-replay charts with cursor sync                              */
@@ -111,6 +91,7 @@ function TimelineChart({
   onSeekToIndex,
   height,
 }: TimelineChartProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation();
   const syncProps = useSyncedCursor();
 
@@ -153,12 +134,12 @@ function TimelineChart({
               type="number"
               domain={['dataMin', 'dataMax']}
               {...axisTick}
-              tickFormatter={(v: number) => `${fmt(v, 0)}m`}
+              tickFormatter={(v: number) => `${fmt(v)}m`}
             />
             <YAxis
               yAxisId="speed"
               {...axisTick}
-              tickFormatter={(v: number) => fmt(v, 0)}
+              tickFormatter={(v: number) => fmt(v)}
               label={{
                 value: speedUnit,
                 angle: -90,
@@ -170,7 +151,7 @@ function TimelineChart({
               yAxisId="power"
               orientation="right"
               {...axisTick}
-              tickFormatter={(v: number) => fmt(v, 0)}
+              tickFormatter={(v: number) => fmt(v)}
               label={{
                 value: 'kW',
                 angle: 90,
@@ -179,7 +160,7 @@ function TimelineChart({
               }}
             />
             <Tooltip
-              content={<ChartTooltip labelFormatter={(v) => `${fmt(v, 1)} min`} />}
+              content={<ChartTooltip labelFormatter={(v) => `${fmt(v)} min`} />}
             />
             <ChartLegend />
             <Area

@@ -51,13 +51,14 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { typography, chartTokens } from '@/lib/tokens';
 import { COLOR } from '@/lib/colors';
 import { Icons } from '@/lib/icons';
 import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -571,6 +572,7 @@ function CategoryGaugeCard({
 /* ------------------------------------------------------------------ */
 
 export default function DriveScorePage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('driveScore.title', 'Drive Score'));
 

@@ -51,7 +51,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useSafety, useSafetyHistory } from '@/api/hooks/useVehicleSystems';
 import { useSecurityLatest } from '@/api/hooks/useVehicles';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import {
@@ -60,6 +60,7 @@ import {
   type SafetyEnumField,
 } from '@/lib/safetyEnum';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -429,6 +430,7 @@ function KpiSkeleton() {
 /* ------------------------------------------------------------------ */
 
 export default function SafetySettingsPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('safety.title', 'Safety settings'));
   const { unitPrefs } = useUnits();

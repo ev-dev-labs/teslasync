@@ -7,10 +7,11 @@ import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetGaugeHero, WidgetStatGrid, type GaugeHeroConfig, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Average consumption (Wh/km, SI) that maps to a perfect 100 score. */
 const SCORE_REFERENCE_WH_KM = 250;
@@ -47,6 +48,7 @@ export function toEfficiencyDisplay(whPerKm: number, isMiles: boolean): number {
 }
 
 export default function DriveScoreWidget({ size }: WidgetProps) {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const query = useFleetAnalytics(7);
   const {
@@ -93,10 +95,10 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
   const stats = useMemo<GaugeHeroStat[]>(() => [
     {
       label: t('widget.efficiency', 'Efficiency'),
-      value: efficiency == null ? '—' : fmtNumber(toEfficiencyDisplay(efficiency, isMiles), 0),
+      value: efficiency == null ? '—' : fmtNumber(toEfficiencyDisplay(efficiency, isMiles)),
       unit: efficiencyUnit,
     },
-  ], [t, efficiency, isMiles, efficiencyUnit]);
+  ], [t, efficiency, isMiles, efficiencyUnit, fmtNumber, displayPrecision, displayLocale]);
 
   return (
     <WidgetShell

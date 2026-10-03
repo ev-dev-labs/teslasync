@@ -5,11 +5,12 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function locationBadge(
   snapshot: { located_at_home?: boolean; located_at_work?: boolean; located_at_favorite?: boolean } | null | undefined,
@@ -22,6 +23,7 @@ function locationBadge(
 }
 
 export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -191,7 +193,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
           <div className="flex flex-col items-center gap-0.5">
             <span className="text-xl font-semibold tabular-nums text-[var(--text-primary)]">
-              {fmtNumber(displayDistance, 1)}
+              {fmtNumber(displayDistance)}
             </span>
             <span className="text-2xs text-[var(--text-muted)] tracking-wider">
               {distanceUnit}
@@ -216,7 +218,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
           </div>
           <div className="flex justify-between text-2xs text-[var(--text-muted)]">
             <span>{t('widget.destinationETA.remaining', 'Remaining')}</span>
-            <span>{fmtNumber(displayDistance, 1)} {distanceUnit}</span>
+            <span>{fmtNumber(displayDistance)} {distanceUnit}</span>
           </div>
         </div>
       </div>

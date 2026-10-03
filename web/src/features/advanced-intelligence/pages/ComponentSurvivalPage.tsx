@@ -12,12 +12,14 @@ import { Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { EvidencePanel, InsightPanel } from '../components';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 12;
 
 export default function ComponentSurvivalPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -72,7 +74,7 @@ export default function ComponentSurvivalPage() {
                   <StatCard
                     label={t('advancedIntelligence.survival.probability', 'Survival probability')}
                     value={item.survival_probability_pct != null
-                      ? `${fmtNumber(item.survival_probability_pct, 1)}%` : null}
+                      ? `${fmtNumber(item.survival_probability_pct)}%` : null}
                   />
                   <StatCard
                     label={t('advancedIntelligence.survival.p10', 'P10 horizon')}
@@ -99,7 +101,7 @@ export default function ComponentSurvivalPage() {
                         value={risk.probability_pct}
                         max={100}
                         color={CHART_COLORS[0]}
-                        sublabel={`${fmtNumber(risk.probability_pct, 1)}%`}
+                        sublabel={`${fmtNumber(risk.probability_pct)}%`}
                       />
                     ) : (
                       <div key={risk.risk} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2">
@@ -123,7 +125,7 @@ export default function ComponentSurvivalPage() {
                   </Text>
                   <Text as="p" variant="bodySm">
                     {item.intervention_sensitivity.intervention}: {fmtNumber(
-                      item.intervention_sensitivity.assumed_hazard_delta_pct, 1,
+                      item.intervention_sensitivity.assumed_hazard_delta_pct,
                     )}% · {t('advancedIntelligence.survival.adjustedP50', 'adjusted P50 {{value}}', {
                       value: units.formatDuration(item.intervention_sensitivity.adjusted_p50_s),
                     })}

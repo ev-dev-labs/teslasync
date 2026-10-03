@@ -37,12 +37,14 @@ import { TripShareImportBanner } from '../components/TripShareImportBanner';
 import { useTripShareTarget } from '../hooks/useTripShareTarget';
 import type { TripLocation, TripPlan, TripPlanRequest } from '@/types/driving';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PLACEHOLDER = '—';
 
 export default function TripPlannerPage() {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('tripPlanner.title', 'Trip Planner'));
   const { unitPrefs, formatEnergy } = useUnits();
@@ -151,7 +153,7 @@ export default function TripPlannerPage() {
       key: 'distance',
       label: t('tripPlanner.stats.distance', 'Distance'),
       value: route
-        ? `${convertDistanceFromSI(route.total_distance_m, distanceUnit).toFixed(0)} ${distanceUnit}`
+        ? `${fmtNumber(convertDistanceFromSI(route.total_distance_m, distanceUnit))} ${distanceUnit}`
         : PLACEHOLDER,
       icon: <Route className="h-4 w-4" />,
       color: 'cyan' as const,
@@ -180,7 +182,7 @@ export default function TripPlannerPage() {
     {
       key: 'energy',
       label: t('tripPlanner.stats.energy', 'Energy'),
-      value: route ? formatEnergy(route.total_energy_wh, { precision: 1 }) : PLACEHOLDER,
+      value: route ? formatEnergy(route.total_energy_wh) : PLACEHOLDER,
       icon: <Battery className="h-4 w-4" />,
       color: 'purple' as const,
     },
@@ -193,7 +195,7 @@ export default function TripPlannerPage() {
       icon: <DollarSign className="h-4 w-4" />,
       color: 'green' as const,
     },
-  ], [route, distanceUnit, formatEnergy, formatCurrency, t]);
+  ], [route, distanceUnit, formatEnergy, formatCurrency, t, displayPrecision, displayLocale, fmtNumber]);
 
   return (
     <PageContainer
@@ -417,7 +419,7 @@ export default function TripPlannerPage() {
                       {weather.avg_temp_c != null && (
                         <Caption className="mt-1 block">
                           {t('tripPlanner.weather.factor', 'Efficiency factor: {{factor}}×', {
-                            factor: fmtNumber(weather.efficiency_factor, 2),
+                            factor: fmtNumber(weather.efficiency_factor),
                           })}
                         </Caption>
                       )}

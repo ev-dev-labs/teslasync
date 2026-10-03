@@ -10,11 +10,12 @@ import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
 import type { DrivingRhythmSectionState } from './types';
 import { useRhythmDayLabel } from './useRhythmDayLabel';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, xl: 4 } as const;
 
@@ -28,6 +29,7 @@ export function DrivingRhythmKpis({
   error,
   onRetry,
 }: DrivingRhythmKpisProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const dayLabel = useRhythmDayLabel();
   const favorite = summary.favorite;

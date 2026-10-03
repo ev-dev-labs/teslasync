@@ -67,7 +67,7 @@ describe('Pressure — source selection', () => {
   it('exposes the raw caller bar value with its source unit via the title', () => {
     setUnits('bar');
     const { container } = render(<Pressure bar={2.4} precision={1} />);
-    expect(span(container)?.getAttribute('title')).toBe('2.40 bar');
+    expect(span(container)?.getAttribute('title')).toBe('2.4 bar');
   });
 
   it('converts a psi input to bar for display but keeps the psi source title', () => {
@@ -75,7 +75,7 @@ describe('Pressure — source selection', () => {
     const { container } = render(<Pressure psi={35} precision={1} />);
     // 35 psi ≈ 241.32 kPa ≈ 2.41 bar → 2.4 at 1dp; title still reflects psi.
     expect(container.textContent).toBe('2.4 bar');
-    expect(span(container)?.getAttribute('title')).toBe('35.00 psi');
+    expect(span(container)?.getAttribute('title')).toBe('35.0 psi');
   });
 
   it('prefers the bar input over psi when both are supplied', () => {
@@ -83,28 +83,28 @@ describe('Pressure — source selection', () => {
     const { container } = render(<Pressure bar={2.4} psi={99} precision={1} />);
     expect(container.textContent).toBe('2.4 bar');
     // Title proves the bar branch (not psi) produced the value.
-    expect(span(container)?.getAttribute('title')).toBe('2.40 bar');
+    expect(span(container)?.getAttribute('title')).toBe('2.4 bar');
   });
 
   it('falls back to the psi branch when bar is null but psi is finite', () => {
     setUnits('bar');
     const { container } = render(<Pressure bar={null} psi={35} precision={1} />);
     expect(container.textContent).toBe('2.4 bar');
-    expect(span(container)?.getAttribute('title')).toBe('35.00 psi');
+    expect(span(container)?.getAttribute('title')).toBe('35.0 psi');
   });
 
   it('falls back to the psi branch when bar is NaN but psi is finite', () => {
     setUnits('bar');
     const { container } = render(<Pressure bar={NaN} psi={35} precision={1} />);
     expect(container.textContent).toBe('2.4 bar');
-    expect(span(container)?.getAttribute('title')).toBe('35.00 psi');
+    expect(span(container)?.getAttribute('title')).toBe('35.0 psi');
   });
 
   it('falls back to the psi branch when bar is Infinity but psi is finite', () => {
     setUnits('bar');
     const { container } = render(<Pressure bar={Infinity} psi={35} precision={1} />);
     expect(container.textContent).toBe('2.4 bar');
-    expect(span(container)?.getAttribute('title')).toBe('35.00 psi');
+    expect(span(container)?.getAttribute('title')).toBe('35.0 psi');
   });
 });
 
@@ -114,7 +114,7 @@ describe('Pressure — imperial (psi) preference', () => {
     const { container } = render(<Pressure psi={35} precision={0} />);
     // psi → kPa → psi round-trips through the shared constant, so 35 stays 35.
     expect(container.textContent).toBe('35 psi');
-    expect(span(container)?.getAttribute('title')).toBe('35.00 psi');
+    expect(span(container)?.getAttribute('title')).toBe('35 psi');
   });
 
   it('converts a bar input to psi when the user prefers psi', () => {
@@ -122,7 +122,7 @@ describe('Pressure — imperial (psi) preference', () => {
     const { container } = render(<Pressure bar={2.4} precision={0} />);
     // 2.4 bar = 240 kPa ≈ 34.8 psi → 35 at 0dp; title still reflects bar.
     expect(container.textContent).toBe('35 psi');
-    expect(span(container)?.getAttribute('title')).toBe('2.40 bar');
+    expect(span(container)?.getAttribute('title')).toBe('2 bar');
   });
 
   it('keeps a finer-precision bar→psi conversion visible', () => {
@@ -187,21 +187,21 @@ describe('Pressure — zero & negative readings', () => {
     const { container } = render(<Pressure bar={0} precision={1} />);
     expect(container.textContent).toBe('0.0 bar');
     expect(container.textContent).not.toBe('—');
-    expect(span(container)?.getAttribute('title')).toBe('0.00 bar');
+    expect(span(container)?.getAttribute('title')).toBe('0.0 bar');
   });
 
   it('treats zero psi as a valid reading and converts it to 0 bar', () => {
     setUnits('bar');
     const { container } = render(<Pressure psi={0} precision={1} />);
     expect(container.textContent).toBe('0.0 bar');
-    expect(span(container)?.getAttribute('title')).toBe('0.00 psi');
+    expect(span(container)?.getAttribute('title')).toBe('0.0 psi');
   });
 
   it('preserves the sign of a negative bar delta', () => {
     setUnits('bar');
     const { container } = render(<Pressure bar={-2} precision={1} />);
     expect(container.textContent).toBe('-2.0 bar');
-    expect(span(container)?.getAttribute('title')).toBe('-2.00 bar');
+    expect(span(container)?.getAttribute('title')).toBe('-2.0 bar');
   });
 });
 
@@ -235,26 +235,26 @@ describe('Pressure — formatting & precision', () => {
 });
 
 describe('Pressure — title (canonical hover value)', () => {
-  it('exposes the raw bar value at a fixed 2-decimal precision', () => {
+  it('formats the bar title with the requested precision', () => {
     setUnits('bar');
     const { container } = render(<Pressure bar={2.4} precision={1} />);
-    expect(span(container)?.getAttribute('title')).toBe('2.40 bar');
+    expect(span(container)?.getAttribute('title')).toBe('2.4 bar');
   });
 
-  it('keeps the title at 2 decimals independent of the display precision', () => {
+  it('uses the display precision for the title too', () => {
     setUnits('bar');
     const { container } = render(<Pressure bar={2.4} precision={0} />);
-    // Display collapses to "2 bar" but the hover title stays canonical.
+    // The explicit integer override applies to both display and title.
     expect(container.textContent).toBe('2 bar');
-    expect(span(container)?.getAttribute('title')).toBe('2.40 bar');
+    expect(span(container)?.getAttribute('title')).toBe('2 bar');
   });
 
-  it('keeps the canonical title free of locale grouping separators', () => {
+  it('uses locale grouping separators in the title', () => {
     setGlobalLocale('de-DE');
     setUnits('psi');
     const { container } = render(<Pressure psi={12345} precision={0} />);
-    // toFixed(2) is locale-agnostic, so the title never picks up de-DE grouping.
-    expect(span(container)?.getAttribute('title')).toBe('12345.00 psi');
+    // Titles follow the same locale as the visible measurement.
+    expect(span(container)?.getAttribute('title')).toBe('12.345 psi');
   });
 });
 
@@ -265,7 +265,7 @@ describe('Pressure — DOM & re-render', () => {
     const el = span(container);
     expect(el).not.toBeNull();
     expect(el?.tagName).toBe('SPAN');
-    expect(el?.getAttribute('title')).toBe('2.40 bar');
+    expect(el?.getAttribute('title')).toBe('2.4 bar');
   });
 
   it('applies the className to the rendered value span', () => {

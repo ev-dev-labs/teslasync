@@ -7,12 +7,13 @@ import { deriveDataState, knownNumber } from '@/api/dataState';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Format an "hours until full charge" value into a compact "Hh Mm" label.
@@ -134,10 +135,11 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
 
 /* ── Compact: charging ── */
 function CompactChargingView({ power, batteryLevel }: { power: number | null; batteryLevel: number | null }) {
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <BatteryCharging className="h-5 w-5 text-neon-green animate-pulse" />
-      <WidgetBigNumber value={power == null ? null : `${fmtNumber(power, 1)} kW`} animated={false} align="center" size="secondary" />
+      <WidgetBigNumber value={power == null ? null : `${fmtNumber(power)} kW`} animated={false} align="center" size="secondary" />
       <span className={dashboardTokens.metricLabel}>{batteryLevel == null ? '—' : `${batteryLevel}%`}</span>
     </div>
   );
@@ -171,6 +173,7 @@ interface FullChargingViewProps {
 }
 
 function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, t }: FullChargingViewProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { power, voltage, amps, energyAdded, timeToFull, chargeRate, batteryLevel } = metrics;
 
   return (
@@ -188,7 +191,7 @@ function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, t 
 
       {/* Primary metric: power */}
       <div className="text-center">
-        <WidgetBigNumber value={power == null ? null : `${fmtNumber(power, 1)} kW`} animated={false} align="center" valueColor="text-emerald-300" />
+        <WidgetBigNumber value={power == null ? null : `${fmtNumber(power)} kW`} animated={false} align="center" valueColor="text-emerald-300" />
       </div>
 
       {/* Secondary metrics grid */}
@@ -196,12 +199,12 @@ function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, t 
         <MetricCell
           icon={<Gauge className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.voltage', 'Voltage')}
-          value={voltage != null ? `${fmtNumber(voltage, 0)} V` : '—'}
+          value={voltage != null ? `${fmtNumber(voltage)} V` : '—'}
         />
         <MetricCell
           icon={<Zap className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.amps', 'Current')}
-          value={amps != null ? `${fmtNumber(amps, 0)} A` : '—'}
+          value={amps != null ? `${fmtNumber(amps)} A` : '—'}
         />
         <MetricCell
           icon={<Timer className="h-3 w-3 text-[var(--text-muted)]" />}
@@ -211,7 +214,7 @@ function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, t 
         <MetricCell
           icon={<Zap className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.energyAdded', 'Added')}
-          value={energyAdded == null ? '—' : `${fmtNumber(convertEnergyFromSI(energyAdded, 'kWh'), 1)} kWh`}
+          value={energyAdded == null ? '—' : `${fmtNumber(convertEnergyFromSI(energyAdded, 'kWh'))} kWh`}
         />
       </div>
 
@@ -221,7 +224,7 @@ function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, t 
           <MetricCell
             icon={<Gauge className="h-3 w-3 text-[var(--text-muted)]" />}
             label={t('widget.chargeRate', 'Rate')}
-            value={chargeRate == null ? '—' : `${fmtNumber(toDistanceDisplay(chargeRate), 0)} ${distanceUnit}/h`}
+            value={chargeRate == null ? '—' : `${fmtNumber(toDistanceDisplay(chargeRate))} ${distanceUnit}/h`}
           />
           <MetricCell
             icon={<BatteryCharging className="h-3 w-3 text-[var(--text-muted)]" />}
@@ -247,6 +250,7 @@ interface IdleViewProps {
 }
 
 function IdleView({ metrics, latestSession, statusLabel, t }: IdleViewProps) {
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="h-full flex flex-col items-center justify-center gap-3">
       <Plug className="h-6 w-6 text-[var(--text-muted)]" />
@@ -263,7 +267,7 @@ function IdleView({ metrics, latestSession, statusLabel, t }: IdleViewProps) {
             {t('widget.lastSession', 'Last session')}
           </p>
           <p className={dashboardTokens.secondaryMetric}>
-            {latestSession && metrics.energyAdded != null ? `${metrics.energyAdded > 0 ? '+' : ''}${fmtNumber(convertEnergyFromSI(metrics.energyAdded, 'kWh'), 1)} kWh` : '—'}
+            {latestSession && metrics.energyAdded != null ? `${metrics.energyAdded > 0 ? '+' : ''}${fmtNumber(convertEnergyFromSI(metrics.energyAdded, 'kWh'))} kWh` : '—'}
           </p>
         </div>
     </div>

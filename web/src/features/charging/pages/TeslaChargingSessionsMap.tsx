@@ -4,9 +4,10 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { MapContainer, MarkerCluster } from '@/components/maps';
 import { MapTileLayer } from '@/components/maps';
 import type { TeslaChargingSession } from '@/api/hooks/useCharging';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatDateTime } from '@/lib/dateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface Props {
   sessions: TeslaChargingSession[];
@@ -47,6 +48,7 @@ function escapeHtml(str: string): string {
 }
 
 export default function TeslaChargingSessionsMap({ sessions }: Props) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -80,10 +82,10 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
         const siteName = escapeHtml(displayName);
         const energy =
           s.total_energy_added_wh != null
-            ? `<p>${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh, 'kWh'), 1)} kWh</p>`
+            ? `<p>${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh, 'kWh'))} kWh</p>`
             : '';
         const cost =
-          s.total_cost != null ? `<p>${formatCurrency(s.total_cost, 2)}</p>` : '';
+          s.total_cost != null ? `<p>${formatCurrency(s.total_cost)}</p>` : '';
         const charger = s.charger_type
           ? `<p>${escapeHtml(String(s.charger_type))}</p>`
           : '';
@@ -104,7 +106,7 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
           }) as string,
         };
       }),
-    [locatedSessions, t, formatCurrency],
+    [locatedSessions, t, formatCurrency, fmtNumber],
   );
 
   return (

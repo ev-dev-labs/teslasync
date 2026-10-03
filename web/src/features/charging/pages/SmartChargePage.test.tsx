@@ -566,8 +566,8 @@ describe('SmartChargePage — after a successful optimization', () => {
     expect(within(kpi).getByText('$8.50')).toBeInTheDocument(); // charge now
     expect(within(kpi).getByText('$3.25')).toBeInTheDocument(); // optimized
     expect(within(kpi).getByText('$5.25')).toBeInTheDocument(); // savings
-    expect(within(kpi).getByText('42.0 kWh')).toBeInTheDocument(); // energy
-    expect(within(kpi).getByText(/62%/)).toBeInTheDocument(); // savings_percent delta
+    expect(within(kpi).getByText('42.00 kWh')).toBeInTheDocument(); // energy
+    expect(within(kpi).getByText(/61\.80%/)).toBeInTheDocument(); // savings_percent delta
     // Scoped to the KPI band: sibling sections (Autopilot preview placeholders)
     // legitimately render '—' until they have their own data.
     expect(within(kpi).queryAllByText('—')).toHaveLength(0);

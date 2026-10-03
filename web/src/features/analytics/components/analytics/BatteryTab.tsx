@@ -13,12 +13,14 @@ import {
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { MetricBandSkeleton } from './helpers';
 import type { FleetAnalyticsQuery } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -57,27 +59,27 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
           <MetricCard
             label={t('analytics.battery.healthScore', 'Health score')}
-            value={latest ? fmtNumber(safe(latest.health_score), 1) : '—'}
+            value={latest ? fmtNumber(safe(latest.health_score)) : '—'}
             subtitle="%"
             icon={<Heart className="h-4 w-4" />}
             color="green"
           />
           <MetricCard
             label={t('analytics.battery.capacity', 'Capacity')}
-            value={latest ? formatEnergy(safe(latest.capacity_wh), { precision: 1 }) : '—'}
+            value={latest ? formatEnergy(safe(latest.capacity_wh)) : '—'}
             icon={<Battery className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
             label={t('analytics.battery.degradation', 'Degradation')}
-            value={latest ? fmtNumber(safe(latest.degradation_pct), 2) : '—'}
+            value={latest ? fmtNumber(safe(latest.degradation_pct)) : '—'}
             subtitle="%"
             icon={<TrendingUp className="h-4 w-4" />}
             color="amber"
           />
           <MetricCard
             label={t('analytics.battery.estRange', 'Est. range')}
-            value={latest ? fmtNumber(fromKm(safe(latest.range_km)), 0) : '—'}
+            value={latest ? fmtNumber(fromKm(safe(latest.range_km))) : '—'}
             subtitle={distanceUnit}
             icon={<MapPin className="h-4 w-4" />}
             color="purple"

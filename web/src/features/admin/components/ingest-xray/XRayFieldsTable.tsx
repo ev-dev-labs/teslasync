@@ -16,9 +16,10 @@ import {
   type Column,
 } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { formatValueKind } from '@/api/hooks/useIngestXRay';
 import type { IngestXRayFieldStat } from '@/types/admin-diagnostics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface XRayFieldsTableProps {
   rows: IngestXRayFieldStat[];
@@ -39,6 +40,7 @@ function lastSeenEpoch(value: string | null | undefined): number {
 }
 
 export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { sortKey, sortDir, onSort } = useSortToggle('sample_count', 'desc');
 
@@ -106,7 +108,7 @@ export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
         ),
       },
     ],
-    [t],
+    [t, fmtInt],
   );
 
   return (

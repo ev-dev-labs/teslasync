@@ -23,6 +23,7 @@ import { chartTokens } from '@/lib/tokens';
 import { formatDateShort } from '@/lib/dateFormat';
 
 import { analyzeFirmwareImpact, type ImpactVerdict } from '../lib/firmwareImpact';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const VERDICT_BADGE: Record<ImpactVerdict, 'success' | 'danger' | 'neutral' | 'warning'> = {
   better: 'success',
@@ -39,6 +40,7 @@ const VERDICT_DEFAULT: Record<ImpactVerdict, string> = {
 };
 
 export default function FirmwareImpactPage() {
+  const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('firmwareImpact.title', 'Firmware impact'));
 
@@ -335,7 +337,7 @@ export default function FirmwareImpactPage() {
                       {t('firmwareImpact.stats', 'p · d')}
                     </Text></th><td className="text-right"><Text variant="bodySm">
                       {i.p != null && i.cohensD != null
-                        ? `${i.p < 0.001 ? '<0.001' : i.p.toFixed(3)} · ${Math.abs(i.cohensD).toFixed(2)}`
+                        ? `${i.p < 0.001 ? '<0.001' : fmtScientificNumber(i.p, 3)} · ${fmtNumber(Math.abs(i.cohensD))}`
                         : '—'}
                     </Text></td></tr>
                     </tbody>

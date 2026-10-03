@@ -6,12 +6,14 @@ import { Grid } from '@/components/layout';
 import { Badge, Card, CardHeader } from '@/components/ui';
 import { KVList } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { getExtendedHealth } from '@/api/devtools';
 import { AccordionSection } from './AccordionSection';
 import { statusToBadgeVariant, formatUptime } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function HealthProbesSection() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['system-status', 'extended-health'],
@@ -98,7 +100,7 @@ export function HealthProbesSection() {
           <KVList
             items={[
               { label: t('systemStatus.database', 'Database'), value: dbStatus },
-              { label: t('systemStatus.latency', 'Latency'), value: dbLatency != null ? `${fmtNumber(dbLatency, 1)} ms` : '—' },
+              { label: t('systemStatus.latency', 'Latency'), value: dbLatency != null ? `${fmtNumber(dbLatency)} ms` : '—' },
               { label: t('systemStatus.probes.poolConns', 'Pool connections'), value: fmtInt(pool?.total_conns ?? 0) },
             ]}
           />

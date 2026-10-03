@@ -19,7 +19,8 @@ import {
   axisTick,
 } from '@/components/charts';
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface DepartureForecastNext24Row {
   slotId: number;
@@ -50,6 +51,7 @@ export function DepartureForecastNext24Plot({
   hiddenSeries: externalHiddenSeries,
   ariaLabel,
 }: DepartureForecastNext24PlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const effectiveAriaLabel =
@@ -65,15 +67,15 @@ export function DepartureForecastNext24Plot({
       {
         key: 'likelihood',
         label: likelihoodName,
-        format: (v) => `${fmtNumber(v as number, 1, locale)}%`,
+        format: (v) => `${fmtNumber(v as number, undefined, locale)}%`,
       },
       {
         key: 'cumulative',
         label: cumulativeName,
-        format: (v) => `${fmtNumber(v as number, 1, locale)}%`,
+        format: (v) => `${fmtNumber(v as number, undefined, locale)}%`,
       },
     ],
-    [t, likelihoodName, cumulativeName, locale],
+    [t, likelihoodName, cumulativeName, locale, fmtNumber],
   );
   const chartRows = useMemo(
     () => rows.map(({ slot, likelihood, cumulative }) => ({ slot, likelihood, cumulative })),
@@ -116,7 +118,7 @@ export function DepartureForecastNext24Plot({
                 content={
                   <ChartTooltip
                     valueFormatter={(value) =>
-                      `${fmtNumber(value, 1, locale)}%`
+                      `${fmtNumber(value, undefined, locale)}%`
                     }
                   />
                 }

@@ -93,7 +93,7 @@ export function TopDrivingDaysPanel({
                 </Caption>
               </div>
               <MetricValue className="shrink-0 text-lg">
-                {formatDistance(day.distanceM, { precision: 1 })}
+                {formatDistance(day.distanceM)}
               </MetricValue>
             </li>
           ))}

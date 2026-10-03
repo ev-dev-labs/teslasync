@@ -13,11 +13,12 @@ import {
   type Column,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { LocationDwell, ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TopParkingLocationsProps {
   summary: ParkingSummary;
@@ -31,6 +32,7 @@ export function TopParkingLocations({
   state,
   className,
 }: TopParkingLocationsProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
   const ongoing = summary.stints.find((stint) => stint.ongoing);
@@ -75,12 +77,12 @@ export function TopParkingLocations({
         key: 'totalMs',
         header: t('parking.dwell', 'Time parked'),
         filterValue: (row) => row.totalMs / 1_000,
-        filterValueLabel: (_value, row) => formatDuration(row.totalMs / 1_000, { precision: 1 }),
+        filterValueLabel: (_value, row) => formatDuration(row.totalMs / 1_000),
         align: 'right',
         visibleOnMobile: true,
         render: (row) => (
           <Text variant="body" mono>
-            {formatDuration(row.totalMs / 1_000, { precision: 1 })}
+            {formatDuration(row.totalMs / 1_000)}
           </Text>
         ),
       },
@@ -88,16 +90,16 @@ export function TopParkingLocations({
         key: 'share',
         header: t('parking.share', 'Share'),
         filterValue: (row) => row.share,
-        filterValueLabel: (_value, row) => `${fmtNumber(row.share * 100, 0)}%`,
+        filterValueLabel: (_value, row) => `${fmtNumber(row.share * 100)}%`,
         align: 'right',
         render: (row) => (
           <Text variant="body" mono>
-            {fmtNumber(row.share * 100, 0)}%
+            {fmtNumber(row.share * 100)}%
           </Text>
         ),
       },
     ],
-    [formatDuration, ongoing, t],
+    [formatDuration, ongoing, t, fmtInt, fmtNumber],
   );
 
   return (

@@ -17,8 +17,8 @@ export type Translate = (key: string, fallback: string, options?: Record<string,
 export const pagination = { defaultPageSize: 25, pageSizeOptions: [25, 50, 100] };
 export const unknown = (t: Translate) => t('teslaOnly.unknown', 'unknown');
 export const time = (value: string | null | undefined, t: Translate) => value ? formatDateTime(value) : unknown(t);
-export const seconds = (value: number | null | undefined, t: Translate) => value == null ? unknown(t) : `${fmtNumber(value, 0)} s`;
-export const hours = (value: number | null | undefined, t: Translate) => value == null ? unknown(t) : `${fmtNumber(value, 1)} h`;
+export const seconds = (value: number | null | undefined, t: Translate) => value == null ? unknown(t) : `${fmtNumber(value)} s`;
+export const hours = (value: number | null | undefined, t: Translate) => value == null ? unknown(t) : `${fmtNumber(value)} h`;
 export const yesNo = (value: boolean | null | undefined, t: Translate) =>
   value == null ? unknown(t) : value ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No');
 

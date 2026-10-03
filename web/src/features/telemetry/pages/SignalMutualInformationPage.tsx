@@ -17,9 +17,10 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { cn } from '@/lib/cn';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import { analyzeSignalMutualInformation } from '../lib/signalMutualInformation';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 const HISTORY_HOURS = 24;
 function heatClass(contribution: number, maximum: number): string {
   const strength = maximum > 0 ? Math.abs(contribution) / maximum : 0;
@@ -34,6 +35,7 @@ function heatClass(contribution: number, maximum: number): string {
   return cn(tone, opacity);
 }
 export default function SignalMutualInformationPage() {
+  const { fmtInt, fmtNumber, fmtScientificNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('signalMutualInformation.title', 'Signal mutual information'));
   const { vehicleId } = useSelectedVehicle();
@@ -196,16 +198,16 @@ export default function SignalMutualInformationPage() {
             <>
               <MetricCard
                 label={t('signalMutualInformation.kpis.samples', 'Aligned samples')}
-                value={result != null ? fmtNumber(result.alignedCount, 0) : '—'}
+                value={result != null ? fmtInt(result.alignedCount) : '—'}
                 subtitle={t('signalMutualInformation.kpis.cadence', '{{seconds}} s robust cadence', {
-                  seconds: result != null ? fmtNumber(result.cadenceMs / 1_000, 1) : '—',
+                  seconds: result != null ? fmtNumber(result.cadenceMs / 1_000) : '—',
                 })}
                 icon={<Boxes className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('signalMutualInformation.kpis.mi', 'Mutual information')}
-                value={result != null ? fmtNumber(result.mutualInformation, 3) : '—'}
+                value={result != null ? fmtScientificNumber(result.mutualInformation, 3) : '—'}
                 subtitle={t('signalMutualInformation.kpis.bits', 'bits of shared state information')}
                 icon={<Grid3X3 className="h-5 w-5" />}
                 color="purple"
@@ -213,7 +215,7 @@ export default function SignalMutualInformationPage() {
               <MetricCard
                 label={t('signalMutualInformation.kpis.normalized', 'Normalized MI')}
                 value={result != null
-                  ? fmtPercent(result.normalizedMutualInformation * 100, 1)
+                  ? fmtPercent(result.normalizedMutualInformation * 100)
                   : '—'}
                 subtitle={t('signalMutualInformation.kpis.range', '0% independent · 100% determined')}
                 icon={<Network className="h-5 w-5" />}
@@ -227,7 +229,7 @@ export default function SignalMutualInformationPage() {
                     ? t('signalMutualInformation.kpis.detected', 'Detected')
                     : t('signalMutualInformation.kpis.null', 'Null-like')}
                 subtitle={t('signalMutualInformation.kpis.threshold', '95% null threshold {{value}}', {
-                  value: result != null ? fmtNumber(result.nullThreshold, 3) : '—',
+                  value: result != null ? fmtScientificNumber(result.nullThreshold, 3) : '—',
                 })}
                 icon={<Shuffle className="h-5 w-5" />}
                 color={result?.significant ? 'green' : 'amber'}
@@ -309,7 +311,7 @@ export default function SignalMutualInformationPage() {
                       a: cell.aBin + 1,
                       b: cell.bBin + 1,
                       count: cell.count,
-                      bits: fmtNumber(cell.contribution, 3),
+                      bits: fmtScientificNumber(cell.contribution, 3),
                     },
                   )}
                 >
@@ -322,12 +324,12 @@ export default function SignalMutualInformationPage() {
                   <Text as="p" variant="caption">
                     {t('signalMutualInformation.heatmap.value', '{{count}} samples · {{bits}} bits', {
                       count: cell.count,
-                      bits: fmtNumber(cell.contribution, 3),
+                      bits: fmtScientificNumber(cell.contribution, 3),
                     })}
                   </Text>
                   {cell.count > 0 ? (
                     <Badge variant="info" size="sm" className="mt-1">
-                      {fmtPercent(cell.probability * 100, 1)}
+                      {fmtPercent(cell.probability * 100)}
                     </Badge>
                   ) : null}
                 </div>

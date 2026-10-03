@@ -29,6 +29,8 @@ export {
   type TreeLeaf,
 } from './TreeSelect';
 export { UnitInput, type UnitInputProps } from './UnitInput';
+export { SignalUnitInput, type SignalUnitInputProps } from './SignalUnitInput';
+export { UnitListInput } from './UnitListInput';
 export {
   ValidationSummary,
   type ValidationSummaryProps,

@@ -9,9 +9,10 @@ import {
 import { FadeIn } from '@/components/motion';
 import { Table } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type TireKey = 'tireFl' | 'tireFr' | 'tireRl' | 'tireRr';
 
@@ -49,6 +50,7 @@ interface WheelSummary {
 }
 
 export function TirePressureSection({ chartData, stats }: TirePressureSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const pressureUnit = unitPrefs.pressure;

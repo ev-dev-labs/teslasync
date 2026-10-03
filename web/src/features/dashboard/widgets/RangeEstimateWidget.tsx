@@ -23,7 +23,7 @@ export function formatRange(
   distanceUnit: DistanceUnitPref,
 ): string {
   if (!isFiniteNumber(meters)) return '—';
-  return `${fmtNumber(convertDistanceFromSI(meters, distanceUnit), 0)} ${distanceUnit}`;
+  return `${fmtNumber(convertDistanceFromSI(meters, distanceUnit))} ${distanceUnit}`;
 }
 
 export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {

@@ -20,6 +20,7 @@ import {
   type GrokMode,
   type GrokTone,
 } from './grokDynamics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface GrokDynamicsBriefingProps {
   vehicleId: number | null | undefined;
@@ -56,6 +57,7 @@ const MODE_BADGE: Record<GrokMode, 'neutral' | 'info' | 'success' | 'warning'> =
  * in plain Tesla language. Unknown stays unknown.
  */
 export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefingProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatPower, formatTemperature } = useUnits();
 
@@ -129,25 +131,25 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
               wrapLabel
               color="cyan"
               label={t('dynamics.grok.drivePower', 'Drive power')}
-              value={read.drivePowerW == null ? '—' : formatPower(read.drivePowerW, { precision: 1 })}
+              value={read.drivePowerW == null ? '—' : formatPower(read.drivePowerW)}
             />
             <MetricCard
               wrapLabel
               color="green"
               label={t('dynamics.grok.regenPower', 'Regen harvest')}
-              value={read.regenPowerW == null ? '—' : formatPower(read.regenPowerW, { precision: 1 })}
+              value={read.regenPowerW == null ? '—' : formatPower(read.regenPowerW)}
             />
             <MetricCard
               wrapLabel
               color="purple"
               label={t('dynamics.grok.torque', 'Axle torque')}
-              value={read.torqueTotalNm == null ? '—' : `${fmtNumber(read.torqueTotalNm, 0)} Nm`}
+              value={read.torqueTotalNm == null ? '—' : `${fmtNumber(read.torqueTotalNm)} Nm`}
             />
             <MetricCard
               wrapLabel
               color="amber"
               label={t('dynamics.grok.combinedG', 'Combined g')}
-              value={read.combinedG == null ? '—' : `${fmtNumber(read.combinedG, 2)} g`}
+              value={read.combinedG == null ? '—' : `${fmtNumber(read.combinedG)} g`}
             />
           </Grid>
 
@@ -158,7 +160,7 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
               max={100}
               color={CHART_COLORS[0]}
               sublabel={t('dynamics.grok.rearShareValue', '{{value}}% of |torque|', {
-                value: fmtNumber(read.rearTorqueSharePct, 0),
+                value: fmtNumber(read.rearTorqueSharePct),
               })}
             />
           ) : (
@@ -173,7 +175,7 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
           {read.maxMotorTempC != null ? (
             <Text as="p" variant="caption">
               {t('dynamics.grok.thermal', 'Hottest stator/inverter {{temp}} · {{band}}', {
-                temp: formatTemperature(read.maxMotorTempC, { precision: 0 }),
+                temp: formatTemperature(read.maxMotorTempC),
                 band: thermalBand(read.thermal, t),
               })}
             </Text>
@@ -296,37 +298,37 @@ function findingText(
       return t(
         'dynamics.grok.find.cornering',
         'Lateral accelerometer {{g}} g. That is chassis load, not a grip percentage.',
-        { g: read.lateralG == null ? '—' : fmtNumber(Math.abs(read.lateralG), 2) },
+        { g: read.lateralG == null ? '—' : fmtNumber(Math.abs(read.lateralG)) },
       );
     case 'awd_rear':
       return t(
         'dynamics.grok.find.awdRear',
         'Rear axle is carrying {{share}}% of |torque|. Typical Tesla drive bias — measured, not assumed.',
-        { share: fmtNumber(read.rearTorqueSharePct ?? 0, 0) },
+        { share: fmtNumber(read.rearTorqueSharePct ?? 0) },
       );
     case 'awd_front':
       return t(
         'dynamics.grok.find.awdFront',
         'Front axle is carrying more of |torque| (rear {{share}}%). Often regen or low-traction split.',
-        { share: fmtNumber(read.rearTorqueSharePct ?? 0, 0) },
+        { share: fmtNumber(read.rearTorqueSharePct ?? 0) },
       );
     case 'awd_balanced':
       return t(
         'dynamics.grok.find.awdBalanced',
         'Axles are sharing |torque| nearly evenly (rear {{share}}%).',
-        { share: fmtNumber(read.rearTorqueSharePct ?? 0, 0) },
+        { share: fmtNumber(read.rearTorqueSharePct ?? 0) },
       );
     case 'thermal_hot':
       return t(
         'dynamics.grok.find.thermalHot',
         'Hottest motor/inverter {{temp}}. Near derate — stop asking for sustained peak.',
-        { temp: formatTemperature(read.maxMotorTempC, { precision: 0 }) },
+        { temp: formatTemperature(read.maxMotorTempC) },
       );
     case 'thermal_warm':
       return t(
         'dynamics.grok.find.thermalWarm',
         'Hottest motor/inverter {{temp}}. Normal after a hard pull, not an emergency.',
-        { temp: formatTemperature(read.maxMotorTempC, { precision: 0 }) },
+        { temp: formatTemperature(read.maxMotorTempC) },
       );
   }
 }

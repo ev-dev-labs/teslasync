@@ -5,11 +5,12 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useLocations } from '@/api/hooks/useLocations';
 import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { formatRelative } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function locationBadge(
   snapshot: { located_at_home?: boolean; located_at_work?: boolean; located_at_favorite?: boolean } | null | undefined,
@@ -22,6 +23,7 @@ export function locationBadge(
 }
 
 export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -71,7 +73,7 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
       formattedValue: `${fmtInt(loc.visitCount ?? 0)}× · ${loc.lastVisited ? formatRelative(loc.lastVisited) : '—'}`,
       barColor: 'bg-blue-400',
     }));
-  }, [locations]);
+  }, [locations, fmtInt]);
 
   // Both queries feed this widget: the snapshot drives the presence badge
   // (the only content in the compact layout) and the locations list drives

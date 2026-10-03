@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   BatteryPassportAnalysis,
   BatteryPassportFitStatus,
@@ -22,6 +22,7 @@ import type {
 } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportTrendDiagnosticsProps {
   analysis: BatteryPassportAnalysis;
@@ -83,6 +84,7 @@ export function BatteryPassportTrendDiagnostics({
   analysis,
   state,
 }: BatteryPassportTrendDiagnosticsProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const diagnostics = analysis.trend.diagnostics;
   const accounting = analysis.trend.accounting;
@@ -157,7 +159,7 @@ export function BatteryPassportTrendDiagnostics({
                 'batteryPassport.diagnostics.points',
                 'Analyzed points',
               )}
-              value={fmtNumber(diagnostics.pointCount, 0)}
+              value={fmtInt(diagnostics.pointCount)}
               subtitle={t(
                 'batteryPassport.diagnostics.returned',
                 '{{count}} returned before checks',
@@ -175,7 +177,7 @@ export function BatteryPassportTrendDiagnostics({
                 ? t(
                     'batteryPassport.values.days',
                     '{{value}} days',
-                    { value: fmtNumber(diagnostics.spanDays, 0) },
+                    { value: fmtNumber(diagnostics.spanDays) },
                   )
                 : '—'}
               subtitle={t(
@@ -194,7 +196,7 @@ export function BatteryPassportTrendDiagnostics({
                 ? t(
                     'batteryPassport.values.days',
                     '{{value}} days',
-                    { value: fmtNumber(diagnostics.daysSinceLatest, 0) },
+                    { value: fmtNumber(diagnostics.daysSinceLatest) },
                   )
                 : '—'}
               subtitle={t(
@@ -216,7 +218,6 @@ export function BatteryPassportTrendDiagnostics({
                     {
                       value: fmtNumber(
                         diagnostics.medianCadenceDays,
-                        1,
                       ),
                     },
                   )
@@ -240,7 +241,6 @@ export function BatteryPassportTrendDiagnostics({
                     {
                       value: fmtNumber(
                         diagnostics.startToEndChangePctPoints,
-                        2,
                       ),
                     },
                   )
@@ -265,12 +265,11 @@ export function BatteryPassportTrendDiagnostics({
                       'batteryPassport.diagnostics.quantileValue',
                       '{{p10}} / {{median}} / {{p90}}%',
                       {
-                        p10: fmtNumber(diagnostics.p10SohPct, 1),
+                        p10: fmtNumber(diagnostics.p10SohPct),
                         median: fmtNumber(
                           diagnostics.medianSohPct,
-                          1,
                         ),
-                        p90: fmtNumber(diagnostics.p90SohPct, 1),
+                        p90: fmtNumber(diagnostics.p90SohPct),
                       },
                     )
                   : '—'
@@ -294,7 +293,6 @@ export function BatteryPassportTrendDiagnostics({
                     {
                       value: fmtNumber(
                         diagnostics.standardDeviationPctPoints,
-                        2,
                       ),
                     },
                   )
@@ -315,7 +313,7 @@ export function BatteryPassportTrendDiagnostics({
                 ? t(
                     'batteryPassport.diagnostics.annualValue',
                     '{{value}} pp/year',
-                    { value: fmtNumber(annualized, 2) },
+                    { value: fmtNumber(annualized) },
                   )
                 : '—'}
               subtitle={fitLabel(diagnostics.fit.status, t)}
@@ -357,9 +355,8 @@ export function BatteryPassportTrendDiagnostics({
                   variant="bodySm"
                   className="font-mono tabular-nums"
                 >
-                  {fmtNumber(
+                  {fmtInt(
                     accounting.categories[category.key],
-                    0,
                   )}
                 </Text>
               </div>

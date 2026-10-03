@@ -21,6 +21,7 @@ import { Info } from 'lucide-react';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 import type { ChargingHistoryEvidence, DrivingHistoryEvidence } from '../lib/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface DrivingChargingSummaryPanelProps {
   driving: DrivingHistoryEvidence | null;
@@ -28,6 +29,7 @@ export interface DrivingChargingSummaryPanelProps {
 }
 
 export function DrivingChargingSummaryPanel({ driving, charging }: DrivingChargingSummaryPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatDistance, formatDuration, formatEnergy, formatPower } = useUnits();
 
@@ -63,8 +65,8 @@ export function DrivingChargingSummaryPanel({ driving, charging }: DrivingChargi
                   { label: t('resaleVault.usage.distance', 'Total distance'), value: driving.total_distance_m != null ? formatDistance(driving.total_distance_m) : '—' },
                   { label: t('resaleVault.usage.duration', 'Total duration'), value: driving.total_duration_s != null ? formatDuration(driving.total_duration_s) : '—' },
                   { label: t('resaleVault.usage.efficiency', 'Avg. efficiency'), value: formatEfficiency(driving.avg_efficiency_wh_per_km) },
-                  { label: t('resaleVault.usage.regen', 'Regen ratio'), value: driving.regen_ratio != null ? `${(driving.regen_ratio * 100).toFixed(0)}%` : '—' },
-                  { label: t('resaleVault.usage.co2', 'CO2 saved'), value: driving.co2_saved_kg != null ? `${driving.co2_saved_kg.toFixed(1)} kg` : '—' },
+                  { label: t('resaleVault.usage.regen', 'Regen ratio'), value: driving.regen_ratio != null ? `${fmtNumber((driving.regen_ratio * 100))}%` : '—' },
+                  { label: t('resaleVault.usage.co2', 'CO2 saved'), value: driving.co2_saved_kg != null ? `${fmtNumber(driving.co2_saved_kg)} kg` : '—' },
                 ]}
               />
               {driving.score_overall != null && (
@@ -86,7 +88,7 @@ export function DrivingChargingSummaryPanel({ driving, charging }: DrivingChargi
                   { label: t('resaleVault.usage.energyAdded', 'Total energy added'), value: charging.total_energy_added_wh != null ? formatEnergy(charging.total_energy_added_wh) : '—' },
                   { label: t('resaleVault.usage.fastCharge', 'Fast-charge sessions'), value: String(charging.fast_charge_session_count) },
                   { label: t('resaleVault.usage.peakPower', 'Avg. peak power'), value: charging.avg_peak_power_w != null ? formatPower(charging.avg_peak_power_w) : '—' },
-                  { label: t('resaleVault.usage.cost', 'Total cost'), value: charging.total_cost != null ? charging.total_cost.toFixed(2) : '—' },
+                  { label: t('resaleVault.usage.cost', 'Total cost'), value: charging.total_cost != null ? fmtNumber(charging.total_cost) : '—' },
                 ]}
               />
             </div>

@@ -34,7 +34,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { toLocalDatetimeStr } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
@@ -49,6 +49,8 @@ import { AutopilotPanel } from '../components/AutopilotPanel';
 import { ChargePointsPanel } from '../components/ChargePointsPanel';
 import { AISmartChargeScheduleSuggestion } from '@/components/ai/AISmartChargeScheduleSuggestion';
 import type { ChargePlan, OptimizeChargeResponse } from '@/types/charging';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 
 /**
  * Default "Depart By" value for the datetime-local input: tomorrow at 07:30 in
@@ -104,6 +106,7 @@ function ScheduleFact({ label, value }: { label: string; value: string }) {
 }
 
 export default function SmartChargePage() {
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('chargePlanner.title', 'Smart charge'));
   const { formatTime, formatDateTime: formatDate } = useDateFormat();
@@ -360,7 +363,7 @@ export default function SmartChargePage() {
               color="green"
               subtitle={
                 result
-                  ? `${result.schedule.rate_tier} · ${fmtNumber(result.schedule.rate_cents_kwh ?? 0, 1)}¢/kWh`
+                  ? `${result.schedule.rate_tier} · ${fmtNumber(result.schedule.rate_cents_kwh ?? 0)}¢/kWh`
                   : undefined
               }
             />
@@ -371,19 +374,19 @@ export default function SmartChargePage() {
               color="cyan"
               change={
                 comparison && savingsPositive
-                  ? { value: fmtPercent(comparison.savings_percent ?? 0, 0), positive: true }
+                  ? { value: fmtPercent(comparison.savings_percent ?? 0), positive: true }
                   : undefined
               }
             />
             <MetricCard
               label={t('chargePlanner.energyNeeded', 'Energy needed')}
-              value={result ? `${fmtNumber(result.kwh_needed ?? 0, 1)} kWh` : '—'}
+              value={result ? `${fmtNumber(result.kwh_needed ?? 0)} kWh` : '—'}
               icon={<Zap className="h-5 w-5" aria-hidden="true" />}
               color="amber"
               subtitle={
                 result
                   ? t('chargePlanner.estDuration', '~{{hours}}h', {
-                      hours: fmtNumber(result.estimated_duration_hours ?? 0, 1),
+                      hours: fmtNumber(result.estimated_duration_hours ?? 0),
                     })
                   : undefined
               }
@@ -464,10 +467,10 @@ export default function SmartChargePage() {
                 <UnitInput
                   label={t('chargePlanner.batteryCapacity', 'Battery capacity')}
                   unit="energy"
-                  value={batteryCapacity}
+                  value={batteryCapacity / convertEnergyFromSI(1, 'kWh')}
                   error={capacityError || undefined}
                   onChange={(v) => {
-                    setBatteryCapacity(v ?? 0);
+                    setBatteryCapacity(v == null ? 0 : convertEnergyFromSI(v, 'kWh'));
                     if (capacityError) setCapacityError('');
                   }}
                 />

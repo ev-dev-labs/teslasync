@@ -8,8 +8,9 @@ import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useNextChargeDecision } from '@/api/hooks/useCharging';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { NextChargeDecision, NextChargeVerdict } from '@/types/charging';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface NextChargeDecisionStripProps {
   vehicleId?: number;
@@ -94,6 +95,7 @@ function DecisionBody({
   t: (key: string, fallback: string, opts?: Record<string, unknown>) => string;
   onOpen: () => void;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const save = data.home_savings ?? 0;
   const site = data.supercharger_site ?? '';
   const waitAt = data.home_wait_start ? formatTime(data.home_wait_start) : '—';
@@ -114,7 +116,7 @@ function DecisionBody({
         {t('nextCharge.socLine', '{{soc}}% → {{target}}% · {{kwh}} kWh needed', {
           soc: data.current_soc,
           target: data.target_soc,
-          kwh: fmtNumber(data.kwh_needed, 1),
+          kwh: fmtNumber(data.kwh_needed),
         })}
       </Caption>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

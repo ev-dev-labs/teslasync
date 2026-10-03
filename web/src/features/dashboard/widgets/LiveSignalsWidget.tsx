@@ -11,11 +11,12 @@ import {
 } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { resolveHvacActive } from '@/lib/climateState';
-import { fmtNumber, fmtInt, isFiniteNumber } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { cleanNil } from '@/lib/cleanNil';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI, convertPressureFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -29,6 +30,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -142,7 +144,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="FL"
                   value={
                     isFiniteNumber(tires.front_left)
-                      ? `${fmtNumber(toPressureDisplay(tires.front_left), 1)} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.front_left))} ${pressureUnit}`
                       : '—'
                   }
                 />
@@ -150,7 +152,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="FR"
                   value={
                     isFiniteNumber(tires.front_right)
-                      ? `${fmtNumber(toPressureDisplay(tires.front_right), 1)} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.front_right))} ${pressureUnit}`
                       : '—'
                   }
                 />
@@ -158,7 +160,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="RL"
                   value={
                     isFiniteNumber(tires.rear_left)
-                      ? `${fmtNumber(toPressureDisplay(tires.rear_left), 1)} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.rear_left))} ${pressureUnit}`
                       : '—'
                   }
                 />
@@ -166,7 +168,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="RR"
                   value={
                     isFiniteNumber(tires.rear_right)
-                      ? `${fmtNumber(toPressureDisplay(tires.rear_right), 1)} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.rear_right))} ${pressureUnit}`
                       : '—'
                   }
                 />

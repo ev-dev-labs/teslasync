@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next'
 
 import { MetricCard } from '@/components/data-display'
 import { Skeleton } from '@/components/feedback'
-import { fmtInt, isFiniteNumber } from '@/lib/numberFormat'
+import { isFiniteNumber } from '@/lib/numberFormat'
 import { type NeonColor } from '@/lib/tokens'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FeedbackStatTileProps {
   label: string
@@ -25,6 +26,7 @@ interface FeedbackStatTileProps {
  *  placeholder instead of a fabricated "0" — while a genuine `0` count (which
  *  is falsy but valid) still renders its card. */
 export function FeedbackStatTile({ label, icon, color, value, loading }: FeedbackStatTileProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   if (loading || !isFiniteNumber(value)) {
     return (

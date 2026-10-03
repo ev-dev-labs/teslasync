@@ -24,8 +24,10 @@ import { sessionLabel, generateChargingCurve, avg, durationMinutes } from '../co
 import type { SummaryStats } from '../components/charging-curve/types';
 import { AIChargingCurveFingerprintClustering } from '@/components/ai/AIChargingCurveFingerprintClustering';
 import { AIMLChargingCurveClustering } from '@/components/ai/AIMLChargingCurveClustering';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ChargingCurvePage() {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('charging.curve.title', 'Charging Curve'));
 
@@ -47,7 +49,7 @@ export default function ChargingCurvePage() {
 
   const sessionOptions = useMemo(
     () => sessions.map((s) => ({ value: String(s.id), label: sessionLabel(s) })),
-    [sessions],
+    [sessions, displayPrecision, displayLocale],
   );
 
   const handleSessionChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {

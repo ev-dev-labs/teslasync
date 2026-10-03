@@ -8,10 +8,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingSourceAvailabilityProps {
   summary: HvacCyclingSummary;
@@ -29,13 +30,14 @@ function AvailabilityCard({
   denominator: number;
   note?: string;
 }) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
       <MetricLabel>{label}</MetricLabel>
       <Text as="p" variant="body" className="mt-1">
         {fmtInt(count)}
         {' · '}
-        {denominator > 0 ? fmtPercent((count / denominator) * 100, 1) : '—'}
+        {denominator > 0 ? fmtPercent((count / denominator) * 100) : '—'}
       </Text>
       {note ? <Text as="p" variant="caption" className="mt-1">{note}</Text> : null}
     </div>
@@ -46,6 +48,7 @@ export function HvacCyclingSourceAvailability({
   summary,
   state,
 }: HvacCyclingSourceAvailabilityProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const signal = summary.signals;
 

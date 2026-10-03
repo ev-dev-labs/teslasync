@@ -16,8 +16,9 @@ import {
 } from '@/components/charts';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { TimelineRow } from '../lib/rootCauseIntelligence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const CHART_KEY = 'diagnostics-root-cause-timeline';
 
@@ -58,6 +59,7 @@ export function RootCauseSignalTimelineChart({
   onRetry,
   className,
 }: RootCauseSignalTimelineChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const hidden = useHiddenSeries(CHART_KEY);
 
@@ -70,7 +72,7 @@ export function RootCauseSignalTimelineChart({
     ...seriesNames.map((name) => ({
       key: name,
       label: name,
-      format: (value: unknown) => (typeof value === 'number' ? fmtNumber(value, 2) : '—'),
+      format: (value: unknown) => (typeof value === 'number' ? fmtNumber(value) : '—'),
     })),
   ];
 

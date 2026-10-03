@@ -1,23 +1,19 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
-import {
-  ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, areaGradient,
-  ChartLegend, EmbeddedChart,
-  type ChartDataRow,
-} from '@/components/charts';
+import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, axisTick, axisTickSm, chartAnimation, areaGradient, ChartLegend, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useChargingSessions, useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -47,6 +43,8 @@ function classifyCharger(chargerType: string | null): ChargerClass {
 }
 
 export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -154,7 +152,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     return [
       {
         label: t('widget.chargingSessionDetail.energy', 'Energy added'),
-        value: knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy), 1),
+        value: knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy)),
         unit: unitPrefs.energy,
       },
       {
@@ -163,7 +161,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       },
       {
         label: t('widget.chargingSessionDetail.peakPower', 'Peak power'),
-        value: peakPower == null ? null : fmtNumber(peakPower, 1),
+        value: peakPower == null ? null : fmtNumber(peakPower),
         unit: unitPrefs.power,
       },
       {
@@ -171,7 +169,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         value: chargerLabel,
       },
     ];
-  }, [detail, durationStr, peakPower, chargerLabel, t, unitPrefs.energy, unitPrefs.power]);
+  }, [detail, durationStr, peakPower, chargerLabel, t, unitPrefs.energy, unitPrefs.power, fmtNumber]);
 
   const tick = isWide ? axisTick : axisTickSm;
 
@@ -221,7 +219,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             axisLine={false}
             width={36}
             domain={['auto', 'auto']}
-            tickFormatter={(v: number) => fmt(v, 0)}
+            tickFormatter={(v: number) => fmt(v)}
           />
 
           <YAxis
@@ -232,7 +230,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             axisLine={false}
             width={36}
             domain={[0, 100]}
-            tickFormatter={(v: number) => `${fmt(v, 0)}%`}
+            tickFormatter={(v: number) => `${fmt(v)}%`}
           />
 
           <Tooltip content={<ChartTooltip />} />
@@ -266,7 +264,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         )}
       </EmbeddedChart>
     );
-  }, [chartData, tick, t, unitPrefs.power]);
+  }, [chartData, tick, t, unitPrefs.power, fmt]);
 
   // ── Compact layout: large kWh number + charger badge ──
   if (isCompact) {
@@ -283,7 +281,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       >
         {detail ? (
           <WidgetBigNumber
-            value={knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy), 1)}
+            value={knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy))}
             label={unitPrefs.energy === 'kWh' ? t('widget.chargingSessionDetail.unitKwh', 'kWh added') : `${unitPrefs.energy} ${t('widget.energyAdded', 'Added')}`}
             badge={{ text: chargerLabel, variant: charger.variant }}
             align="center"

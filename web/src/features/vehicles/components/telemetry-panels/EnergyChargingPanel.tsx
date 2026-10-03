@@ -4,15 +4,17 @@ import { cn } from '@/lib/cn'
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
-import { fmtNumber } from '@/lib/numberFormat'
+
 import { useUnits } from '@/hooks/useUnits'
 import type { ChargingTelemetry } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EnergyChargingPanelProps {
   chargingTelemetry: ChargingTelemetry | null | undefined
 }
 
 export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatSpeed, formatPower, formatEnergy } = useUnits()
 

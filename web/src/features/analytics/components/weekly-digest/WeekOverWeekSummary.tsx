@@ -5,10 +5,11 @@ import { Car, Activity, Zap, Fuel, BarChart3, Leaf } from 'lucide-react';
 import { SectionTitle, GlassPanel } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { QueryError } from '@/components/feedback';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { trendFor } from './helpers';
 import { formatEfficiencyFromSI } from './display';
 import type { DigestMetrics } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface WeekOverWeekSummaryProps {
   metrics: DigestMetrics;
@@ -25,6 +26,7 @@ export function WeekOverWeekSummary({
   error,
   onRetry,
 }: WeekOverWeekSummaryProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { unitPrefs, formatDistance, formatEnergy } = useUnits();
@@ -46,7 +48,7 @@ export function WeekOverWeekSummary({
           <StatCard
             loading={isLoading}
             label={t('analytics.weeklyDigest.distance', 'Distance')}
-            value={formatDistance(metrics.totalDistanceM ?? 0, { precision: 1 })}
+            value={formatDistance(metrics.totalDistanceM ?? 0)}
             icon={<Car className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.totalDistanceM ?? 0, metrics.prevDistanceM ?? 0)}
           />
@@ -60,14 +62,14 @@ export function WeekOverWeekSummary({
           <StatCard
             loading={isLoading}
             label={t('analytics.weeklyDigest.energy', 'Energy')}
-            value={formatEnergy(metrics.energyUsedWh ?? 0, { precision: 1 })}
+            value={formatEnergy(metrics.energyUsedWh ?? 0)}
             icon={<Zap className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.energyUsedWh ?? 0, metrics.prevEnergyWh ?? 0, true)}
           />
           <StatCard
             loading={isLoading}
             label={t('analytics.weeklyDigest.cost', 'Cost')}
-            value={formatCurrency(metrics.chargingCost ?? 0, 2)}
+            value={formatCurrency(metrics.chargingCost ?? 0)}
             icon={<Fuel className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.chargingCost ?? 0, metrics.prevChargingCost ?? 0, true)}
           />
@@ -85,7 +87,7 @@ export function WeekOverWeekSummary({
           <StatCard
             loading={isLoading}
             label={t('analytics.weeklyDigest.co2', 'CO₂ saved')}
-            value={fmtNumber(metrics.co2Saved ?? 0, 1)}
+            value={fmtNumber(metrics.co2Saved ?? 0)}
             unit="kg"
             icon={<Leaf className="h-4 w-4" aria-hidden="true" />}
             trend={trendFor(metrics.co2Saved ?? 0, metrics.prevCo2 ?? 0)}

@@ -9,13 +9,14 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export type Urgency = 'overdue' | 'soon' | 'good';
 
@@ -39,6 +40,7 @@ export function urgencyLabel(urgency: Urgency, t: (k: string, f: string) => stri
 }
 
 export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -116,7 +118,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
     const itemMap = new Map(items.map((m) => [m.id, m]));
     return recentRecords.map((rec) => {
       const mi = itemMap.get(rec.itemId);
-      const odometerDisplay = rec.odometerKm == null ? '—' : `${fmtNumber(toDistanceDisplay(rec.odometerKm), 0)} ${distanceUnit}`;
+      const odometerDisplay = rec.odometerKm == null ? '—' : `${fmtNumber(toDistanceDisplay(rec.odometerKm))} ${distanceUnit}`;
       return {
         icon: <CheckCircle2 className="h-3 w-3" />,
         title: mi?.name ?? rec.itemId ?? '—',
@@ -129,7 +131,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
         color: '#10b981',
       };
     });
-  }, [recentRecords, items, toDistanceDisplay, distanceUnit, formatDate]);
+  }, [recentRecords, items, toDistanceDisplay, distanceUnit, formatDate, fmtNumber]);
 
   const updatedAt = combined.updatedAt ?? Math.min(maintUpdatedAt || Infinity, recordsUpdatedAt || Infinity);
   const hasData = items.length > 0 || records.length > 0;
@@ -215,7 +217,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
                   {t('widget.maintenance.months', 'mo')}
                 </span>
                 <span className="flex items-center gap-1">
-                  {nextItem?.intervalKm == null ? '—' : `${fmtNumber(toDistanceDisplay(nextItem.intervalKm), 0)} ${distanceUnit}`}
+                  {nextItem?.intervalKm == null ? '—' : `${fmtNumber(toDistanceDisplay(nextItem.intervalKm))} ${distanceUnit}`}
                 </span>
                 {nextItem?.estimatedCostUsd != null && (
                   <span>{formatCurrency(nextItem.estimatedCostUsd)}</span>
@@ -235,7 +237,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
               <WidgetStatGrid cols={3} stats={[
                 { label: t('widget.maintenance.overdue', 'Overdue'), value: forecast?.overdue_count },
                 { label: t('widget.maintenance.soon', 'Soon'), value: forecast?.due_soon_count },
-                { label: t('widget.maintenance.dailyDistance', 'Daily distance'), value: forecast?.km_per_day == null ? null : fmtNumber(toDistanceDisplay(forecast.km_per_day), 0), unit: forecast?.km_per_day == null ? undefined : `${distanceUnit}/${t('widget.maintenance.dayUnit', 'day')}` },
+                { label: t('widget.maintenance.dailyDistance', 'Daily distance'), value: forecast?.km_per_day == null ? null : fmtNumber(toDistanceDisplay(forecast.km_per_day)), unit: forecast?.km_per_day == null ? undefined : `${distanceUnit}/${t('widget.maintenance.dayUnit', 'day')}` },
               ]} />
               <p className={dashboardTokens.metricLabel}>
                 {t('widget.maintenance.forecastCaveat', 'Forecast depends on recorded service history and mileage.')}

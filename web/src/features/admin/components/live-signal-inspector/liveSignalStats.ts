@@ -13,6 +13,7 @@ import type {
   VehicleLiveSignalsResponse,
 } from '@/api/hooks/useTelemetry';
 import type { SignalSource } from '@/components/data-display';
+import { fmtNumber } from '@/lib/numberFormat';
 
 /** Flat row consumed by the table + breakdown panels. */
 export interface LiveSignalRow {
@@ -230,8 +231,8 @@ export function computeStats(
 export function formatAge(ms: number | null | undefined): string {
   if (ms == null || !Number.isFinite(ms)) return '—';
   if (ms < 1000) return `${Math.round(ms)}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  if (ms < 60_000) return `${fmtNumber((ms / 1000))}s`;
   if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
-  if (ms < 86_400_000) return `${(ms / 3_600_000).toFixed(1)}h`;
-  return `${(ms / 86_400_000).toFixed(1)}d`;
+  if (ms < 86_400_000) return `${fmtNumber((ms / 3_600_000))}h`;
+  return `${fmtNumber((ms / 86_400_000))}d`;
 }

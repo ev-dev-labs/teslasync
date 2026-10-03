@@ -2,14 +2,16 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, time, unknown } from './PhysicsPageShell';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function PhysicsMetersSection({ physics }: { physics: PhysicsPage }) {
+  const { fmtNumber } = useNumberFormatting();
   const { report, t } = physics;
   const { formatDistance } = useUnits();
-  const distance = (m: number | null | undefined) => m == null ? unknown(t) : formatDistance(m, { precision: 1 });
+  const distance = (m: number | null | undefined) => m == null ? unknown(t) : formatDistance(m);
   const meter = report?.meters;
   const resets = meter?.resets ?? [];
   const drops = resets.flatMap((row) => row.from_m != null && row.to_m != null && row.from_m > row.to_m
@@ -32,7 +34,7 @@ export default function PhysicsMetersSection({ physics }: { physics: PhysicsPage
         <Badge variant="neutral" size="sm">{t('teslaOnly.workbench.resetSummary', '{{count}} returned meter drops; inspect before and after readings below.', { count: resets.length })}</Badge>
         <Badge variant="neutral" size="sm">{t('teslaOnly.metersQuantified', 'Quantifiable drops: {{count}}', { count: drops.length })}</Badge>
         <Badge variant="warning" size="sm">{t('teslaOnly.metersLargest', 'Largest measured drop: {{value}}', { value: largest ? distance(largest.delta) : unknown(t) })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.metersRelative', 'FSD counter / driving counter: {{value}}', { value: fsdFraction == null ? unknown(t) : `${fmtNumber(fsdFraction, 1)}%` })}</Badge>
+        <Badge variant="neutral" size="sm">{t('teslaOnly.metersRelative', 'FSD counter / driving counter: {{value}}', { value: fsdFraction == null ? unknown(t) : `${fmtNumber(fsdFraction)}%` })}</Badge>
       </div>
       <Text as="p" variant="caption">{t('teslaOnly.metersRatioNote', 'The counter ratio compares two returned readings only. It does not indicate FSD engagement share, particularly across resets or different counter scopes.')}</Text>
       <div className="grid gap-2 sm:grid-cols-2">{byMeter.map((name) => <div key={name} className="rounded-lg border border-[var(--glass-border)] p-3">

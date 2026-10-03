@@ -6,8 +6,10 @@ import { useDataState } from '@/hooks/useDataState';
 import { useSettings } from '@/hooks/useSettings';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function AiSpendWatch() {
+  const { precision, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const { settings } = useSettings();
   const enabled = settings?.ai_mode === 'local' || settings?.ai_mode === 'cloud';
@@ -22,11 +24,11 @@ export function AiSpendWatch() {
     && capMicroCents > 0
     && data.projected_today_micro_cents >= capMicroCents;
   const biggest = (data?.drivers ?? [])[0];
-  const money = (value: number) => new Intl.NumberFormat(undefined, {
+  const money = (value: number) => new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
   }).format(value / 1_000_000);
 
   return (

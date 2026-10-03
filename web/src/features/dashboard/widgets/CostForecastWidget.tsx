@@ -1,12 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartTooltip, EmbeddedChart, Cell, Legend, useThemeChartPalette,
-  type ChartDataRow,
-} from '@/components/charts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, Cell, Legend, useThemeChartPalette, type ChartDataRow } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCostForecast } from '@/api/hooks/useCharging';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -21,6 +16,7 @@ import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { CostHistoricalMonth, CostForecastMonth } from '@/types/charging';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BarDatum extends ChartDataRow {
   month: string;
@@ -50,6 +46,7 @@ function buildChartData(
 }
 
 export default function CostForecastWidget({ vehicleId, config, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
   const vid = vehicleId ?? config?.vehicleId ?? vehiclesQuery.data?.[0]?.id ?? null;
@@ -104,10 +101,20 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
     ),
   });
 
+  const shellProps = {
+    title: t('widget.costForecast.title', 'Cost forecast'),
+    icon: delta != null && delta > 0
+      ? <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
+      : delta != null && delta < 0
+        ? <TrendingDown className="h-3.5 w-3.5 text-emerald-400" />
+        : <DollarSign className="h-3.5 w-3.5" />,
+  };
+
   // ── Compact (1×2): big predicted cost + trend ──
   if (isCompact) {
     return (
       <WidgetShell
+        {...shellProps}
         loading={isLoading}
         dataState={dataState}
         loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
@@ -123,7 +130,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
           stats={[
             {
               label: t('widget.costForecast.nextMonth', 'Next month'),
-              value: nextCost == null ? null : formatCurrency(nextCost, 0),
+              value: nextCost == null ? null : formatCurrency(nextCost),
             },
             {
               label: t('widget.costForecast.trend', 'Trend'),
@@ -142,7 +149,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
   const stats: ChartSummaryStat[] = [
     {
       label: t('widget.costForecast.nextMonth', 'Next month'),
-      value: nextCost == null ? null : formatCurrency(nextCost, 0),
+      value: nextCost == null ? null : formatCurrency(nextCost),
     },
     {
       label: t('widget.costForecast.avgEnergyRate', 'Avg {{currency}}/{{unit}}', { currency: currencySymbol, unit: unitPrefs.energy }),
@@ -150,7 +157,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
     },
     {
       label: t('widget.costForecast.trend', 'Trend'),
-      value: delta == null ? null : `${trendArrow} ${formatCurrency(Math.abs(delta), 0)}`,
+      value: delta == null ? null : `${trendArrow} ${formatCurrency(Math.abs(delta))}`,
     },
   ];
 
@@ -159,14 +166,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
 
   return (
     <WidgetShell
-      title={t('widget.costForecast.title', 'Cost forecast')}
-      icon={
-        delta != null && delta > 0
-          ? <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
-          : delta != null && delta < 0
-            ? <TrendingDown className="h-3.5 w-3.5 text-emerald-400" />
-            : <DollarSign className="h-3.5 w-3.5" />
-      }
+      {...shellProps}
       loading={isLoading}
       dataState={dataState}
       loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
@@ -219,7 +219,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
                   tickLine={false}
                   axisLine={false}
                   width={40}
-                  tickFormatter={(v: number) => `${currencySymbol}${fmt(v, 0)}`}
+                  tickFormatter={(v: number) => `${currencySymbol}${fmt(v)}`}
                 />
                 <Tooltip
                   content={<ChartTooltip />}

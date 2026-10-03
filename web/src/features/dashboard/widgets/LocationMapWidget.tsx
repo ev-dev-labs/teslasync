@@ -6,6 +6,7 @@ import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * True only when `(lat, lng)` is a usable GPS fix: both finite, inside the
@@ -37,6 +38,7 @@ export function normalizeHeading(
 }
 
 export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -106,7 +108,7 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
             )}
             {isExpanded && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-2xs text-[var(--text-secondary)] backdrop-blur-sm">
-                {lat.toFixed(4)}, {lng.toFixed(4)}
+                {fmtNumber(lat)}, {fmtNumber(lng)}
               </span>
             )}
           </div>

@@ -10,9 +10,10 @@ import { DataProvenanceBadge } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { TransportAgreementFieldList } from './TransportAgreementFieldList';
 import { TransportAgreementMetrics } from './TransportAgreementMetrics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Widest window the agreement endpoint accepts, mirroring
@@ -51,6 +52,7 @@ export function TransportAgreementPanel({
   to,
   enabled,
 }: TransportAgreementPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const windowHours = transportAgreementWindowHours(from, to);
   // The submitted history range is immutable — it is NOT narrowed to fit the

@@ -11,8 +11,9 @@ import { Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { EvidencePanel, InsightPanel } from '../components';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 10;
 
@@ -24,6 +25,7 @@ function decisionVariant(decision: string) {
 }
 
 export default function FirmwareCanaryPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const [page, setPage] = useState(1);
@@ -81,17 +83,17 @@ export default function FirmwareCanaryPage() {
                   <StatCard
                     label={t('advancedIntelligence.firmware.targetDelta', 'Target regression')}
                     value={item.vehicle_regression_pct != null
-                      ? `${fmtNumber(item.vehicle_regression_pct, 2)}%` : null}
+                      ? `${fmtNumber(item.vehicle_regression_pct)}%` : null}
                   />
                   <StatCard
                     label={t('advancedIntelligence.firmware.peerDelta', 'Peer regression')}
                     value={item.peer_regression_pct != null
-                      ? `${fmtNumber(item.peer_regression_pct, 2)}%` : null}
+                      ? `${fmtNumber(item.peer_regression_pct)}%` : null}
                   />
                   <StatCard
                     label={t('advancedIntelligence.firmware.excessDelta', 'Matched excess')}
                     value={item.matched_excess_pct != null
-                      ? `${fmtNumber(item.matched_excess_pct, 2)}%` : null}
+                      ? `${fmtNumber(item.matched_excess_pct)}%` : null}
                   />
                   <StatCard
                     label={t('advancedIntelligence.firmware.generated', 'Decision generated')}

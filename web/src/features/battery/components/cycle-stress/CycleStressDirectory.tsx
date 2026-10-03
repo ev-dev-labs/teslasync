@@ -9,10 +9,7 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-import {
-  formatDateTime,
-  formatDurationMsCompact,
-} from '@/lib/dateFormat';
+import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import type {
   CycleStressResult,
@@ -25,6 +22,7 @@ import {
 } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressDirectoryProps {
   result: CycleStressResult;
@@ -41,6 +39,8 @@ export function CycleStressDirectory({
   state,
   locale,
 }: CycleStressDirectoryProps) {
+  const { formatDurationMsCompact } = useNumberFormatting();
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo<DirectoryRow[]>(
     () =>
@@ -146,7 +146,7 @@ export function CycleStressDirectory({
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {cycleStressNumber(row.equivalentFullCycles, locale, 3)}
+            {cycleStressNumber(row.equivalentFullCycles, locale)}
           </Text>
         ),
       },
@@ -156,7 +156,7 @@ export function CycleStressDirectory({
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {cycleStressNumber(row.depthWeightedIndex, locale, 3)}
+            {cycleStressNumber(row.depthWeightedIndex, locale)}
           </Text>
         ),
       },
@@ -177,7 +177,7 @@ export function CycleStressDirectory({
       locale,
       result.config.deepThresholdPct,
       result.timeZone,
-      t,
+      t, displayPrecision, displayLocale, formatDurationMsCompact,
     ],
   );
 

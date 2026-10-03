@@ -1,16 +1,18 @@
 import { useTranslation } from 'react-i18next'
 
 import { Caption, Text } from '@/components/ui'
-import { fmtInt, fmtPercent } from '@/lib/numberFormat'
+
 import type { FeedbackStatus } from '@/api/types'
 
 import { STATUS_COLORS, type FeedbackCounts } from './constants'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Fixed display order — active work first: new → triaged → closed. */
 const ORDER: readonly FeedbackStatus[] = ['new', 'triaged', 'closed']
 
 /** Proportional new / triaged / closed bar + a labelled legend with counts. */
 export function StatusDistribution({ counts, total }: { counts: FeedbackCounts; total: number }) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation()
   const label: Record<FeedbackStatus, string> = {
     new: t('feedback.queue.status.new', 'New'),
@@ -46,7 +48,7 @@ export function StatusDistribution({ counts, total }: { counts: FeedbackCounts; 
               key={seg.key}
               className="h-full transition-all"
               style={{ width: `${seg.pct}%`, backgroundColor: seg.color }}
-              title={`${seg.label}: ${fmtInt(seg.count)} (${fmtPercent(seg.pct, 0)})`}
+              title={`${seg.label}: ${fmtInt(seg.count)} (${fmtPercent(seg.pct)})`}
             />
           ),
         )}
@@ -61,7 +63,7 @@ export function StatusDistribution({ counts, total }: { counts: FeedbackCounts; 
             />
             <span className="min-w-0 flex-1">
               <Text as="span" variant="bodySm" className="block truncate">{seg.label}</Text>
-              <Caption>{fmtInt(seg.count)} · {fmtPercent(seg.pct, 0)}</Caption>
+              <Caption>{fmtInt(seg.count)} · {fmtPercent(seg.pct)}</Caption>
             </span>
           </li>
         ))}

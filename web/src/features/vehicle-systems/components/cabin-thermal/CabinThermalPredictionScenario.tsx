@@ -102,12 +102,12 @@ export function CabinThermalPredictionScenario({
                     direction: scenario.direction === 'cooling'
                       ? t('cabinThermal.direction.cooling', 'Cooling')
                       : t('cabinThermal.direction.warming', 'Warming'),
-                    start: formatTemperature(scenario.startC, { precision: 0 }),
-                    ambient: formatTemperature(scenario.ambientC, { precision: 0 }),
-                    tau: formatDuration(scenario.tauMin * 60, { precision: 1 }),
-                    target: formatTemperature(scenario.targetC, { precision: 0 }),
+                    start: formatTemperature(scenario.startC),
+                    ambient: formatTemperature(scenario.ambientC),
+                    tau: formatDuration(scenario.tauMin * 60),
+                    target: formatTemperature(scenario.targetC),
                     time: targetMinutes != null
-                      ? formatDuration(targetMinutes * 60, { precision: 1 })
+                      ? formatDuration(targetMinutes * 60)
                       : t('cabinThermal.prediction.unreachable', 'not passively reachable'),
                   },
                 )}

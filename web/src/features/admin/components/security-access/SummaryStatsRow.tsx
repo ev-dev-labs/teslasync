@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Clock, Activity, BarChart3 } from 'lucide-react';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { timeSince } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SummaryStatsRowProps {
   isSecure: boolean;
@@ -21,6 +22,7 @@ export function SummaryStatsRow({
   totalEvents,
   isLoading,
 }: SummaryStatsRowProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   if (isLoading) {

@@ -8,14 +8,16 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatusGrid, WidgetStatGrid, type StatGridItem } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
@@ -87,17 +89,17 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
   const stats: StatGridItem[] = useMemo(() => [
     {
       label: t('widget.drivetrainHealth.motorTemp', 'Motor temp'),
-      value: motorTemp != null ? fmtNumber(toTemperatureDisplay(motorTemp), 0) : '—',
+      value: motorTemp != null ? fmtNumber(toTemperatureDisplay(motorTemp)) : '—',
       unit: motorTemp != null ? tempUnit : undefined,
     },
     {
       label: t('widget.drivetrainHealth.statorTemp', 'Stator temp'),
-      value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp), 0) : '—',
+      value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp)) : '—',
       unit: statorTemp != null ? tempUnit : undefined,
     },
     {
       label: t('widget.drivetrainHealth.inverterHealth', 'Inverter'),
-      value: inverterTemp != null ? fmtNumber(toTemperatureDisplay(inverterTemp), 0) : '—',
+      value: inverterTemp != null ? fmtNumber(toTemperatureDisplay(inverterTemp)) : '—',
       unit: inverterTemp != null ? tempUnit : undefined,
     },
     {
@@ -107,11 +109,11 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
     {
       label: t('widget.drivetrainHealth.rearMotorTemp', 'Rear motor temp'),
       value: health?.rearMotorTempC != null || motor?.motor_temp_c_rear != null
-        ? fmtNumber(toTemperatureDisplay(health?.rearMotorTempC ?? motor?.motor_temp_c_rear ?? 0), 0)
+        ? fmtNumber(toTemperatureDisplay(health?.rearMotorTempC ?? motor?.motor_temp_c_rear ?? 0))
         : '—',
       unit: health?.rearMotorTempC != null || motor?.motor_temp_c_rear != null ? tempUnit : undefined,
     },
-  ], [motorTemp, statorTemp, inverterTemp, driveState, health?.rearMotorTempC, motor?.motor_temp_c_rear, toTemperatureDisplay, tempUnit, t]);
+  ], [motorTemp, statorTemp, inverterTemp, driveState, health?.rearMotorTempC, motor?.motor_temp_c_rear, toTemperatureDisplay, tempUnit, t, fmtNumber]);
 
   const updatedAt = combined.updatedAt ?? Math.min(healthUpdatedAt || Infinity, motorUpdatedAt || Infinity);
 

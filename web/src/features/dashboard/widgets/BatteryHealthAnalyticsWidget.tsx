@@ -4,14 +4,17 @@ import { EmptyState } from '@/components/feedback';
 import { LinearGauge } from '@/components/charts';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -27,7 +30,7 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
 
   const isCompact = size.cols <= 1;
   const healthScore = knownNumber(data?.current_soh);
-  const reading = (value: unknown, precision = 0) => {
+  const reading = (value: unknown, precision = getGlobalPrecision()) => {
     const number = knownNumber(value);
     return number == null ? null : fmtNumber(number, precision);
   };

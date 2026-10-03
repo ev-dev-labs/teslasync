@@ -6,13 +6,14 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetGaugeHero } from './shared';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const G_MAX = 1.2;
 
@@ -38,6 +39,7 @@ function gaugeColor(g: number): string {
 }
 
 export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -113,10 +115,10 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
     if (values.length === 0) return [];
     const step = G_MAX / values.length;
     return values.map((count, i) => ({
-      range: `${fmtNumber(i * step, 2)}`,
+      range: `${fmtNumber(i * step)}`,
       count: knownNumber(count),
     }));
-  }, [distData]);
+  }, [distData, fmtNumber]);
 
   // Compact layout: large number + badge
   if (isCompact) {
@@ -134,7 +136,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
         {dynamics ? (
           <div className="h-full flex flex-col items-center justify-center gap-2">
             <WidgetBigNumber
-              value={maxG == null ? null : fmtNumber(maxG, 2)}
+              value={maxG == null ? null : fmtNumber(maxG)}
               label={t('widget.drivingDynamics.maxG', 'Max g')}
               align="center"
               animated={false}
@@ -192,7 +194,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                     gauge={{
                       value: metric.value,
                       max: G_MAX,
-                      label: fmtNumber(metric.value, 2),
+                      label: fmtNumber(metric.value),
                       unit: '',
                       color: gaugeColor(metric.value),
                     }}

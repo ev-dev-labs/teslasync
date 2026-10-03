@@ -17,14 +17,16 @@ import {
 } from '@/components/charts';
 import { Badge, MetricLabel, Table, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeCandidateModels({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtScientificNumber, fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -81,9 +83,9 @@ export function ArchetypeCandidateModels({
         dataColumns={[
           { key: 'model', label: t('archetypes.candidates.model', 'Candidate') },
           { key: 'realized', label: t('archetypes.candidates.realized', 'Realized clusters') },
-          { key: 'silhouette', label: silhouetteName, format: (value) => fmtNumber(value, 3) },
-          { key: 'inertia', label: t('archetypes.candidates.inertia', 'Inertia'), format: (value) => fmtNumber(value, 2) },
-          { key: 'agreement', label: agreementName, format: (value) => fmtNumber(value, 3) },
+          { key: 'silhouette', label: silhouetteName, format: (value) => fmtScientificNumber(value, 3) },
+          { key: 'inertia', label: t('archetypes.candidates.inertia', 'Inertia'), format: (value) => fmtNumber(value) },
+          { key: 'agreement', label: agreementName, format: (value) => fmtScientificNumber(value, 3) },
           { key: 'smallest', label: t('archetypes.candidates.smallest', 'Smallest cluster') },
           { key: 'largest', label: t('archetypes.candidates.largest', 'Largest cluster') },
           { key: 'selected', label: t('archetypes.candidates.decision', 'Decision') },
@@ -101,8 +103,8 @@ export function ArchetypeCandidateModels({
               <BarChart data={rows} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-white/10" />
                 <XAxis dataKey="model" tick={axisTick} tickLine={false} axisLine={false} />
-                <YAxis domain={[-1, 1]} tick={axisTick} tickFormatter={(value) => fmtNumber(value, 1)} />
-                <Tooltip content={<ChartTooltip valueFormatter={(value) => fmtNumber(value, 3)} />} />
+                <YAxis domain={[-1, 1]} tick={axisTick} tickFormatter={(value) => fmtNumber(value)} />
+                <Tooltip content={<ChartTooltip valueFormatter={(value) => fmtScientificNumber(value, 3)} />} />
                 <ChartLegend verticalAlign="top" align="right" />
                 <Bar
                   dataKey="silhouette"
@@ -147,9 +149,9 @@ export function ArchetypeCandidateModels({
                 )}
               >
                 <th scope="row"><Text variant="bodySm">{row.model}</Text></th>
-                <td className="text-right"><Text variant="bodySm">{fmtNumber(row.silhouette, 3)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtNumber(row.agreement, 3)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtNumber(row.inertia, 2)}</Text></td>
+                <td className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.silhouette, 3)}</Text></td>
+                <td className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.agreement, 3)}</Text></td>
+                <td className="text-right"><Text variant="bodySm">{fmtNumber(row.inertia)}</Text></td>
                 <td className="text-right"><Text variant="bodySm">{fmtInt(row.realized)}</Text></td>
                 <td className="text-right"><Text variant="bodySm">{fmtInt(row.smallest)} / {fmtInt(row.largest)}</Text></td>
                 <td>

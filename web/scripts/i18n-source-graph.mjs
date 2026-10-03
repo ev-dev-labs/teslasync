@@ -64,14 +64,15 @@ export function staticDependencies(sourceRoot, file) {
   return dependencies
 }
 
-export function staticClosure(sourceRoot, roots) {
+export function staticClosure(sourceRoot, roots, dependencyCache = new Map()) {
   const files = new Set()
   const pending = roots.filter((file) => existsSync(file))
   while (pending.length > 0) {
     const file = pending.pop()
     if (!file || files.has(file)) continue
     files.add(file)
-    for (const dependency of staticDependencies(sourceRoot, file)) {
+    if (!dependencyCache.has(file)) dependencyCache.set(file, staticDependencies(sourceRoot, file))
+    for (const dependency of dependencyCache.get(file)) {
       if (!files.has(dependency)) pending.push(dependency)
     }
   }

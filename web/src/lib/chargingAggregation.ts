@@ -86,6 +86,13 @@ export function avgPowerW(s: ChargingSession): number {
   return s.avg_power_w ?? 0;
 }
 
+export function sessionAveragePowerW(s: ChargingSession): number | null {
+  const canDerive = durationMinutes(s) > 0 && Number.isFinite(s.total_energy_added_wh);
+  if (!canDerive && !Number.isFinite(s.avg_power_w)) return null;
+  const value = avgPowerW(s);
+  return Number.isFinite(value) ? value : null;
+}
+
 /**
  * Cost per kWh for a single session. Returns `null` when free /
  * unknown / zero-energy.
@@ -94,6 +101,18 @@ export function costPerKwh(s: ChargingSession): number | null {
   if (s.total_energy_added_wh <= 0) return null;
   if (s.cost_decimal == null || s.cost_decimal <= 0) return null;
   return s.cost_decimal / (s.total_energy_added_wh / 1000);
+}
+
+export function blendedRecordedCostPerKwh(sessions: readonly ChargingSession[]): number | null {
+  let cost = 0;
+  let energyWh = 0;
+  for (const session of sessions) {
+    if (session.cost_decimal == null || !Number.isFinite(session.cost_decimal)
+      || !Number.isFinite(session.total_energy_added_wh) || session.total_energy_added_wh <= 0) continue;
+    cost += session.cost_decimal;
+    energyWh += session.total_energy_added_wh;
+  }
+  return energyWh > 0 ? cost / (energyWh / 1000) : null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -118,7 +137,7 @@ export interface ChargingPeriodStats {
   mostCommonStartHour: number | null;
   /** Counts by charger category. */
   byCategory: Record<ChargerCategory, number>;
-  /** Number of sessions where `cost_decimal` is null/zero. */
+  /** Number of sessions with a recorded zero cost; unknown cost is not free. */
   freeCount: number;
   /** "Battery-friendly" score 0–100 → see {@link batteryFriendlyScore}. */
   batteryFriendlyScore: number | null;
@@ -187,6 +206,9 @@ export function computeChargingPeriodStats(
   let totalEnergyWh = 0;
   let totalCost = 0;
   let totalDurationMin = 0;
+  let durationN = 0;
+  let rateEnergyWh = 0;
+  let rateDurationMin = 0;
   let powerSum = 0;
   let powerN = 0;
   let freeCount = 0;
@@ -205,14 +227,24 @@ export function computeChargingPeriodStats(
     inWindow.push(s);
     totalEnergyWh += s.total_energy_added_wh;
     totalCost += s.cost_decimal ?? 0;
-    totalDurationMin += durationMinutes(s);
-    const p = avgPowerW(s);
-    if (p > 0) {
+    const minutes = durationMinutes(s);
+    totalDurationMin += minutes;
+    if (minutes > 0) {
+      durationN += 1;
+      // Pair energy with its own measured duration; open sessions cannot add
+      // energy to a rate whose denominator excludes their elapsed time.
+      if (Number.isFinite(s.total_energy_added_wh)) {
+        rateEnergyWh += s.total_energy_added_wh;
+        rateDurationMin += minutes;
+      }
+    }
+    const p = sessionAveragePowerW(s);
+    if (p != null) {
       powerSum += p;
       powerN += 1;
     }
     byCategory[getChargerCategory(s.charger_type)] += 1;
-    if (!s.cost_decimal || s.cost_decimal === 0) freeCount += 1;
+    if (s.cost_decimal === 0) freeCount += 1;
     const hour = parseStartHour(s.started_at, tz);
     if (hour != null) hourCounts[hour] += 1;
   }
@@ -224,10 +256,10 @@ export function computeChargingPeriodStats(
     totalEnergyWh,
     totalCost,
     totalDurationMin,
-    avgRateKw: totalDurationMin > 0
-      ? totalEnergyWh / 1000 / (totalDurationMin / 60)
+    avgRateKw: rateDurationMin > 0
+      ? rateEnergyWh / 1000 / (rateDurationMin / 60)
       : null,
-    avgDurationMin: count > 0 ? totalDurationMin / count : null,
+    avgDurationMin: durationN > 0 ? totalDurationMin / durationN : null,
     avgPowerW: powerN > 0 ? powerSum / powerN : null,
     mostCommonStartHour: hourCounts.some((c) => c > 0)
       ? hourCounts.indexOf(Math.max(...hourCounts))
@@ -349,7 +381,7 @@ export function detectChargingAnomalies(
       out.push({
         session: s,
         kind: 'bad_power',
-        message: `Low power for DC (${fmtNumber(power, 1)} kW)`,
+        message: `Low power for DC (${fmtNumber(power)} kW)`,
         actionLabel: 'View curve',
       });
       continue;
@@ -358,7 +390,7 @@ export function detectChargingAnomalies(
       out.push({
         session: s,
         kind: 'expensive',
-        message: `Expensive charge (${currencySymbol}${fmtNumber(cpk, 2)}/kWh)`,
+        message: `Expensive charge (${currencySymbol}${fmtNumber(cpk)}/kWh)`,
         actionLabel: 'Compare',
       });
       continue;
@@ -367,7 +399,7 @@ export function detectChargingAnomalies(
       out.push({
         session: s,
         kind: 'trickle',
-        message: `Trickle charge (${fmtNumber(power, 1)} kW for ${formatDurationShort(dur)})`,
+        message: `Trickle charge (${fmtNumber(power)} kW for ${formatDurationShort(dur)})`,
         actionLabel: 'View curve',
       });
       continue;
@@ -445,32 +477,33 @@ export function dailyChargingTrend(
   for (const s of sessions) {
     const day = localDayKey(s.started_at, tz);
     if (!day) continue;
-    const b = buckets.get(day) ?? { sum: 0, count: 0 };
+    let value: number | null;
     switch (metric) {
       case 'sessions':
-        b.sum += 1;
+        value = 1;
         break;
       case 'energy':
-        b.sum += s.total_energy_added_wh / 1000;
+        value = Number.isFinite(s.total_energy_added_wh) ? s.total_energy_added_wh / 1000 : null;
         break;
       case 'cost':
-        b.sum += s.cost_decimal ?? 0;
+        value = s.cost_decimal != null && Number.isFinite(s.cost_decimal) ? s.cost_decimal : null;
         break;
       case 'power': {
-        const p = avgPowerW(s) / 1000;
-        if (p > 0) {
-          b.sum += p;
-          b.count += 1;
-        }
+        const powerW = sessionAveragePowerW(s);
+        value = powerW != null ? powerW / 1000 : null;
         break;
       }
     }
+    if (value == null) continue;
+    const b = buckets.get(day) ?? { sum: 0, count: 0 };
+    b.sum += value;
+    b.count += 1;
     buckets.set(day, b);
   }
   const points: ChargingTrendPoint[] = Array.from(buckets.entries()).map(
     ([date, b]) => ({
       date,
-      value: metric === 'power' ? (b.count > 0 ? b.sum / b.count : 0) : b.sum,
+      value: metric === 'power' ? b.sum / b.count : b.sum,
     }),
   );
   return points.sort((a, b) => (a.date < b.date ? -1 : 1));

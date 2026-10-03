@@ -5,13 +5,15 @@ import { deriveDataState } from '@/api/dataState';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { resolveHvacActive } from '@/lib/climateState';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, WidgetStatusGrid } from './shared';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;

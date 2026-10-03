@@ -11,6 +11,8 @@ import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import type { ExportJob as ExportJobExport } from '@/types/export';
 import type { ExportJob as ExportJobAdmin } from '@/types/admin';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 // ── Normalised job shape used within this widget ─────────────────────
 
@@ -75,9 +77,9 @@ const STATUS_BADGE: Record<JobStatus, { variant: 'neutral' | 'info' | 'success' 
 export function fmtBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '—';
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  if (bytes < 1024 * 1024) return `${fmtNumber((bytes / 1024))} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${fmtNumber((bytes / (1024 * 1024)))} MB`;
+  return `${fmtNumber((bytes / (1024 * 1024 * 1024)))} GB`;
 }
 
 export function truncateFilename(path: string | undefined, maxLen: number): string {
@@ -161,6 +163,7 @@ function JobRow({
   showDownload: boolean;
   t: (key: string, fallback: string) => string;
 }) {
+  useNumberFormatting();
   const cfg = STATUS_BADGE[status];
   const format = (job.format ?? '').toUpperCase() || '—';
 

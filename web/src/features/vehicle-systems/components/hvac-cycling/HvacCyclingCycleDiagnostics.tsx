@@ -9,10 +9,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingCycleDiagnosticsProps {
   summary: HvacCyclingSummary;
@@ -32,6 +33,7 @@ export function HvacCyclingCycleDiagnostics({
   summary,
   state,
 }: HvacCyclingCycleDiagnosticsProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const censoredActive =
     summary.activeRunCount - summary.completeOnRunCount;
@@ -76,7 +78,7 @@ export function HvacCyclingCycleDiagnostics({
             <Diagnostic
               label={t('hvacCycling.cycles.rate', 'Short-cycle rate')}
               value={summary.qualifiedShortCycleRate != null
-                ? fmtPercent(summary.qualifiedShortCycleRate * 100, 1)
+                ? fmtPercent(summary.qualifiedShortCycleRate * 100)
                 : '—'}
             />
           </Grid>

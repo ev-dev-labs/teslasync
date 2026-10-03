@@ -20,7 +20,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   ComplianceFiling,
   JurisdictionApportionment,
@@ -40,10 +40,12 @@ import {
   fromDateInput,
   toDateInput,
 } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const WINDOW_OPTIONS = [30, 90, 180, 365];
 
 export default function JurisdictionCompliancePage() {
+  const { fmtInt, fmtNumber, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -150,7 +152,7 @@ export default function JurisdictionCompliancePage() {
       key: 'drives',
       header: t('ownership.compliance.row.drives', 'Drives'),
       align: 'right',
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.drive_count, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtInt(row.drive_count)}</span>,
     },
     {
       key: 'energy',
@@ -196,11 +198,11 @@ export default function JurisdictionCompliancePage() {
       align: 'right',
       render: (row) => (
         <div>
-          <span className="tabular-nums">{fmtNumber(row.emissions_g / 1000, 1)} kg</span>
+          <span className="tabular-nums">{fmtNumber(row.emissions_g / 1000)} kg</span>
           <Text as="p" variant="caption">
             {row.emissions_g_per_m != null
               ? t('ownership.compliance.row.emissionsRate', '{{value}} g per km', {
-                  value: fmtNumber(row.emissions_g_per_m * 1000, 1),
+                  value: fmtNumber(row.emissions_g_per_m * 1000),
                 })
               : '—'}
           </Text>
@@ -215,7 +217,7 @@ export default function JurisdictionCompliancePage() {
         <span
           className={`tabular-nums ${row.confidence_pct >= 90 ? 'text-emerald-300' : row.confidence_pct >= 60 ? 'text-amber-300' : 'text-rose-300'}`}
         >
-          {formatPct(row.confidence_pct, 0)}
+          {formatPct(row.confidence_pct)}
         </span>
       ),
     },
@@ -270,11 +272,11 @@ export default function JurisdictionCompliancePage() {
       key: 'grid',
       align: 'right',
       filterValue: (row) => row.grid_intensity_g_per_wh,
-      filterValueLabel: (_value, row) => `${fmtNumber(row.grid_intensity_g_per_wh * 1000, 0)} g/kWh`,
+      filterValueLabel: (_value, row) => `${fmtNumber(row.grid_intensity_g_per_wh * 1000)} g/kWh`,
       header: t('ownership.compliance.rate.grid', 'Grid intensity'),
       render: (row) => (
         <span className="tabular-nums">
-          {fmtNumber(row.grid_intensity_g_per_wh * 1000, 0)} g/kWh
+          {fmtNumber(row.grid_intensity_g_per_wh * 1000)} g/kWh
         </span>
       ),
     },
@@ -283,8 +285,8 @@ export default function JurisdictionCompliancePage() {
       header: t('ownership.compliance.rate.bbox', 'Bounding box'),
       render: (row) => (
         <Text as="span" variant="caption">
-          {fmtNumber(row.min_lat, 3)},{fmtNumber(row.min_lng, 3)} → {fmtNumber(row.max_lat, 3)},
-          {fmtNumber(row.max_lng, 3)}
+          {fmtScientificNumber(row.min_lat, 3)},{fmtScientificNumber(row.min_lng, 3)} → {fmtScientificNumber(row.max_lat, 3)},
+          {fmtScientificNumber(row.max_lng, 3)}
         </Text>
       ),
     },
@@ -432,7 +434,7 @@ export default function JurisdictionCompliancePage() {
               {
                 key: 'emissions',
                 label: t('ownership.compliance.stat.emissions', 'Attributed emissions'),
-                value: `${fmtNumber((report?.total_emissions_g ?? 0) / 1000, 1)} kg`,
+                value: `${fmtNumber((report?.total_emissions_g ?? 0) / 1000)} kg`,
               },
             ]}
           />
@@ -556,7 +558,7 @@ export default function JurisdictionCompliancePage() {
                 step="any"
                 min={0}
                 hint={t('ownership.compliance.rateForm.gridHint', '{{value}} g per kWh', {
-                  value: fmtNumber(rateDraft.grid_intensity_g_per_wh * 1000, 0),
+                  value: fmtNumber(rateDraft.grid_intensity_g_per_wh * 1000),
                 })}
                 onChange={(event) =>
                   setRateDraft((current) => ({

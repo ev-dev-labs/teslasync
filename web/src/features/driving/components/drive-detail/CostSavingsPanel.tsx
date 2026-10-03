@@ -4,12 +4,14 @@ import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { DriveDetail } from '@/types/driving';
 import type { DriveStats } from './types';
 import { driveEnergyEvidence } from './energyEvidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function CostSavingsPanel({ drive, stats }: { drive: DriveDetail; stats: DriveStats }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { settings } = useSettings();
   const { unitPrefs } = useUnits();
@@ -24,7 +26,7 @@ export function CostSavingsPanel({ drive, stats }: { drive: DriveDetail; stats: 
   const costPerUnit = kwh != null ? costPerDistanceUnit(kwh, distanceM) : null;
   const rows = [
     { id: 'ev', label: t('driveDetail.tripCost', 'Trip cost'), value: kwh != null ? formatEnergyCost(kwh) : '—' },
-    { id: 'per-unit', label: t('driveDetail.costPerUnit', 'Cost / {{unit}}', { unit: unitPrefs.distance }), value: costPerUnit != null ? formatCurrency(costPerUnit, 3) : '—' },
+    { id: 'per-unit', label: t('driveDetail.costPerUnit', 'Cost / {{unit}}', { unit: unitPrefs.distance }), value: costPerUnit != null ? formatCurrency(costPerUnit) : '—' },
     { id: 'gas', label: t('driveDetail.gasCostEquiv', 'Gas cost (equivalent)'), value: gasCost != null ? formatCurrency(gasCost) : '—' },
     { id: 'savings', label: t('driveDetail.gasSavings', 'Savings vs gas'), value: savings != null ? formatCurrency(savings) : '—' },
     { id: 'percentage', label: t('driveDetail.savingsPct', 'Savings %'), value: savingsPct != null ? `${fmtNumber(savingsPct)}%` : '—' },

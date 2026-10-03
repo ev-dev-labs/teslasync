@@ -58,6 +58,8 @@ import type {
   DiagnosticReport,
 } from '@/api/types';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 // ── helpers ─────────────────────────────────────────────────────────
 
@@ -148,7 +150,7 @@ function statusIcon(status: DiagnosticCheckStatus) {
 /** Compact human duration for probe timings (sub-second in ms, else s). */
 function formatMs(ms: number): string {
   const v = Number.isFinite(ms) ? ms : 0;
-  if (v >= 1000) return `${(v / 1000).toFixed(v >= 10_000 ? 0 : 1)}s`;
+  if (v >= 1000) return `${fmtNumber((v / 1000))}s`;
   return `${Math.round(v)}ms`;
 }
 
@@ -327,6 +329,7 @@ function OverallHero({
 }
 
 function StatusSummary({ summary }: { summary: DiagnosticSummary }) {
+  useNumberFormatting();
   const { t } = useTranslation();
   return (
     <section

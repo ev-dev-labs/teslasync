@@ -6,6 +6,7 @@ import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { MiniChart } from '@/components/charts/MiniChart';
 import { StaggerContainer, StaggerItem } from '@/components/motion';
 import type { FleetAnalytics, Drive, ChargingSession } from '../types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FleetStatsBarProps {
   analytics: FleetAnalytics | undefined;
@@ -25,6 +26,7 @@ export function FleetStatsBar({
   recentDrives, recentCharges,
   toDistanceDisplay, toEfficiencyDisplay, distanceUnit, efficiencyUnit,
 }: FleetStatsBarProps) {
+  const { precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const totalDistance = analytics?.total_distance_km ?? 0;
   const totalEnergy = analytics?.total_energy_kwh ?? 0;
@@ -78,7 +80,7 @@ export function FleetStatsBar({
         <GlassPanel role="group" aria-label={energyLabel} className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
           <p className="metric-label mb-1 text-2xs sm:text-xs">{energyLabel}</p>
           <p className="text-xl sm:text-2xl font-bold text-emerald-300">
-            <AnimatedNumber value={totalEnergy} decimals={1} suffix=" kWh" />
+            <AnimatedNumber value={totalEnergy} decimals={displayPrecision} suffix=" kWh" />
           </p>
           <MiniChart data={chargeSparkline} color="#10b981" height={24} width={60} />
         </GlassPanel>

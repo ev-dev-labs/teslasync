@@ -2,8 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { ShieldCheck } from 'lucide-react';
 import { GlassPanel, PanelTitle, Badge, Text, Caption } from '@/components/ui';
 import type { WarrantyOutlook } from '@/api/hooks/useServiceIntelligence';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { PanelState } from './PanelState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface WarrantyPanelProps {
   selected: boolean;
@@ -36,6 +37,7 @@ function statusLabel(status: string, t: (k: string, d: string) => string): strin
 }
 
 export function WarrantyPanel({ selected, loading, error, outlook, onRetry }: WarrantyPanelProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -76,7 +78,7 @@ export function WarrantyPanel({ selected, loading, error, outlook, onRetry }: Wa
                     <>
                       {' · '}
                       {t('serviceIntelligence.warranty.kmLeft', '{{km}} km left', {
-                        km: fmtNumber(Math.max(c.km_remaining, 0), 0),
+                        km: fmtNumber(Math.max(c.km_remaining, 0)),
                       })}
                     </>
                   )}

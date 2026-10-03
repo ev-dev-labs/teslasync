@@ -2,12 +2,14 @@ import { useLocation } from 'react-router-dom';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { PhysicsInvestigation } from '../components/tesla-physics/PhysicsInvestigation';
 import { PhysicsInvestigationNav } from '../components/tesla-physics/PhysicsInvestigationNav';
 import { features, hours, PhysicsPageShell, unknown, usePhysicsPage } from '../components/tesla-physics/PhysicsPageShell';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function TeslaPhysicsPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { pathname } = useLocation();
   const slug = features.find((item) => pathname === `/tesla-physics/${item.slug}`)?.slug;
   const physics = usePhysicsPage(slug);
@@ -23,7 +25,7 @@ export default function TeslaPhysicsPage() {
       <PanelTitle>{slug ? t('teslaOnly.workbench.summary', 'Evidence at a glance') : t('teslaOnly.whereToStart', 'Where to start')}</PanelTitle>
       {!slug && <Text as="p" variant="bodySm">{t('teslaOnly.hubGuide', 'Choose a focused investigation. Each section explains its measurements, interpretation limits, related evidence, and optional timestamp-level drilldowns. Start by checking source coverage.')}</Text>}
       <Grid cols={{ default: 1, md: 2, xl: 4 }} gap={3}>
-        <MetricCard label={t('teslaOnly.sampleCoverage', 'Sampled window')} value={percentage == null ? unknown(t) : `${fmtNumber(percentage, 1)}%`} color="cyan" />
+        <MetricCard label={t('teslaOnly.sampleCoverage', 'Sampled window')} value={percentage == null ? unknown(t) : `${fmtNumber(percentage)}%`} color="cyan" />
         <MetricCard label={t('teslaOnly.unknownHours', 'Unknown')} value={hours(coverage?.unknown_hours, t)} color="amber" />
         <MetricCard label={t('teslaOnly.contradictionEpisodes', 'Returned episodes')} value={findings ? findings.length : unknown(t)} color="purple" />
         <MetricCard label={t('teslaOnly.workbench.resetCount', 'Returned meter drops')} value={drops ? drops.length : unknown(t)} color="green" />

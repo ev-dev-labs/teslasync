@@ -1,11 +1,12 @@
 import type { TFunction } from 'i18next';
 
 import type { RangeBufferEvidenceBand } from '../../lib/rangeBuffer';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export function rangeBufferNumber(
   value: number | null | undefined,
   locale: string,
-  precision = 1,
+  precision = getGlobalPrecision(),
 ): string {
   if (value == null || !Number.isFinite(value)) return '—';
   return new Intl.NumberFormat(locale, {
@@ -17,7 +18,7 @@ export function rangeBufferNumber(
 export function rangeBufferPercent(
   value: number | null | undefined,
   locale: string,
-  precision = 1,
+  precision = getGlobalPrecision(),
 ): string {
   if (value == null || !Number.isFinite(value)) return '—';
   return `${rangeBufferNumber(value, locale, precision)}%`;

@@ -11,14 +11,16 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { MetricBandSkeleton } from './helpers';
 import { PIE_COLORS } from './constants';
 import { ChargingDetailSection } from './ChargingDetailSection';
 import type { FleetAnalyticsQuery } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -49,34 +51,34 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
             />
             <MetricCard
               label={t('analytics.charging.totalEnergy', 'Total energy')}
-              value={data ? fmtNumber(data.total_energy_kwh ?? 0, 1) : '—'}
+              value={data ? fmtNumber(data.total_energy_kwh ?? 0) : '—'}
               subtitle="kWh"
               icon={<Zap className="h-4 w-4" />}
               color="green"
             />
             <MetricCard
               label={t('analytics.charging.totalCost', 'Total cost')}
-              value={data ? formatCurrency(data.total_cost ?? 0, 2) : '—'}
+              value={data ? formatCurrency(data.total_cost ?? 0) : '—'}
               icon={<DollarSign className="h-4 w-4" />}
               color="amber"
             />
             <MetricCard
               label={t('analytics.charging.avgPower', 'Avg power')}
-              value={powerStats ? fmtNumber(safe(powerStats.avg), 1) : '—'}
+              value={powerStats ? fmtNumber(safe(powerStats.avg)) : '—'}
               subtitle="kW"
               icon={<Gauge className="h-4 w-4" />}
               color="purple"
             />
             <MetricCard
               label={t('analytics.charging.avgDuration', 'Avg duration')}
-              value={durStats ? fmtNumber(safe(durStats.avg), 0) : '—'}
+              value={durStats ? fmtNumber(safe(durStats.avg)) : '—'}
               subtitle={t('analytics.charging.min', 'min')}
               icon={<Timer className="h-4 w-4" />}
               color="cyan"
             />
             <MetricCard
               label={t('analytics.charging.chargeEff', 'Charge efficiency')}
-              value={effStats ? fmtNumber(safe(effStats.avg), 1) : '—'}
+              value={effStats ? fmtNumber(safe(effStats.avg)) : '—'}
               subtitle="%"
               icon={<TrendingUp className="h-4 w-4" />}
               color="green"

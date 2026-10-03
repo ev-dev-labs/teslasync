@@ -137,9 +137,9 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
           data={monthlyTrend}
           dataColumns={[
             { key: 'month', label: t('analytics.charging.month', 'Month') },
-            { key: 'cost', label: t('analytics.overview.electricCost', 'Electric cost'), format: (value) => formatCurrency(safe(value), 2) },
-            { key: 'gas_cost', label: t('analytics.overview.gasCost', 'Gas cost'), format: (value) => formatCurrency(safe(value), 2) },
-            { key: 'savings', label: t('analytics.overview.savings', 'Savings'), format: (value) => formatCurrency(safe(value), 2) },
+            { key: 'cost', label: t('analytics.overview.electricCost', 'Electric cost'), format: (value) => formatCurrency(safe(value)) },
+            { key: 'gas_cost', label: t('analytics.overview.gasCost', 'Gas cost'), format: (value) => formatCurrency(safe(value)) },
+            { key: 'savings', label: t('analytics.overview.savings', 'Savings'), format: (value) => formatCurrency(safe(value)) },
           ]}
           exportFilename="fleet-monthly-cost-comparison"
           chartKey="analytics-monthly-cost-comparison"
@@ -151,7 +151,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
                 <XAxis dataKey="month" tick={axisTickSm} />
                 <YAxis yAxisId="left" tick={axisTick} />
                 <YAxis yAxisId="right" orientation="right" tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} formatter={(value: number) => formatCurrency(value, 2)} />
+                <Tooltip content={<ChartTooltip />} formatter={(value: number) => formatCurrency(value)} />
                 <ChartLegend />
                 <Bar yAxisId="left" dataKey="cost" name={t('analytics.overview.electricCost', 'Electric cost')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} hide={hiddenSeries?.isHidden('cost')} />
                 <Bar yAxisId="left" dataKey="gas_cost" name={t('analytics.overview.gasCost', 'Gas cost')} fill={CHART_COLORS[5]} radius={[3, 3, 0, 0]} hide={hiddenSeries?.isHidden('gas_cost')} />

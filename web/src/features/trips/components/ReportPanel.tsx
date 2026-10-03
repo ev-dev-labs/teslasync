@@ -5,8 +5,9 @@ import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { Text } from '@/components/ui';
 import { ListSkeleton, QueryError } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { safeArray } from '@/lib/safeArray';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Trip report card: distance, duration, detour factor, plan/replan
@@ -14,6 +15,7 @@ import { safeArray } from '@/lib/safeArray';
  * transitions, check-ins, and replans.
  */
 export function ReportPanel({ session }: { session: JourneySession }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const units = useUnits();
 
@@ -62,7 +64,7 @@ export function ReportPanel({ session }: { session: JourneySession }) {
               </Text>
               <Text as="dd" variant="label" className="tabular-nums">
                 {report.detour != null
-                  ? t('journey.report.times', '{{ratio}}×', { ratio: fmtNumber(report.detour, 2) })
+                  ? t('journey.report.times', '{{ratio}}×', { ratio: fmtNumber(report.detour) })
                   : '—'}
               </Text>
             </div>
@@ -71,7 +73,7 @@ export function ReportPanel({ session }: { session: JourneySession }) {
                 {t('journey.report.fixes', 'Fixes')}
               </Text>
               <Text as="dd" variant="label" className="tabular-nums">
-                {fmtNumber(report.fixes, 0)}
+                {fmtNumber(report.fixes)}
               </Text>
             </div>
             <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2">
@@ -80,8 +82,8 @@ export function ReportPanel({ session }: { session: JourneySession }) {
               </Text>
               <Text as="dd" variant="label" className="tabular-nums">
                 {t('journey.report.replanCount', '{{replans}} of {{plans}} plans', {
-                  replans: fmtNumber(report.replans, 0),
-                  plans: fmtNumber(report.plans, 0),
+                  replans: fmtNumber(report.replans),
+                  plans: fmtNumber(report.plans),
                 })}
               </Text>
             </div>
@@ -92,7 +94,7 @@ export function ReportPanel({ session }: { session: JourneySession }) {
               <Text as="dd" variant="label" className="tabular-nums">
                 {report.route_factor != null
                   ? t('journey.report.usuallyTimes', '{{ratio}}× over {{count}} trips', {
-                      ratio: fmtNumber(report.route_factor, 2),
+                      ratio: fmtNumber(report.route_factor),
                       count: report.route_trips,
                     })
                   : '—'}
@@ -105,8 +107,8 @@ export function ReportPanel({ session }: { session: JourneySession }) {
               <Text as="dd" variant="label" className="tabular-nums">
                 {report.checklist != null
                   ? t('journey.report.readyCount', '{{ready}} of {{total}}', {
-                      ready: fmtNumber(report.checklist.ready, 0),
-                      total: fmtNumber(report.checklist.total, 0),
+                      ready: fmtNumber(report.checklist.ready),
+                      total: fmtNumber(report.checklist.total),
                     })
                   : '—'}
               </Text>

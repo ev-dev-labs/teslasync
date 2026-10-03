@@ -9,10 +9,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalSegmentationDiagnosticsProps {
   summary: CabinThermalSummary;
@@ -20,6 +21,7 @@ interface CabinThermalSegmentationDiagnosticsProps {
 }
 
 function SegmentMetric({ label, value }: { label: string; value: number }) {
+  const { fmtInt } = useNumberFormatting();
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
       <MetricLabel>{label}</MetricLabel>

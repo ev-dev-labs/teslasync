@@ -124,7 +124,7 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.uptime.title', 'Uptime monitor')}
+      title={t('widget.uptime.title', 'Uptime monitor')}
       icon={<Activity className="h-3.5 w-3.5" />}
       loading={isLoading}
       dataState={state}

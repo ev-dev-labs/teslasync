@@ -38,6 +38,7 @@ import { formatDateTime, formatRelativeTime } from '@/lib/dateFormat';
 import { useSchemaDrift } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
 import type { SchemaDrift, SchemaFingerprint } from '@/types/admin-operator-confidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
@@ -229,6 +230,7 @@ interface DeltaTileProps {
 }
 
 function DeltaTile({ label, icon, delta, current, expected, isLoading, hasData }: DeltaTileProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const matched = (delta ?? 0) === 0;
   return (
@@ -347,6 +349,7 @@ function FingerprintCard({ title, fp, generatedAt }: FingerprintCardProps) {
 }
 
 function FingerprintStat({ label, value }: { label: string; value: number | null | undefined }) {
+  const { fmtInt } = useNumberFormatting();
   return (
     <div className="rounded-md bg-[var(--surface-2)] px-2 py-2 text-center">
       <Text as="div" size="lg" weight="bold" color="primary" className="tabular-nums">
@@ -425,6 +428,7 @@ interface CategoryRowProps {
 }
 
 function CategoryRow({ label, current, expected, delta }: CategoryRowProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const matched = (delta ?? 0) === 0;
   return (

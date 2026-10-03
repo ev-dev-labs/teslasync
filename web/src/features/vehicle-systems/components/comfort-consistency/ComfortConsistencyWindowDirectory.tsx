@@ -10,7 +10,7 @@ import {
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type {
   ComfortConsistencySummary,
   ComfortRunBoundary,
@@ -20,6 +20,7 @@ import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyWindowDirectoryProps {
   summary: ComfortConsistencySummary;
@@ -45,6 +46,7 @@ export function ComfortConsistencyWindowDirectory({
   formatDuration,
   formatDelta,
 }: ComfortConsistencyWindowDirectoryProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.windowDirectory;
   const boundaryLabel = (boundary: ComfortRunBoundary) => {
@@ -135,7 +137,7 @@ export function ComfortConsistencyWindowDirectory({
                   />
                   <Detail
                     label={t('comfortConsistency.directory.span', 'Sample span')}
-                    value={formatDuration(window.sampleSpanS, { precision: 2 })}
+                    value={formatDuration(window.sampleSpanS)}
                   />
                   <Detail
                     label={t('comfortConsistency.directory.samples', 'Samples')}
@@ -147,7 +149,7 @@ export function ComfortConsistencyWindowDirectory({
                   />
                   <Detail
                     label={t('comfortConsistency.directory.timeToBand', 'Observed time to sustained band')}
-                    value={formatDuration(window.timeToBandS, { precision: 2 })}
+                    value={formatDuration(window.timeToBandS)}
                   />
                   <Detail
                     label={t('comfortConsistency.directory.overshoot', 'Observed overshoot')}

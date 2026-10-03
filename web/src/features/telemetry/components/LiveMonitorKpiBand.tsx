@@ -11,7 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { Activity, Boxes, Fingerprint, Hash, Layers, Wifi, WifiOff } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface LiveMonitorKpiBandProps {
   connected: boolean;
@@ -38,6 +39,7 @@ export function LiveMonitorKpiBand({
   numericCount,
   categoricalCount,
 }: LiveMonitorKpiBandProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   const safeBufferCount = bufferCount ?? 0;
@@ -77,7 +79,7 @@ export function LiveMonitorKpiBand({
       <MetricCard
         label={t('liveMonitor.bufferSize', 'Buffer size')}
         value={fmtInt(safeBufferCount)}
-        subtitle={`/ ${fmtInt(safeMax)} · ${fmtPercent(fillPct, 0)}`}
+        subtitle={`/ ${fmtInt(safeMax)} · ${fmtPercent(fillPct)}`}
         color="blue"
         icon={<Boxes className="h-5 w-5" aria-hidden="true" />}
       />

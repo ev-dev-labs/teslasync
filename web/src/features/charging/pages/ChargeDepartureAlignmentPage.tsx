@@ -21,10 +21,11 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 
 import { analyzeChargeDepartureAlignment, type AlignmentFlag } from '../lib/chargeDepartureAlignment';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const FLAG_DEFAULTS: Record<AlignmentFlag, string> = {
   tight_margin: 'Cut it close on departure',
@@ -41,6 +42,7 @@ function dayLabel(ms: number, locale: string): string {
 }
 
 export default function ChargeDepartureAlignmentPage() {
+  const { fmtPercent } = useNumberFormatting();
   const { t, i18n } = useTranslation();
   usePageTitle(t('chargeDepartureAlignment.title', 'Charge \u2192 Departure Alignment'));
 
@@ -135,7 +137,7 @@ export default function ChargeDepartureAlignmentPage() {
               />
               <MetricCard
                 label={t('chargeDepartureAlignment.avgMargin', 'Avg. Readiness Margin')}
-                value={summary.avgReadinessMarginPct != null ? fmtPercent(summary.avgReadinessMarginPct, 1) : '\u2014'}
+                value={summary.avgReadinessMarginPct != null ? fmtPercent(summary.avgReadinessMarginPct) : '\u2014'}
                 subtitle={t('chargeDepartureAlignment.avgMarginHint', 'SoC left once that drive ended')}
                 icon={<Gauge className="h-4 w-4" />}
                 color="purple"
@@ -147,7 +149,7 @@ export default function ChargeDepartureAlignmentPage() {
               />
               <MetricCard
                 label={t('chargeDepartureAlignment.misaligned', 'Misaligned Rate')}
-                value={fmtPercent(summary.misalignedRatePct, 1)}
+                value={fmtPercent(summary.misalignedRatePct)}
                 subtitle={t('chargeDepartureAlignment.misalignedHint', '{{n}} of {{total}} paired sessions', {
                   n: summary.misalignedCount,
                   total: summary.pairedCount,
@@ -276,9 +278,9 @@ export default function ChargeDepartureAlignmentPage() {
                   </div>
                   <div className="mb-2 grid grid-cols-2 gap-x-4 gap-y-1">
                     <Text variant="caption">{t('chargeDepartureAlignment.margin', 'Readiness margin')}</Text>
-                    <Text variant="bodySm">{p.readinessMarginPct != null ? fmtPercent(p.readinessMarginPct, 0) : '\u2014'}</Text>
+                    <Text variant="bodySm">{p.readinessMarginPct != null ? fmtPercent(p.readinessMarginPct) : '\u2014'}</Text>
                     <Text variant="caption">{t('chargeDepartureAlignment.socUsed', 'SoC that drive used')}</Text>
-                    <Text variant="bodySm">{p.socUsedPct != null ? fmtPercent(p.socUsedPct, 0) : '\u2014'}</Text>
+                    <Text variant="bodySm">{p.socUsedPct != null ? fmtPercent(p.socUsedPct) : '\u2014'}</Text>
                   </div>
                   {p.flags.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">

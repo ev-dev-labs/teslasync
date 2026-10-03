@@ -4,14 +4,16 @@ import { MetricCard } from '@/components/data-display';
 import { safe } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { MetricBandSkeleton } from './helpers';
 import type { FleetAnalyticsQuery } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SECONDS_PER_HOUR = 3600;
 const METERS_PER_KM = 1000;
 
 export function DrivingPerformanceCards({ query }: { query: FleetAnalyticsQuery }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -45,42 +47,42 @@ export function DrivingPerformanceCards({ query }: { query: FleetAnalyticsQuery 
     >
       <MetricCard
         label={t('analytics.driving.topSpeed', 'Top speed')}
-        value={ss ? fmtNumber(fromKmh(safe(ss.max)), 0) : '—'}
+        value={ss ? fmtNumber(fromKmh(safe(ss.max))) : '—'}
         subtitle={speedUnit}
         icon={<Gauge className="h-4 w-4" />}
         color="cyan"
       />
       <MetricCard
         label={t('analytics.driving.avgSpeed', 'Avg speed')}
-        value={ss ? fmtNumber(fromKmh(safe(ss.avg)), 0) : '—'}
+        value={ss ? fmtNumber(fromKmh(safe(ss.avg))) : '—'}
         subtitle={speedUnit}
         icon={<TrendingUp className="h-4 w-4" />}
         color="purple"
       />
       <MetricCard
         label={t('analytics.driving.peakPower', 'Peak power')}
-        value={ps ? fmtNumber(safe(ps.max), 0) : '—'}
+        value={ps ? fmtNumber(safe(ps.max)) : '—'}
         subtitle="kW"
         icon={<Zap className="h-4 w-4" />}
         color="amber"
       />
       <MetricCard
         label={t('analytics.driving.peakRegen', 'Peak regen')}
-        value={rs ? fmtNumber(safe(rs.max), 0) : '—'}
+        value={rs ? fmtNumber(safe(rs.max)) : '—'}
         subtitle="kW"
         icon={<BatteryCharging className="h-4 w-4" />}
         color="green"
       />
       <MetricCard
         label={t('analytics.driving.avgDriveDist', 'Avg drive distance')}
-        value={ds ? fmtNumber(fromKm(safe(ds.avg)), 1) : '—'}
+        value={ds ? fmtNumber(fromKm(safe(ds.avg))) : '—'}
         subtitle={distanceUnit}
         icon={<MapPin className="h-4 w-4" />}
         color="cyan"
       />
       <MetricCard
         label={t('analytics.driving.longestDrive', 'Longest drive')}
-        value={ds ? fmtNumber(fromKm(safe(ds.max)), 1) : '—'}
+        value={ds ? fmtNumber(fromKm(safe(ds.max))) : '—'}
         subtitle={distanceUnit}
         icon={<Car className="h-4 w-4" />}
         color="purple"

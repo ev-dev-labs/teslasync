@@ -37,8 +37,14 @@ vi.mock('react-i18next', () => ({
 // The only data-fetching dependency. Default returns two geofences; individual
 // tests override via mockReturnValue to exercise empty / undefined data.
 vi.mock('@/api/hooks/useLocations', () => ({ useGeofences: vi.fn() }));
+vi.mock('@/hooks/useSettings', async () => {
+  const { inputPreferences } = await import('@/test/inputPreferences');
+  return { useSettings: vi.fn(() => ({ settings: inputPreferences() })) };
+});
 
 import { useGeofences } from '@/api/hooks/useLocations';
+import { useSettings } from '@/hooks/useSettings';
+import { inputPreferences } from '@/test/inputPreferences';
 import { ConditionBuilder, CONDITION_TYPES, createDefaultCondition } from './ConditionBuilder';
 import type { AutomationConditionStepInput } from '../components/stepInputTypes';
 
@@ -50,6 +56,7 @@ function geofenceResult(data: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(useSettings).mockReturnValue({ settings: inputPreferences() } as ReturnType<typeof useSettings>);
   mockedUseGeofences.mockReturnValue(
     geofenceResult([
       { id: 5, name: 'Home' },
@@ -255,8 +262,8 @@ describe('ConditionBuilder — signal operators', () => {
         value_max: 100,
       },
     ]);
-    expect(screen.getByLabelText('Min')).toHaveValue(20);
-    expect(screen.getByLabelText('Max')).toHaveValue(100);
+    expect(screen.getByLabelText('Min')).toHaveValue('20.00');
+    expect(screen.getByLabelText('Max')).toHaveValue('100.00');
     expect(screen.queryByLabelText('Value')).not.toBeInTheDocument();
   });
 
@@ -273,18 +280,56 @@ describe('ConditionBuilder — signal operators', () => {
 // ── Signal fields — value editing per data type ───────────────────────────────
 
 describe('ConditionBuilder — signal value editing', () => {
-  it('parses a numeric value and coerces blanks to zero', () => {
+  it('converts preferred speed list inputs to exact canonical CSV values', () => {
+    vi.mocked(useSettings).mockReturnValue({
+      settings: inputPreferences({ unit_of_length: 'mi' }),
+    } as ReturnType<typeof useSettings>);
+    const { onChange } = renderBuilder([{
+      kind: 'condition_signal', signal: 'speed', op: 'in', value_text: '31.2928',
+    }]);
+    const input = screen.getByRole('textbox', { name: 'Value' });
+    expect(input).toHaveValue('70.00');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '60.0001; 70' } });
+    const condition = lastArg(onChange)[0];
+    expect(condition.kind).toBe('condition_signal');
+    if (condition.kind === 'condition_signal') {
+      const values = condition.value_text?.split(',').map(Number);
+      expect(values?.[0]).toBeCloseTo(26.822444704, 10);
+      expect(values?.[1]).toBeCloseTo(31.2928, 10);
+    }
+  });
+
+  it('converts preferred temperature bounds without rounding or repopulating blanks', () => {
+    vi.mocked(useSettings).mockReturnValue({
+      settings: inputPreferences({ unit_of_temp: 'F', locale: 'de-DE', decimal_precision: 3 }),
+    } as ReturnType<typeof useSettings>);
+    const { onChange } = renderBuilder([{
+      kind: 'condition_signal', signal: 'inside_temp', op: 'between', value_min: 20, value_max: 25,
+    }]);
+    const min = screen.getByLabelText('Min');
+    expect(min).toHaveValue('68,000');
+    expect(screen.getByLabelText('Max')).toHaveValue('77,000');
+    fireEvent.focus(min);
+    fireEvent.change(min, { target: { value: '68,12345' } });
+    expect(lastArg(onChange)[0]).toMatchObject({ value_min: (68.12345 - 32) * 5 / 9, value_max: 25 });
+    fireEvent.change(min, { target: { value: '' } });
+    expect(lastArg(onChange)[0]).toMatchObject({ value_min: undefined, value_max: 25 });
+    fireEvent.blur(min);
+    expect(min).toHaveValue('');
+  });
+  it('parses a numeric value and preserves blanks as absent thresholds', () => {
     const { onChange } = renderBuilder([signalCondition]);
-    const valueInput = screen.getByLabelText('Value');
+    const valueInput = screen.getByRole('textbox', { name: /^Value/ });
 
     fireEvent.change(valueInput, { target: { value: '55' } });
     expect(lastArg(onChange)).toEqual([
       { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: 55 },
     ]);
 
-    fireEvent.change(screen.getByLabelText('Value'), { target: { value: '' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^Value/ }), { target: { value: '' } });
     expect(lastArg(onChange)).toEqual([
-      { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: 0 },
+      { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: undefined },
     ]);
   });
 

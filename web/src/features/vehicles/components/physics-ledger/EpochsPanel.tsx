@@ -3,10 +3,12 @@ import type {
 } from '@/api/types';
 import { DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { asList, unknownLabel, useT } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function EpochsPanel({ ledger }: { ledger: PhysicsLedger }) {
+  const { fmtInt } = useNumberFormatting();
   const t = useT();
   const { formatEnergy } = useUnits();
   const epochs = asList(ledger.epochs);
@@ -34,7 +36,7 @@ export function EpochsPanel({ ledger }: { ledger: PhysicsLedger }) {
       key: 'samples',
       align: 'right',
       header: t('physicsLedger.epochs.samples', 'Samples'),
-      render: (row) => fmtNumber(row.sample_count, 0),
+      render: (row) => fmtInt(row.sample_count),
     },
   ];
   return (

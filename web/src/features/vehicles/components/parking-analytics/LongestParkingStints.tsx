@@ -13,11 +13,12 @@ import {
 } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import type { ParkingStint, ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RankedStint extends ParkingStint {
   rank: number;
@@ -35,6 +36,7 @@ export function LongestParkingStints({
   state,
   className,
 }: LongestParkingStintsProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
   const { formatDuration } = useUnits();
@@ -87,7 +89,7 @@ export function LongestParkingStints({
         visibleOnMobile: true,
         render: (row) => (
           <Text variant="body" mono>
-            {formatDuration(row.durationMs / 1_000, { precision: 1 })}
+            {formatDuration(row.durationMs / 1_000)}
           </Text>
         ),
       },
@@ -109,7 +111,7 @@ export function LongestParkingStints({
         ),
       },
     ],
-    [formatDateTime, formatDuration, t],
+    [formatDateTime, formatDuration, t, fmtInt],
   );
 
   return (

@@ -29,6 +29,7 @@ import {
   useSaveStormguardConfig,
   type StormLevel,
 } from '@/api/hooks/useStormguard';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function levelVariant(level: StormLevel): 'success' | 'warning' | 'danger' | 'neutral' {
   switch (level) {
@@ -53,6 +54,7 @@ function levelLabel(t: (k: string, f: string) => string, level: StormLevel): str
 }
 
 export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
 
@@ -136,7 +138,7 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
           <div className="flex flex-wrap gap-x-6 gap-y-1">
             <Caption className="tabular-nums">
               {t('stormguard.peakGust', 'Peak gust {{gust}} m/s', {
-                gust: assessment.peak_gust_ms.toFixed(0),
+                gust: fmtNumber(assessment.peak_gust_ms),
               })}
             </Caption>
             {currentSoc != null && (

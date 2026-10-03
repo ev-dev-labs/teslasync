@@ -6,9 +6,10 @@ import { GlassPanel, Badge, DataTable, PanelTitle, Text, type Column } from '@/c
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
 import { formatRelative } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { Automation } from '@/api/types';
 import { VisuallyHidden } from '@/components/a11y';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type RowKey = string | number;
 
@@ -49,6 +50,7 @@ export function AutomationListTable({
   onRetry,
   totalCount,
 }: AutomationListTableProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Defensive null-safety: the page contract passes null-safe values, but a
@@ -225,7 +227,7 @@ export function AutomationListTable({
         },
       },
     ],
-    [t, lookup],
+    [t, lookup, fmtInt],
   );
 
   return (

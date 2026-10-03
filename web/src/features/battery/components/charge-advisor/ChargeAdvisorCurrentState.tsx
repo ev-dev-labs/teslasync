@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComponentProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const current = analysis.current;
   const sourceLabel = current.source === 'live'
@@ -50,7 +52,7 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text variant="caption">{t('chargeAdvisor.current.battery', 'Battery SoC')}</Text>
           <Text className="mt-1 text-2xl font-semibold text-cyan-300">
-            {current.batteryPct == null ? '—' : fmtPercent(current.batteryPct, 0)}
+            {current.batteryPct == null ? '—' : fmtPercent(current.batteryPct)}
           </Text>
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">

@@ -19,7 +19,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { useAPICallLogs, useAPICallLogStats, useSystemErrorStats } from '@/api/hooks/useAdmin';
@@ -28,6 +28,7 @@ import { deriveServiceOptions } from '../lib/serviceOptions';
 import {
   ApiLogsEvidenceTable, type ApiLogsServerFilterKey, type ApiLogsServerFilters,
 } from '../components/ApiLogsEvidenceTable';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Local helpers                                                      */
@@ -69,6 +70,7 @@ function serviceBadgeConfig(service: string): { label: string; variant: LogBadge
 /* ------------------------------------------------------------------ */
 
 export default function ApiLogsPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('apiLogs.title', 'API logs'));
   const serviceConfig = useCallback((svc: string) => {

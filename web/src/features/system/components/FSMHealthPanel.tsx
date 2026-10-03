@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, RotateCw, Timer } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { Grid } from '@/components/layout';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { FSMTransition } from '@/types/fsm';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FSMHealthPanelProps {
   transitions: FSMTransition[];
@@ -34,6 +35,7 @@ function parseTs(ts: string): number {
 }
 
 export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   const alerts = useMemo<HealthAlert[]>(() => {

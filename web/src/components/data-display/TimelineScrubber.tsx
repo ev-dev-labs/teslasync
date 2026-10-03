@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 
@@ -449,11 +450,12 @@ function TimelineMarkerTick({
   onSeek: (normalized: number) => void;
 }) {
   const { t } = useTranslation();
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const left = `${Math.min(100, Math.max(0, marker.at * 100))}%`;
   const color = MARKER_COLORS[marker.kind] ?? 'bg-[var(--surface-2)]';
   const ariaLabel = marker.label
-    ? `${marker.label} ${t('replay.markers.atPercent', 'at {{pct}}%', { pct: Math.round(marker.at * 100) })}`
-    : `${marker.kind} ${Math.round(marker.at * 100)}%`;
+    ? `${marker.label} ${t('replay.markers.atPercent', 'at {{pct}}%', { pct: fmtNumber(marker.at * 100) })}`
+    : `${marker.kind} ${fmtPercent(marker.at * 100)}`;
   return (
     <Tooltip
       content={marker.label ?? marker.kind}

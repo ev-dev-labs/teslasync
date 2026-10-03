@@ -6,11 +6,12 @@ import { BatteryCharging, ChevronRight } from 'lucide-react'
 import { GlassPanel, DataTable, PanelTitle, type Column } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
-import { fmtNumber } from '@/lib/numberFormat'
+
 import { convertEnergyFromSI } from '@/lib/unitConversion'
 import { useFormatting } from '@/hooks/useFormatting'
 import type { ChargingSession } from '@/api/types'
 import { durationStr } from './helpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RecentChargesSectionProps {
   sessions: ChargingSession[] | undefined
@@ -43,6 +44,7 @@ export function chargeDurationMinutes(session: ChargingSession): number {
 }
 
 function useChargeColumns(): Column<ChargingSession>[] {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatCurrency } = useFormatting()
 
@@ -90,7 +92,7 @@ function useChargeColumns(): Column<ChargingSession>[] {
         },
       },
     ],
-    [t, formatCurrency],
+    [t, formatCurrency, fmtNumber, displayPrecision, displayLocale],
   )
 }
 

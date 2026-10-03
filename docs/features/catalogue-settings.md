@@ -15,6 +15,14 @@ and `/settings#appearance` continue to work. Switching categories preserves
 unsaved form edits and does not save automatically. Each section retains its own
 save or instant-apply behavior.
 
+**Decimal precision** in Units, language & costs controls measurement, currency
+and percentage displays across pages, tables, widgets and chart tooltips.
+Changing the saved preference updates mounted displays without reloading data.
+Counts, identifiers and clock durations remain integers or clock-formatted;
+scientific diagnostics may retain a minimum number of decimals to avoid hiding
+meaningful detail, while honoring a higher selected precision. This preference
+changes presentation only, not stored SI values, calculations or filter limits.
+
 **Fonts & readability** at `/settings#typography` offers a searchable UI and
 monospace font library, live font samples, and a text field for trying your own
 copy. Font selection, reading presets, scale, line height, letter spacing, and

@@ -14,9 +14,10 @@ import { Table, Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { EvidencePanel, InsightPanel, MutationError } from '../components';
 import { formatEfficiencyFromSI } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 12;
 
@@ -30,6 +31,7 @@ interface RoundForm {
 }
 
 export default function FederatedLearningStudioPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -93,16 +95,16 @@ export default function FederatedLearningStudioPage() {
           <Grid minItemWidth="standard" gap={4}>
             <StatCard
               label={t('advancedIntelligence.federated.budget.total', 'Total epsilon budget')}
-              value={query.data ? fmtNumber(query.data.total_epsilon_budget, 2) : null}
+              value={query.data ? fmtNumber(query.data.total_epsilon_budget) : null}
             />
             <StatCard
               label={t('advancedIntelligence.federated.budget.spent', 'Epsilon spent')}
-              value={query.data ? fmtNumber(query.data.total_epsilon_spent, 2) : null}
+              value={query.data ? fmtNumber(query.data.total_epsilon_spent) : null}
             />
             <StatCard
               label={t('advancedIntelligence.federated.budget.remaining', 'Epsilon remaining')}
               value={query.data
-                ? fmtNumber(Math.max(0, query.data.total_epsilon_budget - query.data.total_epsilon_spent), 2)
+                ? fmtNumber(Math.max(0, query.data.total_epsilon_budget - query.data.total_epsilon_spent))
                 : null}
               icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
             />
@@ -136,19 +138,19 @@ export default function FederatedLearningStudioPage() {
                     <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.epsilon', 'Epsilon')}
                     </th>
-                    <td className="text-right">{fmtNumber(card.epsilon_spent, 2)} / {fmtNumber(card.epsilon_budget, 2)}</td>
+                    <td className="text-right">{fmtNumber(card.epsilon_spent)} / {fmtNumber(card.epsilon_budget)}</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.rounds', 'Rounds')}
                     </th>
-                    <td className="text-right">{fmtNumber(card.round_count, 0)}</td>
+                    <td className="text-right">{fmtInt(card.round_count)}</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.samples', 'Latest local samples')}
                     </th>
-                    <td className="text-right">{card.latest_sample_count != null ? fmtNumber(card.latest_sample_count, 0) : '—'}</td>
+                    <td className="text-right">{card.latest_sample_count != null ? fmtInt(card.latest_sample_count) : '—'}</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">

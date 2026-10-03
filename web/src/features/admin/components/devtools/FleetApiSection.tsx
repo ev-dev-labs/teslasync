@@ -5,7 +5,7 @@ import { GlassPanel, Badge, Button, Input, Select, Textarea, type Column } from 
 import { Skeleton, AlertBanner } from '@/components/feedback'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
-import { fmtInt } from '@/lib/numberFormat'
+
 import { getErrorMessage } from '@/lib/errorMessage'
 import SignalConfigModal from '@/components/ui/SignalConfigModal'
 
@@ -17,6 +17,7 @@ import { apiFetch, extractTelemetryErrors, useVehicleOptions } from './helpers'
 import type { TelemetryError } from './types'
 import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
 import { Icons } from '@/lib/icons';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── Fleet API Config Tool ───────────────────────────────────────────── */
 
@@ -690,6 +691,7 @@ function VehicleDataTools() {
 /* ─── Onboarding Workflow ─────────────────────────────────────────────── */
 
 function OnboardingWorkflow() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const [currentStep, setCurrentStep] = useState(0)
   const [completed, setCompleted] = useState<Record<string, boolean>>(() => {

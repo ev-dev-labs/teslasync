@@ -29,6 +29,7 @@ import {
   type KindCategory,
   type LiveSignalRow,
 } from './liveSignalStats';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface LiveSignalsTableProps {
   rows: LiveSignalRow[];
@@ -85,6 +86,7 @@ function parseTs(ts: string | undefined): number {
 }
 
 export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const [filter, setFilter] = useState('');
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc');

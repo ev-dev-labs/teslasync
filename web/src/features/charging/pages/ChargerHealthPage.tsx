@@ -134,7 +134,7 @@ export default function ChargerHealthPage() {
                 label={t('chargerHealth.fastest', 'Fastest Site')}
                 value={
                   summary.fastestSite != null
-                    ? formatPower(summary.fastestSite.baselineW, { precision: 0 })
+                    ? formatPower(summary.fastestSite.baselineW)
                     : '—'
                 }
                 subtitle={summary.fastestSite?.label ?? t('chargerHealth.none', 'None yet')}
@@ -284,15 +284,15 @@ export default function ChargerHealthPage() {
                     <Text variant="caption">
                       {t('chargerHealth.baselinePower', 'Baseline')}
                     </Text>
-                    <Text variant="bodySm">{formatPower(s.baselineW, { precision: 0 })}</Text>
+                    <Text variant="bodySm">{formatPower(s.baselineW)}</Text>
                     <Text variant="caption">
                       {t('chargerHealth.recentPower', 'Recent')}
                     </Text>
-                    <Text variant="bodySm">{formatPower(s.recentW, { precision: 0 })}</Text>
+                    <Text variant="bodySm">{formatPower(s.recentW)}</Text>
                     <Text variant="caption">
                       {t('chargerHealth.energy', 'Energy taken')}
                     </Text>
-                    <Text variant="bodySm">{formatEnergy(s.totalEnergyWh, { precision: 0 })}</Text>
+                    <Text variant="bodySm">{formatEnergy(s.totalEnergyWh)}</Text>
                     <Text variant="caption">
                       {t('chargerHealth.visits', 'Visits')}
                     </Text>

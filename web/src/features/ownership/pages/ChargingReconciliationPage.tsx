@@ -19,7 +19,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime, isoUtcToLocalDatetimeInput, localDatetimeInputToIso } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   ChargingInvoice,
   InvoiceLine,
@@ -36,6 +36,7 @@ import {
   VerdictBadge,
 } from '../components';
 import { formatCurrencyMinor, formatPct, formatSpan, fromDateInput, toDateInput } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function blankLine(): InvoiceLine {
   return {
@@ -52,6 +53,7 @@ function blankLine(): InvoiceLine {
 }
 
 export default function ChargingReconciliationPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -175,7 +177,7 @@ export default function ChargingReconciliationPage() {
       key: 'lines',
       header: t('ownership.reconcile.invoice.lines', 'Lines'),
       align: 'right',
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.line_count, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtInt(row.line_count)}</span>,
     },
     {
       key: 'status',
@@ -233,7 +235,7 @@ export default function ChargingReconciliationPage() {
         <div className="flex items-center gap-2">
           <VerdictBadge value={row.match_state} />
           <span className="tabular-nums text-xs text-[var(--text-muted)]">
-            {formatPct(row.match_confidence_pct, 0)}
+            {formatPct(row.match_confidence_pct)}
           </span>
         </div>
       ),
@@ -348,7 +350,7 @@ export default function ChargingReconciliationPage() {
       key: 'lines',
       header: t('ownership.reconcile.bucket.lines', 'Lines'),
       align: 'right',
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.line_count, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtInt(row.line_count)}</span>,
     },
     {
       key: 'amount',
@@ -734,13 +736,13 @@ export default function ChargingReconciliationPage() {
                 {
                   key: 'matched',
                   label: t('ownership.reconcile.stat.matched', 'Matched lines'),
-                  value: fmtNumber(report?.matched_line_count ?? 0, 0),
+                  value: fmtInt(report?.matched_line_count ?? 0),
                   tone: 'positive',
                 },
                 {
                   key: 'unmatched',
                   label: t('ownership.reconcile.stat.unmatched', 'Unmatched lines'),
-                  value: fmtNumber(report?.unmatched_line_count ?? 0, 0),
+                  value: fmtInt(report?.unmatched_line_count ?? 0),
                   tone: (report?.unmatched_line_count ?? 0) > 0 ? 'warning' : 'default',
                 },
                 {

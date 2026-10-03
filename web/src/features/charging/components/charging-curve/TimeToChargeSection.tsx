@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Timer, Clock, TrendingUp, TrendingDown } from 'lucide-react';
 import type { ChargingSession } from '@/api/types';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { SectionTitle, HelperText } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { isDcSession, avg, durationMinutes } from './helpers';
@@ -10,6 +10,7 @@ import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type { NeonColor } from '@/lib/tokens';
 import type { TimeToChargeMetrics } from './types';
 import YearlyTrendChart from './YearlyTrendChart';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TimeToChargeSectionProps {
   sessions: ChargingSession[];
@@ -25,6 +26,7 @@ interface TtcCard {
 }
 
 export default function TimeToChargeSection({ sessions }: TimeToChargeSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const timeToCharge = useMemo((): TimeToChargeMetrics => {
@@ -131,7 +133,7 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
         color: 'amber',
       },
     ];
-  }, [t, timeToCharge]);
+  }, [t, timeToCharge, fmtNumber]);
 
   return (
     <div className="space-y-4">

@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { latestNumeric, latestText } from '@/lib/signalObservation';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 
@@ -19,6 +19,7 @@ import {
   POWERSHARE_SIGNALS, SERIES_LIMIT, buildSeries, humanizeEnum, seriesPeak, statusNeon,
   type SnapshotRow,
 } from '../components/powershare';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Powershare — bidirectional power-sharing cockpit. Five cold signals
@@ -28,6 +29,7 @@ import {
  * this render boundary — the API returns raw values.
  */
 export default function PowersharePage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('powershare.title', 'Powershare'));
 
@@ -68,17 +70,17 @@ export default function PowersharePage() {
         value: humanizeEnum(shareType, POWERSHARE_SIGNALS.type) ?? '—',
         ts: typeQ.data?.[0]?.ts ?? null },
       { key: 'power', label: t('powershare.kpi.outputPower', 'Output Power'),
-        value: powerKw != null ? `${fmtNumber(powerKw, 2)} kW` : '—',
+        value: powerKw != null ? `${fmtNumber(powerKw)} kW` : '—',
         ts: powerQ.data?.[0]?.ts ?? null },
       { key: 'hours', label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'),
-        value: hoursLeft != null ? `${fmtNumber(hoursLeft, 1)} h` : '—',
+        value: hoursLeft != null ? `${fmtNumber(hoursLeft)} h` : '—',
         ts: hoursQ.data?.[0]?.ts ?? null },
       { key: 'stop', label: t('powershare.stopReason.title', 'Stop Reason'),
         value: humanizeEnum(stopReason, POWERSHARE_SIGNALS.stopReason) ?? '—',
         ts: stopQ.data?.[0]?.ts ?? null },
     ],
     [t, status, shareType, powerKw, hoursLeft, stopReason,
-      statusQ.data, typeQ.data, powerQ.data, hoursQ.data, stopQ.data],
+      statusQ.data, typeQ.data, powerQ.data, hoursQ.data, stopQ.data, fmtNumber],
   );
 
   const snapshotLoading = [statusQ, typeQ, stopQ, hoursQ, powerQ].every((q) => q.isLoading);
@@ -144,14 +146,14 @@ export default function PowersharePage() {
           />
           <MetricCard
             label={t('powershare.kpi.outputPower', 'Output Power')}
-            value={powerKw != null ? `${fmtNumber(powerKw, 2)} kW` : '—'}
+            value={powerKw != null ? `${fmtNumber(powerKw)} kW` : '—'}
             icon={<Power className="h-5 w-5" />}
             color="amber"
             subtitle={t('powershare.kpi.outputPowerSub', 'Instantaneous power draw')}
           />
           <MetricCard
             label={t('powershare.kpi.hoursRemaining', 'Hours Remaining')}
-            value={hoursLeft != null ? `${fmtNumber(hoursLeft, 1)} h` : '—'}
+            value={hoursLeft != null ? `${fmtNumber(hoursLeft)} h` : '—'}
             icon={<Clock className="h-5 w-5" />}
             color="cyan"
             subtitle={t('powershare.kpi.hoursRemainingSub', 'Runtime at current output')}

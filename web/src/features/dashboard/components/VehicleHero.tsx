@@ -20,6 +20,7 @@ import type {
 } from '@/api/hooks/useVehicles';
 import type { VehicleStatus, VehicleStateReadings } from '@/api/types';
 import type { Vehicle } from '../types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface VehicleHeroProps {
   vehicle: Vehicle;
@@ -64,6 +65,7 @@ export function VehicleHero({
   freshness = 'unknown',
   verifiedFields = NO_VERIFIED_FIELDS,
 }: VehicleHeroProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatTime } = useDateFormat();
   const { formatPower } = useUnits();
@@ -197,7 +199,7 @@ export function VehicleHero({
                   <div>
                     <Text as="p" size="xs" color="secondary">{t('hero.timeToFull', 'Time to full')}</Text>
                     <Text as="p" size="sm" weight="bold" color="primary">
-                      {hasEta ? `${fmtNumber(etaHours, 1)}h` : '—'}
+                      {hasEta ? `${fmtNumber(etaHours)}h` : '—'}
                     </Text>
                     {hasEta && (
                       <Text as="p" size="2xs" color="secondary">
@@ -284,24 +286,24 @@ function buildStatCards(
 
   if (isDriving) {
     cards.push(
-      { icon: Gauge, label: t('hero.speed', 'Speed'), value: formatReading(speed, value => `${fmtNumber(u.toSpeedDisplay(value), 0)} ${u.speedUnit}`), color: gaugeTone.purple },
+      { icon: Gauge, label: t('hero.speed', 'Speed'), value: formatReading(speed, value => `${fmtNumber(u.toSpeedDisplay(value))} ${u.speedUnit}`), color: gaugeTone.purple },
       powerCard,
       { icon: Navigation, label: t('hero.odometer', 'Odometer'), value: formatReading(odometer, value => `${fmtInt(u.toDistanceDisplay(value))} ${u.distanceUnit}`), color: gaugeTone.purple },
-      { icon: Activity, label: t('hero.idealRange', 'Ideal range'), value: formatReading(idealRange, value => `${fmtNumber(u.toDistanceDisplay(value), 0)} ${u.distanceUnit}`), color: gaugeTone.accent },
+      { icon: Activity, label: t('hero.idealRange', 'Ideal range'), value: formatReading(idealRange, value => `${fmtNumber(u.toDistanceDisplay(value))} ${u.distanceUnit}`), color: gaugeTone.accent },
     );
   } else if (isCharging) {
     cards.push(
       { icon: Zap, label: t('hero.chargeRate', 'Charge rate'), value: formatReading(s.charge_rate, value => `${fmtInt(u.toDistanceDisplay(value))} ${u.distanceUnit}/h`), color: gaugeTone.success },
-      { icon: Clock, label: t('hero.timeToFull', 'Time to full'), value: s.time_to_full_charge != null && Number.isFinite(s.time_to_full_charge) && s.time_to_full_charge > 0 ? `${fmtNumber(s.time_to_full_charge, 1)}h` : '—', color: gaugeTone.warning },
-      { icon: Activity, label: t('hero.idealRange', 'Ideal range'), value: formatReading(idealRange, value => `${fmtNumber(u.toDistanceDisplay(value), 0)} ${u.distanceUnit}`), color: gaugeTone.accent },
+      { icon: Clock, label: t('hero.timeToFull', 'Time to full'), value: s.time_to_full_charge != null && Number.isFinite(s.time_to_full_charge) && s.time_to_full_charge > 0 ? `${fmtNumber(s.time_to_full_charge)}h` : '—', color: gaugeTone.warning },
+      { icon: Activity, label: t('hero.idealRange', 'Ideal range'), value: formatReading(idealRange, value => `${fmtNumber(u.toDistanceDisplay(value))} ${u.distanceUnit}`), color: gaugeTone.accent },
       { icon: Navigation, label: t('hero.odometer', 'Odometer'), value: formatReading(odometer, value => `${fmtInt(u.toDistanceDisplay(value))} ${u.distanceUnit}`), color: gaugeTone.purple },
     );
   } else {
     cards.push(
-      { icon: Thermometer, label: t('hero.inside', 'Inside'), value: formatReading(s.inside_temp, value => `${fmtNumber(u.toTemperatureDisplay(value), 1)}${u.tempUnit}`), color: gaugeTone.warning },
-      { icon: Thermometer, label: t('hero.outside', 'Outside'), value: formatReading(s.outside_temp, value => `${fmtNumber(u.toTemperatureDisplay(value), 1)}${u.tempUnit}`), color: gaugeTone.primary },
+      { icon: Thermometer, label: t('hero.inside', 'Inside'), value: formatReading(s.inside_temp, value => `${fmtNumber(u.toTemperatureDisplay(value))}${u.tempUnit}`), color: gaugeTone.warning },
+      { icon: Thermometer, label: t('hero.outside', 'Outside'), value: formatReading(s.outside_temp, value => `${fmtNumber(u.toTemperatureDisplay(value))}${u.tempUnit}`), color: gaugeTone.primary },
       { icon: Navigation, label: t('hero.odometer', 'Odometer'), value: formatReading(odometer, value => `${fmtInt(u.toDistanceDisplay(value))} ${u.distanceUnit}`), color: gaugeTone.purple },
-      { icon: Activity, label: t('hero.idealRange', 'Ideal range'), value: formatReading(idealRange, value => `${fmtNumber(u.toDistanceDisplay(value), 0)} ${u.distanceUnit}`), color: gaugeTone.accent },
+      { icon: Activity, label: t('hero.idealRange', 'Ideal range'), value: formatReading(idealRange, value => `${fmtNumber(u.toDistanceDisplay(value))} ${u.distanceUnit}`), color: gaugeTone.accent },
     );
   }
 

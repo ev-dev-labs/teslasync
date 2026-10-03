@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import type { DriveFsdInsight } from '@/types/fsd';
 import type { ChartDataPoint, DriveStats } from './types';
 import { interpretDriveDebrief, type DebriefBeatId } from './drivePhysicsDebrief';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const BEAT_COPY: Record<DebriefBeatId, { key: string; fallback: string }> = {
   launch: {
@@ -44,6 +45,7 @@ export function DrivePhysicsDebriefPanel({
   chartData: ChartDataPoint[];
   fsdInsight: DriveFsdInsight | undefined;
 }) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const debrief = interpretDriveDebrief(stats, chartData, fsdInsight);
   const provenance = debrief.beats.some((beat) => beat.honesty === 'missing' && beat.id === 'gap')
@@ -69,7 +71,7 @@ export function DrivePhysicsDebriefPanel({
         {debrief.regenShare != null && (
           <Badge variant="success" size="sm">
             {t('driveDetail.report.regenShareEstimate', 'Estimated regen ratio {{share}}', {
-              share: fmtPercent(debrief.regenShare * 100, 0),
+              share: fmtPercent(debrief.regenShare * 100),
             })}
           </Badge>
         )}

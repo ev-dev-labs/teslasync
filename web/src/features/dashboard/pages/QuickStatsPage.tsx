@@ -21,7 +21,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Fleet analytics distances are SI kilometres; efficiency is Wh/km. Convert at the boundary. */
 const METERS_PER_KM = 1000;
@@ -30,6 +31,7 @@ const KM_PER_MILE = 1.609344;
 const ANALYTICS_WINDOW_DAYS = 30;
 
 export default function QuickStatsPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('quickStats.title', 'Quick stats'));
   const navigate = useNavigate();
@@ -173,7 +175,7 @@ export default function QuickStatsPage() {
               />
               <MetricCard
                 label={t('quickStats.totalCost', 'Total cost')}
-                value={formatCurrency(analytics.totalCost ?? 0, 0)}
+                value={formatCurrency(analytics.totalCost ?? 0)}
                 icon={<DollarSign className="h-4 w-4" />}
                 color="purple"
               />

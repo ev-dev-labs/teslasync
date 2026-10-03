@@ -3,9 +3,10 @@ import { MetricCard } from '@/components/data-display';
 import { GlassPanel, SectionTitle, Text } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { ACTIVITY_KINDS, ACTIVITY_KIND_LABELS, type ActivityItem } from '@/types/activity';
 import { ymdInTz } from '@/lib/dateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ActivityOverviewProps {
   items: readonly ActivityItem[];
@@ -17,6 +18,7 @@ interface ActivityOverviewProps {
 }
 
 export function ActivityOverview({ items, total, offset, loading, error, timezone }: ActivityOverviewProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const activeDays = new Set(items.map((item) => ymdInTz(new Date(item.occurred_at), timezone))).size;
   const criticalAlerts = items.filter((item) => item.kind === 'alert' && item.severity === 'critical').length;

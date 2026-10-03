@@ -5,12 +5,14 @@ import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { fitStatusLabel, formatDecimal, supportBandLabel } from './formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalEvidenceSupport({
   analysis,
   state,
   locale,
 }: SeasonalSectionProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const factors = [
     [t('seasonalEfficiency.support.volume', 'Included volume'), analysis.support.volumeScore],
@@ -36,7 +38,7 @@ export function SeasonalEvidenceSupport({
               <Text variant="metricValue" as="p">{analysis.support.index} / 100</Text>
               <Text variant="bodySm" as="p" className="mt-1">{supportBandLabel(analysis.support.band, t)}</Text>
               <Text variant="caption" as="p" className="mt-2">{t('seasonalEfficiency.support.ratioValue', '{{ratio}} samples per parameter', {
-                ratio: formatDecimal(analysis.fit.sampleToParameterRatio, locale, 1),
+                ratio: formatDecimal(analysis.fit.sampleToParameterRatio, locale),
               })}</Text>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">

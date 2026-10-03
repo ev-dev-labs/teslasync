@@ -16,7 +16,8 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, WidgetStatusGrid } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
-import { fmtInt } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ── Event type → visual mapping ──────────────────────────────────────
 
@@ -79,6 +80,7 @@ function CompactView({
   eventCount: number | null;
   t: (key: string, fallback: string) => string;
 }) {
+  const { fmtInt } = useNumberFormatting();
   return (
     <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">

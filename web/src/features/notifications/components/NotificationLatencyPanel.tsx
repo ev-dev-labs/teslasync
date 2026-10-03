@@ -12,12 +12,14 @@ import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Badge, DataTable, GlassPanel, PanelTitle, SectionTitle, Table, Text, type Column } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
 import { analyzeNotificationLatency } from '../lib/notificationLatency';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function NotificationLatencyPanel() {
+  const { fmtNumber, fmtPercent, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const logsQuery = useNotificationDeliveryLogs();
   const summary = useMemo(
@@ -26,7 +28,7 @@ export function NotificationLatencyPanel() {
   );
   const latencyLabel = useCallback((value: number | null) => value == null
     ? '—'
-    : t('notificationLatency.units.ms', '{{value}} ms', { value: fmtNumber(value, 0) }), [t]);
+    : t('notificationLatency.units.ms', '{{value}} ms', { value: fmtNumber(value) }), [t, fmtNumber]);
   const slowestColumns = useMemo<Column<(typeof summary.slowest)[number]>[]>(() => [
     {
       key: 'notification',
@@ -66,15 +68,15 @@ export function NotificationLatencyPanel() {
     () => summary.histogram.map((bin) => ({
       range: bin.upperMs == null
         ? t('notificationLatency.histogram.over', '> {{value}} ms', {
-            value: fmtNumber(bin.lowerMs, 0),
+            value: fmtNumber(bin.lowerMs),
           })
         : t('notificationLatency.histogram.upTo', '≤ {{value}} ms', {
-            value: fmtNumber(bin.upperMs, 0),
+            value: fmtNumber(bin.upperMs),
           }),
       count: bin.count,
       share: Math.round(bin.share * 1_000) / 10,
     })),
-    [summary.histogram, t],
+    [summary.histogram, t, fmtNumber],
   );
   const isLoading = logsQuery.isLoading;
   const isError = logsQuery.isError;
@@ -125,7 +127,7 @@ export function NotificationLatencyPanel() {
                 value={latencyLabel(summary.p99Ms)}
                 subtitle={t('notificationLatency.kpis.tail', '{{value}} slower than 4 seconds', {
                   value: summary.tailShare != null
-                    ? fmtPercent(summary.tailShare * 100, 1)
+                    ? fmtPercent(summary.tailShare * 100)
                     : '—',
                 })}
                 icon={<Hourglass className="h-5 w-5" />}
@@ -133,7 +135,7 @@ export function NotificationLatencyPanel() {
               />
               <MetricCard
                 label={t('notificationLatency.kpis.apdex', 'Delivery Apdex')}
-                value={summary.apdex != null ? fmtNumber(summary.apdex, 3) : '—'}
+                value={summary.apdex != null ? fmtScientificNumber(summary.apdex, 3) : '—'}
                 subtitle={t('notificationLatency.kpis.apdexThreshold', 'T = 1 s · tolerating through 4 s')}
                 icon={<Gauge className="h-5 w-5" />}
                 color={(summary.apdex ?? 0) >= 0.85 ? 'green' : 'amber'}
@@ -230,7 +232,7 @@ export function NotificationLatencyPanel() {
                             <Text as="p" variant="caption">
                               {t('notificationLatency.cohorts.samples', '{{count}} samples · {{tail}} tail', {
                                 count: cohort.count,
-                                tail: fmtPercent(cohort.tailShare * 100, 1),
+                                tail: fmtPercent(cohort.tailShare * 100),
                               })}
                             </Text>
                           </th>

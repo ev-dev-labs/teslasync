@@ -45,6 +45,7 @@ import { CHART_COLORS } from '@/lib/colors';
 import { cn } from '@/lib/cn';
 import { useInView } from '@/hooks/useInView';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { downsampleChartRows } from './chartSampling';
 import { useChartPointBudget } from './useChartPointBudget';
 
@@ -55,6 +56,8 @@ export interface SmallMultiplesChartProps<T extends Record<string, unknown> = Re
   series: string[];
   /** Optional friendly label per series. Defaults to the key. */
   seriesLabel?: (series: string) => string;
+  /** Numeric semantics per series, independent of translated series labels. */
+  seriesKind?: (series: string) => 'measurement' | 'count';
   /** dataKey on each row holding the x-axis value. Default `'timestamp'`. */
   xKey?: string;
   /** Pixel height of each cell. Default 120. */
@@ -156,6 +159,7 @@ export function SmallMultiplesChart<T extends Record<string, unknown> = Record<s
   data,
   series,
   seriesLabel,
+  seriesKind,
   xKey = 'timestamp',
   cellHeight = 120,
   cellMinWidth = 280,
@@ -217,6 +221,7 @@ export function SmallMultiplesChart<T extends Record<string, unknown> = Record<s
             key={sig}
             sig={sig}
             label={label}
+            kind={seriesKind?.(sig)}
             color={color}
             cellHeight={cellHeight}
             hasData={hasData}
@@ -242,6 +247,7 @@ export function SmallMultiplesChart<T extends Record<string, unknown> = Record<s
 interface SmallMultiplesCellProps {
   sig: string;
   label: string;
+  kind?: 'measurement' | 'count';
   color: string;
   cellHeight: number;
   hasData: boolean;
@@ -256,6 +262,7 @@ interface SmallMultiplesCellProps {
 function SmallMultiplesCell({
   sig,
   label,
+  kind,
   color,
   cellHeight,
   hasData,
@@ -267,6 +274,7 @@ function SmallMultiplesCell({
   onCellClick,
 }: SmallMultiplesCellProps) {
   const { formatTime } = useDateFormat();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { ref, inView } = useInView<HTMLDivElement>({ rootMargin: '300px' });
   const cellInteractive = Boolean(onCellClick);
   return (
@@ -340,12 +348,16 @@ function SmallMultiplesCell({
               tickLine={false}
             />
             <YAxis
+              tickFormatter={kind === 'count' ? (value: number) => fmtInt(value)
+                : kind === 'measurement' ? (value: number) => fmtNumber(value) : undefined}
               tick={{ fill: 'var(--text-muted)', fontSize: 9 }}
               width={32}
               tickLine={false}
               domain={['auto', 'auto']}
             />
-            <Tooltip content={<ChartTooltip />} />
+            <Tooltip content={<ChartTooltip valueFormatter={kind === 'count'
+              ? (value) => typeof value === 'number' && Number.isFinite(value) ? fmtInt(value) : '—'
+              : undefined} />} />
             <Line
               type="monotone"
               dataKey={sig}

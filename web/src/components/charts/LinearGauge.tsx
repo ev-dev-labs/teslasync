@@ -4,7 +4,8 @@ import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
 import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { useA11ySummary } from '@/hooks/useA11ySummary';
-import { fmtNumber, getGlobalPrecision, isFiniteNumber } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { resolveGaugeColor, type GaugeTone } from '@/lib/tokens';
 
 export interface LinearGaugeProps {
@@ -60,6 +61,8 @@ export interface LinearGaugeProps {
    */
   size?: number;
   decimals?: number;
+  /** Unit-bearing values default to measurements; use count for counted units. */
+  kind?: 'measurement' | 'count';
   /**
    * Qualitative reading, already translated ("Healthy", "Degraded",
    * "Below target").
@@ -110,7 +113,7 @@ export interface LinearGaugeProps {
  */
 export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
   function LinearGauge(
-    { value, max, min = 0, label, ariaLabel, unit, tone, color, size = 120, decimals, hideScale, marker, markerLabel, status, className },
+    { value, max, min = 0, label, ariaLabel, unit, tone, color, size = 120, decimals, kind, hideScale, marker, markerLabel, status, className },
     ref,
   ) {
     const generatedId = useId();
@@ -130,8 +133,13 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
     const span = safeMax - safeMin;
     const clamped = Math.max(safeMin, Math.min(hasReading ? value : 0, safeMax));
     const ratio = span > 0 ? (clamped - safeMin) / span : 0;
-    const d = decimals ?? (Number.isInteger(clamped) ? 0 : getGlobalPrecision());
-    const display = hasReading ? fmtNumber(clamped, d) : '—';
+    const { fmtNumber, fmtInt } = useNumberFormatting();
+    const hasUnit = !!unit?.trim() && unit.trim() !== '—';
+    const isCount = kind === 'count' || (kind == null && !hasUnit && Number.isInteger(clamped));
+    const formatScale = kind === 'measurement' || (kind == null && hasUnit) ? fmtNumber : fmtInt;
+    const display = hasReading
+      ? decimals == null && isCount ? fmtInt(clamped) : fmtNumber(clamped, decimals)
+      : '—';
 
     // A percentage scale needs no caption: the reader already knows a full
     // track is "all of it". Percent-ness is a property of the UNIT, not of the
@@ -166,8 +174,8 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
       value: hasReading
         ? unitSuffix ? `${display}${unitSuffix}` : display
         : t('common.unknown', 'Unknown'),
-      min: showScale ? `${fmtNumber(safeMin, 0)}${unitSuffix}` : null,
-      max: showScale ? `${fmtNumber(safeMax, 0)}${unitSuffix}` : null,
+      min: showScale ? `${formatScale(safeMin)}${unitSuffix}` : null,
+      max: showScale ? `${formatScale(safeMax)}${unitSuffix}` : null,
       status: hasReading ? status : undefined,
     });
 
@@ -225,7 +233,7 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
           </Text>
           {showScale && (
             <Text as="span" size="2xs" color="muted" className="shrink-0 tabular-nums">
-              {`${fmtNumber(safeMin, 0)} – ${fmtNumber(safeMax, 0)}${unitSuffix}`}
+              {`${formatScale(safeMin)} – ${formatScale(safeMax)}${unitSuffix}`}
             </Text>
           )}
         </div>

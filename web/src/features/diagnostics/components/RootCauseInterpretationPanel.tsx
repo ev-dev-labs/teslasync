@@ -2,9 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { EvidenceQuality } from '../lib/rootCauseIntelligence';
 import { QualityBadge } from './QualityBadge';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface RootCauseInterpretationPanelProps {
   summary: string;
@@ -36,6 +37,7 @@ export function RootCauseInterpretationPanel({
   onRetry,
   className,
 }: RootCauseInterpretationPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -81,7 +83,7 @@ export function RootCauseInterpretationPanel({
             </div>
           )}
           <Caption>
-            {t('rootCauseIntelligence.interpretation.overallScore', 'Overall evidence score {{n}} of 1.00', { n: fmtNumber(quality.overallScore, 2) })}
+            {t('rootCauseIntelligence.interpretation.overallScore', 'Overall evidence score {{n}} of 1.00', { n: fmtNumber(quality.overallScore) })}
           </Caption>
         </div>
       )}

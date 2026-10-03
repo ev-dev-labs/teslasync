@@ -12,13 +12,14 @@ import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Badge, GlassPanel, PanelTitle, SectionTitle, Text } from '@/components/ui';
 import { formatTime } from '@/lib/dateFormat';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
 import {
   analyzeNotificationBurnRate,
   type BurnBreachStatus,
 } from '../lib/notificationBurnRate';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STATUS_FALLBACK: Record<BurnBreachStatus, string> = {
   healthy: 'Healthy',
@@ -28,6 +29,7 @@ const STATUS_FALLBACK: Record<BurnBreachStatus, string> = {
 };
 
 export function NotificationBurnRatePanel() {
+  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const logsQuery = useNotificationDeliveryLogs();
   const summary = useMemo(
@@ -81,7 +83,7 @@ export function NotificationBurnRatePanel() {
               <MetricCard
                 label={t('notificationBurnRate.kpis.delivery', '24h delivery SLO')}
                 value={summary.longWindow.deliveryRate != null
-                  ? fmtPercent(summary.longWindow.deliveryRate * 100, 2)
+                  ? fmtPercent(summary.longWindow.deliveryRate * 100)
                   : '—'}
                 subtitle={t('notificationBurnRate.kpis.objective', '99% objective')}
                 icon={<ShieldCheck className="h-5 w-5" />}
@@ -91,7 +93,7 @@ export function NotificationBurnRatePanel() {
                 label={t('notificationBurnRate.kpis.shortBurn', '1h burn rate')}
                 value={summary.shortWindow.burnRate != null
                   ? t('notificationBurnRate.kpis.multiplier', '{{value}}×', {
-                      value: fmtNumber(summary.shortWindow.burnRate, 2),
+                      value: fmtNumber(summary.shortWindow.burnRate),
                     })
                   : '—'}
                 subtitle={t('notificationBurnRate.kpis.shortOutcomes', '{{count}} delivery outcomes', {
@@ -104,7 +106,7 @@ export function NotificationBurnRatePanel() {
                 label={t('notificationBurnRate.kpis.longBurn', '24h burn rate')}
                 value={summary.longWindow.burnRate != null
                   ? t('notificationBurnRate.kpis.multiplier', '{{value}}×', {
-                      value: fmtNumber(summary.longWindow.burnRate, 2),
+                      value: fmtNumber(summary.longWindow.burnRate),
                     })
                   : '—'}
                 subtitle={t('notificationBurnRate.kpis.failures', '{{failed}} failed · {{sent}} sent', {
@@ -232,7 +234,7 @@ export function NotificationBurnRatePanel() {
                     >
                       {severity.burnRate != null
                         ? t('notificationBurnRate.kpis.multiplier', '{{value}}×', {
-                            value: fmtNumber(severity.burnRate, 2),
+                            value: fmtNumber(severity.burnRate),
                           })
                         : '—'}
                     </Badge>

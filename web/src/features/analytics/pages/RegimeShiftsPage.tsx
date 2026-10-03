@@ -126,7 +126,7 @@ export default function RegimeShiftsPage() {
                 label={t('regimes.tempLink', 'Temp link')}
                 value={
                   lastShift?.tempDeltaC != null
-                    ? `${lastShift.tempDeltaC > 0 ? '+' : ''}${formatTemperature(Math.abs(lastShift.tempDeltaC), { precision: 0 })}`
+                    ? `${lastShift.tempDeltaC > 0 ? '+' : ''}${formatTemperature(Math.abs(lastShift.tempDeltaC))}`
                     : '—'
                 }
                 subtitle={t('regimes.tempLinkHint', 'avg temp change at last shift')}

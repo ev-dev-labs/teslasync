@@ -7,11 +7,12 @@ import { Circle, Marker } from '@/components/maps';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { useVehicleState, useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Haversine distance in meters between two lat/lon points */
 export function haversineMeters(
@@ -41,6 +42,7 @@ interface FenceStatus {
 }
 
 export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
 
@@ -116,7 +118,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
 
   /** Convert radius (meters) to user-preferred distance and format */
   const fmtRadius = (meters: number): string => {
-    return `${fmtNumber(convertDistanceFromSI(meters, unitPrefs.distance), 1)} ${unitPrefs.distance}`;
+    return `${fmtNumber(convertDistanceFromSI(meters, unitPrefs.distance))} ${unitPrefs.distance}`;
   };
 
   const shellProps = {

@@ -347,8 +347,8 @@ describe('LiveLogsPage', () => {
     expect(screen.queryByText('INFO')).not.toBeInTheDocument();
     expect(screen.queryByText('WARN')).not.toBeInTheDocument();
     const levelHeader = screen.getByRole('columnheader', { name: /^Level\b/ });
-    fireEvent.click(within(levelHeader).getByRole('button', { name: /^Filter / }));
-    const menu = screen.getByRole('dialog', { name: /^Filter / });
+    fireEvent.click(within(levelHeader).getByRole('button', { name: / filter$/ }));
+    const menu = screen.getByRole('dialog', { name: / filter$/ });
     expect(within(menu).getByRole('checkbox', { name: 'Info' })).toBeInTheDocument();
     expect(within(menu).getByRole('checkbox', { name: 'Warn' })).toBeInTheDocument();
 

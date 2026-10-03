@@ -19,6 +19,7 @@
 import { useTranslation } from 'react-i18next'
 import { GlassPanel, Caption, HelperText, Text } from '@/components/ui'
 import { useAiUsageToday } from '@/api/hooks/useAiUsage'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type SpendLevel = 'ok' | 'warn' | 'critical'
 
@@ -44,6 +45,7 @@ function toFinite(n: number | null | undefined): number {
 }
 
 export function AICostCapSpendBar({ capCents }: { capCents: number }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('settings')
   const { data, isLoading, isError } = useAiUsageToday()
 
@@ -72,9 +74,9 @@ export function AICostCapSpendBar({ capCents }: { capCents: number }) {
     : isError
       ? t('ai.settings.costCap.unavailable', 'Spend unavailable')
       : t('ai.settings.costCap.amount', '${{spent}} / ${{cap}}', {
-          spent: todayDollars.toFixed(2),
-          cap: capDollars.toFixed(2),
-          defaultValue: `$${todayDollars.toFixed(2)} / $${capDollars.toFixed(2)}`,
+          spent: fmtNumber(todayDollars),
+          cap: fmtNumber(capDollars),
+          defaultValue: `$${fmtNumber(todayDollars)} / $${fmtNumber(capDollars)}`,
         })
   const readoutClass = isError ? 'text-[var(--text-muted)]' : TEXT_CLASS[level]
 

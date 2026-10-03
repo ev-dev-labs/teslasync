@@ -6,11 +6,13 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatusGrid, WidgetStatGrid } from './shared';
 import type { StatusCell } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 /**
  * Derive a status from how far a cell's voltage deviates from the average.
@@ -29,6 +31,7 @@ export function cellStatus(voltage: number | null, avg: number | null): StatusCe
 }
 
 export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -48,7 +51,7 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
 
   const cells = data?.cells ?? [];
   const avgV = knownNumber(data?.avg_voltage);
-  const reading = (value: number | null | undefined, precision: number, unit: string, scale = 1) => {
+  const reading = (value: number | null | undefined, precision = getGlobalPrecision(), unit: string, scale = 1) => {
     const number = knownNumber(value);
     return number == null ? '—' : `${fmtNumber(number * scale, precision)} ${unit}`;
   };
@@ -61,19 +64,19 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
         ? `${t('widget.batteryCells.cell', 'Cell')} ${c.cell_id} · M${c.module}`
         : `C${c.cell_id}`;
       const value = isWide
-        ? `${knownNumber(c.voltage) != null ? `${fmtNumber(c.voltage, 3)} V` : '—'} / ${formatTemperature(knownNumber(c.temperature), { precision: 1 })}`
-        : knownNumber(c.voltage) != null ? `${fmtNumber(c.voltage, 3)} V` : '—';
+        ? `${knownNumber(c.voltage) != null ? `${fmtScientificNumber(c.voltage, 3)} V` : '—'} / ${formatTemperature(knownNumber(c.temperature))}`
+        : knownNumber(c.voltage) != null ? `${fmtScientificNumber(c.voltage, 3)} V` : '—';
 
       return { id: String(c.cell_id), label, status, value };
     });
-  }, [cells, avgV, isWide, t, formatTemperature]);
+  }, [cells, avgV, isWide, t, formatTemperature, fmtNumber, fmtScientificNumber]);
 
   // Summary stats
   const voltageStats = [
-    { label: t('widget.batteryCells.minV', 'Min V'), value: reading(data?.min_voltage, 3, 'V') },
-    { label: t('widget.batteryCells.maxV', 'Max V'), value: reading(data?.max_voltage, 3, 'V') },
-    { label: t('widget.batteryCells.avgV', 'Avg V'), value: reading(avgV, 3, 'V') },
-    { label: t('widget.batteryCells.spread', 'Spread'), value: reading(data?.voltage_spread, 1, 'mV', 1000) },
+    { label: t('widget.batteryCells.minV', 'Min V'), value: reading(data?.min_voltage, Math.max(3, getGlobalPrecision()), 'V') },
+    { label: t('widget.batteryCells.maxV', 'Max V'), value: reading(data?.max_voltage, Math.max(3, getGlobalPrecision()), 'V') },
+    { label: t('widget.batteryCells.avgV', 'Avg V'), value: reading(avgV, Math.max(3, getGlobalPrecision()), 'V') },
+    { label: t('widget.batteryCells.spread', 'Spread'), value: reading(data?.voltage_spread, undefined, 'mV', 1000) },
   ];
 
   return (
@@ -106,9 +109,9 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
           {/* Wide layout: temperature summary row */}
           {isWide && (
             <WidgetStatGrid cols={3} stats={[
-              { label: t('widget.batteryCells.minTemp', 'Min temp'), value: formatTemperature(knownNumber(data?.min_temperature), { precision: 1 }) },
-              { label: t('widget.batteryCells.avgTemp', 'Avg temp'), value: formatTemperature(knownNumber(data?.avg_temperature), { precision: 1 }) },
-              { label: t('widget.batteryCells.maxTemp', 'Max temp'), value: formatTemperature(knownNumber(data?.max_temperature), { precision: 1 }) },
+              { label: t('widget.batteryCells.minTemp', 'Min temp'), value: formatTemperature(knownNumber(data?.min_temperature)) },
+              { label: t('widget.batteryCells.avgTemp', 'Avg temp'), value: formatTemperature(knownNumber(data?.avg_temperature)) },
+              { label: t('widget.batteryCells.maxTemp', 'Max temp'), value: formatTemperature(knownNumber(data?.max_temperature)) },
             ]} />
           )}
         </div>

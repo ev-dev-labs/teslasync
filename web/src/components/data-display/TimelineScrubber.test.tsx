@@ -45,6 +45,7 @@ vi.mock('@/hooks/useMotionPreference', () => ({
 
 import { TimelineScrubber, type TimelineMarker } from './TimelineScrubber';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { setGlobalPrecision } from '@/lib/numberFormat';
 
 /** Track width used by the stub — clientX / 200 is the normalized position. */
 const TRACK_WIDTH = 200;
@@ -77,6 +78,7 @@ function stubTrackRect(width = TRACK_WIDTH, left = 0) {
 const getTrack = () => screen.getByRole('slider');
 
 beforeEach(() => {
+  setGlobalPrecision(0);
   vi.mocked(useMotionPreference).mockReturnValue({ reduce: false, durationMs: 250 });
 });
 

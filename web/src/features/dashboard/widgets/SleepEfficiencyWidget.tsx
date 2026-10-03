@@ -4,11 +4,12 @@ import { Moon } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetGaugeHero } from './shared';
 import type { GaugeHeroConfig, GaugeHeroStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function efficiencyColor(pct: number): string {
   if (pct > 95) return '#10b981';  // green
@@ -17,6 +18,7 @@ function efficiencyColor(pct: number): string {
 }
 
 export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -46,7 +48,7 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   }), [data, efficiencyPct, isCompact, t]);
 
   // Derive avg drain %/day from the sentry-off drain rate (%/hr)
-  const avgDrainPerDay = fmtNumber((data?.sentry_off_drain_rate ?? 0) * 24, 2);
+  const avgDrainPerDay = fmtNumber((data?.sentry_off_drain_rate ?? 0) * 24);
 
   const totalSleepHours = useMemo(() => {
     const dist = data?.state_distribution ?? [];
@@ -60,9 +62,9 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
   const stats = useMemo<GaugeHeroStat[]>(() => [
     { label: t('widget.sleepEfficiency.avgDrain', 'Avg drain/day'), value: avgDrainPerDay, unit: '%' },
-    { label: t('widget.sleepEfficiency.totalSleep', 'Total sleep'), value: fmtNumber(totalSleepHours, 0), unit: t('widget.sleepEfficiency.hours', 'h') },
+    { label: t('widget.sleepEfficiency.totalSleep', 'Total sleep'), value: fmtNumber(totalSleepHours), unit: t('widget.sleepEfficiency.hours', 'h') },
     { label: t('widget.sleepEfficiency.wakeEvents', 'Wake events'), value: wakeEventsCount },
-  ], [avgDrainPerDay, totalSleepHours, wakeEventsCount, t]);
+  ], [avgDrainPerDay, totalSleepHours, wakeEventsCount, t, fmtNumber]);
 
   const hasData = data != null;
 

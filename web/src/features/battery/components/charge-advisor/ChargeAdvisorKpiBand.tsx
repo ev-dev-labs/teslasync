@@ -11,11 +11,13 @@ import { useTranslation } from 'react-i18next';
 import { AlertBanner, QueryError } from '@/components/feedback';
 import { MetricCard } from '@/components/data-display';
 import { Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 
 import type { ChargeAdvisorComponentProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponentProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const guidanceLabel: Record<string, string> = {
     current_state_unavailable: t(
@@ -40,7 +42,7 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
   };
   const currentValue = analysis.current.batteryPct == null
     ? '—'
-    : fmtPercent(analysis.current.batteryPct, 0);
+    : fmtPercent(analysis.current.batteryPct);
   const currentSubtitle = analysis.current.freshness === 'fresh'
     ? t('chargeAdvisor.kpis.currentFresh', 'Fresh observed state')
     : analysis.current.freshness === 'stale'
@@ -92,7 +94,7 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
             label={t('chargeAdvisor.kpis.typicalUse', 'Daily SoC drop')}
             value={analysis.burnDistribution.medianPct == null
               ? '—'
-              : fmtPercent(analysis.burnDistribution.medianPct, 1)}
+              : fmtPercent(analysis.burnDistribution.medianPct)}
             subtitle={t(
               'chargeAdvisor.kpis.dailyUseDetail',
               'Median across active local days',

@@ -9,10 +9,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingIntervalDispositionProps {
   summary: HvacCyclingSummary;
@@ -26,6 +27,7 @@ function Disposition({
   label: string;
   value: number;
 }) {
+  const { fmtInt } = useNumberFormatting();
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
       <MetricLabel>{label}</MetricLabel>
@@ -38,6 +40,7 @@ export function HvacCyclingIntervalDisposition({
   summary,
   state,
 }: HvacCyclingIntervalDispositionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const interval = summary.intervals;
 

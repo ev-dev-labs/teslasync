@@ -15,7 +15,7 @@ import { convertTempFromSI, convertDistanceFromSI, convertEnergyFromSI, convertP
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { formatDate, formatTime } from '@/lib/dateFormat';
-import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
 import { PageContainer } from '@/components/layout';
@@ -48,6 +48,7 @@ import { ChargePhysicsPanel } from '../components/ChargePhysicsPanel';
 import { ChargeLedgerCompactPanel } from '../components/ChargeLedgerCompactPanel';
 import { ChargeBillTruthPanel } from '../components/ChargeBillTruthPanel';
 import { ShareSessionDialog } from '../components/ShareSessionDialog';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
@@ -159,6 +160,7 @@ function ChargingChartSync({
 /* ─── main page ────────────────────────────────────────────────── */
 
 export default function ChargingDetailPage() {
+  const { fmtInt, fmtNumber, fmtPercent, fmtWithUnit } = useNumberFormatting();
   const { t } = useTranslation();
   const closedTelemetryDescription = t(
     'charging.detail.closedTelemetryDescription',
@@ -322,7 +324,7 @@ export default function ChargingDetailPage() {
 
   const costValue =
     displayCost != null
-      ? formatCurrency(displayCost, 2)
+      ? formatCurrency(displayCost)
       : displayEnergyWh > 0
         ? formatEnergyCost(displayEnergyWh / 1000)
         : '—';
@@ -336,7 +338,7 @@ export default function ChargingDetailPage() {
         'charging.detail.fullResolutionTableOmitted',
         'Full-resolution data: {{samples}} samples from {{start}} to {{end}}. The screen-reader data table is omitted for very long sessions; every sample is drawn in the chart.',
         {
-          samples: fmtNumber(telemetryCount, 0),
+          samples: fmtInt(telemetryCount),
           start: formatDate(session.started_at),
           end: session.ended_at ? formatDate(session.ended_at) : t('charging.detail.ongoing', 'now'),
         },
@@ -506,7 +508,7 @@ export default function ChargingDetailPage() {
           />
           <MetricCard
             label={t('charging.detail.duration', 'Duration')}
-            value={`${fmtNumber(durationMin, 0)} min`}
+            value={`${fmtNumber(durationMin)} min`}
             icon={<Clock className="h-5 w-5" aria-hidden="true" />}
             color="blue"
           />
@@ -518,7 +520,7 @@ export default function ChargingDetailPage() {
           />
           <MetricCard
             label={t('charging.detail.socRange', 'SoC Range')}
-            value={`${fmtNumber(session.start_soc_pct ?? 0, 0)}–${fmtNumber(session.end_soc_pct ?? 0, 0)}%`}
+            value={`${fmtNumber(session.start_soc_pct ?? 0)}–${fmtNumber(session.end_soc_pct ?? 0)}%`}
             icon={<Battery className="h-5 w-5" aria-hidden="true" />}
             color="green"
           />
@@ -543,7 +545,7 @@ export default function ChargingDetailPage() {
           />
           <MetricCard
             label={t('charging.detail.perKwh', 'Per kWh')}
-            value={`${formatCurrency(perKwhRate ?? settingsCostPerKwh, 2)}/kWh`}
+            value={`${formatCurrency(perKwhRate ?? settingsCostPerKwh)}/kWh`}
             icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
             color="amber"
             subtitle={perKwhRate == null ? t('charging.detail.fromSettings', 'from settings') : undefined}
@@ -551,7 +553,7 @@ export default function ChargingDetailPage() {
           <MetricCard
             label={t('charging.detail.milesAdded', 'Miles Added')}
             value={addedDistanceM != null
-              ? `${fmtNumber(toDistanceDisplay((addedDistanceM ?? 0) / 1000), 0)} ${distanceUnit}`
+              ? `${fmtNumber(toDistanceDisplay((addedDistanceM ?? 0) / 1000))} ${distanceUnit}`
               : '—'}
             icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
             color="green"
@@ -642,7 +644,7 @@ export default function ChargingDetailPage() {
                   <Text as="p" variant="caption">{t('charging.detail.rangeGained', 'Range Gained')}</Text>
                   <Text as="p" size="lg" weight="bold" color="primary" className="tabular-nums">
                     {addedDistanceM != null
-                      ? fmtWithUnit(toDistanceDisplay((addedDistanceM ?? 0) / 1000), distanceUnit, 0)
+                      ? fmtWithUnit(toDistanceDisplay((addedDistanceM ?? 0) / 1000), distanceUnit)
                       : '—'}
                   </Text>
                 </div>
@@ -758,7 +760,7 @@ export default function ChargingDetailPage() {
                   label={t('charging.detail.milesAdded', 'Miles Added')}
                   value={
                     addedDistanceM != null
-                      ? fmtWithUnit(toDistanceDisplay((addedDistanceM ?? 0) / 1000), distanceUnit, 0)
+                      ? fmtWithUnit(toDistanceDisplay((addedDistanceM ?? 0) / 1000), distanceUnit)
                       : '—'
                   }
                 />
@@ -1148,28 +1150,28 @@ export default function ChargingDetailPage() {
                       label: t('charging.detail.chargerVoltage', 'Charger Voltage'),
                       value:
                         liveCharging.charger_voltage != null
-                          ? fmtWithUnit(liveCharging.charger_voltage, 'V', 0)
+                          ? fmtWithUnit(liveCharging.charger_voltage, 'V')
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargerActualCurrent', 'Active Charge Current'),
                       value:
                         liveCharging.charger_actual_current != null
-                          ? fmtWithUnit(liveCharging.charger_actual_current, 'A', 1)
+                          ? fmtWithUnit(liveCharging.charger_actual_current, 'A')
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargerPilotCurrent', 'Pilot Current'),
                       value:
                         liveCharging.charger_pilot_current != null
-                          ? fmtWithUnit(liveCharging.charger_pilot_current, 'A', 1)
+                          ? fmtWithUnit(liveCharging.charger_pilot_current, 'A')
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargerPowerKw', 'Charger Power'),
                       value:
                         liveCharging.charger_power_w != null
-                          ? formatPower(liveCharging.charger_power_w, { precision: 1 })
+                          ? formatPower(liveCharging.charger_power_w)
                           : '—',
                     },
                     {
@@ -1183,21 +1185,21 @@ export default function ChargingDetailPage() {
                       label: t('charging.detail.batteryRange', 'Battery Range'),
                       value:
                         liveCharging.battery_range_mi != null
-                          ? fmtWithUnit(toDistanceDisplay(liveCharging.battery_range_mi), distanceUnit, 0)
+                          ? fmtWithUnit(toDistanceDisplay(liveCharging.battery_range_mi), distanceUnit)
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargeRate', 'Charge Rate'),
                       value:
                         liveCharging.range_added_meters_per_hour != null
-                          ? fmtWithUnit(toDistanceDisplay(liveCharging.range_added_meters_per_hour), `${distanceUnit}/h`, 1)
+                          ? fmtWithUnit(toDistanceDisplay(liveCharging.range_added_meters_per_hour), `${distanceUnit}/h`)
                           : '—',
                     },
                     {
                       label: t('charging.detail.chargeEnergyAdded', 'Energy Added'),
                       value:
                         liveCharging.charge_energy_added_wh != null
-                          ? formatEnergy(liveCharging.charge_energy_added_wh, { precision: 2 })
+                          ? formatEnergy(liveCharging.charge_energy_added_wh)
                           : '—',
                     },
                     {
@@ -1207,7 +1209,7 @@ export default function ChargingDetailPage() {
                       label: t('charging.detail.chargeMilesAdded', 'Range Added'),
                       value:
                         liveCharging.range_added_meters != null
-                          ? fmtWithUnit(toDistanceDisplay(liveCharging.range_added_meters), distanceUnit, 1)
+                          ? fmtWithUnit(toDistanceDisplay(liveCharging.range_added_meters), distanceUnit)
                           : '—',
                     },
                   ]}

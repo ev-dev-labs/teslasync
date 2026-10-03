@@ -4,6 +4,7 @@ import { Download, AlertTriangle, Package } from 'lucide-react';
 import { Modal, Button, Badge, CopyButton } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { MiniGridPreview } from './MiniGridPreview';
 import { toUrlSafeBase64, buildMinimalExport } from '../hooks/validateImport';
 import type { SavedDashboard } from '../widgets/types';
@@ -16,6 +17,7 @@ interface ExportModalProps {
 }
 
 export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModalProps) {
+  const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDate } = useDateFormat();
 
@@ -26,9 +28,8 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
 
   const jsonSize = useMemo(() => {
     const bytes = new Blob([dashboardJson]).size;
-    if (bytes < 1024) return `${bytes} B`;
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }, [dashboardJson]);
+    return formatBytes(bytes);
+  }, [dashboardJson, formatBytes]);
 
   // Compute the shareable URL eagerly so we can validate length and disable the
   // copy button up-front (instead of letting users click through to a silent

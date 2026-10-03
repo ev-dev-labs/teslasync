@@ -36,7 +36,7 @@ import {
   EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
@@ -46,6 +46,7 @@ import type {
   SecretRotationSeverity,
   SecretRotationStatus,
 } from '@/types/admin-operator-confidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SEVERITY_VARIANT: Record<SecretRotationSeverity, 'success' | 'warning' | 'danger' | 'neutral'> = {
   ok: 'success',
@@ -89,6 +90,7 @@ function truncate(value: string, max = 22): string {
 }
 
 export default function SecretRotationPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('admin.secretRotation.pageTitle', 'Secret rotation'));
 
@@ -265,7 +267,7 @@ export default function SecretRotationPage() {
         ),
       },
     ],
-    [t, severityLabel, kindLabel],
+    [t, severityLabel, kindLabel, fmtNumber],
   );
 
   const retry = () => query.refetch();

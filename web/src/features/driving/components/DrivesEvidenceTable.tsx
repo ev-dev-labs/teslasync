@@ -5,13 +5,14 @@ import { AlertTriangle, Eye } from 'lucide-react';
 import { Badge, Button, DataTable, DataTableValueFilter, Input, Select, buildTableFilterValues, selectedTableValueKeys, type Column } from '@/components/ui';
 import { endpointLabel } from '@/components/data-display';
 import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';
 import type { DriveFsdInsight } from '@/types/fsd';
 import { DriveGridMetric } from './DriveGridMetric';
 import { driveAverageSpeed, driveBattery } from './driveGridMetrics';
 import { DRIVE_VALUE_COLUMNS, driveColumnValue, driveStatusFlags, type DriveValueColumn, type DriveValueSelections } from './driveGridValues';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export const DRIVE_GRID_SORT_KEYS = ['date', 'route', 'start', 'destination', 'distance', 'duration', 'speed', 'maxSpeed', 'avgPower', 'outsideTemp', 'insideTemp', 'efficiency', 'grade', 'battery', 'startBattery', 'batteryUsed', 'energy', 'regen', 'score', 'cost', 'fsd'] as const;
 export type DriveGridSortKey = typeof DRIVE_GRID_SORT_KEYS[number];
@@ -68,6 +69,7 @@ export function DrivesEvidenceTable({
   distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit,
   timezone, fsdAvailable, fsdByDriveID, anomalyDriveIds, toolbarActions, toolbarHeading,
 }: DrivesEvidenceTableProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const statusLabels = useMemo(() => ({
     inProgress: t('drives.inProgress', 'In progress'),
@@ -384,7 +386,7 @@ export function DrivesEvidenceTable({
         const insight = fsdByDriveID.get(drive.id);
         if (!fsdAvailable || !insight || insight.confidence === 'unknown' || insight.fsd_distance_m == null) return '—';
         const value = insight.fsd_share_pct != null
-          ? `${fmtNumber(insight.fsd_share_pct, 0)}%`
+          ? `${fmtNumber(insight.fsd_share_pct)}%`
           : `${fmtNumber(toDistanceDisplay(insight.fsd_distance_m))} ${distanceUnit}`;
         return (
           <Badge
@@ -473,7 +475,7 @@ export function DrivesEvidenceTable({
         </Button>
       ),
     },
-  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, search, onSearchChange, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange]);
+  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, search, onSearchChange, collection, onCollectionChange, onDriveFilterClear, fsdFilter, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt]);
 
   const valueColumns = useMemo<Column<Drive>[]>(() => {
     const label = (key: DriveValueColumn, value: string | number | null): string => {
@@ -485,7 +487,7 @@ export function DrivesEvidenceTable({
         ).join(' · ');
         if (key === 'fsd') {
           const [kind, raw] = value.split(':');
-          return kind === 'share' ? `${fmtNumber(Number(raw), 0)}%` : `${fmtNumber(toDistanceDisplay(Number(raw)))} ${distanceUnit}`;
+          return kind === 'share' ? `${fmtNumber(Number(raw))}%` : `${fmtNumber(toDistanceDisplay(Number(raw)))} ${distanceUnit}`;
         }
         return value;
       }
@@ -542,7 +544,7 @@ export function DrivesEvidenceTable({
     });
   }, [columns, availableDrives, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
     fsdByDriveID, fsdAvailable, anomalyDriveIds, statusLabels, t, timezone, toDistanceDisplay, distanceUnit, toSpeedDisplay, speedUnit,
-    toPowerDisplay, powerUnit, toTemperatureDisplay, temperatureUnit, toEfficiencyDisplay, efficiencyUnit, formatEnergy, formatEnergyCost]);
+    toPowerDisplay, powerUnit, toTemperatureDisplay, temperatureUnit, toEfficiencyDisplay, efficiencyUnit, formatEnergy, formatEnergyCost, fmtNumber, fmtInt]);
 
   return (
     <div data-drive-evidence-grid className="min-w-0">

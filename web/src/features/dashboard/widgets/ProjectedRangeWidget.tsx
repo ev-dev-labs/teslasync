@@ -9,11 +9,12 @@ import { dashboardTokens } from '../lib/dashboardTokens';
 import { useProjectedRange } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function healthBadge(score: number, t: (k: string, d: string) => string) {
   if (score >= 90) return { text: t('widget.projectedRange.excellent', 'Excellent'), variant: 'success' as const };
@@ -23,6 +24,7 @@ function healthBadge(score: number, t: (k: string, d: string) => string) {
 }
 
 export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -77,25 +79,25 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
       {
         icon: <Gauge className="size-4" />,
         label: t('widget.projectedRange.degradation', 'Battery degradation'),
-        value: knownNumber(data?.degradation_pct) != null ? `${fmtNumber(data?.degradation_pct, 1)}%` : null,
+        value: knownNumber(data?.degradation_pct) != null ? `${fmtNumber(data?.degradation_pct)}%` : null,
       },
       {
         icon: <Navigation className="size-4" />,
         label: t('widget.projectedRange.avgDaily', 'Avg daily usage'),
-        value: avgDaily != null ? `${fmtNumber(avgDaily, 0)} ${distanceUnit}` : null,
+        value: avgDaily != null ? `${fmtNumber(avgDaily)} ${distanceUnit}` : null,
       },
       {
         icon: <Thermometer className="size-4" />,
         label: t('widget.projectedRange.capacity', 'Current capacity'),
-        value: knownNumber(data?.current_capacity_pct) != null ? `${fmtNumber(data?.current_capacity_pct, 1)}%` : null,
+        value: knownNumber(data?.current_capacity_pct) != null ? `${fmtNumber(data?.current_capacity_pct)}%` : null,
       },
       {
         icon: <Mountain className="size-4" />,
         label: t('widget.projectedRange.cycles', 'Battery cycles'),
-        value: knownNumber(data?.total_cycles) != null ? fmtNumber(data?.total_cycles, 0) : null,
+        value: knownNumber(data?.total_cycles) != null ? fmtNumber(data?.total_cycles) : null,
       },
     ];
-  }, [data, avgDaily, distanceUnit, t]);
+  }, [data, avgDaily, distanceUnit, t, fmtNumber]);
 
   return (
     <WidgetShell
@@ -116,7 +118,7 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
           label={t('widget.projectedRange.projected', 'Projected')}
           badge={badge && {
             ...badge,
-            text: isCompact ? badge.text : `${badge.text} · ${fmtNumber(healthScore, 0)}%`,
+            text: isCompact ? badge.text : `${badge.text} · ${fmtNumber(healthScore)}%`,
           }}
           animated={false}
         />
@@ -152,11 +154,12 @@ function ComparisonBar({
   distanceUnit: string;
   t: (k: string, d: string) => string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="flex-shrink-0">
       <div className={`${dashboardTokens.metricLabel} mb-1 flex flex-wrap items-center justify-between gap-2`}>
         <span>
-          {t('widget.projectedRange.epa', 'EPA')}: {epaRange != null ? `${fmtNumber(epaRange, 0)} ${distanceUnit}` : '—'}
+          {t('widget.projectedRange.epa', 'EPA')}: {epaRange != null ? `${fmtNumber(epaRange)} ${distanceUnit}` : '—'}
         </span>
       </div>
       <div

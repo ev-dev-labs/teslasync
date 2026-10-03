@@ -64,6 +64,10 @@ vi.mock('react-i18next', () => {
 // ── useGeofences: mocked data hook (no react-query in the render tree). ────────
 const h = vi.hoisted(() => ({ useGeofences: vi.fn() }));
 vi.mock('@/api/hooks/useLocations', () => ({ useGeofences: h.useGeofences }));
+vi.mock('@/hooks/useSettings', async () => {
+  const { inputPreferences } = await import('@/test/inputPreferences');
+  return { useSettings: () => ({ settings: inputPreferences() }) };
+});
 
 function mockGeofences(state: { data?: unknown; isLoading?: boolean; isError?: boolean }) {
   h.useGeofences.mockReturnValue({
@@ -425,7 +429,7 @@ describe('TriggerConfigurator — signal (numeric)', () => {
     renderConfig(createDefaultTrigger('trigger_signal'));
     expect(screen.getByLabelText('Signal')).toHaveValue('battery_level');
     expect(screen.getByLabelText('Operator')).toHaveValue('<');
-    expect(screen.getByLabelText('Value')).toHaveValue(20);
+    expect(screen.getByRole('textbox', { name: /^Value/ })).toHaveValue('20.00');
     expect(screen.getByRole('switch', { name: 'Fire on any change' })).toHaveAttribute(
       'aria-checked',
       'false',
@@ -434,7 +438,7 @@ describe('TriggerConfigurator — signal (numeric)', () => {
 
   it('writes a numeric value on change', () => {
     const { onChange } = renderConfig(createDefaultTrigger('trigger_signal'));
-    fireEvent.change(screen.getByLabelText('Value'), { target: { value: '42' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^Value/ }), { target: { value: '42' } });
     expect(onChange).toHaveBeenCalledWith({
       kind: 'trigger_signal',
       signal: 'battery_level',
@@ -443,14 +447,14 @@ describe('TriggerConfigurator — signal (numeric)', () => {
     });
   });
 
-  it('coerces an emptied numeric value to 0', () => {
+  it('keeps an emptied numeric value absent instead of inventing zero', () => {
     const { onChange } = renderConfig(createDefaultTrigger('trigger_signal'));
-    fireEvent.change(screen.getByLabelText('Value'), { target: { value: '' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^Value/ }), { target: { value: '' } });
     expect(onChange).toHaveBeenCalledWith({
       kind: 'trigger_signal',
       signal: 'battery_level',
       op: '<',
-      value_num: 0,
+      value_num: undefined,
     });
   });
 });

@@ -10,8 +10,9 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyMethodologyProps {
   summary: ComfortConsistencySummary;
@@ -20,6 +21,7 @@ interface ComfortConsistencyMethodologyProps {
 export function ComfortConsistencyMethodology({
   summary,
 }: ComfortConsistencyMethodologyProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items = [
     {

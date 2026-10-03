@@ -5,13 +5,15 @@ import { safe } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { MetricBandSkeleton } from './helpers';
 import type { FleetAnalyticsQuery } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KM_PER_MILE = 1.609344;
 
 export function HeroGauges({ query }: { query: FleetAnalyticsQuery }) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -45,7 +47,7 @@ export function HeroGauges({ query }: { query: FleetAnalyticsQuery }) {
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
       <MetricCard
         label={t('analytics.hero.distance', 'Distance')}
-        value={data ? fmtNumber(totalDist, 1) : dash}
+        value={data ? fmtNumber(totalDist) : dash}
         subtitle={distanceUnit}
         icon={<MapPin className="h-4 w-4" />}
         color="cyan"
@@ -58,27 +60,27 @@ export function HeroGauges({ query }: { query: FleetAnalyticsQuery }) {
       />
       <MetricCard
         label={t('analytics.hero.energy', 'Energy')}
-        value={data ? fmtNumber(data.total_energy_kwh, 1) : dash}
+        value={data ? fmtNumber(data.total_energy_kwh) : dash}
         subtitle="kWh"
         icon={<Zap className="h-4 w-4" />}
         color="green"
       />
       <MetricCard
         label={t('analytics.hero.efficiency', 'Efficiency')}
-        value={data ? fmtNumber(avgEffDisplay, 1) : dash}
+        value={data ? fmtNumber(avgEffDisplay) : dash}
         subtitle={efficiencyUnit}
         icon={<Gauge className="h-4 w-4" />}
         color="amber"
       />
       <MetricCard
         label={t('analytics.hero.gasSavings', 'Gas savings')}
-        value={data ? formatCurrency(Math.max(gasSavings, 0), 0) : dash}
+        value={data ? formatCurrency(Math.max(gasSavings, 0)) : dash}
         icon={<DollarSign className="h-4 w-4" />}
         color="green"
       />
       <MetricCard
         label={t('analytics.hero.co2Saved', 'CO₂ saved')}
-        value={data ? fmtNumber(co2Saved, 0) : dash}
+        value={data ? fmtNumber(co2Saved) : dash}
         subtitle="kg"
         icon={<Leaf className="h-4 w-4" />}
         color="green"

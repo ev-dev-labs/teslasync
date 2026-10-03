@@ -16,11 +16,12 @@ import { FadeIn } from '@/components/motion/FadeIn'
 import { MetricCard } from '@/components/data-display/MetricCard'
 import { useUnits } from '@/hooks/useUnits'
 import { cleanNil } from '@/lib/cleanNil'
-import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat'
+import { isFiniteNumber } from '@/lib/numberFormat'
 import { formatTime } from '@/lib/dateFormat'
 import { parseSettingEnum } from '@/lib/parseSettingEnum'
 import type { VehicleState, Position, VehicleConfigSnapshot, UserPreferenceSnapshot } from '@/api/types'
 import { convertSpeedFromSI } from '@/lib/unitConversion'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface VehicleChartsProps {
   state: VehicleState
@@ -35,6 +36,7 @@ export function VehicleCharts({
   vehicleConfigData,
   userPrefData,
 }: VehicleChartsProps) {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs } = useUnits()
   const speedUnit = unitPrefs.speed
@@ -65,7 +67,7 @@ export function VehicleCharts({
           speed: isFiniteNumber(p.speed_mph) ? toSpeedDisplay(p.speed_mph) : null,
         }))
         .reverse(),
-    [positions, toSpeedDisplay],
+    [positions, toSpeedDisplay, displayPrecision, displayLocale],
   )
 
   const hasSpeedData = useMemo(() => speedSeries.some((d) => d.speed != null), [speedSeries])

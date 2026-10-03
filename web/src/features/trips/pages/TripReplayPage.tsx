@@ -30,7 +30,7 @@ import { useTripReplay } from '@/hooks/useTripReplay';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { haversineDistance } from '@/lib/geo';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import {
   computeReplayMarkers,
@@ -43,6 +43,7 @@ import {
   TripReplayCharts,
   type TripReplayChartPoint,
 } from '@/features/trips/components/TripReplayCharts';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ================================================================== */
 /*  Helpers                                                            */
@@ -104,6 +105,7 @@ export function fmtDriveTime(min: number): string {
  *   replay-specific display formatting at render time.
  */
 export default function TripReplayPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   usePageTitle(t('replay.title', 'Trip Replay'));
@@ -338,12 +340,12 @@ export default function TripReplayPage() {
         speed: p.speed != null
           ? `${fmtNumber(convertSpeedFromSI(p.speed, unitPrefs.speed))} ${unitPrefs.speed}`
           : undefined,
-        power: p.power != null ? `${fmtNumber(p.power, 1)} kW` : undefined,
+        power: p.power != null ? `${fmtNumber(p.power)} kW` : undefined,
         soc: `${fmtInt(p.batteryLevel)}%`,
         elevation: p.elevation != null ? `${fmtInt(p.elevation)} m` : undefined,
       };
     },
-    [positions, replay.totalTime, unitPrefs.speed],
+    [positions, replay.totalTime, unitPrefs.speed, fmtNumber, fmtInt],
   );
 
   /* ---- Speed sparkline behind the scrubber ---- */
@@ -572,7 +574,7 @@ export default function TripReplayPage() {
                   />
                   <MetricCard
                     label={t('replay.stat.power', 'Power')}
-                    value={cp?.power != null ? `${fmtNumber(cp.power, 1)} kW` : '—'}
+                    value={cp?.power != null ? `${fmtNumber(cp.power)} kW` : '—'}
                     icon={<Zap className="h-4 w-4" />}
                     color="cyan"
                     className={cn(cardHighlight(['regen-peak', 'charge-start', 'charge-stop']))}

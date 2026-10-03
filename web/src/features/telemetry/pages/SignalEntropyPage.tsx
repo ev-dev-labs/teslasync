@@ -18,14 +18,16 @@ import {
 import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
 import { summarizeSignalEntropy } from '../lib/signalEntropy';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HOURS = 48;
 
 export default function SignalEntropyPage() {
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('signalEntropy.title', 'Signal entropy'));
 
@@ -76,11 +78,11 @@ export default function SignalEntropyPage() {
   const binSeries = useMemo(
     () =>
       summary.bins.map((b, i) => ({
-        bin: `${fmtNumber(b.lo, 1)}–${fmtNumber(b.hi, 1)}`,
+        bin: `${fmtNumber(b.lo)}–${fmtNumber(b.hi)}`,
         key: i,
         count: b.count,
       })),
-    [summary.bins],
+    [summary.bins, fmtNumber],
   );
 
   if (vehicleId == null) {
@@ -153,8 +155,8 @@ export default function SignalEntropyPage() {
             <>
               <MetricCard
                 label={t('signalEntropy.entropy', 'Shannon entropy')}
-                value={hasData ? `${fmtNumber(summary.entropyBits, 2)} bits` : '—'}
-                subtitle={t('signalEntropy.normalized', '{{n}} normalized', { n: hasData ? fmtPercent(summary.normalizedEntropy * 100, 0) : '—' })}
+                value={hasData ? `${fmtNumber(summary.entropyBits)} bits` : '—'}
+                subtitle={t('signalEntropy.normalized', '{{n}} normalized', { n: hasData ? fmtPercent(summary.normalizedEntropy * 100) : '—' })}
                 icon={<Binary className="h-5 w-5" />}
                 color={hasData && summary.normalizedEntropy >= 0.6 ? 'green' : 'cyan'}
                 help={{
@@ -164,21 +166,21 @@ export default function SignalEntropyPage() {
               />
               <MetricCard
                 label={t('signalEntropy.effectiveStates', 'Effective states')}
-                value={hasData ? fmtNumber(summary.effectiveStates, 2) : '—'}
+                value={hasData ? fmtNumber(summary.effectiveStates) : '—'}
                 subtitle={t('signalEntropy.effectiveBins', '{{n}} of {{r}} bins populated', { n: summary.effectiveBins, r: summary.requestedBins })}
                 icon={<Gauge className="h-5 w-5" />}
                 color="purple"
               />
               <MetricCard
                 label={t('signalEntropy.stuck', 'Dominant-state fraction')}
-                value={hasData ? fmtPercent(summary.dominantBinFraction * 100, 0) : '—'}
+                value={hasData ? fmtPercent(summary.dominantBinFraction * 100) : '—'}
                 subtitle={t('signalEntropy.stuckHint', 'occupancy of the single most common bin')}
                 icon={<Repeat className="h-5 w-5" />}
                 color={hasData && summary.dominantBinFraction >= 0.9 ? 'amber' : 'blue'}
               />
               <MetricCard
                 label={t('signalEntropy.changeRate', 'Change rate')}
-                value={hasData ? fmtPercent(summary.changeRate * 100, 0) : '—'}
+                value={hasData ? fmtPercent(summary.changeRate * 100) : '—'}
                 subtitle={t('signalEntropy.changeRateHint', '{{n}} samples analyzed', { n: summary.samples })}
                 icon={<Waypoints className="h-5 w-5" />}
                 color="cyan"
@@ -291,8 +293,8 @@ export default function SignalEntropyPage() {
                 </div>
                 <Text variant="body">
                   {t('signalEntropy.rangeText', '{{min}} to {{max}} across {{n}} samples in the last {{h}}h window', {
-                    min: fmtNumber(summary.minValue ?? 0, 2),
-                    max: fmtNumber(summary.maxValue ?? 0, 2),
+                    min: fmtNumber(summary.minValue ?? 0),
+                    max: fmtNumber(summary.maxValue ?? 0),
                     n: summary.samples,
                     h: HOURS,
                   })}

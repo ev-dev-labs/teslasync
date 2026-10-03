@@ -1,11 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleDot } from 'lucide-react';
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow,
-} from '@/components/charts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { useTirePressureHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePressureFormat } from '@/hooks/usePressureFormat';
@@ -14,6 +10,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Recommended tire-pressure range expressed in SI kilopascals — the unit the
@@ -86,10 +83,12 @@ export function recommendedPressureRange(
 
 /** Format a converted pressure value to a single decimal, or an em-dash when absent. */
 function formatPressure(val: number | null): string {
-  return val != null ? fmtNumber(val, 1) : '—';
+  return val != null ? fmtNumber(val) : '—';
 }
 
 export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -137,7 +136,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
             { label: t('widget.tirePressureHistory.rr', 'RR'), value: formatPressure(latestRR), unit: pressureUnit },
           ]
         : [],
-    [hasData, latestFL, latestFR, latestRL, latestRR, pressureUnit, t],
+    [hasData, latestFL, latestFR, latestRL, latestRR, pressureUnit, t, displayPrecision, displayLocale],
   );
 
   const handleRefresh = useCallback(() => {
@@ -179,7 +178,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
           tickLine={false}
           axisLine={false}
           width={35}
-          tickFormatter={(v: number) => `${fmt(v, 1)}`}
+          tickFormatter={(v: number) => `${fmt(v)}`}
         />
         <Tooltip
           content={<ChartTooltip />}
@@ -191,7 +190,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
               rl: t('widget.tirePressureHistory.rl', 'RL'),
               rr: t('widget.tirePressureHistory.rr', 'RR'),
             };
-            return [`${fmtNumber(value, 1)} ${pressureUnit}`, labels[name] ?? name];
+            return [`${fmtNumber(value)} ${pressureUnit}`, labels[name] ?? name];
           }}
         />
         <ChartLegend />

@@ -299,22 +299,22 @@ describe('EnergyFlowWidget — node derivation', () => {
   });
 
   it('labels the motor "Consuming" and formats abs power as "N.N kW" when discharging', () => {
-    setState({ state: makeState({ power: 12.3 }) });
+    setState({ state: makeState({ power: 12_300 }) });
     renderWidget();
 
     const motor = nodeById('motor');
     expect(motor?.label).toBe('Consuming');
-    expect(motor?.value).toBe(12.3);
+    expect(motor?.value).toBe(12_300);
     expect(motor?.formattedValue).toBe('12.3 kW');
   });
 
   it('labels the motor "Regenerating" and uses the magnitude of a negative power', () => {
-    setState({ state: makeState({ power: -8.5 }) });
+    setState({ state: makeState({ power: -8_500 }) });
     renderWidget();
 
     const motor = nodeById('motor');
     expect(motor?.label).toBe('Regenerating');
-    expect(motor?.value).toBe(8.5); // abs()
+    expect(motor?.value).toBe(8_500);
     expect(screen.getByTestId('node-motor-value')).toHaveTextContent('8.5 kW');
   });
 
@@ -350,25 +350,25 @@ describe('EnergyFlowWidget — node derivation', () => {
 
 describe('EnergyFlowWidget — arrow derivation', () => {
   it('activates only battery → motor (with abs power) while discharging', () => {
-    setState({ state: makeState({ power: 15 }) });
+    setState({ state: makeState({ power: 15_000 }) });
     renderWidget();
 
     const discharge = arrowByEnds('battery', 'motor');
     const regen = arrowByEnds('motor', 'battery');
     expect(discharge?.active).toBe(true);
-    expect(discharge?.value).toBe(15);
+    expect(discharge?.value).toBe(15_000);
     expect(regen?.active).toBe(false);
     expect(regen?.value).toBe(0);
   });
 
   it('activates only motor → battery (with abs power) while regenerating', () => {
-    setState({ state: makeState({ power: -6 }) });
+    setState({ state: makeState({ power: -6_000 }) });
     renderWidget();
 
     const discharge = arrowByEnds('battery', 'motor');
     const regen = arrowByEnds('motor', 'battery');
     expect(regen?.active).toBe(true);
-    expect(regen?.value).toBe(6);
+    expect(regen?.value).toBe(6_000);
     expect(discharge?.active).toBe(false);
     expect(discharge?.value).toBe(0);
   });
@@ -405,7 +405,7 @@ describe('EnergyFlowWidget — null safety', () => {
   });
 
   it('retains the diagram during a background refresh and marks the shell busy', () => {
-    setState({ state: makeState({ power: 12.3 }), isFetching: true });
+    setState({ state: makeState({ power: 12_300 }), isFetching: true });
     const { container } = renderWidget();
     expect(screen.getByTestId('flow-diagram')).toBeInTheDocument();
     expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
@@ -426,7 +426,7 @@ describe('EnergyFlowWidget — null safety', () => {
     expect(arrowByEnds('charger', 'battery')?.active).toBe(false);
   });
   it('retains measured SoC and power on a failed cached refresh', () => {
-    setState({ state: makeState({ battery_level: 72, power: 12.3 }), isError: true });
+    setState({ state: makeState({ battery_level: 72, power: 12_300 }), isError: true });
     renderWidget();
     expect(nodeById('battery')?.formattedValue).toBe('72%');
     expect(nodeById('motor')?.formattedValue).toBe('12.3 kW');

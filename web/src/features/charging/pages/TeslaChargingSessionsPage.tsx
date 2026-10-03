@@ -52,12 +52,13 @@ import { useSettings } from '@/hooks/useSettings';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 
 import { WaitOraclePanel } from '../components/WaitOraclePanel';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const LazyMap = lazy(() => import('./TeslaChargingSessionsMap'));
 
@@ -118,6 +119,7 @@ export function groupSessions(
 }
 
 export default function TeslaChargingSessionsPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
   const { settings, locale } = useSettings();
@@ -270,7 +272,7 @@ export default function TeslaChargingSessionsPage() {
         description: t(
           'operations.charging.feesDescription',
           '{{amount}} in idle or congestion fees was recorded in this window.',
-          { amount: formatCurrency(operationalTotals.totalFees, 2) },
+          { amount: formatCurrency(operationalTotals.totalFees) },
         ),
         tone: 'warning',
       });
@@ -306,7 +308,7 @@ export default function TeslaChargingSessionsPage() {
           cost:
             session.total_cost == null
               ? t('operations.charging.fleetNarrative.costMissing', 'no')
-              : formatCurrency(session.total_cost, 2),
+              : formatCurrency(session.total_cost),
         },
       ),
       observedAt: session.charge_start_datetime,
@@ -329,7 +331,7 @@ export default function TeslaChargingSessionsPage() {
       {
         sessions: sessions.length,
         energy: formatEnergy(operationalTotals.totalWh),
-        cost: formatCurrency(operationalTotals.totalCost, 2),
+        cost: formatCurrency(operationalTotals.totalCost),
       },
     ),
     whyItMatters: t(
@@ -451,11 +453,11 @@ export default function TeslaChargingSessionsPage() {
       key: 'energy',
       align: 'right',
       filterValue: (row) => row.total_energy_added_wh ?? null,
-      filterValueLabel: (_, row) => row.total_energy_added_wh != null ? fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh'), 1) : '—',
+      filterValueLabel: (_, row) => row.total_energy_added_wh != null ? fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh')) : '—',
       header: t('tesla_sessions.col.energy', 'Energy (kWh)'),
       render: (row) => (
         <Text size="sm" weight="medium" className="text-cyan-300">
-          {row.total_energy_added_wh != null ? fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh'), 1) : '—'}
+          {row.total_energy_added_wh != null ? fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh')) : '—'}
         </Text>
       ),
       sortable: true,
@@ -467,7 +469,7 @@ export default function TeslaChargingSessionsPage() {
       header: t('tesla_sessions.col.peakPower', 'Peak (kW)'),
       render: (row) => (
         <Text size="sm" className="text-amber-300">
-          {row.peak_power_kw != null ? fmtNumber(row.peak_power_kw, 0) : '—'}
+          {row.peak_power_kw != null ? fmtNumber(row.peak_power_kw) : '—'}
         </Text>
       ),
       sortable: true,
@@ -523,7 +525,7 @@ export default function TeslaChargingSessionsPage() {
         </Text>
       ),
     },
-  ], [t, userCurrency, locale]);
+  ], [t, userCurrency, locale, fmtNumber]);
 
   const [sortKey, setSortKey] = useState<string>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -688,7 +690,7 @@ export default function TeslaChargingSessionsPage() {
             label: t('tesla_sessions.stats.energy', 'Total energy'),
             value: isLoading || error
               ? '—'
-              : formatEnergy(operationalTotals.totalWh, { precision: 1 }),
+              : formatEnergy(operationalTotals.totalWh),
             detail: t('operations.charging.energyDetail', 'Energy added across the matching charging sessions.'),
             tone: 'success',
           },
@@ -697,7 +699,7 @@ export default function TeslaChargingSessionsPage() {
             label: t('tesla_sessions.stats.cost_decimal', 'Total cost'),
             value: isLoading || error || sessions.length === 0
               ? '—'
-              : formatCurrency(operationalTotals.totalCost, 2),
+              : formatCurrency(operationalTotals.totalCost),
             detail: t('operations.charging.costDetail', 'Reported session cost; sessions without cost remain flagged as partial.'),
             tone: operationalTotals.totalFees > 0 ? 'warning' : 'neutral',
           },
@@ -761,25 +763,25 @@ export default function TeslaChargingSessionsPage() {
           />
           <StatCard
             label={t('tesla_sessions.stats.energy', 'Total energy')}
-            value={summary.total_wh != null ? formatEnergy(summary.total_wh, { precision: 1 }) : '—'}
+            value={summary.total_wh != null ? formatEnergy(summary.total_wh) : '—'}
             icon={<Gauge className="h-5 w-5 text-amber-300" aria-hidden="true" />}
             loading={isLoading}
           />
           <StatCard
             label={t('tesla_sessions.stats.cost_decimal', 'Total cost')}
-            value={summary.total_cost != null ? formatCurrency(summary.total_cost, 2) : '—'}
+            value={summary.total_cost != null ? formatCurrency(summary.total_cost) : '—'}
             icon={<DollarSign className="h-5 w-5 text-emerald-300" aria-hidden="true" />}
             loading={isLoading}
           />
           <StatCard
             label={t('tesla_sessions.stats.avgCost', 'Avg cost/kWh')}
-            value={summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh, 3) : '—'}
+            value={summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh) : '—'}
             icon={<TrendingUp className="h-5 w-5 text-purple-300" aria-hidden="true" />}
             loading={isLoading}
           />
           <StatCard
             label={t('tesla_sessions.stats.peakPower', 'Peak power')}
-            value={summary.peak_power_kw != null ? fmtNumber(summary.peak_power_kw, 0) : '—'}
+            value={summary.peak_power_kw != null ? fmtNumber(summary.peak_power_kw) : '—'}
             unit="kW"
             icon={<Clock className="h-5 w-5 text-orange-300" aria-hidden="true" />}
             loading={isLoading}
@@ -825,7 +827,7 @@ export default function TeslaChargingSessionsPage() {
                     </defs>
                     {chartGrid}
                     <XAxis dataKey="month" tick={axisTickSm} />
-                    <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v, 0)} />
+                    <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v)} />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar dataKey="total" fill="url(#sessionCostGrad)" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -859,7 +861,7 @@ export default function TeslaChargingSessionsPage() {
                     value={c.energyWh}
                     max={maxChargerEnergy || 1}
                     color={CHART_COLORS[i % CHART_COLORS.length]}
-                    sublabel={`${formatEnergy(c.energyWh, { precision: 1 })} · ${fmtInt(c.count)}×`}
+                    sublabel={`${formatEnergy(c.energyWh)} · ${fmtInt(c.count)}×`}
                   />
                 ))}
               </div>
@@ -930,7 +932,7 @@ export default function TeslaChargingSessionsPage() {
                     value={l.cost}
                     max={maxLocationCost || 1}
                     color={CHART_COLORS[i % CHART_COLORS.length]}
-                    sublabel={`${formatCurrency(l.cost, 0)} · ${fmtInt(l.count)}×`}
+                    sublabel={`${formatCurrency(l.cost)} · ${fmtInt(l.count)}×`}
                   />
                 ))}
               </div>

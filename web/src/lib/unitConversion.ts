@@ -110,6 +110,8 @@ const METERS_PER_FOOT = 0.3048
 const KPA_PER_PSI = 6.894757
 /** 1 bar = 100 kPa (BIPM definition). */
 const KPA_PER_BAR = 100
+/** SI-prefix bridge for telemetry APIs that expose pressure in pascals. */
+export const PASCALS_PER_KPA = 1000
 /** Seconds in a minute / hour / day. */
 const SECONDS_PER_MINUTE = 60
 const SECONDS_PER_HOUR = 3600
@@ -179,6 +181,11 @@ export function convertSpeedFromSI(mps: number, to: SpeedUnitPref): number {
   }
 }
 
+/** Convert a preferred-unit speed to SI meters per second without rounding. */
+export function convertSpeedToSI(value: number, from: SpeedUnitPref): number {
+  return value / convertSpeedFromSI(1, from)
+}
+
 /**
  * Convert temperature from SI Celsius to the user's display unit.
  * @param celsius - temperature in degrees Celsius (SI)
@@ -194,6 +201,11 @@ export function convertTempFromSI(
     case '°F':
       return (celsius * 9) / 5 + 32
   }
+}
+
+/** Convert a preferred-unit temperature to canonical Celsius without rounding. */
+export function convertTempToSI(value: number, from: TemperatureUnitPref): number {
+  return from === '°F' ? (value - 32) * 5 / 9 : value
 }
 
 /**
@@ -213,6 +225,11 @@ export function convertPressureFromSI(
     case 'bar':
       return kpa / KPA_PER_BAR
   }
+}
+
+/** Convert a preferred-unit pressure to canonical kilopascals without rounding. */
+export function convertPressureToSI(value: number, from: PressureUnitPref): number {
+  return value / convertPressureFromSI(1, from)
 }
 
 /**

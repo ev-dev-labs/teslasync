@@ -217,13 +217,13 @@ describe('FleetOperationsPage', () => {
   it('enables loaded-value checklists only when each complete fleet list is loaded', () => {
     const view = renderPage();
     for (const column of ['Reference', 'Ends', 'Reservation', 'Max power']) {
-      expect(screen.getByRole('button', { name: `Filter ${column}` })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: `${column} filter` })).toBeInTheDocument();
     }
     view.unmount();
     fleetPageState.total = 101;
     renderPage();
     for (const column of ['Reference', 'Ends', 'Reservation', 'Max power']) {
-      expect(screen.queryByRole('button', { name: `Filter ${column}` })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: `${column} filter` })).not.toBeInTheDocument();
     }
     expect(screen.getByText('Fleet drivers')).toBeInTheDocument();
     expect(screen.getByText('Charging policy matrix')).toBeInTheDocument();

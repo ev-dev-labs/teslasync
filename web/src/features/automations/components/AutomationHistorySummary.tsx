@@ -5,9 +5,12 @@ import { MetricCard } from '@/components/data-display';
 import { GlassPanel } from '@/components/ui';
 import { QueryError, StatGridSkeleton } from '@/components/feedback';
 import type { AutomationHistoryListResponse } from '@/api/types';
-import { formatDurationMs } from '@/lib/dateFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function AutomationHistorySummary({ query }: { query: UseQueryResult<AutomationHistoryListResponse> }) {
+  const { formatDurationMs } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const summary = query.data?.summary;
   return (
@@ -22,7 +25,7 @@ export function AutomationHistorySummary({ query }: { query: UseQueryResult<Auto
           <MetricCard label={t('automations.historyPage.success', 'Succeeded')} value={summary.succeeded} color="green" icon={<CheckCircle className="h-5 w-5" />} />
           <MetricCard label={t('automations.historyPage.failed', 'Failed')} value={summary.failed} color="red" icon={<AlertTriangle className="h-5 w-5" />} />
           <MetricCard label={t('automations.historyPage.partial', 'Partial')} value={summary.partial} color="amber" icon={<AlertCircle className="h-5 w-5" />} />
-          <MetricCard label={t('automations.historyPage.rate', 'Success rate')} value={summary.total_executions > 0 ? `${summary.success_rate.toFixed(1)}%` : '—'} />
+          <MetricCard label={t('automations.historyPage.rate', 'Success rate')} value={summary.total_executions > 0 ? `${fmtNumber(summary.success_rate)}%` : '—'} />
           <MetricCard label={t('automations.historyPage.duration', 'Average duration')} value={summary.total_executions > 0 ? formatDurationMs(summary.avg_duration_ms) : '—'} icon={<Clock className="h-5 w-5" />} />
         </div>
       )}

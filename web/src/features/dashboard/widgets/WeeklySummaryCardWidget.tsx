@@ -7,11 +7,12 @@ import { useWeeklyDigest } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+import { fmtPercent } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** 1 km = 1000 m exactly — scales the digest's km wire value up to SI metres. */
 const METERS_PER_KM = 1000;
@@ -34,10 +35,11 @@ export function trendOf(
   if (Math.abs(pct) < 1) return { direction: 'flat', value: '~0%' };
   const direction = pct > 0 ? 'up' : 'down';
   const positive = lowerIsPositive ? pct < 0 : pct > 0;
-  return { direction, value: fmtPercent(Math.abs(pct), 0), positive };
+  return { direction, value: fmtPercent(Math.abs(pct)), positive };
 }
 
 export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -83,7 +85,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
         {metrics ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5">
             <span className="text-2xl font-bold text-[var(--text-primary)]">
-              {fmtNumber(metrics.distance, 0)}
+              {fmtNumber(metrics.distance)}
             </span>
             <span className="text-2xs text-[var(--text-muted)] tracking-wider">
               {distanceUnit} {t('widget.weeklySummary.thisWeek', 'this week')}
@@ -117,14 +119,14 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
           <div className={cn('grid gap-2', isWide ? 'grid-cols-4' : 'grid-cols-2')}>
             <StatCard
               label={t('widget.weeklySummary.distance', 'Distance')}
-              value={fmtNumber(metrics.distance, 1)}
+              value={fmtNumber(metrics.distance)}
               unit={distanceUnit}
               icon={<Route className="h-3.5 w-3.5" />}
               trend={trendOf(metrics.distance, metrics.prevDistance)}
             />
             <StatCard
               label={t('widget.weeklySummary.energy', 'Energy')}
-              value={fmtNumber(metrics.energy, 1)}
+              value={fmtNumber(metrics.energy)}
               unit="kWh"
               icon={<Zap className="h-3.5 w-3.5" />}
               trend={trendOf(metrics.energy, metrics.prevEnergy)}
@@ -139,7 +141,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
                 />
                 <StatCard
                   label={t('widget.weeklySummary.efficiency', 'Efficiency')}
-                  value={fmtNumber(metrics.efficiency, 0)}
+                  value={fmtNumber(metrics.efficiency)}
                   unit={efficiencyUnit}
                   icon={<Gauge className="h-3.5 w-3.5" />}
                   trend={trendOf(metrics.efficiency, metrics.prevEfficiency, true)}
@@ -156,7 +158,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
               />
               <InlineMetric
                 icon={<Gauge className="h-3 w-3" />}
-                value={`${fmtNumber(metrics.efficiency, 0)} ${efficiencyUnit}`}
+                value={`${fmtNumber(metrics.efficiency)} ${efficiencyUnit}`}
               />
             </div>
           )}

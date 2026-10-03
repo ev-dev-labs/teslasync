@@ -300,7 +300,7 @@ describe('SystemHealthWidget — standard layout (2×4)', () => {
 });
 
 describe('SystemHealthWidget — compact layout (1×2)', () => {
-  it('renders the badge + overall label + healthy-service count, without the title/grid', () => {
+  it('retains its title with the compact badge, overall label and healthy-service count', () => {
     setup({
       health: makeQuery({
         data: makeHealth({
@@ -321,8 +321,7 @@ describe('SystemHealthWidget — compact layout (1×2)', () => {
     expect(screen.getByText('3/4')).toBeInTheDocument();
     expect(screen.getByText('Services')).toBeInTheDocument();
 
-    // Compact is title-less and omits the dot grid + stat cards.
-    expect(screen.queryByText('System health')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument();
     expect(screen.queryByText('DB size')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });

@@ -1,21 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThermometerSun } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartLegend, ChartTooltip, EmbeddedChart,
-  type ChartDataRow,
-} from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -40,6 +36,8 @@ function buildChartData(
 }
 
 export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDateTime: formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
@@ -187,7 +185,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 tickLine={false}
                 axisLine={false}
                 width={35}
-                tickFormatter={(v: number) => `${fmt(v, 0)}°`}
+                tickFormatter={(v: number) => `${fmt(v)}°`}
               />
               <Tooltip
                 content={<ChartTooltip />}

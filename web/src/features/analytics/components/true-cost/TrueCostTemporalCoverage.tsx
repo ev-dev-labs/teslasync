@@ -28,14 +28,14 @@ export function TrueCostTemporalCoverage({
       label: t('tco.coverage.driveSpan', 'Observed drive span'),
       value: span.spanDays != null
         ? t('tco.coverage.days', '{{value}} days', {
-          value: display.formatNumber(span.spanDays, 1),
+          value: display.formatNumber(span.spanDays),
         })
         : '—',
     },
     {
       label: t('tco.coverage.modeledMonths', 'Modeled span months'),
       value: span.available
-        ? display.formatNumber(analysis.metrics.monthsOfDriveSpan.value, 1)
+        ? display.formatNumber(analysis.metrics.monthsOfDriveSpan.value)
         : '—',
     },
     {

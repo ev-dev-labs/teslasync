@@ -28,11 +28,12 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { formatDateShort } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import {
   convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI,
 } from '@/lib/unitConversion';
 import { getEfficiency } from '@/lib/drivesAggregation';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -65,6 +66,7 @@ export { getEfficiency };
 /* ------------------------------------------------------------------ */
 
 export default function EfficiencyPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('efficiency.title', 'Efficiency'));
   const savedView = useSavedViewUrl();
@@ -169,7 +171,7 @@ export default function EfficiencyPage() {
       .map((d) => ({
         date: formatDateShort(d.startTs),
         efficiency: Math.round(toEfficiencyDisplay(getEfficiency(d)!)),
-        distance: parseFloat(fmtNumber(toDistanceDisplay(d.distanceM ?? 0), 1)),
+        distance: toDistanceDisplay(d.distanceM ?? 0),
       }));
   }, [filteredDrives, toEfficiencyDisplay, toDistanceDisplay]);
 
@@ -268,16 +270,16 @@ export default function EfficiencyPage() {
 
   /* ---- Computed metrics ---- */
   const costPerKm = stats && stats.totalDistanceKm > 0
-    ? fmtNumber((stats.avgEfficiencyWhKm / 1000) * 0.12, 3)
+    ? fmtNumber((stats.avgEfficiencyWhKm / 1000) * 0.12)
     : '—';
   const distancePerKwh = stats && stats.avgEfficiencyWhKm > 0
-    ? fmtNumber(toStatsDistanceDisplay(1000 / stats.avgEfficiencyWhKm), 1)
+    ? fmtNumber(toStatsDistanceDisplay(1000 / stats.avgEfficiencyWhKm))
     : '—';
 
   /* ---- Energy insight tiles ---- */
   const insights = stats
     ? [
-        { key: 'regen', label: t('efficiency.totalRegen', 'Total regen'), value: formatEnergy(stats.regenEnergyWh ?? 0, { precision: 1 }), icon: <Zap className="h-4 w-4" />, color: 'green' as const },
+        { key: 'regen', label: t('efficiency.totalRegen', 'Total regen'), value: formatEnergy(stats.regenEnergyWh ?? 0), icon: <Zap className="h-4 w-4" />, color: 'green' as const },
         { key: 'ratio', label: t('efficiency.regenRatioLabel', 'Regen ratio'), value: `${fmtNumber((stats.regenRatio ?? 0) * 100)}%`, icon: <TrendingUp className="h-4 w-4" />, color: 'cyan' as const },
         { key: 'co2', label: t('efficiency.co2Label', 'CO₂ saved'), value: `${fmtInt(stats.co2SavedKg ?? 0)} ${t('efficiency.kgUnit', 'kg')}`, icon: <Leaf className="h-4 w-4" />, color: 'green' as const },
         { key: 'dist', label: t('efficiency.totalDistLabel', 'Total distance'), value: `${fmtInt(toStatsDistanceDisplay(stats.totalDistanceKm ?? 0))} ${distanceUnit}`, icon: <Route className="h-4 w-4" />, color: 'cyan' as const },
@@ -383,7 +385,7 @@ export default function EfficiencyPage() {
                     <MetricBar label={t('efficiency.avgConsumption', 'Avg consumption')} value={toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0)} max={toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM)} color="#00f0ff" sublabel={`${fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`} />
                     <MetricBar label={t('efficiency.avgSpeed', 'Avg speed')} value={toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0)} max={150} color="#10b981" sublabel={`${fmtInt(toStatsSpeedDisplay(stats.avgSpeedKmh ?? 0))} ${speedUnit}`} />
                     <MetricBar label={t('efficiency.regenRatio', 'Regen ratio')} value={(stats.regenRatio ?? 0) * 100} max={100} color="#a855f7" sublabel={`${fmtNumber((stats.regenRatio ?? 0) * 100)}%`} />
-                    <MetricBar label={t('efficiency.totalDriveTime', 'Total drive time')} value={stats.totalDurationS ?? 0} max={Math.max(stats.totalDurationS ?? 0, 36000)} color="#f59e0b" sublabel={formatDuration(stats.totalDurationS ?? 0, { precision: 1 })} />
+                    <MetricBar label={t('efficiency.totalDriveTime', 'Total drive time')} value={stats.totalDurationS ?? 0} max={Math.max(stats.totalDurationS ?? 0, 36000)} color="#f59e0b" sublabel={formatDuration(stats.totalDurationS ?? 0)} />
                   </div>
                 </div>
               )}

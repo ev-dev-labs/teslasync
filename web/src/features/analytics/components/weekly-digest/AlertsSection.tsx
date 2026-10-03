@@ -6,8 +6,9 @@ import {
   ChartTooltip,
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, ChartLegend, EmbeddedChart,
 } from '@/components/charts';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { DigestMetrics, AlertPieEntry } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AlertsSectionProps {
   metrics: DigestMetrics;
@@ -38,6 +39,7 @@ export function AlertsSection({
   error,
   onRetry,
 }: AlertsSectionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const byType = metrics.alertsByType ?? {};
   const pieData = alertPieData ?? [];

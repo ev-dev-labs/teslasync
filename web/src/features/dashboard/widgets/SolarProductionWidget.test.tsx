@@ -5,7 +5,7 @@
  * under test:
  *
  *   1. Responsive layout branches keyed off `size.cols`:
- *        - compact (cols ≤ 1) → a title-less shell with Today + Daily-Avg
+ *        - compact (cols ≤ 1) → a titled shell with Today + Daily-Avg
  *          stats and NO chart.
  *        - standard (2 cols)  → a titled shell + a 3-up stat row (Today /
  *          30-Day Total / Daily Avg) + an area chart, using the *small* ticks.
@@ -376,7 +376,7 @@ describe('SolarProductionWidget', () => {
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-ticksize', 'lg');
   });
 
-  it('compact layout shows the Today + Daily-Avg stats, no title or chart', () => {
+  it('compact layout retains its title and icon with Today + Daily-Avg stats, no chart', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('Today')).toBeInTheDocument();
@@ -385,8 +385,10 @@ describe('SolarProductionWidget', () => {
     expect(screen.getByText('2.0')).toBeInTheDocument();
     expect(screen.getAllByText('kWh')).toHaveLength(1);
 
-    // Compact is title-less, never mounts the chart, and drops the 30-day stat.
-    expect(screen.queryByText('Solar production')).not.toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: 'Solar production', level: 3 });
+    expect(heading).toBeVisible();
+    expect(heading.parentElement?.querySelector('svg.lucide-sun')).toBeInTheDocument();
+    // Compact never mounts the chart and drops the 30-day stat.
     expect(screen.queryByText('30-day total')).not.toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
@@ -395,6 +397,7 @@ describe('SolarProductionWidget', () => {
     historyMock.mockReturnValue(makeQuery({ data: [] }));
     renderWidget({ cols: 1, rows: 2 });
 
+    expect(screen.getByRole('heading', { name: 'Solar production', level: 3 })).toBeVisible();
     expect(screen.getByText('No solar data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByText('Today')).not.toBeInTheDocument();

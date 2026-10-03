@@ -111,6 +111,7 @@ export function GeneralSettings() {
     },
   })
   const [saved, setSaved] = useState(false)
+  const [costValidity, setCostValidity] = useState({ electricity: true, gas: true })
 
   // In-app navigation guard. The settings form has no explicit isDirty flag,
   // so diff the in-progress draft against the persisted server snapshot. This
@@ -372,6 +373,7 @@ export function GeneralSettings() {
                     locale={form.locale ?? 'en-US'}
                     precision={clampDecimals(form.decimal_precision)}
                     valueMicro={valueToMicro(form.base_cost_per_kwh)}
+                    onValidityChange={electricity => setCostValidity(previous => ({ ...previous, electricity }))}
                     onChange={({ valueMicro }) =>
                       setForm({ ...form, base_cost_per_kwh: microToValue(valueMicro) ?? 0 })
                     }
@@ -387,6 +389,7 @@ export function GeneralSettings() {
                         locale={form.locale ?? 'en-US'}
                         precision={clampDecimals(form.decimal_precision)}
                         valueMicro={valueToMicro(form.gas_price_per_unit)}
+                        onValidityChange={gas => setCostValidity(previous => ({ ...previous, gas }))}
                         onChange={({ valueMicro }) =>
                           setForm({ ...form, gas_price_per_unit: microToValue(valueMicro) ?? 0 })
                         }
@@ -421,7 +424,7 @@ export function GeneralSettings() {
           <Button variant="primary" icon={<Save className="h-4 w-4" />} onClick={() => settingsMut.mutate(form, {
             onSuccess: () => { toast.success(t('toast.saved', 'Settings saved'), t('toast.savedDesc', 'Your preferences have been updated')); setSaved(true); setTimeout(() => setSaved(false), 3000) },
             onError: () => toast.error(t('toast.saveFailed', 'Failed to save'), t('toast.saveFailedDesc', 'Could not update settings')),
-          })} loading={settingsMut.isPending}>
+          })} loading={settingsMut.isPending} disabled={!costValidity.electricity || !costValidity.gas}>
             {t('app.save', 'Save settings')}
           </Button>
           {saved && (

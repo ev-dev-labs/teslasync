@@ -7,13 +7,14 @@ import { Grid } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { ChargingSession } from '@/api/types';
 
 import {
   deriveChargeBillTruth,
   type ChargeBillReasonId,
 } from '../lib/chargeBillTruth';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const REASON_COPY: Record<ChargeBillReasonId, { key: string; fallback: string }> = {
   no_invoice: {
@@ -43,6 +44,7 @@ const REASON_COPY: Record<ChargeBillReasonId, { key: string; fallback: string }>
 };
 
 export function ChargeBillTruthPanel({ session }: { session: ChargingSession }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const truth = deriveChargeBillTruth({
@@ -61,11 +63,11 @@ export function ChargeBillTruthPanel({ session }: { session: ChargingSession }) 
   const energy = (wh: number | null) =>
     wh == null
       ? '—'
-      : `${fmtNumber(convertEnergyFromSI(wh, unitPrefs.energy), 2)} ${unitPrefs.energy}`;
+      : `${fmtNumber(convertEnergyFromSI(wh, unitPrefs.energy))} ${unitPrefs.energy}`;
   const money = (value: number | null) =>
     value == null
       ? '—'
-      : `${truth.currency ?? session.cost_currency ?? '$'}${fmtNumber(value, 2)}`;
+      : `${truth.currency ?? session.cost_currency ?? '$'}${fmtNumber(value)}`;
 
   return (
     <GlassPanel className="space-y-4 p-4 sm:p-5" data-testid="charge-bill-truth">
@@ -105,7 +107,7 @@ export function ChargeBillTruthPanel({ session }: { session: ChargingSession }) 
             truth.energyDeltaPct == null
               ? '—'
               : t('charging.billTruth.deltaPct', '{{pct}}% of invoice', {
-                  pct: fmtNumber(truth.energyDeltaPct, 1),
+                  pct: fmtNumber(truth.energyDeltaPct),
                 })
           }
           color="purple"

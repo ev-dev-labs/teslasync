@@ -18,6 +18,7 @@ import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 import type { VehicleState, Drive } from '@/api/types'
 import { batteryColor } from './helpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryRangeChartsProps {
   state: VehicleState
@@ -27,6 +28,7 @@ interface BatteryRangeChartsProps {
 const valueClass = cn('block', typography.size.xl, typography.weight.bold, typography.color.primary)
 
 export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
+  const { precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs } = useUnits()
 
@@ -107,7 +109,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
               <Text variant="caption">{t('common.range', 'Range')}</Text>
               <AnimatedNumber
                 value={ratedRangeDisplay}
-                decimals={0}
+                decimals={displayPrecision}
                 suffix={` ${unitPrefs.distance}`}
                 className={valueClass}
               />

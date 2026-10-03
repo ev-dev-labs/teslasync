@@ -8,10 +8,12 @@ import {
 } from '@/api/hooks/useScience';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { asList, useT } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
+  const { fmtInt } = useNumberFormatting();
   const t = useT();
   const electrochem = useDataState(useScienceElectrochem(window), { provenance: 'historical' });
   const thermal = useDataState(useScienceThermal(window), { provenance: 'historical' });
@@ -36,7 +38,7 @@ export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
       state: electrochem,
       hasEvidence: restCount > 0 || irCount > 0,
       measure: t('science.overview.batteryMeasure', '{{rest}} rest points · {{ir}} resistance steps', {
-        rest: fmtNumber(restCount, 0), ir: fmtNumber(irCount, 0),
+        rest: fmtInt(restCount), ir: fmtInt(irCount),
       }),
       meaning: electrochem.data?.capacity_proxy_unknown
         ? t('science.overview.batteryUnknown', 'Capacity proxy unavailable; this is not a battery health score.')
@@ -47,7 +49,7 @@ export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
       title: t('science.overview.thermal', 'Thermal fits'),
       state: thermal,
       hasEvidence: thermalCount > 0,
-      measure: t('science.overview.thermalMeasure', '{{count}} qualified cooldown fits', { count: fmtNumber(thermalCount, 0) }),
+      measure: t('science.overview.thermalMeasure', '{{count}} qualified cooldown fits', { count: fmtInt(thermalCount) }),
       meaning: t('science.overview.thermalMeaning', 'Only observed park cooldowns qualify; inspect uncertainty below.'),
     },
     {
@@ -55,7 +57,7 @@ export function ScienceEvidenceOverview({ window }: { window: ScienceWindow }) {
       title: t('science.overview.weather', 'Weather matches'),
       state: weather,
       hasEvidence: weatherCount > 0 && !weather.data?.weather_unknown,
-      measure: t('science.overview.weatherMeasure', '{{count}} drives joined to archive weather', { count: fmtNumber(weatherCount, 0) }),
+      measure: t('science.overview.weatherMeasure', '{{count}} drives joined to archive weather', { count: fmtInt(weatherCount) }),
       meaning: t('science.overview.weatherMeaning', 'Associations with energy residuals do not establish causation.'),
     },
     {

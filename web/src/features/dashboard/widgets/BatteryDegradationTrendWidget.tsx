@@ -12,7 +12,7 @@ import { ChartTooltip } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
@@ -21,8 +21,10 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary } from './shared';
 import type { ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function BatteryDegradationTrendWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -58,18 +60,18 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
     const items: ChartSummaryStat[] = [];
     items.push({
       label: t('widget.soh', 'SoH'),
-      value: currentHealth != null ? `${fmtNumber(currentHealth, 1)}%` : '—',
+      value: currentHealth != null ? `${fmtNumber(currentHealth)}%` : '—',
     });
       items.push({
         label: t('widget.degradation', 'Degradation'),
-        value: degradationRate != null ? `${degradationRate > 0 ? '−' : ''}${fmtNumber(degradationRate, 2)}%/${t('widget.mo', 'mo')}` : '—',
+        value: degradationRate != null ? `${degradationRate > 0 ? '−' : ''}${fmtNumber(degradationRate)}%/${t('widget.mo', 'mo')}` : '—',
       });
     items.push({
       label: t('widget.cycles', 'Cycles'),
-      value: totalCycles != null ? fmtNumber(totalCycles, 0) : '—',
+      value: totalCycles != null ? fmtNumber(totalCycles) : '—',
     });
     return items;
-  }, [currentHealth, degradationRate, totalCycles, t]);
+  }, [currentHealth, degradationRate, totalCycles, t, fmtNumber]);
 
   const handleRefresh = useCallback(() => {
     void refetch();

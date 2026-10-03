@@ -14,9 +14,10 @@ import {
 } from '@/components/ui'
 import { Avatar } from '@/components/data-display'
 import { EmptyState, QueryError, TableSkeleton, InlineCallout } from '@/components/feedback'
-import { fmtInt } from '@/lib/numberFormat'
+
 import type { ImpersonationCandidate } from '@/api/hooks/useImpersonation'
 import { UserImpersonateButton } from './UserImpersonateButton'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SubjectsTableProps {
   /** Distinct subjects the admin may impersonate (already excludes self). */
@@ -48,6 +49,7 @@ export function SubjectsTable({
   error,
   onRetry,
 }: SubjectsTableProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
 

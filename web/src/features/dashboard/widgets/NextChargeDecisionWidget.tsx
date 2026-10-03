@@ -6,10 +6,11 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useNextChargeDecision } from '@/api/hooks/useCharging';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { NextChargeVerdict } from '@/types/charging';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const VERDICT_BADGE: Record<NextChargeVerdict, 'success' | 'info' | 'warning' | 'neutral'> = {
   enough: 'success',
@@ -20,6 +21,7 @@ const VERDICT_BADGE: Record<NextChargeVerdict, 'success' | 'info' | 'warning' | 
 };
 
 export default function NextChargeDecisionWidget({ vehicleId }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { data: vehicles } = useVehicles();
@@ -73,7 +75,7 @@ export default function NextChargeDecisionWidget({ vehicleId }: WidgetProps) {
             {t('nextCharge.socLine', '{{soc}}% → {{target}}% · {{kwh}} kWh needed', {
               soc: data.current_soc,
               target: data.target_soc,
-              kwh: fmtNumber(data.kwh_needed, 1),
+              kwh: fmtNumber(data.kwh_needed),
             })}
           </Caption>
           {data.home_now_cost != null ? (

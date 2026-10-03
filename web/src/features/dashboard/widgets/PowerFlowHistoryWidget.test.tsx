@@ -479,6 +479,9 @@ describe('PowerFlowHistoryWidget — compact', () => {
   it('renders only Avg Solar + Peak Home and suppresses the chart + Net Grid', () => {
     renderWidget({ cols: 1, rows: 1 });
 
+    const heading = screen.getByRole('heading', { name: 'Power flow history', level: 3 });
+    expect(heading).toBeVisible();
+    expect(heading.parentElement?.querySelector('svg.lucide-trending-up[aria-hidden="true"]')).toBeInTheDocument();
     expect(screen.getByText('Avg solar')).toBeInTheDocument();
     expect(screen.getByText('Peak home')).toBeInTheDocument();
     expect(screen.getByText('5.0')).toBeInTheDocument();
@@ -491,6 +494,7 @@ describe('PowerFlowHistoryWidget — compact', () => {
   it('shows its own empty state when there is no data', () => {
     useHistoryMock.mockReturnValue(makeQ<TeslaEnergyLiveStatus[]>([]));
     renderWidget({ cols: 1, rows: 1 });
+    expect(screen.getByRole('heading', { name: 'Power flow history', level: 3 })).toBeVisible();
     expect(screen.getByText('No power flow data')).toBeInTheDocument();
     expect(screen.queryByText('Avg solar')).toBeNull();
   });

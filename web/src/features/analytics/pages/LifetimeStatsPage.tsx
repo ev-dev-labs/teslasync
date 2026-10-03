@@ -25,13 +25,14 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 
 import { AchievementBadge } from '../components/AchievementBadge';
 import { AILifetimeStatsQA } from '@/components/ai/AILifetimeStatsQA';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SECONDS_PER_HOUR = 3600;
 const METERS_PER_KM = 1000;
@@ -47,6 +48,7 @@ type SectionState = 'loading' | 'error' | 'empty' | 'ready';
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 export default function LifetimeStatsPage() {
+  const { fmtInt, fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDate: fmtDate } = useDateFormat();
   usePageTitle(t('lifetime.title', 'Lifetime stats'));
@@ -152,7 +154,7 @@ export default function LifetimeStatsPage() {
                         color="primary"
                         className="tabular-nums sm:text-4xl xl:text-5xl"
                       >
-                        <AnimatedNumber value={heroDistance} duration={1.5} decimals={0} />
+                        <AnimatedNumber value={heroDistance} duration={1.5} decimals={displayPrecision} />
                       </Text>
                       <Text as="span" size="lg" color="secondary">{distanceUnit}</Text>
                     </span>
@@ -167,7 +169,7 @@ export default function LifetimeStatsPage() {
                   {stats && stats.earth_circumferences > 0 && (
                     <HeroChip icon={<Globe className="h-3.5 w-3.5" aria-hidden="true" />}>
                       {t('lifetime.earthCompare', "That's {{x}}x around the Earth!", {
-                        x: fmtNumber(stats.earth_circumferences, 2),
+                        x: fmtNumber(stats.earth_circumferences),
                       })}
                     </HeroChip>
                   )}
@@ -205,19 +207,19 @@ export default function LifetimeStatsPage() {
                 label={t('lifetime.totalDrives', 'Total drives')}
                 value={fmtInt(stats?.total_drives ?? 0)}
                 icon={<Car className="h-4 w-4" aria-hidden="true" />}
-                sublabel={`${fmtNumber(stats?.total_driving_hours ?? 0, 1)} ${t('lifetime.hours', 'hrs')}`}
+                sublabel={`${fmtNumber(stats?.total_driving_hours ?? 0)} ${t('lifetime.hours', 'hrs')}`}
               />
               <StatCard
                 loading={isLoading}
                 label={t('lifetime.totalDistance', 'Total distance')}
-                value={fmtNumber(heroDistance, 0)}
+                value={fmtNumber(heroDistance)}
                 unit={distanceUnit}
                 icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
               />
               <StatCard
                 loading={isLoading}
                 label={t('lifetime.totalEnergy', 'Total energy')}
-                value={fmtNumber(stats?.total_energy_kwh ?? 0, 1)}
+                value={fmtNumber(stats?.total_energy_kwh ?? 0)}
                 unit="kWh"
                 icon={<Zap className="h-4 w-4" aria-hidden="true" />}
                 sublabel={`${fmtInt(stats?.total_charge_sessions ?? 0)} ${t('lifetime.sessions', 'sessions')}`}
@@ -225,7 +227,7 @@ export default function LifetimeStatsPage() {
               <StatCard
                 loading={isLoading}
                 label={t('lifetime.totalSavings', 'Total savings')}
-                value={formatCurrency(stats?.total_savings ?? 0, 0)}
+                value={formatCurrency(stats?.total_savings ?? 0)}
                 icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
                 sublabel={t('lifetime.vsGas', 'vs gasoline')}
               />
@@ -257,13 +259,13 @@ export default function LifetimeStatsPage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
               <FunFactCard
                 icon={<Globe className="h-6 w-6 shrink-0 text-indigo-300" aria-hidden="true" />}
-                value={fmtNumber((stats?.earth_circumferences ?? 0) * 100, 1)}
+                value={fmtNumber((stats?.earth_circumferences ?? 0) * 100)}
                 unit="%"
                 label={t('lifetime.earthProgress', 'around the Earth')}
               />
               <FunFactCard
                 icon={<Moon className="h-6 w-6 shrink-0 text-slate-300" aria-hidden="true" />}
-                value={fmtNumber((stats?.moon_trips ?? 0) * 100, 2)}
+                value={fmtNumber((stats?.moon_trips ?? 0) * 100)}
                 unit="%"
                 label={t('lifetime.moonProgress', 'to the Moon')}
               />
@@ -275,7 +277,7 @@ export default function LifetimeStatsPage() {
               />
               <FunFactCard
                 icon={<Home className="h-6 w-6 shrink-0 text-amber-300" aria-hidden="true" />}
-                value={fmtNumber(stats?.homes_equivalent_days ?? 0, 1)}
+                value={fmtNumber(stats?.homes_equivalent_days ?? 0)}
                 unit={t('lifetime.days', 'days')}
                 label={t('lifetime.homesPowered', 'of home energy used')}
               />
@@ -323,7 +325,7 @@ export default function LifetimeStatsPage() {
                     color={CO2_COLOR}
                   />
                 }
-                value={<AnimatedNumber value={stats?.co2_offset_kg ?? 0} decimals={0} suffix=" kg" />}
+                value={<AnimatedNumber value={stats?.co2_offset_kg ?? 0} decimals={displayPrecision} suffix=" kg" />}
                 label={t('lifetime.co2Offset', 'CO₂ offset')}
               />
               <EnvStat
@@ -351,19 +353,19 @@ export default function LifetimeStatsPage() {
             <Grid minItemWidth="standard" gap={3}>
               <RecordCard
                 title={t('lifetime.longestDrive', 'Longest drive')}
-                value={`${fmtNumber(fromKm(stats?.longest_drive_record?.value ?? 0), 1)} ${distanceUnit}`}
+                value={`${fmtNumber(fromKm(stats?.longest_drive_record?.value ?? 0))} ${distanceUnit}`}
                 date={stats?.longest_drive_record?.date}
                 icon={<Car className="h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />}
               />
               <RecordCard
                 title={t('lifetime.highestSpeed', 'Highest speed')}
-                value={`${fmtNumber(fromKmh(stats?.highest_speed_record?.value ?? 0), 0)} ${speedUnit}`}
+                value={`${fmtNumber(fromKmh(stats?.highest_speed_record?.value ?? 0))} ${speedUnit}`}
                 date={stats?.highest_speed_record?.date}
                 icon={<Gauge className="h-5 w-5 shrink-0 text-rose-300" aria-hidden="true" />}
               />
               <RecordCard
                 title={t('lifetime.biggestCharge', 'Biggest charge')}
-                value={`${fmtNumber(stats?.max_charge_record?.value ?? 0, 1)} kWh`}
+                value={`${fmtNumber(stats?.max_charge_record?.value ?? 0)} kWh`}
                 date={stats?.max_charge_record?.date}
                 icon={<BatteryCharging className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />}
               />
@@ -390,12 +392,12 @@ export default function LifetimeStatsPage() {
               />
               <MiniStat
                 label={t('lifetime.daysOnRoad', 'Days on road')}
-                value={fmtNumber(stats?.days_on_road ?? 0, 1)}
+                value={fmtNumber(stats?.days_on_road ?? 0)}
               />
               <MiniStat
                 label={t('lifetime.avgEfficiency', 'Avg efficiency')}
                 value={(stats?.avg_efficiency_wh_km ?? 0) > 0
-                  ? `${fmtNumber(stats?.avg_efficiency_wh_km ?? 0, 0)} Wh/km`
+                  ? `${fmtNumber(stats?.avg_efficiency_wh_km ?? 0)} Wh/km`
                   : '—'}
                 help={{
                   i18nKey: 'help.lifetime.avgEfficiency',
@@ -534,6 +536,7 @@ function FunFactCard({ icon, value, unit, label }: {
 function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
   evCost: number; gasCost: number; savings: number; co2Kg: number;
 }) {
+  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const maxCost = Math.max(evCost, gasCost, 1);
@@ -545,22 +548,22 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
         value={evCost}
         max={maxCost}
         color={EV_COLOR}
-        sublabel={formatCurrency(evCost, 0)}
+        sublabel={formatCurrency(evCost)}
       />
       <MetricBar
         label={t('lifetime.gasCost', 'Gasoline equivalent')}
         value={gasCost}
         max={maxCost}
         color={GAS_COLOR}
-        sublabel={formatCurrency(gasCost, 0)}
+        sublabel={formatCurrency(gasCost)}
       />
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
         <Text as="span" size="lg" weight="semibold" className="text-emerald-300">
           {t('lifetime.youSaved', 'You saved')}{' '}
-          <Currency value={savings} precision={0} className="text-emerald-300" />
+          <Currency value={savings} precision={displayPrecision} className="text-emerald-300" />
         </Text>
         <Caption>
-          {fmtNumber(co2Kg, 0)} kg CO₂ {t('lifetime.avoided', 'avoided')}
+          {fmtNumber(co2Kg)} kg CO₂ {t('lifetime.avoided', 'avoided')}
         </Caption>
       </div>
     </div>

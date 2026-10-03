@@ -20,14 +20,16 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber } from '@/hooks/useUrlState';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtInt } from '@/lib/numberFormat';
+
 import {
   RouteCard, makeUnitDisplay, ROUTE_EFF_COLORS, MAX_COMPARISON_ROUTES,
 } from '../components/route-efficiency';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const ROUTES_PAGE_SIZE = 12;
 
 export default function RouteEfficiencyPage() {
+  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('routeEfficiency.title', 'Route Efficiency'));
 
@@ -68,7 +70,7 @@ export default function RouteEfficiencyPage() {
   const isError = Boolean(error) && !hasRoutes;
 
   const { unitPrefs } = useUnits();
-  const unit = useMemo(() => makeUnitDisplay(unitPrefs.distance), [unitPrefs.distance]);
+  const unit = useMemo(() => makeUnitDisplay(unitPrefs.distance), [unitPrefs.distance, displayPrecision, displayLocale]);
 
   /* ---- Aggregates (SI Wh/km in, converted at the display boundary) ---- */
   const totalTrips = routes.reduce((sum, r) => sum + (r.tripCount ?? 0), 0);

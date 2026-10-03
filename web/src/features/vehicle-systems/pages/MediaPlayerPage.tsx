@@ -27,9 +27,10 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { getErrorMessage } from '@/lib/errorMessage';
 import type { MediaSnapshot } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -89,6 +90,7 @@ function statusLabel(status: string, t: TFunction): string {
 /* ── Component ─────────────────────────────────────────────────── */
 
 export default function MediaPlayerPage() {
+  const { fmtNumber, fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('media.title', 'Media player'));
 
@@ -274,7 +276,7 @@ export default function MediaPlayerPage() {
         ),
       },
     ],
-    [t],
+    [t, displayPrecision, displayLocale],
   );
 
   /* ── Sorting ──────────────────────────────────────────────── */
@@ -468,7 +470,7 @@ export default function MediaPlayerPage() {
               <Caption className="text-center">
                 {t('media.volumeStep', 'Step')}:{' '}
                 {latest?.audio_volume_increment != null
-                  ? fmtNumber(latest.audio_volume_increment, 2)
+                  ? fmtNumber(latest.audio_volume_increment)
                   : '—'}
               </Caption>
             </div>
@@ -504,7 +506,7 @@ export default function MediaPlayerPage() {
             label={t('media.volumeStepFull', 'Volume step')}
             value={
               latest?.audio_volume_increment != null
-                ? fmtNumber(latest.audio_volume_increment, 2)
+                ? fmtNumber(latest.audio_volume_increment)
                 : '—'
             }
             icon={<Volume2 className="h-5 w-5" aria-hidden="true" />}

@@ -10,8 +10,9 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingMethodologyProps {
   summary: HvacCyclingSummary;
@@ -20,6 +21,7 @@ interface HvacCyclingMethodologyProps {
 export function HvacCyclingMethodology({
   summary,
 }: HvacCyclingMethodologyProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items = [
     {

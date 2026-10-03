@@ -3,8 +3,9 @@ import { Flag, ToggleRight, ToggleLeft, Percent } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
 import { StatGridSkeleton } from '@/components/feedback';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { FeatureFlagSummary } from './parseFeatureFlags';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FeatureConfigKpisProps {
   summary: FeatureFlagSummary;
@@ -30,6 +31,7 @@ const UNKNOWN = '—';
  * headline.
  */
 export function FeatureConfigKpis({ summary, isLoading, error }: FeatureConfigKpisProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -70,7 +72,7 @@ export function FeatureConfigKpis({ summary, isLoading, error }: FeatureConfigKp
       />
       <MetricCard
         label={t('featureConfig.kpi.enabledRate', 'Enabled rate')}
-        value={error ? UNKNOWN : fmtPercent(enabledRate, 0)}
+        value={error ? UNKNOWN : fmtPercent(enabledRate)}
         icon={<Percent className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
       />

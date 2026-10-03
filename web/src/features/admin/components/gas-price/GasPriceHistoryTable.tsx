@@ -7,8 +7,9 @@ import { GlassPanel, PanelTitle, Text, Badge, DataTable, useSortToggle, type Col
 import { Skeleton, QueryError } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { GasPriceHistory } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface GasPriceHistoryTableProps {
   query: UseQueryResult<GasPriceHistory[], Error>;
@@ -19,6 +20,7 @@ interface GasPriceHistoryTableProps {
  * chart. Doubles as the non-visual, accessible fallback for the chart above.
  */
 export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { sortKey, sortDir, onSort } = useSortToggle('effective_from', 'desc');
@@ -93,13 +95,13 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
       {
         key: 'efficiency_mpg',
         filterValue: (r) => r.efficiency_mpg ?? null,
-        filterValueLabel: (_value, r) => r.efficiency_mpg == null ? '—' : `${fmtNumber(r.efficiency_mpg, 0)} ${t('gas.mpg', 'mpg')}`,
+        filterValueLabel: (_value, r) => r.efficiency_mpg == null ? '—' : `${fmtNumber(r.efficiency_mpg)} ${t('gas.mpg', 'mpg')}`,
         align: 'right',
         header: t('gas.efficiency', 'Efficiency'),
         sortable: true,
         render: (r) => (
           <Text size="sm" color="secondary" className="tabular-nums">
-            {r.efficiency_mpg ? `${fmtNumber(r.efficiency_mpg, 0)} ${t('gas.mpg', 'mpg')}` : '—'}
+            {r.efficiency_mpg ? `${fmtNumber(r.efficiency_mpg)} ${t('gas.mpg', 'mpg')}` : '—'}
           </Text>
         ),
       },
@@ -119,7 +121,7 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
           ),
       },
     ],
-    [t, formatCurrency],
+    [t, formatCurrency, fmtNumber],
   );
 
   return (

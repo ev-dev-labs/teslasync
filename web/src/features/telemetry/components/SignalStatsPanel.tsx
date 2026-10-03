@@ -22,9 +22,10 @@ import { GlassPanel, DataTable, Toggle, SectionTitle, type Column } from '@/comp
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { CHART_COLORS } from '@/lib/colors';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface SignalStatsPanelProps {
   stats: SignalStat[];
@@ -64,6 +65,7 @@ export function SignalStatsPanel({
   className,
   signalIndex,
 }: SignalStatsPanelProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const [hideEmpty, setHideEmpty] = useState(false);
 
@@ -116,7 +118,7 @@ export function SignalStatsPanel({
           —
         </span>
       ),
-    [t],
+    [t, fmtNumber],
   );
 
   const columns: Column<SignalStat>[] = useMemo(() => [
@@ -155,7 +157,7 @@ export function SignalStatsPanel({
         <span className="font-mono text-[var(--text-muted)]">{fmtInt(s.count)}</span>
       ),
     },
-  ], [positionIndex, renderNumeric, signalIndex, t]);
+  ], [positionIndex, renderNumeric, signalIndex, t, fmtNumber, fmtInt]);
 
   return (
     <FadeIn>

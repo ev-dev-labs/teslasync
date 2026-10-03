@@ -131,9 +131,9 @@ export function ShareCardWeekdayProfile({
                       <ChartTooltip
                         valueFormatter={(value, name) =>
                           name === countSeries
-                            ? display.formatNumber(Number(value), 0)
+                            ? display.formatNumber(Number(value))
                             : t('shareCard.units.distanceDisplay', '{{value}} {{unit}}', {
-                              value: display.formatNumber(Number(value), 1),
+                              value: display.formatNumber(Number(value)),
                               unit: display.distanceUnit,
                             })}
                       />

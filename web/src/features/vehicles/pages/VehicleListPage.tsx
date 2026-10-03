@@ -49,7 +49,7 @@ import {
 import { useFleetWorkOrders } from '@/api/hooks/useFleetOps';
 import { usePinned } from '@/api/hooks/usePinned';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { formatObservationAge } from '@/lib/observationAge';
 import { batteryColor, statusHexColor } from '@/lib/colors';
 import { maskFor } from '@/lib/maskValue';
@@ -62,6 +62,7 @@ import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
 import type { TFunction } from 'i18next';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -245,6 +246,7 @@ function FleetKpis({
   chargingCount,
   chargingCoverageCount,
 }: FleetKpisProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const unknownLabel = t('common.unknownValue', '—');
@@ -599,6 +601,7 @@ interface VehicleCardProps {
 
 /** One vehicle in the responsive fleet grid — all data + row actions. */
 function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const state = entry?.state ?? null;
@@ -763,6 +766,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
 /* ── Page ──────────────────────────────────────────────────── */
 
 export default function VehicleListPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   usePageTitle(t('nav.vehicles', 'Fleet'));

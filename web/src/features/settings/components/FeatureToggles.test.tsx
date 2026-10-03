@@ -164,8 +164,8 @@ describe('FeatureToggles — populated table', () => {
 
     await screen.findByTestId('feature-toggles-row-feature_0')
     expect(screen.queryByTestId('feature-toggles-row-disabled_flag')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Status' }))
-    const menu = screen.getByRole('dialog', { name: 'Filter Status' })
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    const menu = screen.getByRole('dialog', { name: 'Status filter' })
     expect(within(menu).getByRole('checkbox', { name: '—' })).toBeInTheDocument()
     fireEvent.click(within(menu).getByRole('checkbox', { name: 'Select all shown values' }))
     fireEvent.click(within(menu).getByRole('checkbox', { name: 'Disabled' }))

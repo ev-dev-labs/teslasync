@@ -8,10 +8,6 @@ interface LiveStateIndicatorsProps {
   state: VehicleState
 }
 
-// Hoisted so the formatter options object is a stable reference rather than a
-// fresh literal allocated on every render.
-const SPEED_FORMAT = { precision: 0 } as const
-
 export function LiveStateIndicators({ state }: LiveStateIndicatorsProps) {
   const { t } = useTranslation()
   const { formatSpeed } = useUnits()
@@ -28,7 +24,7 @@ export function LiveStateIndicators({ state }: LiveStateIndicatorsProps) {
       aria-label={t('vehicles.detail.liveState', 'Live state')}
     >
       <Badge variant={isMoving ? 'success' : 'neutral'} dot size="lg">
-        {t('common.speed', 'Speed')}: {formatSpeed(state.speed, SPEED_FORMAT)}
+        {t('common.speed', 'Speed')}: {formatSpeed(state.speed)}
       </Badge>
       <Badge variant={state.is_locked ? 'success' : 'danger'} dot size="lg">
         {state.is_locked ? t('common.locked', 'Locked') : t('common.unlocked', 'Unlocked')}

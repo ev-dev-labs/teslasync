@@ -685,6 +685,21 @@
     "tzUtc": "UTC",
     "tzVehicle": "Vehicle's local time (recommended)"
   },
+  "automations": {
+    "builder": {
+      "signals": {
+        "batteryLevel": "Battery level",
+        "insideTemp": "Inside temperature",
+        "isCharging": "Is charging",
+        "isClimateOn": "Climate on",
+        "isLocked": "Is locked",
+        "outsideTemp": "Outside temperature",
+        "sentryMode": "Sentry Mode",
+        "speed": "Speed",
+        "state": "Vehicle state"
+      }
+    }
+  },
   "backup": {
     "export": {
       "busy": "Exporting…",

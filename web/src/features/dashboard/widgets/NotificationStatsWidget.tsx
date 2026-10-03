@@ -4,12 +4,13 @@ import { Bell, Send, AlertTriangle, Radio, CheckCircle, XCircle, Clock } from 'l
 import { Badge, DataTable, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import type { NotificationLog } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STATUS_VARIANT: Record<string, 'success' | 'danger' | 'warning'> = {
   sent: 'success',
@@ -18,6 +19,7 @@ const STATUS_VARIANT: Record<string, 'success' | 'danger' | 'warning'> = {
 };
 
 export default function NotificationStatsWidget({ size }: WidgetProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDateTime } = useDateFormat();
 
@@ -77,7 +79,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       },
       {
         label: t('widget.notificationStats.deliveryRate', 'Delivery rate'),
-        value: fmtNumber(deliveryRate, 1),
+        value: fmtNumber(deliveryRate),
         unit: '%',
         icon: <CheckCircle className="h-3.5 w-3.5" />,
         trend: deliveryRate >= 95 ? 'up' as const : deliveryRate > 0 ? 'down' as const : 'flat' as const,
@@ -97,7 +99,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
         icon: <Radio className="h-3.5 w-3.5" />,
       },
     ];
-  }, [stats, totalSent, deliveryRate, failed, enabledChannels, t]);
+  }, [stats, totalSent, deliveryRate, failed, enabledChannels, t, fmtInt, fmtNumber]);
 
   const recentLogs = useMemo(() => {
     const list = logs ?? [];
@@ -172,7 +174,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       >
         {stats ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
-            <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(deliveryRate, 1)}%</span>
+            <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(deliveryRate)}%</span>
             <span className="text-2xs text-[var(--text-muted)] tracking-wider">
               {t('widget.notificationStats.deliveryRate', 'Delivery rate')}
             </span>

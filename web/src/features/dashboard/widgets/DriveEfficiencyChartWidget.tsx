@@ -2,26 +2,21 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
-  Tooltip, ReferenceLine,
-  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useThemeChartPalette,
-  AREA_DEFAULTS, areaGradient,
-  ChartLegend, EmbeddedChart,
-} from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, chartGrid, axisTick, axisTickSm, chartAnimation, useThemeChartPalette, AREA_DEFAULTS, areaGradient, ChartLegend, EmbeddedChart } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
 import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Colour for the rolling-average series (amber). Shared by the reference
@@ -86,6 +81,8 @@ export function buildDailyEfficiency(drives: Drive[], windowSize: number, fmtSho
 }
 
 export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -162,12 +159,12 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
     const items: ChartSummaryStat[] = [
       {
         label: t('widget.driveEfficiencyChart.avg', 'Avg'),
-        value: overallAvg != null ? fmtNumber(overallAvg, 0) : '—',
+        value: overallAvg != null ? fmtNumber(overallAvg) : '—',
         unit: efficiencyUnit,
       },
       {
         label: t('widget.driveEfficiencyChart.best', 'Best day'),
-        value: bestDay != null ? fmtNumber(bestDay, 0) : '—',
+        value: bestDay != null ? fmtNumber(bestDay) : '—',
         unit: efficiencyUnit,
       },
       {
@@ -176,7 +173,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
       },
     ];
     return items;
-  }, [t, overallAvg, bestDay, trend, efficiencyUnit]);
+  }, [t, overallAvg, bestDay, trend, efficiencyUnit, fmtNumber]);
 
   const chartEl = (
     <EmbeddedChart
@@ -216,7 +213,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
               axisLine={false}
               width={36}
               domain={['dataMin - 20', 'dataMax + 20']}
-              tickFormatter={(v: number) => `${fmt(v, 0)}`}
+              tickFormatter={(v: number) => `${fmt(v)}`}
             />
             <Tooltip content={<ChartTooltip />} />
             <ChartLegend />

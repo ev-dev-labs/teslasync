@@ -15,11 +15,13 @@ import {
 } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { unknown, useT } from './helpers';
 import { MissingBadges } from './MissingBadges';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function TiresPanel({ window }: { window: ScienceWindow }) {
+  const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const query = useScienceTires(window);
   const state = useDataState(query, { provenance: 'historical' });
@@ -65,7 +67,7 @@ export function TiresPanel({ window }: { window: ScienceWindow }) {
                 </Badge>
                 <Badge variant="neutral" size="sm">
                   {t('science.tires.underinflation', 'Underinflation')}:{' '}
-                  {data.underinflation_frac != null ? `${fmtNumber(data.underinflation_frac * 100, 1)} %` : unknown(t)}
+                  {data.underinflation_frac != null ? `${fmtNumber(data.underinflation_frac * 100)} %` : unknown(t)}
                 </Badge>
                 <Badge variant={data.extra_wh != null ? 'info' : 'neutral'} size="sm">
                   {t('science.tires.extra', 'Extra rolling')}:{' '}

@@ -9,10 +9,11 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingThresholdGateMatrixProps {
   summary: HvacCyclingSummary;
@@ -46,6 +47,7 @@ export function HvacCyclingThresholdGateMatrix({
   state,
   formatDuration,
 }: HvacCyclingThresholdGateMatrixProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const threshold = summary.thresholds;
 
@@ -67,7 +69,7 @@ export function HvacCyclingThresholdGateMatrix({
             <Gate
               label={t('hvacCycling.thresholds.maxGap', 'Maximum observed gap')}
               value={t('hvacCycling.thresholds.atMost', '≤ {{value}}', {
-                value: formatDuration(threshold.maxGapS, { precision: 1 }),
+                value: formatDuration(threshold.maxGapS),
               })}
               affected={summary.intervals.longGapExclusions}
             />
@@ -76,7 +78,6 @@ export function HvacCyclingThresholdGateMatrix({
               value={t('hvacCycling.thresholds.atMost', '≤ {{value}}', {
                 value: formatDuration(
                   threshold.shortCycleThresholdS,
-                  { precision: 1 },
                 ),
               })}
               affected={summary.shortCompleteOnRunCount}

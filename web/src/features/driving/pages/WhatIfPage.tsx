@@ -27,6 +27,7 @@ import {
   type TirePreset,
   type EnergyBreakdown,
 } from '../lib/whatIfModel';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type ComponentKey = keyof Omit<EnergyBreakdown, 'total'>;
 
@@ -94,6 +95,7 @@ function BreakdownRow({
 }
 
 export default function WhatIfPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('whatIf.title', 'What-If Simulator'));
 
@@ -120,7 +122,7 @@ export default function WhatIfPage() {
     () =>
       drives.map((d) => ({
         value: String(d.id),
-        label: `${formatDateShort(d.startTs)} · ${formatDistance(d.distanceM, { precision: 1 })}`,
+        label: `${formatDateShort(d.startTs)} · ${formatDistance(d.distanceM)}`,
       })),
     [drives, formatDistance],
   );
@@ -134,7 +136,7 @@ export default function WhatIfPage() {
   );
 
   const kwh = useMemo(
-    () => (wh: number) => formatEnergy(wh, { precision: 1 }),
+    () => (wh: number) => formatEnergy(wh),
     [formatEnergy],
   );
 
@@ -216,7 +218,7 @@ export default function WhatIfPage() {
                 value={result.scenarioArrivalSoc != null ? `${Math.round(result.scenarioArrivalSoc)}%` : '—'}
                 subtitle={
                   socDelta != null
-                    ? `${socDelta >= 0 ? '+' : '−'}${Math.abs(socDelta).toFixed(1)}%`
+                    ? `${socDelta >= 0 ? '+' : '−'}${fmtNumber(Math.abs(socDelta))}%`
                     : undefined
                 }
                 icon={<BatteryCharging className="h-5 w-5" />}
@@ -224,10 +226,10 @@ export default function WhatIfPage() {
               />
               <MetricCard
                 label={t('whatIf.duration', 'Duration')}
-                value={formatDuration(result.scenarioDurationS, { precision: 0 })}
+                value={formatDuration(result.scenarioDurationS)}
                 subtitle={
                   baselineDurationS != null
-                    ? `${t('whatIf.was', 'was')} ${formatDuration(baselineDurationS, { precision: 0 })}`
+                    ? `${t('whatIf.was', 'was')} ${formatDuration(baselineDurationS)}`
                     : undefined
                 }
                 icon={<Timer className="h-5 w-5" />}
@@ -297,7 +299,7 @@ export default function WhatIfPage() {
                     min={-10}
                     max={40}
                     step={1}
-                    formatValue={(v) => formatTemperature(v, { precision: 0 })}
+                    formatValue={(v) => formatTemperature(v)}
                     onChange={(v) => setKnobs((k) => ({ ...k, ambientC: v }))}
                   />
                 </div>
@@ -354,11 +356,11 @@ export default function WhatIfPage() {
                     {saves
                       ? t('whatIf.takeawaySave', 'This would save {{wh}} — arriving with {{soc}} more battery.', {
                           wh: kwh(Math.abs(result.energyDeltaWh)),
-                          soc: socDelta != null ? `${Math.abs(socDelta).toFixed(1)}%` : '—',
+                          soc: socDelta != null ? `${fmtNumber(Math.abs(socDelta))}%` : '—',
                         })
                       : t('whatIf.takeawayCost', 'This would cost an extra {{wh}} — arriving with {{soc}} less battery.', {
                           wh: kwh(result.energyDeltaWh),
-                          soc: socDelta != null ? `${Math.abs(socDelta).toFixed(1)}%` : '—',
+                          soc: socDelta != null ? `${fmtNumber(Math.abs(socDelta))}%` : '—',
                         })}
                   </Text>
                   <Badge variant={saves ? 'success' : 'warning'}>

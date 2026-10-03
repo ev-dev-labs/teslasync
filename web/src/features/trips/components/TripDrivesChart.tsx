@@ -10,8 +10,9 @@ import {
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber, safeNumber } from '@/lib/numberFormat';
+import { safeNumber } from '@/lib/numberFormat';
 import type { TripDetail } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TripDrivesChartProps {
   trip: TripDetail | undefined;
@@ -27,6 +28,7 @@ interface TripDrivesChartProps {
  * converted to the user's unit at the display boundary.
  */
 export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: TripDrivesChartProps) {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
 
@@ -41,7 +43,7 @@ export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: Tr
         // reading never feeds a broken bar to Recharts at the display boundary.
         distance: convertDistanceFromSI(safeNumber(d.distance_m), unitPrefs.distance),
       })),
-    [trip?.drives, unitPrefs.distance, t],
+    [trip?.drives, unitPrefs.distance, t, displayPrecision, displayLocale],
   );
 
   const dataColumns = useMemo(
@@ -50,10 +52,10 @@ export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: Tr
       {
         key: 'distance',
         label: distanceLabel,
-        format: (v: unknown) => fmtNumber(v as number, 1),
+        format: (v: unknown) => fmtNumber(v as number),
       },
     ],
-    [t, distanceLabel],
+    [t, distanceLabel, fmtNumber],
   );
 
   if (isError) {

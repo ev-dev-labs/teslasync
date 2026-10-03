@@ -45,7 +45,7 @@ beforeEach(() => {
 describe('TopParkingLocations value filters', () => {
   it('filters all loaded location groups before client pagination', () => {
     render(<TopParkingLocations summary={summary()} state={{ isLoading: false, error: null, onRetry: vi.fn() }} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Stints' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Stints filter' }));
     const dialog = screen.getByRole('dialog');
     fireEvent.click(within(dialog).getByRole('checkbox', { name: '1' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
@@ -55,7 +55,7 @@ describe('TopParkingLocations value filters', () => {
 
   it('does not offer whole-window choices when the source drive list may be capped', () => {
     render(<TopParkingLocations summary={summary(true)} state={{ isLoading: false, error: null, onRetry: vi.fn() }} />);
-    expect(screen.queryByRole('button', { name: 'Filter Stints' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Stints filter' })).toBeNull();
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
 });

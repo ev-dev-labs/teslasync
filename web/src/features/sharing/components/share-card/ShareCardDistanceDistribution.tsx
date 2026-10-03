@@ -121,7 +121,7 @@ export function ShareCardDistanceDistribution({
                   content={(
                     <ChartTooltip
                       valueFormatter={(value) =>
-                        display.formatNumber(Number(value), 0)}
+                        display.formatNumber(Number(value))}
                     />
                   )}
                 />

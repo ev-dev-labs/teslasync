@@ -30,8 +30,9 @@ import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { request } from '@/api/client';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
@@ -59,6 +60,7 @@ const STATE_COLORS: Record<string, string> = {
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 export default function StatisticsPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('statistics.title', 'Statistics'));
   const { unitPrefs, formatEnergy } = useUnits();
@@ -209,7 +211,7 @@ export default function StatisticsPage() {
               <MetricCard label={t('statistics.totalDistance', 'Total distance')} value={`${fmtInt(fromKm(stats.total_distance ?? 0))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
               <MetricCard label={t('statistics.totalDrives', 'Total drives')} value={fmtInt(stats.total_drives ?? 0)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
               <MetricCard label={t('statistics.totalEnergy', 'Total energy')} value={`${fmtNumber(stats.energy_used ?? 0)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" />
-              <MetricCard label={t('statistics.totalCost', 'Total cost')} value={formatCurrency(stats.total_cost ?? 0, 0)} icon={<DollarSign className="h-4 w-4" />} color="red" />
+              <MetricCard label={t('statistics.totalCost', 'Total cost')} value={formatCurrency(stats.total_cost ?? 0)} icon={<DollarSign className="h-4 w-4" />} color="red" />
               <MetricCard label={t('statistics.co2Saved', 'CO₂ saved')} value={`${fmtNumber(stats.co2_saved ?? 0)} kg`} icon={<Leaf className="h-4 w-4" />} color="green" />
             </section>
             <section
@@ -218,7 +220,7 @@ export default function StatisticsPage() {
             >
               <MetricCard label={t('statistics.avgDriveDistance', 'Avg drive distance')} value={`${fmtNumber(fromKm(avgDriveDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
               <MetricCard label={t('statistics.avgEfficiency', 'Avg efficiency')} value={`${fmtNumber(whPerKmToDisplay(stats.avg_efficiency ?? 0))} ${efficiencyUnit}`} icon={<Gauge className="h-4 w-4" />} color="green" />
-              <MetricCard label={t('statistics.costPerKm', 'Cost per km')} value={(stats.total_distance ?? 0) > 0 ? formatCurrency((stats.total_cost ?? 0) / stats.total_distance, 3) : '—'} icon={<DollarSign className="h-4 w-4" />} color="amber" />
+              <MetricCard label={t('statistics.costPerKm', 'Cost per km')} value={(stats.total_distance ?? 0) > 0 ? formatCurrency((stats.total_cost ?? 0) / stats.total_distance) : '—'} icon={<DollarSign className="h-4 w-4" />} color="amber" />
             </section>
           </div>
         )}
@@ -250,8 +252,8 @@ export default function StatisticsPage() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <MetricCard label={t('statistics.capacity', 'Capacity')} value={formatEnergy(batteryHealth.estimated_capacity_wh ?? 0, { precision: 1 })} icon={<Battery className="h-4 w-4" />} color="cyan" />
-                  <MetricCard label={t('statistics.degradation', 'Degradation')} value={`${fmtNumber(batteryHealth.degradation_rate_pct_per_year ?? 0, 2)}%/yr`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
+                  <MetricCard label={t('statistics.capacity', 'Capacity')} value={formatEnergy(batteryHealth.estimated_capacity_wh ?? 0)} icon={<Battery className="h-4 w-4" />} color="cyan" />
+                  <MetricCard label={t('statistics.degradation', 'Degradation')} value={`${fmtNumber(batteryHealth.degradation_rate_pct_per_year ?? 0)}%/yr`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
                   <MetricCard label={t('statistics.cycles', 'Cycles')} value={fmtInt(batteryHealth.total_cycles ?? 0)} icon={<RefreshCw className="h-4 w-4" />} color="purple" />
                   <MetricCard label={t('statistics.age', 'Age')} value={`${batteryHealth.battery_age_months ?? 0} mo`} icon={<Clock className="h-4 w-4" />} color="green" />
                 </div>

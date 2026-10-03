@@ -94,8 +94,8 @@ describe('OrdersTable', () => {
     render(<OrdersTable orders={orders} />);
     expect(screen.queryByText('RN-30')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Model' }));
-    const menu = screen.getByRole('dialog', { name: 'Filter Model' });
+    fireEvent.click(screen.getByRole('button', { name: 'Model filter' }));
+    const menu = screen.getByRole('dialog', { name: 'Model filter' });
     expect(within(menu).getByRole('checkbox', { name: 'Model Y' })).toBeChecked();
     fireEvent.click(within(menu).getByRole('checkbox', { name: 'Select all shown values' }));
     fireEvent.click(within(menu).getByRole('checkbox', { name: 'Model Y' }));
@@ -103,7 +103,7 @@ describe('OrdersTable', () => {
 
     expect(dataRows()).toHaveLength(1);
     expect(screen.getByText('RN-30')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Model' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Model filter' }));
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(dataRows()).toHaveLength(25);
@@ -116,7 +116,7 @@ describe('OrdersTable', () => {
     ]} />);
     fireEvent.change(screen.getByRole('textbox', { name: 'Filter orders' }), { target: { value: 'RN-3' } });
     expect(dataRows()).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Model' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Model filter' }));
     expect(screen.getByRole('checkbox', { name: 'Model Y' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Model 3' })).toBeInTheDocument();
   });

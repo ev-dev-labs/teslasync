@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertSpeedFromSI, type SpeedUnitPref } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetChartSummary } from './shared';
@@ -14,6 +14,7 @@ import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** 7 rows (Mon–Sun) × 24 cols (0h–23h) */
 const ROWS = 7;
@@ -98,6 +99,7 @@ const DAY_LABELS_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const DAY_LABELS_FULL = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -143,7 +145,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell dataState={trust.hasData ? trust : undefined} loading={isLoading} error={trust.fatalError?.message ?? null} updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
         <WidgetBigNumber
-          value={totalDrives > 0 ? fmtNumber(maxSpeed, 0) : null}
+          value={totalDrives > 0 ? fmtNumber(maxSpeed) : null}
           unit={unitPrefs.speed}
           label={t('widget.speedHeatmap.peak', 'Peak')}
           align="center"
@@ -173,7 +175,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
         <WidgetChartSummary
           stats={[
             { label: t('widget.speedHeatmap.drives', '{{count}} drives', { count: totalDrives }), value: totalDrives },
-            { label: t('widget.speedHeatmap.peakSpeed', 'Peak avg {{speed}} {{unit}}', { speed: fmtNumber(maxSpeed, 0), unit: unitPrefs.speed }), value: fmtNumber(maxSpeed, 0), unit: unitPrefs.speed },
+            { label: t('widget.speedHeatmap.peakSpeed', 'Peak avg {{speed}} {{unit}}', { speed: fmtNumber(maxSpeed), unit: unitPrefs.speed }), value: fmtNumber(maxSpeed), unit: unitPrefs.speed },
           ]}
           chart={
           <div className="flex min-h-36 h-full flex-col">
@@ -232,6 +234,7 @@ interface HeatmapGridProps {
 }
 
 function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t }: HeatmapGridProps) {
+  const { fmtNumber } = useNumberFormatting();
   const leftMargin = isWide ? 30 : 14;
   const topMargin = 14;
   const hourLabels = isWide
@@ -288,7 +291,7 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t }: Heatma
           >
             <title>
               {dayLabels[day]} {cell.hour}:00 – {cell.count > 0
-                ? `${fmtNumber(cell.avgSpeed, 0)} ${speedUnit} (${cell.count} ${t('widget.speedHeatmap.drivesSuffix', 'drives')})`
+                ? `${fmtNumber(cell.avgSpeed)} ${speedUnit} (${cell.count} ${t('widget.speedHeatmap.drivesSuffix', 'drives')})`
                 : t('widget.speedHeatmap.noData', 'No data')}
             </title>
           </rect>

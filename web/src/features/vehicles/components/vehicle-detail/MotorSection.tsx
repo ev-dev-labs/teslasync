@@ -5,14 +5,16 @@ import { GlassPanel, PanelTitle } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
-import { fmtNumber, fmtInt } from '@/lib/numberFormat'
+
 import type { MotorSnapshot } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MotorSectionProps {
   motorData: MotorSnapshot | null | undefined
 }
 
 export function MotorSection({ motorData }: MotorSectionProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatTemperature } = useUnits()
 

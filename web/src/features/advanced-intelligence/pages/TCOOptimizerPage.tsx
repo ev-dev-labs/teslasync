@@ -10,15 +10,17 @@ import { Table, Badge, Button, Input, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { SI } from '@/lib/unitConversion';
 import type { TCOOptimizerRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
 import { formatCurrencyMinor } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type TCOForm = Omit<TCOOptimizerRequest, 'vehicle_id' | 'confirmed'>;
 
 export default function TCOOptimizerPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -198,15 +200,15 @@ export default function TCOOptimizerPage() {
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.risk', 'Risk score')}</th>
-                    <td className="text-right">{strategy.risk_score_pct != null ? `${fmtNumber(strategy.risk_score_pct, 1)}%` : '—'}</td>
+                    <td className="text-right">{strategy.risk_score_pct != null ? `${fmtNumber(strategy.risk_score_pct)}%` : '—'}</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.convenience', 'Convenience')}</th>
-                    <td className="text-right">{fmtNumber(strategy.convenience_score_pct, 1)}%</td>
+                    <td className="text-right">{fmtNumber(strategy.convenience_score_pct)}%</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.mix', 'Home / public mix')}</th>
-                    <td className="text-right">{fmtNumber(strategy.home_charging_pct, 0)}% / {fmtNumber(strategy.public_charging_pct, 0)}%</td>
+                    <td className="text-right">{fmtNumber(strategy.home_charging_pct)}% / {fmtNumber(strategy.public_charging_pct)}%</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">{t('advancedIntelligence.tco.budgetStatus', 'Budget status')}</th>

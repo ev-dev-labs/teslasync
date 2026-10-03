@@ -10,12 +10,13 @@ import {
   Table,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeFeatureEvidenceProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -26,6 +27,7 @@ export function ArchetypeFeatureEvidence({
   state,
   display,
 }: ArchetypeFeatureEvidenceProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const ranges = summary.featureRanges;
   const rows = [
@@ -42,7 +44,7 @@ export function ArchetypeFeatureEvidence({
     {
       label: t('archetypes.features.efficiency', 'Energy per distance'),
       range: ranges.efficiencyWhPerM,
-      format: (value: number | null | undefined) => display.formatEfficiency(value, 1),
+      format: (value: number | null | undefined) => display.formatEfficiency(value),
     },
     {
       label: t('archetypes.features.temperature', 'Outside temperature'),

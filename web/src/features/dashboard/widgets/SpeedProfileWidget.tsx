@@ -1,16 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import {
-  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow,
-  useThemeChartPalette,
-} from '@/components/charts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow, useThemeChartPalette } from '@/components/charts';
 import { useSpeedProfile } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -18,6 +13,7 @@ import { convertSpeedFromSI, convertPowerFromSI, type PowerUnitPref } from '@/li
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   bucket: string;
@@ -76,6 +72,8 @@ function findSweetSpot(chartData: ChartDatum[]): string {
 }
 
 export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtInt, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -102,7 +100,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
 
   const chartData = useMemo(
     () => buildChartData(data, toSpeedDisplay, powerUnit),
-    [data, toSpeedDisplay, powerUnit],
+    [data, toSpeedDisplay, powerUnit, displayPrecision, displayLocale],
   );
 
   const sweetSpot = useMemo(() => {
@@ -113,7 +111,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
       return `${fmtInt(toSpeedDisplay(optimal))}`;
     }
     return findSweetSpot(chartData);
-  }, [data, chartData, toSpeedDisplay]);
+  }, [data, chartData, toSpeedDisplay, fmtInt]);
 
   const peakFreq = useMemo(() => {
     let max = 0;
@@ -182,7 +180,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
         },
         {
           label: t('widget.speedProfile.peakFreq', 'Peak freq'),
-          value: chartData.some((d) => d.frequency != null) ? `${fmtNumber(peakFreq, 1)}%` : null,
+          value: chartData.some((d) => d.frequency != null) ? `${fmtNumber(peakFreq)}%` : null,
         },
         {
           label: sweetSpotLabel,
@@ -246,7 +244,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 tickLine={false}
                 axisLine={false}
                 width={35}
-                tickFormatter={(v: number) => `${fmt(v, 0)}%`}
+                tickFormatter={(v: number) => `${fmt(v)}%`}
               />
               <YAxis
                 yAxisId="eff"
@@ -255,15 +253,15 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 tickLine={false}
                 axisLine={false}
                 width={40}
-                tickFormatter={(v: number) => fmt(v, 0)}
+                tickFormatter={(v: number) => fmt(v)}
               />
               <Tooltip
                 content={<ChartTooltip />}
                 formatter={(value: number, name: string) => {
                   if (name === t('widget.speedProfile.frequency', 'Frequency')) {
-                    return [`${fmtNumber(value, 1)}%`, t('widget.speedProfile.frequency', 'Frequency')];
+                    return [`${fmtNumber(value)}%`, t('widget.speedProfile.frequency', 'Frequency')];
                   }
-                  return [`${fmtNumber(value, 1)} ${powerUnit}`, t('widget.speedProfile.averagePower', 'Average power')];
+                  return [`${fmtNumber(value)} ${powerUnit}`, t('widget.speedProfile.averagePower', 'Average power')];
                 }}
                 cursor={{ fill: 'var(--surface-hover)' }}
               />

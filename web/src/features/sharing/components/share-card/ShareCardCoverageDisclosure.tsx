@@ -31,12 +31,12 @@ export function ShareCardCoverageDisclosure({
               ? t(
                 'shareCard.coverage.capped',
                 'Exactly {{rows}} rows were returned, so this is an observed capped sample. Older drives inside the requested range may be absent; full-range or lifetime coverage is not claimed.',
-                { rows: display.formatNumber(analysis.returnedRows, 0) },
+                { rows: display.formatNumber(analysis.returnedRows) },
               )
               : t(
                 'shareCard.coverage.returnedEvidence',
                 '{{rows}} rows were returned as selected-window evidence. A sub-cap response is not a guarantee of complete lifetime or range coverage.',
-                { rows: display.formatNumber(analysis.returnedRows, 0) },
+                { rows: display.formatNumber(analysis.returnedRows) },
               )}
           </AlertBanner>
           <Table className="mt-4" aria-label={t('shareCard.coverage.title', 'Coverage and cap disclosure')}>
@@ -56,7 +56,7 @@ export function ShareCardCoverageDisclosure({
             <tr>
               <th scope="row"><Text variant="label">{t('shareCard.coverage.observedSpan', 'Observed span')}</Text></th>
               <td className="text-right"><Text variant="bodySm">
-                {display.formatDuration(analysis.observedSpanS, { precision: 1 })}
+                {display.formatDuration(analysis.observedSpanS)}
               </Text></td>
             </tr>
             <tr>

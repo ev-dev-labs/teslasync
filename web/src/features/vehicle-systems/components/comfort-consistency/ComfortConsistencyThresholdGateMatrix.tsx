@@ -9,13 +9,14 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyThresholdGateMatrixProps {
   summary: ComfortConsistencySummary;
@@ -53,6 +54,7 @@ export function ComfortConsistencyThresholdGateMatrix({
   formatDuration,
   formatDelta,
 }: ComfortConsistencyThresholdGateMatrixProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const thresholds = summary.thresholds;
 
@@ -81,7 +83,7 @@ export function ComfortConsistencyThresholdGateMatrix({
             <Gate
               label={t('comfortConsistency.thresholds.maxGap', 'Maximum interval gap')}
               value={t('comfortConsistency.thresholds.atMost', '<= {{value}}', {
-                value: formatDuration(thresholds.maxGapS, { precision: 2 }),
+                value: formatDuration(thresholds.maxGapS),
               })}
               affected={summary.intervals.longGapExclusions}
             />

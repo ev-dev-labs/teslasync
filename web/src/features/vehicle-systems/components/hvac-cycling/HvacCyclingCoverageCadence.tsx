@@ -10,10 +10,11 @@ import {
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingCoverageCadenceProps {
   summary: HvacCyclingSummary;
@@ -37,6 +38,7 @@ export function HvacCyclingCoverageCadence({
   locale,
   formatDuration,
 }: HvacCyclingCoverageCadenceProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = summary.coverage;
   const date = (ms: number | null) =>
@@ -67,25 +69,25 @@ export function HvacCyclingCoverageCadence({
             />
             <CoverageMetric
               label={t('hvacCycling.coverage.span', 'Timeline span')}
-              value={formatDuration(coverage.spanS, { precision: 1 })}
+              value={formatDuration(coverage.spanS)}
             />
             <CoverageMetric
               label={t('hvacCycling.coverage.stateCoverage', 'Known-state coverage')}
               value={coverage.stateCoverage != null
-                ? fmtPercent(coverage.stateCoverage * 100, 1)
+                ? fmtPercent(coverage.stateCoverage * 100)
                 : '—'}
             />
             <CoverageMetric
               label={t('hvacCycling.coverage.medianGap', 'Median cadence')}
-              value={formatDuration(coverage.medianGapS, { precision: 1 })}
+              value={formatDuration(coverage.medianGapS)}
             />
             <CoverageMetric
               label={t('hvacCycling.coverage.p90Gap', 'P90 cadence')}
-              value={formatDuration(coverage.p90GapS, { precision: 1 })}
+              value={formatDuration(coverage.p90GapS)}
             />
             <CoverageMetric
               label={t('hvacCycling.coverage.maxGap', 'Maximum observed gap')}
-              value={formatDuration(coverage.maxObservedGapS, { precision: 1 })}
+              value={formatDuration(coverage.maxObservedGapS)}
             />
             <CoverageMetric
               label={t('hvacCycling.coverage.gaps', 'Cadence / long gaps')}

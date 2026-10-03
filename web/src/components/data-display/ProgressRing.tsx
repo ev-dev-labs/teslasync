@@ -1,6 +1,7 @@
 import { forwardRef, type ReactNode, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ProgressRingProps {
   value: number;
@@ -43,6 +44,7 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
     ref,
   ) {
     const { t } = useTranslation();
+    const { fmtNumber } = useNumberFormatting();
 
     // Harden the geometry against the values that actually reach this ring:
     // a `value`/`max` that is still `undefined`, `NaN` or `Infinity` while data
@@ -57,12 +59,14 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
     const clamped = Math.max(0, Math.min(safeValue, safeMax));
     const fraction = clamped / safeMax; // safeMax > 0 → always finite in [0, 1]
     const offset = circumference * (1 - fraction);
-    const percent = Math.round(fraction * 100);
+    const percent = fmtNumber(fraction * 100);
     const hasCenter = centerLabel != null || centerSubLabel != null;
     const mainSize = Math.max(10, Math.round(size * 0.32));
     const subSize = Math.max(8, Math.round(size * 0.18));
     const resolvedAriaLabel =
-      ariaLabel ?? t('progressRing.ariaLabel', 'Progress: {{percent}}%', { percent });
+      ariaLabel ?? (Number.isFinite(value)
+        ? t('progressRing.ariaLabel', 'Progress: {{percent}}%', { percent })
+        : t('common.unknown', 'Unknown'));
 
     return (
       <div ref={ref} className={cn('inline-flex flex-col items-center gap-1', className)}>

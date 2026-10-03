@@ -58,7 +58,7 @@ import { useSignals, useSignalDiffServer, type SignalDiffRow } from '@/api/hooks
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import { request } from '@/api/client';
 import { getErrorMessage } from '@/lib/errorMessage';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
 import type { SignalHistoryResp } from '@/api/types';
 import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/SignalQueryControls';
@@ -77,6 +77,7 @@ import {
 } from '../components/SignalCompareControls';
 import { useLiveSignalStream, type SignalStat } from '../hooks/useLiveSignalStream';
 import { pLimit } from '@/lib/pLimit';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // Bound the parallel signal-history fetches so a "select all 80 signals"
 // click can't fire 80 simultaneous requests at the backend. 6 keeps the
@@ -99,6 +100,7 @@ const PER_PAGE_OPTIONS = [
 type CombinedHistoryRow = SignalLogEntry;
 
 export default function SignalsWorkspacePage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('signalsWorkspace.title', 'Signals'));

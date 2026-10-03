@@ -15,9 +15,10 @@ import { GlassPanel, PanelTitle, Badge, Code, type BadgeProps } from '@/componen
 import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { SignalEntry } from '@/types/telemetry';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface TopSignal {
   name: string;
@@ -48,6 +49,7 @@ const TYPE_VARIANT: Record<SignalEntry['type'], BadgeProps['variant']> = {
 const EMPTY_SIGNALS: readonly TopSignal[] = [];
 
 export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = signals ?? EMPTY_SIGNALS;
 

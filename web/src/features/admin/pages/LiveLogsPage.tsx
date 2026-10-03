@@ -75,9 +75,10 @@ import {
   type LogStreamLevel,
   type UseLogStreamOptions,
 } from '@/api/hooks/useLogStream';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { neonColorMap, type NeonColor } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ── helpers ─────────────────────────────────────────────────────────
 
@@ -429,6 +430,7 @@ export default function LiveLogsPage({
   fetchImpl,
   endpoint,
 }: LiveLogsPageProps = {}) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('liveLogs.title', 'Live logs'));
 

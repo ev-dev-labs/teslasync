@@ -10,14 +10,16 @@ import { Badge, DataTable, type Column } from '@/components/ui';
 import { MetricCard, StatCard } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import { formatDateTime } from '@/lib/dateFormat';
 import { getCompressionStats, getExportJobs as getDevtoolsExportJobs } from '@/api/devtools';
 import type { ExportJobSummary } from '@/api/types';
 import { AccordionSection } from './AccordionSection';
 import { getStatusIcon, statusTextClass, formatBytes } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function DataPipelineSection() {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   const {
@@ -64,7 +66,7 @@ export function DataPipelineSection() {
     },
     { key: 'record_count', filterValue: (row) => row.record_count ?? null, align: 'right', header: t('systemStatus.pipeline.records', 'Records'), sortable: true, render: (row) => fmtInt(row.record_count) },
     { key: 'created_at', filterValue: (row) => row.created_at ?? null, filterValueLabel: (_value, row) => formatDateTime(row.created_at), header: t('systemStatus.pipeline.created', 'Created'), render: (row) => formatDateTime(row.created_at) },
-  ], [t]);
+  ], [t, fmtInt]);
 
   const { pendingJobs, processingJobs, completedJobs, failedJobs } = useMemo(() => {
     const list = exportJobs ?? [];

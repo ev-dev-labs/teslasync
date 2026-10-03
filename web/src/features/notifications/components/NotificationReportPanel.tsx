@@ -7,12 +7,14 @@ import { DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/componen
 import { useNotificationReport } from '@/api/hooks/useNotifications';
 import { useDataState } from '@/hooks/useDataState';
 import type { NotificationReport } from '@/api/types';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { notificationEventTypeFallback } from '@/lib/notificationEventType';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type Breakdown = NotificationReport['by_source'];
 
 export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: { fromInstant: string; toExclusive: string; timezone: string }) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const query = useNotificationReport(fromInstant, toExclusive, timezone);
   const state = useDataState(query, { provenance: 'historical' });
@@ -58,7 +60,7 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
       defaultWidth: 85, minWidth: 65, align: 'right',
       render: (row) => fmtInt(row.count),
     },
-  ], [t]);
+  ], [t, fmtInt]);
 
   return (
     <section aria-label={t('notifications.report.title', 'Notification activity')} className="space-y-4">
@@ -89,7 +91,7 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <MetricCard label={t('notifications.report.triggered', 'Triggers recorded')} value={fmtInt(report.triggered)} />
             <MetricCard label={t('notifications.report.deliveries', 'Channel deliveries')} value={fmtInt(report.deliveries)} />
-            <MetricCard label={t('notifications.report.fanout', 'Linked deliveries per trigger')} value={report.triggered > 0 ? ((report.deliveries - report.uncorrelated_deliveries) / report.triggered).toFixed(1) : '—'} />
+            <MetricCard label={t('notifications.report.fanout', 'Linked deliveries per trigger')} value={report.triggered > 0 ? fmtNumber(((report.deliveries - report.uncorrelated_deliveries) / report.triggered)) : '—'} />
             <MetricCard label={t('notifications.report.uncorrelated', 'Deliveries without a linked trigger')} value={fmtInt(report.uncorrelated_deliveries)} />
             <MetricCard label={t('notifications.report.outboundCalls', 'Outbound HTTP calls')} value={fmtInt(report.outbound_http_calls)} />
           </div>

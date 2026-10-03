@@ -15,7 +15,8 @@ import {
   axisTick,
   chartGrid,
 } from '@/components/charts';
-import { fmtInt } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ParkingStartRow {
   label: string;
@@ -39,6 +40,7 @@ export function ParkingStartBarChart({
   interval,
   ariaLabel,
 }: ParkingStartBarChartProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const effectiveAriaLabel =
     ariaLabel ??
@@ -55,7 +57,7 @@ export function ParkingStartBarChart({
         format: (v) => fmtInt(v as number),
       },
     ],
-    [t, seriesName],
+    [t, seriesName, fmtInt],
   );
   const chartRows = useMemo(
     () => rows.map(({ label, stints }) => ({ label, stints })),

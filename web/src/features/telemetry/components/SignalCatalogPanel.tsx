@@ -24,6 +24,7 @@ import { fmtInt } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import type { SignalRow } from '@/types/telemetry';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type CatalogRow = SignalRow & { rawValue: string | number | boolean | null };
 
@@ -82,6 +83,7 @@ export function SignalCatalogPanel({
   headerExtra,
   tableMaxHeight = '60vh',
 }: SignalCatalogPanelProps) {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { data: liveData, isLoading, dataUpdatedAt } = useSignalGaps(vehicleId);
 
@@ -219,7 +221,7 @@ export function SignalCatalogPanel({
       },
     );
     return cols;
-  }, [selection, selectedSet, selectionMax, t]);
+  }, [selection, selectedSet, selectionMax, t, displayPrecision, displayLocale]);
 
   return (
     <div className={cn('space-y-4', className)}>

@@ -11,15 +11,17 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { archetypeQualityLabel, archetypeStatusLabel } from './labels';
 import { ArchetypeQueryStatus } from './ArchetypeQueryStatus';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeEvidenceLedger({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtInt, fmtScientificNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const clustered = resolved && summary.status === 'clustered';
@@ -94,7 +96,7 @@ export function ArchetypeEvidenceLedger({
           />
           <MetricCard
             label={t('archetypes.kpis.separation', 'Silhouette separation')}
-            value={clustered ? fmtNumber(summary.silhouette, 3) : '—'}
+            value={clustered ? fmtScientificNumber(summary.silhouette, 3) : '—'}
             subtitle={clustered
               ? archetypeQualityLabel(t, summary.quality)
               : t('archetypes.kpis.notPublished', 'Not published')}
@@ -110,7 +112,6 @@ export function ArchetypeEvidenceLedger({
                     summary.analyzedDrives > 0
                       ? (ambiguous / summary.analyzedDrives) * 100
                       : 0,
-                    1,
                   ),
                 })
               : t('archetypes.kpis.notPublished', 'Not published')}

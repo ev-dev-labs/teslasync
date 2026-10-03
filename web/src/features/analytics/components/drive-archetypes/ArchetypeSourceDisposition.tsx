@@ -10,14 +10,16 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeSourceDisposition({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const source = summary.source;
   const dispositions = [

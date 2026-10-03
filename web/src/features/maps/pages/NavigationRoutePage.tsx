@@ -65,7 +65,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertSpeedFromSI, convertDistanceFromSI } from '@/lib/unitConversion';
 import { request } from '@/api/client';
 import {
@@ -75,6 +75,7 @@ import {
 } from '@/api/hooks/useVehicles';
 import { normalizeGpsState } from '@/lib/signalCatalog';
 import type { LocationSnapshot } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Helper: heading label                                              */
@@ -219,6 +220,7 @@ function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
 /* ------------------------------------------------------------------ */
 
 export default function NavigationRoutePage() {
+  const { fmtNumber, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('nav.pageTitle', 'Navigation & route'));
 
@@ -349,10 +351,10 @@ export default function NavigationRoutePage() {
     () => [
       { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <Caption className="whitespace-nowrap">{row.time}</Caption> },
       { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <Text variant="body">{row.destination}</Text> },
-      { key: 'distance', align: 'right', header: t('nav.col.distance', 'Distance'), render: (row) => <Caption>{fmtNumber(row.distance, 1)} {distanceUnit}</Caption> },
-      { key: 'eta', align: 'right', header: t('nav.col.eta', 'ETA'), render: (row) => <Caption>{fmtNumber(row.eta, 0)} {t('nav.minutes', 'min')}</Caption> },
+      { key: 'distance', align: 'right', header: t('nav.col.distance', 'Distance'), render: (row) => <Caption>{fmtNumber(row.distance)} {distanceUnit}</Caption> },
+      { key: 'eta', align: 'right', header: t('nav.col.eta', 'ETA'), render: (row) => <Caption>{fmtNumber(row.eta)} {t('nav.minutes', 'min')}</Caption> },
     ],
-    [t, distanceUnit],
+    [t, distanceUnit, fmtNumber],
   );
 
   /* ---- location-history table columns ---- */
@@ -373,7 +375,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <Text mono color="primary">
-            {row.latitude != null && row.latitude !== 0 ? fmtNumber(row.latitude, 6) : '—'}
+            {row.latitude != null && row.latitude !== 0 ? fmtScientificNumber(row.latitude, 6) : '—'}
           </Text>
         ),
       },
@@ -384,7 +386,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <Text mono color="primary">
-            {row.longitude != null && row.longitude !== 0 ? fmtNumber(row.longitude, 6) : '—'}
+            {row.longitude != null && row.longitude !== 0 ? fmtScientificNumber(row.longitude, 6) : '—'}
           </Text>
         ),
       },
@@ -427,7 +429,7 @@ export default function NavigationRoutePage() {
         ),
       },
     ],
-    [t],
+    [t, fmtNumber, fmtScientificNumber],
   );
 
   /* ---- waypoint columns ---- */
@@ -474,16 +476,16 @@ export default function NavigationRoutePage() {
         align: 'right',
         header: t('nav.wp.distance', 'Distance'),
         filterValue: (row) => row.distance ?? null,
-        filterValueLabel: (_value, row) => row.distance == null ? '—' : `${fmtNumber(convertDistanceFromSI(row.distance, distanceUnit), 1)} ${distanceUnit}`,
+        filterValueLabel: (_value, row) => row.distance == null ? '—' : `${fmtNumber(convertDistanceFromSI(row.distance, distanceUnit))} ${distanceUnit}`,
         render: (row: Waypoint) => (
           <Text mono color="muted">
             {/* row.distance is meters SI from buildWaypoints; convert to user pref. */}
-            {fmtNumber(convertDistanceFromSI(row.distance, distanceUnit), 1)} {distanceUnit}
+            {fmtNumber(convertDistanceFromSI(row.distance, distanceUnit))} {distanceUnit}
           </Text>
         ),
       },
     ],
-    [t, distanceUnit],
+    [t, distanceUnit, fmtNumber],
   );
 
   /* ---- sort state ---- */
@@ -593,7 +595,7 @@ export default function NavigationRoutePage() {
                   label={t('nav.metric.distance', 'Distance')}
                   value={
                     hasActiveRoute
-                      ? `${fmtNumber(convertDistanceFromSI(latest?.miles_to_arrival ?? 0, distanceUnit), 1)} ${distanceUnit}`
+                      ? `${fmtNumber(convertDistanceFromSI(latest?.miles_to_arrival ?? 0, distanceUnit))} ${distanceUnit}`
                       : '—'
                   }
                   icon={<Route className="h-5 w-5" />}
@@ -603,7 +605,7 @@ export default function NavigationRoutePage() {
                   label={t('nav.metric.eta', 'ETA')}
                   value={
                     hasActiveRoute
-                      ? `${fmtNumber(latest?.minutes_to_arrival ?? 0, 0)} ${t('nav.minutes', 'min')}`
+                      ? `${fmtNumber(latest?.minutes_to_arrival ?? 0)} ${t('nav.minutes', 'min')}`
                       : '—'
                   }
                   icon={<Clock className="h-5 w-5" />}
@@ -621,7 +623,7 @@ export default function NavigationRoutePage() {
                 />
                 <MetricCard
                   label={t('nav.metric.avgSpeed', 'Avg speed')}
-                  value={`${fmtNumber(avgSpeed, 1)} ${speedUnit}`}
+                  value={`${fmtNumber(avgSpeed)} ${speedUnit}`}
                   icon={<Gauge className="h-5 w-5" />}
                   color="green"
                 />
@@ -629,7 +631,7 @@ export default function NavigationRoutePage() {
                   label={t('nav.metric.energyAtArrival', 'Energy at arrival')}
                   value={
                     chargingTelemetry?.expected_energy_pct_at_arrival != null
-                      ? `${fmtNumber(chargingTelemetry.expected_energy_pct_at_arrival, 0)}%`
+                      ? `${fmtNumber(chargingTelemetry.expected_energy_pct_at_arrival)}%`
                       : '—'
                   }
                   icon={<BatteryCharging className="h-5 w-5" />}
@@ -681,11 +683,11 @@ export default function NavigationRoutePage() {
                         {latest.destination_name ?? '—'}
                       </RouteField>
                       <RouteField label={t('nav.eta', 'ETA')}>
-                        {fmtNumber(latest.minutes_to_arrival ?? 0, 0)} {t('nav.minutes', 'min')}
+                        {fmtNumber(latest.minutes_to_arrival ?? 0)} {t('nav.minutes', 'min')}
                       </RouteField>
                       <RouteField label={t('nav.distanceRemaining', 'Distance remaining')}>
                         {/* miles_to_arrival is meters SI; convert to user pref. */}
-                        {fmtNumber(convertDistanceFromSI(latest.miles_to_arrival ?? 0, distanceUnit), 1)}{' '}
+                        {fmtNumber(convertDistanceFromSI(latest.miles_to_arrival ?? 0, distanceUnit))}{' '}
                         {distanceUnit}
                       </RouteField>
                       <RouteField label={t('nav.trafficDelay', 'Traffic delay')}>
@@ -725,7 +727,7 @@ export default function NavigationRoutePage() {
                   label={t('nav.currentLocation', 'Current location')}
                   value={
                     hasValidLocation
-                      ? `${fmtNumber(lat!, 4)}, ${fmtNumber(lon!, 4)}`
+                      ? `${fmtScientificNumber(lat!, 4)}, ${fmtScientificNumber(lon!, 4)}`
                       : t('nav.locationUnavailable', 'Location unavailable')
                   }
                   active={hasValidLocation}

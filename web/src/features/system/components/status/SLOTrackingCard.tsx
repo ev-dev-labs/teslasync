@@ -20,7 +20,8 @@ import { Target, Info } from 'lucide-react'
 import { GlassPanel, Button, Input } from '@/components/ui'
 import { request } from '@/api/client'
 import { cn } from '@/lib/cn'
-import { fmtPercent, isFiniteNumber } from '@/lib/numberFormat'
+import { isFiniteNumber } from '@/lib/numberFormat'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type Window = '24h' | '7d' | '30d' | '90d' | '1y'
 
@@ -52,6 +53,7 @@ function loadTarget(): number {
 }
 
 export function SLOTrackingCard() {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation()
   const [win, setWin] = useState<Window>('30d')
   const [target, setTargetState] = useState<number>(() => loadTarget())
@@ -163,7 +165,7 @@ export function SLOTrackingCard() {
 
       <div className="mt-3 flex flex-wrap items-baseline gap-3">
         <div className={cn('text-3xl font-semibold tabular-nums', tone)} aria-live="polite">
-          {pct == null ? '—' : fmtPercent(pct, 2)}
+          {pct == null ? '—' : fmtPercent(pct)}
         </div>
         <div className="text-xs text-[var(--text-muted)]">
           {hasHistory

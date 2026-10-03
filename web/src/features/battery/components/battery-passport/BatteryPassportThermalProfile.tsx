@@ -9,13 +9,14 @@ import { useTranslation } from 'react-i18next';
 import { MetricBar, MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type {
   BatteryPassportAnalysis,
   BatteryPassportThermalBand,
 } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportThermalProfileProps {
   analysis: BatteryPassportAnalysis;
@@ -60,6 +61,7 @@ export function BatteryPassportThermalProfile({
   analysis,
   state,
 }: BatteryPassportThermalProfileProps) {
+  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const thermal = analysis.thermal;
 
@@ -93,7 +95,7 @@ export function BatteryPassportThermalProfile({
                   max={100}
                   color={thermalColor(band)}
                   sublabel={band.valuePct != null
-                    ? fmtPercent(band.valuePct, 1)
+                    ? fmtPercent(band.valuePct)
                     : '—'}
                 />
               ))}
@@ -119,7 +121,7 @@ export function BatteryPassportThermalProfile({
                   'Exact reported sum',
                 )}
                 value={thermal.sumPct != null
-                  ? fmtPercent(thermal.sumPct, 1)
+                  ? fmtPercent(thermal.sumPct)
                   : '—'}
                 subtitle={t(
                   'batteryPassport.thermal.sumHint',
@@ -140,7 +142,6 @@ export function BatteryPassportThermalProfile({
                       {
                         value: fmtNumber(
                           thermal.differenceFrom100PctPoints,
-                          1,
                         ),
                       },
                     )

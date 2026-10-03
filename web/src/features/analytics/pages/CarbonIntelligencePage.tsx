@@ -31,8 +31,10 @@ import {
   useCarbonQueryStates,
 } from '../components/carbon-intelligence';
 import { buildCarbonIntelligence } from '../lib/carbonIntelligence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function CarbonIntelligencePage() {
+  useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('carbon.title', 'Carbon intelligence'));
   const { vehicleId } = useSelectedVehicle();

@@ -4,9 +4,10 @@ import { GlassPanel, PanelTitle, Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
-import { fmtInt, fmtPercent, formatBytes } from '@/lib/numberFormat';
+
 
 import { STATUS_ORDER, statusColor, type ExportStats } from './exportStats';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STATUS_LABELS: Record<(typeof STATUS_ORDER)[number], string> = {
   ready: 'Ready',
@@ -34,6 +35,7 @@ export function ExportStatusBreakdown({
   error,
   onRetry,
 }: ExportStatusBreakdownProps) {
+  const { fmtInt, fmtPercent, formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Defensive: `byStatus` can be missing a key if the API ever returns a
@@ -92,7 +94,7 @@ export function ExportStatusBreakdown({
                   value={count}
                   max={stats.total}
                   color={statusColor[status]}
-                  sublabel={`${fmtInt(count)} · ${fmtPercent(pct, 0)}`}
+                  sublabel={`${fmtInt(count)} · ${fmtPercent(pct)}`}
                 />
               );
             })}

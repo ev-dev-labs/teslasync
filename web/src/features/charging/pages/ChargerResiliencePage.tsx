@@ -20,9 +20,10 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { chartTokens } from '@/lib/tokens';
-import { fmtPercent } from '@/lib/numberFormat';
+
 
 import { analyzeChargerResilience, type SiteGroupedBy } from '../lib/chargerResilience';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const GROUPED_BY_DEFAULTS: Record<SiteGroupedBy, string> = {
   place: 'Named place',
@@ -31,6 +32,7 @@ const GROUPED_BY_DEFAULTS: Record<SiteGroupedBy, string> = {
 };
 
 export default function ChargerResiliencePage() {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('chargerResilience.title', 'Charger Resilience'));
 
@@ -117,14 +119,14 @@ export default function ChargerResiliencePage() {
               />
               <MetricCard
                 label={t('chargerResilience.topDependency', 'Top-Site Dependency')}
-                value={fmtPercent(summary.topSiteDependencyPct, 1)}
+                value={fmtPercent(summary.topSiteDependencyPct)}
                 subtitle={summary.topSite?.label ?? t('chargerResilience.none', 'None yet')}
                 icon={<MapPin className="h-4 w-4" />}
                 color={summary.topSiteDependencyPct >= 66 ? 'red' : summary.topSiteDependencyPct >= 40 ? 'amber' : 'green'}
               />
               <MetricCard
                 label={t('chargerResilience.fallback', 'Fallback Coverage')}
-                value={fmtPercent(summary.fallbackCoveragePct, 1)}
+                value={fmtPercent(summary.fallbackCoveragePct)}
                 subtitle={t('chargerResilience.fallbackHint', 'sessions charged elsewhere')}
                 icon={<Route className="h-4 w-4" />}
                 color="purple"
@@ -204,7 +206,7 @@ export default function ChargerResiliencePage() {
             ) : (
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <Text variant="caption">{t('chargerResilience.atRisk', 'Energy at risk')}</Text>
-                <Text variant="bodySm">{formatEnergy(summary.whatIfTopSiteLoss.energyAtRiskWh, { precision: 0 })}</Text>
+                <Text variant="bodySm">{formatEnergy(summary.whatIfTopSiteLoss.energyAtRiskWh)}</Text>
                 <Text variant="caption">{t('chargerResilience.newTop', 'New top site')}</Text>
                 <Text variant="bodySm">{summary.whatIfTopSiteLoss.newTopSiteLabel ?? t('chargerResilience.none', 'None yet')}</Text>
                 <Text variant="caption">{t('chargerResilience.scoreBefore', 'Score before')}</Text>
@@ -250,7 +252,7 @@ export default function ChargerResiliencePage() {
                         {t('chargerResilience.sessionsCount', '{{n}} sessions', { n: s.sessions })}
                       </Badge>
                       <Badge variant={s.energyShare >= 0.5 ? 'warning' : 'info'}>
-                        {fmtPercent(Math.round(s.energyShare * 1000) / 10, 1)}
+                        {fmtPercent(Math.round(s.energyShare * 1000) / 10)}
                       </Badge>
                     </div>
                   </li>

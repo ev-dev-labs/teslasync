@@ -8,11 +8,12 @@ import { EmptyState } from '@/components/feedback';
 import { useYearReview } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -27,6 +28,7 @@ const METERS_PER_KM = 1000;
 const KMH_PER_MPS = 3.6; // 1 m/s === 3.6 km/h
 
 export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -65,7 +67,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
     return [
       {
         label: t('widget.yearReview.totalDistance', 'Total miles'),
-        value: fmtNumber(displayDistance, 0),
+        value: fmtNumber(displayDistance),
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
@@ -76,13 +78,13 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
       },
       {
         label: t('widget.yearReview.energyUsed', 'Energy used'),
-        value: fmtNumber(data.total_energy_kwh ?? 0, 1),
+        value: fmtNumber(data.total_energy_kwh ?? 0),
         unit: 'kWh',
         icon: <Zap className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.yearReview.co2Saved', 'CO₂ saved'),
-        value: fmtNumber(data.co2_offset_kg ?? 0, 0),
+        value: fmtNumber(data.co2_offset_kg ?? 0),
         unit: 'kg',
         icon: <Leaf className="h-3.5 w-3.5" />,
       },
@@ -93,12 +95,12 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
       },
       {
         label: t('widget.yearReview.longestDrive', 'Longest drive'),
-        value: fmtNumber(displayLongestDrive, 1),
+        value: fmtNumber(displayLongestDrive),
         unit: distanceUnit,
         icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, displayDistance, displayLongestDrive, distanceUnit, busiestMonth, t]);
+  }, [data, displayDistance, displayLongestDrive, distanceUnit, busiestMonth, t, fmtNumber, fmtInt]);
 
   const wideStats = useMemo((): StatGridItem[] => {
     if (!data) return [];
@@ -111,12 +113,12 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
       },
       {
         label: t('widget.yearReview.topSpeed', 'Top speed'),
-        value: fmtNumber(displayFastestSpeed, 0),
+        value: fmtNumber(displayFastestSpeed),
         unit: speedUnit,
         icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, displayFastestSpeed, speedUnit, t]);
+  }, [data, displayFastestSpeed, speedUnit, t, fmtInt, fmtNumber]);
 
   const allStats = useMemo(
     () => (isWide ? [...coreStats, ...wideStats] : coreStats),

@@ -25,6 +25,7 @@ import {
 
 import type { TeslaEnergySite, TeslaEnergySiteInfo } from '@/types/energy';
 import { TOUSettingsModal } from '../components/TOUSettingsModal';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ───────── Helpers ───────── */
 
@@ -36,15 +37,15 @@ type TranslateFn = (key: string, fallback: string) => string;
 /** Format a Wh energy value as SI-scaled Wh/kWh; nullish → em dash. */
 export function fmtEnergy(wh: number | null | undefined): string {
   if (wh == null) return '—';
-  if (Math.abs(wh) >= 1000) return `${fmtNumber(wh / 1000, 1)} kWh`;
-  return `${fmtNumber(wh, 0)} Wh`;
+  if (Math.abs(wh) >= 1000) return `${fmtNumber(wh / 1000)} kWh`;
+  return `${fmtNumber(wh)} Wh`;
 }
 
 /** Format a W power value as SI-scaled W/kW; nullish → em dash. */
 export function fmtPower(w: number | null | undefined): string {
   if (w == null) return '—';
-  if (Math.abs(w) >= 1000) return `${fmtNumber(w / 1000, 1)} kW`;
-  return `${fmtNumber(w, 0)} W`;
+  if (Math.abs(w) >= 1000) return `${fmtNumber(w / 1000)} kW`;
+  return `${fmtNumber(w)} W`;
 }
 
 /** Map a Tesla resource_type to its lucide icon (defaults to a generic bolt). */
@@ -106,6 +107,7 @@ function CapBadge({ active, label, icon: Icon }: CapBadgeProps) {
 /* ───────── Site Info Section ───────── */
 
 function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: boolean }) {
+  const { precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   const infoQuery = useTeslaEnergySiteInfo(siteId);
   const { data: response, isLoading, isError, error } = infoQuery;
@@ -164,7 +166,7 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
                   label=""
                   ariaLabel={t('energy.siteInfo.backupReserve', 'Backup Reserve')}
                   unit="%"
-                  decimals={0}
+                  decimals={displayPrecision}
                   tone="info"
                 />
               ) : (
@@ -275,6 +277,7 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
 /* ───────── Site Card ───────── */
 
 function EnergySiteCard({ site }: { site: TeslaEnergySite }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const Icon = resourceIcon(site.resource_type);
 
@@ -302,7 +305,7 @@ function EnergySiteCard({ site }: { site: TeslaEnergySite }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <MetricCard
           label={t('energy.products.charge', 'Charge')}
-          value={site.percentage_charged != null ? `${fmtNumber(site.percentage_charged, 1)}%` : '—'}
+          value={site.percentage_charged != null ? `${fmtNumber(site.percentage_charged)}%` : '—'}
           icon={<Gauge className="h-4 w-4" />}
           color="cyan"
         />
@@ -360,6 +363,7 @@ interface SummaryKpi {
 }
 
 function SummaryBand({ sites, isLoading }: { sites: TeslaEnergySite[]; isLoading: boolean }) {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
 
   const kpis = useMemo<SummaryKpi[]>(() => {
@@ -372,7 +376,7 @@ function SummaryBand({ sites, isLoading }: { sites: TeslaEnergySite[]; isLoading
       { key: 'storm', label: t('energy.products.stormReady', 'Storm-Ready'), value: sites.filter((s) => s.storm_mode_capable).length, icon: <CloudLightning className="h-5 w-5" />, color: 'purple' },
       { key: 'capacity', label: t('energy.products.totalCapacity', 'Total Capacity'), value: fmtEnergy(totalCapacity), icon: <Layers className="h-5 w-5" />, color: 'cyan' },
     ];
-  }, [sites, t]);
+  }, [sites, t, displayPrecision, displayLocale]);
 
   return (
     <section

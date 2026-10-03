@@ -25,9 +25,10 @@ import { GlassPanel, Badge, DataTable, Pagination, SectionTitle, type Column } f
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { CHART_COLORS } from '@/lib/colors';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { formatValue, type SignalLogEntry } from '@/components/SignalQueryControls';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const TYPE_BADGE_VARIANT: Record<string, 'info' | 'success' | 'warning'> = {
   number: 'info',
@@ -71,6 +72,7 @@ export function SignalHistoryTable({
   expandable = true,
   className,
 }: SignalHistoryTableProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
   const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);

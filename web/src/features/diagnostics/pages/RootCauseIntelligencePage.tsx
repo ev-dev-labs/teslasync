@@ -12,7 +12,7 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
 import {
@@ -23,6 +23,7 @@ import {
   RootCauseInterpretationPanel,
 } from '../components';
 import type { EvidenceQualityBand } from '../lib/rootCauseIntelligence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Mirrors `QualityBadge`'s semantics with the KPI band's `NeonColor` palette. */
 const QUALITY_COLOR: Record<EvidenceQualityBand, 'green' | 'cyan' | 'amber' | 'red'> = {
@@ -46,6 +47,7 @@ const QUALITY_COLOR: Record<EvidenceQualityBand, 'green' | 'cyan' | 'amber' | 'r
  * `vehicleId == null` early return, matching `SignalChangePointsPage.tsx`.
  */
 export default function RootCauseIntelligencePage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('rootCauseIntelligence.title', 'Root-cause intelligence'));
 
@@ -116,7 +118,7 @@ export default function RootCauseIntelligencePage() {
                 label={t('rootCauseIntelligence.kpis.quality', 'Evidence quality')}
                 value={workspace.hasChosenSignal ? qualityLabel : '—'}
                 subtitle={t('rootCauseIntelligence.kpis.qualitySubtitle', 'Overall score {{n}} of 1.00', {
-                  n: fmtNumber(analysis.quality.overallScore, 2),
+                  n: fmtNumber(analysis.quality.overallScore),
                 })}
                 icon={<ShieldCheck className="h-5 w-5" />}
                 color={workspace.hasChosenSignal ? QUALITY_COLOR[analysis.quality.band] : 'cyan'}
@@ -127,12 +129,12 @@ export default function RootCauseIntelligencePage() {
               />
               <MetricCard
                 label={t('rootCauseIntelligence.kpis.effect', 'Focal shift effect size')}
-                value={analysis.focalShift != null ? fmtNumber(analysis.focalShift.effectSize, 2) : '—'}
+                value={analysis.focalShift != null ? fmtNumber(analysis.focalShift.effectSize) : '—'}
                 subtitle={
                   analysis.focalShift != null
                     ? t('rootCauseIntelligence.kpis.effectSubtitle', '{{before}} \u2192 {{after}}', {
-                        before: fmtNumber(analysis.focalShift.before.median, 2),
-                        after: fmtNumber(analysis.focalShift.after.median, 2),
+                        before: fmtNumber(analysis.focalShift.before.median),
+                        after: fmtNumber(analysis.focalShift.after.median),
                       })
                     : t('rootCauseIntelligence.kpis.effectNone', 'No robust shift found')
                 }

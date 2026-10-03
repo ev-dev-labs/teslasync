@@ -87,14 +87,12 @@ export function PackCapacityDirectory({
       {
         key: 'energy',
         filterValue: (row) => row.observation.energyAddedWh ?? null,
-        filterValueLabel: (_, row) => formatEnergy(row.observation.energyAddedWh, { precision: 2 }),
+        filterValueLabel: (_, row) => formatEnergy(row.observation.energyAddedWh),
         header: t('packCapacity.directory.energy', 'Energy added'),
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {formatEnergy(row.observation.energyAddedWh, {
-              precision: 2,
-            })}
+            {formatEnergy(row.observation.energyAddedWh)}
           </Text>
         ),
       },
@@ -102,39 +100,37 @@ export function PackCapacityDirectory({
         key: 'raw',
         groupStart: true,
         filterValue: (row) => row.observation.capacityWh ?? null,
-        filterValueLabel: (_, row) => formatEnergy(row.observation.capacityWh, { precision: 2 }),
+        filterValueLabel: (_, row) => formatEnergy(row.observation.capacityWh),
         header: t('packCapacity.directory.raw', 'Raw capacity'),
         align: 'right',
         visibleOnMobile: true,
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {formatEnergy(row.observation.capacityWh, {
-              precision: 2,
-            })}
+            {formatEnergy(row.observation.capacityWh)}
           </Text>
         ),
       },
       {
         key: 'filtered',
         filterValue: (row) => row.state.capacityWh ?? null,
-        filterValueLabel: (_, row) => formatEnergy(row.state.capacityWh, { precision: 2 }),
+        filterValueLabel: (_, row) => formatEnergy(row.state.capacityWh),
         header: t('packCapacity.directory.filtered', 'Filtered'),
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {formatEnergy(row.state.capacityWh, { precision: 2 })}
+            {formatEnergy(row.state.capacityWh)}
           </Text>
         ),
       },
       {
         key: 'sigma',
         filterValue: (row) => row.state.sigmaWh ?? null,
-        filterValueLabel: (_, row) => formatEnergy(row.state.sigmaWh, { precision: 2 }),
+        filterValueLabel: (_, row) => formatEnergy(row.state.sigmaWh),
         header: t('packCapacity.directory.sigma', 'Posterior sigma'),
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {formatEnergy(row.state.sigmaWh, { precision: 2 })}
+            {formatEnergy(row.state.sigmaWh)}
           </Text>
         ),
       },

@@ -31,7 +31,7 @@ export function TrueCostAssumptionsLedger({
       label: t('tco.assumptions.mpg', 'Comparison efficiency'),
       value: m.gasEfficiencyMpg.value != null
         ? t('tco.assumptions.mpgValue', '{{value}} MPG', {
-          value: display.formatNumber(m.gasEfficiencyMpg.value, 1),
+          value: display.formatNumber(m.gasEfficiencyMpg.value),
         })
         : '—',
       detail: t('tco.assumptions.mpgHint', 'Configured comparison vehicle efficiency; not observed fuel economy.'),

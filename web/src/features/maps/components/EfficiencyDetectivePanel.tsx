@@ -3,8 +3,9 @@ import { Lightbulb } from 'lucide-react';
 
 import { GlassPanel, Badge, PanelTitle, Text, Caption } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { useEfficiencyShift } from '@/api/hooks/useAnalytics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EfficiencyDetectivePanelProps {
   vehicleId: string;
@@ -30,6 +31,7 @@ function verdictBadge(verdict: string, t: (k: string, d: string) => string): { l
  * attribution. Mounted on TemperatureImpactPage below the KPI band.
  */
 export function EfficiencyDetectivePanel({ vehicleId }: EfficiencyDetectivePanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useEfficiencyShift(vehicleId);
 
@@ -62,9 +64,9 @@ export function EfficiencyDetectivePanel({ vehicleId }: EfficiencyDetectivePanel
                 'tempImpact.detective.detail',
                 '{{delta}}% vs prior month · {{attributed}}% temperature-attributed · {{temp}}°C shift',
                 {
-                  delta: fmtNumber(data.efficiency_delta_pct, 1),
-                  attributed: fmtNumber(data.temp_attributed_pct, 1),
-                  temp: fmtNumber(data.temp_delta_c, 1),
+                  delta: fmtNumber(data.efficiency_delta_pct),
+                  attributed: fmtNumber(data.temp_attributed_pct),
+                  temp: fmtNumber(data.temp_delta_c),
                 },
               )}
             </Text>

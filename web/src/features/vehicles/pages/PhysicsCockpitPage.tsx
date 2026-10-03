@@ -13,9 +13,11 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { downloadJSON, defaultExportFilename } from '@/lib/csvExport';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function PhysicsCockpitPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('vehicles.physicsCockpit.title', 'Tesla physics cockpit'));
   const { vehicleId } = useSelectedVehicle();
@@ -70,7 +72,7 @@ export default function PhysicsCockpitPage() {
           />
           <MetricCard
             label={t('vehicles.physicsCockpit.battery', 'Battery')}
-            value={cockpit?.battery_level_pct == null ? '—' : `${fmtNumber(cockpit.battery_level_pct, 0)}%`}
+            value={cockpit?.battery_level_pct == null ? '—' : `${fmtNumber(cockpit.battery_level_pct)}%`}
             color="purple"
           />
           <MetricCard
@@ -78,7 +80,7 @@ export default function PhysicsCockpitPage() {
             value={
               cockpit?.pack_voltage_v == null && cockpit?.pack_current_a == null
                 ? '—'
-                : `${cockpit.pack_voltage_v == null ? '—' : `${fmtNumber(cockpit.pack_voltage_v, 0)} V`} · ${cockpit.pack_current_a == null ? '—' : `${fmtNumber(cockpit.pack_current_a, 1)} A`}`
+                : `${cockpit.pack_voltage_v == null ? '—' : `${fmtNumber(cockpit.pack_voltage_v)} V`} · ${cockpit.pack_current_a == null ? '—' : `${fmtNumber(cockpit.pack_current_a)} A`}`
             }
             color="amber"
           />
@@ -89,7 +91,7 @@ export default function PhysicsCockpitPage() {
           />
           <MetricCard
             label={t('vehicles.physicsCockpit.trip', 'Trip meter')}
-            value={cockpit?.driving_distance_m == null ? '—' : formatDistance(cockpit.driving_distance_m, { precision: 1 })}
+            value={cockpit?.driving_distance_m == null ? '—' : formatDistance(cockpit.driving_distance_m)}
             color="cyan"
           />
           <MetricCard
@@ -107,7 +109,7 @@ export default function PhysicsCockpitPage() {
             <Badge variant="info" size="sm">
               {heartbeat.fsd_distance_m == null
                 ? t('vehicles.physicsCockpit.fsdUnknown', 'FSD trip meter unknown')
-                : formatDistance(heartbeat.fsd_distance_m, { precision: 1 })}
+                : formatDistance(heartbeat.fsd_distance_m)}
             </Badge>
             <Badge variant="neutral" size="sm">
               {heartbeat.last_tick_at

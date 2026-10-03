@@ -102,7 +102,7 @@ export function DestinationDirectory({
       {
         key: 'distanceFromBaseM',
         filterValue: (destination) => summary.evidence.baseSufficient ? destination.distanceFromBaseM ?? null : null,
-        filterValueLabel: (_, destination) => summary.evidence.baseSufficient ? formatDistance(destination.distanceFromBaseM, { precision: 0 }) : '—',
+        filterValueLabel: (_, destination) => summary.evidence.baseSufficient ? formatDistance(destination.distanceFromBaseM) : '—',
         header: t(
           'explorer.destination.fromBase',
           'From inferred base',
@@ -112,9 +112,7 @@ export function DestinationDirectory({
         render: (destination) => (
           <Text variant="body" mono>
             {summary.evidence.baseSufficient
-              ? formatDistance(destination.distanceFromBaseM, {
-                  precision: 0,
-                })
+              ? formatDistance(destination.distanceFromBaseM)
               : '—'}
           </Text>
         ),

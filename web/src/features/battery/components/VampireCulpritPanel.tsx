@@ -7,9 +7,10 @@ import { Grid } from '@/components/layout';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useParkTruth, useVampireSplit } from '@/api/hooks/useTeslaPhysics';
 import { useDataState } from '@/hooks/useDataState';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { VampireCulpritId } from '../lib/vampireCulprits';
 import { deriveVampireCulprits } from '../lib/vampireCulprits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const ACTION: Record<VampireCulpritId, { key: string; fallback: string }> = {
   sentry: {
@@ -39,6 +40,7 @@ const ACTION: Record<VampireCulpritId, { key: string; fallback: string }> = {
 };
 
 export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefined }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const parkQuery = useParkTruth(vehicleId);
   const splitQuery = useVampireSplit(vehicleId);
@@ -90,7 +92,7 @@ export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefin
                 label={t(`vampireDrain.culprit.${row.id}`, row.id.replace(/_/g, ' '))}
                 value={
                   row.drainPct != null
-                    ? `${fmtNumber(row.drainPct, 2)}%`
+                    ? `${fmtNumber(row.drainPct)}%`
                     : row.active
                       ? t('vampireDrain.culprit.on', 'On')
                       : t('vampireDrain.culprit.off', 'Off')

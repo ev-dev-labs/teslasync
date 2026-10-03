@@ -20,9 +20,10 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import { UPDATE_STATUS, UPDATE_STATUS_ORDER } from './softwareUpdateStatus';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SoftwareUpdateStatusBreakdownProps {
   counts: Record<string, number>;
@@ -33,6 +34,7 @@ export function SoftwareUpdateStatusBreakdown({
   counts,
   total,
 }: SoftwareUpdateStatusBreakdownProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = UPDATE_STATUS_ORDER.filter((key) => (counts?.[key] ?? 0) > 0);
 

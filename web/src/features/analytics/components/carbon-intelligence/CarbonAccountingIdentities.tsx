@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { CarbonReconciliation } from '../../lib/carbonIntelligence';
 import type { CarbonSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 function checkLabel(
   id: string,
@@ -79,12 +81,12 @@ function checkValue(
   t: ReturnType<typeof useTranslation>['t'],
 ): string {
   if (value == null) return '—';
-  if (check.unit === 'Wh') return display.formatEnergy(value, { precision: 3 });
-  if (check.unit === 'kg') return display.formatSignedKg(value, 4);
-  if (check.unit === 'g/kWh') return display.formatIntensity(value, 3);
-  if (check.unit === '%') return display.formatPercent(value, 3);
+  if (check.unit === 'Wh') return display.formatEnergy(value, { precision: Math.max(3, getGlobalPrecision()) });
+  if (check.unit === 'kg') return display.formatSignedKg(value);
+  if (check.unit === 'g/kWh') return display.formatIntensity(value);
+  if (check.unit === '%') return display.formatPercent(value);
   return t('carbon.units.hours', '{{value}} h', {
-    value: display.formatNumber(value, 0),
+    value: display.formatNumber(value),
   });
 }
 
@@ -104,6 +106,7 @@ export function CarbonAccountingIdentities({
   analysis,
   display,
 }: CarbonSectionProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
 
   return (

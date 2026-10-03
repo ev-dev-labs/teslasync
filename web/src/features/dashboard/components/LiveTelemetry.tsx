@@ -7,8 +7,9 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { cleanNil } from '@/lib/cleanNil';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import type { MotorData, ClimateData, SecurityData, TirePressureData, MediaData, LocationData } from '../types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface LiveTelemetryProps {
   motorData: MotorData | undefined;
@@ -78,6 +79,7 @@ export function LiveTelemetry({
 function DrivetrainPanel({ data, toTemperatureDisplay, tempUnit }: {
   data: MotorData | undefined; toTemperatureDisplay: (c: number) => number; tempUnit: string;
 }) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   return (
     <GlassPanel hover glow="purple" className="p-4">
@@ -99,7 +101,7 @@ function DrivetrainPanel({ data, toTemperatureDisplay, tempUnit }: {
           <TelemetryRow
             label={t('telemetry.gforce', 'G-force')}
             value={data.lateral_accel != null || data.longitudinal_accel != null
-              ? `${fmtNumber(Math.max(Math.abs(data.lateral_accel ?? 0), Math.abs(data.longitudinal_accel ?? 0)), 2)}g`
+              ? `${fmtNumber(Math.max(Math.abs(data.lateral_accel ?? 0), Math.abs(data.longitudinal_accel ?? 0)))}g`
               : '—'}
           />
         </div>
@@ -112,6 +114,7 @@ function DrivetrainPanel({ data, toTemperatureDisplay, tempUnit }: {
 function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
   data: ClimateData | undefined; toTemperatureDisplay: (c: number) => number; tempUnit: string;
 }) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const fanSpeed = data?.hvac_fan_speed ?? 0;
   return (
@@ -123,7 +126,7 @@ function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
         <div className="space-y-2.5">
           <TelemetryRow label={t('telemetry.cabin', 'Cabin')} value={data.inside_temp != null ? `${fmtInt(toTemperatureDisplay(data.inside_temp))}${tempUnit}` : '—'} />
           <TelemetryRow label={t('telemetry.outside', 'Outside')} value={data.outside_temp != null ? `${fmtInt(toTemperatureDisplay(data.outside_temp))}${tempUnit}` : '—'} />
-          <TelemetryRow label={t('telemetry.hvac', 'HVAC power')} value={data.hvac_power != null ? `${fmtNumber(data.hvac_power, 1)} kW` : '—'} />
+          <TelemetryRow label={t('telemetry.hvac', 'HVAC power')} value={data.hvac_power != null ? `${fmtNumber(data.hvac_power)} kW` : '—'} />
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.fan', 'Fan')}</span>
@@ -231,6 +234,7 @@ function SecurityPanel({ data }: { data: SecurityData | undefined }) {
 function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
   data: TirePressureData | undefined; toPressureDisplay: (bar: number) => number; pressureUnit: string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
 
   if (!data) {
@@ -274,7 +278,7 @@ function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
             <div key={tire.label} className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
               <p className="text-2xs text-[var(--text-muted)]">{tire.label}</p>
               <p className={`text-sm font-bold ${getPressureColor(tire.value)}`}>
-                {tire.value != null ? fmtNumber(toPressureDisplay(tire.value), 1) : '—'}
+                {tire.value != null ? fmtNumber(toPressureDisplay(tire.value)) : '—'}
               </p>
               <p className="text-2xs text-[var(--text-muted)]">{pressureUnit}</p>
             </div>
@@ -353,6 +357,7 @@ function MediaPanel({ data }: { data: MediaData | undefined }) {
 function NavigationPanel({ data, toDistanceDisplay, distanceUnit }: {
   data: LocationData | undefined; toDistanceDisplay: (km: number) => number; distanceUnit: string;
 }) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   return (
     <GlassPanel hover glow="cyan" className="p-4">
@@ -365,7 +370,7 @@ function NavigationPanel({ data, toDistanceDisplay, distanceUnit }: {
           <TelemetryRow
             label={t('telemetry.distance', 'Distance')}
             value={data.miles_to_arrival != null
-              ? `${fmtNumber(toDistanceDisplay(data.miles_to_arrival), 1)} ${distanceUnit}`
+              ? `${fmtNumber(toDistanceDisplay(data.miles_to_arrival))} ${distanceUnit}`
               : '—'}
           />
           <TelemetryRow

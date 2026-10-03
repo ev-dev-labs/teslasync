@@ -48,7 +48,7 @@ import { PullToRefresh } from '@/components/mobile';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDayKey } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
-import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
+
 import { buildContextHref } from '@/lib/contextNavigation';
 import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
@@ -70,6 +70,7 @@ import {
   computeChargeRateStats,
   computeChargerSpecs,
 } from '../components/charging-list';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ----------------------------------------------------------------*/
 /*  URL allowlists */
@@ -83,6 +84,7 @@ type SortField = typeof SORT_FIELDS[number];
 const DENSITY_VALUES = ['compact', 'comfortable'] as const;
 
 export default function ChargingListPage() {
+  const { fmtNumber, fmtInt, fmtCompact } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle(t('charging.list.title', 'Charging sessions'));
@@ -274,7 +276,7 @@ export default function ChargingListPage() {
         },
       }),
     );
-  }, [collectionFiltered, searchTokens, tz]);
+  }, [collectionFiltered, searchTokens, tz, fmtNumber]);
 
   const filteredSessions = useMemo(() => valueFilter.invalid ? [] : searchedSessions.filter((session) =>
     CHARGING_VALUE_COLUMNS.every((column) =>
@@ -346,7 +348,7 @@ export default function ChargingListPage() {
           items,
         };
       });
-  }, [paginatedSessions, t, tz, sortDesc]);
+  }, [paginatedSessions, t, tz, sortDesc, fmtNumber]);
 
   /* ── Trend chart series ──────────────────────────────────────── */
   const trendSeries = useMemo(() => ({
@@ -362,10 +364,10 @@ export default function ChargingListPage() {
     { key: 'energy', label: t('charging.metric.energy', 'Energy'), chart: 'bar', color: '#06b6d4', accent: 'cyan',
       formatValue: (v) => `${fmtNumber(v)} kWh`, formatTick: (v) => fmtNumber(v) },
     { key: 'cost', label: t('charging.metric.cost', 'Cost'), chart: 'bar', color: '#ef4444', accent: 'red',
-      formatValue: (v) => formatCurrency(v), formatTick: (v) => formatCurrency(v, 0) },
+      formatValue: (v) => formatCurrency(v), formatTick: (v) => formatCurrency(v) },
     { key: 'power', label: t('charging.metric.power', 'Avg power'), chart: 'line', color: '#a855f7', accent: 'purple',
-      formatValue: (v) => `${fmtNumber(v)} kW`, formatTick: (v) => fmtNumber(v, 0) },
-  ], [t, formatCurrency]);
+      formatValue: (v) => `${fmtNumber(v)} kW`, formatTick: (v) => fmtNumber(v) },
+  ], [t, formatCurrency, fmtInt, fmtNumber]);
 
   const formatChartXTick = useCallback(
     (key: string) => formatDayKey(key, { style: 'short' }),

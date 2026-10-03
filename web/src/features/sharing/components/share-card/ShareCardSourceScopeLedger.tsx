@@ -98,11 +98,10 @@ export function ShareCardSourceScopeLedger({
                   'shareCard.source.runtimeCounts',
                   '{{returned}} returned · {{eligible}} eligible · {{rejected}} rejected',
                   {
-                    returned: display.formatNumber(analysis.returnedRows, 0),
-                    eligible: display.formatNumber(analysis.eligibleRows, 0),
+                    returned: display.formatNumber(analysis.returnedRows),
+                    eligible: display.formatNumber(analysis.eligibleRows),
                     rejected: display.formatNumber(
                       analysis.returnedRows - analysis.eligibleRows,
-                      0,
                     ),
                   },
                 )}

@@ -59,7 +59,7 @@ export function YearSummaryCard({ data }: Props) {
       {gasSavings > 0 && (
         <div className="mt-auto border-t border-[var(--border-subtle)] pt-3">
           <Text variant="bodySm" className="text-emerald-300">
-            💰 {t('yearReview.savedSummary', { amount: formatCurrency(gasSavings, 0), defaultValue: 'Saved {{amount}} vs. gas' })}
+            💰 {t('yearReview.savedSummary', { amount: formatCurrency(gasSavings), defaultValue: 'Saved {{amount}} vs. gas' })}
           </Text>
         </div>
       )}

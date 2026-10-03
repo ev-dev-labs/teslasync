@@ -5,13 +5,15 @@ import { Grid } from '@/components/layout';
 import { Badge, Card, CardHeader } from '@/components/ui';
 import { InlineMetric, KVList } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { getTelemetryStatus, getExtendedHealth } from '@/api/devtools';
 import { AccordionSection } from './AccordionSection';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const DASH = '—';
 
 export function InfrastructureSection() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   const {

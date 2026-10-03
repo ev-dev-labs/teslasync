@@ -116,10 +116,15 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
   const canUseDonut = donutData.every((entry) => entry.value != null && entry.value >= 0)
     && donutData.some((entry) => entry.value != null && entry.value > 0);
   const primaryCost = monthlyEntries.length > 0 ? latestMonthCost : totalCost;
+  const shellProps = {
+    title: t('widget.costBreakdown.title', 'Cost breakdown'),
+    icon: <PieIcon className="h-3.5 w-3.5 text-emerald-400" />,
+  };
 
   if (isCompact) {
     return (
       <WidgetShell
+        {...shellProps}
         loading={isLoading}
         dataState={dataState}
         loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
@@ -161,8 +166,7 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
 
   return (
     <WidgetShell
-      title={t('widget.costBreakdown.title', 'Cost breakdown')}
-      icon={<PieIcon className="h-3.5 w-3.5 text-emerald-400" />}
+      {...shellProps}
       loading={isLoading}
       dataState={dataState}
       loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
@@ -183,7 +187,7 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
         <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
           <WidgetStatGrid cols={3} stats={[
             { label: t('widget.costBreakdown.totalCost', 'Total cost'), value: formatAmount(totalCost), icon: <DollarSign className="size-3.5" /> },
-            { label: t('widget.costBreakdown.costPerDist', 'Cost / {{unit}}', { unit: distanceUnit }), value: formatAmount(costPerDist, 3), icon: <Fuel className="size-3.5" /> },
+            { label: t('widget.costBreakdown.costPerDist', 'Cost / {{unit}}', { unit: distanceUnit }), value: formatAmount(costPerDist), icon: <Fuel className="size-3.5" /> },
             { label: t('widget.costBreakdown.gasSavings', 'Gas savings'), value: formatAmount(totalSavings), icon: <TrendingDown className="size-3.5" /> },
           ]} />
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-3 @sm:grid-cols-2 @sm:grid-rows-1">
@@ -225,14 +229,14 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
                   ))}
                 </Pie>
                 <Tooltip
-                  content={<ChartTooltip valueFormatter={(value) => formatAmount(value, 2)} />}
+                  content={<ChartTooltip valueFormatter={(value) => formatAmount(value)} />}
                 />
               </PieChart>
               ) : (
                 <BarChart data={donutData} margin={chartMargin} {...chartAnimation}>
                   <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
-                  <YAxis tick={axisTickSm} width={45} tickLine={false} axisLine={false} tickFormatter={(value: number) => formatAmount(value, 0)} />
-                  <Tooltip content={<ChartTooltip valueFormatter={(value) => formatAmount(value, 2)} />} />
+                  <YAxis tick={axisTickSm} width={45} tickLine={false} axisLine={false} tickFormatter={(value: number) => formatAmount(value)} />
+                  <Tooltip content={<ChartTooltip valueFormatter={(value) => formatAmount(value)} />} />
                   <Bar dataKey="value" name={t('widget.costBreakdown.cost', 'Cost')} fill={palette.primary} maxBarSize={32} radius={[4, 4, 0, 0]} />
                 </BarChart>
               )}

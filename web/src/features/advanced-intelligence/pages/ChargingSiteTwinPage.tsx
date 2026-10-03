@@ -11,14 +11,16 @@ import { Badge, Button, Input, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { SI } from '@/lib/unitConversion';
 import type { ChargingSiteTwinRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type SiteForm = Omit<ChargingSiteTwinRequest, 'vehicle_id' | 'confirmed'>;
 
 export default function ChargingSiteTwinPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -208,7 +210,7 @@ export default function ChargingSiteTwinPage() {
           <Grid cols={{ default: 1, sm: 2, lg: 3 }} gap={4}>
             <StatCard
               label={t('advancedIntelligence.site.utilization', 'Utilization')}
-              value={result ? `${fmtNumber(result.utilization_pct, 1)}%` : null}
+              value={result ? `${fmtNumber(result.utilization_pct)}%` : null}
               icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
             />
             <StatCard label={t('advancedIntelligence.site.queueP50', 'Queue wait P50')} value={units.formatDuration(result?.queue_wait_p50_s)} />
@@ -216,7 +218,7 @@ export default function ChargingSiteTwinPage() {
             <StatCard label={t('advancedIntelligence.site.peak', 'Peak demand')} value={units.formatPower(result?.peak_demand_w)} />
             <StatCard
               label={t('advancedIntelligence.site.panelConstraint', 'Panel constraint')}
-              value={result ? `${fmtNumber(result.panel_constraint_pct, 1)}%` : null}
+              value={result ? `${fmtNumber(result.panel_constraint_pct)}%` : null}
             />
             <StatCard
               label={t('advancedIntelligence.site.status', 'Projection status')}
@@ -245,7 +247,7 @@ export default function ChargingSiteTwinPage() {
                 </div>
                 <Text as="p" variant="bodySm" className="mt-2">
                   {t('advancedIntelligence.site.mitigation.effect', 'Queue {{queue}}% · peak {{peak}}', {
-                    queue: fmtNumber(item.queue_delta_pct, 1),
+                    queue: fmtNumber(item.queue_delta_pct),
                     peak: units.formatPower(item.peak_delta_w),
                   })}
                 </Text>

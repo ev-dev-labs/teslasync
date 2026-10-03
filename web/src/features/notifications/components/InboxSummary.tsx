@@ -21,8 +21,9 @@ import { GlassPanel } from '@/components/ui';
 import { EmptyState, QueryError, StatGridSkeleton, StaleRefreshWarning } from '@/components/feedback';
 import type { NotificationLog } from '@/api/types';
 import { formatRelativeTime, formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { useDataState } from '@/hooks/useDataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface InboxSummaryProps {
   /** The active (non-archived) notifications query (TanStack result) from the page. */
@@ -41,6 +42,7 @@ interface InboxStats {
 
 /** Compact backlog context; complete period aggregates remain in the report. */
 export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const state = useDataState(query);
   const rows = query.data ?? [];

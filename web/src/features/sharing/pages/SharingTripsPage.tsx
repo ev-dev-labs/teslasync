@@ -41,15 +41,17 @@ import { useTrips } from '@/api/hooks/useTrips'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import { useUnits } from '@/hooks/useUnits'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { fmtInt } from '@/lib/numberFormat'
+
 import { AITripPostcardShareCardImageGeneration } from '@/components/ai/AITripPostcardShareCardImageGeneration'
 import {
   TripShareRow,
   SelectedTripPreview,
   aggregateTripKpis,
 } from '../components/sharing-trips'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function SharingTripsPage() {
+  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   usePageTitle(t('sharing.trips.title', 'Share a trip'))
 
@@ -69,7 +71,7 @@ export default function SharingTripsPage() {
     [allTrips, selectedTripId],
   )
 
-  const kpis = useMemo(() => aggregateTripKpis(allTrips), [allTrips])
+  const kpis = useMemo(() => aggregateTripKpis(allTrips), [allTrips, displayPrecision, displayLocale])
   const coldLoading = isLoading && allTrips.length === 0
   // Surface the destructive error banner only when there is nothing cached to
   // show. On a background-refetch failure TanStack Query keeps the last good

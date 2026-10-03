@@ -77,9 +77,9 @@ export default function EfficiencyLandscapePage() {
   };
   const tempLabel = (i: number) => {
     const b = TEMP_BANDS_C[i]!;
-    if (b.from === -Infinity) return `< ${formatTemperature(b.to, { precision: 0 })}`;
-    if (b.to === Infinity) return `≥ ${formatTemperature(b.from, { precision: 0 })}`;
-    return `${formatTemperature(b.from, { precision: 0 })}–${formatTemperature(b.to, { precision: 0 })}`;
+    if (b.from === -Infinity) return `< ${formatTemperature(b.to)}`;
+    if (b.to === Infinity) return `≥ ${formatTemperature(b.from)}`;
+    return `${formatTemperature(b.from)}–${formatTemperature(b.to)}`;
   };
 
   const cellDescription = (cell: LandscapeCell): string =>

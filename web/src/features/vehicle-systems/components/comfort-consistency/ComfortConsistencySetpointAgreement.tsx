@@ -8,13 +8,14 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencySetpointAgreementProps {
   summary: ComfortConsistencySummary;
@@ -36,6 +37,7 @@ export function ComfortConsistencySetpointAgreement({
   state,
   formatDelta,
 }: ComfortConsistencySetpointAgreementProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -80,7 +82,7 @@ export function ComfortConsistencySetpointAgreement({
             <AgreementMetric
               label={t('comfortConsistency.setpoints.overThreshold', 'Paired samples above gate')}
               value={summary.disagreementSampleShare != null
-                ? fmtPercent(summary.disagreementSampleShare * 100, 1)
+                ? fmtPercent(summary.disagreementSampleShare * 100)
                 : '—'}
             />
           </Grid>

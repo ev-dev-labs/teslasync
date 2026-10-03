@@ -13,6 +13,7 @@ import { cn } from '@/lib/cn';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtWatts } from './helpers';
 import { FLOW_COLORS } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** One sample of the live-status history, pre-shaped for the charts. */
 export interface PowerHistoryPoint {
@@ -37,6 +38,7 @@ const CHART_HEIGHT = 320;
 
 /** Hero stacked-area chart of solar / battery / grid / home power over time. */
 export function PowerHistoryChart({ data, loading, error, onRetry, className }: PowerHistoryChartProps) {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
 
   // The API layer is untyped at runtime and can transiently omit the series;
@@ -52,7 +54,7 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
     (value: number) => formatDateShort(new Date(value)),
     [],
   );
-  const formatWattTick = useCallback((value: number) => fmtWatts(value), []);
+  const formatWattTick = useCallback((value: number) => fmtWatts(value), [displayPrecision, displayLocale]);
 
   if (error) {
     return (

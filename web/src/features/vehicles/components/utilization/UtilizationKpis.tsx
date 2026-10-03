@@ -6,12 +6,13 @@ import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceToSI } from '@/lib/unitConversion';
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { useUtilizationDisplay } from './useUtilizationDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, xl: 4 } as const;
 
@@ -25,6 +26,7 @@ export function UtilizationKpis({
   error,
   onRetry,
 }: UtilizationKpisProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { distanceUnit, formatDistance } = useUtilizationDisplay();
@@ -58,7 +60,7 @@ export function UtilizationKpis({
               label={t('utilization.drivingShare', 'Time driving')}
               value={
                 summary.drivingShare != null
-                  ? `${fmtNumber(summary.drivingShare * 100, 1)}%`
+                  ? `${fmtNumber(summary.drivingShare * 100)}%`
                   : '—'
               }
               subtitle={t(
@@ -74,7 +76,7 @@ export function UtilizationKpis({
               label={t('utilization.activeDays', 'Days used')}
               value={
                 summary.activeDayShare != null
-                  ? `${fmtNumber(summary.activeDayShare * 100, 0)}%`
+                  ? `${fmtNumber(summary.activeDayShare * 100)}%`
                   : '—'
               }
               subtitle={t(
@@ -97,9 +99,7 @@ export function UtilizationKpis({
               label={t('utilization.perDay', 'Distance per day')}
               value={
                 summary.distancePerDayM != null
-                  ? formatDistance(summary.distancePerDayM, {
-                      precision: 1,
-                    })
+                  ? formatDistance(summary.distancePerDayM)
                   : '—'
               }
               subtitle={t(
@@ -119,7 +119,6 @@ export function UtilizationKpis({
                 costPerDisplayDistance != null
                   ? `${formatCurrency(
                       costPerDisplayDistance,
-                      3,
                     )}/${distanceUnit}`
                   : '—'
               }

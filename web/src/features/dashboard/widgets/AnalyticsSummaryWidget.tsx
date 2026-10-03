@@ -7,11 +7,12 @@ import { EmptyState } from '@/components/feedback';
 import { useAnalyticsSummary } from '@/api/hooks/useAnalytics';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MI_TO_KM = 1.60934;
 
@@ -30,6 +31,7 @@ function toNumberArray(value: unknown): number[] {
 }
 
 export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -79,28 +81,28 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
   const stats = useMemo((): StatGridItem[] => [
     {
       label: t('widget.analyticsSummary.totalDistance', 'Total distance'),
-      value: fmtNumber(displayDist, 0),
+      value: fmtNumber(displayDist),
       unit: distanceUnit,
       icon: <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />,
     },
     {
       label: t('widget.analyticsSummary.avgEfficiency', 'Avg efficiency'),
-      value: fmtNumber(displayEff, 0),
+      value: fmtNumber(displayEff),
       unit: effUnit,
       icon: <Gauge className="h-3.5 w-3.5 text-emerald-400" />,
     },
     {
       label: t('widget.analyticsSummary.energyConsumed', 'Energy consumed'),
-      value: fmtNumber(energyKwh, 1),
+      value: fmtNumber(energyKwh),
       unit: 'kWh',
       icon: <Zap className="h-3.5 w-3.5 text-amber-400" />,
     },
     {
       label: t('widget.analyticsSummary.costPerDist', 'Cost / {{unit}}', { unit: distanceUnit }),
-      value: costPerDist > 0 ? formatCurrency(costPerDist, 3) : '—',
+      value: costPerDist > 0 ? formatCurrency(costPerDist) : '—',
       icon: <DollarSign className="h-3.5 w-3.5 text-purple-400" />,
     },
-  ], [displayDist, displayEff, effUnit, energyKwh, costPerDist, distanceUnit, formatCurrency, t]);
+  ], [displayDist, displayEff, effUnit, energyKwh, costPerDist, distanceUnit, formatCurrency, t, fmtNumber]);
 
   // Compact (1×2): large animated distance number
   if (isCompact) {

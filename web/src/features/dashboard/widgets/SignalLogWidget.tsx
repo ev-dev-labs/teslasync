@@ -13,6 +13,7 @@ import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import type { SignalObservation } from '@/types/signals';
 import type { VehicleTelemetry } from '@/types/telemetry';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ── Source → visual mapping ──────────────────────────────────────────
 
@@ -85,6 +86,7 @@ function CompactView({
 // ── Main widget ──────────────────────────────────────────────────────
 
 export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -139,7 +141,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
         severity: 'info' as const,
       };
     });
-  }, [observations, t]);
+  }, [observations, t, displayPrecision, displayLocale]);
 
   // Freeze display when paused
   const displayItems = useMemo(() => {

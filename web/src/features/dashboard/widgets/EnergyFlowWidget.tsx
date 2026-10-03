@@ -67,8 +67,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
             ? t('widget.regenerating', 'Regenerating')
             : power == null ? t('hero.unknownStatus', 'Unknown') : t('widget.standby', 'Standby'),
         value: absPower ?? 0,
-        // VehicleState still exposes kW; the SI-only formatter accepts W.
-        formattedValue: formatPower(absPower == null ? null : absPower * 1000, { precision: 1 }),
+        formattedValue: formatPower(absPower),
         icon: <Zap className="h-2.5 w-2.5 text-purple-400" />,
         position: 'right',
       },
@@ -79,7 +78,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
         id: 'charger',
         label: t('widget.charger', 'Charger'),
         value: chargerPower ?? 0,
-        formattedValue: formatPower(chargerPower == null ? null : chargerPower * 1000, { precision: 1 }),
+        formattedValue: formatPower(chargerPower == null ? null : chargerPower * 1000),
         icon: <Plug className="h-2.5 w-2.5 text-amber-400" />,
         position: 'top',
       });

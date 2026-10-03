@@ -4,15 +4,17 @@ import { Zap, Activity, BatteryCharging, Battery } from 'lucide-react'
 import { GlassPanel, PanelTitle } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
-import { fmtNumber } from '@/lib/numberFormat'
+
 import { useUnits } from '@/hooks/useUnits'
 import type { ChargingTelemetry } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChargingTelemetrySectionProps {
   chargingTelemetry: ChargingTelemetry | null | undefined
 }
 
 export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetrySectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatDistance, formatSpeed, formatPower, formatEnergy } = useUnits()
 

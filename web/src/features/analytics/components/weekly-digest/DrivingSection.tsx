@@ -9,13 +9,14 @@ import {
   chartGrid, axisTickSm, chartMarginLabeled, chartAnimation,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { formatDate } from '@/lib/dateFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { MiniStat } from './MiniStat';
 import { formatEfficiencyFromSI } from './display';
 import { pctChange } from './helpers';
 import type { DigestMetrics, DailyDistanceEntry } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DrivingSectionProps {
   metrics: DigestMetrics;
@@ -34,6 +35,7 @@ export function DrivingSection({
   error,
   onRetry,
 }: DrivingSectionProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatDistance, formatDuration } = useUnits();
   const distanceData = dailyDistanceData ?? [];
@@ -121,7 +123,7 @@ export function DrivingSection({
         />
         <MiniStat
           label={t('analytics.weeklyDigest.totalDrivingTime', 'Total driving time')}
-          value={formatDuration(metrics.totalDurationS ?? 0, { precision: 1 })}
+          value={formatDuration(metrics.totalDurationS ?? 0)}
           icon={<Clock className="h-4 w-4" />}
         />
         <MiniStat
@@ -133,7 +135,6 @@ export function DrivingSection({
                     metrics.avgEfficiencyWhPerM ?? 0,
                     metrics.prevAvgEfficiencyWhPerM ?? 0,
                   ),
-                  1,
                 )}%`
               : '—'
           }
@@ -170,13 +171,13 @@ export function DrivingSection({
               <div className="flex min-w-0 flex-col">
                 <Caption>{t('analytics.weeklyDigest.distance', 'Distance')}</Caption>
                 <Text size="sm" weight="semibold" color="primary" className="truncate">
-                  {formatDistance(metrics.topDrive.distanceM ?? 0, { precision: 1 })}
+                  {formatDistance(metrics.topDrive.distanceM ?? 0)}
                 </Text>
               </div>
               <div className="flex min-w-0 flex-col">
                 <Caption>{t('analytics.weeklyDigest.duration', 'Duration')}</Caption>
                 <Text size="sm" weight="semibold" color="primary" className="truncate">
-                  {formatDuration(metrics.topDrive.durationS ?? 0, { precision: 1 })}
+                  {formatDuration(metrics.topDrive.durationS ?? 0)}
                 </Text>
               </div>
               <div className="flex min-w-0 flex-col">

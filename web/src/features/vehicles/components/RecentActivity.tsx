@@ -9,8 +9,9 @@ import { AnimatedNumber } from '@/components/data-display/AnimatedNumber'
 import { TimeStamp } from '@/components/data-display'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion'
-import { fmtInt } from '@/lib/numberFormat'
+
 import type { Drive, ChargingSession } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RecentActivityProps {
   drives: Drive[] | undefined
@@ -18,6 +19,7 @@ interface RecentActivityProps {
 }
 
 export function RecentActivity({ drives, sessions }: RecentActivityProps) {
+  const { fmtInt, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs } = useUnits()
   return (
@@ -52,7 +54,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-cyan-300 transition-colors">
                       <AnimatedNumber
                         value={convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance)}
-                        decimals={1}
+                        decimals={displayPrecision}
                         suffix={` ${unitPrefs.distance}`}
                       />
                     </p>
@@ -112,7 +114,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-emerald-300 transition-colors">
                       <AnimatedNumber
                         value={convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh')}
-                        decimals={1}
+                        decimals={displayPrecision}
                         suffix=" kWh"
                       />
                     </p>

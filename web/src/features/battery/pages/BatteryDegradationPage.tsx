@@ -30,9 +30,10 @@ import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { BatteryHealthSnapshot, RiskFactorData } from '@/types/energy';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Types ─────────────────────────────────────────────── */
 
@@ -104,6 +105,7 @@ function ageLabel(
 /* ── Page ──────────────────────────────────────────────── */
 
 export default function BatteryDegradationPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('battery.degradation.title', 'Battery degradation'));
 
@@ -220,10 +222,10 @@ export default function BatteryDegradationPage() {
         key: 'capacity_wh',
         align: 'right',
         filterValue: (row) => row.capacity_wh ?? null,
-        filterValueLabel: (_, row) => formatEnergy(row.capacity_wh, { precision: 1 }),
+        filterValueLabel: (_, row) => formatEnergy(row.capacity_wh),
         header: t('battery.degradation.capacity', 'Capacity'),
         render: (row: DegradationEntry) =>
-          formatEnergy(row.capacity_wh, { precision: 1 }),
+          formatEnergy(row.capacity_wh),
         sortable: true,
       },
       {
@@ -236,7 +238,7 @@ export default function BatteryDegradationPage() {
         sortable: true,
       },
     ],
-    [t, fromMeters, unitPrefs.distance, formatEnergy],
+    [t, fromMeters, unitPrefs.distance, formatEnergy, fmtNumber],
   );
 
   /* ── Render ──────────────────────────────────────────── */
@@ -278,7 +280,7 @@ export default function BatteryDegradationPage() {
                   />
                   <MetricCard
                     label={t('battery.degradation.estimatedCapacity', 'Estimated capacity')}
-                    value={formatEnergy(data?.estimated_capacity_wh ?? 0, { precision: 1 })}
+                    value={formatEnergy(data?.estimated_capacity_wh ?? 0)}
                     icon={<Zap className="h-4 w-4" />}
                     color="cyan"
                     help={{

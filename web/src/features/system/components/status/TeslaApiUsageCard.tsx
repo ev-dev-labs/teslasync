@@ -2,9 +2,10 @@ import { Activity, Zap, Clock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { UsageCard } from '@/components/data-display'
 import type { APIUsage, TeslaUsageCycle } from '@/api/types'
-import { fmtInt } from '@/lib/numberFormat'
+
 import { useFormatting } from '@/hooks/useFormatting'
 import { TeslaUsageContractError } from '@/api/hooks/useTeslaUsage'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface Props {
   apiUsage: APIUsage | undefined
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }: Props) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatCurrency } = useFormatting()
   const pageLink = [{ key: 'usage', to: '/tesla-api-usage', label: t('teslaUsage.openPage', 'Explore Tesla API usage'), primary: true }]

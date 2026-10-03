@@ -11,7 +11,7 @@
  *   2. `useTeslaEnergySiteInfo(siteId)` — the detailed config, gated on a
  *      truthy `siteId` (disabled until the site list resolves).
  *
- *   - size.cols <= 1  → compact tile: no header title (detail rows still show).
+ *   - size.cols <= 1  → compact tile: titled header and compact detail rows.
  *   - otherwise       → full tile: titled header + the four detail rows.
  *   - no sites        → the accessible "No Tesla Energy site linked" empty state.
  *   - sites but null info data → the "No site info available" empty state.
@@ -24,7 +24,7 @@
  *      `siteId`.
  *   2. Null-safety: every optional field absent → each row degrades to an em
  *      dash, never a `undefined kW` / `NaN kWh` artefact.
- *   3. Compact view drops the header title but still renders the detail rows.
+ *   3. Compact view retains the header identity and all detail rows.
  *   4. Site resolution + query gating: an empty site list disables the info
  *      query (`useTeslaEnergySiteInfo(undefined)`) and shows the no-site empty.
  *   5. Empty (sites present, info `data: null`) → the no-data empty state.
@@ -252,7 +252,7 @@ describe('EnergySiteInfoWidget — null-safety', () => {
 // ── Compact view ─────────────────────────────────────────────────────────────
 
 describe('EnergySiteInfoWidget — compact view', () => {
-  it('renders the detail rows but drops the header title', () => {
+  it('retains the titled header and icon alongside the compact detail rows', () => {
     renderWidget(COMPACT, {
       sites: sitesQuery({ data: [site(9)] }),
       info: infoQuery({ data: POPULATED }),
@@ -260,8 +260,15 @@ describe('EnergySiteInfoWidget — compact view', () => {
 
     expect(screen.getByText('10.5 kW')).toBeInTheDocument();
     expect(screen.getByText('2 · 27.0 kWh')).toBeInTheDocument();
-    // A compact (1×1) tile suppresses the header title entirely.
-    expect(screen.queryByText('Energy site')).toBeNull();
+    const heading = screen.getByRole('heading', { name: 'Energy site', level: 3 });
+    expect(heading).toBeVisible();
+    expect(heading.parentElement?.querySelector('svg.lucide-home')).toBeInTheDocument();
+  });
+
+  it('keeps its identity when the compact site is unlinked', () => {
+    renderWidget(COMPACT);
+    expect(screen.getByRole('heading', { name: 'Energy site', level: 3 })).toBeVisible();
+    expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
   });
 });
 

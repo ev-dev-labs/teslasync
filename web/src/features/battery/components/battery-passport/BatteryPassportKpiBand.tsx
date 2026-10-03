@@ -10,10 +10,11 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportKpiBandProps {
   analysis: BatteryPassportAnalysis;
@@ -24,6 +25,7 @@ export function BatteryPassportKpiBand({
   analysis,
   state,
 }: BatteryPassportKpiBandProps) {
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const metrics = analysis.metrics;
   const capacityValue =
@@ -33,8 +35,8 @@ export function BatteryPassportKpiBand({
           'batteryPassport.kpis.capacityValue',
           '{{reported}} / {{reference}} kWh',
           {
-            reported: fmtNumber(metrics.capacityKwh, 2),
-            reference: fmtNumber(metrics.originalCapacityKwh, 1),
+            reported: fmtNumber(metrics.capacityKwh),
+            reference: fmtNumber(metrics.originalCapacityKwh),
           },
         )
       : '—';
@@ -69,7 +71,7 @@ export function BatteryPassportKpiBand({
                 'Certificate-reported SoH',
               )}
               value={metrics.sohPct != null
-                ? fmtPercent(metrics.sohPct, 1)
+                ? fmtPercent(metrics.sohPct)
                 : '—'}
               subtitle={t(
                 'batteryPassport.kpis.sohHint',
@@ -97,7 +99,7 @@ export function BatteryPassportKpiBand({
                 'EFC proxy',
               )}
               value={metrics.equivalentFullCycles != null
-                ? fmtNumber(metrics.equivalentFullCycles, 1)
+                ? fmtNumber(metrics.equivalentFullCycles)
                 : '—'}
               subtitle={t(
                 'batteryPassport.kpis.efcHint',
@@ -112,7 +114,7 @@ export function BatteryPassportKpiBand({
                 'Fast-charge session share',
               )}
               value={metrics.fastChargeRatio != null
-                ? fmtPercent(metrics.fastChargeRatio * 100, 1)
+                ? fmtPercent(metrics.fastChargeRatio * 100)
                 : '—'}
               subtitle={t(
                 'batteryPassport.kpis.fastHint',
@@ -127,7 +129,7 @@ export function BatteryPassportKpiBand({
                 'Average charge-end SoC proxy',
               )}
               value={metrics.avgChargeLimitPct != null
-                ? fmtPercent(metrics.avgChargeLimitPct, 1)
+                ? fmtPercent(metrics.avgChargeLimitPct)
                 : '—'}
               subtitle={t(
                 'batteryPassport.kpis.endSocHint',

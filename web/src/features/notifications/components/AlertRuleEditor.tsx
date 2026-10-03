@@ -23,8 +23,8 @@ import { SeverityBadge } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { AlertBanner, DraftRecoveryBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
-import { SearchInput, VehicleMultiSelect, hydrateVehicleSelection, buildVehiclePayload, type VehicleSelection } from '@/components/forms'
-import { fmtInt } from '@/lib/numberFormat'
+import { SearchInput, SignalUnitInput, VehicleMultiSelect, hydrateVehicleSelection, buildVehiclePayload, type VehicleSelection } from '@/components/forms'
+
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { cn } from '@/lib/cn'
 import { severityTokens, typography } from '@/lib/tokens'
@@ -43,6 +43,10 @@ import { DEFAULT_ALERT_COOLDOWN_S, getAlertBehaviorOptions } from '../lib/alertD
 import { Icons } from '@/lib/icons';
 import { AINLAlertBuilder } from '@/components/ai/AINLAlertBuilder'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useSettings } from '@/hooks/useSettings'
+import { unitKindForSignalDescriptor } from '@/lib/signals'
+import { unitSymbol } from '@/lib/unitInput'
 
 // 'unset' is retained only to guard a draft saved before the new default.
 // Newly created rules always start in 'once' (notify on event).
@@ -558,6 +562,8 @@ export interface AlertRuleEditorProps {
 }
 
 export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProps) {
+  const { fmtInt } = useNumberFormatting();
+  const { settings } = useSettings()
   const { t } = useTranslation()
   // Fail closed if the server introduces a new rule kind before this editor
   // gains its corresponding typed condition fields and validator.
@@ -867,12 +873,18 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
         'Unit metadata is unavailable for this signal. Enter the canonical numeric value emitted by Fleet Telemetry.',
       )
     }
-    return hints[selectedSignalDescriptor.unit_kind]
+    const symbol = unitSymbol(unitKindForSignalDescriptor(selectedSignalDescriptor.unit_kind), settings)
+    return symbol ? t(
+      'common.preferredUnitInputHint',
+      'Enter {{unit}}. Saved thresholds remain canonical SI values.',
+      { unit: symbol },
+    ) : hints[selectedSignalDescriptor.unit_kind]
   }, [
     aiVehicleId,
     availableSignalsQuery.isError,
     availableSignalsQuery.isLoading,
     selectedSignalDescriptor,
+    settings,
     t,
   ])
 
@@ -1101,25 +1113,25 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
     if (valueKind === 'range') {
       return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <UiInput
+          <SignalUnitInput
             id="alert-value-min"
+            commitOnChange
             label={t('notifications.alertStudio.editor.minValueLabel', 'Minimum value')}
-            type="number"
-            step="any"
+            unitKind={selectedSignalDescriptor?.unit_kind}
             className="w-full"
-            value={editor.value_min}
-            onChange={e => setEditor(s => ({ ...s, value_min: e.target.value }))}
+            value={parseOptionalNumber(editor.value_min)}
+            onChange={next => setEditor(s => ({ ...s, value_min: valueToInput(next) }))}
             hint={canonicalUnitHint}
             required
           />
-          <UiInput
+          <SignalUnitInput
             id="alert-value-max"
+            commitOnChange
             label={t('notifications.alertStudio.editor.maxValueLabel', 'Maximum value')}
-            type="number"
-            step="any"
+            unitKind={selectedSignalDescriptor?.unit_kind}
             className="w-full"
-            value={editor.value_max}
-            onChange={e => setEditor(s => ({ ...s, value_max: e.target.value }))}
+            value={parseOptionalNumber(editor.value_max)}
+            onChange={next => setEditor(s => ({ ...s, value_max: valueToInput(next) }))}
             hint={canonicalUnitHint}
             required
           />
@@ -1166,14 +1178,14 @@ export function AlertRuleEditor({ rule, onSaved, onCancel }: AlertRuleEditorProp
     }
 
     return (
-      <UiInput
+      <SignalUnitInput
         id="alert-value-num"
+        commitOnChange
         label={t('notifications.alertStudio.editor.numericValueLabel', 'Numeric value')}
-        type="number"
-        step="any"
+        unitKind={selectedSignalDescriptor?.unit_kind}
         className="w-full"
-        value={editor.value_num}
-        onChange={e => setEditor(s => ({ ...s, value_num: e.target.value }))}
+        value={parseOptionalNumber(editor.value_num)}
+        onChange={next => setEditor(s => ({ ...s, value_num: valueToInput(next) }))}
         hint={canonicalUnitHint}
         required
       />

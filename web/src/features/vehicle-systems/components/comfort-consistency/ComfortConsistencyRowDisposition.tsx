@@ -10,10 +10,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyRowDispositionProps {
   summary: ComfortConsistencySummary;
@@ -24,6 +25,7 @@ export function ComfortConsistencyRowDisposition({
   summary,
   state,
 }: ComfortConsistencyRowDispositionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = summary.rows;
   const outcomes = [

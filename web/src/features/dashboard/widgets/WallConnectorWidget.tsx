@@ -1,11 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plug } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartTooltip, EmbeddedChart, type ChartDataRow,
-} from '@/components/charts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { useTeslaWCChargingHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { averageKnown, knownNumber, sumKnown } from '@/api/dataState';
 import { DataProvenanceBadge } from '@/components/data-display';
@@ -14,11 +10,12 @@ import { Caption } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   date: string;
@@ -50,6 +47,8 @@ function isSameMonth(iso: string): boolean {
 }
 
 export default function WallConnectorWidget({ size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
 
@@ -151,6 +150,10 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
     dataUpdatedAt: siteId ? historyUpdatedAt : sitesUpdatedAt,
     refetch: handleRefresh,
   }, { provenance: 'historical', partial: chartData.some((d) => d.energy_kwh == null) });
+  const shellProps = {
+    title: t('widget.wallConnector.title', 'Wall connector'),
+    icon: <Plug className="h-3.5 w-3.5 text-emerald-400" />,
+  };
 
   // No energy sites linked. Guard on `!sitesError` so a *failed* sites fetch
   // surfaces the shared error panel (below) rather than this misleading empty
@@ -158,6 +161,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   if (!hasSites && !isLoading && !sitesError) {
     return (
       <WidgetShell
+        {...(isCompact ? shellProps : {})}
         loading={false}
         dataState={dataState}
         updatedAt={sitesUpdatedAt}
@@ -182,6 +186,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
+        {...shellProps}
         loading={isLoading}
         dataState={dataState}
         loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
@@ -199,7 +204,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
           stats={hasData ? [
             {
               label: t('widget.wallConnector.monthLoaded', 'This month (loaded)'),
-              value: monthTotalKwh == null ? null : fmtNumber(monthTotalKwh, 1),
+              value: monthTotalKwh == null ? null : fmtNumber(monthTotalKwh),
               unit: unitPrefs.energy,
             },
             {
@@ -218,7 +223,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
     ? [
         {
           label: t('widget.wallConnector.monthLoaded', 'This month (loaded)'),
-          value: monthTotalKwh == null ? null : fmtNumber(monthTotalKwh, 1),
+          value: monthTotalKwh == null ? null : fmtNumber(monthTotalKwh),
           unit: unitPrefs.energy,
         },
         {
@@ -227,7 +232,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
         },
         {
           label: t('widget.wallConnector.avgPerSession', 'Avg / session'),
-          value: avgKwhPerSession == null ? null : fmtNumber(avgKwhPerSession, 1),
+          value: avgKwhPerSession == null ? null : fmtNumber(avgKwhPerSession),
           unit: unitPrefs.energy,
         },
       ]
@@ -237,8 +242,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.wallConnector.title', 'Wall connector')}
-      icon={<Plug className="h-3.5 w-3.5 text-emerald-400" />}
+      {...shellProps}
       loading={isLoading}
       dataState={dataState}
       loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
@@ -282,12 +286,12 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
                   tickLine={false}
                   axisLine={false}
                   width={40}
-                  tickFormatter={(v: number) => fmt(v, 0)}
+                  tickFormatter={(v: number) => fmt(v)}
                 />
                 <Tooltip
                   content={<ChartTooltip />}
                   formatter={(value: number) => [
-                    `${fmtNumber(value, 1)} ${unitPrefs.energy}`,
+                    `${fmtNumber(value)} ${unitPrefs.energy}`,
                     t('widget.wallConnector.energy', 'Energy'),
                   ]}
                   cursor={{ fill: chartTokens.gridStroke }}

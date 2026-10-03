@@ -15,10 +15,11 @@ import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import type { SignalLogSummary } from './signalLogSummary';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface SignalLogBreakdownPanelProps {
   summary: SignalLogSummary;
@@ -39,6 +40,7 @@ export function SignalLogBreakdownPanel({
   loading = false,
   className,
 }: SignalLogBreakdownPanelProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
 
@@ -93,7 +95,7 @@ export function SignalLogBreakdownPanel({
                   value={bar.value}
                   max={total}
                   color={bar.color}
-                  sublabel={`${fmtInt(bar.value)} · ${fmtPercent(total > 0 ? (bar.value / total) * 100 : 0, 0)}`}
+                  sublabel={`${fmtInt(bar.value)} · ${fmtPercent(total > 0 ? (bar.value / total) * 100 : 0)}`}
                 />
               ))}
             </div>

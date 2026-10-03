@@ -8,10 +8,11 @@ import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const LIST_LAYOUT_CLASS = 'min-w-0 [&_li>div.relative]:flex-wrap [&_li>div.relative>span.flex-1]:basis-full @sm:[&_li>div.relative>span.flex-1]:basis-auto [&_li>div.relative>span.flex-1]:whitespace-normal [&_li>div.relative>span.flex-1]:break-words [&_li>div.relative>span.shrink-0]:max-w-full';
 
@@ -26,6 +27,7 @@ function efficiencyBadge(
 }
 
 export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -63,7 +65,7 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
       const isBest = rawEff != null && rawEff === bestRaw;
       const reading = (value: unknown) => {
         const number = knownNumber(value);
-        return number == null ? '—' : fmtNumber(toEfficiencyDisplay(number), 0);
+        return number == null ? '—' : fmtNumber(toEfficiencyDisplay(number));
       };
 
       let label = `${r.startLocation ?? '—'} → ${r.endLocation ?? '—'}`;
@@ -78,12 +80,12 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
         label,
         // Invert: lower Wh/unit (better) → higher value → ranks first
         value: eff == null ? 0 : 10000 / (Math.max(0, eff) + 1),
-        formattedValue: `${eff == null ? '—' : `${fmtNumber(eff, 0)} ${efficiencyUnit}`} · ${trips == null ? '—' : fmtInt(trips)}×`,
+        formattedValue: `${eff == null ? '—' : `${fmtNumber(eff)} ${efficiencyUnit}`} · ${trips == null ? '—' : fmtInt(trips)}×`,
         badge: rawEff == null ? undefined : efficiencyBadge(rawEff, t),
         barColor: isBest ? 'bg-emerald-400' : 'bg-blue-400',
       };
     });
-  }, [routes, toEfficiencyDisplay, efficiencyUnit, isWide, t]);
+  }, [routes, toEfficiencyDisplay, efficiencyUnit, isWide, t, fmtNumber, fmtInt]);
 
   const handleRefresh = useCallback(() => {
     refetch();

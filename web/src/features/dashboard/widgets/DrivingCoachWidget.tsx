@@ -5,13 +5,14 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingCoach } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetTipCards, type TipItem } from './shared';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Potential-savings percentage derived from the driver's current average
@@ -41,6 +42,7 @@ export function computeSavingsPct(
 }
 
 export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;

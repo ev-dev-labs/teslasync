@@ -1517,6 +1517,21 @@
       "title": "Frontend errors (last hour)"
     }
   },
+  "automations": {
+    "builder": {
+      "signals": {
+        "batteryLevel": "Battery level",
+        "insideTemp": "Inside temperature",
+        "isCharging": "Is charging",
+        "isClimateOn": "Climate on",
+        "isLocked": "Is locked",
+        "outsideTemp": "Outside temperature",
+        "sentryMode": "Sentry Mode",
+        "speed": "Speed",
+        "state": "Vehicle state"
+      }
+    }
+  },
   "bulk": {
     "clear": "Clear selection",
     "itemDefault": "item",

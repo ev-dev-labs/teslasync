@@ -9,6 +9,7 @@ import {
   Textarea as UiTextarea,
 } from '@/components/ui';
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { UnitInput } from '@/components/forms';
 import type { NotificationChannel } from '@/types/notifications';
 import type {
   AutomationActionKind,
@@ -173,14 +174,14 @@ const GUIDED_COMMAND_FIELDS: Record<string, {
   max?: number;
 }[]> = {
   set_charge_limit: [
-    { key: 'percent', labelKey: 'automations.builder.chargeLimit', fallback: 'Charge limit (%)', min: 0, max: 100 },
+    { key: 'percent', labelKey: 'automations.builder.chargeLimit', fallback: 'Charge limit', min: 0, max: 100 },
   ],
   set_charging_amps: [
     { key: 'charging_amps', labelKey: 'automations.builder.chargingAmps', fallback: 'Charging current (A)', min: 1 },
   ],
   set_temps: [
-    { key: 'driver_temp', labelKey: 'automations.builder.driverTemp', fallback: 'Driver temperature (°C)', min: 15, max: 30 },
-    { key: 'passenger_temp', labelKey: 'automations.builder.passengerTemp', fallback: 'Passenger temperature (°C)', min: 15, max: 30 },
+    { key: 'driver_temp', labelKey: 'automations.builder.driverTemp', fallback: 'Driver temperature', min: 15, max: 30 },
+    { key: 'passenger_temp', labelKey: 'automations.builder.passengerTemp', fallback: 'Passenger temperature', min: 15, max: 30 },
   ],
 };
 
@@ -429,19 +430,19 @@ function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
           {guidedFields.length > 0 && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {guidedFields.map(({ key, labelKey, fallback, min, max }) => (
-                <UiInput
+                <UnitInput
                   key={key}
                   label={t(labelKey, fallback)}
-                  type="number"
+                  unit={action.command_name === 'set_temps' ? 'temperature' : key === 'percent' ? 'percent' : 'count'}
                   min={min}
                   max={max}
-                  step={action.command_name === 'set_temps' ? 0.5 : 1}
                   value={typeof action.command_params?.[key] === 'number'
-                    ? String(action.command_params[key]) : ''}
-                  onChange={(event) => {
+                    ? action.command_params[key] : null}
+                  commitOnChange
+                  onChange={(value) => {
                     const next = { ...action.command_params };
-                    if (event.target.value === '') delete next[key];
-                    else next[key] = Number(event.target.value);
+                    if (value === null) delete next[key];
+                    else next[key] = value;
                     const command_params = Object.keys(next).length ? next : undefined;
                     setParamsText(command_params ? JSON.stringify(command_params, null, 2) : '');
                     onChange({ ...action, command_params });

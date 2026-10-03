@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { ChartContainer } from '@/components/charts';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, ChartTooltip } from '@/components/charts';
 import { Text, Caption } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { YearReview } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface Props {
   data: YearReview;
@@ -13,6 +14,7 @@ interface Props {
 
 /** How the year's charging split across Supercharger / DC fast / AC. */
 export function YearChargingBreakdown({ data }: Props) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Colour travels with each slice (keyed to the connector, not to the

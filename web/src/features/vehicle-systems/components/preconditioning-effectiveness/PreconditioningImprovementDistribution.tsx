@@ -37,18 +37,18 @@ export function PreconditioningImprovementDistribution({
   const data = summary.improvementDistribution.map((bin) => {
     const band = bin.lowerC == null
       ? t('preconditioningEffectiveness.distribution.below', 'Below {{upper}}', {
-          upper: formatDelta(bin.upperC, { precision: 0 }),
+          upper: formatDelta(bin.upperC),
         })
       : bin.upperC == null
         ? t('preconditioningEffectiveness.distribution.atLeast', 'At least {{lower}}', {
-            lower: formatDelta(bin.lowerC, { precision: 0 }),
+            lower: formatDelta(bin.lowerC),
           })
         : t(
             'preconditioningEffectiveness.distribution.range',
             '{{lower}} to below {{upper}}',
             {
-              lower: formatDelta(bin.lowerC, { precision: 0 }),
-              upper: formatDelta(bin.upperC, { precision: 0 }),
+              lower: formatDelta(bin.lowerC),
+              upper: formatDelta(bin.upperC),
             },
           );
     return {

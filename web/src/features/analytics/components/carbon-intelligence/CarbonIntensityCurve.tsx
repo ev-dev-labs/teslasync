@@ -94,7 +94,6 @@ export function CarbonIntensityCurve({
             label: t('carbon.curve.rankColumn', 'Cleanest rank'),
             format: (value) => display.formatNumber(
               typeof value === 'number' ? value : null,
-              0,
             ),
           },
         ]}
@@ -131,7 +130,7 @@ export function CarbonIntensityCurve({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value: number) => display.formatNumber(value, 0)}
+                  tickFormatter={(value: number) => display.formatNumber(value)}
                 />
                 <Tooltip
                   content={(

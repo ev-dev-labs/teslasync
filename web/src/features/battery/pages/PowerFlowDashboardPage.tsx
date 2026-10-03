@@ -35,6 +35,7 @@ import {
   FLOW_COLORS,
   type PowerHistoryPoint,
 } from '../components/power-flow';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ───────── Power Flow arrow row ───────── */
 
@@ -95,6 +96,7 @@ function gridStatusVariant(status: string | null): 'success' | 'danger' | 'neutr
  * fans the SI data out to inline sections and the two extracted chart cards.
  */
 export default function PowerFlowDashboardPage() {
+  const { precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('powerFlow.title', 'Power Flow'));
 
@@ -312,7 +314,7 @@ export default function PowerFlowDashboardPage() {
                   unit="%"
                   color={FLOW_COLORS.soc}
                   size={140}
-                  decimals={1}
+                  decimals={displayPrecision}
                 />
                 <KVList
                   className="w-full"

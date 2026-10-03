@@ -18,15 +18,15 @@ describe('AuditLogPanel', () => {
     renderWithProviders(<AuditLogPanel />, { repository });
     await screen.findByText('Pack A');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Action' }));
-    const filter = screen.getByRole('dialog', { name: 'Filter Action' });
+    fireEvent.click(screen.getByRole('button', { name: 'Action filter' }));
+    const filter = screen.getByRole('dialog', { name: 'Action filter' });
     fireEvent.click(within(filter).getByRole('checkbox', { name: 'install' }));
     fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
     expect(screen.queryByText('First install.')).not.toBeInTheDocument();
     expect(screen.getByText('Disabled locally.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Action' }));
-    const reopened = screen.getByRole('dialog', { name: 'Filter Action' });
+    fireEvent.click(screen.getByRole('button', { name: 'Action filter' }));
+    const reopened = screen.getByRole('dialog', { name: 'Action filter' });
     expect(within(reopened).getByRole('checkbox', { name: 'install' })).not.toBeChecked();
     fireEvent.click(within(reopened).getByRole('button', { name: 'Clear' }));
     fireEvent.click(within(reopened).getByRole('button', { name: 'Done' }));

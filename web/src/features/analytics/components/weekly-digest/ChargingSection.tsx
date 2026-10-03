@@ -9,11 +9,12 @@ import {
   chartGrid, axisTickSm, chartMarginLabeled, chartAnimation,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { MiniStat } from './MiniStat';
 import { pctChange } from './helpers';
 import type { DigestMetrics, DailyEnergyEntry } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChargingSectionProps {
   metrics: DigestMetrics;
@@ -32,6 +33,7 @@ export function ChargingSection({
   error,
   onRetry,
 }: ChargingSectionProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { formatEnergy, formatPower, unitPrefs } = useUnits();
@@ -97,7 +99,7 @@ export function ChargingSection({
               <BarChart data={energyChartData} margin={chartMarginLabeled}>
                 {chartGrid}
                 <XAxis dataKey="day" {...axisTickSm} />
-                <YAxis {...axisTickSm} tickFormatter={(v: number) => fmtNumber(v, 1)} />
+                <YAxis {...axisTickSm} tickFormatter={(v: number) => fmtNumber(v)} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar
                   dataKey="energy"
@@ -120,17 +122,17 @@ export function ChargingSection({
         />
         <MiniStat
           label={t('analytics.weeklyDigest.totalEnergyAdded', 'Total energy added')}
-          value={formatEnergy(metrics.chargeEnergyAddedWh ?? 0, { precision: 1 })}
+          value={formatEnergy(metrics.chargeEnergyAddedWh ?? 0)}
           icon={<Zap className="h-4 w-4" />}
         />
         <MiniStat
           label={t('analytics.weeklyDigest.avgChargeRate', 'Avg charge rate')}
-          value={formatPower(metrics.avgChargePowerW ?? 0, { precision: 1 })}
+          value={formatPower(metrics.avgChargePowerW ?? 0)}
           icon={<Activity className="h-4 w-4" />}
         />
         <MiniStat
           label={t('analytics.weeklyDigest.totalCost', 'Total cost')}
-          value={formatCurrency(metrics.chargingCost ?? 0, 2)}
+          value={formatCurrency(metrics.chargingCost ?? 0)}
           icon={<Fuel className="h-4 w-4" />}
         />
       </div>
@@ -152,7 +154,6 @@ export function ChargingSection({
                   metrics.chargeEnergyAddedWh ?? 0,
                   metrics.prevChargeEnergyWh ?? 0,
                 ),
-                1,
               )}%`
             : '—'}
         </Badge>

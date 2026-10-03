@@ -54,7 +54,7 @@ export function CarbonLifetimeContext({
             />
             <MetricCard
               label={t('carbon.lifetime.sessions', 'Lifetime sessions scored')}
-              value={display.formatNumber(lifetime.sessionsScored, 0)}
+              value={display.formatNumber(lifetime.sessionsScored)}
               subtitle={t(
                 'carbon.lifetime.sessionShare',
                 'Period share: {{share}}',

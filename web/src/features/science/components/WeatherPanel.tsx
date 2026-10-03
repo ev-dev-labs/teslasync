@@ -18,13 +18,15 @@ import {
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { formatEnergyPerDistance } from '@/lib/unitConversion';
 import { Link } from 'react-router-dom';
 import { asList, unknown, useT } from './helpers';
 import { MissingBadges } from './MissingBadges';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function WeatherPanel({ window }: { window: ScienceWindow }) {
+  const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const t = useT();
   const query = useScienceWeather(window);
   const state = useDataState(query, { provenance: 'historical' });
@@ -37,8 +39,8 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
     { key: 'at', header: t('science.weather.at', 'Start'), render: (r) => formatDateTime(r.at) },
     { key: 'temp', align: 'right', header: t('science.weather.temp', 'Temperature'), render: (r) => r.temp_c != null ? formatTemperature(r.temp_c) : unknown(t) },
     { key: 'wind', align: 'right', header: t('science.weather.wind', 'Wind'), render: (r) => (r.wind_mps != null ? formatSpeed(r.wind_mps) : unknown(t)) },
-    { key: 'density', align: 'right', header: t('science.weather.density', 'Air density'), render: (r) => r.density_kg_m3 != null ? `${fmtNumber(r.density_kg_m3, 3)} kg/m³` : unknown(t) },
-    { key: 'rain', align: 'right', header: t('science.weather.rain', 'Precipitation'), render: (r) => r.precip_mm != null ? `${fmtNumber(r.precip_mm, 1)} mm` : unknown(t) },
+    { key: 'density', align: 'right', header: t('science.weather.density', 'Air density'), render: (r) => r.density_kg_m3 != null ? `${fmtScientificNumber(r.density_kg_m3, 3)} kg/m³` : unknown(t) },
+    { key: 'rain', align: 'right', header: t('science.weather.rain', 'Precipitation'), render: (r) => r.precip_mm != null ? `${fmtNumber(r.precip_mm)} mm` : unknown(t) },
     { key: 'session', align: 'right', header: t('science.weather.session', 'Session energy / distance'), render: (r) =>
       r.session_wh_per_m != null ? formatEnergyPerDistance(r.session_wh_per_m, unitPrefs) : unknown(t) },
     {
@@ -67,13 +69,13 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
                 : t('science.weather.joined', 'joined {{n}} drives', { n: asList(data.points).length })}
             </Badge>
             <Badge variant="neutral" size="sm">
-              r(density, residual): {data.density_r != null ? fmtNumber(data.density_r, 2) : unknown(t)}
+              r(density, residual): {data.density_r != null ? fmtNumber(data.density_r) : unknown(t)}
             </Badge>
             <Badge variant="neutral" size="sm">
-              r(wind, residual): {data.wind_r != null ? fmtNumber(data.wind_r, 2) : unknown(t)}
+              r(wind, residual): {data.wind_r != null ? fmtNumber(data.wind_r) : unknown(t)}
             </Badge>
             <Badge variant="neutral" size="sm">
-              {t('science.weather.rainDry', 'rain/dry')}: {fmtNumber(data.rain_n, 0)}/{fmtNumber(data.dry_n, 0)}
+              {t('science.weather.rainDry', 'rain/dry')}: {fmtNumber(data.rain_n)}/{fmtNumber(data.dry_n)}
             </Badge>
           </div>
           <Text as="p" size="sm" color="secondary">

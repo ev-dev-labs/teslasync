@@ -4,12 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { OdometerMilestoneResult, PaceScenario } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SCENARIO_COLUMNS = { default: 1, lg: 3 } as const;
 
@@ -22,6 +23,7 @@ export function PaceForecastScenarios({
   summary,
   state,
 }: PaceForecastScenariosProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateMs, formatDistanceKm } =
     useOdometerMilestoneDisplay();
@@ -122,7 +124,6 @@ export function PaceForecastScenarios({
                                 {
                                   days: fmtNumber(
                                     scenario.observedDays,
-                                    1,
                                   ),
                                 },
                               )
@@ -134,7 +135,7 @@ export function PaceForecastScenarios({
                           'milestones.scenarios.distance',
                           'Eligible distance',
                         ),
-                        value: formatDistanceKm(scenario.distanceKm, 1),
+                        value: formatDistanceKm(scenario.distanceKm),
                       },
                       {
                         key: 'pace',
@@ -146,7 +147,6 @@ export function PaceForecastScenarios({
                           scenario.paceKmPerDay != null
                             ? formatDistanceKm(
                                 scenario.paceKmPerDay,
-                                1,
                               )
                             : '—',
                       },

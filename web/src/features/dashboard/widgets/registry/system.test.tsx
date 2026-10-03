@@ -389,8 +389,7 @@ describe('system-health — lazy component wiring', () => {
     // 3 of 4 services report ok/healthy (tesla_api is degraded).
     expect(screen.getByText('3/4')).toBeInTheDocument();
     expect(screen.getByText('Services')).toBeInTheDocument();
-    // Compact mode hides the widget title.
-    expect(screen.queryByText('System health')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument();
   });
 
   it('shows the empty state (not a blank panel) when there is no health data', async () => {
@@ -465,7 +464,7 @@ describe('mqtt-status — lazy component wiring', () => {
 
     expect(screen.getByText('MQTT status')).toBeInTheDocument();
     expect(screen.getByText('Messages/sec')).toBeInTheDocument();
-    expect(screen.getByText('2.5')).toBeInTheDocument();
+    expect(screen.getByText('2.50')).toBeInTheDocument();
     expect(screen.getByText('Total messages')).toBeInTheDocument();
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('tcp://mqtt:1883')).toBeInTheDocument();

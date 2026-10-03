@@ -4,8 +4,9 @@ import { CalendarDays, Clock } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption, MetricValue } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { YearReview } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface Props {
   data: YearReview;
@@ -28,6 +29,7 @@ function to12Hour(rawHour: number | null | undefined): { hour12: number; isPM: b
 
 /** When and how the vehicle was driven across the year. */
 export function YearPatternsPanel({ data }: Props) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -46,7 +48,7 @@ export function YearPatternsPanel({ data }: Props) {
   ];
 
   const stats = [
-    { value: fmtNumber(data.avg_drives_per_week ?? 0, 1), unit: t('yearReview.drivesWeek', 'drives/week') },
+    { value: fmtNumber(data.avg_drives_per_week ?? 0), unit: t('yearReview.drivesWeek', 'drives/week') },
     { value: fmtInt(avgDistance), unit: t('yearReview.distancePerDrive', { unit: distanceUnit, defaultValue: '{{unit}}/drive avg' }) },
     { value: fmtInt(avgEfficiency), unit: `${efficiencyUnit} ${t('yearReview.avg', 'avg')}` },
   ];

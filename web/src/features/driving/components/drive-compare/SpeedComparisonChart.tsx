@@ -18,7 +18,7 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 import {
@@ -26,6 +26,7 @@ import {
   type NormalizedDriveProfile,
 } from '../../lib/driveCompare';
 import { CompareSectionBody, type CompareSectionState } from './CompareSectionBody';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SpeedComparisonChartProps {
   profileA: NormalizedDriveProfile | null;
@@ -34,6 +35,7 @@ interface SpeedComparisonChartProps {
 }
 
 export function SpeedComparisonChart({ profileA, profileB, state }: SpeedComparisonChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const speedA = profileA?.speed ?? [];
@@ -76,12 +78,12 @@ export function SpeedComparisonChart({ profileA, profileB, state }: SpeedCompari
         {
           key: 'a',
           label: driveAName,
-          format: (value) => typeof value === 'number' ? `${fmtNumber(value, 0)} ${unitPrefs.speed}` : '—',
+          format: (value) => typeof value === 'number' ? `${fmtNumber(value)} ${unitPrefs.speed}` : '—',
         },
         {
           key: 'b',
           label: driveBName,
-          format: (value) => typeof value === 'number' ? `${fmtNumber(value, 0)} ${unitPrefs.speed}` : '—',
+          format: (value) => typeof value === 'number' ? `${fmtNumber(value)} ${unitPrefs.speed}` : '—',
         },
       ]}
       className="h-full"
@@ -104,7 +106,7 @@ export function SpeedComparisonChart({ profileA, profileB, state }: SpeedCompari
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `${fmtNumber(value, 0)}%`}
+                  tickFormatter={(value) => `${fmtNumber(value)}%`}
                 />
                 <YAxis
                   tick={axisTick}
@@ -119,9 +121,9 @@ export function SpeedComparisonChart({ profileA, profileB, state }: SpeedCompari
                       labelFormatter={(value) => t(
                         'driveCompare.chart.progressValue',
                         '{{value}}% complete',
-                        { value: fmtNumber(value, 0) },
+                        { value: fmtNumber(value) },
                       )}
-                      valueFormatter={(value) => `${fmtNumber(value, 0)} ${unitPrefs.speed}`}
+                      valueFormatter={(value) => `${fmtNumber(value)} ${unitPrefs.speed}`}
                     />
                   }
                 />

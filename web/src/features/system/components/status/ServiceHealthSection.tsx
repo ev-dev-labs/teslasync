@@ -6,12 +6,14 @@ import { Grid } from '@/components/layout';
 import { Badge, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { formatDateTime } from '@/lib/dateFormat';
 import { getTelemetryStatus } from '@/api/devtools';
 import { AccordionSection } from './AccordionSection';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ServiceHealthSection() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -34,10 +36,10 @@ export function ServiceHealthSection() {
       render: (row) => <Badge variant={row.is_streaming ? 'success' : 'neutral'} size="sm" dot>{row.is_streaming ? t('systemStatus.serviceHealth.streaming', 'Streaming') : t('systemStatus.idle', 'Idle')}</Badge>,
     },
     { key: 'signal_count', filterValue: (row) => row.signal_count ?? null, align: 'right', groupStart: true, header: t('systemStatus.serviceHealth.signals', 'Signals'), sortable: true, render: (row) => fmtInt(row.signal_count) },
-    { key: 'signals_per_second', filterValue: (row) => row.signals_per_second ?? null, filterValueLabel: (_value, row) => fmtNumber(row.signals_per_second, 1), align: 'right', header: t('systemStatus.serviceHealth.signalsPerSec', 'Signals/s'), render: (row) => fmtNumber(row.signals_per_second, 1) },
-    { key: 'latency_ms', filterValue: (row) => row.latency_ms ?? null, filterValueLabel: (_value, row) => `${fmtNumber(row.latency_ms, 0)} ms`, align: 'right', header: t('systemStatus.latency', 'Latency'), render: (row) => `${fmtNumber(row.latency_ms, 0)} ms` },
+    { key: 'signals_per_second', filterValue: (row) => row.signals_per_second ?? null, filterValueLabel: (_value, row) => fmtNumber(row.signals_per_second), align: 'right', header: t('systemStatus.serviceHealth.signalsPerSec', 'Signals/s'), render: (row) => fmtNumber(row.signals_per_second) },
+    { key: 'latency_ms', filterValue: (row) => row.latency_ms ?? null, filterValueLabel: (_value, row) => `${fmtNumber(row.latency_ms)} ms`, align: 'right', header: t('systemStatus.latency', 'Latency'), render: (row) => `${fmtNumber(row.latency_ms)} ms` },
     { key: 'last_received', filterValue: (row) => row.last_received ?? null, filterValueLabel: (_value, row) => formatDateTime(row.last_received), header: t('systemStatus.serviceHealth.lastReceived', 'Last received'), render: (row) => formatDateTime(row.last_received) },
-  ], [t]);
+  ], [t, fmtInt, fmtNumber]);
 
   return (
     <AccordionSection

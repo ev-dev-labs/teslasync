@@ -93,7 +93,7 @@ export default function DriveComparePage() {
   const driveOptions = useMemo(
     () => drives.map((drive) => ({
       value: String(drive.id),
-      label: `${formatDateShort(drive.startTs)} · ${formatDistance(drive.distanceM, { precision: 1 })}`,
+      label: `${formatDateShort(drive.startTs)} · ${formatDistance(drive.distanceM)}`,
     })),
     [drives, formatDistance],
   );

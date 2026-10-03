@@ -210,7 +210,7 @@ describe('buildEnergyChartData', () => {
 });
 
 describe('EnergyStatsWidget — compact (1×N)', () => {
-  it('renders the total-kWh big number and the energy unit, with no title/chart/stats', () => {
+  it('retains its title beside the compact total-kWh metric without adding a chart or stat grid', () => {
     setup({ stats: makeQuery({ data: makeStats({ total_wh: 45_000 }) }) });
     renderWidget({ size: COMPACT });
 
@@ -218,7 +218,7 @@ describe('EnergyStatsWidget — compact (1×N)', () => {
     expect(screen.getByText('45')).toBeInTheDocument();
     expect(screen.getByText('kWh')).toBeInTheDocument();
     // Compact is title-less and stat-less.
-    expect(screen.queryByText('Energy stats')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Energy stats' })).toBeInTheDocument();
     expect(screen.queryByText('Total used')).not.toBeInTheDocument();
   });
 

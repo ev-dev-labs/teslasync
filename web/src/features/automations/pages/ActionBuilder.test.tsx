@@ -15,13 +15,21 @@
  * the English copy. No network is touched — the component is prop-driven.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { useState } from 'react';
 
 import { ActionBuilder, ACTION_TYPES } from './ActionBuilder';
 import type { AutomationActionStepInput } from '../components/stepInputTypes';
 import type { NotificationChannel } from '@/types/notifications';
+import { useSettings } from '@/hooks/useSettings';
+import { inputPreferences } from '@/test/inputPreferences';
+vi.mock('@/hooks/useSettings', () => ({ useSettings: vi.fn() }));
+beforeEach(() => {
+  vi.mocked(useSettings).mockReturnValue({
+    settings: inputPreferences(),
+  } as ReturnType<typeof useSettings>);
+});
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -284,7 +292,7 @@ describe('ActionFields — command', () => {
   it('edits a charge limit with a labeled number field and keeps the JSON editor optional', () => {
     const { onChange } = renderBuilder([command('set_charge_limit', { percent: 80 })]);
     expect(screen.queryByLabelText(/Params \(JSON/i)).not.toBeInTheDocument();
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Charge limit (%)' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Charge limit' }), {
       target: { value: '90' },
     });
     expect(lastAction(onChange).command_params).toEqual({ percent: 90 });

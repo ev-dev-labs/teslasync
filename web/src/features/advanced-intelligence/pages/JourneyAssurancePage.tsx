@@ -12,10 +12,11 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { toLocalDatetimeStr } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { SI } from '@/lib/unitConversion';
 import type { JourneyAssuranceRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type JourneyForm = Omit<JourneyAssuranceRequest, 'vehicle_id' | 'confirmed' | 'departure_at'> & {
   departure_at: string;
@@ -29,6 +30,7 @@ function defaultDeparture(): string {
 }
 
 export default function JourneyAssurancePage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -176,18 +178,18 @@ export default function JourneyAssurancePage() {
             <StatCard
               label={t('advancedIntelligence.journey.readiness', 'Readiness score')}
               value={result?.readiness_score_pct != null
-                ? `${fmtNumber(result.readiness_score_pct, 1)}%` : null}
+                ? `${fmtNumber(result.readiness_score_pct)}%` : null}
               icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
             />
             <StatCard
               label={t('advancedIntelligence.journey.arrivalLow', 'Arrival SoC low')}
               value={result?.arrival_soc_low_pct != null
-                ? `${fmtNumber(result.arrival_soc_low_pct, 1)}%` : null}
+                ? `${fmtNumber(result.arrival_soc_low_pct)}%` : null}
             />
             <StatCard
               label={t('advancedIntelligence.journey.arrivalHigh', 'Arrival SoC high')}
               value={result?.arrival_soc_high_pct != null
-                ? `${fmtNumber(result.arrival_soc_high_pct, 1)}%` : null}
+                ? `${fmtNumber(result.arrival_soc_high_pct)}%` : null}
             />
             <StatCard
               label={t('advancedIntelligence.journey.energy', 'Energy required')}
@@ -212,7 +214,7 @@ export default function JourneyAssurancePage() {
                 </div>
                 <Text as="p" variant="bodySm" className="mt-2">{factor.explanation}</Text>
                 <Text as="p" variant="metricValue" className="mt-3">
-                  {factor.score_pct != null ? `${fmtNumber(factor.score_pct, 1)}%` : '—'}
+                  {factor.score_pct != null ? `${fmtNumber(factor.score_pct)}%` : '—'}
                 </Text>
               </article>
             ))}

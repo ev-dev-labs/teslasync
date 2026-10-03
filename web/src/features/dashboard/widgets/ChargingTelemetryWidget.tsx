@@ -6,17 +6,19 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { deriveDataState, knownNumber } from '@/api/dataState';
 import { useChargingTelemetryLatest, useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { convertPowerFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MAX_POWER_HISTORY = 30;
 
 export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const { data: vehicles } = useVehicles();
@@ -61,8 +63,8 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
   // render boundary — rendering the raw watt magnitude with a "kW" suffix was a
   // 1000× overstatement (an 11 kW charger showed as "11,000.0 kW").
   const powerDisplay = useMemo(
-    () => power == null ? '—' : fmtNumber(convertPowerFromSI(power, unitPrefs.power), 1),
-    [power, unitPrefs.power],
+    () => power == null ? '—' : fmtNumber(convertPowerFromSI(power, unitPrefs.power)),
+    [power, unitPrefs.power, fmtNumber],
   );
 
   const handleRefresh = useCallback(() => {
@@ -94,13 +96,13 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
     return [
       {
         label: t('widget.chargingTelemetry.voltage', 'Voltage'),
-        value: voltage == null ? null : fmtNumber(voltage, 0),
+        value: voltage == null ? null : fmtNumber(voltage),
         unit: 'V',
         icon: <Zap className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.chargingTelemetry.current', 'Current'),
-        value: current == null ? null : fmtNumber(current, 0),
+        value: current == null ? null : fmtNumber(current),
         unit: 'A',
         icon: <Gauge className="h-3.5 w-3.5" />,
       },
@@ -117,7 +119,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
         icon: <Gauge className="h-3.5 w-3.5" />,
       },
     ];
-  }, [isCharging, voltage, current, power, powerDisplay, unitPrefs.power, phases, t]);
+  }, [isCharging, voltage, current, power, powerDisplay, unitPrefs.power, phases, t, fmtNumber, fmtInt]);
 
   // Wide-only extra stats
   const wideStats = useMemo((): StatGridItem[] => {
@@ -125,12 +127,12 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
     const items: StatGridItem[] = [];
       items.push({
         label: t('widget.chargingTelemetry.efficiency', 'Efficiency'),
-        value: efficiency == null ? null : fmtNumber(efficiency, 0),
+        value: efficiency == null ? null : fmtNumber(efficiency),
         unit: '%',
         icon: <Gauge className="h-3.5 w-3.5" />,
       });
     return items;
-  }, [isCharging, isWide, efficiency, t]);
+  }, [isCharging, isWide, efficiency, t, fmtNumber]);
 
   const allStats = useMemo(
     () => (isWide ? [...coreStats, ...wideStats] : coreStats),
@@ -155,7 +157,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
             <BatteryCharging className="h-5 w-5 text-emerald-300" />
             <WidgetBigNumber value={power == null ? null : `${powerDisplay} ${unitPrefs.power}`} align="center" size="secondary" animated={false} />
             <span className={dashboardTokens.metricLabel}>
-              {voltage == null ? '—' : `${fmtNumber(voltage, 0)}V`} · {current == null ? '—' : `${fmtNumber(current, 0)}A`}
+              {voltage == null ? '—' : `${fmtNumber(voltage)}V`} · {current == null ? '—' : `${fmtNumber(current)}A`}
             </span>
           </div>
         ) : (

@@ -33,7 +33,7 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const scrollTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const scrollTimerRef = useRef<number | null>(null);
   const listboxId = useId();
 
   const index = useMemo(() => getSettingsIndex(t), [t]);

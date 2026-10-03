@@ -74,8 +74,8 @@ describe('TrueCostFixedLedger', () => {
   it('filters the loaded ledger without changing accounting totals or available categories', () => {
     render(<TrueCostFixedLedger vehicleId={3} totalKm={10000} totalChargingCost={700} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Category' }));
-    const filter = screen.getByRole('dialog', { name: 'Filter Category' });
+    fireEvent.click(screen.getByRole('button', { name: 'Category filter' }));
+    const filter = screen.getByRole('dialog', { name: 'Category filter' });
     fireEvent.click(within(filter).getByRole('checkbox', { name: 'insurance' }));
     fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
 
@@ -84,8 +84,8 @@ describe('TrueCostFixedLedger', () => {
     expect(within(table).getByText('winter set')).toBeInTheDocument();
     expect(screen.getByText('All-in: $2000.00 ($0.20/km)')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Category' }));
-    const reopened = screen.getByRole('dialog', { name: 'Filter Category' });
+    fireEvent.click(screen.getByRole('button', { name: 'Category filter' }));
+    const reopened = screen.getByRole('dialog', { name: 'Category filter' });
     expect(within(reopened).getByRole('checkbox', { name: 'insurance' })).not.toBeChecked();
     expect(within(reopened).getByRole('checkbox', { name: 'tires' })).toBeChecked();
     fireEvent.click(within(reopened).getByRole('button', { name: 'Clear' }));
@@ -104,7 +104,7 @@ describe('TrueCostFixedLedger', () => {
     mockAdd.mockReturnValue({ mutate, isPending: false, isError: false, error: null });
     render(<TrueCostFixedLedger vehicleId={3} totalKm={10000} totalChargingCost={700} />);
     expect(screen.getByText('Record cost').closest('button')).toHaveProperty('disabled', true);
-    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '120' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Amount' }), { target: { value: '120' } });
     fireEvent.click(screen.getByText('Record cost'));
     expect(mutate).toHaveBeenCalledTimes(1);
     expect(mutate.mock.calls[0][0]).toMatchObject({ vehicle_id: 3, amount: 120 });

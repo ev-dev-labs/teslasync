@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricBar, MetricCard } from '@/components/data-display';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type {
   BatteryPassportAnalysis,
   BatteryPassportDistributionBin,
 } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportTrendDistributionProps {
   analysis: BatteryPassportAnalysis;
@@ -53,6 +54,7 @@ export function BatteryPassportTrendDistribution({
   analysis,
   state,
 }: BatteryPassportTrendDistributionProps) {
+  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const diagnostics = analysis.trend.diagnostics;
 
@@ -90,7 +92,7 @@ export function BatteryPassportTrendDistribution({
                         'batteryPassport.distribution.binValue',
                         '{{share}} · {{count}} points',
                         {
-                          share: fmtPercent(bin.share * 100, 1),
+                          share: fmtPercent(bin.share * 100),
                           count: bin.count,
                         },
                       )
@@ -105,7 +107,7 @@ export function BatteryPassportTrendDistribution({
                   'Observed minimum',
                 )}
                 value={diagnostics.minimumSohPct != null
-                  ? fmtPercent(diagnostics.minimumSohPct, 1)
+                  ? fmtPercent(diagnostics.minimumSohPct)
                   : '—'}
                 subtitle={t(
                   'batteryPassport.distribution.includedOnly',
@@ -120,7 +122,7 @@ export function BatteryPassportTrendDistribution({
                   'Observed maximum',
                 )}
                 value={diagnostics.maximumSohPct != null
-                  ? fmtPercent(diagnostics.maximumSohPct, 1)
+                  ? fmtPercent(diagnostics.maximumSohPct)
                   : '—'}
                 subtitle={t(
                   'batteryPassport.distribution.includedOnly',
@@ -141,7 +143,6 @@ export function BatteryPassportTrendDistribution({
                       {
                         value: fmtNumber(
                           diagnostics.rangePctPoints,
-                          2,
                         ),
                       },
                     )
@@ -166,7 +167,6 @@ export function BatteryPassportTrendDistribution({
                         {
                           value: fmtNumber(
                             diagnostics.interquartileRangePctPoints,
-                            2,
                           ),
                         },
                       )

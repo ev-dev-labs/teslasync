@@ -16,13 +16,14 @@ import {
 } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   useTcoLedger,
   useAddTcoLedgerEntry,
   useDeleteTcoLedgerEntry,
 } from '@/api/hooks/useAnalytics';
 import type { TcoLedgerCategory, TcoLedgerEntry } from '@/types/analytics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TrueCostFixedLedgerProps {
   vehicleId?: number;
@@ -47,6 +48,7 @@ const CATEGORIES: TcoLedgerCategory[] = [
  * Same GlassPanel + DataTable idiom as the Smart Charge plan history.
  */
 export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: TrueCostFixedLedgerProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -233,7 +235,7 @@ export function TrueCostFixedLedger({ vehicleId, totalKm, totalChargingCost }: T
             {t('tco.ledger.hint', '{{count}} entries · {{total}} fixed · {{km}} km lifetime', {
               count: totals?.entries ?? 0,
               total: formatCurrency(totals?.grand_total ?? 0),
-              km: fmtNumber(totalKm, 0),
+              km: fmtNumber(totalKm),
             })}
           </Text>
         </div>

@@ -4,10 +4,11 @@ import { useUnits } from '@/hooks/useUnits';
 import { Car, Activity, Zap, Fuel, Leaf, MapPin } from 'lucide-react';
 import { SectionTitle, GlassPanel } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { HighlightCard } from './HighlightCard';
 import { trendFor } from './helpers';
 import type { DigestMetrics, FunFact } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SummaryHeroCardsProps {
   metrics: DigestMetrics;
@@ -28,6 +29,7 @@ export function SummaryHeroCards({
   error,
   onRetry,
 }: SummaryHeroCardsProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { formatDistance, formatEnergy } = useUnits();
@@ -56,7 +58,7 @@ export function SummaryHeroCards({
           <HighlightCard
             icon={<Car className="h-5 w-5" />}
             label={t('analytics.weeklyDigest.totalDistance', 'Total distance')}
-            value={formatDistance(metrics.totalDistanceM ?? 0, { precision: 1 })}
+            value={formatDistance(metrics.totalDistanceM ?? 0)}
             change={trendFor(metrics.totalDistanceM ?? 0, metrics.prevDistanceM ?? 0)}
             color="cyan"
           />
@@ -70,21 +72,21 @@ export function SummaryHeroCards({
           <HighlightCard
             icon={<Zap className="h-5 w-5" />}
             label={t('analytics.weeklyDigest.energyUsed', 'Energy used')}
-            value={formatEnergy(metrics.energyUsedWh ?? 0, { precision: 1 })}
+            value={formatEnergy(metrics.energyUsedWh ?? 0)}
             change={trendFor(metrics.energyUsedWh ?? 0, metrics.prevEnergyWh ?? 0, true)}
             color="purple"
           />
           <HighlightCard
             icon={<Fuel className="h-5 w-5" />}
             label={t('analytics.weeklyDigest.chargingCost', 'Charging cost')}
-            value={formatCurrency(metrics.chargingCost ?? 0, 2)}
+            value={formatCurrency(metrics.chargingCost ?? 0)}
             change={trendFor(metrics.chargingCost ?? 0, metrics.prevChargingCost ?? 0, true)}
             color="amber"
           />
           <HighlightCard
             icon={<Leaf className="h-5 w-5" />}
             label={t('analytics.weeklyDigest.co2Saved', 'CO₂ saved')}
-            value={`${fmtNumber(metrics.co2Saved ?? 0, 1)} kg`}
+            value={`${fmtNumber(metrics.co2Saved ?? 0)} kg`}
             change={trendFor(metrics.co2Saved ?? 0, metrics.prevCo2 ?? 0)}
             color="green"
           />

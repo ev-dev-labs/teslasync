@@ -8,7 +8,7 @@ import {
   type MetricSemantic,
   type MetricUnit,
 } from '@/lib/metricSemantics';
-import { fmtNumber } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -33,7 +33,7 @@ export interface DeltaProps {
   /** Force the loading skeleton. */
   loading?: boolean;
   className?: string;
-  /** Override the default precision (defaults to 1 for percent, settings precision for absolute). */
+  /** Override settings precision (count absolutes default to integers). */
   precision?: number;
 }
 
@@ -84,8 +84,7 @@ function useUnitLabels(unit: MetricUnit | undefined): ResolvedUnitLabels {
   }
 }
 
-function formatAbsolute(value: number, labels: ResolvedUnitLabels, precision: number | undefined): string {
-  const num = fmtNumber(value, precision);
+function formatAbsolute(num: string, labels: ResolvedUnitLabels): string {
   if (labels.prefix && labels.suffix) return `${labels.prefix}${num} ${labels.suffix}`;
   if (labels.prefix) return `${labels.prefix}${num}`;
   if (labels.suffix === '%') return `${num}%`;
@@ -130,6 +129,7 @@ export function Delta({
   className,
   precision,
 }: DeltaProps) {
+  const { fmtNumber, fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const semantic = resolveSemantic(metric);
   const labels = useUnitLabels(semantic.unit);
@@ -176,8 +176,10 @@ export function Delta({
   const absDelta = Math.abs(signedDelta);
   const absPct = signedPct == null ? null : Math.abs(signedPct);
 
-  const absText = formatAbsolute(absDelta, labels, precision);
-  const pctText = absPct == null ? null : `${fmtNumber(absPct, precision ?? 1)}%`;
+  const formatReading = (value: number) =>
+    semantic.unit === 'count' && precision == null ? fmtInt(value) : fmtNumber(value, precision);
+  const absText = formatAbsolute(formatReading(absDelta), labels);
+  const pctText = absPct == null ? null : fmtPercent(absPct, precision);
 
   let valueNode: ReactNode;
   if (display === 'absolute') {
@@ -199,8 +201,8 @@ export function Delta({
     <span
       className={wrapperClass}
       title={t('delta.title', '{{current}} vs {{previous}}', {
-        current: fmtNumber(current, precision ?? 2),
-        previous: fmtNumber(previous, precision ?? 2),
+        current: formatReading(current),
+        previous: formatReading(previous),
       })}
     >
       {!hideArrow ? <Arrow className={cn(iconClass, 'shrink-0')} aria-hidden="true" /> : null}

@@ -36,7 +36,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { getErrorMessage } from '@/lib/errorMessage';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/SignalQueryControls';
 import type { SignalHistoryResp } from '@/api/types';
 
@@ -49,6 +49,7 @@ import {
   AISignalExplorerNlFilter,
   type SignalFilterDraft,
 } from '@/components/ai/AISignalExplorerNlFilter';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MAX_SIGNALS = 5;
 const DEFAULT_PER_PAGE = 25;
@@ -61,6 +62,7 @@ const PER_PAGE_OPTIONS = [
 ];
 
 export default function SignalExplorerPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('signalExplorer.title', 'Signal explorer'));
   const { preferences } = useProductPreferences();

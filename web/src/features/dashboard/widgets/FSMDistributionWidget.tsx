@@ -7,9 +7,10 @@ import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── State colors for donut chart ──────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
@@ -63,6 +64,7 @@ function DonutTooltip({
   payload?: Array<{ payload: DonutSegment }>;
   t: (k: string, d: string) => string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   if (!active || !payload?.[0]) return null;
   const seg = payload[0].payload;
   return (
@@ -77,7 +79,7 @@ function DonutTooltip({
         </span>
       </div>
       <div className="mt-1 text-[var(--text-secondary)]">
-        {fmtDuration(seg.value, t)} · {fmtNumber(seg.pct, 1)}%
+        {fmtDuration(seg.value, t)} · {fmtNumber(seg.pct)}%
       </div>
     </div>
   );
@@ -115,6 +117,7 @@ function TransitionRow({
 
 /* ── Main widget ───────────────────────────────────────────────── */
 export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -249,7 +252,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               {
                 key: 'pct',
                 label: t('widget.fsmDistribution.share', 'Share'),
-                format: (value) => `${fmtNumber(Number(value ?? 0), 1)}%`,
+                format: (value) => `${fmtNumber(Number(value ?? 0))}%`,
               },
             ]}
             className="flex-1 min-h-0"

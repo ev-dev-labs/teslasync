@@ -16,7 +16,7 @@ import { Gauge } from 'lucide-react';
 import { GlassPanel, PanelTitle, Caption, Text, Badge, DataTable, type Column } from '@/components/ui';
 import { SeverityBadge } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import {
   coverageTrust,
   formatCoveragePct,
@@ -27,6 +27,7 @@ import {
   type SectionState,
 } from './helpers';
 import type { DataQualityFieldScore } from '@/types/admin-operator-confidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FieldQualityTableProps extends SectionState {
   fields: readonly DataQualityFieldScore[];
@@ -42,6 +43,7 @@ const TRUST_VARIANT: Record<CoverageTrust, 'success' | 'warning' | 'danger' | 'n
 const NO_VALUE = '—';
 
 export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQualityTableProps) {
+  const { fmtInt, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
 
   const rows = useMemo(() => sortFieldsWorstFirst(fields), [fields]);
@@ -83,7 +85,7 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
           <div className="flex items-center gap-2">
             <SeverityBadge severity={r.severity} size="sm" />
             <Text className="tabular-nums" color="secondary">
-              {fmtNumber(r.composite_score, 0)}
+              {fmtNumber(r.composite_score)}
             </Text>
           </div>
         ),
@@ -169,7 +171,7 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
         },
       },
     ],
-    [t, trustLabel],
+    [t, trustLabel, fmtInt, fmtNumber, displayPrecision, displayLocale],
   );
 
   return (

@@ -27,7 +27,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlBatch } from '@/hooks/useUrlState';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { neonColorMap } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -38,6 +38,7 @@ import {
 } from '../components/SoftwareUpdateCadenceChart';
 import { SoftwareUpdateStatusBreakdown } from '../components/SoftwareUpdateStatusBreakdown';
 import { getUpdateStatus } from '../components/softwareUpdateStatus';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,7 @@ function monthLabel(key: string): string {
 // ─── Page component ──────────────────────────────────────────────────────────
 
 export default function SoftwareUpdatesPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('softwareUpdates.title', 'Software updates'));
 
@@ -135,7 +137,7 @@ export default function SoftwareUpdatesPage() {
     return t('softwareUpdates.kpi.cadenceDays', '{{days}}d', {
       days: fmtInt(spanDays / (ms.length - 1)),
     });
-  }, [installedUpdates, t]);
+  }, [installedUpdates, t, fmtInt]);
 
   // ── Cadence chart (updates per calendar month) ──
   const cadence = useMemo<CadencePoint[]>(() => {

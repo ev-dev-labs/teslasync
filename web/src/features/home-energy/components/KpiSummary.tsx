@@ -5,8 +5,9 @@ import { Grid } from '@/components/layout';
 import { MetricCard } from '@/components/data-display';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import type { OrchestrationResult } from '../lib/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface KpiSummaryProps {
   result: OrchestrationResult;
@@ -14,6 +15,7 @@ interface KpiSummaryProps {
 
 /** Top-of-page KPI band: overall recommendation quality plus the headline physical/financial outcomes. */
 export function KpiSummary({ result }: KpiSummaryProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy, formatPower } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -44,7 +46,7 @@ export function KpiSummary({ result }: KpiSummaryProps) {
         />
         <MetricCard
           label={t('homeEnergy.kpi.selfConsumption', 'Self-consumption')}
-          value={fmtPercent(result.scores.selfConsumption, 0)}
+          value={fmtPercent(result.scores.selfConsumption)}
           subtitle={t('homeEnergy.kpi.selfConsumptionHint', 'solar used on-site')}
           icon={<BatteryCharging className="h-4 w-4" />}
           color="purple"

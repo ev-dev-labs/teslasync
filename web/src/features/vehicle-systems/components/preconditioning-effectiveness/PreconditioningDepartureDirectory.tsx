@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningDepartureCard } from './PreconditioningDepartureCard';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
@@ -11,6 +11,7 @@ import type {
   PreconditioningQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningDepartureDirectoryProps {
   summary: PreconditioningSummary;
@@ -27,6 +28,7 @@ export function PreconditioningDepartureDirectory({
   formatDuration,
   formatDelta,
 }: PreconditioningDepartureDirectoryProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.directory;
 

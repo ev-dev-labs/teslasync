@@ -54,7 +54,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
         id: entry.id,
         label: entry.site_location_name ?? '—',
         value: wh,
-        formattedValue: formatEnergy(wh, { precision: 1 }),
+        formattedValue: formatEnergy(wh),
         badge: cost > 0
           ? { text: formatCurrency(cost), variant: 'neutral' as const }
           : undefined,
@@ -126,7 +126,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
               {t('widget.superchargerHistory.totals', '30-day totals')}
             </span>
             <div className="flex items-center gap-3 text-sm font-semibold tabular-nums text-[var(--text-primary)]">
-              <span>{formatEnergy(totalWh, { precision: 1 })}</span>
+              <span>{formatEnergy(totalWh)}</span>
               <span>{formatCurrency(totalSpend)}</span>
             </div>
           </div>

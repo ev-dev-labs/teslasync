@@ -15,9 +15,10 @@ import { FadeIn } from '@/components/motion';
 import { Table } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TemperatureSectionProps {
   chartData: ChartDataPoint[];
@@ -33,6 +34,7 @@ function meanOrNull(values: readonly number[]): number | null {
 }
 
 export function TemperatureSection({ chartData, stats }: TemperatureSectionProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;

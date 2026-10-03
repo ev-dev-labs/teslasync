@@ -9,6 +9,8 @@ import { cn } from '@/lib/cn';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 type BackupStatus = 'completed' | 'failed' | 'running' | 'queued';
 
@@ -54,7 +56,7 @@ export function fmtBytes(bytes: number): string {
     Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1),
   );
   const val = bytes / Math.pow(1024, i);
-  return `${val < 10 ? val.toFixed(1) : Math.round(val)} ${units[i]}`;
+  return `${i === 0 ? bytes : fmtNumber(val)} ${units[i]}`;
 }
 
 /** Parse an ISO timestamp to epoch ms, coercing nullish/invalid input to 0 so sorts stay stable. */
@@ -80,6 +82,7 @@ export function fmtRelativeTime(iso: string | null, t: TranslateFn): string {
 }
 
 export default function BackupMonitorWidget({ size }: WidgetProps) {
+  useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDateTime: fmtShortTime } = useDateFormat();
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } =

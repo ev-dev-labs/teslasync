@@ -10,7 +10,8 @@ import {
   ResponsiveContainer, XAxis, YAxis, Tooltip, chartGrid, axisTick, chartAnimationProps,
 } from '@/components/charts'
 import { useFormatting } from '@/hooks/useFormatting'
-import { fmtInt } from '@/lib/numberFormat'
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const DAY_MS = 86_400_000
 type Bucket = 'day' | 'week'
@@ -40,6 +41,7 @@ function categoryCost(point: TeslaUsagePoint | TeslaUsageCycle, category: 'signa
 }
 
 export function TeslaApiUsageHistory() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatCurrency } = useFormatting()
   const [range, setRange] = useState<Range>(initialRange)
@@ -106,16 +108,16 @@ export function TeslaApiUsageHistory() {
           ? isLoading && !invalid ? t('teslaUsage.historyLoading', 'Loading selected usage…') : stateMessage
           : undefined}
         bands={showTotals && totals ? [
-          { label: t('teslaUsage.selectedEstimate', 'Selected range estimate'), value: formatCurrency(totals.estimated_usd, 4),
+          { label: t('teslaUsage.selectedEstimate', 'Selected range estimate'), value: formatCurrency(totals.estimated_usd),
             sub: t('teslaUsage.observedBuckets', '{{count}} observed buckets', { count: points.length }) },
-          { label: labels.signals, value: fmtInt(totals.signals), sub: formatCurrency(categoryCost(totals, 'signals'), 4) },
+          { label: labels.signals, value: fmtInt(totals.signals), sub: formatCurrency(categoryCost(totals, 'signals')) },
           { label: t('teslaUsage.historyRequests', 'Billable API requests'),
             value: fmtInt(totals.commands + totals.data_requests + totals.wakes),
             sub: t('teslaUsage.notInvoice', 'Local estimate, not an invoice') },
         ] : undefined}
         details={showTotals && totals ? (['signals', 'commands', 'data_requests', 'wakes'] as const).map(key => ({
           label: labels[key],
-          value: `${fmtInt(totals[key])} · ${formatCurrency(categoryCost(totals, key), 4)}`,
+          value: `${fmtInt(totals[key])} · ${formatCurrency(categoryCost(totals, key))}`,
         })) : undefined}
       />
       </GlassPanel>
@@ -132,7 +134,7 @@ export function TeslaApiUsageHistory() {
         dataColumns={[
           { key: 'category', label: t('teslaUsage.category', 'Billable category') },
           { key: 'usd', label: t('teslaUsage.estimatedUSD', 'Estimated USD'),
-            format: (value: unknown) => formatCurrency(typeof value === 'number' ? value : 0, 4) },
+            format: (value: unknown) => formatCurrency(typeof value === 'number' ? value : 0) },
         ]}
         metadata={{ rangeLabel: `${range.start} – ${range.end} UTC`, sourceLabel: t('teslaUsage.estimated', 'Estimated'), unitLabel: 'USD' }}
         exportable
@@ -145,7 +147,7 @@ export function TeslaApiUsageHistory() {
               cx="50%" cy="50%" innerRadius="45%" outerRadius="72%" isAnimationActive={false}>
               {distribution.filter(row => row.usd > 0).map(row => <Cell key={row.category} fill={row.color} />)}
             </Pie>
-            <Tooltip content={<ChartTooltip valueFormatter={value => formatCurrency(Number(value), 4)} />} />
+            <Tooltip content={<ChartTooltip valueFormatter={value => formatCurrency(Number(value))} />} />
             <ChartLegend />
           </PieChart>
         </ResponsiveContainer>
@@ -165,7 +167,7 @@ export function TeslaApiUsageHistory() {
         dataColumns={[
           { key: 'bucket_start', label: t('teslaUsage.bucketStart', 'UTC bucket start') },
           ...(['signals', 'commands', 'data_requests', 'wakes'] as const).map(key => ({
-            key, label: labels[key], format: (value: unknown) => formatCurrency(typeof value === 'number' ? value : 0, 4),
+            key, label: labels[key], format: (value: unknown) => formatCurrency(typeof value === 'number' ? value : 0),
           })),
         ]}
         exportable
@@ -177,8 +179,8 @@ export function TeslaApiUsageHistory() {
             <BarChart data={chartRows} margin={{ top: 12, right: 8, bottom: 4, left: 0 }}>
               {chartGrid}
               <XAxis dataKey="bucket_start" tick={axisTick} tickFormatter={value => String(value).slice(5, 10)} />
-              <YAxis tick={axisTick} width={62} tickFormatter={(value: number) => formatCurrency(value, 2)} />
-              <Tooltip content={<ChartTooltip timezone="UTC" valueFormatter={value => formatCurrency(Number(value), 4)} />} />
+              <YAxis tick={axisTick} width={62} tickFormatter={(value: number) => formatCurrency(value)} />
+              <Tooltip content={<ChartTooltip timezone="UTC" valueFormatter={value => formatCurrency(Number(value))} />} />
               <ChartLegend />
               {(['signals', 'commands', 'data_requests', 'wakes'] as const).map((key, index) => (
                 <Bar

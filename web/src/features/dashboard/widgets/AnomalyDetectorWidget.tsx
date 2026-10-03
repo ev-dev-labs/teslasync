@@ -6,10 +6,11 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useAnomalies } from '@/api/hooks/useAnomalies';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SEVERITY_ORDER: Record<string, number> = { critical: 0, warning: 1, info: 2 };
 
@@ -79,6 +80,7 @@ export function maxSeverity(anomalies: { severity: string }[]): string {
 }
 
 export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -98,7 +100,7 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
         .map((entry, index) => ({
           id: `${entry.signal ?? 'signal'}-${entry.detected_at ?? index}`,
           icon: severityIcon(entry.severity),
-          title: `${entry.signal ?? '—'} · z=${fmtNumber(entry.z_score ?? 0, 1)} · ${formatRelativeTime(entry.detected_at ?? '', t)}`,
+          title: `${entry.signal ?? '—'} · z=${fmtNumber(entry.z_score ?? 0)} · ${formatRelativeTime(entry.detected_at ?? '', t)}`,
           description: entry.message ?? '—',
           impact: SEVERITY_IMPACT[entry.severity] ?? ('low' as const),
           impactLabel: t(
@@ -106,7 +108,7 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
             entry.severity ?? '—',
           ),
         })),
-    [anomalies, t],
+    [anomalies, t, fmtNumber],
   );
 
   const handleRefresh = useCallback(() => {

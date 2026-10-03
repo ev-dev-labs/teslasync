@@ -12,9 +12,10 @@ import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { Table, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { DriveDetail } from '@/types/driving';
 import type { ChartDataPoint } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DriveOverviewChartProps {
   drive: DriveDetail;
@@ -154,6 +155,7 @@ function summarize(vals: (number | null)[]): SeriesStat | null {
 }
 
 function DriveStatsLegend({ chartData }: { chartData: ChartDataPoint[] }) {
+  const { fmtNumber, fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
@@ -176,7 +178,7 @@ function DriveStatsLegend({ chartData }: { chartData: ChartDataPoint[] }) {
     if (socS) out.push({ color: '#84cc16', label: t('driveDetail.soc', 'SOC'), mean: fmtPercent(socS.mean), max: fmtPercent(socS.max), min: fmtPercent(socS.min) });
     if (usableSocS) out.push({ color: '#22d3ee', label: t('driveDetail.usableSoc', 'Usable SOC'), mean: fmtPercent(usableSocS.mean), max: fmtPercent(usableSocS.max), min: fmtPercent(usableSocS.min) });
     return out;
-  }, [chartData, t, speedUnit, distanceUnit]);
+  }, [chartData, t, speedUnit, distanceUnit, fmtNumber, fmtInt, fmtPercent]);
 
   const meanLabel = t('driveDetail.stat.mean', 'Mean');
   const maxLabel = t('driveDetail.stat.max', 'Max');

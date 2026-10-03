@@ -12,12 +12,13 @@ import {
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import type {
   PreconditioningQueryState,
   PreconditioningSourceQueryState,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningSourceCoverageProps {
   summary: PreconditioningSummary;
@@ -51,6 +52,7 @@ export function PreconditioningSourceCoverage({
   formatDuration,
   locale,
 }: PreconditioningSourceCoverageProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const climateReady = sourceReady(state.climate);
   const drivesReady = sourceReady(state.drives);
@@ -132,10 +134,10 @@ export function PreconditioningSourceCoverage({
                     ? formatDateTime(new Date(summary.coverage.climateLatestMs), { locale })
                     : '—',
                   span: climateReady
-                    ? formatDuration(summary.coverage.climateSpanS, { precision: 2 })
+                    ? formatDuration(summary.coverage.climateSpanS)
                     : '—',
                   gap: climateReady
-                    ? formatDuration(summary.coverage.climateMedianGapS, { precision: 2 })
+                    ? formatDuration(summary.coverage.climateMedianGapS)
                     : '—',
                 },
               )}
@@ -158,7 +160,7 @@ export function PreconditioningSourceCoverage({
               <SourceMetric label={t('preconditioningEffectiveness.coverage.returned', 'Returned rows')} value={drivesReady ? fmtInt(summary.driveRows.returnedRows) : '—'} />
               <SourceMetric label={t('preconditioningEffectiveness.coverage.validDrives', 'Unique valid drives')} value={drivesReady ? fmtInt(summary.driveRows.uniqueValidDrives) : '—'} />
               <SourceMetric label={t('preconditioningEffectiveness.coverage.overlap', 'Windows overlapping coverage')} value={climateReady && drivesReady ? fmtInt(summary.coverage.overlappingDriveWindows) : '—'} />
-              <SourceMetric label={t('preconditioningEffectiveness.coverage.driveSpan', 'Drive span')} value={drivesReady ? formatDuration(summary.coverage.driveSpanS, { precision: 2 }) : '—'} />
+              <SourceMetric label={t('preconditioningEffectiveness.coverage.driveSpan', 'Drive span')} value={drivesReady ? formatDuration(summary.coverage.driveSpanS) : '—'} />
             </div>
             <Text as="p" variant="caption" className="mt-4">
               {t(

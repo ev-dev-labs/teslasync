@@ -67,7 +67,7 @@ export function buildInsights(
       icon: <CheckCircle className="h-4 w-4" aria-hidden="true" />,
       title: t('battery.insight.excellentTitle', 'Excellent Health'),
       description: t('battery.insight.excellentDesc', {
-        soh: fmtNumber(health.current_soh, 0),
+        soh: fmtNumber(health.current_soh),
         defaultValue: 'Battery health is {{soh}}/100 — performing above average.',
       }),
       status: 'good',
@@ -77,7 +77,7 @@ export function buildInsights(
       icon: <Info className="h-4 w-4" aria-hidden="true" />,
       title: t('battery.insight.goodTitle', 'Good Health'),
       description: t('battery.insight.goodDesc', {
-        soh: fmtNumber(health.current_soh, 0),
+        soh: fmtNumber(health.current_soh),
         defaultValue: 'Battery health is {{soh}}/100 — normal degradation for age.',
       }),
       status: 'warning',
@@ -87,7 +87,7 @@ export function buildInsights(
       icon: <AlertTriangle className="h-4 w-4" aria-hidden="true" />,
       title: t('battery.insight.concernTitle', 'Health Concern'),
       description: t('battery.insight.concernDesc', {
-        soh: fmtNumber(health.current_soh, 0),
+        soh: fmtNumber(health.current_soh),
         defaultValue: 'Battery health dropped to {{soh}}/100 — consider service check.',
       }),
       status: 'critical',
@@ -149,7 +149,7 @@ export function buildInsights(
       icon: <Target className="h-4 w-4" aria-hidden="true" />,
       title: t('battery.insight.lowDegTitle', 'Low Degradation Rate'),
       description: t('battery.insight.lowDegDesc', {
-        rate: fmtNumber(health.degradation_rate_pct_per_year, 1),
+        rate: fmtNumber(health.degradation_rate_pct_per_year),
         defaultValue: '{{rate}}% per year — well below industry average of 3–5%.',
       }),
       status: 'good',

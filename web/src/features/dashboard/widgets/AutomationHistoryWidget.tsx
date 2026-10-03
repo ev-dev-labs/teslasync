@@ -5,13 +5,14 @@ import { Badge } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useAutomationHistory } from '@/api/hooks/useAutomations';
-import { formatDurationMs } from '@/lib/dateFormat';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import type { AutomationHistoryStatus } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ── Status → visual mapping ──────────────────────────────────────────
 
@@ -46,9 +47,10 @@ function CompactView({
   lastRunTime: string | null;
   t: (key: string, fallback: string) => string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
-      <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(successRate, 1)}%</span>
+      <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(successRate)}%</span>
       <span className="text-2xs text-[var(--text-muted)]">{t('widget.successRate', 'Success rate')}</span>
       {lastRunTime && (
         <TimeStamp value={lastRunTime} className="text-xs text-[var(--text-secondary)]" />
@@ -60,6 +62,8 @@ function CompactView({
 // ── Main widget ──────────────────────────────────────────────────────
 
 export default function AutomationHistoryWidget({ size }: WidgetProps) {
+  const { formatDurationMs } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const {
     data,
@@ -106,7 +110,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
           severity: mapped.severity,
         };
       }),
-    [items],
+    [items, formatDurationMs],
   );
 
   const lastEntry = items.length > 0 ? items[0] : null;
@@ -146,7 +150,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
           {/* Success rate header */}
           <div className="flex items-center gap-2 pb-1.5 border-b border-white/[0.06]">
             <Badge variant={rateVariant}>
-              {fmtNumber(successRate, 1)}% {t('widget.successRate', 'Success rate')}
+              {fmtNumber(successRate)}% {t('widget.successRate', 'Success rate')}
             </Badge>
             {summary && (
               <span className="text-2xs text-[var(--text-muted)]">

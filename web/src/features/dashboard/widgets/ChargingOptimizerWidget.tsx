@@ -5,12 +5,13 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useChargingOptimizer } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { safeArray } from '@/lib/safeArray';
 import { cn } from '@/lib/cn';
 import { WidgetShell } from './WidgetShell';
 import { WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PRIORITY_IMPACT: Record<string, 'high' | 'medium' | 'low'> = {
   high: 'high',
@@ -28,6 +29,7 @@ function formatHour(hour: number): string {
 }
 
 export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -105,7 +107,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
             </span>
             {monthlySavings > 0 && (
               <Badge variant="success" size="sm">
-                {t('widget.chargingOptimizer.savingsShort', '${{amount}}/mo', { amount: fmtNumber(monthlySavings, 0) })}
+                {t('widget.chargingOptimizer.savingsShort', '${{amount}}/mo', { amount: fmtNumber(monthlySavings) })}
               </Badge>
             )}
           </div>
@@ -152,7 +154,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
             <div className="flex flex-col items-center gap-1 rounded-lg bg-white/[0.03] p-2 min-h-[44px]">
               <DollarSign className="h-4 w-4 text-amber-400" />
               <span className="text-sm font-semibold text-[var(--text-primary)]">
-                ${fmtNumber(monthlySavings, 0)}
+                ${fmtNumber(monthlySavings)}
               </span>
               <span className="text-2xs text-[var(--text-muted)] truncate">
                 {t('widget.chargingOptimizer.savingsLabel', 'Savings/mo')}

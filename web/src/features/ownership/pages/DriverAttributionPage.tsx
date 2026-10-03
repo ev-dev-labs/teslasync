@@ -36,7 +36,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { DriveFingerprint, DriverCluster, DriverProfile } from '@/types/ownership';
 import {
   EvidencePanel,
@@ -47,6 +47,7 @@ import {
   VerdictBadge,
 } from '../components';
 import { formatCurrencyMinor, formatEfficiencyFromSI, formatPct, formatSpan } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const WINDOW_OPTIONS = [30, 60, 90, 180, 365];
 const ACCENTS = ['cyan', 'emerald', 'amber', 'purple', 'rose', 'indigo'];
@@ -78,6 +79,7 @@ function accentText(accent: string): string {
 }
 
 export default function DriverAttributionPage() {
+  const { fmtInt, fmtNumber, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -187,9 +189,9 @@ export default function DriverAttributionPage() {
       align: 'right',
       render: (row) => (
         <div>
-          <span className="tabular-nums">{fmtNumber(row.drive_count, 0)}</span>
+          <span className="tabular-nums">{fmtInt(row.drive_count)}</span>
           <Text as="p" variant="caption">
-            {formatPct(row.share_pct, 0)}
+            {formatPct(row.share_pct)}
           </Text>
         </div>
       ),
@@ -236,7 +238,7 @@ export default function DriverAttributionPage() {
       key: 'night',
       header: t('ownership.driver.cluster.night', 'Night share'),
       align: 'right',
-      render: (row) => <span className="tabular-nums">{formatPct(row.night_share_pct, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{formatPct(row.night_share_pct)}</span>,
     },
     {
       key: 'aggression',
@@ -251,7 +253,7 @@ export default function DriverAttributionPage() {
             />
           </div>
           <span className="tabular-nums text-xs text-[var(--text-muted)]">
-            {fmtNumber(row.aggression_score, 0)}/100
+            {fmtNumber(row.aggression_score)}/100
           </span>
         </div>
       ),
@@ -272,7 +274,7 @@ export default function DriverAttributionPage() {
       header: t('ownership.driver.cluster.cohesion', 'Cohesion'),
       align: 'right',
       render: (row) => (
-        <span className="tabular-nums">{fmtNumber(row.cohesion, 2)}</span>
+        <span className="tabular-nums">{fmtNumber(row.cohesion)}</span>
       ),
     },
   ];
@@ -320,7 +322,7 @@ export default function DriverAttributionPage() {
         <span
           className={`tabular-nums ${row.confidence_pct >= 75 ? 'text-emerald-300' : row.confidence_pct >= 50 ? 'text-amber-300' : 'text-rose-300'}`}
         >
-          {formatPct(row.confidence_pct, 0)}
+          {formatPct(row.confidence_pct)}
         </span>
       ),
       sortable: true,
@@ -345,7 +347,7 @@ export default function DriverAttributionPage() {
       render: (row) =>
         row.distance_to_next_centroid != null ? (
           <span className="tabular-nums">
-            {fmtNumber(row.distance_to_next_centroid - row.distance_to_own_centroid, 3)}
+            {fmtScientificNumber(row.distance_to_next_centroid - row.distance_to_own_centroid, 3)}
           </span>
         ) : (
           '—'
@@ -492,14 +494,14 @@ export default function DriverAttributionPage() {
               {
                 key: 'clusters',
                 label: t('ownership.driver.stat.clusters', 'Distinct clusters'),
-                value: fmtNumber(clusters.length, 0),
+                value: fmtInt(clusters.length),
               },
               {
                 key: 'separation',
                 label: t('ownership.driver.stat.separation', 'Separation score'),
                 value:
                   report?.separation_score != null
-                    ? fmtNumber(report.separation_score, 2)
+                    ? fmtNumber(report.separation_score)
                     : '—',
                 hint: report?.separation_verdict,
                 tone:
@@ -512,18 +514,18 @@ export default function DriverAttributionPage() {
               {
                 key: 'labelled',
                 label: t('ownership.driver.stat.labelled', 'Confirmed drives'),
-                value: fmtNumber(report?.labelled_drive_count ?? 0, 0),
+                value: fmtInt(report?.labelled_drive_count ?? 0),
                 tone: 'positive',
               },
               {
                 key: 'inferred',
                 label: t('ownership.driver.stat.inferred', 'Inferred drives'),
-                value: fmtNumber(report?.inferred_drive_count ?? 0, 0),
+                value: fmtInt(report?.inferred_drive_count ?? 0),
               },
               {
                 key: 'ambiguous',
                 label: t('ownership.driver.stat.ambiguous', 'Ambiguous drives'),
-                value: fmtNumber(report?.ambiguous_drive_count ?? 0, 0),
+                value: fmtInt(report?.ambiguous_drive_count ?? 0),
                 tone: (report?.ambiguous_drive_count ?? 0) > 0 ? 'warning' : 'default',
                 hint: t(
                   'ownership.driver.stat.ambiguousHint',
@@ -556,12 +558,12 @@ export default function DriverAttributionPage() {
               {
                 key: 'share',
                 label: t('ownership.driver.chart.col.share', 'Share of drives'),
-                format: (v) => formatPct(v as number, 1),
+                format: (v) => formatPct(v as number),
               },
               {
                 key: 'aggression',
                 label: t('ownership.driver.chart.col.aggression', 'Aggression score'),
-                format: (v) => fmtNumber(v as number, 1),
+                format: (v) => fmtNumber(v as number),
               },
             ]}
             height={280}

@@ -360,8 +360,8 @@ describe('FleetAPIPage', () => {
     renderPage();
     fireEvent.change(await screen.findByRole('textbox', { name: 'Search API routes' }), { target: { value: 'charge_state' } });
     const region = screen.getByRole('region', { name: 'Vehicle data' });
-    fireEvent.click(within(region).getByRole('button', { name: 'Filter API path' }));
-    const menu = screen.getByRole('dialog', { name: 'Filter API path' });
+    fireEvent.click(within(region).getByRole('button', { name: 'API path filter' }));
+    const menu = screen.getByRole('dialog', { name: 'API path filter' });
     expect(within(menu).getByRole('checkbox', { name: '/api/1/vehicles' })).toBeInTheDocument();
     expect(within(menu).getByRole('checkbox', { name: '/api/1/vehicles/{vin}/vehicle_data?endpoints=drive_state' })).toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: 'Enable GET /api/1/vehicles' })).not.toBeInTheDocument();
@@ -384,8 +384,8 @@ describe('FleetAPIPage', () => {
     expect(toggle).toHaveAttribute('aria-checked', 'false');
     expect(toggle).toBeDisabled();
     const region = screen.getByRole('region', { name: 'Vehicle data' });
-    fireEvent.click(within(region).getByRole('button', { name: 'Filter Auto-poll' }));
-    const menu = screen.getByRole('dialog', { name: 'Filter Auto-poll' });
+    fireEvent.click(within(region).getByRole('button', { name: 'Auto-poll filter' }));
+    const menu = screen.getByRole('dialog', { name: 'Auto-poll filter' });
     expect(within(menu).getByRole('checkbox', { name: 'Disabled' })).toBeInTheDocument();
     expect(within(menu).queryByRole('checkbox', { name: 'Enabled' })).not.toBeInTheDocument();
   });

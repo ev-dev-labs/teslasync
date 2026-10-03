@@ -11,9 +11,11 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { downloadJSON, defaultExportFilename } from '@/lib/csvExport';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function OutageAutobiographyPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('system.outage.title', 'Outage autobiography'));
   const { vehicleId } = useSelectedVehicle();
@@ -71,7 +73,7 @@ export default function OutageAutobiographyPage() {
           </Text>
           {outage.gap_s != null && (
             <Text as="p" variant="caption">
-              {t('system.outage.gap', 'Gap {{minutes}} min', { minutes: fmtNumber(outage.gap_s / 60, 1) })}
+              {t('system.outage.gap', 'Gap {{minutes}} min', { minutes: fmtNumber(outage.gap_s / 60) })}
             </Text>
           )}
           {outage.unknown_since && (

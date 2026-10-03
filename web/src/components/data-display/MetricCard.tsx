@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn'
 import { type NeonColor, neonColorMap } from '../../lib/tokens'
 import { Card, HelpTooltip, Text, type HelpTooltipProps } from '@/components/ui'
 import { Delta, type DeltaProps } from './Delta'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
 /**
  * Slim wrapper around `<Delta>` for the `MetricCard` footer slot.
@@ -17,6 +18,8 @@ type MetricCardDelta = Omit<DeltaProps, 'current'> & {
 interface MetricCardProps {
   label: string
   value: string | number
+  /** Numeric semantics; omitted preserves caller-formatted/count/ID contracts. */
+  kind?: 'measurement' | 'count'
   icon?: ReactNode
   color?: NeonColor
   /**
@@ -44,8 +47,12 @@ interface MetricCardProps {
 }
 
 /** Compact metric display card with icon, value, label, and optional trend. */
-export function MetricCard({ label, value, icon, color = 'cyan', change, delta, subtitle, className, help, wrapLabel = false, compact = false }: MetricCardProps) {
+export function MetricCard({ label, value, kind, icon, color = 'cyan', change, delta, subtitle, className, help, wrapLabel = false, compact = false }: MetricCardProps) {
   const { t } = useTranslation()
+  const { fmtNumber, fmtInt } = useNumberFormatting()
+  const displayValue = typeof value === 'number' && kind
+    ? Number.isFinite(value) ? kind === 'count' ? fmtInt(value) : fmtNumber(value) : '—'
+    : value
   // Fall back to cyan if a caller passes an unregistered colour (e.g. a
   // value driven from API data) so `c.bg`/`c.ring` never throw on undefined.
   const c = neonColorMap[color] ?? neonColorMap.cyan
@@ -92,7 +99,7 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
             data-role="metric-value"
             className={cn('leading-tight tracking-[-0.025em] tabular-nums', compact ? 'mt-1 break-words text-xl xl:mt-0 xl:text-right' : 'mt-3')}
           >
-            {value}
+            {displayValue}
           </Text>
           {subtitle && (
             <Text as="p" variant="caption" data-role="metric-subtitle" className="mt-1.5 truncate">

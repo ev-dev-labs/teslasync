@@ -5,12 +5,13 @@ import { MetricCard } from '@/components/data-display';
 import { Badge, GlassPanel } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceToSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type {
   BenchmarkMetric,
   BenchmarkMetricName,
   BenchmarkRelease,
 } from '@/api/hooks/useBenchmarks';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const icons = {
   degradation_pct: Battery,
@@ -26,6 +27,7 @@ export function MetricComparisonGrid({
   release: BenchmarkRelease | null;
   loading?: boolean;
 }) {
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
 
@@ -42,9 +44,9 @@ export function MetricComparisonGrid({
     if (value == null) return '—';
     if (metric.metric_name === 'efficiency_wh_per_km') {
       const metersPerUnit = convertDistanceToSI(1, unitPrefs.distance);
-      return `${fmtNumber(value * metersPerUnit / 1000, 0)} Wh/${unitPrefs.distance}`;
+      return `${fmtNumber(value * metersPerUnit / 1000)} Wh/${unitPrefs.distance}`;
     }
-    return fmtPercent(value, 1);
+    return fmtPercent(value);
   };
 
   const metrics = release?.metrics ?? [];
@@ -88,7 +90,7 @@ export function MetricComparisonGrid({
                   <span>
                     {metric.percentile != null
                       ? t('benchmarks.metrics.percentile', '{{value}}th performance percentile', {
-                          value: fmtNumber(metric.percentile, 0),
+                          value: fmtNumber(metric.percentile),
                         })
                       : t('benchmarks.metrics.noPercentile', 'Percentile unavailable')}
                   </span>

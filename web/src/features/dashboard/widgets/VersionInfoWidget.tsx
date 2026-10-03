@@ -9,12 +9,13 @@ import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${fmtInt(bytes)} B`;
-  if (bytes < 1024 * 1024) return `${fmtNumber(bytes / 1024, 1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${fmtNumber(bytes / (1024 * 1024), 1)} MB`;
-  return `${fmtNumber(bytes / (1024 * 1024 * 1024), 2)} GB`;
+  if (bytes < 1024 * 1024) return `${fmtNumber(bytes / 1024)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${fmtNumber(bytes / (1024 * 1024))} MB`;
+  return `${fmtNumber(bytes / (1024 * 1024 * 1024))} GB`;
 }
 
 // The `/system/version` endpoint reports process uptime as `uptime_seconds`
@@ -34,6 +35,7 @@ function formatUptime(seconds: number): string {
 }
 
 export default function VersionInfoWidget({ size }: WidgetProps) {
+  const { fmtNumber, fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
 
   const version = useVersionInfo();
@@ -88,7 +90,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
     const items: StatGridItem[] = [
       {
         label: t('widget.versionInfo.signalsPerSec', 'Signals/sec'),
-        value: fmtNumber(signalsPerSec, 1),
+        value: fmtNumber(signalsPerSec),
       },
       {
         label: t('widget.versionInfo.messagesToday', 'Messages today'),
@@ -104,13 +106,13 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
         },
         {
           label: t('widget.versionInfo.avgLatency', 'Avg latency'),
-          value: `${fmtNumber(avgLatency, 1)} ms`,
+          value: `${fmtNumber(avgLatency)} ms`,
         },
       );
     }
 
     return items;
-  }, [t, signalsPerSec, messagesToday, bytesProcessed, avgLatency, isWide]);
+  }, [t, signalsPerSec, messagesToday, bytesProcessed, avgLatency, isWide, fmtNumber, fmtInt, displayPrecision, displayLocale]);
 
   const isLoading = version.isLoading;
   const hasError = version.error ? String(version.error) : null;

@@ -36,6 +36,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { formatDurationClock, formatDateShort } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 const DASH = '—';
 
@@ -61,10 +63,11 @@ function whPerKm(v: number | null | undefined): string {
 function signedDelta(s: number): string {
   if (!Number.isFinite(s) || s === 0) return '—';
   const sign = s < 0 ? '−' : '+';
-  return `${sign}${Math.abs(s).toFixed(1)}s`;
+  return `${sign}${fmtNumber(Math.abs(s))}s`;
 }
 
 export default function SegmentsPage() {
+  useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('segments.title', 'Ghost Racing'));
 
@@ -634,6 +637,7 @@ interface LeaderboardTableProps {
 }
 
 function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: LeaderboardTableProps) {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const columns = useMemo<Column<LeaderboardRow>[]>(() => [
     {
       key: 'rank',
@@ -718,7 +722,7 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
         </div>
       ),
     },
-  ], [board, onPickA, onPickB, racerA, racerB, t]);
+  ], [board, onPickA, onPickB, racerA, racerB, t, displayPrecision, displayLocale]);
 
   return (
     <DataTable

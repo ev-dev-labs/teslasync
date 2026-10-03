@@ -12,16 +12,18 @@ import { Wallet } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption, Text, DataTable, type Column } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
-import { fmtNumber, fmtInt, formatBytes } from '@/lib/numberFormat';
+
 import { formatRelative } from '@/lib/dateFormat';
 import { vehicleName, type SectionState } from './helpers';
 import type { VehicleCostRow } from '@/types/admin-operator-confidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface VehicleCostTableProps extends SectionState {
   vehicles: VehicleCostRow[];
 }
 
 export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleCostTableProps) {
+  const { fmtInt, fmtNumber, formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Defensive: the page passes `data?.vehicles ?? []`, but guard here too so a
@@ -50,11 +52,11 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
       {
         key: 'rows',
         filterValue: (r) => r.signal_row_count ?? null,
-        filterValueLabel: (_value, r) => fmtNumber(r.signal_row_count),
+        filterValueLabel: (_value, r) => fmtInt(r.signal_row_count),
         groupStart: true,
         header: t('admin.vehicleCost.colRows', 'Rows'),
         align: 'right',
-        render: (r) => <Text className="tabular-nums">{fmtNumber(r.signal_row_count)}</Text>,
+        render: (r) => <Text className="tabular-nums">{fmtInt(r.signal_row_count)}</Text>,
       },
       {
         key: 'bytes',
@@ -67,11 +69,11 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
       {
         key: 'rate',
         filterValue: (r) => r.ingest_rate_per_minute_24h ?? null,
-        filterValueLabel: (_value, r) => fmtNumber(r.ingest_rate_per_minute_24h, 1),
+        filterValueLabel: (_value, r) => fmtNumber(r.ingest_rate_per_minute_24h),
         header: t('admin.vehicleCost.colRate', 'Rate (rows/min, 24h)'),
         align: 'right',
         render: (r) => (
-          <Text className="tabular-nums">{fmtNumber(r.ingest_rate_per_minute_24h, 1)}</Text>
+          <Text className="tabular-nums">{fmtNumber(r.ingest_rate_per_minute_24h)}</Text>
         ),
       },
       {
@@ -98,7 +100,7 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
         ),
       },
     ],
-    [t],
+    [t, fmtInt, fmtNumber, formatBytes],
   );
 
   return (

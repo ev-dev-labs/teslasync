@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { DriveDetail } from '@/types/driving';
 import type { ChartDataPoint, DriveStats } from './types';
 import { driveEnergyEvidence } from './energyEvidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Evidence, not another dashboard: source and estimation remain attached to
@@ -13,6 +14,7 @@ import { driveEnergyEvidence } from './energyEvidence';
  * recovered energy again would fabricate "net consumption".
  */
 export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDetail; stats: DriveStats; chartData?: ChartDataPoint[] }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { energyWh: used, regenWh: recovered } = driveEnergyEvidence(drive, stats);

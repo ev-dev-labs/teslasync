@@ -7,9 +7,10 @@ import {
   type ChartDataColumn,
 } from '@/components/charts';
 import { formatDayKey } from '@/lib/dateFormat';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportTrendTimelineProps {
   analysis: BatteryPassportAnalysis;
@@ -22,6 +23,7 @@ export function BatteryPassportTrendTimeline({
   state,
   locale,
 }: BatteryPassportTrendTimelineProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const data = useMemo(
     () => analysis.trend.points.map((point) => ({
@@ -44,12 +46,12 @@ export function BatteryPassportTrendTimeline({
         ),
         format: (value) => (
           typeof value === 'number'
-            ? fmtPercent(value, 1)
+            ? fmtPercent(value)
             : '—'
         ),
       },
     ],
-    [t],
+    [t, fmtPercent],
   );
   const unavailable =
     !state.vehicleSelected
@@ -95,7 +97,7 @@ export function BatteryPassportTrendTimeline({
           xFormatter={(value) =>
             formatDayKey(value, { locale, style: 'short' })
           }
-          yFormatter={(value) => fmtPercent(value, 0)}
+          yFormatter={(value) => fmtPercent(value)}
           series={[
             {
               key: 'soh_pct',

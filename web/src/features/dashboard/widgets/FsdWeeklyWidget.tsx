@@ -9,13 +9,15 @@ import { EmptyState } from '@/components/feedback';
 import { Text } from '@/components/ui';
 import { getWeekRange } from '@/features/analytics/components/weekly-digest/helpers';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { browserTimezone } from '@/lib/timezone';
 
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -48,11 +50,11 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
 
   const distanceLabel = distanceM == null
     ? '—'
-    : formatDistance(distanceM, { precision: 1 });
-  const shareLabel = sharePct == null ? '—' : `${fmtNumber(sharePct, 1)}%`;
+    : formatDistance(distanceM);
+  const shareLabel = sharePct == null ? '—' : `${fmtNumber(sharePct)}%`;
   const changeLabel = shareChange == null
     ? '—'
-    : `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange, 1)} pts`;
+    : `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange)} pts`;
 
   return (
     <WidgetShell

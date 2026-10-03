@@ -30,7 +30,7 @@ import { EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { getErrorMessage } from '@/lib/errorMessage';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlArray } from '@/hooks/useUrlState';
@@ -53,6 +53,7 @@ import {
   buildSignalChartData,
   buildSignalStats,
 } from '../components/signalLogSummary';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PER_PAGE_OPTIONS = [
   { value: '25', label: '25' },
@@ -72,6 +73,7 @@ interface SubmittedSignalQuery {
 }
 
 export default function SignalLogViewerPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('signalLog.title', 'Signal log viewer'));
   const { preferences } = useProductPreferences();

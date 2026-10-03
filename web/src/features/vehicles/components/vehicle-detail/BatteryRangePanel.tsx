@@ -5,15 +5,17 @@ import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { LinearGauge } from '@/components/charts'
 import { useUnits } from '@/hooks/useUnits'
-import { fmtNumber } from '@/lib/numberFormat'
+
 import type { VehicleState } from '@/api/types'
 import { batteryColor } from './helpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryRangePanelProps {
   state: VehicleState
 }
 
 export function BatteryRangePanel({ state }: BatteryRangePanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatDistance } = useUnits()
 
@@ -26,7 +28,7 @@ export function BatteryRangePanel({ state }: BatteryRangePanelProps) {
   const timeToFull = state.time_to_full_charge ?? 0
   const chargeSubtitle =
     isCharging && timeToFull > 0
-      ? `${t('vehicles.detail.fullIn', 'Full in')} ${fmtNumber(timeToFull, 1)}h`
+      ? `${t('vehicles.detail.fullIn', 'Full in')} ${fmtNumber(timeToFull)}h`
       : undefined
 
   return (
@@ -45,13 +47,13 @@ export function BatteryRangePanel({ state }: BatteryRangePanelProps) {
         <div className="flex-1 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <MetricCard
             label={t('vehicles.detail.ratedRange', 'Rated range')}
-            value={formatDistance(state.rated_range, { precision: 0 })}
+            value={formatDistance(state.rated_range)}
             icon={<Navigation aria-hidden="true" className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
             label={t('vehicles.detail.idealRange', 'Ideal range')}
-            value={formatDistance(state.ideal_range, { precision: 0 })}
+            value={formatDistance(state.ideal_range)}
             icon={<MapPin aria-hidden="true" className="h-4 w-4" />}
             color="green"
           />

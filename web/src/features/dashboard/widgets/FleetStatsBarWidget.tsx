@@ -5,11 +5,12 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Convert a fleet-analytics `total_distance_km` value to the user's display
@@ -26,6 +27,7 @@ export function toDistanceDisplay(totalDistanceKm: number, to: DistanceUnitPref)
 }
 
 export default function FleetStatsBarWidget({ size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const { data: analytics, isLoading: analyticsLoading, error, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsIsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = useFleetAnalytics(30);
@@ -50,7 +52,7 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
   const items = useMemo<StatGridItem[]>(() => {
     const onlinePct =
       stats.vehicleCount > 0
-        ? `${fmtNumber((stats.onlineCount / stats.vehicleCount) * 100, 0)}%`
+        ? `${fmtNumber((stats.onlineCount / stats.vehicleCount) * 100)}%`
         : undefined;
 
     return [
@@ -70,18 +72,18 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
       },
       {
         label: t('widget.fleetStatsBar.distance30d', 'Distance (30d)'),
-        value: fmtNumber(stats.totalDistance, 1),
+        value: fmtNumber(stats.totalDistance),
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.fleetStatsBar.energy30d', 'Energy (30d)'),
-        value: fmtNumber(stats.totalEnergy, 1),
+        value: fmtNumber(stats.totalEnergy),
         unit: 'kWh',
         icon: <Zap className="h-3.5 w-3.5" />,
       },
     ];
-  }, [stats, t, distanceUnit]);
+  }, [stats, t, distanceUnit, fmtNumber]);
 
   return (
     <WidgetShell

@@ -112,7 +112,7 @@ export default function RangeSimulatorPage() {
               />
               <MetricCard
                 label={t('rangeSim.pack', 'Self-Measured Pack')}
-                value={result.packWhEstimate != null ? formatEnergy(result.packWhEstimate, { precision: 1 }) : '—'}
+                value={result.packWhEstimate != null ? formatEnergy(result.packWhEstimate) : '—'}
                 subtitle={t('rangeSim.packHint', 'median implied usable capacity')}
                 icon={<Gauge className="h-5 w-5" />}
                 color="purple"
@@ -169,7 +169,7 @@ export default function RangeSimulatorPage() {
                       'rangeSim.takeaway',
                       'A {{dist}} trip starting at {{soc}}% typically lands at {{p50}}% — and {{odds}}% of simulated runs keep at least the {{reserve}}% reserve.',
                       {
-                        dist: formatDistance(tripKm * 1000, { precision: 0 }),
+                        dist: formatDistance(tripKm * 1000),
                         soc: startSoc,
                         p50: result.p50,
                         odds: successPct,

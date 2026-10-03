@@ -6,7 +6,7 @@
  * behaviour surface — the thing under test:
  *
  *   1. Two layouts driven by `size.cols`:
- *        - compact  (cols <= 1): a title-less shell with the Overall badge + a
+ *        - compact  (cols <= 1): a titled shell with the Overall badge + a
  *          single "healthy / total" count (role="img" with an accessible
  *          "services healthy" label). The widget's registered minSize is 1×2, so
  *          this branch MUST be reachable at one column (the hardened bug: the
@@ -363,8 +363,7 @@ describe('UptimeMonitorWidget — compact layout', () => {
 
     renderWidget({ cols: 1, rows: 2 });
 
-    // Compact drops the title and the per-service rows …
-    expect(screen.queryByText('Uptime monitor')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Uptime monitor' })).toBeInTheDocument();
     expect(screen.queryByText('Database')).not.toBeInTheDocument();
     // … and shows the accessible count + the Overall badge.
     expect(screen.getByText('4/4')).toBeInTheDocument();

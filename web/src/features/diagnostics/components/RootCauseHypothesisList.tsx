@@ -2,8 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { ListOrdered, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption, Badge, type BadgeProps, HelpTooltip } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { EvidenceRelation, RankedHypothesis } from '../lib/rootCauseIntelligence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const RELATION_VARIANT: Record<EvidenceRelation, BadgeProps['variant']> = {
   leads: 'warning',
@@ -44,6 +45,7 @@ export function RootCauseHypothesisList({
   onRetry,
   className,
 }: RootCauseHypothesisListProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const emptyMessage = !hasChosenSignal
@@ -91,15 +93,15 @@ export function RootCauseHypothesisList({
                 </Badge>
                 <span className="inline-flex items-center gap-1">
                   {directionIcon(h.shift.direction)}
-                  <Caption>{fmtNumber(h.shift.before.median, 2)} → {fmtNumber(h.shift.after.median, 2)}</Caption>
+                  <Caption>{fmtNumber(h.shift.before.median)} → {fmtNumber(h.shift.after.median)}</Caption>
                 </span>
               </div>
               <Text variant="body">{h.rationale}</Text>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                <Caption>{t('rootCauseIntelligence.hypotheses.score', 'Rank score {{n}}', { n: fmtNumber(h.score, 2) })}</Caption>
-                <Caption>{t('rootCauseIntelligence.hypotheses.effect', 'Effect size {{n}}', { n: fmtNumber(h.shift.effectSize, 2) })}</Caption>
+                <Caption>{t('rootCauseIntelligence.hypotheses.score', 'Rank score {{n}}', { n: fmtNumber(h.score) })}</Caption>
+                <Caption>{t('rootCauseIntelligence.hypotheses.effect', 'Effect size {{n}}', { n: fmtNumber(h.shift.effectSize) })}</Caption>
                 <Caption>{t('rootCauseIntelligence.hypotheses.samples', '{{n}} samples', { n: h.sampleCount })}</Caption>
-                <Caption>{t('rootCauseIntelligence.hypotheses.lag', 'Lag {{n}} min', { n: fmtNumber(Math.abs(h.lagMs) / 60_000, 1) })}</Caption>
+                <Caption>{t('rootCauseIntelligence.hypotheses.lag', 'Lag {{n}} min', { n: fmtNumber(Math.abs(h.lagMs) / 60_000) })}</Caption>
               </div>
             </li>
           ))}

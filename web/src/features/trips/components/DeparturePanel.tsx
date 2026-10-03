@@ -6,8 +6,9 @@ import { useDataState } from '@/hooks/useDataState';
 import { Badge, Button, Text } from '@/components/ui';
 import { ListSkeleton, QueryError } from '@/components/feedback';
 import { formatTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { safeArray } from '@/lib/safeArray';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HORIZONS = [12, 24, 48] as const;
 
@@ -28,6 +29,7 @@ function levelVariant(level: string) {
  * rides along when the vehicle has reported recently.
  */
 export function DeparturePanel({ session }: { session: JourneySession }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const [horizonH, setHorizonH] = useState<(typeof HORIZONS)[number]>(12);
 
@@ -97,7 +99,7 @@ export function DeparturePanel({ session }: { session: JourneySession }) {
               {advice.charge?.soc_pct != null ? (
                 <Text as="span" variant="caption">
                   {t('journey.departure.socNow', 'Battery {{pct}}% now', {
-                    pct: fmtNumber(advice.charge.soc_pct, 0),
+                    pct: fmtNumber(advice.charge.soc_pct),
                   })}
                 </Text>
               ) : null}

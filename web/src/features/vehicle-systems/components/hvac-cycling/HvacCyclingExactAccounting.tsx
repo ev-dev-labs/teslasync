@@ -10,10 +10,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingExactAccountingProps {
   summary: HvacCyclingSummary;
@@ -49,6 +50,7 @@ export function HvacCyclingExactAccounting({
   summary,
   state,
 }: HvacCyclingExactAccountingProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const row = summary.rows;
   const interval = summary.intervals;

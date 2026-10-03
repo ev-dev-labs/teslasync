@@ -125,7 +125,7 @@ describe('SignalStatsPanel — populated', () => {
       stats: [{ signal: 'recorded_zero', min: 0, max: 0, avg: 0, count: 1 }],
       selectedSignals: ['recorded_zero', 'unrecorded'],
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Avg' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Avg filter' }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByRole('checkbox', { name: '0.00' })).toBeInTheDocument();
     expect(within(dialog).getByRole('checkbox', { name: '—' })).toBeInTheDocument();
@@ -138,7 +138,7 @@ describe('SignalStatsPanel — populated', () => {
   it('preserves complete selected-signal candidates when empty rows are locally hidden', () => {
     renderPanel({ selectedSignals: SELECTED });
     fireEvent.click(screen.getByRole('switch'));
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Signal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Signal filter' }));
     expect(within(screen.getByRole('dialog')).getByRole('checkbox', { name: 'phantom' })).toBeInTheDocument();
   });
 

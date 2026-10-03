@@ -7,6 +7,8 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { MapPin, Zap, Clock, ArrowRight } from 'lucide-react';
 import type { TripLeg, TripChargeStop, TripLocation } from '@/types/driving';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 interface TripLegListProps {
   legs: TripLeg[];
@@ -30,12 +32,13 @@ function locationLabel(loc: TripLocation | null | undefined): string {
   const lat = loc?.lat;
   const lng = loc?.lng;
   if (typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng)) {
-    return `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+    return `${fmtNumber(lat)}, ${fmtNumber(lng)}`;
   }
   return '—';
 }
 
 export function TripLegList({ legs, chargeStops }: TripLegListProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -87,7 +90,7 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                   <div>
                     <Caption>{t('tripPlanner.legs.distance', 'Distance')}</Caption>
                     <Text as="p" weight="medium" color="primary">
-                      {toDistanceDisplay(leg.distance_m).toFixed(1)} {distanceUnit}
+                      {fmtNumber(toDistanceDisplay(leg.distance_m))} {distanceUnit}
                     </Text>
                   </div>
                   <div>
@@ -98,7 +101,7 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                   </div>
                   <div>
                     <Caption>{t('tripPlanner.legs.energy', 'Energy')}</Caption>
-                    <Text as="p" weight="medium" color="primary">{formatEnergy(leg.energy_wh, { precision: 1 })}</Text>
+                    <Text as="p" weight="medium" color="primary">{formatEnergy(leg.energy_wh)}</Text>
                   </div>
                   <div>
                     <Caption>{t('tripPlanner.legs.soc', 'Battery')}</Caption>
@@ -127,7 +130,7 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                       <span>
                         {roundOrZero(stop.charge_from_soc)}% → {roundOrZero(stop.charge_to_soc)}%
                       </span>
-                      <span>{formatEnergy(stop.energy_wh, { precision: 1 })}</span>
+                      <span>{formatEnergy(stop.energy_wh)}</span>
                       <span className="text-emerald-400">{formatCurrency(stop.cost ?? 0)}</span>
                     </div>
                     {stop.is_recommended && (

@@ -9,10 +9,11 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
 import type { PreconditioningQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningDepartureDispositionProps {
   summary: PreconditioningSummary;
@@ -23,6 +24,7 @@ export function PreconditioningDepartureDisposition({
   summary,
   state,
 }: PreconditioningDepartureDispositionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const a = summary.departureAccounting;
   const outcomes = [

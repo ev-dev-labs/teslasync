@@ -12,10 +12,11 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import type { FleetAnalyticsQuery } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Stable bar corner-radius — hoisted so the hot chart JSX never allocates a fresh array per render. */
 const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
@@ -26,6 +27,7 @@ const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
  * tab's bento; the Monthly Trend spans a full-width hero band.
  */
 export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery }) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -127,25 +129,25 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
         <div className="grid grid-cols-2 gap-3">
           <MetricCard
             label={t('analytics.charging.minCost', 'Min cost')}
-            value={formatCurrency(safe(costStats?.min), 2)}
+            value={formatCurrency(safe(costStats?.min))}
             icon={<DollarSign className="h-4 w-4" />}
             color="green"
           />
           <MetricCard
             label={t('analytics.charging.avgCost', 'Avg cost')}
-            value={formatCurrency(safe(costStats?.avg), 2)}
+            value={formatCurrency(safe(costStats?.avg))}
             icon={<DollarSign className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
             label={t('analytics.charging.medianCost', 'Median cost')}
-            value={formatCurrency(safe(costStats?.median), 2)}
+            value={formatCurrency(safe(costStats?.median))}
             icon={<DollarSign className="h-4 w-4" />}
             color="purple"
           />
           <MetricCard
             label={t('analytics.charging.maxCost', 'Max cost')}
-            value={formatCurrency(safe(costStats?.max), 2)}
+            value={formatCurrency(safe(costStats?.max))}
             icon={<DollarSign className="h-4 w-4" />}
             color="amber"
           />

@@ -20,8 +20,9 @@ import { FadeIn } from '@/components/motion';
 import { useRUL, useComponentRUL, type ComponentRUL, type RULStatus } from '@/api/hooks/useRUL';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const DASH = '—';
 
@@ -60,6 +61,7 @@ const COMPONENT_ICON: Record<string, LucideIcon> = {
 };
 
 export default function RemainingUsefulLifePage() {
+  const { fmtNumber, fmtInt, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('rul.title', 'Remaining useful life'));
 
@@ -92,17 +94,17 @@ export default function RemainingUsefulLifePage() {
   const remainingText = useCallback((c: ComponentRUL): string => {
     if (c.projected_eol_date != null) {
       if (c.remaining_days >= 365) {
-        return `${fmtNumber(c.remaining_days / 365, 1)} ${t('rul.units.years', 'yr')}`;
+        return `${fmtNumber(c.remaining_days / 365)} ${t('rul.units.years', 'yr')}`;
       }
       return `${fmtInt(c.remaining_days)} ${t('rul.units.days', 'days')}`;
     }
     if (c.status === 'overdue') return t('rul.card.overdueNow', 'Overdue');
     return DASH; // indeterminate — not enough trend to project
-  }, [t]);
+  }, [t, fmtNumber, fmtInt]);
 
   const kmText = useCallback((c: ComponentRUL): string => (
     c.remaining_km == null ? DASH : `${fmtInt(c.remaining_km)} ${t('rul.units.km', 'km')}`
-  ), [t]);
+  ), [t, fmtInt]);
 
   const confLabel = useCallback((conf: number): string => {
     if (conf >= 0.66) return t('rul.confidence.high', 'High');
@@ -236,7 +238,7 @@ export default function RemainingUsefulLifePage() {
                         label={t('rul.card.health', 'Health')}
                         color={meta.gauge}
                         size={104}
-                        decimals={0}
+                        decimals={displayPrecision}
                         className="w-32 shrink-0"
                       />
                       <dl className="min-w-0 flex-1 space-y-1.5">
@@ -342,7 +344,7 @@ export default function RemainingUsefulLifePage() {
                           valueFormatter={(v) => (
                             Array.isArray(v)
                               ? `${fmtInt(v[0])}–${fmtInt(v[1])}%`
-                              : `${fmtNumber(v as number, 1)}%`
+                              : `${fmtNumber(v as number)}%`
                           )}
                         />
                       } />

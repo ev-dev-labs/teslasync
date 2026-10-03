@@ -55,7 +55,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useDataState } from '@/hooks/useDataState';
 import { formatDateShort, formatDayKey, ymdInTz } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import { CHARGER_COLORS } from '@/lib/colors';
 import { chartTokens, neonColorMap, type NeonColor } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
@@ -63,6 +63,7 @@ import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { useTimezone } from '@/lib/timezone';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Local: Cost Comparison Card ────────────────────────────────── */
 
@@ -95,6 +96,7 @@ function CostComparisonCard({
 }: {
   label: string; evCost: number | null; gasCost: number | null; icon: ReactNode;
 }) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const savings = evCost != null && gasCost != null ? gasCost - evCost : null;
   const savingsPct =
@@ -236,6 +238,7 @@ function EnergyPageSkeleton() {
 }
 
 export default function EnergyPage() {
+  const { fmtPercent, fmtNumber, fmtInt, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
   const { unitPrefs, formatEnergy } = useUnits();
@@ -731,7 +734,7 @@ export default function EnergyPage() {
         </Text>
       ),
     },
-  ], [t, formatCurrency, formatEnergy]);
+  ], [t, formatCurrency, formatEnergy, fmtNumber]);
 
   /* ── KPI band definition ──────────────────────────────────────── */
   const recordedCostValue =
@@ -792,7 +795,7 @@ export default function EnergyPage() {
           {
             date: day.date,
             energy: formatEnergy(day.energy_wh ?? 0),
-            distance: `${fmtNumber(toDistanceDisplay(day.distance_m ?? 0), 1)} ${distanceUnit}`,
+            distance: `${fmtNumber(toDistanceDisplay(day.distance_m ?? 0))} ${distanceUnit}`,
           },
         ),
         observedAt: day.date,
@@ -1201,7 +1204,7 @@ export default function EnergyPage() {
                   bands={efficiencyBands}
                   label={t('energy.gauge.efficiency', 'Efficiency')}
                   unit={efficiencyUnit}
-                  decimals={0}
+                  decimals={displayPrecision}
                   className="col-span-2 sm:col-span-1"
                 />
                 <MetricTile
@@ -1314,7 +1317,7 @@ export default function EnergyPage() {
                               tick={axisTickSm}
                               tickLine={false}
                               axisLine={false}
-                              tickFormatter={(value: number) => formatCurrency(value, 0)}
+                              tickFormatter={(value: number) => formatCurrency(value)}
                             />
                             <Tooltip
                               content={(
@@ -1595,7 +1598,7 @@ export default function EnergyPage() {
                         </Text>
                         <Caption>
                           {b.costedEnergy > 0
-                            ? <><Currency value={b.cost / (b.costedEnergy / 1000)} precision={3} />/kWh</>
+                            ? <><Currency value={b.cost / (b.costedEnergy / 1000)} precision={displayPrecision} />/kWh</>
                             : '—'}
                         </Caption>
                       </div>

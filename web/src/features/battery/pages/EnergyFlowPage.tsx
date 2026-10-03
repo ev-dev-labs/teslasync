@@ -29,11 +29,12 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { convertDistanceFromSI, convertEnergyFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import { useEnergyStats, useEnergyFlow } from '@/api/hooks/useEnergy';
 import type { DailyEnergy, EnergyFlowData } from '@/types/energy';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ───────── Constants ───────── */
 
@@ -305,6 +306,7 @@ function SectionState({
 /* ───────── Main Page ───────── */
 
 export default function EnergyFlowPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('energyFlow.title', 'Energy flow'));
 
@@ -463,17 +465,17 @@ export default function EnergyFlowPage() {
         key: 'efficiency_wh_per_m',
         align: 'right',
         filterValue: (row) => row.efficiency_wh_per_m ?? null,
-        filterValueLabel: (value, row) => value == null ? '—' : fmtNumber(scaleEfficiency(row.efficiency_wh_per_m, distanceUnit), 0),
+        filterValueLabel: (value, row) => value == null ? '—' : fmtNumber(scaleEfficiency(row.efficiency_wh_per_m, distanceUnit)),
         header: efficiencyUnit,
         sortable: true,
         render: (row) => (
           <Text size="sm" mono color="primary">
-            {fmtNumber(scaleEfficiency(row.efficiency_wh_per_m, distanceUnit), 0)}
+            {fmtNumber(scaleEfficiency(row.efficiency_wh_per_m, distanceUnit))}
           </Text>
         ),
       },
     ],
-    [t, distanceUnit, efficiencyUnit, formatDistance, formatEnergy],
+    [t, distanceUnit, efficiencyUnit, formatDistance, formatEnergy, fmtNumber],
   );
 
   /* ───── Vehicle & Range Controls ───── */
@@ -524,7 +526,7 @@ export default function EnergyFlowPage() {
           />
           <MetricCard
             label={t('energyFlow.kpi.co2Saved', 'CO₂ saved')}
-            value={stats ? fmtNumber(stats.co2_saved_kg ?? 0, 1) : DASH}
+            value={stats ? fmtNumber(stats.co2_saved_kg ?? 0) : DASH}
             icon={<Leaf className="h-4 w-4" />}
             color="green"
             subtitle={t('energyFlow.units.kg', 'kg')}
@@ -575,7 +577,7 @@ export default function EnergyFlowPage() {
 
                 <FlowConnector
                   label={t('energyFlow.node.charging', 'Charging')}
-                  value={`${fmtNumber(chargePower, 1)} ${t('energyFlow.units.kw', 'kW')}`}
+                  value={`${fmtNumber(chargePower)} ${t('energyFlow.units.kw', 'kW')}`}
                   color={CHART_COLORS[1]}
                   active={Math.abs(chargePower) > 0.01}
                 />
@@ -586,7 +588,7 @@ export default function EnergyFlowPage() {
                   label={t('energyFlow.node.battery', 'Battery')}
                   sublabel={
                     flow?.energy_remaining != null
-                      ? `${fmtNumber(flow.energy_remaining, 1)} ${t('energyFlow.units.kwh', 'kWh')}`
+                      ? `${fmtNumber(flow.energy_remaining)} ${t('energyFlow.units.kwh', 'kWh')}`
                       : undefined
                   }
                 >
@@ -638,13 +640,13 @@ export default function EnergyFlowPage() {
                 <LivePowerRow
                   icon={<Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                   label={t('energyFlow.livePower.dc', 'DC power')}
-                  value={`${fmtNumber(flow?.dc_charging_power ?? 0, 1)} ${t('energyFlow.units.kw', 'kW')}`}
+                  value={`${fmtNumber(flow?.dc_charging_power ?? 0)} ${t('energyFlow.units.kw', 'kW')}`}
                   valueClass="text-cyan-300"
                 />
                 <LivePowerRow
                   icon={<Activity className="h-4 w-4 text-indigo-300" aria-hidden="true" />}
                   label={t('energyFlow.livePower.ac', 'AC power')}
-                  value={`${fmtNumber(flow?.ac_charging_power ?? 0, 1)} ${t('energyFlow.units.kw', 'kW')}`}
+                  value={`${fmtNumber(flow?.ac_charging_power ?? 0)} ${t('energyFlow.units.kw', 'kW')}`}
                   valueClass="text-indigo-300"
                 />
                 <LivePowerRow
@@ -739,13 +741,13 @@ export default function EnergyFlowPage() {
               <div className="space-y-3">
                 <EfficiencyStat
                   label={efficiencyUnit}
-                  value={fmtNumber(avgEfficiency, 0)}
+                  value={fmtNumber(avgEfficiency)}
                   valueClass="text-cyan-300"
                   badge={<Badge variant={effVariant} size="sm">{effLabel}</Badge>}
                 />
                 <EfficiencyStat
                   label={t('energyFlow.kpi.co2Saved', 'CO₂ saved')}
-                  value={fmtNumber(stats?.co2_saved_kg ?? 0, 1)}
+                  value={fmtNumber(stats?.co2_saved_kg ?? 0)}
                   valueClass="text-emerald-300"
                   badge={<Badge variant="success" size="sm">{t('energyFlow.units.kgCo2', 'kg CO₂')}</Badge>}
                 />

@@ -30,9 +30,11 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { useBatteryCells, type CellReading, type CellStatus } from '@/api/hooks/useAnalytics';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtScientificNumber } from '@/lib/numberFormat';
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
@@ -82,7 +84,7 @@ export function buildHistogram(cells: CellReading[]): { bucket: string; count: n
   }
 
   return buckets.map((b) => ({
-    bucket: `${fmtNumber(b.low ?? 0, 3)}–${fmtNumber(b.high ?? 0, 3)}`,
+    bucket: `${fmtScientificNumber(b.low, 3)}–${fmtScientificNumber(b.high, 3)}`,
     count: b.count,
   }));
 }
@@ -111,6 +113,7 @@ function HeatLegend({ className, label }: { className: string; label: string }) 
 }
 
 function CellHeatmap({ cells, avg, label }: { cells: CellReading[]; avg: number; label: string }) {
+  const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const cols = Math.max(1, Math.ceil(Math.sqrt(cells.length || 1)));
 
@@ -137,10 +140,10 @@ function CellHeatmap({ cells, avg, label }: { cells: CellReading[]; avg: number;
                 isDeviation && 'ring-1 ring-inset ring-current',
               )}
               style={{ backgroundColor: `${color}20`, color }}
-              title={`${t('battery.cells.cell', 'Cell')} ${cell.cell_number}: ${fmtNumber(cell.voltage ?? 0, 3)} V (${delta >= 0 ? '+' : ''}${fmtNumber(delta, 1)} mV)`}
+              title={`${t('battery.cells.cell', 'Cell')} ${cell.cell_number}: ${fmtScientificNumber(cell.voltage, 3)} V (${delta >= 0 ? '+' : ''}${fmtNumber(delta)} mV)`}
             >
               <span className={typography.weight.semibold}>{cell.cell_number}</span>
-              <span>{fmtNumber(cell.voltage ?? 0, 3)}</span>
+              <span>{fmtScientificNumber(cell.voltage, 3)}</span>
             </div>
           );
         })}
@@ -174,6 +177,7 @@ function SummaryStat({ label, value, valueClassName }: {
 /* ── Page ──────────────────────────────────────────────────────── */
 
 export default function BatteryCellsPage() {
+  const { fmtNumber, fmtScientificNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('battery.cells.title', 'Battery cells'));
 
@@ -195,7 +199,7 @@ export default function BatteryCellsPage() {
 
   /* ── Derived data ─── */
 
-  const histogram = useMemo(() => buildHistogram(cells), [cells]);
+  const histogram = useMemo(() => buildHistogram(cells), [cells, displayPrecision, displayLocale]);
 
   const minCell = useMemo(
     () => (cells.length ? cells.reduce((a, b) => ((a.voltage ?? 0) < (b.voltage ?? 0) ? a : b)) : null),
@@ -210,10 +214,10 @@ export default function BatteryCellsPage() {
     () =>
       history.map((h) => ({
         time: formatDateTime(h.timestamp).split(',')[0],
-        spread: fmtNumber(((h.max_voltage ?? 0) - (h.min_voltage ?? 0)) * 1000, 1),
+        spread: fmtNumber(((h.max_voltage ?? 0) - (h.min_voltage ?? 0)) * 1000),
         spreadRaw: ((h.max_voltage ?? 0) - (h.min_voltage ?? 0)) * 1000,
       })),
-    [history],
+    [history, fmtNumber],
   );
 
   const insights = useMemo(() => {
@@ -322,12 +326,12 @@ export default function BatteryCellsPage() {
       key: 'voltage',
       align: 'right',
       filterValue: (r) => r.voltage ?? null,
-      filterValueLabel: (value, r) => value == null ? '—' : fmtNumber(r.voltage ?? 0, 4),
+      filterValueLabel: (value, r) => value == null ? '—' : fmtScientificNumber(r.voltage, 4),
       header: t('battery.cells.table.voltage', 'Voltage (V)'),
       sortable: true,
       render: (r) => (
         <span className={typography.family.mono} style={{ color: cellColor(r.voltage ?? 0, avgVoltage) }}>
-          {fmtNumber(r.voltage ?? 0, 4)}
+          {fmtScientificNumber(r.voltage, 4)}
         </span>
       ),
     },
@@ -335,14 +339,14 @@ export default function BatteryCellsPage() {
       key: 'delta_from_avg',
       align: 'right',
       filterValue: (r) => r.delta_from_avg ?? null,
-      filterValueLabel: (value, r) => value == null ? '—' : `${(r.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber(r.delta_from_avg ?? 0, 1)}`,
+      filterValueLabel: (value, r) => value == null ? '—' : `${(r.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber(r.delta_from_avg ?? 0)}`,
       header: t('battery.cells.table.delta', 'Delta (mV)'),
       sortable: true,
       render: (r) => {
         const mv = r.delta_from_avg ?? 0;
         return (
           <span className={cn(typography.family.mono, mv > 0 ? 'text-emerald-300' : mv < 0 ? 'text-rose-300' : 'text-[var(--text-muted)]')}>
-            {mv >= 0 ? '+' : ''}{fmtNumber(mv, 1)}
+            {mv >= 0 ? '+' : ''}{fmtNumber(mv)}
           </span>
         );
       },
@@ -360,7 +364,7 @@ export default function BatteryCellsPage() {
         </Badge>
       ),
     },
-  ], [t, avgVoltage, statusLabel]);
+  ], [t, avgVoltage, statusLabel, fmtNumber, fmtScientificNumber]);
 
   /* ── Guards ─── */
 
@@ -385,37 +389,37 @@ export default function BatteryCellsPage() {
             <>
               <MetricCard
                 label={t('battery.cells.kpi.totalCells', 'Total cells')}
-                value={fmtNumber(data?.total_cells ?? 0, 0)}
+                value={fmtNumber(data?.total_cells ?? 0)}
                 icon={<Grid3x3 className="h-4 w-4" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('battery.cells.kpi.avgVoltage', 'Avg voltage')}
-                value={`${fmtNumber(avgVoltage, 4)} V`}
+                value={`${fmtScientificNumber(avgVoltage, 4)} V`}
                 icon={<Battery className="h-4 w-4" />}
                 color="green"
               />
               <MetricCard
                 label={t('battery.cells.kpi.minCell', 'Min cell')}
-                value={minCell ? `#${minCell.cell_number} ${fmtNumber(minCell.voltage ?? 0, 4)} V` : '—'}
+                value={minCell ? `#${minCell.cell_number} ${fmtScientificNumber(minCell.voltage, 4)} V` : '—'}
                 icon={<ArrowDownRight className="h-4 w-4" />}
                 color="amber"
               />
               <MetricCard
                 label={t('battery.cells.kpi.maxCell', 'Max cell')}
-                value={maxCell ? `#${maxCell.cell_number} ${fmtNumber(maxCell.voltage ?? 0, 4)} V` : '—'}
+                value={maxCell ? `#${maxCell.cell_number} ${fmtScientificNumber(maxCell.voltage, 4)} V` : '—'}
                 icon={<ArrowUpRight className="h-4 w-4" />}
                 color="purple"
               />
               <MetricCard
                 label={t('battery.cells.kpi.imbalance', 'Imbalance')}
-                value={`${fmtNumber(data?.imbalance_mv ?? 0, 1)} mV`}
+                value={`${fmtNumber(data?.imbalance_mv ?? 0)} mV`}
                 icon={<Activity className="h-4 w-4" />}
                 color={(data?.imbalance_mv ?? 0) > 15 ? 'red' : (data?.imbalance_mv ?? 0) > 5 ? 'amber' : 'green'}
               />
               <MetricCard
                 label={t('battery.cells.kpi.packVoltage', 'Pack voltage')}
-                value={`${fmtNumber(data?.pack_voltage ?? 0, 1)} V`}
+                value={`${fmtNumber(data?.pack_voltage ?? 0)} V`}
                 icon={<Cpu className="h-4 w-4" />}
                 color="cyan"
               />
@@ -483,7 +487,7 @@ export default function BatteryCellsPage() {
                     <YAxis
                       tick={axisTickSm}
                       domain={['dataMin - 0.005', 'dataMax + 0.005']}
-                      tickFormatter={(v: number) => fmtNumber(v, 3)}
+                      tickFormatter={(v: number) => fmtScientificNumber(v, 3)}
                       width={48}
                     />
                     <Tooltip content={<ChartTooltip />} />
@@ -587,7 +591,7 @@ export default function BatteryCellsPage() {
                   <YAxis
                     tick={axisTick}
                     domain={['dataMin - 0.005', 'dataMax + 0.005']}
-                    tickFormatter={(v: number) => fmtNumber(v, 3)}
+                    tickFormatter={(v: number) => fmtScientificNumber(v, 3)}
                     width={55}
                     label={{ value: t('battery.cells.table.voltage', 'Voltage (V)'), angle: -90, position: 'insideLeft', style: { fill: 'var(--text-muted)', fontSize: 11 } }}
                   />
@@ -654,7 +658,7 @@ export default function BatteryCellsPage() {
                     <YAxis
                       tick={axisTick}
                       domain={['dataMin - 0.002', 'dataMax + 0.002']}
-                      tickFormatter={(v: number) => fmtNumber(v, 3)}
+                      tickFormatter={(v: number) => fmtScientificNumber(v, 3)}
                       width={55}
                     />
                     <Tooltip content={<ChartTooltip />} labelFormatter={(v: string) => formatDateTime(v)} />
@@ -829,25 +833,25 @@ export default function BatteryCellsPage() {
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <MetricCard
                   label={t('battery.cells.temp.avg', 'Avg temperature')}
-                  value={formatTemperature(data.avg_temperature, { precision: 1 })}
+                  value={formatTemperature(data.avg_temperature)}
                   icon={<Thermometer className="h-5 w-5" />}
                   color="green"
                 />
                 <MetricCard
                   label={t('battery.cells.temp.min', 'Min temperature')}
-                  value={formatTemperature(data.min_temperature, { precision: 1 })}
+                  value={formatTemperature(data.min_temperature)}
                   icon={<ArrowDownRight className="h-5 w-5" />}
                   color="cyan"
                 />
                 <MetricCard
                   label={t('battery.cells.temp.max', 'Max temperature')}
-                  value={formatTemperature(data.max_temperature, { precision: 1 })}
+                  value={formatTemperature(data.max_temperature)}
                   icon={<ArrowUpRight className="h-5 w-5" />}
                   color="amber"
                 />
                 <MetricCard
                   label={t('battery.cells.temp.spread', 'Temp spread')}
-                  value={`${fmtNumber(tempUnit === '°F' ? (data.temp_spread ?? 0) * 1.8 : (data.temp_spread ?? 0), 1)}${tempUnit}`}
+                  value={`${fmtNumber(tempUnit === '°F' ? (data.temp_spread ?? 0) * 1.8 : (data.temp_spread ?? 0))}${tempUnit}`}
                   icon={<Activity className="h-5 w-5" />}
                   color={(data.temp_spread ?? 0) > 5 ? 'red' : (data.temp_spread ?? 0) > 3 ? 'amber' : 'green'}
                 />
@@ -911,21 +915,21 @@ export default function BatteryCellsPage() {
           />
           <SummaryStat
             label={t('battery.cells.stat.packVoltage', 'Pack voltage')}
-            value={<>{fmtNumber(data?.pack_voltage ?? 0, 1)}<span className={typography.size.sm}>V</span></>}
+            value={<>{fmtNumber(data?.pack_voltage ?? 0)}<span className={typography.size.sm}>V</span></>}
             valueClassName="text-emerald-300"
           />
           <SummaryStat
             label={t('battery.cells.stat.avgVoltage', 'Avg cell V')}
-            value={<>{fmtNumber(avgVoltage, 4)}<span className={typography.size.sm}>V</span></>}
+            value={<>{fmtScientificNumber(avgVoltage, 4)}<span className={typography.size.sm}>V</span></>}
           />
           <SummaryStat
             label={t('battery.cells.stat.voltageSpread', 'V spread')}
-            value={<>{fmtNumber(data?.imbalance_mv ?? 0, 1)}<span className={typography.size.sm}>mV</span></>}
+            value={<>{fmtNumber(data?.imbalance_mv ?? 0)}<span className={typography.size.sm}>mV</span></>}
             valueClassName={(data?.imbalance_mv ?? 0) > 15 ? 'text-rose-300' : (data?.imbalance_mv ?? 0) > 5 ? 'text-amber-300' : 'text-emerald-300'}
           />
           <SummaryStat
             label={t('battery.cells.stat.tempSpread', 'Temp spread')}
-            value={<>{fmtNumber(tempUnit === '°F' ? (data?.temp_spread ?? 0) * 1.8 : (data?.temp_spread ?? 0), 1)}<span className={typography.size.sm}>{tempUnit}</span></>}
+            value={<>{fmtNumber(tempUnit === '°F' ? (data?.temp_spread ?? 0) * 1.8 : (data?.temp_spread ?? 0))}<span className={typography.size.sm}>{tempUnit}</span></>}
             valueClassName={(data?.temp_spread ?? 0) > 5 ? 'text-rose-300' : (data?.temp_spread ?? 0) > 3 ? 'text-amber-300' : 'text-emerald-300'}
           />
           <SummaryStat

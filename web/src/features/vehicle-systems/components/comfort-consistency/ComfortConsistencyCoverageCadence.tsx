@@ -10,10 +10,11 @@ import {
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyCoverageCadenceProps {
   summary: ComfortConsistencySummary;
@@ -37,6 +38,7 @@ export function ComfortConsistencyCoverageCadence({
   locale,
   formatDuration,
 }: ComfortConsistencyCoverageCadenceProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = summary.coverage;
   const date = (ms: number | null) =>
@@ -71,25 +73,25 @@ export function ComfortConsistencyCoverageCadence({
             />
             <CoverageMetric
               label={t('comfortConsistency.coverage.span', 'Timeline span')}
-              value={formatDuration(coverage.spanS, { precision: 1 })}
+              value={formatDuration(coverage.spanS)}
             />
             <CoverageMetric
               label={t('comfortConsistency.coverage.stateCoverage', 'Known-HVAC coverage')}
               value={coverage.stateCoverage != null
-                ? fmtPercent(coverage.stateCoverage * 100, 1)
+                ? fmtPercent(coverage.stateCoverage * 100)
                 : '—'}
             />
             <CoverageMetric
               label={t('comfortConsistency.coverage.medianGap', 'Median cadence')}
-              value={formatDuration(coverage.medianGapS, { precision: 2 })}
+              value={formatDuration(coverage.medianGapS)}
             />
             <CoverageMetric
               label={t('comfortConsistency.coverage.p90Gap', 'P90 cadence')}
-              value={formatDuration(coverage.p90GapS, { precision: 2 })}
+              value={formatDuration(coverage.p90GapS)}
             />
             <CoverageMetric
               label={t('comfortConsistency.coverage.maxGap', 'Maximum observed gap')}
-              value={formatDuration(coverage.maxObservedGapS, { precision: 2 })}
+              value={formatDuration(coverage.maxObservedGapS)}
             />
             <CoverageMetric
               label={t('comfortConsistency.coverage.gaps', 'Cadence / long gaps')}

@@ -16,13 +16,14 @@ import {
   axisTick,
   type ChartDataColumn,
 } from '@/components/charts';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeMonthlyCompositionProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -33,6 +34,7 @@ export function ArchetypeMonthlyComposition({
   state,
   display,
 }: ArchetypeMonthlyCompositionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -65,7 +67,7 @@ export function ArchetypeMonthlyComposition({
         format: (value: unknown) => fmtInt(value),
       })),
     ],
-    [summary.clusters, t],
+    [summary.clusters, t, fmtInt],
   );
 
   return (

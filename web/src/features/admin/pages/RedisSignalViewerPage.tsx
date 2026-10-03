@@ -49,9 +49,10 @@ import {
 } from '@/api/hooks/useRedisSignals'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
-import { fmtInt } from '@/lib/numberFormat'
+
 import { isApiError, type ApiError } from '@/lib/resilience'
 import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../components/RedisDiagnosticEmptyState'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── signal categorization ─────────────────────────────────────────── */
 
@@ -187,6 +188,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
    ═══════════════════════════════════════════════════════════════════════ */
 
 export default function RedisSignalViewerPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   usePageTitle(t('redis.title', 'Redis signal viewer'))
   const { formatDateTime } = useDateFormat()

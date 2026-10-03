@@ -22,10 +22,12 @@ import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
 
 import { crossCorrelate } from '../lib/signalCorrelation';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HOURS = 24;
 
 export default function SignalCorrelationPage() {
+  const { fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('signalCorrelation.title', 'Signal correlation'));
 
@@ -240,9 +242,9 @@ export default function SignalCorrelationPage() {
             <>
               <MetricCard
                 label={t('signalCorrelation.bestR', 'Peak correlation')}
-                value={result != null ? result.bestR.toFixed(3) : '—'}
+                value={result != null ? fmtScientificNumber(result.bestR, 3) : '—'}
                 subtitle={t('signalCorrelation.zeroLag', 'at zero lag: {{r}}', {
-                  r: result != null ? result.zeroLagR.toFixed(3) : '—',
+                  r: result != null ? fmtScientificNumber(result.zeroLagR, 3) : '—',
                 })}
                 icon={<GitCompareArrows className="h-5 w-5" />}
                 color={Math.abs(result?.bestR ?? 0) >= 0.7 ? 'green' : 'cyan'}
@@ -269,7 +271,7 @@ export default function SignalCorrelationPage() {
                       : t('signalCorrelation.noise', 'Noise')
                 }
                 subtitle={t('signalCorrelation.threshold', 'needs |r| > {{v}}', {
-                  v: result != null ? result.significanceThreshold.toFixed(3) : '—',
+                  v: result != null ? fmtScientificNumber(result.significanceThreshold, 3) : '—',
                 })}
                 icon={<ArrowLeftRight className="h-5 w-5" />}
                 color={result?.significant ? 'green' : 'amber'}

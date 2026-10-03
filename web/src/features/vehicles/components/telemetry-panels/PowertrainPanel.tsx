@@ -5,8 +5,9 @@ import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
-import { fmtNumber, fmtInt } from '@/lib/numberFormat'
+
 import type { MotorSnapshot } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Symmetric ± window (kW) the power bar + accessible meter visualise. The
@@ -28,6 +29,7 @@ interface PowertrainPanelProps {
 }
 
 export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatTemperature } = useUnits()
 

@@ -19,11 +19,12 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyHourlyProfileProps {
   summary: ComfortConsistencySummary;
@@ -36,6 +37,7 @@ export function ComfortConsistencyHourlyProfile({
   state,
   formatDuration,
 }: ComfortConsistencyHourlyProfileProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const data = summary.hourlyProfile.map((bucket) => ({
     hour: t('comfortConsistency.hourly.hourLabel', '{{hour}}:00', {
@@ -45,7 +47,7 @@ export function ComfortConsistencyHourlyProfile({
       bucket.withinBandShare != null
         ? bucket.withinBandShare * 100
         : null,
-    observed: formatDuration(bucket.observedS, { precision: 2 }),
+    observed: formatDuration(bucket.observedS),
   }));
 
   return (
@@ -123,11 +125,11 @@ export function ComfortConsistencyHourlyProfile({
                 </MetricLabel>
                 <Text as="p" variant="bodySm" className="mt-1">
                   {bucket.withinBandShare != null
-                    ? fmtPercent(bucket.withinBandShare * 100, 0)
+                    ? fmtPercent(bucket.withinBandShare * 100)
                     : '—'}
                 </Text>
                 <Text as="p" variant="caption">
-                  {formatDuration(bucket.observedS, { precision: 2 })}
+                  {formatDuration(bucket.observedS)}
                 </Text>
               </div>
             ))}

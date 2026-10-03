@@ -18,12 +18,13 @@ import {
 } from '@/components/charts';
 import { QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import type { CalendarMonth } from '../../lib/driveCalendar';
 import { formatCalendarMonth } from './labels';
 import type { DriveCalendarSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyActivityChartProps extends DriveCalendarSectionState {
   months: CalendarMonth[];
@@ -38,6 +39,7 @@ export function MonthlyActivityChart({
   error,
   onRetry,
 }: MonthlyActivityChartProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { distance: distanceUnit, locale } = unitPrefs;
@@ -86,7 +88,7 @@ export function MonthlyActivityChart({
         {
           key: 'distance',
           label: distanceName,
-          format: (value) => fmtNumber(value, 1),
+          format: (value) => fmtNumber(value),
         },
         {
           key: 'drives',
@@ -121,7 +123,7 @@ export function MonthlyActivityChart({
                 tick={axisTick}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => fmtNumber(value, 0)}
+                tickFormatter={(value) => fmtNumber(value)}
               />
               <YAxis
                 yAxisId="drives"
@@ -136,7 +138,7 @@ export function MonthlyActivityChart({
                   <ChartTooltip
                     valueFormatter={(value, name) =>
                       name === distanceName
-                        ? `${fmtNumber(value, 1)} ${distanceUnit}`
+                        ? `${fmtNumber(value)} ${distanceUnit}`
                         : fmtInt(value)
                     }
                   />

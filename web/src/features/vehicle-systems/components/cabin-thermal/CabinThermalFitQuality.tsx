@@ -35,7 +35,7 @@ export function CabinThermalFitQuality({
   const points = summary.events.map((event, index) => ({
     event: index + 1,
     quality: Math.round(event.r2 * 1_000) / 10,
-    tau: formatDuration(event.tauMin * 60, { precision: 1 }),
+    tau: formatDuration(event.tauMin * 60),
     direction: event.cooling
       ? t('cabinThermal.direction.cooling', 'Cooling')
       : t('cabinThermal.direction.warming', 'Warming'),

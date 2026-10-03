@@ -122,7 +122,7 @@ export function DriveCalendarHeatmap({
                                 style: 'long',
                                 locale: unitPrefs.locale,
                               }),
-                              distance: formatDistance(day.distanceM, { precision: 1 }),
+                              distance: formatDistance(day.distanceM),
                               count: day.drives,
                             },
                           )}

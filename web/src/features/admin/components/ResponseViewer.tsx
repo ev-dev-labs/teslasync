@@ -5,6 +5,8 @@ import { cn } from '@/lib/cn';
 import { GlassPanel, Button as UiButton, CopyButton, Text } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 /* ─── types ───────────────────────────────────────────────────────────── */
 
@@ -42,8 +44,8 @@ function formatBytes(bytes: number): string {
   // nonsensical negative size instead of a neutral value.
   if (!Number.isFinite(bytes) || bytes < 0) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${fmtNumber((bytes / 1024))} KB`;
+  return `${fmtNumber((bytes / (1024 * 1024)))} MB`;
 }
 
 function statusColor(status: number): string {
@@ -288,6 +290,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
 /* ─── main component ──────────────────────────────────────────────────── */
 
 export default function ResponseViewer({ response, loading, history, onReplay }: ResponseViewerProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
 
   // Pretty-printing a large JSON body is non-trivial — memoise so it only

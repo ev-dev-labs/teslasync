@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { cn } from '@/lib/cn';
-import { formatBytes, fmtInt as libFmtInt } from '@/lib/numberFormat';
-import { formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
+import { fmtInt as libFmtInt } from '@/lib/numberFormat';
+import { formatRelative } from '@/lib/dateFormat';
 import { neonColorMap, typography, type NeonColor } from '@/lib/tokens';
 import { Icons } from '@/lib/icons';
 
@@ -45,6 +45,7 @@ import {
 } from '@/api/hooks/useExports';
 import { ScheduledExportsPanel } from './ScheduledExportsPanel';
 import type { Vehicle } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -464,6 +465,7 @@ function StatsRow({
   jobs: ExportJobSummary[] | undefined;
   isLoading: boolean;
 }) {
+  const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
   const totalExports = jobs?.length ?? 0;
 
@@ -510,7 +512,7 @@ function StatsRow({
       />
       <MetricCard
         label={t('dataExport.totalSize', 'Total size')}
-        value={formatBytes(totalSize, { zeroAsEmpty: true, gbDecimals: 2 })}
+        value={formatBytes(totalSize, { zeroAsEmpty: true })}
         icon={<Icons.hardDrive className="h-4 w-4" />}
         color="blue"
       />
@@ -890,6 +892,8 @@ function ExportHistoryTable({
   onDownload: (job: ExportJobSummary) => void;
   onRefresh: () => void;
 }) {
+  const { formatDurationMsLong } = useNumberFormatting();
+  const { formatBytes, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const vehicleMap = useMemo(() => {
     const map = new Map<number, string>();
@@ -957,13 +961,13 @@ function ExportHistoryTable({
       {
         key: 'size',
         filterValue: (row) => row.file_size ?? null,
-        filterValueLabel: (_value, row) => formatBytes(row.file_size, { zeroAsEmpty: true, gbDecimals: 2 }),
+        filterValueLabel: (_value, row) => formatBytes(row.file_size, { zeroAsEmpty: true }),
         align: 'right',
         header: t('dataExport.size', 'Size'),
         sortable: true,
         render: (row) => (
           <Text size="xs" color="secondary">
-            {formatBytes(row.file_size, { zeroAsEmpty: true, gbDecimals: 2 })}
+            {formatBytes(row.file_size, { zeroAsEmpty: true })}
           </Text>
         ),
       },
@@ -1014,7 +1018,7 @@ function ExportHistoryTable({
           ) : null,
       },
     ],
-    [t, vehicleMap, onDownload],
+    [t, vehicleMap, onDownload, formatBytes, displayPrecision, displayLocale, formatDurationMsLong],
   );
 
   return (

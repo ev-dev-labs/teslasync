@@ -29,13 +29,14 @@ import {
 import { MetricTile } from '@/components/data-display';
 import { Badge, Caption, GlassPanel, Select, Text } from '@/components/ui';
 import { EmptyState, InlineCallout } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { useCatalog } from '../hooks/useCatalog';
 import { useTrustDecision } from '../hooks/useTrustDecision';
 import { useSandboxPreview } from '../hooks/useSandboxPreview';
 import { resolveDashboardWidgetResults } from '../lib/sandboxRunner';
 import type { FormulaRunResult } from '../lib/sandboxRunner';
 import type { PackCapabilityId, PackVizKind } from '../lib/manifestTypes';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function seriesToChartData(series: number[]) {
   return series.map((value, i) => ({ i, value }));
@@ -102,6 +103,7 @@ function FormulaSeriesChart({
 }
 
 function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind; result: FormulaRunResult | null }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   if (!result) {
     return (
@@ -135,16 +137,16 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
           align="start"
           decimals={1}
           sublabel={t('intelPacks.sandbox.sampleRange', 'sample {{min}}–{{max}}{{unit}}', {
-            min: fmtNumber(Math.min(...result.series), 1),
-            max: fmtNumber(Math.max(...result.series), 1),
+            min: fmtNumber(Math.min(...result.series)),
+            max: fmtNumber(Math.max(...result.series)),
             unit: result.unit ? ` ${result.unit}` : '',
           })}
         />
       ) : (
         <div>
-          <Text variant="metricValue">{result.latest != null ? fmtNumber(result.latest, 1) : '—'}</Text>
+          <Text variant="metricValue">{result.latest != null ? fmtNumber(result.latest) : '—'}</Text>
           <p className="text-xs text-[var(--text-muted)]">
-            {t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', { value: result.average != null ? fmtNumber(result.average, 1) : '—', unit: result.unit ? ` ${result.unit}` : '' })}
+            {t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', { value: result.average != null ? fmtNumber(result.average) : '—', unit: result.unit ? ` ${result.unit}` : '' })}
           </p>
         </div>
       )}

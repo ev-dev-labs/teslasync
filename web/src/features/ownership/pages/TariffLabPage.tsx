@@ -32,7 +32,7 @@ import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   Tariff,
   TariffRate,
@@ -47,6 +47,7 @@ import {
   VerdictBadge,
 } from '../components';
 import { formatCurrencyMinor, formatPct, formatPricePerEnergy } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STRUCTURES: TariffStructure[] = ['flat', 'tou', 'tiered', 'real_time', 'demand'];
 const ALL_DAYS = 127;
@@ -80,6 +81,7 @@ function clockToMinutes(value: string): number {
 }
 
 export default function TariffLabPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -485,12 +487,12 @@ export default function TariffLabPage() {
               {
                 key: 'plans',
                 label: t('ownership.tariff.stat.plans', 'Plans evaluated'),
-                value: fmtNumber(results.length, 0),
+                value: fmtInt(results.length),
               },
               {
                 key: 'shift',
                 label: t('ownership.tariff.stat.shift', 'Shiftable share modelled'),
-                value: formatPct(result?.shiftable_pct, 0),
+                value: formatPct(result?.shiftable_pct),
                 tone: 'accent',
               },
             ]}
@@ -521,7 +523,7 @@ export default function TariffLabPage() {
               {
                 key: 'annual',
                 label: t('ownership.tariff.chart.cost', 'Annual cost'),
-                format: (v) => fmtNumber(v as number, 2),
+                format: (v) => fmtNumber(v as number),
               },
               { key: 'status', label: t('ownership.tariff.chart.col.status', 'Status') },
             ]}

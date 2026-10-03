@@ -8,7 +8,8 @@ import { DateTime, FormattedNumber } from '@/components/data-display';
 import type { APICallLog } from '@/api/types';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { fmtInt } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type EvidenceVariant = 'success' | 'info' | 'warning' | 'danger' | 'neutral';
 type Installation = { id: string; platform: string; shortId: string };
@@ -85,6 +86,7 @@ function ApiLogDetails({ log, serviceLabel, installation }: {
   serviceLabel: string;
   installation: Installation | null;
 }) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const keyName = log.request_headers?.['App-Key-Name'];
   const keyId = log.request_headers?.['App-Key-ID'];
@@ -160,6 +162,7 @@ export function ApiLogsEvidenceTable({
   logs, serviceConfig, installationFor, toolbarHeading, toolbarActions,
   filters, onFilterChange, onFiltersClear, methodOptions, statusOptions, serviceOptions,
 }: ApiLogsEvidenceTableProps) {
+  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);
   const columns = useMemo<Column<APICallLog>[]>(() => {
@@ -269,7 +272,7 @@ export function ApiLogsEvidenceTable({
       defaultWidth: 120,
       minWidth: 100,
       align: 'right',
-      render: (log) => <FormattedNumber value={log.duration_ms} precision={0} className="tabular-nums" />,
+      render: (log) => <FormattedNumber value={log.duration_ms} precision={displayPrecision} className="tabular-nums" />,
     },
     {
       key: 'client',
@@ -322,7 +325,7 @@ export function ApiLogsEvidenceTable({
       render: (log) => <Text as="span" variant="error" className="block truncate" title={log.error_message ?? undefined}>{log.error_message || '—'}</Text>,
     },
     ];
-  }, [t, serviceConfig, installationFor, filters, onFilterChange, methodOptions, statusOptions, serviceOptions]);
+  }, [t, serviceConfig, installationFor, filters, onFilterChange, methodOptions, statusOptions, serviceOptions, fmtInt, displayPrecision, displayLocale]);
 
   return (
     <DataTable

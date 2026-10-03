@@ -134,7 +134,7 @@ describe('EventHistoryTable — structure', () => {
       makeEvent({ id: 'unlocked', locked: false }),
       makeEvent({ id: 'unknown', locked: null }),
     ] });
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Lock' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lock filter' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Unlocked' }));
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));

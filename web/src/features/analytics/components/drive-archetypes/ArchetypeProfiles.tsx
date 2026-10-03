@@ -10,13 +10,14 @@ import {
   Table,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity, archetypeLabel } from './labels';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeProfilesProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -27,6 +28,7 @@ export function ArchetypeProfiles({
   state,
   display,
 }: ArchetypeProfilesProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -81,7 +83,7 @@ export function ArchetypeProfiles({
                           '{{count}} drives · {{share}} membership',
                           {
                             count: cluster.size,
-                            share: fmtPercent(cluster.share * 100, 1),
+                            share: fmtPercent(cluster.share * 100),
                           },
                         )}
                       </Text>

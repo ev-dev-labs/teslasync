@@ -42,7 +42,7 @@ import { useGDPRExport } from '@/api/hooks/useOperatorConfidence';
 import { apiUrl } from '@/api/client';
 import { isApiError } from '@/lib/resilience';
 import { cn } from '@/lib/cn';
-import { formatBytes } from '@/lib/numberFormat';
+
 import { formatRelative } from '@/lib/dateFormat';
 
 import {
@@ -53,8 +53,10 @@ import {
   STATUS_VARIANT,
   STATUS_ICON,
 } from '../components/gdpr-export';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function GDPRExportPage() {
+  const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('admin.gdprExport.pageTitle', 'GDPR export'));
 

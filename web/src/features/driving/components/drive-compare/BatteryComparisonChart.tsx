@@ -17,13 +17,14 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import {
   mergeProfileSeries,
   type NormalizedDriveProfile,
 } from '../../lib/driveCompare';
 import { CompareSectionBody, type CompareSectionState } from './CompareSectionBody';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryComparisonChartProps {
   profileA: NormalizedDriveProfile | null;
@@ -32,6 +33,7 @@ interface BatteryComparisonChartProps {
 }
 
 export function BatteryComparisonChart({ profileA, profileB, state }: BatteryComparisonChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const socA = profileA?.soc ?? [];
   const socB = profileB?.soc ?? [];
@@ -67,12 +69,12 @@ export function BatteryComparisonChart({ profileA, profileB, state }: BatteryCom
         {
           key: 'a',
           label: driveAName,
-          format: (value) => typeof value === 'number' ? `${fmtNumber(value, 0)}%` : '—',
+          format: (value) => typeof value === 'number' ? `${fmtNumber(value)}%` : '—',
         },
         {
           key: 'b',
           label: driveBName,
-          format: (value) => typeof value === 'number' ? `${fmtNumber(value, 0)}%` : '—',
+          format: (value) => typeof value === 'number' ? `${fmtNumber(value)}%` : '—',
         },
       ]}
       className="h-full"
@@ -95,7 +97,7 @@ export function BatteryComparisonChart({ profileA, profileB, state }: BatteryCom
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `${fmtNumber(value, 0)}%`}
+                  tickFormatter={(value) => `${fmtNumber(value)}%`}
                 />
                 <YAxis
                   domain={[0, 100]}
@@ -111,9 +113,9 @@ export function BatteryComparisonChart({ profileA, profileB, state }: BatteryCom
                       labelFormatter={(value) => t(
                         'driveCompare.chart.progressValue',
                         '{{value}}% complete',
-                        { value: fmtNumber(value, 0) },
+                        { value: fmtNumber(value) },
                       )}
-                      valueFormatter={(value) => `${fmtNumber(value, 0)}%`}
+                      valueFormatter={(value) => `${fmtNumber(value)}%`}
                     />
                   }
                 />

@@ -6,12 +6,27 @@
  * Recharts SVG that would otherwise be opaque to them.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ChartContainer } from '../ChartContainer';
 import { EmbeddedChart } from '../EmbeddedChart';
+
+let previousPreferences: ReturnType<typeof getFormatterPreferences>;
+
+beforeEach(() => {
+  previousPreferences = getFormatterPreferences();
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
+});
+
+afterEach(() => {
+  cleanup();
+  setGlobalPrecision(previousPreferences.precision);
+  setGlobalLocale(previousPreferences.locale);
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -60,6 +75,30 @@ function renderChart(ui: React.ReactNode) {
 }
 
 describe('ChartContainer accessibility contract', () => {
+  it('reactively formats typed numeric table cells while preserving IDs, counts, strings and unknowns', () => {
+    setGlobalPrecision(2);
+    setGlobalLocale('en-US');
+    renderChart(
+      <ChartContainer title="Typed values" ariaLabel="Typed values"
+        data={[{ reading: 42, count: 1234, id: 987654, clock: '03:04', missing: null }]}
+        dataColumns={[
+          { key: 'reading', label: 'reading', kind: 'measurement' },
+          { key: 'count', label: 'count', kind: 'count' },
+          { key: 'id', label: 'id' },
+          { key: 'clock', label: 'clock' },
+          { key: 'missing', label: 'missing', kind: 'measurement' },
+        ]}
+      ><div>chart</div></ChartContainer>,
+    );
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('42.00')).toBeInTheDocument();
+    act(() => setGlobalPrecision(3));
+    expect(within(table).getByText('42.000')).toBeInTheDocument();
+    expect(within(table).getByText('1,234')).toBeInTheDocument();
+    expect(within(table).getByText('987654')).toBeInTheDocument();
+    expect(within(table).getByText('03:04')).toBeInTheDocument();
+    expect(within(table).getByText('—')).toBeInTheDocument();
+  });
   it('keeps semantics without nested panel chrome in embedded mode', () => {
     renderChart(
       <EmbeddedChart

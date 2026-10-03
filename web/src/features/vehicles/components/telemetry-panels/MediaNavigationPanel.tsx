@@ -3,9 +3,10 @@ import { Headphones, Navigation2, MapPin } from 'lucide-react'
 import { GlassPanel, Badge } from '@/components/ui'
 import { useUnits } from '@/hooks/useUnits'
 import { cleanNil } from '@/lib/cleanNil'
-import { fmtNumber, fmtInt } from '@/lib/numberFormat'
+
 import type { MediaSnapshot, LocationSnapshot } from '@/api/types'
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MediaNavigationPanelProps {
   mediaData: MediaSnapshot | null | undefined
@@ -13,6 +14,7 @@ interface MediaNavigationPanelProps {
 }
 
 export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigationPanelProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;

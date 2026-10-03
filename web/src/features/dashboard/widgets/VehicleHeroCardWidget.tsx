@@ -9,10 +9,11 @@ import { FadeIn } from '@/components/motion';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -192,6 +193,7 @@ function FullView({
   isCharging, chargerPower,
   isWide, isTall, t,
 }: FullViewProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   return (
     <div className="flex min-w-0 flex-col gap-3">
       {/* Header: name + status badge */}
@@ -226,7 +228,7 @@ function FullView({
           </Badge>
           {chargerPower != null && chargerPower > 0 && (
             <Text variant="bodySm" className="ml-auto">
-              {fmtNumber(chargerPower, 1)} kW
+              {fmtNumber(chargerPower)} kW
             </Text>
           )}
         </div>

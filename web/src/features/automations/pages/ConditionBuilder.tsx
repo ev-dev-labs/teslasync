@@ -10,7 +10,9 @@ import {
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import { Plus, Trash2 } from 'lucide-react';
-import { buildSignalFieldOptions, BOOL_FIELD_KEYS } from '@/lib/signals';
+import { buildSignalFieldOptions, BOOL_FIELD_KEYS, unitKindForSignal } from '@/lib/signals';
+import { UnitInput, UnitListInput } from '@/components/forms';
+import { useSettings } from '@/hooks/useSettings';
 import type {
   AutomationConditionKind,
   AutomationConditionSignalOp,
@@ -240,8 +242,9 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
 
 function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFieldsProps) {
   const { t } = useTranslation();
+  const { settings } = useSettings();
 
-  const signalOptions = useMemo(() => buildSignalFieldOptions(t), [t]);
+  const signalOptions = useMemo(() => buildSignalFieldOptions(t, settings), [t, settings]);
 
   const operatorOptions = useMemo(() => {
     const isBool = condition.kind === 'condition_signal' && BOOL_FIELD_KEYS.has(condition.signal);
@@ -318,23 +321,27 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
           />
           {isRange ? (
             <>
-              <UiInput
+              <UnitInput
+                key={`${condition.signal}-min`}
                 label={t('automations.builder.minValue', 'Min')}
-                type="number"
-                value={numericValue(condition.value_min, 0)}
-                onChange={(event) => onChange({
+                unit={unitKindForSignal(condition.signal)}
+                value={condition.value_min ?? null}
+                commitOnChange
+                onChange={(next) => onChange({
                   ...condition,
-                  value_min: Number.parseFloat(event.target.value) || 0,
+                  value_min: next ?? undefined,
                 })}
                 className="w-28"
               />
-              <UiInput
+              <UnitInput
+                key={`${condition.signal}-max`}
                 label={t('automations.builder.maxValue', 'Max')}
-                type="number"
-                value={numericValue(condition.value_max, 100)}
-                onChange={(event) => onChange({
+                unit={unitKindForSignal(condition.signal)}
+                value={condition.value_max ?? null}
+                commitOnChange
+                onChange={(next) => onChange({
                   ...condition,
-                  value_max: Number.parseFloat(event.target.value) || 0,
+                  value_max: next ?? undefined,
                 })}
                 className="w-28"
               />
@@ -350,16 +357,46 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
               onChange={(event) => onChange(conditionValueFromInput(condition, event.target.value))}
               className="w-28"
             />
-          ) : (
+          ) : condition.op === 'in' && condition.signal !== 'state' ? (
+            <UnitListInput
+              key={`${condition.signal}-list`}
+              label={t('automations.builder.value', 'Value')}
+              unit={unitKindForSignal(condition.signal)}
+              values={(condition.value_text ?? '').split(',').filter(part => part.trim()).map(Number)}
+              onChange={(next) => onChange({
+                kind: 'condition_signal',
+                signal: condition.signal,
+                op: condition.op,
+                value_text: next?.length ? next.join(',') : undefined,
+              })}
+              className="w-56"
+            />
+          ) : condition.signal === 'state' ? (
             <UiInput
               label={t('automations.builder.value', 'Value')}
-              type={condition.signal === 'state' || condition.op === 'in' ? 'text' : 'number'}
+              type="text"
               value={value}
               onChange={(event) => onChange(conditionValueFromInput(condition, event.target.value))}
               placeholder={condition.signal === 'state'
                 ? t('automations.builder.statePlaceholder', 'online')
                 : undefined}
               className="w-40"
+            />
+          ) : (
+            <UnitInput
+              key={condition.signal}
+              label={t('automations.builder.value', 'Value')}
+              unit={unitKindForSignal(condition.signal)}
+              value={condition.value_num ?? null}
+              commitOnChange
+              onChange={(next) => onChange({
+                kind: 'condition_signal',
+                signal: condition.signal,
+                op: condition.op,
+                value_num: next ?? undefined,
+              })}
+              className="w-40"
+              required
             />
           )}
         </div>

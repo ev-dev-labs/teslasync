@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ChargingSession } from '@/api/types';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { CHARGER_COLORS } from '@/lib/colors';
 import { Text } from '@/components/ui';
 import {
@@ -23,12 +23,14 @@ import {
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { avg, durationMinutes, getChargerLabel } from './helpers';
 import type { ChargerTypeStats } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChargerTypeChartProps {
   sessions: ChargingSession[];
 }
 
 export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const hidden = useHiddenSeries('charger-type-chart');
 
@@ -59,11 +61,11 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
       chargerTypeStats.map((s) => ({
         label: s.label,
         count: s.count,
-        avgKw: fmtNumber(s.avgKw, 1),
-        avgKwh: fmtNumber(s.avgKwh, 1),
+        avgKw: fmtNumber(s.avgKw),
+        avgKwh: fmtNumber(s.avgKwh),
         avgDuration: fmtInt(s.avgDuration),
       })),
-    [chargerTypeStats],
+    [chargerTypeStats, fmtNumber, fmtInt],
   );
 
   const tableColumns = useMemo(

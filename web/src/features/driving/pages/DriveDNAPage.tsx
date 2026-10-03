@@ -79,7 +79,7 @@ export default function DriveDNAPage() {
           '{{date}} · {{distance}}',
           {
             date: formatDateTime(drive.startTs, { tz: timezone }),
-            distance: units.formatDistance(drive.distanceM, { precision: 1 }),
+            distance: units.formatDistance(drive.distanceM),
           },
         ),
       })),

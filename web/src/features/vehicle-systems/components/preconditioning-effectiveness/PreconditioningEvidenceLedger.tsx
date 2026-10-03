@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { preconditioningEvidenceLabel } from './labels';
 import { PreconditioningQueryStatus } from './PreconditioningQueryStatus';
@@ -19,6 +19,7 @@ import type {
   PreconditioningQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningEvidenceLedgerProps {
   summary: PreconditioningSummary;
@@ -31,6 +32,7 @@ export function PreconditioningEvidenceLedger({
   state,
   formatDelta,
 }: PreconditioningEvidenceLedgerProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const resolved =
     state.climate.isResolved
@@ -103,7 +105,7 @@ export function PreconditioningEvidenceLedger({
             )}
             value={
               resolved && summary.conditionedShare != null
-                ? fmtPercent(summary.conditionedShare * 100, 1)
+                ? fmtPercent(summary.conditionedShare * 100)
                 : resolved
                   ? '—'
                   : '—'
@@ -178,7 +180,7 @@ export function PreconditioningEvidenceLedger({
             )}
             value={
               resolved && summary.overall.evidence !== 'none'
-                ? fmtPercent(summary.overall.confidence * 100, 0)
+                ? fmtPercent(summary.overall.confidence * 100)
                 : '—'
             }
             subtitle={resolved

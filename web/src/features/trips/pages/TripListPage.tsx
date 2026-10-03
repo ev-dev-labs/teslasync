@@ -30,9 +30,10 @@ import { useUrlBatch, useUrlNumber } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import type { Trip } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── Constants & helpers ─────────────────────────────────── */
 
@@ -217,6 +218,7 @@ export default function TripListPage() {
 /** Full-width KPI band. Aggregates are computed null-safe from SI fields and
  *  formatted at the display boundary via `useUnits` / `useFormatting`. */
 function TripStatsBand({ trips, isLoading }: { trips: Trip[]; isLoading: boolean }) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -455,6 +457,7 @@ function TripEnergyPanel({ trips, isLoading, isError, error, onRetry }: SectionS
 /** A single trip rendered as a bento grid cell — header, meta badges, and a
  *  distance / energy / cost stat footer. */
 function TripCard({ trip }: { trip: Trip }) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();

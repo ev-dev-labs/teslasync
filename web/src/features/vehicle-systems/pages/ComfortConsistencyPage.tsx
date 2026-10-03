@@ -26,16 +26,18 @@ import {
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   convertTempFromSI,
   type TemperatureUnitPref,
 } from '@/lib/unitConversion';
 import { summarizeComfortConsistency } from '../lib/comfortConsistency';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const convertDeltaC = (valueC: number, unit: TemperatureUnitPref): number =>
   convertTempFromSI(valueC, unit) - convertTempFromSI(0, unit);
 export default function ComfortConsistencyPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('comfortConsistency.title', 'Comfort consistency'));
   const { vehicleId } = useSelectedVehicle();
@@ -55,7 +57,7 @@ export default function ComfortConsistencyPage() {
         precision,
       )} ${unitPrefs.temperature}`;
     },
-    [unitPrefs.precision, unitPrefs.temperature],
+    [unitPrefs.precision, unitPrefs.temperature, fmtNumber],
   );
   const hasData = climateQuery.data !== undefined;
   const queryState = useMemo<ComfortConsistencyQueryState>(

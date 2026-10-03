@@ -9,10 +9,11 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingDutyCompositionProps {
   summary: HvacCyclingSummary;
@@ -34,6 +35,7 @@ export function HvacCyclingDutyComposition({
   state,
   formatDuration,
 }: HvacCyclingDutyCompositionProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -53,20 +55,20 @@ export function HvacCyclingDutyComposition({
           <Grid cols={{ default: 2, md: 3 }} gap={3}>
             <DutyMetric
               label={t('hvacCycling.duty.onTime', 'Observed on time')}
-              value={formatDuration(summary.totalOnObservedS, { precision: 1 })}
+              value={formatDuration(summary.totalOnObservedS)}
             />
             <DutyMetric
               label={t('hvacCycling.duty.offTime', 'Observed off time')}
-              value={formatDuration(summary.totalOffObservedS, { precision: 1 })}
+              value={formatDuration(summary.totalOffObservedS)}
             />
             <DutyMetric
               label={t('hvacCycling.duty.totalTime', 'Total observed time')}
-              value={formatDuration(summary.observedS, { precision: 1 })}
+              value={formatDuration(summary.observedS)}
             />
             <DutyMetric
               label={t('hvacCycling.duty.dutyCycle', 'Duration-weighted on duty')}
               value={summary.dutyCycle != null
-                ? fmtPercent(summary.dutyCycle * 100, 1)
+                ? fmtPercent(summary.dutyCycle * 100)
                 : '—'}
             />
             <DutyMetric
@@ -83,9 +85,9 @@ export function HvacCyclingDutyComposition({
               'hvacCycling.duty.identity',
               '{{observed}} observed = {{on}} on + {{off}} off.',
               {
-                observed: formatDuration(summary.observedS, { precision: 1 }),
-                on: formatDuration(summary.totalOnObservedS, { precision: 1 }),
-                off: formatDuration(summary.totalOffObservedS, { precision: 1 }),
+                observed: formatDuration(summary.observedS),
+                on: formatDuration(summary.totalOnObservedS),
+                off: formatDuration(summary.totalOffObservedS),
               },
             )}
           </Text>

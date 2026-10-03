@@ -217,8 +217,8 @@ describe('TripDrivesTable — shared loaded-value filters', () => {
     renderTable({ trip: makeTrip(drives) });
     expect(screen.queryByText('dist:30000')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Distance' }));
-    const dialog = within(screen.getByRole('dialog', { name: 'Filter Distance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Distance filter' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Distance filter' }));
     expect(dialog.getByRole('checkbox', { name: 'dist:30000' })).toBeChecked();
     fireEvent.click(dialog.getByRole('checkbox', { name: 'Select all shown values' }));
     fireEvent.click(dialog.getByRole('checkbox', { name: 'dist:30000' }));
@@ -235,8 +235,8 @@ describe('TripDrivesTable — shared loaded-value filters', () => {
         makeDrive({ id: 2, distance_m: 0 }),
       ]),
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Filter Distance' }));
-    const dialog = within(screen.getByRole('dialog', { name: 'Filter Distance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Distance filter' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Distance filter' }));
     expect(dialog.getAllByRole('checkbox')).toHaveLength(3);
     expect(dialog.getByRole('checkbox', { name: 'dist:0' })).toBeInTheDocument();
   });

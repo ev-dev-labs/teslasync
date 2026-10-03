@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { Badge, Select, Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, seconds, time } from './PhysicsPageShell';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function PhysicsLifeTapeSection({ physics }: { physics: PhysicsPage }) {
+  const { fmtNumber } = useNumberFormatting();
   const { report, t } = physics;
   const tape = report?.life_tape;
   const segments = tape?.segments ?? [];
@@ -35,14 +37,14 @@ export default function PhysicsLifeTapeSection({ physics }: { physics: PhysicsPa
       </Grid>
       <div className="flex flex-wrap gap-2">
         <Badge variant="neutral" size="sm">{t('teslaOnly.lifeShare', 'Sum of classified intervals / returned window: {{value}}', {
-          value: classifiedShare == null ? t('teslaOnly.unknown', 'unknown') : `${fmtNumber(classifiedShare, 1)}%`,
+          value: classifiedShare == null ? t('teslaOnly.unknown', 'unknown') : `${fmtNumber(classifiedShare)}%`,
         })}</Badge>
         {windowS != null && total > windowS && <Badge variant="warning" size="sm">{t('teslaOnly.lifeOverlap', 'Intervals sum beyond the window; no coverage percentage is inferred')}</Badge>}
       </div>
       <Text as="p" variant="caption">{t('teslaOnly.lifeShareCaution', 'Classified interval duration is not telemetry completeness. Unclassified time may be absent from the returned intervals; do not treat the remainder as parked or driving.')}</Text>
       <div className="space-y-2">{states.map(([name, item]) => <div key={name} className="rounded-lg border border-[var(--glass-border)] p-3">
         <div className="flex justify-between gap-2"><Text as="span" variant="bodySm">{name}</Text>
-          <Badge variant={name === 'unknown' ? 'warning' : 'neutral'} size="sm">{seconds(item.duration, t)} · {total > 0 ? `${fmtNumber(100 * item.duration / total, 1)}%` : t('teslaOnly.unknown', 'unknown')}</Badge></div>
+          <Badge variant={name === 'unknown' ? 'warning' : 'neutral'} size="sm">{seconds(item.duration, t)} · {total > 0 ? `${fmtNumber(100 * item.duration / total)}%` : t('teslaOnly.unknown', 'unknown')}</Badge></div>
         <Text as="p" variant="caption">{t('teslaOnly.lifeIntervals', '{{count}} returned intervals', { count: item.count })}</Text>
       </div>)}</div>
       <Text as="p" variant="caption">{t('teslaOnly.workbench.tapeCaution', 'State durations classify the returned window, not GPS distance. Neutral rolling is not confirmed park; gaps stay unknown.')}</Text>

@@ -7,8 +7,9 @@ import { AlertBanner } from '@/components/feedback';
 import { Skeleton } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { DriveFsdInsight, FsdAttributionConfidence } from '@/types/fsd';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SupervisedDrivingPanelProps {
   insight: DriveFsdInsight | undefined;
@@ -33,6 +34,7 @@ export function SupervisedDrivingPanel({
   error,
   isOngoing = false,
 }: SupervisedDrivingPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
 
@@ -125,7 +127,6 @@ export function SupervisedDrivingPanel({
                 ? '—'
                 : `${confidence === 'high' ? '' : '~'}${formatDistance(
                     insight.fsd_distance_m,
-                    { precision: 1 },
                   )}`}
             </td>
           </tr><tr>
@@ -136,7 +137,7 @@ export function SupervisedDrivingPanel({
             <td className="tabular-nums">
               {insight?.fsd_share_pct == null
                 ? '—'
-                : `${confidence === 'high' ? '' : '~'}${fmtNumber(insight.fsd_share_pct, 1)}%`}
+                : `${confidence === 'high' ? '' : '~'}${fmtNumber(insight.fsd_share_pct)}%`}
             </td>
           </tr><tr>
             <th scope="row">

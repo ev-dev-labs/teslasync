@@ -6093,6 +6093,9 @@
     }
   },
   "common": {
+    "invalidNumber": "Enter a valid number",
+    "unitListHint": "Separate values with semicolons",
+    "preferredUnitInputHint": "Enter {{unit}}. Saved thresholds remain canonical SI values.",
     "name": "Name",
     "type": "Type",
     "description": "Description",
@@ -12093,10 +12096,10 @@
       },
       "actionType": "Action type",
       "actionNumber": "Action {{number}}",
-      "chargeLimit": "Charge limit (%)",
+      "chargeLimit": "Charge limit",
       "chargingAmps": "Charging current (A)",
-      "driverTemp": "Driver temperature (°C)",
-      "passengerTemp": "Passenger temperature (°C)",
+      "driverTemp": "Driver temperature",
+      "passengerTemp": "Passenger temperature",
       "showAdvancedParams": "Advanced parameters (JSON)",
       "hideAdvancedParams": "Hide advanced parameters",
       "geofenceHelp": "Create a place first, then return here to choose when the vehicle arrives or leaves.",

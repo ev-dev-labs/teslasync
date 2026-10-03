@@ -21,10 +21,11 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import { formatDateShort, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 
 import { analyzeChargingThermalTax, type ThermalEnergySource } from '../lib/chargingThermalTax';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SOURCE_DEFAULTS: Record<ThermalEnergySource, string> = {
   cumulative: 'Metered running total',
@@ -35,6 +36,7 @@ const SOURCE_DEFAULTS: Record<ThermalEnergySource, string> = {
 const CHART_KEY = 'charging-thermal-tax-power';
 
 export default function ChargingThermalTaxPage() {
+  const { fmtPercent } = useNumberFormatting();
   const { t, i18n } = useTranslation();
   usePageTitle(t('chargingThermalTax.title', 'Charging Thermal Tax'));
 
@@ -131,14 +133,14 @@ export default function ChargingThermalTaxPage() {
             <>
               <MetricCard
                 label={t('chargingThermalTax.heaterEnergy', 'Heater Energy')}
-                value={numericSessionId != null ? formatEnergy(summary.heaterWh, { precision: 0 }) : '\u2014'}
+                value={numericSessionId != null ? formatEnergy(summary.heaterWh) : '\u2014'}
                 subtitle={t('chargingThermalTax.heaterEnergyHint', 'trapezoidal integral over the session')}
                 icon={<Flame className="h-4 w-4" />}
                 color="amber"
               />
               <MetricCard
                 label={t('chargingThermalTax.heaterShare', 'Heater Share')}
-                value={summary.heaterSharePct != null ? fmtPercent(summary.heaterSharePct, 1) : '\u2014'}
+                value={summary.heaterSharePct != null ? fmtPercent(summary.heaterSharePct) : '\u2014'}
                 subtitle={t('chargingThermalTax.heaterShareHint', 'of energy the charger delivered')}
                 icon={<Gauge className="h-4 w-4" />}
                 color={summary.heaterSharePct != null && summary.heaterSharePct >= 15 ? 'amber' : 'cyan'}
@@ -161,7 +163,7 @@ export default function ChargingThermalTaxPage() {
               />
               <MetricCard
                 label={t('chargingThermalTax.peakHeater', 'Peak Heater Power')}
-                value={numericSessionId != null ? formatPower(summary.peakHeaterW, { precision: 0 }) : '\u2014'}
+                value={numericSessionId != null ? formatPower(summary.peakHeaterW) : '\u2014'}
                 subtitle={t('chargingThermalTax.peakHeaterHint', 'highest single reading')}
                 icon={<Zap className="h-4 w-4" />}
                 color="blue"
@@ -285,7 +287,7 @@ export default function ChargingThermalTaxPage() {
                     </Badge>
                     <Text variant="caption">
                       {formatDurationSecondsAsMinutes(p.durationS)}
-                      {p.state === 'heater_on' ? ` \u00b7 ${formatPower(p.avgHeaterW, { precision: 0 })}` : ''}
+                      {p.state === 'heater_on' ? ` \u00b7 ${formatPower(p.avgHeaterW)}` : ''}
                     </Text>
                   </li>
                 ))}

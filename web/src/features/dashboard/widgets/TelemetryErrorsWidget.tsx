@@ -6,15 +6,17 @@ import { combineDataStates, deriveDataState } from '@/api/dataState';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useFleetTelemetryErrorVINs, useFleetTelemetryErrors } from '@/api/hooks/useTelemetry';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { severityTokens, typography } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 export default function TelemetryErrorsWidget({ size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
 
   const vinsQuery = useFleetTelemetryErrorVINs();
@@ -117,7 +119,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.telemetryErrors.title', 'Telemetry errors')}
+      title={t('widget.telemetryErrors.title', 'Telemetry errors')}
       icon={<AlertCircle className={`h-3.5 w-3.5 ${severityTokens.critical.fg}`} />}
       loading={loading}
       dataState={state}

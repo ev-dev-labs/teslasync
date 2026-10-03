@@ -183,13 +183,13 @@ const EMPTY_TWIN_STATE: VehicleTwinState = {
   lastUpdated: null,
 };
 
-function isVehicleDriving(vehicleState: { state?: string; speed?: number } | null | undefined): boolean {
+function isVehicleDriving(vehicleState: { state?: string | null; speed?: number | null } | null | undefined): boolean {
   if (!vehicleState) return false;
   return vehicleState.state?.toLowerCase() === 'driving' || (vehicleState.speed ?? 0) > 0;
 }
 
 function isChargingActive(
-  vehicleState: { is_charging?: boolean; charger_power?: number } | null | undefined,
+  vehicleState: { is_charging?: boolean | null; charger_power?: number | null } | null | undefined,
   charging: { charging_state?: string | null; charger_power_kw?: number | null } | null | undefined,
 ): boolean {
   const normalizedState = charging?.charging_state?.toLowerCase().replace(/[\s_-]/g, '') ?? '';
@@ -217,7 +217,7 @@ function parseWindowOpenSummary(
  */
 export function buildTwinState(
   security: SecurityEvent | null | undefined,
-  vehicleState: { state?: string; speed?: number; is_charging?: boolean; charger_power?: number; is_locked?: boolean; sentry_mode?: boolean } | null | undefined,
+  vehicleState: { state?: string | null; speed?: number | null; is_charging?: boolean | null; charger_power?: number | null; is_locked?: boolean | null; sentry_mode?: boolean | null } | null | undefined,
   charging: ChargingTelemetry | null | undefined,
 ): VehicleTwinState {
   if (!security && !vehicleState && !charging) return { ...EMPTY_TWIN_STATE };

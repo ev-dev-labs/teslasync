@@ -1,11 +1,7 @@
 import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
-  ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow,
-} from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { useTeslaEnergyLiveStatusHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { averageKnown, knownNumber } from '@/api/dataState';
 import { DataProvenanceBadge } from '@/components/data-display';
@@ -13,11 +9,12 @@ import { Skeleton } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertPowerFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -34,6 +31,8 @@ export function shortTime(iso: string): string {
 }
 
 export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const widgetId = useId();
@@ -125,6 +124,10 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
     dataUpdatedAt: siteId ? historyUpdatedAt : sitesUpdatedAt,
     refetch: handleRefresh,
   }, { provenance: 'historical', partial: chartData.some((d) => [d.solar, d.battery, d.grid, d.home].some((value) => value == null)) });
+  const shellProps = {
+    title: t('widget.powerFlowHistory.title', 'Power flow history'),
+    icon: <TrendingUp aria-hidden="true" className="h-3.5 w-3.5 text-cyan-400" />,
+  };
 
   // No energy sites linked. Only surface the "no site" empty state when the
   // sites query genuinely returned none — a sites *error* must fall through so
@@ -133,6 +136,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   if (!hasSites && !isLoading && !sitesError) {
     return (
       <WidgetShell
+        {...(isCompact ? shellProps : {})}
         loading={false}
         dataState={dataState}
         updatedAt={sitesUpdatedAt}
@@ -157,6 +161,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
+        {...shellProps}
         loading={isLoading}
         dataState={dataState}
         loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
@@ -174,12 +179,12 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
           stats={hasData ? [
             {
               label: t('widget.powerFlowHistory.avgSolar', 'Avg solar'),
-              value: avgSolarKw == null ? null : fmtNumber(avgSolarKw, 1),
+              value: avgSolarKw == null ? null : fmtNumber(avgSolarKw),
               unit: unitPrefs.power,
             },
             {
               label: t('widget.powerFlowHistory.peakHome', 'Peak home'),
-              value: peakHomeKw == null ? null : fmtNumber(peakHomeKw, 1),
+              value: peakHomeKw == null ? null : fmtNumber(peakHomeKw),
               unit: unitPrefs.power,
             },
           ] : []}
@@ -194,17 +199,17 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
     ? [
         {
           label: t('widget.powerFlowHistory.avgSolar', 'Avg solar'),
-          value: avgSolarKw == null ? null : fmtNumber(avgSolarKw, 1),
+          value: avgSolarKw == null ? null : fmtNumber(avgSolarKw),
           unit: unitPrefs.power,
         },
         {
           label: t('widget.powerFlowHistory.peakHome', 'Peak home'),
-          value: peakHomeKw == null ? null : fmtNumber(peakHomeKw, 1),
+          value: peakHomeKw == null ? null : fmtNumber(peakHomeKw),
           unit: unitPrefs.power,
         },
         {
           label: t('widget.powerFlowHistory.avgNetGrid', 'Avg net grid'),
-          value: avgGridPower == null ? null : fmtNumber(avgGridPower, 1),
+          value: avgGridPower == null ? null : fmtNumber(avgGridPower),
           unit: unitPrefs.power,
         },
       ]
@@ -214,8 +219,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.powerFlowHistory.title', 'Power flow history')}
-      icon={<TrendingUp aria-hidden="true" className="h-3.5 w-3.5 text-cyan-400" />}
+      {...shellProps}
       loading={isLoading}
       dataState={dataState}
       loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
@@ -263,12 +267,12 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                 tickLine={false}
                 axisLine={false}
                 width={40}
-                tickFormatter={(v: number) => fmt(v, 1)}
+                tickFormatter={(v: number) => fmt(v)}
               />
               <Tooltip
                 content={<ChartTooltip />}
                 formatter={(value: number, name: string) => [
-                  `${fmtNumber(value, 2)} ${unitPrefs.power}`,
+                  `${fmtNumber(value)} ${unitPrefs.power}`,
                   name,
                 ]}
                 cursor={{ fill: chartTokens.gridStroke }}

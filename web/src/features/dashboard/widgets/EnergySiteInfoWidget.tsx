@@ -6,14 +6,16 @@ import { DataProvenanceBadge } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { WidgetDetailCard, type DetailEntry } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function EnergySiteInfoWidget({ size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatPower, formatEnergy } = useUnits();
   const isCompact = size.cols <= 1;
@@ -72,11 +74,11 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
   // date — surfaced under the "Installation Timezone" label below.
   const installTimezone = knownString(info?.installation_time_zone);
 
-  const solarPower = formatPower(knownNumber(info?.nameplate_power), { precision: 1 });
+  const solarPower = formatPower(knownNumber(info?.nameplate_power));
 
   const batteryCount = knownNumber(info?.battery_count);
   const batteryCapacity = knownNumber(info?.nameplate_energy);
-  const batteryEnergy = formatEnergy(batteryCapacity, { precision: 1 });
+  const batteryEnergy = formatEnergy(batteryCapacity);
 
   const gatewayFirmware = knownString(info?.version);
 
@@ -109,8 +111,8 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.energySiteInfo.title', 'Energy site')}
-      icon={isCompact ? undefined : <Home className="h-3.5 w-3.5" />}
+      title={t('widget.energySiteInfo.title', 'Energy site')}
+      icon={<Home className="h-3.5 w-3.5" />}
       loading={isLoading}
       dataState={dataState}
       loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}

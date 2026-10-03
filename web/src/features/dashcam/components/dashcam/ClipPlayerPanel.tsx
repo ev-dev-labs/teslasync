@@ -7,6 +7,7 @@ import { useUnits } from '@/hooks/useUnits';
 import type { ClipRecord } from '../../lib/types';
 import { useMotionAnalysis } from '../../hooks/useMotionAnalysis';
 import { RedactionOverlay } from './RedactionOverlay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface ClipPlayerPanelProps {
   clip: ClipRecord;
@@ -19,6 +20,7 @@ export interface ClipPlayerPanelProps {
  * change and revoked on cleanup — no bytes are ever sent anywhere.
  */
 export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -106,7 +108,7 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
         <div className="text-xs text-[var(--text-muted)]">
           {motionStatus === 'not_run' && t('dashcam.player.motionNotRun', 'Motion score not yet computed.')}
           {motionStatus === 'ok' && t('dashcam.player.motionScore', 'Sampled-frame pixel-difference score: {{score}} ({{pairs}} frame pairs)', {
-            score: clip.motion.score?.toFixed(3),
+            score: fmtNumber(clip.motion.score),
             pairs: clip.motion.samplePairs ?? 0,
           })}
           {motionStatus === 'unavailable' && t('dashcam.player.motionUnavailable', 'Motion analysis unavailable: {{reason}}', { reason: clip.motion.reason })}

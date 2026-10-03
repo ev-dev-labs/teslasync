@@ -7,15 +7,17 @@ import { Badge, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import { formatDateTime } from '@/lib/dateFormat';
 import { getAuditLogs as getDevtoolsAuditLogs } from '@/api/devtools';
 import { getNotificationStats, getNotificationLogs } from '@/api/settings';
 import type { NotificationLog, AuditLog } from '@/api/types';
 import { AccordionSection } from './AccordionSection';
 import { getStatusIcon, statusTextClass } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function OperationsSection() {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   const {
@@ -113,7 +115,7 @@ export function OperationsSection() {
             variant={successRate >= 95 ? 'success' : successRate >= 80 ? 'warning' : 'danger'}
             size="sm"
           >
-            {fmtPercent(successRate, 1)} {t('systemStatus.operations.successRateSuffix', 'success rate')}
+            {fmtPercent(successRate)} {t('systemStatus.operations.successRateSuffix', 'success rate')}
           </Badge>
         ) : undefined
       }
@@ -134,7 +136,7 @@ export function OperationsSection() {
                 <Grid cols={{ default: 2, md: 4 }} gap={3} className="mb-4">
                   <MetricCard label={t('systemStatus.operations.totalSent', 'Total sent')} value={fmtInt(notifStats.total_sent ?? 0)} icon={<Send className="h-4 w-4" />} color="cyan" />
                   <MetricCard label={t('systemStatus.failed', 'Failed')} value={fmtInt(notifStats.failed ?? 0)} icon={<XCircle className="h-4 w-4" />} color="red" />
-                  <MetricCard label={t('systemStatus.operations.successRate', 'Success rate')} value={fmtPercent(successRate, 1)} icon={<CheckCircle className="h-4 w-4" />} color="green" />
+                  <MetricCard label={t('systemStatus.operations.successRate', 'Success rate')} value={fmtPercent(successRate)} icon={<CheckCircle className="h-4 w-4" />} color="green" />
                   <MetricCard label={t('systemStatus.operations.channels', 'Channels')} value={`${notifStats.enabled_channels ?? 0}/${notifStats.total_channels ?? 0}`} icon={<Bell className="h-4 w-4" />} color="purple" />
                 </Grid>
 

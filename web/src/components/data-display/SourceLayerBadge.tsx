@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Tooltip } from '@/components/ui';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Debugger-only badge showing where a signal value came from.
@@ -65,20 +66,21 @@ const STYLE: Record<string, { tint: string; label: string; labelKey?: string; de
   },
 };
 
-function formatAge(ms: number | null | undefined): string | null {
+function formatAge(ms: number | null | undefined, fmtWithUnit: ReturnType<typeof useNumberFormatting>['fmtWithUnit']): string | null {
   if (ms == null || !Number.isFinite(ms)) return null;
-  if (ms < 1000) return `${Math.round(ms)} ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
-  if (ms < 3_600_000) return `${Math.round(ms / 60_000)} min`;
-  if (ms < 86_400_000) return `${(ms / 3_600_000).toFixed(1)} h`;
-  return `${(ms / 86_400_000).toFixed(1)} d`;
+  if (ms < 1000) return fmtWithUnit(ms, 'ms');
+  if (ms < 60_000) return fmtWithUnit(ms / 1000, 's');
+  if (ms < 3_600_000) return fmtWithUnit(ms / 60_000, 'min');
+  if (ms < 86_400_000) return fmtWithUnit(ms / 3_600_000, 'h');
+  return fmtWithUnit(ms / 86_400_000, 'd');
 }
 
 export function SourceLayerBadge({ source, ageMs, showLabel, className }: SourceLayerBadgeProps) {
   const { t } = useTranslation();
+  const { fmtWithUnit } = useNumberFormatting();
   const key = (source ?? 'unknown').toLowerCase();
   const style = STYLE[key] ?? STYLE.unknown;
-  const ageText = formatAge(ageMs);
+  const ageText = formatAge(ageMs, fmtWithUnit);
   const tooltip = ageText
     ? `${t(style.descKey, style.descFallback)} (${t('sourceLayer.age', 'age')}: ${ageText})`
     : t(style.descKey, style.descFallback);

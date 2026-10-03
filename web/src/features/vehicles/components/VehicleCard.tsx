@@ -10,10 +10,11 @@ import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarVi
 import { useUnits } from '@/hooks/useUnits';
 import { useVehicleState, deriveTrustedVehicleStatus } from '@/api/hooks/useVehicles';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { batteryColor } from '@/lib/colors';
 import type { Vehicle } from '@/api/types';
 import type { VehicleStateReadings } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -21,6 +22,7 @@ interface VehicleCardProps {
 }
 
 export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('vehicles');
   const { unitPrefs, formatDistance, formatTemperature } = useUnits();
 

@@ -3,8 +3,10 @@ import { EmptyState } from '@/components/feedback';
 import { useTranslation } from 'react-i18next';
 
 import { JourneyFragmentationSectionProps } from './_types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChainLengthChart({ result, loading = false }: JourneyFragmentationSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const data = result.chainLengthDistribution.map((point) => ({
     fragments: String(point.fragments),
@@ -14,8 +16,8 @@ export function ChainLengthChart({ result, loading = false }: JourneyFragmentati
     'journeyFragmentation.chainLength.summary',
     'Median {{median}} fragments; p90 {{p90}} fragments.',
     {
-      median: result.chainFragmentSummary.median == null ? '—' : result.chainFragmentSummary.median.toFixed(1),
-      p90: result.chainFragmentSummary.p90 == null ? '—' : result.chainFragmentSummary.p90.toFixed(1),
+      median: result.chainFragmentSummary.median == null ? '—' : fmtNumber(result.chainFragmentSummary.median),
+      p90: result.chainFragmentSummary.p90 == null ? '—' : fmtNumber(result.chainFragmentSummary.p90),
     },
   );
   return (

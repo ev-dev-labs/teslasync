@@ -44,12 +44,13 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { buildContextHref } from '@/lib/contextNavigation';
 import { request } from '@/api/client';
 import { AIAutoNameUnnamedLocations } from '@/components/ai/AIAutoNameUnnamedLocations';
 import { LocationLeaderboardPanel, type LeaderboardDatum } from '../components/LocationLeaderboardPanel';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -100,6 +101,7 @@ export function rankChipClass(index: number): string {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function LocationsPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('locations.title', 'Visited locations'));
   const { formatDuration } = useUnits();
@@ -193,9 +195,9 @@ export default function LocationsPage() {
         .slice(0, 10)
         .map((l) => ({
           name: truncateLabel(l.address_name ?? ''),
-          value: +fmtNumber((l.total_duration_s ?? 0) / 3600, 1),
+          value: +fmtNumber((l.total_duration_s ?? 0) / 3600),
         })),
-    [locations],
+    [locations, fmtNumber],
   );
 
   const shownCount = locations?.length ?? 0;

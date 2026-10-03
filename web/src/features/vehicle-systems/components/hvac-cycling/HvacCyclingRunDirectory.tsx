@@ -10,13 +10,14 @@ import {
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type {
   HvacCyclingSummary,
   HvacRunBoundary,
 } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingRunDirectoryProps {
   summary: HvacCyclingSummary;
@@ -42,6 +43,7 @@ export function HvacCyclingRunDirectory({
   locale,
   formatDuration,
 }: HvacCyclingRunDirectoryProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.runDirectory;
   const boundaryLabel = (boundary: HvacRunBoundary) => {
@@ -141,7 +143,7 @@ export function HvacCyclingRunDirectory({
                     />
                     <Detail
                       label={t('hvacCycling.directory.duration', 'Observed duration')}
-                      value={formatDuration(run.durationS, { precision: 1 })}
+                      value={formatDuration(run.durationS)}
                     />
                     <Detail
                       label={t('hvacCycling.directory.intervals', 'Intervals')}

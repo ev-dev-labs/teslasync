@@ -11,10 +11,11 @@ import { GlassPanel, PanelTitle, Text } from '@/components/ui'
 import { KVList, Currency } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import { formatDate } from '@/lib/dateFormat'
-import { fmtInt } from '@/lib/numberFormat'
+
 import type { Trip } from '@/api/types'
 import type { UnitFormatter } from '@/hooks/useUnits'
 import { tripDurationSeconds, formatTripDuration } from './helpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SelectedTripPreviewProps {
   trip: Trip | null
@@ -33,6 +34,7 @@ export function SelectedTripPreview({
   formatDistance,
   formatEnergy,
 }: SelectedTripPreviewProps) {
+  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
 
   // Derive the redacted KVList rows once per (trip, formatter, locale) change.
@@ -74,7 +76,7 @@ export function SelectedTripPreview({
               : []),
           ]
         : [],
-    [trip, formatDistance, formatEnergy, t],
+    [trip, formatDistance, formatEnergy, t, fmtInt, displayPrecision, displayLocale],
   )
 
   return (

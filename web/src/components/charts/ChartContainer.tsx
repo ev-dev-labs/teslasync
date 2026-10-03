@@ -18,6 +18,7 @@ import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary
 import { Button, FullscreenButton, Heading, Table, Text } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
 import { getLangDir, textAnchorForDir, type Direction } from '@/lib/i18nDir';
 import { AnnotationList } from './AnnotationList';
@@ -167,8 +168,8 @@ export interface ChartContainerProps {
   data?: ReadonlyArray<ChartDataRow>;
   /**
    * Column definitions for the fallback table. Required when `data`
-   * is set. `format` is unit-aware and runs once per cell; default
-   * stringifies the raw value.
+   * is set. `format` is unit-aware and runs once per cell; `kind` opts numeric
+   * cells into Settings/count formatting. Untyped cells keep raw IDs/strings.
    */
   dataColumns?: ReadonlyArray<ChartDataColumn>;
   /**
@@ -230,6 +231,8 @@ export interface ChartDataColumn {
   key: string;
   /** Visible column header. Pre-localized at the call site. */
   label: string;
+  /** Optional numeric semantics; omitted preserves raw counts/IDs/strings. */
+  kind?: 'measurement' | 'count';
   /**
    * Optional formatter — typically `(v) => formatKWh(v as number)` so
    * the table reads in the same units the visible chart axes use.
@@ -306,6 +309,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     ref,
   ) {
     const { t } = useTranslation();
+    const { fmtNumber, fmtInt } = useNumberFormatting();
     const { chartRef, exportPNG, exportSVG, copyToClipboard, exporting } =
       useChartExport(exportFilename ?? title);
     // Separate ref for the figure node used
@@ -775,7 +779,11 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                           ? col.format(raw)
                           : raw == null
                             ? '—'
-                            : String(raw);
+                            : typeof raw === 'number' && col.kind != null
+                              ? Number.isFinite(raw)
+                                ? col.kind === 'count' ? fmtInt(raw) : fmtNumber(raw)
+                                : '—'
+                              : String(raw);
                       return (
                         <td
                           key={col.key}

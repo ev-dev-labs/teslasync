@@ -6,12 +6,13 @@ import { combineDataStates, deriveDataState } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { useSignalStats, useSignalGaps, useSignals } from '@/api/hooks/useTelemetry';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { formatRelative } from '@/lib/dateFormat';
 import { severityTokens } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -22,6 +23,7 @@ interface GapSignal {
 }
 
 export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -155,7 +157,7 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.signalHealth.title', 'Signal health')}
+      title={t('widget.signalHealth.title', 'Signal health')}
       icon={<Activity className={`h-3.5 w-3.5 ${healthColor}`} />}
       loading={statsLoading}
       dataState={state}

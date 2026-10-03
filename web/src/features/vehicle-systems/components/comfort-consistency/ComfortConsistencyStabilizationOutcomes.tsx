@@ -21,7 +21,7 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
@@ -29,6 +29,7 @@ import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyStabilizationOutcomesProps {
   summary: ComfortConsistencySummary;
@@ -52,16 +53,17 @@ export function ComfortConsistencyStabilizationOutcomes({
   formatDuration,
   formatDelta,
 }: ComfortConsistencyStabilizationOutcomesProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const data = summary.overshootDistribution.map((bin) => ({
     band:
       bin.upperC == null
         ? t('comfortConsistency.stabilization.over', '> {{value}}', {
-            value: formatDelta(bin.lowerC, { precision: 2 }),
+            value: formatDelta(bin.lowerC),
           })
         : t('comfortConsistency.stabilization.range', '{{lower}}-{{upper}}', {
-            lower: formatDelta(bin.lowerC, { precision: 2 }),
-            upper: formatDelta(bin.upperC, { precision: 2 }),
+            lower: formatDelta(bin.lowerC),
+            upper: formatDelta(bin.upperC),
           }),
     windows: bin.windows,
   }));
@@ -116,7 +118,7 @@ export function ComfortConsistencyStabilizationOutcomes({
             />
             <OutcomeMetric
               label={t('comfortConsistency.stabilization.medianTime', 'Median observed time to band')}
-              value={formatDuration(summary.medianStabilizationS, { precision: 2 })}
+              value={formatDuration(summary.medianStabilizationS)}
             />
             <OutcomeMetric
               label={t('comfortConsistency.stabilization.medianOvershoot', 'Median observed overshoot')}

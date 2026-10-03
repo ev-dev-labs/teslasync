@@ -4,13 +4,14 @@ import { Radio } from 'lucide-react';
 import { Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { deriveDataState, knownNumber } from '@/api/dataState';
 import { formatRelative } from '@/lib/dateFormat';
 import type { VehicleTelemetry } from '@/types/telemetry';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid, type StatusCell } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface MqttWidgetStats {
   /** Sum of per-vehicle signal counts across the streaming fleet. */
@@ -68,6 +69,7 @@ export function deriveMqttStats(
 }
 
 export default function MQTTStatusWidget({ size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const query = useMQTTStatus();
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
@@ -90,7 +92,7 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.mqtt.title', 'MQTT status')}
+      title={t('widget.mqtt.title', 'MQTT status')}
       icon={<Radio className="h-3.5 w-3.5" />}
       loading={isLoading}
       dataState={state}
@@ -104,7 +106,7 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
           /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
             <WidgetBigNumber
-              value={stats.messagesPerSec == null ? null : fmtNumber(stats.messagesPerSec, 1)}
+              value={stats.messagesPerSec == null ? null : fmtNumber(stats.messagesPerSec)}
               unit={t('widget.mqtt.msgSec', 'msg/s')}
               badge={{ text: status.statusLabel ?? '—', variant: connected == null ? 'neutral' : connected ? 'success' : 'error' }}
             />
@@ -117,7 +119,7 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
 
             {/* Stats grid */}
             <WidgetStatGrid cols={2} stats={[
-              { label: t('widget.mqtt.msgRate', 'Messages/sec'), value: stats.messagesPerSec == null ? '—' : fmtNumber(stats.messagesPerSec, 1) },
+              { label: t('widget.mqtt.msgRate', 'Messages/sec'), value: stats.messagesPerSec == null ? '—' : fmtNumber(stats.messagesPerSec) },
               { label: t('widget.mqtt.totalToday', 'Total messages'), value: stats.totalMessages == null ? '—' : fmtInt(stats.totalMessages) },
             ]} />
 

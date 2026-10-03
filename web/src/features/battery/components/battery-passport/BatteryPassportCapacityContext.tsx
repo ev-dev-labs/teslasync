@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportCapacityContextProps {
   analysis: BatteryPassportAnalysis;
@@ -18,6 +19,7 @@ export function BatteryPassportCapacityContext({
   analysis,
   state,
 }: BatteryPassportCapacityContextProps) {
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const metrics = analysis.metrics;
 
@@ -51,7 +53,7 @@ export function BatteryPassportCapacityContext({
                 ? t(
                     'batteryPassport.values.kwh',
                     '{{value}} kWh',
-                    { value: fmtNumber(metrics.capacityKwh, 2) },
+                    { value: fmtNumber(metrics.capacityKwh) },
                   )
                 : '—'}
               subtitle={t(
@@ -73,7 +75,6 @@ export function BatteryPassportCapacityContext({
                     {
                       value: fmtNumber(
                         metrics.originalCapacityKwh,
-                        1,
                       ),
                     },
                   )
@@ -91,7 +92,7 @@ export function BatteryPassportCapacityContext({
                 'Reported / reference ratio',
               )}
               value={metrics.capacityRatio != null
-                ? fmtPercent(metrics.capacityRatio * 100, 2)
+                ? fmtPercent(metrics.capacityRatio * 100)
                 : '—'}
               subtitle={t(
                 'batteryPassport.capacity.ratioHint',

@@ -7,6 +7,7 @@ import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface UpcomingRoadmapProps {
   summary: OdometerMilestoneResult;
@@ -19,6 +20,7 @@ export function UpcomingRoadmap({
   state,
   className,
 }: UpcomingRoadmapProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateMs, formatDistanceKm } =
     useOdometerMilestoneDisplay();

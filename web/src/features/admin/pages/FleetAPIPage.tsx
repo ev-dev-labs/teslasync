@@ -18,15 +18,17 @@ import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, InlineCallout } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtInt } from '@/lib/numberFormat';
+
 import {
   useSettings, useToggleAPISuspend, usePollingConfig,
   useUpdatePollingConfig, useVersionInfo,
 } from '@/api/hooks/useSettings';
 import type { FleetEndpoint } from '@/api/hooks/useSettings';
 import { FleetEndpointTable } from '../components/FleetEndpointTable';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function FleetAPIPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('fleetApi.title', 'Fleet API'));
   const [search, setSearch] = useState('');

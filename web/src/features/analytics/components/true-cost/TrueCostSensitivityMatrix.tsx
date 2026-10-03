@@ -63,7 +63,7 @@ export function TrueCostSensitivityMatrix({
       render: (row) => (
         <Text variant="label" mono>
           {t('tco.sensitivity.factorValue', '{{value}}×', {
-            value: display.formatNumber(row.priceFactor, 1),
+            value: display.formatNumber(row.priceFactor),
           })}
         </Text>
       ),

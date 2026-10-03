@@ -8,12 +8,13 @@ import { useWatchSummary, useWatchComplication } from '@/api/hooks/useWatch';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownNumber } from '@/api/dataState';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI, convertTempFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // Battery state-of-charge health bands → gauge/accent color:
 // healthy (>50%) emerald, low (>20%) amber, critical (≤20%) red.
@@ -24,6 +25,7 @@ export function getBatteryColor(level: number): string {
 }
 
 export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const summaryQuery = useWatchSummary(vehicleId);
   const {
@@ -109,13 +111,13 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
                 unit="%"
                 color={color}
                 size={80}
-                decimals={0}
+                decimals={displayPrecision}
               />}
             </div>
             {state && <StatusBadge status={state} size="sm" />}
             {displayRange != null && (
               <span className={dashboardTokens.metricLabel}>
-                {fmtNumber(displayRange, 0)} {distanceUnit}
+                {fmtNumber(displayRange)} {distanceUnit}
               </span>
             )}
             {complication?.charging && (
@@ -163,12 +165,12 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
           <WidgetStatGrid cols={2} stats={[
             {
               label: t('widget.range', 'Range'),
-              value: displayRange == null ? null : fmtNumber(displayRange, 0),
+              value: displayRange == null ? null : fmtNumber(displayRange),
               unit: displayRange == null ? undefined : distanceUnit,
             },
             {
               label: t('widget.cabinTemp', 'Cabin'),
-              value: displayTemp == null ? null : fmtNumber(displayTemp, 0),
+              value: displayTemp == null ? null : fmtNumber(displayTemp),
               unit: displayTemp == null ? undefined : tempUnit,
             },
           ]} />

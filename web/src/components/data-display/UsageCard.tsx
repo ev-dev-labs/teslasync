@@ -10,7 +10,8 @@
  * separating that skeleton from each consumer's data derivation, we
  * keep the visual contract in one file and let the consumers focus
  * on "what numbers do I have" rather than "how do I render them".
- * Pure presentational: no hooks, no API calls, no derived state.
+ * Pure presentational: no API calls or domain-derived state.
+ * Numeric preferences format the budget's accessible percentage summary.
  * Every dynamic value comes in via props so the card stays trivially
  * testable + Storybook-friendly without mounting a query client.
  */
@@ -18,6 +19,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, ExternalLink } from 'lucide-react'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
 /** Visual intent driving accent colour for bars / banners / values. */
 export type UsageCardIntent = 'normal' | 'warn' | 'danger'
@@ -218,6 +220,7 @@ export function UsageCard(props: UsageCardProps) {
 // ----------------------------------------------------------------------------
 
 function BudgetSection({ budget }: { budget: UsageCardBudget }) {
+  const { fmtPercent } = useNumberFormatting()
   const intent = budget.intent ?? 'normal'
   const barColor = intentBarBg[intent]
   // Preserve the unclamped pct in aria-valuenow so screen readers
@@ -245,6 +248,7 @@ function BudgetSection({ budget }: { budget: UsageCardBudget }) {
         className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]"
         role="progressbar"
         aria-valuenow={ariaPct}
+        aria-valuetext={Number.isFinite(budget.pct) ? fmtPercent(Math.max(0, budget.pct)) : '—'}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={budget.ariaLabel}

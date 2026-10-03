@@ -14,13 +14,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
-import { formatBytes } from '@/lib/numberFormat';
+
 import { formatRelative } from '@/lib/dateFormat';
 import {
   useExportJobs,
   exportDownloadUrl,
   type ExportJobSummary,
 } from '@/api/hooks/useExports';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Floating, minimizable widget that surfaces in-flight + recently-finished
@@ -257,6 +258,7 @@ function DrawerSection({
 }
 
 function JobRow({ job }: { job: ExportJobSummary }) {
+  const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
   const bucket = bucketFor(job);
   const typeLabel = prettyType(job.type, t);
@@ -285,7 +287,7 @@ function JobRow({ job }: { job: ExportJobSummary }) {
                 relative: formatRelative(job.created_at),
               })
             : t('export.jobDrawer.completedLine', '{{size}} · {{relative}}', {
-                size: formatBytes(job.file_size, { zeroAsEmpty: true, gbDecimals: 2 }) || '—',
+                size: formatBytes(job.file_size, { zeroAsEmpty: true }) || '—',
                 relative: formatRelative(job.completed_at ?? job.created_at),
               })}
         </div>

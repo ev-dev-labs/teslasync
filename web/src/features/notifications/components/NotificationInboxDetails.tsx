@@ -2,8 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { DateTime } from '@/components/data-display';
 import { Button, PanelTitle, Text, type ContextMenuItem } from '@/components/ui';
 import type { AlertRule, NotificationLog, Vehicle } from '@/api/types';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { NotificationInboxDelivery } from './NotificationInboxDelivery';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface NotificationInboxDetailsProps {
   log: NotificationLog;
@@ -14,6 +15,7 @@ interface NotificationInboxDetailsProps {
 
 /** Shared by inline inspection and the non-rule dialog; nothing is inferred from missing metadata. */
 export function NotificationInboxDetails({ log, rule, vehicle, actions = [] }: NotificationInboxDetailsProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const timestamp = (value: string | null | undefined) =>
     value && Number.isFinite(Date.parse(value)) ? <DateTime value={value} in="user" /> : '—';

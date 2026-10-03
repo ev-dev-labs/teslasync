@@ -8,13 +8,14 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceToSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface CostMetrics {
   totalKwh: number | null;
@@ -80,6 +81,7 @@ export function computeMetrics(
 }
 
 export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -182,7 +184,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
       {hasData ? (
         <div className="space-y-2">
           <WidgetStatGrid cols={2} stats={[
-            { label: t('widget.chargeCost.totalEnergy', 'Total energy'), value: energyWh == null ? null : `${fmtNumber(convertEnergyFromSI(energyWh, unitPrefs.energy), 1)} ${unitPrefs.energy}`, icon: <Zap className="h-3.5 w-3.5" /> },
+            { label: t('widget.chargeCost.totalEnergy', 'Total energy'), value: energyWh == null ? null : `${fmtNumber(convertEnergyFromSI(energyWh, unitPrefs.energy))} ${unitPrefs.energy}`, icon: <Zap className="h-3.5 w-3.5" /> },
             { label: t('widget.chargeCost.totalCost', 'Total cost'), value: currency(metrics.totalCost), icon: <DollarSign className="h-3.5 w-3.5" /> },
           ]} />
           <div className={`flex min-w-0 flex-wrap justify-between gap-2 ${dashboardTokens.metricLabel}`}>
@@ -206,7 +208,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
             <div className={`flex min-w-0 flex-wrap items-center justify-between gap-2 ${dashboardTokens.metricLabel}`}>
               <span>
                 {metrics.costPerDistance != null
-                  ? `${formatCurrency(metrics.costPerDistance, 3)}/${distanceUnit}`
+                  ? `${formatCurrency(metrics.costPerDistance)}/${distanceUnit}`
                   : '—'}
               </span>
               <span>

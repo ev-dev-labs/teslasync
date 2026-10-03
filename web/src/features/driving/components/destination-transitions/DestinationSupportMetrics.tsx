@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
 import {
   destinationBits,
@@ -11,6 +11,7 @@ import {
   DestinationTransitionsMetricGroup,
   type DestinationTransitionsEvidenceMetric,
 } from './DestinationTransitionsMetricGroup';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationSupportMetricsProps {
   model: DestinationTransitionResult;
@@ -21,6 +22,7 @@ export function DestinationSupportMetrics({
   model,
   locale,
 }: DestinationSupportMetricsProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const evidence = model.evidence;
   const ingredient = (value: number | null) =>
@@ -50,7 +52,7 @@ export function DestinationSupportMetrics({
       ),
       value:
         evidence.effectiveSuccessorCount != null
-          ? fmtNumber(evidence.effectiveSuccessorCount, 2, locale)
+          ? fmtInt(evidence.effectiveSuccessorCount, locale)
           : '—',
     },
     {
@@ -120,7 +122,7 @@ export function DestinationSupportMetrics({
       ),
       value:
         evidence.latestStateAgeDays != null
-          ? fmtNumber(evidence.latestStateAgeDays, 1, locale)
+          ? fmtNumber(evidence.latestStateAgeDays, undefined, locale)
           : '—',
     },
   ];

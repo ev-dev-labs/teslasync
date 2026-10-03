@@ -2,12 +2,14 @@ import { ClipboardList, Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorComponentProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const driveCategories = Object.entries(analysis.driveAccounting.categories);
   const chargingCategories = Object.entries(analysis.chargingAccounting.categories);

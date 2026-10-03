@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 import { CabinThermalCandidateRow } from './CabinThermalCandidateRow';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalCandidateDirectoryProps {
   summary: CabinThermalSummary;
@@ -27,6 +28,7 @@ export function CabinThermalCandidateDirectory({
   formatTemperature,
   formatDuration,
 }: CabinThermalCandidateDirectoryProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.candidateDirectory;
 

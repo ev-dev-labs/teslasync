@@ -156,11 +156,13 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     // The flex container is the first descendant of the FadeIn wrapper.
     const flex = container.querySelector('.flex.flex-col.xl\\:flex-row') as HTMLElement | null;
     expect(flex).not.toBeNull();
-    // Subtitle uses a readable text-sm size regardless of viewport (no
-    // shrunken text-xs on mobile — PageHeader subtitles stay legible).
-    const subtitle = container.querySelector('p');
-    expect(subtitle?.className).toMatch(/text-sm/);
-    expect(subtitle?.className).not.toMatch(/text-xs/);
+    const info = screen.getByRole('button', { name: 'More info: Charging' });
+    const description = screen.getByRole('tooltip');
+    expect(info).toHaveAttribute('aria-describedby', description.id);
+    expect(info).toHaveClass('h-11', 'w-11');
+    expect(description).toHaveTextContent('14 sessions');
+    expect(description).toHaveClass('text-sm', 'whitespace-normal', 'max-w-[calc(100vw-1.5rem)]');
+    expect(container.querySelector('p')).toBeNull();
   });
 
   it('DataTable with mobileColumns hides non-essential columns at < md', () => {
@@ -429,4 +431,3 @@ describe('mobile.viewport :: focus + touch targets (Drawer / FilterSheet)', () =
     expect(trigger.className).toMatch(/py-3/);
   });
 });
-

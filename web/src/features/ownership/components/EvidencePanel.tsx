@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import { Table, Badge, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { DataQuality, Evidence } from '@/types/ownership';
 import { OwnershipPanel } from './OwnershipPanel';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EvidencePanelProps {
   quality?: DataQuality | null;
@@ -32,6 +33,7 @@ export function EvidencePanel({
   limitations,
   unsupported,
 }: EvidencePanelProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const evidenceItems = evidence ?? [];
   const limitationItems = limitations ?? [];
@@ -67,7 +69,7 @@ export function EvidencePanel({
                   <th scope="row" className="text-[var(--text-muted)]">
                     {t('ownership.quality.samples', 'Samples')}
                   </th>
-                  <td className="text-right">{fmtNumber(quality.sample_count ?? 0, 0)}</td>
+                  <td className="text-right">{fmtInt(quality.sample_count ?? 0)}</td>
                 </tr>
                 <tr>
                   <th scope="row" className="text-[var(--text-muted)]">
@@ -75,7 +77,7 @@ export function EvidencePanel({
                   </th>
                   <td className="text-right">
                     {quality.coverage_pct != null
-                      ? `${fmtNumber(quality.coverage_pct, 1)}%`
+                      ? `${fmtNumber(quality.coverage_pct)}%`
                       : '—'}
                   </td>
                 </tr>

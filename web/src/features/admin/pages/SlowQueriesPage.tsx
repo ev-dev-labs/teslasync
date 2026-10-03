@@ -37,7 +37,7 @@ import {
   EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import { useSlowQueries } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
@@ -45,6 +45,7 @@ import type {
   SlowQueryOrderBy,
   SlowQueryRow,
 } from '@/types/admin-operator-confidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const ORDER_BY_OPTIONS: ReadonlyArray<{ value: SlowQueryOrderBy; labelKey: string; fallback: string }> = [
   { value: 'mean_time', labelKey: 'admin.slowQueries.orderMean', fallback: 'Mean time' },
@@ -72,7 +73,7 @@ const CACHE_POOR_HEX = '#ef4444';
 /** Format a millisecond duration, promoting to seconds past 1 s. */
 function formatMs(ms: number): string {
   if (!Number.isFinite(ms)) return '—';
-  if (ms >= 1000) return `${fmtNumber(ms / 1000, 2)} s`;
+  if (ms >= 1000) return `${fmtNumber(ms / 1000)} s`;
   return `${fmtNumber(ms, ms < 10 ? 2 : 1)} ms`;
 }
 
@@ -94,7 +95,7 @@ function cacheHitRatioValue(row: SlowQueryRow): number | null {
 /** Table-cell label form of the cache hit ratio. */
 function cacheHitRatioLabel(row: SlowQueryRow): string {
   const v = cacheHitRatioValue(row);
-  return v === null ? '—' : `${fmtNumber(v, 1)}%`;
+  return v === null ? '—' : `${fmtNumber(v)}%`;
 }
 
 /** Green (cached) → amber → red (I/O-bound) tier color for a hit ratio. */
@@ -105,6 +106,7 @@ function cacheColor(ratio: number): string {
 }
 
 export default function SlowQueriesPage() {
+  const { fmtInt, fmtCompact, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('admin.slowQueries.pageTitle', 'Slow queries'));
 
@@ -200,27 +202,27 @@ export default function SlowQueriesPage() {
       {
         key: 'mean_time_ms',
         filterValue: (r) => r.mean_time_ms ?? null,
-        filterValueLabel: (_value, r) => fmtNumber(r.mean_time_ms, 2),
+        filterValueLabel: (_value, r) => fmtNumber(r.mean_time_ms),
         groupStart: true,
         header: t('admin.slowQueries.colMean', 'Mean (ms)'),
         align: 'right',
-        render: (r) => <span className="tabular-nums">{fmtNumber(r.mean_time_ms, 2)}</span>,
+        render: (r) => <span className="tabular-nums">{fmtNumber(r.mean_time_ms)}</span>,
       },
       {
         key: 'max_time_ms',
         filterValue: (r) => r.max_time_ms ?? null,
-        filterValueLabel: (_value, r) => fmtNumber(r.max_time_ms, 2),
+        filterValueLabel: (_value, r) => fmtNumber(r.max_time_ms),
         header: t('admin.slowQueries.colMax', 'Max (ms)'),
         align: 'right',
-        render: (r) => <span className="tabular-nums">{fmtNumber(r.max_time_ms, 2)}</span>,
+        render: (r) => <span className="tabular-nums">{fmtNumber(r.max_time_ms)}</span>,
       },
       {
         key: 'total_time_ms',
         filterValue: (r) => r.total_time_ms ?? null,
-        filterValueLabel: (_value, r) => fmtNumber(r.total_time_ms, 0),
+        filterValueLabel: (_value, r) => fmtNumber(r.total_time_ms),
         header: t('admin.slowQueries.colTotal', 'Total (ms)'),
         align: 'right',
-        render: (r) => <span className="tabular-nums">{fmtNumber(r.total_time_ms, 0)}</span>,
+        render: (r) => <span className="tabular-nums">{fmtNumber(r.total_time_ms)}</span>,
       },
       {
         key: 'rows_returned',
@@ -237,7 +239,7 @@ export default function SlowQueriesPage() {
         render: (r) => <span className="tabular-nums">{cacheHitRatioLabel(r)}</span>,
       },
     ],
-    [t],
+    [t, fmtNumber, displayPrecision, displayLocale],
   );
 
   const actions = (
@@ -347,7 +349,7 @@ export default function SlowQueriesPage() {
               />
               <MetricCard
                 label={t('admin.slowQueries.kpiCache', 'Cache hit ratio')}
-                value={totals.cacheRatio === null ? '—' : `${fmtNumber(totals.cacheRatio, 1)}%`}
+                value={totals.cacheRatio === null ? '—' : `${fmtNumber(totals.cacheRatio)}%`}
                 icon={<Layers className="h-5 w-5" aria-hidden="true" />}
                 color="green"
                 subtitle={t('admin.slowQueries.kpiCacheSub', 'Shared-buffer hits')}
@@ -443,7 +445,7 @@ export default function SlowQueriesPage() {
                     value={ratio}
                     max={100}
                     color={cacheColor(ratio)}
-                    sublabel={`${fmtNumber(ratio, 1)}%`}
+                    sublabel={`${fmtNumber(ratio)}%`}
                   />
                 ))}
               </div>

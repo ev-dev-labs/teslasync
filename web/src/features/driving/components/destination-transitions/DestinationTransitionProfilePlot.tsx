@@ -17,7 +17,8 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface DestinationTransitionProfileRow {
   [key: string]: string | number | null | undefined;
@@ -49,6 +50,7 @@ export function DestinationTransitionProfilePlot({
   hiddenConcentration = false,
   ariaLabel,
 }: DestinationTransitionProfilePlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const effectiveAriaLabel =
@@ -69,10 +71,10 @@ export function DestinationTransitionProfilePlot({
       {
         key: 'concentration',
         label: concentrationSeriesName,
-        format: (v) => (v != null ? fmtNumber(v as number, 1, locale) : '—'),
+        format: (v) => (v != null ? fmtNumber(v as number, undefined, locale) : '—'),
       },
     ],
-    [t, countSeriesName, concentrationSeriesName, locale],
+    [t, countSeriesName, concentrationSeriesName, locale, fmtNumber],
   );
 
   return (
@@ -116,7 +118,7 @@ export function DestinationTransitionProfilePlot({
             <Tooltip
               content={
                 <ChartTooltip
-                  valueFormatter={(value) => fmtNumber(value, 1, locale)}
+                  valueFormatter={(value) => fmtNumber(value, undefined, locale)}
                 />
               }
             />

@@ -7,8 +7,9 @@ import { LinearGauge, BipolarBar, temperatureGaugeRange } from '@/components/cha
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface LiveMotorStatusProps {
   vehicleId: number | null | undefined;
@@ -67,6 +68,7 @@ export default function LiveMotorStatus({
   toTemperatureDisplay,
   tempUnit,
 }: LiveMotorStatusProps) {
+  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
 
   const {
@@ -143,11 +145,11 @@ export default function LiveMotorStatus({
               unit={motorTempC != null ? tempUnit : '—'}
               color={motorTempColor(motorTempC ?? 0)}
               size={120}
-              decimals={0}
+              decimals={displayPrecision}
             />
             <Caption>
               {motorTempC != null
-                ? `${fmtNumber(toTemperatureDisplay(motorTempC), 1)}${tempUnit}`
+                ? `${fmtNumber(toTemperatureDisplay(motorTempC))}${tempUnit}`
                 : t('dynamics.awaiting', 'Awaiting data')}
             </Caption>
           </div>

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { fmtInt, fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { LinearGauge } from '@/components/charts/LinearGauge';
 import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
@@ -17,6 +17,7 @@ import { FSM_REGISTRY } from '@/types/fsm';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertPowerFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import type { VehicleStatus } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
   vehicle: {
@@ -66,6 +67,7 @@ function toStatus(state: string): VehicleStatus {
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
   ({ vehicle, vehicleState, photoUrl, className, ...props }, ref) => {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
     const { t } = useTranslation();
     const { unitPrefs } = useUnits();
     const vs = vehicleState;

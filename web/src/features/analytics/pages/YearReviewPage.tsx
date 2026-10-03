@@ -24,11 +24,13 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { YearReview } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Full-width "year in review" dashboard — a bento recap of the driving year. */
 export default function YearReviewPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { year: yearParam } = useParams<{ year: string }>();
   const navigate = useNavigate();
@@ -129,7 +131,7 @@ export default function YearReviewPage() {
                 <MetricCard label={t('yearReview.drives', 'Drives')} value={fmtInt(d.total_drives ?? 0)} icon={<Car className="h-4 w-4" aria-hidden="true" />} color="green" />
                 <MetricCard label={t('yearReview.energy', 'Energy')} value={formatEnergy((d.total_energy_kwh ?? 0) * 1000)} icon={<Zap className="h-4 w-4" aria-hidden="true" />} color="amber" />
                 <MetricCard label={t('yearReview.charges', 'Charges')} value={fmtInt(d.total_charge_sessions ?? 0)} icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />} color="blue" />
-                <MetricCard label={t('yearReview.youSaved', 'You saved')} value={formatCurrency(d.gas_savings ?? 0, 0)} icon={<DollarSign className="h-4 w-4" aria-hidden="true" />} color="green" />
+                <MetricCard label={t('yearReview.youSaved', 'You saved')} value={formatCurrency(d.gas_savings ?? 0)} icon={<DollarSign className="h-4 w-4" aria-hidden="true" />} color="green" />
                 <MetricCard label={t('yearReview.co2Offset', 'CO₂ offset')} value={`${fmtNumber(d.co2_offset_kg ?? 0)} kg`} icon={<Leaf className="h-4 w-4" aria-hidden="true" />} color="purple" />
               </div>
             ),

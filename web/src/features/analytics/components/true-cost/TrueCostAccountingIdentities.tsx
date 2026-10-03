@@ -33,10 +33,10 @@ function value(
   if (check.unit === 'Wh') return display.formatEnergy(amount);
   if (check.unit === 'currency_per_km') {
     return t('tco.accounting.perKmValue', '{{value}}/km', {
-      value: display.formatCurrency(amount, 4),
+      value: display.formatCurrency(amount),
     });
   }
-  return display.formatSignedCurrency(amount, 4);
+  return display.formatSignedCurrency(amount);
 }
 
 export function TrueCostAccountingIdentities({

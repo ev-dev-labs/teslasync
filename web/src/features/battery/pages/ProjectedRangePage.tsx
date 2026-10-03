@@ -29,9 +29,10 @@ import {
   type EfficiencyBucket,
   type RangeScenario,
 } from '@/api/hooks/useAnalytics';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Static maps ── */
 
@@ -118,6 +119,7 @@ export function interpolateRange(
 /* ── Component ── */
 
 export default function ProjectedRangePage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('range.title', 'Projected Range'));
   const { formatEnergy, formatTemperature, formatSpeed, formatDistance, unitPrefs } = useUnits();
@@ -215,19 +217,19 @@ export default function ProjectedRangePage() {
           ) : (
             <StaggerContainer className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
               <StaggerItem>
-                <MetricCard label={t('range.yourEstimate', 'Your Estimate')} value={formatDistance((data?.your_estimate_km ?? 0) * 1000, { precision: 0 })} icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />} color="green" />
+                <MetricCard label={t('range.yourEstimate', 'Your Estimate')} value={formatDistance((data?.your_estimate_km ?? 0) * 1000)} icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />} color="green" />
               </StaggerItem>
               <StaggerItem>
-                <MetricCard label={t('range.teslaEstimate', 'Tesla Estimate')} value={formatDistance((data?.tesla_estimate_km ?? 0) * 1000, { precision: 0 })} icon={<Car className="h-4 w-4" aria-hidden="true" />} color="cyan" />
+                <MetricCard label={t('range.teslaEstimate', 'Tesla Estimate')} value={formatDistance((data?.tesla_estimate_km ?? 0) * 1000)} icon={<Car className="h-4 w-4" aria-hidden="true" />} color="cyan" />
               </StaggerItem>
               <StaggerItem>
-                <MetricCard label={t('range.battery', 'Battery')} value={`${fmtNumber(data?.current_battery_pct ?? data?.battery_level ?? 0, 0)}%`} icon={<BatteryFull className="h-4 w-4" aria-hidden="true" />} color="purple" />
+                <MetricCard label={t('range.battery', 'Battery')} value={`${fmtNumber(data?.current_battery_pct ?? data?.battery_level ?? 0)}%`} icon={<BatteryFull className="h-4 w-4" aria-hidden="true" />} color="purple" />
               </StaggerItem>
               <StaggerItem>
                 <MetricCard label={t('range.usableCapacity', 'Usable Capacity')} value={formatEnergy(data?.usable_capacity_wh ?? 0)} icon={<Zap className="h-4 w-4" aria-hidden="true" />} color="amber" />
               </StaggerItem>
               <StaggerItem>
-                <MetricCard label={t('range.healthFactor', 'Health Factor')} value={`${fmtNumber((data?.health_factor ?? 1) * 100, 1)}%`} icon={<Shield className="h-4 w-4" aria-hidden="true" />} color="green" />
+                <MetricCard label={t('range.healthFactor', 'Health Factor')} value={`${fmtNumber((data?.health_factor ?? 1) * 100)}%`} icon={<Shield className="h-4 w-4" aria-hidden="true" />} color="green" />
               </StaggerItem>
             </StaggerContainer>
           )}
@@ -343,10 +345,10 @@ export default function ProjectedRangePage() {
                     </div>
                     {s.is_current && <Badge variant="success" size="sm">{t('range.current', 'Current')}</Badge>}
                   </div>
-                  <Text as="p" size="2xl" weight="bold" color="primary" className="tabular-nums">{formatDistance((s.range_km ?? 0) * 1000, { precision: 0 })}</Text>
+                  <Text as="p" size="2xl" weight="bold" color="primary" className="tabular-nums">{formatDistance((s.range_km ?? 0) * 1000)}</Text>
                   <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1">
-                    <Caption>{formatSpeed((s.speed_kmh ?? 0) / 3.6, { precision: 0 })}</Caption>
-                    <Caption>{formatTemperature(s.temp_c ?? 0, { precision: 0 })}</Caption>
+                    <Caption>{formatSpeed((s.speed_kmh ?? 0) / 3.6)}</Caption>
+                    <Caption>{formatTemperature(s.temp_c ?? 0)}</Caption>
                     <Caption>{fmtNumber(toDisplayEff(s.efficiency_wh_km ?? 0))} {efficiencyUnit}</Caption>
                     {(s.sample_count ?? 0) > 0 && <Caption>{t('range.drivesCount', '{{count}} drives', { count: s.sample_count })}</Caption>}
                   </div>
@@ -394,7 +396,7 @@ export default function ProjectedRangePage() {
                           <div key={speed} className="p-1 text-center">
                             {bucket ? (
                               <div className={cn('rounded-lg px-3 py-2', effColor(bucket.wh_km), 'bg-opacity-20')}>
-                                <Text as="span" size="xs" weight="bold" color="primary">{fmtNumber(toDisplayEff(bucket.wh_km), 0)}</Text>
+                                <Text as="span" size="xs" weight="bold" color="primary">{fmtNumber(toDisplayEff(bucket.wh_km))}</Text>
                                 <Caption className="block">({bucket.samples ?? 0})</Caption>
                               </div>
                             ) : (
@@ -429,7 +431,7 @@ export default function ProjectedRangePage() {
                   <div>
                     <Slider
                       label={t('range.speed', 'Speed')}
-                      formatValue={(n) => formatSpeed(n / 3.6, { precision: 0 })}
+                      formatValue={(n) => formatSpeed(n / 3.6)}
                       min={30}
                       max={150}
                       step={5}
@@ -437,15 +439,15 @@ export default function ProjectedRangePage() {
                       onChange={setWhatIfSpeed}
                     />
                     <div className="mt-0.5 flex justify-between">
-                      <Caption>{formatSpeed(30 / 3.6, { precision: 0 })}</Caption>
-                      <Caption>{formatSpeed(90 / 3.6, { precision: 0 })}</Caption>
-                      <Caption>{formatSpeed(150 / 3.6, { precision: 0 })}</Caption>
+                      <Caption>{formatSpeed(30 / 3.6)}</Caption>
+                      <Caption>{formatSpeed(90 / 3.6)}</Caption>
+                      <Caption>{formatSpeed(150 / 3.6)}</Caption>
                     </div>
                   </div>
                   <div>
                     <Slider
                       label={t('range.temperature', 'Temperature')}
-                      formatValue={(n) => formatTemperature(n, { precision: 0 })}
+                      formatValue={(n) => formatTemperature(n)}
                       min={-20}
                       max={40}
                       step={1}
@@ -453,18 +455,18 @@ export default function ProjectedRangePage() {
                       onChange={setWhatIfTemp}
                     />
                     <div className="mt-0.5 flex justify-between">
-                      <Caption>{formatTemperature(-20, { precision: 0 })}</Caption>
-                      <Caption>{formatTemperature(10, { precision: 0 })}</Caption>
-                      <Caption>{formatTemperature(40, { precision: 0 })}</Caption>
+                      <Caption>{formatTemperature(-20)}</Caption>
+                      <Caption>{formatTemperature(10)}</Caption>
+                      <Caption>{formatTemperature(40)}</Caption>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-center rounded-xl bg-white/[0.02] p-4">
                   {whatIfResult ? (
                     <div className="text-center">
-                      <Text as="p" size="3xl" weight="bold" className="text-cyan-300 tabular-nums">{formatDistance(whatIfResult.rangeKm * 1000, { precision: 0 })}</Text>
+                      <Text as="p" size="3xl" weight="bold" className="text-cyan-300 tabular-nums">{formatDistance(whatIfResult.rangeKm * 1000)}</Text>
                       <HelperText className="mt-1">{fmtNumber(toDisplayEff(whatIfResult.effWhKm))} {efficiencyUnit}</HelperText>
-                      <HelperText className="mt-1">{t('range.whatIfConditions', 'at {{speed}}, {{temp}}', { speed: formatSpeed(whatIfSpeed / 3.6, { precision: 0 }), temp: formatTemperature(whatIfTemp, { precision: 0 }) })}</HelperText>
+                      <HelperText className="mt-1">{t('range.whatIfConditions', 'at {{speed}}, {{temp}}', { speed: formatSpeed(whatIfSpeed / 3.6), temp: formatTemperature(whatIfTemp) })}</HelperText>
                     </div>
                   ) : (
                     <EmptyState /* no-action: transient — result appears as soon as the sliders resolve */ message={t('range.noWhatIf', 'Adjust sliders to calculate projected range.')} />
@@ -497,7 +499,7 @@ export default function ProjectedRangePage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Text as="span" size="sm" weight="medium" color="primary">{t(`range.factor.${f.name}`, f.name)}</Text>
                       <Badge variant={(f.impact_pct ?? 0) >= 0 ? 'success' : 'danger'} size="sm">
-                        {(f.impact_pct ?? 0) >= 0 ? '+' : ''}{fmtNumber(f.impact_pct ?? 0, 1)}%
+                        {(f.impact_pct ?? 0) >= 0 ? '+' : ''}{fmtNumber(f.impact_pct ?? 0)}%
                       </Badge>
                     </div>
                     <HelperText className="mt-1 block">{t(`range.factorDesc.${f.name}`, f.description)}</HelperText>

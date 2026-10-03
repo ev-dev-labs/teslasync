@@ -48,11 +48,12 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRefreshInterval } from '@/hooks/useRefreshPolicy';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { batteryColor, COLOR } from '@/lib/colors';
 import { cn } from '@/lib/cn';
 import type { NeonColor } from '@/lib/tokens';
 import type { LocationSnapshot } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type TFn = (key: string, fallback: string) => string;
 
@@ -143,6 +144,7 @@ function StatusRow({ icon: Icon, label, children }: StatusRowProps) {
 // ── Main page ────────────────────────────────────────────────────────
 
 export default function GlancePage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const title = t('glance.title', 'Quick glance');
   usePageTitle(title);
@@ -284,13 +286,13 @@ export default function GlancePage() {
                 <>
                   <MetricCard
                     label={t('glance.battery', 'Battery')}
-                    value={state ? `${fmtNumber(state.battery_level ?? 0, 0)}%` : '—'}
+                    value={state ? `${fmtNumber(state.battery_level ?? 0)}%` : '—'}
                     icon={<Battery className="h-5 w-5" />}
                     color={batteryNeon(state?.battery_level)}
                   />
                   <MetricCard
                     label={t('glance.range', 'Range')}
-                    value={state ? formatDistance(state.rated_range ?? 0, { precision: 0 }) : '—'}
+                    value={state ? formatDistance(state.rated_range ?? 0) : '—'}
                     icon={<Gauge className="h-5 w-5" />}
                     color="green"
                   />
@@ -308,13 +310,13 @@ export default function GlancePage() {
                   />
                   <MetricCard
                     label={t('glance.odometer', 'Odometer')}
-                    value={state ? formatDistance(state.odometer ?? 0, { precision: 0 }) : '—'}
+                    value={state ? formatDistance(state.odometer ?? 0) : '—'}
                     icon={<Route className="h-5 w-5" />}
                     color="purple"
                   />
                   <MetricCard
                     label={t('glance.speed', 'Speed')}
-                    value={state ? formatSpeed(state.speed ?? 0, { precision: 0 }) : '—'}
+                    value={state ? formatSpeed(state.speed ?? 0) : '—'}
                     icon={<Navigation className="h-5 w-5" />}
                     color="blue"
                   />
@@ -363,7 +365,7 @@ export default function GlancePage() {
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                         <Badge variant="neutral" size="sm">
                           <Battery className="h-3.5 w-3.5" aria-hidden="true" />
-                          {formatDistance(state.rated_range ?? 0, { precision: 0 })}
+                          {formatDistance(state.rated_range ?? 0)}
                         </Badge>
                         {state.is_charging && (
                           <Badge variant="info" size="sm" dot>
@@ -411,14 +413,14 @@ export default function GlancePage() {
                             <DetailRow
                               icon={BatteryCharging}
                               label={t('glance.charging.rate', 'Charge rate')}
-                              value={`${formatDistance(state.charge_rate ?? 0, { precision: 0 })}/h`}
+                              value={`${formatDistance(state.charge_rate ?? 0)}/h`}
                             />
                             <DetailRow
                               icon={Clock}
                               label={t('glance.charging.timeToFull', 'Time to full')}
                               value={
                                 (state.time_to_full_charge ?? 0) > 0
-                                  ? `${fmtNumber(state.time_to_full_charge, 1)} h`
+                                  ? `${fmtNumber(state.time_to_full_charge)} h`
                                   : '—'
                               }
                             />
@@ -516,7 +518,7 @@ export default function GlancePage() {
                           <DetailRow
                             icon={Route}
                             label={t('glance.eta', 'ETA')}
-                            value={`${fmtNumber(location?.minutes_to_arrival ?? 0, 0)} ${t('glance.minutesShort', 'min')}`}
+                            value={`${fmtNumber(location?.minutes_to_arrival ?? 0)} ${t('glance.minutesShort', 'min')}`}
                           />
                         )}
                       </div>

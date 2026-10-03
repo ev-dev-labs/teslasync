@@ -43,7 +43,7 @@ import {
   getVersionInfo, getExtendedHealth, checkForUpdates,
   getBackupStats, getWorkersHealth,
 } from '@/api/devtools'
-import { fmtInt } from '@/lib/numberFormat'
+
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 
@@ -64,6 +64,7 @@ import {
 } from '../components/status'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
 import { AiSpendWatch } from '../components/status/AiSpendWatch'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // Shared cadence
 const STATUS_REFRESH_MS = 30_000
@@ -71,6 +72,7 @@ const UPDATE_CHECK_MS = 60 * 60 * 1_000  // hourly — backend caches GitHub for
 const STALE_BACKUP_DAYS = 7
 
 export default function SystemStatusPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   usePageTitle(t('systemStatus.title', 'System status'))
   const qc = useQueryClient()
@@ -363,7 +365,7 @@ export default function SystemStatusPage() {
     positionCount,
     totalRows,
     version,
-    workers,
+    workers, fmtInt,
   ])
 
   // Action item flags
@@ -875,6 +877,7 @@ function SystemInfoRows({
   version?: { app_version: string; chart_version: string; go_version: string; os: string; arch: string; uptime_seconds: number }
   system?: { goroutines: number; uptime_seconds: number; go_version: string }
 }) {
+  const { fmtInt } = useNumberFormatting();
   if (!version) {
     return <Text as="div" size="sm" color="muted">Loading system info…</Text>
   }

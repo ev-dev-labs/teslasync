@@ -10,7 +10,8 @@ import {
   Trash2, RotateCcw, Car, CheckCircle, XCircle, SkipForward,
 } from 'lucide-react';
 import type { Automation } from '@/api/types';
-import { formatDateTime, formatRelativeTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -54,6 +55,8 @@ export function AutomationCard({
   actionsDisabledReason,
 }: AutomationCardProps) {
   const { t } = useTranslation();
+  const { formatDateTime, formatRelativeTime } = useDateFormat();
+  const { fmtInt } = useNumberFormatting();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -233,13 +236,13 @@ export function AutomationCard({
             )}
           </Caption>
           <Caption aria-hidden="true">·</Caption>
-          <Caption>{t('automations.runs', 'Runs')}: {a.execution_count ?? 0}</Caption>
+          <Caption>{t('automations.runs', 'Runs')}: {fmtInt(a.execution_count ?? 0)}</Caption>
           {failureCount > 0 && (
             <>
               <Caption aria-hidden="true">·</Caption>
               <Caption className="flex items-center gap-1 text-rose-300">
                 <XCircle className="h-3 w-3" aria-hidden="true" />
-                {t('automations.fails', 'Fails')}: {failureCount}
+                {t('automations.fails', 'Fails')}: {fmtInt(failureCount)}
               </Caption>
             </>
           )}

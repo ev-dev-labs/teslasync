@@ -9,13 +9,14 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyIntervalCompositionProps {
   summary: ComfortConsistencySummary;
@@ -39,6 +40,7 @@ export function ComfortConsistencyIntervalComposition({
   formatDuration,
   formatDelta,
 }: ComfortConsistencyIntervalCompositionProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const intervals = summary.intervals;
   const composition = summary.intervalComposition;
@@ -64,24 +66,24 @@ export function ComfortConsistencyIntervalComposition({
           <Grid cols={{ default: 2, xl: 4 }} gap={3}>
             <IntervalMetric
               label={t('comfortConsistency.intervals.observed', 'Observed active duration')}
-              value={formatDuration(composition.observedActiveS, { precision: 1 })}
+              value={formatDuration(composition.observedActiveS)}
             />
             <IntervalMetric
               label={t('comfortConsistency.intervals.within', 'Within-band duration')}
-              value={formatDuration(composition.withinBandS, { precision: 1 })}
+              value={formatDuration(composition.withinBandS)}
             />
             <IntervalMetric
               label={t('comfortConsistency.intervals.above', 'Above-target duration')}
-              value={formatDuration(composition.aboveBandS, { precision: 1 })}
+              value={formatDuration(composition.aboveBandS)}
             />
             <IntervalMetric
               label={t('comfortConsistency.intervals.below', 'Below-target duration')}
-              value={formatDuration(composition.belowBandS, { precision: 1 })}
+              value={formatDuration(composition.belowBandS)}
             />
             <IntervalMetric
               label={t('comfortConsistency.intervals.share', 'Duration within band')}
               value={composition.withinBandShare != null
-                ? fmtPercent(composition.withinBandShare * 100, 1)
+                ? fmtPercent(composition.withinBandShare * 100)
                 : '—'}
             />
             <IntervalMetric

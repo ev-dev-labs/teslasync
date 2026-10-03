@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Lock, Eye, DoorOpen, Car, Home, UserCheck, Activity } from 'lucide-react';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import type { SecurityStats } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Responsive metric grid: 2 cols on phones, 3 on small, 2 in the xl bento column. */
 const GRID_CLASS = 'grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2';
@@ -27,6 +28,7 @@ export function SecurityStatistics({
   onRetry,
   className,
 }: SecurityStatisticsProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (

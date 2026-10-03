@@ -364,8 +364,7 @@ describe('SignalHealthWidget — compact view', () => {
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.getByText('Signals')).toBeInTheDocument();
     expect(screen.getByText('30s ago')).toBeInTheDocument();
-    // Compact tiles suppress the header title AND the StatCard grid.
-    expect(screen.queryByText('Signal health')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Signal health' })).toBeInTheDocument();
     expect(screen.queryByText('Total signals')).toBeNull();
   });
 });

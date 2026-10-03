@@ -6,12 +6,13 @@ import { FadeIn } from '@/components/motion';
 import { useDrivingStats } from '@/api/hooks/useDriving';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import type { Direction, MetricUnit } from '@/lib/metricSemantics';
 import type { DriveDetail } from '@/types/driving';
 import type { DriveStats } from './types';
 import { driveEnergyEvidence } from './energyEvidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** The only aggregate summary. Sample extrema belong to the evidence chart. */
 export function HeroGauges({ drive, stats, meaningful = true }: {
@@ -19,6 +20,7 @@ export function HeroGauges({ drive, stats, meaningful = true }: {
   stats: DriveStats;
   meaningful?: boolean;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const query = useDrivingStats(drive.vehicleId != null ? String(drive.vehicleId) : undefined);
@@ -95,7 +97,7 @@ export function HeroGauges({ drive, stats, meaningful = true }: {
             {t('driveDetail.report.aggregateSource', 'Drive aggregates · comparisons use this vehicle’s history')}
           </Text>
           <Text as="p" variant="caption">
-            {t('driveDetail.report.recordedScore', 'Recorded score')}: {score != null ? fmtNumber(score, 1) : '—'}
+            {t('driveDetail.report.recordedScore', 'Recorded score')}: {score != null ? fmtNumber(score) : '—'}
           </Text>
         </div>
         <StaleRefreshWarning state={state} label={t('driveDetail.report.baselines', 'Vehicle baselines')} />
@@ -105,7 +107,7 @@ export function HeroGauges({ drive, stats, meaningful = true }: {
               <Text variant="metricLabel">{row.label}</Text>
               <div className="mt-1 flex flex-wrap items-baseline gap-1 text-[var(--text-primary)]">
                 <Text as="span" variant="metricValue" className="text-xl tabular-nums sm:text-2xl">
-                  {row.value != null ? fmtNumber(row.value, 1) : '—'}
+                  {row.value != null ? fmtNumber(row.value) : '—'}
                 </Text>
                 <Text as="span" size="xs" color="muted">{row.unit}</Text>
               </div>

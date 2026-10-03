@@ -7,13 +7,15 @@
  * `web/src/components/ui/__tests__/DataTable.test.tsx`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useState } from 'react'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { useMemo, useState } from 'react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import '@/i18n'
 import { DataTable, type Column } from './DataTable'
 import { ToastProvider } from '../feedback/Toast'
 import { Button } from './Button'
 import { downloadRowsAsCSV } from '@/lib/csvExport'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 
 interface Row {
   id: number
@@ -41,6 +43,8 @@ function getHeaderOrder(container: HTMLElement): string[] {
 
 beforeEach(() => {
   window.localStorage.clear()
+  setGlobalLocale('en-US')
+  setGlobalPrecision(2)
 })
 
 describe('DataTable — reusable value filters', () => {
@@ -48,6 +52,45 @@ describe('DataTable — reusable value filters', () => {
     { key: 'name', header: 'Name', render: row => <span>{row.name}</span>, filterValue: row => row.name },
     { key: 'status', header: 'Status', render: row => <span>{row.status}</span>, filterValue: row => row.status, groupStart: true },
   ]
+
+  it('updates mounted measurement cells and memoized filter labels without losing canonical selections', () => {
+    const readings = [
+      { id: 1, energy: 12.34567 },
+      { id: 2, energy: 23.45678 },
+    ]
+    const original = JSON.stringify(readings)
+    function PrecisionTable() {
+      const { fmtNumber, fmtInt } = useNumberFormatting()
+      const formatted = useMemo<Column<(typeof readings)[number]>[]>(() => [
+        { key: 'id', header: 'ID', render: row => fmtInt(row.id) },
+        {
+          key: 'energy', header: 'Energy', render: row => `${fmtNumber(row.energy)} kWh`,
+          filterValue: row => row.energy,
+          filterValueLabel: (_value, row) => `${fmtNumber(row.energy)} kWh`,
+        },
+      ], [fmtNumber, fmtInt])
+      return <DataTable columns={formatted} data={readings} keyExtractor={row => row.id} enableValueFilters />
+    }
+    render(<PrecisionTable />)
+    fireEvent.click(screen.getByRole('button', { name: 'Energy filter' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: '12.35 kWh' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.getByText('12.35 kWh')).toBeInTheDocument()
+    expect(screen.queryByText('23.46 kWh')).toBeNull()
+
+    act(() => setGlobalPrecision(3))
+    const cell = screen.getByText('12.346 kWh')
+    expect(within(cell.closest('tr')!).getByText('1')).toBeInTheDocument()
+    expect(screen.queryByText('23.457 kWh')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Energy filter' }))
+    expect(screen.getByRole('checkbox', { name: '12.346 kWh' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: '23.457 kWh' })).not.toBeChecked()
+    act(() => setGlobalLocale('de-DE'))
+    expect(screen.getByRole('checkbox', { name: '12,346 kWh' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: '23,457 kWh' })).not.toBeChecked()
+    expect(JSON.stringify(readings)).toBe(original)
+  })
 
   it('labels raw null as unknown rather than extracting a renderer-coerced zero', () => {
     const rows = [{ id: 1, value: null }, { id: 2, value: 0 }]

@@ -15,12 +15,13 @@ import {
   axisTick,
   chartGrid,
 } from '@/components/charts';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   DurationUnitPref,
   PowerUnitPref,
   SpeedUnitPref,
 } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface DriveDnaSpeedPowerRow {
   elapsed: number;
@@ -61,6 +62,7 @@ export function DriveDnaSpeedPowerPlot({
   powerHidden,
   ariaLabel,
 }: DriveDnaSpeedPowerPlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const effectiveAriaLabel =
@@ -129,12 +131,12 @@ export function DriveDnaSpeedPowerPlot({
                 content={
                   <ChartTooltip
                     labelFormatter={(value) =>
-                      `${fmtNumber(value, 2)} ${durationUnit}`
+                      `${fmtNumber(value)} ${durationUnit}`
                     }
                     valueFormatter={(value, name) =>
                       name === speedName
-                        ? `${fmtNumber(value, 1)} ${speedUnit}`
-                        : `${fmtNumber(value, 1)} ${powerUnit}`
+                        ? `${fmtNumber(value)} ${speedUnit}`
+                        : `${fmtNumber(value)} ${powerUnit}`
                     }
                   />
                 }

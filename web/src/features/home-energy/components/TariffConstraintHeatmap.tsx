@@ -60,7 +60,7 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
       key: 'tariff',
       label: t('homeEnergy.heatmap.tariff', 'Import tariff'),
       ratio: (s) => s.importPricePerKwh / maxImportPrice,
-      format: (s) => `${formatCurrency(s.importPricePerKwh, 2)}/kWh`,
+      format: (s) => `${formatCurrency(s.importPricePerKwh)}/kWh`,
     },
     {
       key: 'gridImport',

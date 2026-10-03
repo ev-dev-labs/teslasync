@@ -84,9 +84,10 @@ import type {
   FleetTelemetryCoverageResponse,
 } from '@/api/types'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { fmtInt, fmtPercent } from '@/lib/numberFormat'
+
 import { chartTokens, severityTokens, type NeonColor } from '@/lib/tokens'
 import { cn } from '@/lib/cn'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface FleetTelemetryCoveragePageProps {
   /** Override the live hook for Storybook / tests. */
@@ -230,6 +231,7 @@ function CategorySection({
   category: FleetTelemetryCategoryCoverage
   filter: string
 }) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const fields = category.fields ?? []
   const filtered = useMemo(() => {
@@ -298,6 +300,7 @@ function CategorySection({
 export default function FleetTelemetryCoveragePage({
   testHookOverride,
 }: FleetTelemetryCoveragePageProps = {}) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation()
   usePageTitle(t('coverage.pageTitle', 'Fleet Telemetry coverage'))
 
@@ -386,7 +389,7 @@ export default function FleetTelemetryCoveragePage({
       id: 'coverage',
       testId: 'coverage-stat-coverage',
       label: t('coverage.stat.subscriptionCoverage', 'Subscription coverage'),
-      value: fmtPercent(stats.subscriptionCoverage, 0),
+      value: fmtPercent(stats.subscriptionCoverage),
       icon: <Gauge className="h-5 w-5" aria-hidden />,
       color: 'purple',
     },

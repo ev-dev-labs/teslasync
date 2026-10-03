@@ -11,10 +11,11 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportGradeAuditProps {
   analysis: BatteryPassportAnalysis;
@@ -25,6 +26,7 @@ export function BatteryPassportGradeAudit({
   analysis,
   state,
 }: BatteryPassportGradeAuditProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const grade = analysis.grade;
 
@@ -60,7 +62,7 @@ export function BatteryPassportGradeAudit({
                 'Clamped SoH term',
               )}
               value={grade.clampedSohPct != null
-                ? fmtNumber(grade.clampedSohPct, 2)
+                ? fmtNumber(grade.clampedSohPct)
                 : '—'}
               subtitle={t(
                 'batteryPassport.gradeAudit.baseHint',
@@ -75,7 +77,7 @@ export function BatteryPassportGradeAudit({
                 'Fast-share deduction',
               )}
               value={grade.fastChargePenalty != null
-                ? fmtNumber(grade.fastChargePenalty, 2)
+                ? fmtNumber(grade.fastChargePenalty)
                 : '—'}
               subtitle={t(
                 'batteryPassport.gradeAudit.fastPenaltyHint',
@@ -90,7 +92,7 @@ export function BatteryPassportGradeAudit({
                 'EFC deduction',
               )}
               value={grade.cyclePenalty != null
-                ? fmtNumber(grade.cyclePenalty, 2)
+                ? fmtNumber(grade.cyclePenalty)
                 : '—'}
               subtitle={t(
                 'batteryPassport.gradeAudit.cyclePenaltyHint',
@@ -105,7 +107,7 @@ export function BatteryPassportGradeAudit({
                 'Reconstructed score',
               )}
               value={grade.score != null
-                ? fmtNumber(grade.score, 2)
+                ? fmtNumber(grade.score)
                 : '—'}
               subtitle={t(
                 'batteryPassport.gradeAudit.bands',

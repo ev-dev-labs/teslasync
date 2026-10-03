@@ -8,13 +8,14 @@ import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDurationRange } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Resolve a human-readable trip label. A trip can arrive with a `null`,
@@ -27,6 +28,7 @@ function tripName(name: string | null | undefined, fallback: string): string {
 }
 
 export default function TripSummaryWidget({ size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -44,7 +46,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
 
   const displayDist = (meters: number | null | undefined) => {
     const value = knownNumber(meters);
-    return value == null ? '—' : `${fmtNumber(convertDistanceFromSI(value, distanceUnit), 1)} ${distanceUnit}`;
+    return value == null ? '—' : `${fmtNumber(convertDistanceFromSI(value, distanceUnit))} ${distanceUnit}`;
   };
   const count = (value: unknown) => knownNumber(value) == null ? '—' : fmtInt(knownNumber(value));
 

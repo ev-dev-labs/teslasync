@@ -12,7 +12,7 @@ import {
   type Column,
 } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type {
   RangeBufferDestinationProfile,
   RangeBufferResult,
@@ -26,6 +26,7 @@ import type {
   RangeBufferDistanceFormatter,
   RangeBufferQueryState,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RangeBufferDestinationDirectoryProps {
   result: RangeBufferResult;
@@ -42,6 +43,7 @@ export function RangeBufferDestinationDirectory({
   timeZone,
   formatDistance,
 }: RangeBufferDestinationDirectoryProps) {
+  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const columns = useMemo<Column<RangeBufferDestinationProfile>[]>(
     () => [
@@ -147,7 +149,7 @@ export function RangeBufferDestinationDirectory({
       {
         key: 'distance',
         filterValue: (row) => row.medianDistanceM ?? null,
-        filterValueLabel: (_, row) => formatDistance(row.medianDistanceM, { precision: 1 }),
+        filterValueLabel: (_, row) => formatDistance(row.medianDistanceM),
         header: t(
           'rangeBuffer.destinations.distance',
           'Median distance',
@@ -155,7 +157,7 @@ export function RangeBufferDestinationDirectory({
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {formatDistance(row.medianDistanceM, { precision: 1 })}
+            {formatDistance(row.medianDistanceM)}
           </Text>
         ),
       },
@@ -177,7 +179,7 @@ export function RangeBufferDestinationDirectory({
         ),
       },
     ],
-    [formatDistance, locale, t, timeZone],
+    [formatDistance, locale, t, timeZone, fmtInt, displayPrecision, displayLocale],
   );
 
   return (

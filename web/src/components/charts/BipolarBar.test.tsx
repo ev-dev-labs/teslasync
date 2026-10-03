@@ -41,7 +41,7 @@ describe('BipolarBar — ARIA meter semantics', () => {
     expect(meter).toHaveAttribute('aria-valuenow', '-200');
     expect(meter).toHaveAttribute('aria-valuemin', '-400');
     expect(meter).toHaveAttribute('aria-valuemax', '1000');
-    expect(meter).toHaveAttribute('aria-valuetext', '-200 Nm');
+    expect(meter).toHaveAttribute('aria-valuetext', '-200.00 Nm');
   });
 
   it('defaults to a symmetric scale when min is omitted', () => {
@@ -223,7 +223,7 @@ describe('BipolarBar — content', () => {
     // composed string is asserted through the meter's accessible value text.
     expect(screen.getByRole('meter', { name: 'Front RPM' })).toHaveAttribute(
       'aria-valuetext',
-      '1,234 RPM',
+      '1,234.00 RPM',
     );
     expect(screen.getByText('RPM')).toBeInTheDocument();
   });

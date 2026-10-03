@@ -18,12 +18,14 @@ import {
   useBatteryCertificate,
   useVerifyBatteryCertificate,
 } from '@/api/hooks/useBatteryCertificate';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface BatteryCertificatePanelProps {
   vehicleId: string | null;
 }
 
 export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
   const { formatEnergy } = useUnits();
@@ -78,7 +80,7 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
             items={[
               {
                 label: t('resaleVault.certificate.soh', 'State of health'),
-                value: `${issued.certificate.current_soh.toFixed(1)}%`,
+                value: `${fmtNumber(issued.certificate.current_soh)}%`,
               },
               {
                 label: t('resaleVault.certificate.capacity', 'Current capacity'),
@@ -90,7 +92,7 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
               },
               {
                 label: t('resaleVault.certificate.habits', 'Charge habits score'),
-                value: `${issued.certificate.charge_habits_score.toFixed(0)} / 100`,
+                value: `${fmtNumber(issued.certificate.charge_habits_score)} / 100`,
               },
               {
                 label: t('resaleVault.certificate.expires', 'Valid until'),

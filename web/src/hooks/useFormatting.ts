@@ -43,13 +43,13 @@ export function useFormatting(): UseFormattingResult {
 
   const formatEnergyCost = useCallback((kwh: number): string => {
     const cost = kwh * costPerKwh
-    return `${currencySymbol}${fmtNumber(cost, userPrecision)}`
-  }, [costPerKwh, currencySymbol, userPrecision])
+    return `${currencySymbol}${fmtNumber(cost, userPrecision, unitPrefs.locale)}`
+  }, [costPerKwh, currencySymbol, userPrecision, unitPrefs.locale])
 
   const formatCurrency = useCallback((amount: number, decimals?: number): string => {
     const d = decimals === undefined ? userPrecision : normalizePrecision(decimals, userPrecision)
-    return `${currencySymbol}${fmtNumber(amount, d)}`
-  }, [currencySymbol, userPrecision])
+    return `${currencySymbol}${fmtNumber(amount, d, unitPrefs.locale)}`
+  }, [currencySymbol, userPrecision, unitPrefs.locale])
 
   /**
    * Calculate cost per user-preferred distance unit from SI meters.

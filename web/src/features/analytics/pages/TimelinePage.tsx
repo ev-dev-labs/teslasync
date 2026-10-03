@@ -28,12 +28,13 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 import { buildContextHref } from '@/lib/contextNavigation';
 import { localDayKey } from '@/lib/drivesAggregation';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── Types matching actual API responses ────────────────── */
 
@@ -129,6 +130,7 @@ function transitionDuration(row: TransitionRow): string {
 /* ─── Component ──────────────────────────────────────────── */
 
 export default function TimelinePage() {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('timeline.title', 'Timeline'));
 
@@ -434,7 +436,7 @@ export default function TimelinePage() {
                       backgroundColor:
                         STATE_COLORS[row.state] ?? STATE_COLORS.offline,
                     }}
-                    title={`${row.state}: ${formatDurationFromSeconds(row.total_seconds)} (${fmtPercent(row.percentage, 1)})`}
+                    title={`${row.state}: ${formatDurationFromSeconds(row.total_seconds)} (${fmtPercent(row.percentage)})`}
                   />
                 );
               })}
@@ -534,7 +536,7 @@ export default function TimelinePage() {
                   value={row.total_seconds}
                   max={totalSeconds || row.total_seconds}
                   color={row.color}
-                  sublabel={`${formatDurationFromSeconds(row.total_seconds)} · ${fmtPercent(row.percentage, 1)}`}
+                  sublabel={`${formatDurationFromSeconds(row.total_seconds)} · ${fmtPercent(row.percentage)}`}
                 />
               ))}
             </div>

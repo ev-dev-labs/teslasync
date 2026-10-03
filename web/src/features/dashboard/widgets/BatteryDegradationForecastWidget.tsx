@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
@@ -13,6 +13,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Map risk factor name to an icon for display. Null-safe: a missing name
  *  falls through to the generic warning icon rather than throwing. */
@@ -70,6 +71,7 @@ export function formatProjectedMonth(dateStr: string | null | undefined, locale:
 }
 
 export default function BatteryDegradationForecastWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
@@ -133,7 +135,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
       {isCompact ? (
           /* ── Compact layout (1×2) ── */
           <div className="flex min-w-0 flex-col gap-2">
-            <WidgetBigNumber value={currentHealthPct != null ? `${fmtNumber(currentHealthPct, 1)}%` : null} label={t('widget.forecast.currentHealth', 'Current health')} />
+            <WidgetBigNumber value={currentHealthPct != null ? `${fmtNumber(currentHealthPct)}%` : null} label={t('widget.forecast.currentHealth', 'Current health')} />
             {tier && <Badge variant={tier.variant} size="sm" className="self-start">
               {t(`widget.forecast.${tier.key}`, tier.label)}
             </Badge>}
@@ -153,8 +155,8 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
 
             {/* Current health stat */}
             <WidgetStatGrid stats={[
-              { label: t('widget.forecast.currentHealth', 'Current health'), value: currentHealthPct != null ? `${fmtNumber(currentHealthPct, 1)}%` : null },
-              { label: t('widget.degradation', 'Degradation'), value: rate != null ? `${rate > 0 ? '−' : ''}${fmtNumber(rate, 2)}%/${t('widget.mo', 'mo')}` : null },
+              { label: t('widget.forecast.currentHealth', 'Current health'), value: currentHealthPct != null ? `${fmtNumber(currentHealthPct)}%` : null },
+              { label: t('widget.degradation', 'Degradation'), value: rate != null ? `${rate > 0 ? '−' : ''}${fmtNumber(rate)}%/${t('widget.mo', 'mo')}` : null },
             ]} cols={2} />
 
             {/* Horizon outlook: 1/3/5-year twin readout */}
@@ -172,10 +174,10 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                         {t('widget.forecast.years', '{{n}} yr', { n: p.years })}
                       </p>
                       <p className={dashboardTokens.secondaryMetric}>
-                        {knownNumber(p.health_pct) != null ? `${fmtNumber(p.health_pct, 1)}%` : '—'}
+                        {knownNumber(p.health_pct) != null ? `${fmtNumber(p.health_pct)}%` : '—'}
                       </p>
                       <p className={dashboardTokens.metricLabel}>
-                        {knownNumber(p.confidence_low) != null ? fmtNumber(p.confidence_low, 0) : '—'}–{knownNumber(p.confidence_high) != null ? fmtNumber(p.confidence_high, 0) : '—'}
+                        {knownNumber(p.confidence_low) != null ? fmtNumber(p.confidence_low) : '—'}–{knownNumber(p.confidence_high) != null ? fmtNumber(p.confidence_high) : '—'}
                       </p>
                     </li>
                   ))}
@@ -211,7 +213,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                           </span>
                         </div>
                         <Badge variant={impact != null ? impactVariant(impact) : 'neutral'} size="sm">
-                          {score != null ? fmtNumber(score, 0) : '—'}
+                          {score != null ? fmtNumber(score) : '—'}
                         </Badge>
                       </li>
                     );

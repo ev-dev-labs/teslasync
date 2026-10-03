@@ -11,8 +11,9 @@ import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { Table } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { ChartDataPoint, DriveStats } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ElevationChartProps {
   chartData: ChartDataPoint[];
@@ -20,6 +21,7 @@ interface ElevationChartProps {
 }
 
 export function ElevationChart({ chartData, stats }: ElevationChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;

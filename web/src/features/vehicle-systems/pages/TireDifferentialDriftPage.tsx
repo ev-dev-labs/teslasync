@@ -21,10 +21,11 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { convertPressureFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
 import { summarizeTireDifferentialDrift, TIRE_CORNERS, type TireCorner } from '../lib/tireDifferentialDrift';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const CORNER_FALLBACK: Record<TireCorner, string> = {
   fl: 'Front left', fr: 'Front right', rl: 'Rear left', rr: 'Rear right',
@@ -34,6 +35,7 @@ const CORNER_COLOR: Record<TireCorner, string> = {
 };
 
 export default function TireDifferentialDriftPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('tireDifferentialDrift.title', 'Tire differential drift'));
 
@@ -117,7 +119,7 @@ export default function TireDifferentialDriftPage() {
               <MetricCard
                 label={t('tireDifferentialDrift.leakCorner', 'Likely leak corner')}
                 value={leakCard ?? t('tireDifferentialDrift.none', 'None detected')}
-                subtitle={t('tireDifferentialDrift.leakScore', 'evidence score {{score}}', { score: fmtNumber(summary.leakScore, 2) })}
+                subtitle={t('tireDifferentialDrift.leakScore', 'evidence score {{score}}', { score: fmtNumber(summary.leakScore) })}
                 icon={<Search className="h-5 w-5" />}
                 color={leakCard != null ? 'amber' : 'green'}
                 help={{
@@ -127,7 +129,7 @@ export default function TireDifferentialDriftPage() {
               />
               <MetricCard
                 label={t('tireDifferentialDrift.imbalance', 'Structural imbalance')}
-                value={formatPressure(summary.imbalancePa / 1000, { precision: 2 })}
+                value={formatPressure(summary.imbalancePa / 1000)}
                 subtitle={
                   imbalanceCard != null
                     ? t('tireDifferentialDrift.imbalanceCorner', 'largest offset: {{corner}}', { corner: imbalanceCard })
@@ -279,9 +281,9 @@ export default function TireDifferentialDriftPage() {
                   </div>
                   <Text variant="caption" as="p">
                     {t('tireDifferentialDrift.cornerStats', 'slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}', {
-                      slope: formatPressure(c.slopePaPerDay / 1000, { precision: 2 }),
-                      conf: fmtNumber(c.confidence, 2),
-                      offset: formatPressure(c.meanResidualPa / 1000, { precision: 2 }),
+                      slope: formatPressure(c.slopePaPerDay / 1000),
+                      conf: fmtNumber(c.confidence),
+                      offset: formatPressure(c.meanResidualPa / 1000),
                     })}
                   </Text>
                 </div>

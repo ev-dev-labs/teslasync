@@ -3,10 +3,11 @@ import { useUnits } from '@/hooks/useUnits';
 import { Battery, TrendingUp, Zap, MapPin } from 'lucide-react';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { BatteryPill } from './BatteryPill';
 import { MiniStat } from './MiniStat';
 import type { DigestMetrics } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // Rough driving-range estimate: 5.5 km/kWh is dimensionally 5.5 m/Wh.
 const EST_RANGE_M_PER_WH = 5.5;
@@ -26,6 +27,7 @@ export function BatteryHealthSection({
   error,
   onRetry,
 }: BatteryHealthSectionProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const hasData = (metrics.chargingSessionCount ?? 0) > 0;
@@ -64,7 +66,7 @@ export function BatteryHealthSection({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <MiniStat
               label={t('analytics.weeklyDigest.avgChargeGain', 'Avg charge gain')}
-              value={`${fmtNumber((metrics.batteryEnd ?? 0) - (metrics.batteryStart ?? 0), 1)}%`}
+              value={`${fmtNumber((metrics.batteryEnd ?? 0) - (metrics.batteryStart ?? 0))}%`}
               icon={<TrendingUp className="h-4 w-4" />}
             />
             <MiniStat
@@ -76,7 +78,6 @@ export function BatteryHealthSection({
               label={t('analytics.weeklyDigest.estRangeAdded', 'Est. range added')}
               value={formatDistance(
                 (metrics.chargeEnergyAddedWh ?? 0) * EST_RANGE_M_PER_WH,
-                { precision: 0 },
               )}
               icon={<MapPin className="h-4 w-4" />}
             />

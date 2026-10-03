@@ -206,14 +206,14 @@ describe('SignalCatalogWidget — loading / empty / error states', () => {
 // ── Compact layout ────────────────────────────────────────────────────────────
 
 describe('SignalCatalogWidget — compact layout', () => {
-  it('renders the signal count and caption without a search box or title heading', () => {
+  it('retains its title beside the signal count and caption without a search box', () => {
     setCatalog({ data: [makeEntry(), makeEntry({ name: 'VehicleSpeed' })] });
     renderWidget(COMPACT);
 
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('Signals available')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.queryByRole('heading', { name: /Signal catalog/i })).toBeNull();
+    expect(screen.getByRole('heading', { name: /Signal catalog/i })).toBeInTheDocument();
   });
 
   it('prefers the empty state over a "0" figure when the catalog is empty', () => {

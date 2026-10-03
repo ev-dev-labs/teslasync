@@ -4,10 +4,11 @@ import { CloudSun, Sun, CloudSnow, Thermometer } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, isFiniteNumber } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Coarse weather condition derived from the outside temperature (°C, SI). */
 export type WeatherCondition = 'freezing' | 'warm' | 'mild';
@@ -32,6 +33,7 @@ function WeatherIcon({ tempC, className }: { tempC: number; className?: string }
 }
 
 export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -101,7 +103,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
               </span>
               {isFiniteNumber(lat) && isFiniteNumber(lon) && (
                 <span className="text-2xs text-[var(--text-muted)] tabular-nums">
-                  {lat.toFixed(2)}°, {lon.toFixed(2)}°
+                  {fmtNumber(lat)}°, {fmtNumber(lon)}°
                 </span>
               )}
             </div>

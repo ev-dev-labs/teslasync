@@ -31,7 +31,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { InsurancePolicy, RiskFactor, RiskLever, UpsertInsurancePolicyRequest } from '@/types/ownership';
 import {
   EvidencePanel,
@@ -48,6 +48,7 @@ import {
   fromDateInput,
   toDateInput,
 } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type PolicyForm = Omit<UpsertInsurancePolicyRequest, 'vehicle_id'>;
 
@@ -66,6 +67,7 @@ const EMPTY_POLICY: PolicyForm = {
 const WINDOW_OPTIONS = [30, 90, 180, 365];
 
 export default function InsuranceTelematicsPage() {
+  const { fmtScientificNumber, fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -157,7 +159,7 @@ export default function InsuranceTelematicsPage() {
       header: t('ownership.insurance.factor.observed', 'Observed'),
       render: (row) => (
         <span className="tabular-nums">
-          {fmtNumber(row.observed_rate, 3)}{' '}
+          {fmtScientificNumber(row.observed_rate, 3)}{' '}
           <span className="text-[var(--text-muted)]">{row.rate_unit}</span>
         </span>
       ),
@@ -166,7 +168,7 @@ export default function InsuranceTelematicsPage() {
       key: 'baseline',
       align: 'right',
       header: t('ownership.insurance.factor.baseline', 'Baseline'),
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.baseline_rate, 3)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtScientificNumber(row.baseline_rate, 3)}</span>,
     },
     {
       key: 'score',
@@ -176,7 +178,7 @@ export default function InsuranceTelematicsPage() {
         <span
           className={`tabular-nums ${row.score >= 60 ? 'text-rose-300' : row.score >= 35 ? 'text-amber-300' : 'text-emerald-300'}`}
         >
-          {fmtNumber(row.score, 1)}
+          {fmtNumber(row.score)}
         </span>
       ),
       sortable: true,
@@ -185,7 +187,7 @@ export default function InsuranceTelematicsPage() {
       key: 'weight',
       align: 'right',
       header: t('ownership.insurance.factor.weight', 'Weight'),
-      render: (row) => <span className="tabular-nums">{formatPct(row.weight * 100, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{formatPct(row.weight * 100)}</span>,
     },
     {
       key: 'contribution',
@@ -221,7 +223,7 @@ export default function InsuranceTelematicsPage() {
       key: 'samples',
       align: 'right',
       header: t('ownership.insurance.factor.samples', 'Samples'),
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.sample_count, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtInt(row.sample_count)}</span>,
     },
   ];
 
@@ -274,7 +276,7 @@ export default function InsuranceTelematicsPage() {
       render: (row) =>
         row.effort_hours_per_week != null
           ? t('ownership.insurance.lever.hours', '{{value}} h/week', {
-              value: fmtNumber(row.effort_hours_per_week, 1),
+              value: fmtNumber(row.effort_hours_per_week),
             })
           : '—',
     },
@@ -338,7 +340,7 @@ export default function InsuranceTelematicsPage() {
               {
                 key: 'score',
                 label: t('ownership.insurance.stat.score', 'Risk score'),
-                value: fmtNumber(data?.risk_score ?? 0, 1),
+                value: fmtNumber(data?.risk_score ?? 0),
                 hint: t('ownership.insurance.stat.scoreHint', '0 = best, 100 = worst'),
                 tone:
                   (data?.risk_score ?? 0) >= 60
@@ -350,19 +352,19 @@ export default function InsuranceTelematicsPage() {
               {
                 key: 'frequency',
                 label: t('ownership.insurance.stat.frequency', 'Frequency index'),
-                value: fmtNumber(data?.frequency_index ?? 0, 2),
+                value: fmtNumber(data?.frequency_index ?? 0),
                 hint: t('ownership.insurance.stat.frequencyHint', 'Expected claim count driver'),
               },
               {
                 key: 'severity',
                 label: t('ownership.insurance.stat.severity', 'Severity index'),
-                value: fmtNumber(data?.severity_index ?? 0, 2),
+                value: fmtNumber(data?.severity_index ?? 0),
                 hint: t('ownership.insurance.stat.severityHint', 'Expected claim size driver'),
               },
               {
                 key: 'losscost',
                 label: t('ownership.insurance.stat.lossCost', 'Loss cost index'),
-                value: fmtNumber(data?.loss_cost_index ?? 0, 2),
+                value: fmtNumber(data?.loss_cost_index ?? 0),
                 hint: t(
                   'ownership.insurance.stat.lossCostHint',
                   'Frequency × severity, 1.0 = baseline',
@@ -673,7 +675,7 @@ export default function InsuranceTelematicsPage() {
               {
                 key: 'risk_score',
                 label: t('ownership.insurance.trend.score', 'Risk score'),
-                format: (v) => fmtNumber(v as number, 1),
+                format: (v) => fmtNumber(v as number),
               },
             ]}
           >

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -28,7 +28,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useUrlEnum } from '@/hooks/useUrlState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   COMPARE_METRIC_SEMANTICS,
   DELTA_FILL,
@@ -36,8 +36,10 @@ import {
   pctChange,
 } from '../lib/periodCompare';
 import { cn } from '@/lib/cn';
+import { resolveSemantic } from '@/lib/metricSemantics';
 import { request } from '@/api/client';
 import { AIPeriodCompareNarration } from '@/components/ai/AIPeriodCompareNarration';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Types ─────────────────────────────────────────────── */
 
@@ -52,6 +54,7 @@ interface PeriodStats {
 
 interface ComparisonRow {
   metric: string;
+  kind: 'count' | 'measurement';
   periodA: number;
   periodB: number;
   change: number;
@@ -79,6 +82,11 @@ const BANNER_DISMISSED_KEY = 'phase40.compareBanner.dismissed.period';
 /* ── Component ─────────────────────────────────────────── */
 
 export default function PeriodComparePage() {
+  const { fmtNumber, fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const formatValue = useCallback(
+    (value: number, kind: ComparisonRow['kind']) => kind === 'count' ? fmtInt(value) : fmtNumber(value),
+    [fmtInt, fmtNumber],
+  );
   const { t } = useTranslation();
   usePageTitle(t('compare.title', 'Period comparison'));
   const { unitPrefs } = useUnits();
@@ -195,7 +203,10 @@ export default function PeriodComparePage() {
       { key: 'efficiency', label: t('compare.avgEfficiency', 'Avg efficiency'), icon: <Gauge className="h-4 w-4" aria-hidden="true" />, a: effA, b: effB, unit: efficiencyUnit, color: 'cyan' as const, semantic: COMPARE_METRIC_SEMANTICS.efficiency },
       { key: 'cost', label: t('compare.totalCost', 'Total cost'), icon: <DollarSign className="h-4 w-4" aria-hidden="true" />, a: a.total_cost ?? 0, b: b.total_cost ?? 0, unit: '$', color: 'green' as const, semantic: COMPARE_METRIC_SEMANTICS.cost },
       { key: 'co2', label: t('compare.co2Saved', 'CO₂ saved'), icon: <Leaf className="h-4 w-4" aria-hidden="true" />, a: a.co2_saved ?? 0, b: b.co2_saved ?? 0, unit: 'kg', color: 'purple' as const, semantic: COMPARE_METRIC_SEMANTICS.co2 },
-    ];
+    ].map((metric) => ({
+      ...metric,
+      kind: resolveSemantic(metric.semantic).unit === 'count' ? 'count' as const : 'measurement' as const,
+    }));
   }, [a, b, t, distanceUnit, efficiencyUnit]);
 
   // Hero chart plots per-metric % change vs Period B (unitless, so a shared
@@ -227,6 +238,7 @@ export default function PeriodComparePage() {
         const pct = pctChange(m.a, m.b);
         return {
           metric: m.label,
+          kind: m.kind,
           periodA: m.a,
           periodB: m.b,
           change: delta,
@@ -235,7 +247,7 @@ export default function PeriodComparePage() {
           favorable: assessDelta(m.semantic, m.a, m.b).favorable,
         };
       }),
-    [metrics],
+    [metrics, displayPrecision, displayLocale],
   );
 
   const columns: Column<ComparisonRow>[] = useMemo(
@@ -250,14 +262,14 @@ export default function PeriodComparePage() {
         align: 'right',
         header: t('compare.periodA', 'Period A'),
         sortable: true,
-        render: (r) => <Text variant="body" className="tabular-nums">{fmtNumber(r.periodA)}</Text>,
+        render: (r) => <Text variant="body" className="tabular-nums">{formatValue(r.periodA, r.kind)}</Text>,
       },
       {
         key: 'periodB',
         align: 'right',
         header: t('compare.periodB', 'Period B'),
         sortable: true,
-        render: (r) => <Text variant="body" className="tabular-nums">{fmtNumber(r.periodB)}</Text>,
+        render: (r) => <Text variant="body" className="tabular-nums">{formatValue(r.periodB, r.kind)}</Text>,
       },
       {
         key: 'change',
@@ -268,14 +280,14 @@ export default function PeriodComparePage() {
           const arrow = r.change > 0 ? '↑' : r.change < 0 ? '↓' : '→';
           const spoken =
             r.change > 0
-              ? t('compare.increasedBy', 'Increased by {{value}}', { value: fmtNumber(Math.abs(r.change)) })
+              ? t('compare.increasedBy', 'Increased by {{value}}', { value: formatValue(Math.abs(r.change), r.kind) })
               : r.change < 0
-                ? t('compare.decreasedBy', 'Decreased by {{value}}', { value: fmtNumber(Math.abs(r.change)) })
+                ? t('compare.decreasedBy', 'Decreased by {{value}}', { value: formatValue(Math.abs(r.change), r.kind) })
                 : t('compare.noChange', 'No change');
           return (
             <Text variant="body" className={cn('tabular-nums', r.favorable == null ? 'text-[var(--text-muted)]' : r.favorable ? 'text-emerald-300' : 'text-rose-300')}>
               <VisuallyHidden>{spoken}</VisuallyHidden>
-              <span aria-hidden="true">{arrow} {fmtNumber(Math.abs(r.change))}</span>
+              <span aria-hidden="true">{arrow} {formatValue(Math.abs(r.change), r.kind)}</span>
             </Text>
           );
         },
@@ -291,7 +303,7 @@ export default function PeriodComparePage() {
         ),
       },
     ],
-    [t],
+    [t, formatValue],
   );
 
   const insights = useMemo(() => {
@@ -316,7 +328,7 @@ export default function PeriodComparePage() {
       effPct.neutral
         ? t('compare.efficiencyNoBaseline', 'Efficiency change is unavailable: period B has no baseline.')
         : t('compare.insightEfficiency', 'Efficiency {{dir}} by {{pct}} compared to period B.', {
-          pct: effNum == null ? effPct.value : `${fmtNumber(Math.abs(effNum), 1)}%`,
+          pct: effNum == null ? effPct.value : `${fmtNumber(Math.abs(effNum))}%`,
           dir: effA === effB
             ? t('compare.unchanged', 'unchanged')
             : effFav
@@ -330,7 +342,7 @@ export default function PeriodComparePage() {
           dir: costPct.positive ? t('compare.higher', 'higher') : t('compare.lower', 'lower'),
         }),
     ];
-  }, [a, b, t]);
+  }, [a, b, t, fmtNumber, displayPrecision, displayLocale]);
 
   /* ── Toolbar (vehicle + both periods + refresh) ── */
 
@@ -442,10 +454,10 @@ export default function PeriodComparePage() {
                 <MetricCard
                   key={m.key}
                   label={m.label}
-                  value={`${fmtNumber(m.a)} ${m.unit}`.trim()}
+                  value={`${formatValue(m.a, m.kind)} ${m.unit}`.trim()}
                   icon={m.icon}
                   color={m.color}
-                  subtitle={`${t('compare.periodB', 'Period B')}: ${fmtNumber(m.b)} ${m.unit}`.trim()}
+                  subtitle={`${t('compare.periodB', 'Period B')}: ${formatValue(m.b, m.kind)} ${m.unit}`.trim()}
                   delta={{
                     metric: m.semantic,
                     current: m.a,
@@ -499,7 +511,7 @@ export default function PeriodComparePage() {
                   {
                     key: 'delta',
                     label: t('compare.pctChange', '% Change'),
-                    format: (value) => `${fmtNumber(Number(value ?? 0), 1)}%`,
+                    format: (value) => `${fmtNumber(Number(value ?? 0))}%`,
                   },
                 ]}
                 height={320}
@@ -518,7 +530,7 @@ export default function PeriodComparePage() {
                       <XAxis
                         type="number"
                         tick={axisTick}
-                        tickFormatter={(v) => `${fmtNumber(Number(v), 0)}%`}
+                        tickFormatter={(v) => `${fmtNumber(Number(v))}%`}
                         domain={[(dataMin: number) => Math.min(0, dataMin), (dataMax: number) => Math.max(0, dataMax)]}
                       />
                       <YAxis type="category" dataKey="name" tick={axisTick} width={112} />
@@ -530,7 +542,7 @@ export default function PeriodComparePage() {
                           valueFormatter={(value) =>
                             metrics.find((m) => m.label === label)?.b === 0
                               ? '—'
-                              : `${fmtNumber(Number(value ?? 0), 1)}%`
+                              : `${fmtNumber(Number(value ?? 0))}%`
                           }
                         />
                       )} />

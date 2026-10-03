@@ -19,14 +19,16 @@ import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
 import { summarizeSignalTrend, toNumericPoints } from '../lib/signalTrend';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HOURS = 168;
 
 export default function SignalTrendPage() {
+  const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('signalTrend.title', 'Signal trend'));
 
@@ -163,8 +165,8 @@ export default function SignalTrendPage() {
             <>
               <MetricCard
                 label={t('signalTrend.slope', 'Drift rate')}
-                value={hasData ? `${fmtNumber(summary.slopePerDay ?? 0, 4)}/day` : '—'}
-                subtitle={t('signalTrend.slopePerHour', '{{v}}/hour', { v: hasData ? fmtNumber(summary.slopePerHour ?? 0, 5) : '—' })}
+                value={hasData ? `${fmtScientificNumber(summary.slopePerDay, 4)}/day` : '—'}
+                subtitle={t('signalTrend.slopePerHour', '{{v}}/hour', { v: hasData ? fmtScientificNumber(summary.slopePerHour, 5) : '—' })}
                 icon={<TrendingUp className="h-5 w-5" />}
                 color="cyan"
                 help={{
@@ -175,7 +177,7 @@ export default function SignalTrendPage() {
               <MetricCard
                 label={t('signalTrend.significance', 'Significance')}
                 value={!hasData ? '—' : mk?.significant ? t('signalTrend.real', 'Real') : t('signalTrend.noise', 'Not significant')}
-                subtitle={t('signalTrend.tau', 'tau {{tau}} · p {{p}}', { tau: hasData ? fmtNumber(mk?.tau ?? 0, 3) : '—', p: hasData ? fmtNumber(mk?.pValue ?? 1, 4) : '—' })}
+                subtitle={t('signalTrend.tau', 'tau {{tau}} · p {{p}}', { tau: hasData ? fmtScientificNumber(mk?.tau, 3) : '—', p: hasData ? fmtScientificNumber(mk?.pValue, 4) : '—' })}
                 icon={<Activity className="h-5 w-5" />}
                 color={hasData && mk?.significant ? 'green' : 'amber'}
                 help={{
@@ -185,7 +187,7 @@ export default function SignalTrendPage() {
               />
               <MetricCard
                 label={t('signalTrend.spread', 'Residual spread')}
-                value={hasData ? fmtNumber(summary.residualSpread ?? 0, 3) : '—'}
+                value={hasData ? fmtScientificNumber(summary.residualSpread, 3) : '—'}
                 subtitle={t('signalTrend.spreadHint', 'robust MAD around the fitted line')}
                 icon={<Ruler className="h-5 w-5" />}
                 color="purple"
@@ -193,7 +195,7 @@ export default function SignalTrendPage() {
               <MetricCard
                 label={t('signalTrend.samples', 'Samples')}
                 value={summary.samples}
-                subtitle={t('signalTrend.span', '{{h}}h span · {{ev}}', { h: fmtNumber(summary.spanHours ?? 0, 1), ev: summary.evidenceLimited ? t('signalTrend.limited', 'evidence-limited') : t('signalTrend.sufficient', 'sufficient evidence') })}
+                subtitle={t('signalTrend.span', '{{h}}h span · {{ev}}', { h: fmtNumber(summary.spanHours ?? 0), ev: summary.evidenceLimited ? t('signalTrend.limited', 'evidence-limited') : t('signalTrend.sufficient', 'sufficient evidence') })}
                 icon={<Waypoints className="h-5 w-5" />}
                 color={summary.evidenceLimited ? 'amber' : 'blue'}
               />

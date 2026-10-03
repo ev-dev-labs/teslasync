@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 import { Grid } from '@/components/layout';
 import { GlassPanel, Badge, PanelTitle, Caption, Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
 import type { Drive } from '@/types/driving';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function shiftColor(shift: string | null | undefined): string {
   switch (shift) {
@@ -51,6 +52,7 @@ function SpeedStat({ label, value, unit }: { label: string; value: string; unit:
 }
 
 export default function SpeedGearPanel({ vehicleId, filteredDrives, toSpeedDisplay, speedUnit }: SpeedGearPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Shares the ['motor-latest', vehicleId] cache entry with LiveMotorStatus —
@@ -101,12 +103,12 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives, toSpeedDispl
         />
         <SpeedStat
           label={t('dynamics.avgDriveSpeed', 'Avg Drive Speed')}
-          value={avgDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(avgDriveSpeedMps), 0) : '—'}
+          value={avgDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(avgDriveSpeedMps)) : '—'}
           unit={speedUnit}
         />
         <SpeedStat
           label={t('dynamics.topDriveSpeed', 'Top Drive Speed')}
-          value={topDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(topDriveSpeedMps), 0) : '—'}
+          value={topDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(topDriveSpeedMps)) : '—'}
           unit={speedUnit}
         />
       </Grid>

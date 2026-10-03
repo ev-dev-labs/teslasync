@@ -7,13 +7,15 @@ import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -47,7 +49,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
     return [
       {
         label: t('widget.lifetimeStats.totalDistance', 'Total distance'),
-        value: fmtNumber(displayDistance, 0),
+        value: fmtNumber(displayDistance),
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
@@ -58,18 +60,18 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
       },
       {
         label: t('widget.lifetimeStats.totalEnergy', 'Total energy'),
-        value: fmtNumber(data.total_energy_kwh ?? 0, 1),
+        value: fmtNumber(data.total_energy_kwh ?? 0),
         unit: 'kWh',
         icon: <Zap className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.lifetimeStats.co2Saved', 'CO₂ saved'),
-        value: fmtNumber(data.co2_offset_kg ?? 0, 0),
+        value: fmtNumber(data.co2_offset_kg ?? 0),
         unit: 'kg',
         icon: <Leaf className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, displayDistance, distanceUnit, t]);
+  }, [data, displayDistance, distanceUnit, t, fmtNumber, fmtInt]);
 
   const wideStats = useMemo((): StatGridItem[] => {
     if (!data) return [];
@@ -92,12 +94,12 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
       },
       {
         label: t('widget.lifetimeStats.avgDailyDistance', 'Avg daily distance'),
-        value: fmtNumber(avgDailyDisplay, 1),
+        value: fmtNumber(avgDailyDisplay),
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, distanceMeters, toDistanceDisplay, distanceUnit, formatCurrency, t]);
+  }, [data, distanceMeters, toDistanceDisplay, distanceUnit, formatCurrency, t, fmtInt, fmtNumber]);
 
   const allStats = useMemo(
     () => (isWide ? [...coreStats, ...wideStats] : coreStats),

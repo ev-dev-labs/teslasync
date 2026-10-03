@@ -15,7 +15,7 @@ import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } 
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { formatDateTime } from '@/lib/dateFormat';
 import type {
   DatasetInventory,
@@ -25,8 +25,10 @@ import type {
 } from '@/types/ownership';
 import { EvidencePanel, MutationError, OwnershipPanel, StatGrid } from '../components';
 import { daysToSeconds, formatBytes, formatPct, formatSpan, secondsToDays } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function DataGovernancePage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const [formOpen, setFormOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -154,8 +156,8 @@ export default function DataGovernancePage() {
       header: t('ownership.governance.inventory.rows', 'Rows'),
       align: 'right',
       filterValue: (row) => row.row_count,
-      filterValueLabel: (_value, row) => fmtNumber(row.row_count, 0),
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.row_count, 0)}</span>,
+      filterValueLabel: (_value, row) => fmtInt(row.row_count),
+      render: (row) => <span className="tabular-nums">{fmtInt(row.row_count)}</span>,
       sortable: true,
     },
     {
@@ -171,11 +173,11 @@ export default function DataGovernancePage() {
       key: 'perRow',
       align: 'right',
       filterValue: (row) => row.bytes_per_row,
-      filterValueLabel: (_value, row) => row.bytes_per_row != null ? fmtNumber(row.bytes_per_row, 0) : '—',
+      filterValueLabel: (_value, row) => row.bytes_per_row != null ? fmtNumber(row.bytes_per_row) : '—',
       header: t('ownership.governance.inventory.perRow', 'Bytes / row'),
       render: (row) =>
         row.bytes_per_row != null ? (
-          <span className="tabular-nums">{fmtNumber(row.bytes_per_row, 0)}</span>
+          <span className="tabular-nums">{fmtNumber(row.bytes_per_row)}</span>
         ) : (
           '—'
         ),
@@ -304,7 +306,7 @@ export default function DataGovernancePage() {
       align: 'right',
       render: (row) => (
         <div>
-          <span className="tabular-nums">{fmtNumber(row.rows_expiring, 0)}</span>
+          <span className="tabular-nums">{fmtInt(row.rows_expiring)}</span>
           <Text as="p" variant="caption">
             {t('ownership.governance.impact.retained', '{{count}} retained', {
               count: row.rows_retained,
@@ -318,7 +320,7 @@ export default function DataGovernancePage() {
       key: 'downsampling',
       header: t('ownership.governance.impact.downsampling', 'Rows downsampled'),
       align: 'right',
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.rows_downsampling, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtInt(row.rows_downsampling)}</span>,
     },
     {
       key: 'reclaim',
@@ -416,7 +418,7 @@ export default function DataGovernancePage() {
       key: 'expiring',
       header: t('ownership.governance.run.expiring', 'Expiring'),
       align: 'right',
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.rows_expiring, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtInt(row.rows_expiring)}</span>,
     },
     {
       key: 'bytes',
@@ -488,7 +490,7 @@ export default function DataGovernancePage() {
               {
                 key: 'holds',
                 label: t('ownership.governance.stat.holds', 'Legal holds'),
-                value: fmtNumber(overview?.legal_hold_count ?? 0, 0),
+                value: fmtInt(overview?.legal_hold_count ?? 0),
                 hint: t('ownership.governance.stat.holdsHint', 'Exempt from every plan'),
               },
               {
@@ -652,7 +654,7 @@ export default function DataGovernancePage() {
               {
                 key: 'rows',
                 label: t('ownership.governance.impactStat.rows', 'Rows in plan'),
-                value: fmtNumber(simulate.data?.total_rows_expiring ?? 0, 0),
+                value: fmtInt(simulate.data?.total_rows_expiring ?? 0),
               },
               {
                 key: 'bytes',

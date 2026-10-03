@@ -6,13 +6,14 @@ import { Grid } from '@/components/layout';
 import { Badge, DataTable, type Column } from '@/components/ui';
 import { StatCard, KVList } from '@/components/data-display';
 import { Skeleton, AlertBanner } from '@/components/feedback';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { useConnectionPool } from '@/api/hooks/useAdmin';
 import { getExtendedHealth, getVersionInfo } from '@/api/devtools';
 import { AccordionSection } from './AccordionSection';
 import { getStatusIcon, statusTextClass, formatUptime } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComponentRow {
   name: string;
@@ -23,6 +24,7 @@ interface ComponentRow {
 }
 
 export function BackendStatusSection() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   const { data: extHealth, isLoading: extLoading, isError: extError } = useQuery({
@@ -79,12 +81,12 @@ export function BackendStatusSection() {
       {
         key: 'latency_ms',
         filterValue: (row) => row.latency_ms ?? null,
-        filterValueLabel: (_value, row) => `${fmtNumber(row.latency_ms, 1)} ms`,
+        filterValueLabel: (_value, row) => `${fmtNumber(row.latency_ms)} ms`,
         align: 'right',
         groupStart: true,
         header: t('systemStatus.latency', 'Latency'),
         sortable: true,
-        render: (row) => `${fmtNumber(row.latency_ms, 1)} ms`,
+        render: (row) => `${fmtNumber(row.latency_ms)} ms`,
       },
       {
         key: 'failures',
@@ -103,7 +105,7 @@ export function BackendStatusSection() {
         render: (row) => (row.lastCheck ? formatDateTime(row.lastCheck) : '—'),
       },
     ],
-    [t],
+    [t, fmtNumber, fmtInt],
   );
 
   const okCount = useMemo(

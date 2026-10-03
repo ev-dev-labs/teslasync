@@ -124,7 +124,7 @@ export function CarbonMonthlyTrend({
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value: number) =>
-                      display.formatNumber(value, 1)}
+                      display.formatNumber(value)}
                   />
                   <YAxis
                     yAxisId="energy"
@@ -134,7 +134,7 @@ export function CarbonMonthlyTrend({
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value: number) =>
-                      display.formatNumber(value, 1)}
+                      display.formatNumber(value)}
                   />
                   <Tooltip
                     content={(
@@ -145,7 +145,7 @@ export function CarbonMonthlyTrend({
                               'carbon.units.energyDisplay',
                               '{{value}} {{unit}}',
                               {
-                                value: display.formatNumber(Number(value), 2),
+                                value: display.formatNumber(Number(value)),
                                 unit: display.energyUnit,
                               },
                             )

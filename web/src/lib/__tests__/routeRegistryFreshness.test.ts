@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -23,6 +23,19 @@ import { join, resolve } from 'node:path'
 const SCRIPT = resolve(process.cwd(), 'scripts', 'generate-route-registry.mjs')
 const APP_PATH = resolve(process.cwd(), 'src', 'App.tsx')
 const REGISTRY_PATH = resolve(process.cwd(), 'src', 'lib', 'routeRegistry.ts')
+const temporaryDirectories: string[] = []
+
+function temporaryDirectory(prefix: string): string {
+  const directory = mkdtempSync(join(tmpdir(), prefix))
+  temporaryDirectories.push(directory)
+  return directory
+}
+
+afterEach(() => {
+  for (const directory of temporaryDirectories.splice(0)) {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
 
 const SYNTHETIC_PARAM_ROUTE =
   '<Route path="acceptance-probe/:token" element={<SafeRoute name="AcceptanceProbe"><AcceptanceProbe /></SafeRoute>} />'
@@ -55,7 +68,7 @@ function appWithSyntheticParamRoute(): string {
   const mutated = src.replace(anchor, `${SYNTHETIC_PARAM_ROUTE}\n      ${anchor}`)
   expect(mutated).not.toBe(src)
 
-  const dir = mkdtempSync(join(tmpdir(), 'routegate-'))
+  const dir = temporaryDirectory('routegate-')
   const path = join(dir, 'App.tsx')
   writeFileSync(path, mutated)
   return path
@@ -80,7 +93,7 @@ describe('generate-route-registry — freshness gate', () => {
 
   it('the regenerated registry contains the new :param route as a parameterised entry', () => {
     const syntheticApp = appWithSyntheticParamRoute()
-    const outDir = mkdtempSync(join(tmpdir(), 'routegate-out-'))
+    const outDir = temporaryDirectory('routegate-out-')
     const outPath = join(outDir, 'routeRegistry.ts')
 
     expect(runGenerator(['--app', syntheticApp, '--out', outPath]).status).toBe(0)
@@ -88,13 +101,13 @@ describe('generate-route-registry — freshness gate', () => {
     const generated = readFileSync(outPath, 'utf8')
     // `hidden: true` is how the generator flags a parameterised route.
     expect(generated).toContain(
-      '{ path: "/acceptance-probe/:token", name: "AcceptanceProbe", label: "Acceptance Probe", i18nKey: "routes.acceptanceProbe", hidden: true },',
+      '{ path: "/acceptance-probe/:token", name: "AcceptanceProbe", label: "Acceptance probe", i18nKey: "routes.acceptanceProbe", hidden: true },',
     )
     expect(generated).not.toBe(readFileSync(REGISTRY_PATH, 'utf8'))
   })
 
   it('is deterministic — two writes produce identical bytes', () => {
-    const outDir = mkdtempSync(join(tmpdir(), 'routegate-det-'))
+    const outDir = temporaryDirectory('routegate-det-')
     const a = join(outDir, 'a.ts')
     const b = join(outDir, 'b.ts')
     expect(runGenerator(['--out', a]).status).toBe(0)
@@ -104,8 +117,39 @@ describe('generate-route-registry — freshness gate', () => {
     expect(readFileSync(a, 'utf8')).toBe(readFileSync(REGISTRY_PATH, 'utf8'))
   })
 
+  it('sentence-cases missing catalog labels while preserving identifiers, brands and acronyms', () => {
+    const names = [
+      ['DriveDetail', 'Drive detail'],
+      ['NotificationsAudit', 'Notifications audit'],
+      ['ActiveSessions', 'Active sessions'],
+      ['ApiLogs', 'API logs'],
+      ['DLQInspector', 'DLQ inspector'],
+      ['GDPRExport', 'GDPR export'],
+      ['StatusApiDocs', 'Status API docs'],
+      ['HvacCycling', 'HVAC cycling'],
+      ['TeslaSyncAPISettings', 'TeslaSync API settings'],
+      ['ConnectTeslaAutopilot', 'Connect Tesla Autopilot'],
+    ]
+    const outDir = temporaryDirectory('routegate-casing-')
+    const app = join(outDir, 'App.tsx')
+    const out = join(outDir, 'routeRegistry.ts')
+    // Synthetic names have no catalog entries, so the actual CLI exercises
+    // fallback humanization rather than relying on authored route labels.
+    writeFileSync(app, names.map(([name]) =>
+      `<Route path="case/${name}/:token" element={<SafeRoute name="${name}CasingProbe"><Page /></SafeRoute>} />`,
+    ).join('\n'))
+    expect(runGenerator(['--app', app, '--out', out]).status).toBe(0)
+
+    const generated = readFileSync(out, 'utf8')
+    for (const [name, label] of names) {
+      expect(generated).toContain(
+        `{ path: "/case/${name}/:token", name: "${name}CasingProbe", label: "${label} casing probe", i18nKey: "routes.${name.charAt(0).toLowerCase() + name.slice(1)}CasingProbe", hidden: true },`,
+      )
+    }
+  })
+
   it('FAILS when the committed registry is missing entirely', () => {
-    const outDir = mkdtempSync(join(tmpdir(), 'routegate-missing-'))
+    const outDir = temporaryDirectory('routegate-missing-')
     const result = runGenerator(['--check', '--out', join(outDir, 'absent.ts')])
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('stale')

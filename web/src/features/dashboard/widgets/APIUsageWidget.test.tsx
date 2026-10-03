@@ -206,8 +206,7 @@ describe('APIUsageWidget — compact layout', () => {
 
     expect(screen.getByText('999')).toBeInTheDocument();
     expect(screen.getByText('Calls (24h)')).toBeInTheDocument();
-    // Compact mode drops the header title and the full stat grid.
-    expect(screen.queryByText('API usage')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'API usage' })).toBeInTheDocument();
     expect(screen.queryByText('Total calls (24h)')).not.toBeInTheDocument();
     expect(screen.queryByText('Error rate')).not.toBeInTheDocument();
   });

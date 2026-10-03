@@ -46,7 +46,7 @@ export function CostPerKwhChart({ data, isLoading, error, onRetry }: CostPerKwhC
 
   // Stable currency tick formatter so the Y axis isn't handed a fresh closure
   // on every render.
-  const formatRate = useCallback((v: number) => formatCurrency(v, 2), [formatCurrency]);
+  const formatRate = useCallback((v: number) => formatCurrency(v), [formatCurrency]);
 
   if (error) {
     return (

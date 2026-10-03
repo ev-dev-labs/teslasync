@@ -14,8 +14,9 @@ import {
 import { FadeIn } from '@/components/motion';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { SharedSessionData } from '@/types/sharing';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  SharedSessionReport — public, chrome-less charging-session report  */
@@ -28,6 +29,7 @@ import type { SharedSessionData } from '@/types/sharing';
  * convert to display units at this render boundary.
  */
 export function SharedSessionReport({ data }: { data: SharedSessionData }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy, formatPower } = useUnits();
   const session = data.session;
@@ -102,14 +104,14 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
             {socDelta != null && socDelta > 0 && session.energy_added_wh != null && (
               <StatCard
                 label={t('share.efficiency', 'Efficiency')}
-                value={`${fmtNumber(session.energy_added_wh / 1000 / (socDelta / 100), 1)} kWh/%`}
+                value={`${fmtNumber(session.energy_added_wh / 1000 / (socDelta / 100))} kWh/%`}
                 icon={<Zap className="h-4 w-4" />}
               />
             )}
             {session.cost != null && (
               <StatCard
                 label={t('share.cost', 'Cost')}
-                value={`${session.cost_currency ?? ''} ${fmtNumber(session.cost, 2)}`.trim()}
+                value={`${session.cost_currency ?? ''} ${fmtNumber(session.cost)}`.trim()}
                 icon={<DollarSign className="h-4 w-4" />}
               />
             )}
@@ -168,7 +170,7 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
                   />
                   <Tooltip
                     contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
-                    labelFormatter={(v: number) => `${fmtNumber(v, 1)} min`}
+                    labelFormatter={(v: number) => `${fmtNumber(v)} min`}
                   />
                   <Area
                     {...AREA_DEFAULTS}

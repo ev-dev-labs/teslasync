@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useStateSummary, useTimeline } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── State colors ───────────────────────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
@@ -66,6 +67,7 @@ export function buildSegments(
 
 /* ── Compact stacked bar (pure CSS) ─────────────────────────────── */
 function StackedBar({ segments }: { segments: StateSegment[] }) {
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="flex h-5 w-full rounded-full overflow-hidden">
       {segments.map((seg) => (
@@ -73,7 +75,7 @@ function StackedBar({ segments }: { segments: StateSegment[] }) {
           key={seg.state}
           className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-normal"
           style={{ width: `${seg.pct}%`, backgroundColor: stateColor(seg.state) }}
-          title={`${seg.state}: ${fmtNumber(seg.pct, 1)}%`}
+          title={`${seg.state}: ${fmtNumber(seg.pct)}%`}
         />
       ))}
     </div>
@@ -88,6 +90,7 @@ function TimelineStripe({
   transitions: Array<{ state: string; startDate: string; durationMin: number }>;
   t: (k: string, d: string) => string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const totalMin = transitions.reduce((sum, tr) => sum + (tr.durationMin ?? 0), 0);
   if (totalMin === 0) return null;
 
@@ -105,7 +108,7 @@ function TimelineStripe({
               key={`${tr.state}-${i}`}
               className="h-full transition-all duration-normal"
               style={{ width: `${pct}%`, backgroundColor: stateColor(tr.state ?? '') }}
-              title={`${tr.state}: ${fmtNumber(tr.durationMin ?? 0, 0)} min`}
+              title={`${tr.state}: ${fmtNumber(tr.durationMin ?? 0)} min`}
             />
           );
         })}
@@ -122,6 +125,7 @@ function StateRow({
   seg: StateSegment;
   t: (k: string, d: string) => string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   return (
     <div className="flex items-center justify-between min-h-[44px]">
       <div className="flex items-center gap-2">
@@ -136,7 +140,7 @@ function StateRow({
       <div className="flex items-center gap-2">
         <span className="text-xs text-[var(--text-secondary)]">{fmtDuration(seg.totalMin, t)}</span>
         <Badge variant="neutral" className="text-2xs tabular-nums">
-          {fmtNumber(seg.pct, 1)}%
+          {fmtNumber(seg.pct)}%
         </Badge>
       </div>
     </div>
@@ -145,6 +149,7 @@ function StateRow({
 
 /* ── Main widget ────────────────────────────────────────────────── */
 export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;

@@ -3,6 +3,7 @@ import { createServer, type Server, type ServerResponse } from 'node:http';
 export interface MockSseServer {
   origin: string;
   connectionCount: () => number;
+  close: () => Promise<void>;
 }
 
 let serverPromise: Promise<MockSseServer> | null = null;
@@ -10,6 +11,12 @@ let serverPromise: Promise<MockSseServer> | null = null;
 export function ensureMockSseServer(): Promise<MockSseServer> {
   serverPromise ??= startServer();
   return serverPromise;
+}
+
+export async function closeMockSseServer(): Promise<void> {
+  const current = serverPromise;
+  serverPromise = null;
+  if (current) await (await current).close();
 }
 
 async function startServer(): Promise<MockSseServer> {
@@ -34,7 +41,7 @@ async function startServer(): Promise<MockSseServer> {
     response.write('data: {"client_id":"e2e-native-client"}\n\n');
     response.write('event: heartbeat\n');
     response.write('data: {"timestamp":"2026-08-26T16:00:00.000Z"}\n\n');
-    request.on('close', () => clients.delete(response));
+    response.on('close', () => clients.delete(response));
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
@@ -48,5 +55,10 @@ async function startServer(): Promise<MockSseServer> {
   return {
     origin: `http://127.0.0.1:${address.port}`,
     connectionCount: () => connections,
+    close: () => new Promise<void>((resolve, reject) => {
+      server.close(error => error ? reject(error) : resolve());
+      for (const client of clients) client.end();
+      server.closeIdleConnections();
+    }),
   };
 }

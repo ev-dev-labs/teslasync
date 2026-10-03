@@ -21,9 +21,10 @@ import {
 import { EmptyState, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { GlassPanel, SectionTitle, Text } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type { BatteryChargingAnalysis } from '@/types/energy';
 import { computeEnergyBreakdown } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryChargingChartsProps {
   analysis: BatteryChargingAnalysis;
@@ -70,6 +71,7 @@ export default function BatteryChargingCharts({
   analysis,
   totalCycles,
 }: BatteryChargingChartsProps) {
+  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const chargeLevelDistribution = useMemo(
     () =>
@@ -250,7 +252,7 @@ export default function BatteryChargingCharts({
                   />
                   <StatRow
                     label={t('battery.stats.totalEnergy', 'Total Energy Added')}
-                    value={`${fmtNumber(energyBreakdown.totalEnergy, 1)} kWh`}
+                    value={`${fmtNumber(energyBreakdown.totalEnergy)} kWh`}
                   />
                   <StatRow
                     label={t('battery.stats.cycles', 'Charge Cycles')}

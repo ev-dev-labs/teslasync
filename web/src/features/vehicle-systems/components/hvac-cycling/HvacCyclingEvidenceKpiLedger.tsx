@@ -12,10 +12,11 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingQueryStatus } from './HvacCyclingQueryStatus';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingEvidenceKpiLedgerProps {
   summary: HvacCyclingSummary;
@@ -28,6 +29,7 @@ export function HvacCyclingEvidenceKpiLedger({
   state,
   formatDuration,
 }: HvacCyclingEvidenceKpiLedgerProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const unavailable = !state.vehicleSelected
@@ -86,7 +88,7 @@ export function HvacCyclingEvidenceKpiLedger({
           <MetricCard
             label={t('hvacCycling.kpis.observed', 'Observed duration')}
             value={resolved
-              ? formatDuration(summary.observedS, { precision: 1 })
+              ? formatDuration(summary.observedS)
               : '—'}
             subtitle={resolved
               ? t('hvacCycling.kpis.observedHint', 'gap-qualified on + off time')
@@ -97,7 +99,7 @@ export function HvacCyclingEvidenceKpiLedger({
           <MetricCard
             label={t('hvacCycling.kpis.duty', 'Observed on duty')}
             value={resolved && summary.dutyCycle != null
-              ? fmtPercent(summary.dutyCycle * 100, 1)
+              ? fmtPercent(summary.dutyCycle * 100)
               : '—'}
             subtitle={resolved
               ? t('hvacCycling.kpis.dutyHint', 'duration-weighted denominator')
@@ -108,7 +110,7 @@ export function HvacCyclingEvidenceKpiLedger({
           <MetricCard
             label={t('hvacCycling.kpis.shortRate', 'Qualified short-cycle rate')}
             value={resolved && summary.qualifiedShortCycleRate != null
-              ? fmtPercent(summary.qualifiedShortCycleRate * 100, 1)
+              ? fmtPercent(summary.qualifiedShortCycleRate * 100)
               : '—'}
             subtitle={resolved
               ? t('hvacCycling.kpis.shortRateHint', '{{count}} complete active runs', {

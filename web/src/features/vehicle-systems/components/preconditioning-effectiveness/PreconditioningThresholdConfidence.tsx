@@ -11,7 +11,7 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import {
   preconditioningEvidenceLabel,
@@ -22,6 +22,7 @@ import type {
   PreconditioningQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningThresholdConfidenceProps {
   summary: PreconditioningSummary;
@@ -36,14 +37,15 @@ export function PreconditioningThresholdConfidence({
   formatDuration,
   formatDelta,
 }: PreconditioningThresholdConfidenceProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const threshold = summary.thresholds;
   const gates = [
-    [t('preconditioningEffectiveness.thresholds.window', 'Pre-drive window'), formatDuration(threshold.preDriveWindowS, { precision: 2 }), summary.driveRows.uniqueValidDrives],
+    [t('preconditioningEffectiveness.thresholds.window', 'Pre-drive window'), formatDuration(threshold.preDriveWindowS), summary.driveRows.uniqueValidDrives],
     [t('preconditioningEffectiveness.thresholds.initial', 'Minimum initial gap'), formatDelta(threshold.minInitialDeltaC), summary.departureAccounting.initialInBand],
     [t('preconditioningEffectiveness.thresholds.samples', 'Minimum distinct cabin states'), fmtInt(threshold.minThermalSamples), summary.departureAccounting.insufficientThermalSamples],
-    [t('preconditioningEffectiveness.thresholds.span', 'Minimum observation span'), formatDuration(threshold.minObservationSpanS, { precision: 2 }), summary.departureAccounting.insufficientObservationSpan],
-    [t('preconditioningEffectiveness.thresholds.age', 'Maximum final-state age'), formatDuration(threshold.maxDepartureSampleAgeS, { precision: 2 }), summary.departureAccounting.staleDepartureSample],
+    [t('preconditioningEffectiveness.thresholds.span', 'Minimum observation span'), formatDuration(threshold.minObservationSpanS), summary.departureAccounting.insufficientObservationSpan],
+    [t('preconditioningEffectiveness.thresholds.age', 'Maximum final-state age'), formatDuration(threshold.maxDepartureSampleAgeS), summary.departureAccounting.staleDepartureSample],
     [t('preconditioningEffectiveness.thresholds.target', 'Maximum target shift'), formatDelta(threshold.maxTargetShiftC), summary.departureAccounting.targetShiftExclusions],
     [t('preconditioningEffectiveness.thresholds.cap', 'Directory display cap'), fmtInt(threshold.directoryLimit), summary.directory.omitted],
   ] as const;
@@ -51,9 +53,9 @@ export function PreconditioningThresholdConfidence({
   const confidence = [
     [t('preconditioningEffectiveness.thresholds.balanceCount', 'Balanced-pair support'), fmtInt(comparison.balanceCount)],
     [t('preconditioningEffectiveness.thresholds.volumeCount', 'Classified volume'), fmtInt(comparison.volumeCount)],
-    [t('preconditioningEffectiveness.thresholds.balanceConfidence', 'Balance confidence'), fmtPercent(comparison.balanceConfidence * 100, 0)],
-    [t('preconditioningEffectiveness.thresholds.volumeConfidence', 'Volume confidence'), fmtPercent(comparison.volumeConfidence * 100, 0)],
-    [t('preconditioningEffectiveness.thresholds.combinedConfidence', 'Combined confidence'), comparison.evidence !== 'none' ? fmtPercent(comparison.confidence * 100, 0) : '—'],
+    [t('preconditioningEffectiveness.thresholds.balanceConfidence', 'Balance confidence'), fmtPercent(comparison.balanceConfidence * 100)],
+    [t('preconditioningEffectiveness.thresholds.volumeConfidence', 'Volume confidence'), fmtPercent(comparison.volumeConfidence * 100)],
+    [t('preconditioningEffectiveness.thresholds.combinedConfidence', 'Combined confidence'), comparison.evidence !== 'none' ? fmtPercent(comparison.confidence * 100) : '—'],
   ] as const;
 
   return (

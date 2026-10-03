@@ -82,6 +82,9 @@
     "resultsCountOne": "1 result"
   },
   "common": {
+    "invalidNumber": "Enter a valid number",
+    "unitListHint": "Separate values with semicolons",
+    "preferredUnitInputHint": "Enter {{unit}}. Saved thresholds remain canonical SI values.",
     "name": "Name",
     "type": "Type",
     "description": "Description",

@@ -125,7 +125,7 @@ export function ShareCardMonthlyTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatNumber(value, 0)}
+                    tickFormatter={(value: number) => display.formatNumber(value)}
                   />
                   <YAxis
                     yAxisId="energy"
@@ -134,7 +134,7 @@ export function ShareCardMonthlyTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatNumber(value, 0)}
+                    tickFormatter={(value: number) => display.formatNumber(value)}
                   />
                   <YAxis yAxisId="count" hide />
                   <Tooltip
@@ -142,14 +142,14 @@ export function ShareCardMonthlyTrend({
                       <ChartTooltip
                         valueFormatter={(value, name) =>
                           name === countSeries
-                            ? display.formatNumber(Number(value), 0)
+                            ? display.formatNumber(Number(value))
                             : name === energySeries
                               ? t('shareCard.units.energyDisplay', '{{value}} {{unit}}', {
-                                value: display.formatNumber(Number(value), 1),
+                                value: display.formatNumber(Number(value)),
                                 unit: display.energyUnit,
                               })
                               : t('shareCard.units.distanceDisplay', '{{value}} {{unit}}', {
-                                value: display.formatNumber(Number(value), 1),
+                                value: display.formatNumber(Number(value)),
                                 unit: display.distanceUnit,
                               })}
                       />

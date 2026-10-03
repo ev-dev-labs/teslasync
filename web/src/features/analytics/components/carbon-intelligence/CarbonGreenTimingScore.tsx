@@ -8,6 +8,7 @@ import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const COLOR_GOOD = '#10b981';
 const COLOR_MIDDLE = '#f59e0b';
@@ -18,6 +19,7 @@ export function CarbonGreenTimingScore({
   states,
   display,
 }: CarbonSectionProps) {
+  const { precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   const lifetime = analysis.lifetime;
   const score = lifetime.greenScore;
@@ -55,7 +57,7 @@ export function CarbonGreenTimingScore({
                   label={t('carbon.score.gaugeLabel', 'Lifetime green score')}
                   color={scoreColor}
                   size={170}
-                  decimals={1}
+                  decimals={displayPrecision}
                 />
                 <Text as="p" variant="caption" className="mt-2">
                   {t(
@@ -67,7 +69,7 @@ export function CarbonGreenTimingScore({
               <Grid minItemWidth="standard" gap={3}>
                 <MetricCard
                   label={t('carbon.score.sessions', 'Support sessions')}
-                  value={display.formatNumber(lifetime.sessionsScored, 0)}
+                  value={display.formatNumber(lifetime.sessionsScored)}
                   subtitle={t(
                     'carbon.score.sessionsHint',
                     'Full-history positive-energy sessions',

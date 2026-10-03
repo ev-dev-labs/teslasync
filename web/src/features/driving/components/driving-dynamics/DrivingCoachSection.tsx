@@ -19,18 +19,20 @@ import {
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { formatDateShort } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { useDrivingCoach } from '@/api/hooks/useDriving';
 import { INTERVALS } from '@/lib/constants';
 import type { CoachDriveScore } from '@/types/driving';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DrivingCoachSectionProps {
   vehicleId: string | undefined;
 }
 
 export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   // The coach model aggregates 30 days of drives — it only shifts when a
@@ -63,7 +65,7 @@ export default function DrivingCoachSection({ vehicleId }: DrivingCoachSectionPr
       { key: 'efficiency', header: t('dynamics.coach.whPerKm', 'Wh/km'), render: (r: CoachDriveScore) => fmtNumber(r.efficiency), sortable: true },
       { key: 'distance', header: t('common.distance', 'Distance'), render: (r: CoachDriveScore) => `${fmtNumber(r.distance)} km`, sortable: true },
     ],
-    [t],
+    [t, fmtNumber],
   );
 
   const patterns = useMemo(

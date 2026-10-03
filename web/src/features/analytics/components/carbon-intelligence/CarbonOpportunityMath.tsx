@@ -90,7 +90,7 @@ export function CarbonOpportunityMath({
               />
               <MetricCard
                 label={t('carbon.opportunity.residual', 'Reported minus recomputed')}
-                value={display.formatSignedKg(difference, 3)}
+                value={display.formatSignedKg(difference)}
                 subtitle={t(
                   'carbon.opportunity.residualHint',
                   'Evaluated against explicit wire-rounding tolerance',

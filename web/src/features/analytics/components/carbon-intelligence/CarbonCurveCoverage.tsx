@@ -42,14 +42,14 @@ export function CarbonCurveCoverage({
           <Grid cols={{ default: 1, sm: 2, xl: 5 }} gap={3}>
             <MetricCard
               label={t('carbon.coverage.returned', 'Rows returned')}
-              value={display.formatNumber(source.returnedRows, 0)}
+              value={display.formatNumber(source.returnedRows)}
               subtitle={t('carbon.coverage.expected', '24 expected clock-hours')}
               icon={<DatabaseZap className="h-5 w-5" aria-hidden="true" />}
               color="blue"
             />
             <MetricCard
               label={t('carbon.coverage.unique', 'Valid unique hours')}
-              value={display.formatNumber(source.validUniqueHours, 0)}
+              value={display.formatNumber(source.validUniqueHours)}
               subtitle={t(
                 'carbon.coverage.uniqueHint',
                 'Canonical rows used in analysis',
@@ -59,14 +59,14 @@ export function CarbonCurveCoverage({
             />
             <MetricCard
               label={t('carbon.coverage.invalidHours', 'Invalid hour rows')}
-              value={display.formatNumber(source.invalidHourRows, 0)}
+              value={display.formatNumber(source.invalidHourRows)}
               subtitle={t('carbon.coverage.hourRange', 'Required integer 0–23')}
               icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
               color={source.invalidHourRows > 0 ? 'red' : 'green'}
             />
             <MetricCard
               label={t('carbon.coverage.invalidIntensity', 'Invalid intensity rows')}
-              value={display.formatNumber(source.invalidIntensityRows, 0)}
+              value={display.formatNumber(source.invalidIntensityRows)}
               subtitle={t(
                 'carbon.coverage.intensityRule',
                 'Required finite non-negative value',
@@ -76,7 +76,7 @@ export function CarbonCurveCoverage({
             />
             <MetricCard
               label={t('carbon.coverage.duplicates', 'Duplicate hour rows')}
-              value={display.formatNumber(source.duplicateHourRows, 0)}
+              value={display.formatNumber(source.duplicateHourRows)}
               subtitle={t(
                 'carbon.coverage.duplicateRule',
                 'First valid row retained deterministically',

@@ -145,7 +145,7 @@ export default function EnergyLedgerPage() {
               <MetricCard
                 label={t('energyLedger.driving', 'Reached the Wheels')}
                 value={`${Math.round(summary.drivingShare * 100)}%`}
-                subtitle={formatEnergy(summary.totalDrivenWh, { precision: 0 })}
+                subtitle={formatEnergy(summary.totalDrivenWh)}
                 icon={<Sigma className="h-5 w-5" />}
                 color="cyan"
               />
@@ -153,18 +153,18 @@ export default function EnergyLedgerPage() {
                 label={t('energyLedger.vampire', 'Vampire Drain')}
                 value={`${Math.round(summary.vampireWhPerDay)} Wh/day`}
                 subtitle={t('energyLedger.standbyPower', 'about {{p}} while parked', {
-                  p: formatPower(summary.meanStandbyPowerW, { precision: 0 }),
+                  p: formatPower(summary.meanStandbyPowerW),
                 })}
                 icon={<BatteryWarning className="h-5 w-5" />}
                 color={summary.vampireWhPerDay > 1000 ? 'red' : 'purple'}
               />
               <MetricCard
                 label={t('energyLedger.unexplained', 'Unexplained')}
-                value={formatEnergy(Math.abs(summary.totalResidualWh), { precision: 0 })}
+                value={formatEnergy(Math.abs(summary.totalResidualWh))}
                 subtitle={
                   summary.packCapacityWh != null
                     ? t('energyLedger.derivedPack', 'derived pack {{v}}', {
-                        v: formatEnergy(summary.packCapacityWh, { precision: 0 }),
+                        v: formatEnergy(summary.packCapacityWh),
                       })
                     : t('energyLedger.noPack', 'pack size not yet derivable')
                 }
@@ -312,7 +312,7 @@ export default function EnergyLedgerPage() {
                     </Text>
                     <Text variant="bodySm">
                       {t('energyLedger.chargedValue', '{{e}} · {{n}} sessions', {
-                        e: formatEnergy(m.chargedWh, { precision: 0 }),
+                        e: formatEnergy(m.chargedWh),
                         n: m.chargeSessions,
                       })}
                     </Text>
@@ -321,8 +321,8 @@ export default function EnergyLedgerPage() {
                     </Text>
                     <Text variant="bodySm">
                       {t('energyLedger.drivenValue', '{{e}} · {{d}}', {
-                        e: formatEnergy(m.drivenWh, { precision: 0 }),
-                        d: formatDistance(m.distanceM, { precision: 0 }),
+                        e: formatEnergy(m.drivenWh),
+                        d: formatDistance(m.distanceM),
                       })}
                     </Text>
                     <Text variant="caption">
@@ -330,7 +330,7 @@ export default function EnergyLedgerPage() {
                     </Text>
                     <Text variant="bodySm">
                       {t('energyLedger.standbyValue', '{{e}} over {{h}} h', {
-                        e: formatEnergy(m.standbyWh, { precision: 0 }),
+                        e: formatEnergy(m.standbyWh),
                         h: Math.round(m.idleHours),
                       })}
                     </Text>
@@ -338,9 +338,7 @@ export default function EnergyLedgerPage() {
                       {t('energyLedger.residual', 'Residual')}
                     </Text>
                     <Text variant="bodySm">
-                      {`${m.residualWh >= 0 ? '+' : '−'}${formatEnergy(Math.abs(m.residualWh), {
-                        precision: 0,
-                      })}`}
+                      {`${m.residualWh >= 0 ? '+' : '−'}${formatEnergy(Math.abs(m.residualWh))}`}
                     </Text>
                   </div>
                 </li>

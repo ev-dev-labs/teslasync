@@ -9,8 +9,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { formatDurationMs, formatRelativeTime } from '@/lib/dateFormat';
-import { fmtPercent } from '@/lib/numberFormat';
+import { formatRelativeTime } from '@/lib/dateFormat';
+
 import { GlassPanel, Badge, SectionTitle, Text, Caption } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { AutomationHistory, AutomationHistoryStats } from '@/api/types';
 import type { AutomationActivityEvent } from '@/hooks/useAutomationEvents';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ─── Status → icon + toned accent (color is never the only signal) ────────────
 
@@ -44,6 +45,7 @@ const liveTypeMap: Record<string, { icon: typeof CheckCircle; color: string }> =
 // ─── History item ─────────────────────────────────────────────────────────────
 
 function HistoryRow({ item }: { item: AutomationHistory }) {
+  const { formatDurationMs } = useNumberFormatting();
   const cfg = statusConfig[item.status] ?? statusConfig.running;
   const Icon = cfg.icon;
 
@@ -131,6 +133,8 @@ export function AutomationActivityFeed({
   liveEvents,
   connectionState,
 }: AutomationActivityFeedProps) {
+  const { formatDurationMs } = useNumberFormatting();
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   const recentLive = useMemo(() => (liveEvents ?? []).slice(0, 5), [liveEvents]);
@@ -165,7 +169,7 @@ export function AutomationActivityFeed({
               </Caption>
               <Caption className="text-emerald-300">
                 {t('automations.successRateValue', '{{value}} success', {
-                  value: fmtPercent(historyStats.success_rate ?? 0, 0),
+                  value: fmtPercent(historyStats.success_rate ?? 0),
                 })}
               </Caption>
               <Caption>
