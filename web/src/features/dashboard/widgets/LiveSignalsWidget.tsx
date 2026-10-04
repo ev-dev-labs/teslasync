@@ -10,12 +10,13 @@ import {
   useLatestTirePressure,
 } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
+import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { resolveHvacActive } from '@/lib/climateState';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { cleanNil } from '@/lib/cleanNil';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { convertTempFromSI, convertPressureFromSI } from '@/lib/unitConversion';
+import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
@@ -70,8 +71,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const tempUnit = unitPrefs.temperature;
-  const pressureUnit = unitPrefs.pressure;
-  const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
+  const { pressureUnit, toPressureValue: toPressureDisplay } = usePressureFormat();
 
   const hasData = [motor, climate, security, tires].some((value) => value != null && Object.keys(value).length > 0);
   const climateHvacState = climate

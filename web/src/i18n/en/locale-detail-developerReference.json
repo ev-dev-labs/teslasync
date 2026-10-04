@@ -1,0 +1,560 @@
+{
+  "developerReference": {
+    "mobileGrid": {
+      "actions": {
+        "add": "Add reference fixture",
+        "clear": "Clear",
+        "done": "Done",
+        "retry": "Retry"
+      },
+      "desktop": {
+        "details": "Open reference details and actions",
+        "empty": "No matching reference rows",
+        "notice": "State examples below 640px; this unchanged shared DataTable is the desktop reference.",
+        "requests": "Reference export requests"
+      },
+      "details": {
+        "actionNotice": "REFERENCE FIXTURES: non-destructive row action invoked. No live record changed.",
+        "confirm": "Confirm fixture callback",
+        "confirmMessage": "This only demonstrates confirmation and callback ownership. No fixture or live record is deleted.",
+        "confirmNotice": "REFERENCE FIXTURES: confirmed row-action callback invoked. No deletion performed.",
+        "confirmTitle": "Confirm reference action",
+        "inspect": "Inspect reference record",
+        "notice": "REFERENCE FIXTURES. Summary-hidden fields remain here; disabled and destructive actions are not hidden.",
+        "remove": "Remove fixture (confirmation)",
+        "title": "Reference record: all fields and actions"
+      },
+      "exports": {
+        "error": "Synthetic export failure. Try the request again.",
+        "full": "Request full-result export",
+        "matching": "Request matching loaded-row export",
+        "notice": "REFERENCE FIXTURES: {{scope}} requested for {{count}} rows. No file downloaded.",
+        "notice_one": "REFERENCE FIXTURES: {{scope}} requested for {{count}} row. No file downloaded.",
+        "notice_other": "REFERENCE FIXTURES: {{scope}} requested for {{count}} rows. No file downloaded.",
+        "selected": "Request selected loaded-row export"
+      },
+      "fields": {
+        "cost": "Cost (USD)",
+        "distance": "Distance",
+        "duration": "Duration",
+        "end": "Ending battery",
+        "energy": "Energy",
+        "id": "Record identifier",
+        "note": "Notes",
+        "place": "Location",
+        "power": "Power",
+        "raw": "Raw field name",
+        "score": "Battery score",
+        "start": "Starting battery",
+        "status": "Status",
+        "temperature": "Temperature",
+        "timestamp": "Timestamp (UTC)"
+      },
+      "filters": {
+        "all": "All",
+        "home": "Home",
+        "supercharger": "Supercharger"
+      },
+      "fixture": {
+        "failure": "Simulate request failure",
+        "label": "REFERENCE FIXTURES · local controller only · not live data",
+        "loading": "Simulate 3-second loading",
+        "ready": "Show ready state"
+      },
+      "footer": {
+        "loadMore": "Load {{count}} more",
+        "rows": "{{count}} rows",
+        "rows_one": "{{count}} row",
+        "rows_other": "{{count}} rows",
+        "showing": "Showing {{count}} of {{total}}",
+        "showingUnknown": "Showing {{count}} loaded rows",
+        "showingUnknown_one": "Showing {{count}} loaded row",
+        "showingUnknown_other": "Showing {{count}} loaded rows"
+      },
+      "gaps": {
+        "replacing": "Adapter gap: replacing server pages cannot be labelled Load more.",
+        "mapping": "Invalid mobile mapping: provide at most three unique metadata fields and unique detail fields."
+      },
+      "groups": {
+        "date": "{{date}} · {{relative}}",
+        "summary": "{{count}} · {{energy}}",
+        "twoDays": "Two days ago",
+        "yesterday": "Yesterday"
+      },
+      "page": {
+        "adapter": "DataTable does not expose its loaded-data/filter/sort/export pipeline as a mobile view model. Production integration requires an approved adapter owned by DataTable; this fixture controller must not be copied into production.",
+        "approval": "Runtime Phase 0, native 375/390 light/dark screenshots, narrow-container desktop freeze decisions and human contract approval remain pending. No production rollout is authorized.",
+        "clock": "Dates use UTC and a fixed reference clock: October 4, 2026. Open any row for every source field and its reference actions; use Enter or Space to activate or select.",
+        "export": "Export buttons demonstrate exact callback scopes and request feedback only. No file is serialized or downloaded by the mobile candidate. Full-result callbacks never appear as selected export.",
+        "gateTitle": "Review scope and adapter gaps",
+        "scope": "Container widths below 640px show the controlled mobile candidate. At 640px and wider, the existing shared DataTable is composed unchanged. All examples use synthetic canonical SI fixtures; units are converted only for display.",
+        "subtitle": "REFERENCE FIXTURES — early presentation candidate, not production integration.",
+        "title": "Mobile grid states reference"
+      },
+      "scenarios": {
+        "empty": "Empty with action",
+        "error": "Initial error with Retry",
+        "exportError": "Export request failure",
+        "fullExport": "Full-result export is not selected export",
+        "grouped": "Groups of one and three",
+        "keyValue": "Timestamp key/value records",
+        "loading": "Loading: three skeletons",
+        "longValues": "Long titles and values",
+        "manyColumns": "15 source fields: nothing lost",
+        "manyPages": "Three cumulative batches",
+        "manyRows": "200 reference rows",
+        "noMatch": "No matching records",
+        "onePage": "One page",
+        "oneRow": "One row: zero and missing values",
+        "replacing": "Replacing server-page adapter gap",
+        "retained": "Retained data with retry",
+        "selection": "Selection across batches",
+        "sortOpen": "Sort bottom sheet open"
+      },
+      "selection": {
+        "cancel": "Cancel",
+        "count": "{{count}} selected",
+        "enter": "Select",
+        "row": "Select {{title}}"
+      },
+      "sort": {
+        "cost": "Highest cost",
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "order": "Sort order",
+        "title": "Sort reference rows"
+      },
+      "states": {
+        "empty": "No reference sessions yet",
+        "error": "Reference request failed; this is a synthetic error.",
+        "loading": "Loading reference rows",
+        "noMatch": "Nothing matches “{{query}}”"
+      },
+      "toolbar": {
+        "filterCount": "{{label}} {{count}}",
+        "more": "More grid actions",
+        "search": "Search…",
+        "searchLabel": "Search {{label}}",
+        "sort": "Sort"
+      },
+      "values": {
+        "ac": "AC",
+        "dc": "DC",
+        "batteryLabel": "Battery level",
+        "complete": "Complete",
+        "home": "Reference home",
+        "longNote": "A long diagnostic value with all original information preserved in the reference detail dialog, including configuration fields and actions.",
+        "longPlace": "Reference home with an extraordinarily long location name that must remain reachable without horizontal scrolling",
+        "missing": "—",
+        "note": "Synthetic SI reference record",
+        "pending": "Pending",
+        "percent": "{{value}}%",
+        "progressLabel": "Battery from {{from}}% to {{to}}%",
+        "rowTitle": "{{place}} · {{number}}",
+        "scoreLabel": "Battery score {{score}}",
+        "supercharger": "Reference Supercharger",
+        "usd": "${{value}}"
+      }
+    },
+    "layout": {
+      "card": {
+        "descriptionHelp": "Read full description for {{title}}"
+      },
+      "about": {
+        "title": "About this analysis",
+        "synthetic": "All examples on this page are deterministic synthetic fixtures. They demonstrate containers, text wrapping, disclosure, source isolation, chart dimensions and the single stats-owned primitive. They do not represent a vehicle, a real analysis period, a fit result, telemetry or API availability. The complete daily series remains accessible through each chart’s data table even when its plotted display is sampled.",
+        "layout": "Cards retain their source order. Incomplete rows expand in place without a CSS dense ordering strategy. Plot heights are 200, 240 and 280 pixels according to the containing grid; gutters follow the same measured boundary. Existing PageContainer, Grid, Card, GlassPanel and chart/feedback primitives remain the substrate. Typography preferences, shell navigation, workspace controls, global padding and safe areas are not redesigned here.",
+        "acceptance": "This is source-authoring evidence, not Phase 0 or Phase 3 runtime acceptance. Route crawl, valid sample IDs, tab selectors, rendered section counts, geometry, before captures and visual rubric scores remain unknown until the parent’s serialized checks. The reference must be reviewed at 375, 768, 1280 and 1920 pixels and at breakpoint edges. Production moves, merges and methodology relocations require per-page human approval. No production page has been migrated."
+      },
+      "locked": {
+        "unknownProgress": "Unlock progress is unknown; no threshold has been inferred.",
+        "title": "Three synthetic analyses share one unavailable reason",
+        "reason": "This fixture intentionally groups unavailable analyses. It does not assert a production eligibility rule.",
+        "fitted": "Synthetic fitted curve",
+        "trend": "Synthetic adjusted trend",
+        "residuals": "Synthetic residual distribution",
+        "progress": "Illustrative progress only: 2 of 9 fixture steps; not calendar eligibility."
+      },
+      "source": {
+        "loading": "Loading {{label}}",
+        "retained": "The synthetic refresh failed. Retained content remains available."
+      },
+      "page": {
+        "title": "Responsive layout reference",
+        "subtitle": "Synthetic developer reference · no production migration",
+        "notice": "Synthetic presentation fixtures only. Native validation and human approval are pending; source inventory is not verified runtime inventory."
+      },
+      "container": {
+        "title": "Container boundary: narrow panel on a wide screen",
+        "description": "This bounded host stays narrow regardless of the viewport; its cards must stack and its charts use the phone plot height.",
+        "grid": "Narrow-container cards",
+        "firstTitle": "First narrow card",
+        "firstBody": "Viewport width cannot promote this card to desktop columns.",
+        "secondTitle": "Second narrow card",
+        "secondBody": "Reading order and complete text are preserved inside the bounded host.",
+        "chartTitle": "Dense chart inside the narrow host"
+      },
+      "action": {
+        "pdfLabel": "Print the synthetic reference or save it as PDF",
+        "pdf": "Print / save PDF"
+      },
+      "chart": {
+        "sectionTitle": "Paired charts and dense daily series",
+        "sectionDescription": "Matching plot heights come from the grid container, including inside a narrow panel.",
+        "pairedGrid": "Paired synthetic charts",
+        "firstTitle": "Daily synthetic observations",
+        "secondTitle": "The same fixture in a paired plot",
+        "emptyTitle": "Empty synthetic chart · orphan expands",
+        "legend": "Legend: Synthetic sample · August–September 2026 (UTC)",
+        "sampling": "Narrow plots select evenly spaced fixture observations for display only. All 60 observations remain in each chart’s accessible data table; tick labels are thinned separately.",
+        "sample": "Synthetic sample",
+        "date": "Fixture date",
+        "subtitle": "Sixty invented daily observations; dates are shown in UTC.",
+        "description": "Presentation fixture only. The accessible data table retains every original observation.",
+        "empty": "This synthetic chart has no observations.",
+        "emptyDescription": "The plot space is retained without drawing misleading axes.",
+        "samplingCount": "Plot shows {{shown}} of {{total}} fixture observations; the data table retains all."
+      },
+      "fill": {
+        "longHeading": "A deliberately long heading that must remain fully readable inside the same narrow container as the neighboring short reference card",
+        "details": "The fill strategy is content-driven: the brief card uses the complete explanatory content region, not an empty spacer, a duplicate fact or a fabricated metric. Both cards stretch, while meaningful content remains at the end of the card. Height and the 48-pixel dead-space limit still require real browser measurements.",
+        "title": "Short and tall content with an explicit fill strategy",
+        "grid": "Source-ordered content fill examples",
+        "shortTitle": "Brief reference",
+        "brief": "A short summary does not justify discarding its neighboring details.",
+        "tallDetail": "Unbalanced production rows are not automatically repaired by stretching. Pairing unlike content or moving details remains a page-specific decision with a no-information-loss map and human approval.",
+        "oddGrid": "Odd card count without source reordering",
+        "oddFirst": "First card",
+        "firstBody": "This card keeps the first source position.",
+        "oddSecond": "Second card",
+        "secondBody": "This card keeps the second source position.",
+        "oddThird": "Third card expands to fill its row",
+        "thirdBody": "Only the final row span changes; the card is not moved, merged or removed."
+      },
+      "facts": {
+        "source": "Source",
+        "synthetic": "Synthetic reference",
+        "timezone": "Timezone",
+        "period": "Analysis period",
+        "unknown": "Unknown",
+        "access": "Access",
+        "reviewOnly": "Developer review only",
+        "precision": "Number preferences",
+        "preserved": "Existing preferences preserved",
+        "availability": "Availability",
+        "independent": "Independent per source",
+        "order": "Reading order",
+        "sourceOrder": "Source order retained",
+        "runtime": "Runtime acceptance",
+        "notRun": "Not run",
+        "missing": "Missing source fact",
+        "missingReason": "This fixture intentionally omits the fact."
+      },
+      "lists": {
+        "title": "List pairs and nine diagnostic facts",
+        "grid": "Paired diagnostic lists",
+        "firstTitle": "Diagnostic facts with a long timezone value",
+        "secondTitle": "Matching list with every fact reachable"
+      },
+      "states": {
+        "ready": "Ready",
+        "loading": "Loading",
+        "error": "Error",
+        "empty": "Empty",
+        "retained": "Retained after refresh error",
+        "firstSource": "Independently controlled synthetic source",
+        "title": "Independent loading, error, empty and retained states",
+        "controls": "Choose the synthetic source state",
+        "grid": "Independent source panels",
+        "emptyMessage": "The first synthetic source returned no records.",
+        "errorMessage": "The first synthetic source failed; its neighbor is unaffected.",
+        "firstBody": "This source’s retained synthetic content remains reachable when only its refresh fails.",
+        "secondSource": "Successful independent neighbor",
+        "secondEmpty": "The second source has no synthetic records.",
+        "secondError": "The second synthetic source failed.",
+        "secondBody": "This successful panel and its title remain visible through every first-source state."
+      },
+      "stats": {
+        "period": "Synthetic fixture · no analysis period",
+        "periodReason": "These readings are invented presentation inputs, not selected-window totals or live vehicle data.",
+        "missingReason": "The synthetic source deliberately provides no power reading.",
+        "title": "Shared stats: values, text, zero and missing",
+        "loadingTitle": "Shared stats loading",
+        "embeddedGrid": "Embedded shared statistics",
+        "embeddedTitle": "Same implementation inside a card"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "overviewBody": "This developer reference is synthetic and isolated from production.",
+        "order": "Reading order",
+        "orderBody": "Grid packing preserves the array and DOM order. No dense placement or hidden card migration is used.",
+        "availability": "Availability",
+        "availabilityBody": "Loading, failures and empty results belong to their own panels, not one blanket page guard.",
+        "charts": "Chart sizing",
+        "chartsBody": "Plot sizing follows the measured containing grid. The complete fixture remains in the accessible chart table.",
+        "methodology": "Methodology",
+        "methodologyBody": "The bottom disclosure contains the full reference methodology and acceptance limitations.",
+        "acceptance": "Human acceptance",
+        "acceptanceBody": "Source authoring does not prove visual quality. Human reference and per-page plan approvals remain required.",
+        "title": "Six accessible reference tabs",
+        "label": "Layout reference topics"
+      }
+    },
+    "stats": {
+      "comparison": {
+        "count": "Change in sessions",
+        "energy": "Energy change"
+      },
+      "examples": {
+        "original": "Original example: {{example}}",
+        "output": "Candidate output: {{output}}",
+        "policy": "Synthetic values. Original specification examples remain visible for review; candidate output preserves selected precision and units instead of forcing adaptive formats or humanized durations.",
+        "raw": "Canonical input: {{raw}} {{unit}}",
+        "state": "State: {{state}}",
+        "title": "Original examples and canonical boundaries"
+      },
+      "fact": {
+        "grade": "Battery score A",
+        "home": "4 home",
+        "recorded": "Recorded cost fixture",
+        "start": "Usually starts 6 AM",
+        "supercharger": "2 Supercharger",
+        "synthetic": "Synthetic reference"
+      },
+      "fixture": {
+        "count-grouped": "1,240",
+        "count-six": "6",
+        "currency-drift": "$36.7 → $36.70 (historical proposed example)",
+        "currency-grouped": "$1,204.50",
+        "currency-long": "$12,345,678.90",
+        "currency-small": "$33.60",
+        "currency-zero": "$0.00",
+        "distance-km": "14.5 km",
+        "distance-mi": "767 mi",
+        "duration-before-day": "Just below 24 hours",
+        "duration-day": "Exactly 24 hours",
+        "duration-days": "3d 4h",
+        "duration-drift": "2.3 h → 2h 18m (historical humanized example)",
+        "duration-hours": "2h 10m",
+        "duration-minutes": "32m",
+        "duration-whole": "6h 00m",
+        "efficiency-km": "18.6 kWh/100km (same quantity; selected display unit preserved)",
+        "efficiency-mi": "300 Wh/mi",
+        "energy-drift": "183.8 kWh",
+        "energy-large": "158 kWh",
+        "energy-medium": "26.3 kWh",
+        "energy-planned": "184 kWh",
+        "energy-round-high": "158.4 → 158 (historical adaptive example)",
+        "energy-round-low": "26.34 → 26.3 (historical adaptive example)",
+        "energy-small": "4.5 kWh",
+        "energy-wh": "850 Wh",
+        "extreme": "Finite numeric extreme",
+        "grade": "A",
+        "nan": "Invalid finite measurement",
+        "negative-infinity": "Invalid finite measurement",
+        "negative-zero": "-0 must not appear",
+        "null": "Missing, not zero",
+        "overflow": "Display conversion overflow is invalid",
+        "percent-fraction": "4.5%",
+        "percent-whole": "74%",
+        "positive-infinity": "Invalid finite measurement",
+        "power-large": "150.0 kW",
+        "power-small": "12.1 kW",
+        "pressure": "250 kPa",
+        "ratio": "Ratio is not 4.5%",
+        "round-100": "99.95 kWh rounding boundary",
+        "round-hour": "59.6 minutes; preserve duration preference, no forced minute rollover",
+        "rounded-negative": "No display-rounded negative zero",
+        "score": "85/100",
+        "signed": "Signed measurement",
+        "speed-km": "64 km/h",
+        "sub-minute": "Sub-minute source detail retained",
+        "temperature-c": "21.5°C",
+        "tiny": "Smallest positive finite input",
+        "undefined": "Missing, not zero",
+        "zero": "0 kWh"
+      },
+      "glossary": {
+        "policy": "Quantity IDs do not prove page semantics. Source occurrence IDs are not semantic IDs. Unreviewed production mappings remain UNKNOWN; recorded cost, estimates, charging rate and mean session power stay distinct.",
+        "title": "Chosen candidate glossary"
+      },
+      "group": {
+        "title": "Embedded group uses the same renderer"
+      },
+      "metric": {
+        "charge": {
+          "avgDuration": {
+            "description": "Existing average session duration calculation, expressed in canonical seconds.",
+            "label": "Average session duration"
+          },
+          "energyAdded": {
+            "description": "Recorded energy added on included charging sessions.",
+            "label": "Energy added"
+          },
+          "meanSessionPower": {
+            "description": "Arithmetic mean of finite session average powers; not peak power.",
+            "label": "Mean session power"
+          },
+          "overallRate": {
+            "description": "Aggregate valid energy divided by corresponding positive duration; not mean session power.",
+            "label": "Overall charging rate"
+          },
+          "peakPower": {
+            "description": "Highest observed charging power; never a replacement for an average.",
+            "label": "Peak power"
+          },
+          "recordedCost": {
+            "description": "Recorded session costs, not tariff estimates or billing.",
+            "label": "Recorded cost"
+          },
+          "sessions": {
+            "description": "Number of returned charging sessions included by the existing filter.",
+            "label": "Sessions"
+          }
+        },
+        "count": {
+          "description": "Declared count, not inferred from an integer measurement.",
+          "label": "Count"
+        },
+        "currency": {
+          "description": "Amount in its recorded denomination; no currency conversion.",
+          "label": "Cost"
+        },
+        "distance": {
+          "description": "Measured distance; canonical input is meters.",
+          "label": "Distance"
+        },
+        "duration": {
+          "description": "Elapsed duration; canonical input is seconds.",
+          "label": "Duration"
+        },
+        "efficiency": {
+          "description": "Consumption in watt-hours per meter; not reciprocal economy.",
+          "label": "Energy intensity"
+        },
+        "energy": {
+          "description": "Measured energy; canonical input is watt-hours.",
+          "label": "Energy"
+        },
+        "number": {
+          "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
+          "label": "Value"
+        },
+        "percent": {
+          "description": "Percentage input is already on the 0–100 scale.",
+          "label": "Percentage"
+        },
+        "power": {
+          "description": "Measured power; canonical input is watts.",
+          "label": "Power"
+        },
+        "pressure": {
+          "description": "Pressure in kilopascals.",
+          "label": "Pressure"
+        },
+        "ratio": {
+          "description": "Dimensionless coefficient, not a percentage.",
+          "label": "Ratio"
+        },
+        "score": {
+          "description": "Numeric score on a declared 100-point scale.",
+          "label": "Score"
+        },
+        "seasonal": {
+          "fitStatus": {
+            "description": "Existing translated fit status; no invented eligibility threshold.",
+            "label": "Fit status"
+          },
+          "includedDrives": {
+            "description": "Drive count admitted by the existing seasonal eligibility rules.",
+            "label": "Included drives"
+          },
+          "inSampleRSquared": {
+            "description": "Existing dimensionless in-sample coefficient, not a percent.",
+            "label": "In-sample R²"
+          },
+          "observedIntensity": {
+            "description": "Existing observed consumption over included drives.",
+            "label": "Observed energy intensity"
+          }
+        },
+        "speed": {
+          "description": "Measured speed; canonical input is meters per second.",
+          "label": "Speed"
+        },
+        "status": {
+          "description": "Source-provided status, retained without numeric coercion.",
+          "label": "Status"
+        },
+        "temperature": {
+          "description": "Absolute temperature in degrees Celsius; not a temperature difference.",
+          "label": "Temperature"
+        },
+        "text": {
+          "description": "Source-provided text, retained without numeric coercion.",
+          "label": "Text"
+        }
+      },
+      "page": {
+        "subtitle": "Synthetic fixtures, chosen candidate policies and source-preserving contracts. Not live vehicle data or an approved production rollout.",
+        "title": "Stat formatting reference"
+      },
+      "period": {
+        "alltime": "All time — synthetic only",
+        "crossYear": "Dec 28, 2025 – Jan 3, 2026 — synthetic",
+        "event": "Single event — synthetic open-ended record",
+        "now": "Now — synthetic snapshot; freshness unknown",
+        "synthetic": "Synthetic period — not live data",
+        "unknownReason": "No backend query or complete-window claim is associated with these fixtures.",
+        "week": "Last 7 days (Sep 27 – Oct 3) — synthetic"
+      },
+      "preferences": {
+        "currency": "Local currency demonstration",
+        "duration": "Local duration unit",
+        "imperial": "Imperial units",
+        "local": "Opt-in local demonstration",
+        "locale": "Local locale",
+        "metric": "Metric units",
+        "policy": "Chosen candidate policy: preserve saved precision, locale, units, currency and duration. Local demo controls are explicitly opt-in and never save global settings. Workspace date and vehicle controls remain in the application header.",
+        "precision": "Local precision",
+        "profile": "Preference source",
+        "saved": "Saved preferences",
+        "symbol": "Existing currency symbol",
+        "title": "Local formatting showcase",
+        "units": "Local measurement profile"
+      },
+      "reason": {
+        "count": "Expected a non-negative safe integer count",
+        "missing": "No measurement supplied",
+        "nonfinite": "Expected a finite numeric measurement",
+        "overflow": "Display conversion exceeded the finite numeric range",
+        "sessions": "Needs at least 2 sessions — synthetic reason, not a production eligibility rule",
+        "text": "Expected non-empty source text"
+      },
+      "state": {
+        "empty": "No metrics supplied",
+        "error": "Synthetic refresh error; retained measurements remain visible",
+        "loading": "Loading measurements",
+        "noSource": "Synthetic source error; no measurements supplied",
+        "retained": "Showing retained measurements"
+      },
+      "status": {
+        "fixture": "Synthetic fit status"
+      },
+      "strips": {
+        "count": "{{count}} synthetic tiles",
+        "error": "Error with explicit missing readings",
+        "loading": "Reserved loading geometry",
+        "policy": "Container widths determine two, three or up to six columns. Odd phone rows span the final tile. All examples below are synthetic.",
+        "retained": "Retained measurements during refresh",
+        "states": "Links, comparisons, zero and missing reasons",
+        "title": "Two through six tiles"
+      },
+      "valueState": {
+        "invalid": "invalid",
+        "missing": "missing",
+        "value": "value"
+      }
+    }
+  }
+}

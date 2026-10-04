@@ -131,14 +131,15 @@ i18n.use(initReactI18next).init({
   },
   lng: 'en',
   fallbackLng: 'en',
+  // Feature-bound hooks use the same flat, deferred catalogue.
+  fallbackNS: 'translation',
   interpolation: { escapeValue: false },
   react: {
     bindI18n: 'languageChanged',
     bindI18nStore: 'added',
   },
   saveMissing: true,
-  missingKeyHandler: (_languages, namespace, key) => {
-    if (namespace !== 'translation') return
+  missingKeyHandler: (_languages, _namespace, key) => {
     const keyPath = String(key)
     if (!keyPath.includes('.')) return
     const topLevelNamespace = keyPath.split('.')[0]

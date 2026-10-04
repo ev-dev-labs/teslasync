@@ -607,7 +607,8 @@
     "dayLog": "vehicles",
     "physicsLedger": "vehicles",
     "science": "science",
-    "serverConnect": "settings"
+    "serverConnect": "settings",
+    "developerReference": "shared"
   },
   "bundles": {
     "shell": [
@@ -737,6 +738,7 @@
       "climate",
       "commands",
       "delta",
+      "developerReference",
       "diagnostic",
       "driveScore",
       "editConflict",
@@ -1317,6 +1319,7 @@
     "delta",
     "demoData",
     "density",
+    "developerReference",
     "diagnostic",
     "draft",
     "driveScore",
@@ -3588,7 +3591,8 @@
     "dayLog": "vehicles",
     "physicsLedger": "vehicles",
     "science": "science",
-    "serverConnect": "settings"
+    "serverConnect": "settings",
+    "developerReference": "detail-developerReference"
   },
   "featureRequiredKeys": {
     "explore": [

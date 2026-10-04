@@ -96,7 +96,7 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 // The four snapshot shapes below mirror the flat maps the *_latest handlers
 // emit (signal → field). The spread lets each test override individual fields,
 // including intentionally wrong-typed values (enum strings, Go "<nil>") to lock
-// in the hardening. Numeric values are SI: temps in °C and pressures in kPa.
+// in the hardening. Numeric values are SI: temps in °C and pressures in Pa.
 function makeMotor(over: Record<string, unknown> = {}): Record<string, unknown> {
   return { di_torque: 245, di_stator_temp: 60, gear: 'D', ...over };
 }
@@ -104,7 +104,7 @@ function makeClimate(over: Record<string, unknown> = {}): Record<string, unknown
   return { inside_temp: 20, outside_temp: 10, hvac_power: true, ...over };
 }
 function makeTires(over: Record<string, unknown> = {}): Record<string, unknown> {
-  return { front_left: 290, front_right: 300, rear_left: 280, rear_right: 260, ...over };
+  return { front_left: 290000, front_right: 300000, rear_left: 280000, rear_right: 260000, ...over };
 }
 function makeSecurity(over: Record<string, unknown> = {}): Record<string, unknown> {
   return { locked: true, sentry_mode: true, ...over };
@@ -163,7 +163,7 @@ describe('LiveSignalsWidget — rendering', () => {
     expect(screen.getByText('10.00°C')).toBeInTheDocument();
     expect(screen.getByText('On')).toBeInTheDocument();
 
-    // Tires: 290/300/280/260 kPa → bar (÷100).
+    // Tires: 290000/300000/280000/260000 Pa → bar (÷1000, then ÷100).
     expect(screen.getByText('2.90 bar')).toBeInTheDocument();
     expect(screen.getByText('3.00 bar')).toBeInTheDocument();
     expect(screen.getByText('2.80 bar')).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe('LiveSignalsWidget — rendering', () => {
   });
 
   it('converts SI readings to the user preference (°F + psi) and labels follow the preference', () => {
-    // 20°C→68°F, 10°C→50°F, 60°C→140°F; 290 kPa → 42.1 psi.
+    // 20°C→68°F, 10°C→50°F, 60°C→140°F; 290000 Pa → 42.06 psi.
     setup({ tempPref: '°F', pressurePref: 'psi' });
     render(<LiveSignalsWidget size={STANDARD} />);
 

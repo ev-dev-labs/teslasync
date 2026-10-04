@@ -174,12 +174,12 @@ export function WidgetShell({
         <>
           {/* Overlay freshness indicator for title-less widgets */}
           {freshnessEl && (
-            <div className="absolute top-1.5 right-1.5 z-[5]">
+            <div className="absolute top-1.5 right-[var(--dashboard-widget-chrome-inset,0.375rem)] z-[5]">
               {freshnessEl}
             </div>
           )}
           {(actions || status || description) && (
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 px-4 pb-2 pt-3">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pl-4 pr-[var(--dashboard-widget-chrome-inset,1rem)] pb-2 pt-3">
               {description && <p className={cn(dashboardTokens.description, 'mr-auto')}>{description}</p>}
               {status}
               {actions}

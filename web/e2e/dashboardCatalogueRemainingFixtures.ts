@@ -343,7 +343,8 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     }
   }
   if (id === 'live-signal-sparklines') {
-    await expect(panel.getByRole('img', { name: 'Trending up', exact: true })).toBeVisible();
+    await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toHaveCount(1);
+    await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toBeVisible();
     await expect(panel.getByRole('img', { name: /Soc trend/i })).toBeVisible();
   }
   if (id === 'fsd-weekly') {

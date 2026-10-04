@@ -90,7 +90,7 @@ export async function assertCatalogueCountReference(page: Page, panel: Locator,
   await expect(table.getByRole('columnheader', { name: '7-day avg (Wh/km)', exact: true })).toHaveCount(1);
   await expect(table.getByRole('cell', { name: '—', exact: true })).toHaveCount(1);
   await expect(table.getByRole('cell', { name: String(expectedAverage), exact: true })).toHaveCount(1);
-  const svg = panel.locator('svg.recharts-surface');
+  const svg = panel.locator('.recharts-wrapper > svg.recharts-surface');
   await expect(svg).toHaveCount(1);
   const rendered = await svg.evaluate(element => {
     const object = (value: unknown): value is Record<string, unknown> =>

@@ -97,6 +97,7 @@ export const VEHICLE_DISABLED_PREFIXES = [
   '/admin',
   '/automations',
   '/benchmarks',
+  '/dev',
   '/docs',
   '/integrations',
   '/me',

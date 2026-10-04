@@ -94,8 +94,8 @@ const readings: Record<string, RegExp> = {
   'mqtt-status': /3\.5/,
   'telemetry-errors': /(?:Healthy|Recovered historical connection interruption)/,
   'signal-health': /(?:1\/1|Active1With gaps0)/,
-  'signal-log': /(?:Signals\/sec|Soc)/,
-  'signal-catalog': /(?:Signals available|Soc)/,
+  'signal-log': /(?:signals\/sec|Soc)/,
+  'signal-catalog': /(?:signals available|Soc)/,
   'uptime-monitor': /(?:4\/4|All OK)/,
 };
 

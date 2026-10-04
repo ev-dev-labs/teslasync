@@ -32,6 +32,10 @@ const Dashboard = lazy(() => import('./features/dashboard/pages/DashboardPage'))
 const QuickStats = lazy(() => import('./features/dashboard/pages/QuickStatsPage'))
 const GlancePage = lazy(() => import('./features/dashboard/pages/GlancePage'))
 
+const MobileGridReference = import.meta.env.DEV ? lazy(() => import('./features/developer-reference/mobile-grid/MobileGridReferencePage')) : null
+const LayoutReference = import.meta.env.DEV ? lazy(() => import('./features/developer-reference/layout/LayoutReferencePage')) : null
+const StatReference = import.meta.env.DEV ? lazy(() => import('./features/developer-reference/stats/StatReferencePage')) : null
+
 // Vehicles
 const Vehicles = lazy(() => import('./features/vehicles/pages/VehicleListPage'))
 const VehicleDetail = lazy(() => import('./features/vehicles/pages/VehicleDetailPage'))
@@ -562,6 +566,9 @@ export default function App() {
       <Route path="connect" element={<SafeRoute name="Connect"><ConnectPage /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
+        {MobileGridReference && <Route path="dev/grid-states" element={<SafeRoute name="MobileGridReference"><MobileGridReference /></SafeRoute>} />}
+        {LayoutReference && <Route path="dev/layout" element={<SafeRoute name="LayoutReference"><LayoutReference /></SafeRoute>} />}
+        {StatReference && <Route path="dev/stats" element={<SafeRoute name="StatReference"><StatReference /></SafeRoute>} />}
         <Route path="explore" element={<SafeRoute name="Explore"><Explore /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
         <Route path="vehicles" element={<SafeRoute name="Vehicles"><Vehicles /></SafeRoute>} />
