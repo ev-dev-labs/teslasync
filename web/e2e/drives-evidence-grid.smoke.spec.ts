@@ -12,6 +12,58 @@ const evidenceDrives = Array.from({ length: 4 }, (_, index) => ({
 }));
 
 for (const theme of ['light', 'dark'] as const) {
+  for (const width of [1440, 1920]) {
+    test(`drive overview aligns mixed comparison slots at ${width}px in ${theme}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await seedBrowserState(page, theme, '/drives');
+      const mocks = await installApiMocks(page, 'populated', theme);
+      const priorDrives = evidenceDrives.slice(0, 2).map((drive, index) => ({
+        ...drive,
+        id: 201 + index,
+        start_ts: `2026-07-${25 - index}T08:00:00.000Z`,
+        end_ts: `2026-07-${25 - index}T08:32:00.000Z`,
+      }));
+      await page.route('**/api/v1/drives?*', route => {
+        const params = new URL(route.request().url()).searchParams;
+        const start = Date.parse(params.get('start') ?? '1970-01-01');
+        const end = Date.parse(params.get('end') ?? '2100-01-01');
+        return fulfillApiFixture(route, mocks, {
+          json: [...evidenceDrives, ...priorDrives].filter(drive => {
+            const at = Date.parse(drive.start_ts);
+            return at >= start && at < end;
+          }),
+        });
+      });
+      await page.goto('/drives?from=2026-08-01&to=2026-08-31');
+      await waitForHarnessReady(page, mocks);
+      const overview = page.getByTestId('drives-overview');
+      await overview.scrollIntoViewIfNeeded();
+      const cards = overview.locator('[data-role="metric-card"]');
+      await expect(cards).toHaveCount(6);
+      await expect(cards.first().locator('[data-role="metric-value"]')).toHaveText('4');
+      await expect(overview.locator('[data-role="metric-comparison"]')).toHaveCount(5);
+      await expect(cards.nth(3).locator('[data-role="metric-comparison"]')).toHaveCount(0);
+      const values = await cards.locator('[data-role="metric-value"]').evaluateAll(nodes =>
+        nodes.map(node => {
+          const bounds = node.getBoundingClientRect();
+          return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+        }),
+      );
+      for (let column = 0; column < 3; column++) {
+        expect(Math.abs(values[column].x - values[column + 3].x)).toBeLessThanOrEqual(1);
+      }
+      for (const row of [values.slice(0, 3), values.slice(3)]) {
+        expect(Math.max(...row.map(value => value.y)) - Math.min(...row.map(value => value.y)))
+          .toBeLessThanOrEqual(1);
+      }
+      await overview.screenshot({ path: test.info().outputPath(`drive-overview-mixed-${width}-${theme}.png`) });
+      await expectNoHorizontalOverflow(page);
+      await assertMockApiComplete(page, mocks);
+    });
+  }
+}
+
+for (const theme of ['light', 'dark'] as const) {
   for (const width of [320, 390, 768, 1024, 1280, 1440, 1920, 2560]) {
     test(`drive evidence aligns and filters at ${width}px in ${theme}`, async ({ page }) => {
       test.setTimeout(60_000);
@@ -34,10 +86,58 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(pageHeader).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
       const shadow = await pageHeader.evaluate((node) => getComputedStyle(node).boxShadow);
       expect(shadow === 'none' || shadow.replaceAll('rgba(0, 0, 0, 0)', '').replaceAll('0px', '').replace(/[,\s]/g, '') === '').toBe(true);
+      const overview = page.getByTestId('drives-overview');
+      await overview.scrollIntoViewIfNeeded();
+      const overviewGeometry = await overview.locator('[data-role="metric-card"]').evaluateAll((cards) => cards.map(card => {
+        const bounds = card.getBoundingClientRect();
+        const value = card.querySelector('[data-role="metric-value"]')!;
+        const valueBounds = value.getBoundingClientRect();
+        const inline = getComputedStyle(value.parentElement!).display === 'grid';
+        return {
+          column: Math.round(bounds.x),
+          row: Math.round(bounds.y),
+          valueX: inline ? valueBounds.x + valueBounds.width / 2 : valueBounds.x,
+          valueY: inline ? valueBounds.y + valueBounds.height / 2 : valueBounds.y,
+          inline,
+          comparison: card.querySelector('[data-role="metric-comparison"]') != null,
+        };
+      }));
+      expect(overviewGeometry).toHaveLength(6);
+      expect(overviewGeometry[3].comparison).toBe(false);
+      for (const column of new Set(overviewGeometry.map(item => item.column))) {
+        const values = overviewGeometry.filter(item => item.column === column).map(item => item.valueX);
+        expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(1);
+      }
+      for (const row of new Set(overviewGeometry.map(item => item.row))) {
+        const values = overviewGeometry.filter(item => item.row === row).map(item => item.valueY);
+        expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(1);
+      }
+      if (width >= 1920) expect(overviewGeometry.every(item => item.inline)).toBe(true);
+      await overview.screenshot({ path: test.info().outputPath(`drive-overview-${width}-${theme}.png`) });
       await region.scrollIntoViewIfNeeded();
       if (width < 1024) {
         await expect(region.getByRole('table')).toHaveCount(0);
         await expect(region.getByRole('link').first()).toBeVisible();
+        const pagination = page.getByRole('navigation', { name: 'Pagination', exact: true });
+        const controls = [
+          pagination.getByRole('button', { name: 'First page', exact: true }),
+          pagination.getByRole('button', { name: 'Previous page', exact: true }),
+          pagination.locator('button[aria-current="page"]'),
+          pagination.getByRole('button', { name: 'Next page', exact: true }),
+          pagination.getByRole('button', { name: 'Last page', exact: true }),
+        ];
+        await expect(pagination).toBeVisible();
+        const boxes = await Promise.all(controls.map(control => control.boundingBox()));
+        expect(boxes.every(Boolean)).toBe(true);
+        const centers = boxes.map(box => box!.y + box!.height / 2);
+        expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(1);
+        if (width < 640) {
+          for (const box of boxes) {
+            expect(box!.width).toBeGreaterThanOrEqual(44);
+            expect(box!.height).toBeGreaterThanOrEqual(44);
+          }
+          await pagination.screenshot({ path: test.info().outputPath(`drive-pagination-${width}-${theme}.png`) });
+        }
       } else {
         const table = region.getByRole('table', { name: 'Drive evidence' });
         await expect(table).toBeVisible();

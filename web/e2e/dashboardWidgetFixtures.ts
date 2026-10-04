@@ -8,13 +8,41 @@ import type { CostForecastData } from '../src/types/charging';
 import type {
   EnergyStats, TeslaEnergyHistoryEntry, TeslaEnergyLiveStatus, TeslaEnergySite,
   TeslaEnergySiteInfoResponse, TeslaWCChargingEntry,
+  TeslaBackupEvent,
 } from '../src/types/energy';
 import type { SignalCatalogEntry } from '../src/types/signals';
 import type { TelemetryStatus } from '../src/types/telemetry';
 import type { SafetySnapshot } from '../src/types/vehicle-systems';
 import { fulfillApiFixture, mockVehicle, type MockApiController } from './mockApi';
+import { installCatalogueVehicleSources } from './dashboardCatalogueVehicleFixtures';
+import { installCatalogueBatterySources } from './dashboardCatalogueBatteryFixtures';
+import { installCatalogueDrivingSources } from './dashboardCatalogueDrivingFixtures';
 
-export async function installDashboardWidgetSources(page: Page, mocks: MockApiController) {
+export function catalogueLiveStatus(now: string): TeslaEnergyLiveStatus {
+  return {
+    id: 1, energy_site_id: 42, solar_power: 4200, battery_power: -1000,
+    load_power: 2500, grid_power: -700, grid_services_power: 0,
+    energy_left: 10_530, total_pack_energy: 13_500, percentage_charged: 78,
+    grid_status: 'Active', backup_capable: true, storm_mode_active: false,
+    timestamp: now, fetched_at: now,
+  };
+}
+
+export function catalogueCostBreakdown(now: string, earlier: string): CostBreakdown {
+  return {
+    vehicle_id: 7, total_charging_cost: 110, total_wh: 520_000, total_sessions: 11,
+    total_km: 1000, first_date: earlier, last_date: now, equivalent_gas_cost: 150,
+    total_savings: 40, monthly_savings: 40, cost_per_km_ev: 0.11, cost_per_km_ice: 0.15,
+    maintenance_savings_estimate: 20, months_of_ownership: 1, gas_price: 4,
+    gas_unit: 'gallon', gas_efficiency_mpg: 25, base_cost_per_kwh: 0.16,
+    monthly_breakdown: [{
+      month: now.slice(0, 7), ev_cost: 110, equiv_gas_cost: 150,
+      savings: 40, cumulative_savings: 40, energy_wh: 520_000,
+    }],
+  };
+}
+
+export async function installDashboardWidgetSources(page: Page, mocks: MockApiController, chargingMode = false) {
   const now = new Date().toISOString();
   const earlier = new Date(Date.now() - 3_600_000).toISOString();
   const day = now.slice(0, 10);
@@ -41,13 +69,7 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
     tou_capable: true, storm_mode_capable: true, fetched_at: now,
     created_at: earlier, updated_at: now, site_info_fetched_at: now,
   };
-  const live: TeslaEnergyLiveStatus = {
-    id: 1, energy_site_id: 42, solar_power: 4200, battery_power: -1000,
-    load_power: 2500, grid_power: -700, grid_services_power: 0,
-    energy_left: 10_530, total_pack_energy: 13_500, percentage_charged: 78,
-    grid_status: 'Active', backup_capable: true, storm_mode_active: false,
-    timestamp: now, fetched_at: now,
-  };
+  const live = catalogueLiveStatus(now);
   const fixtures: Record<string, unknown> = {
     '/security/latest': security,
     '/security': [security],
@@ -79,7 +101,11 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
       verified_fields: ['state', 'power', 'battery_level', 'is_charging', 'charger_power', 'timestamp'],
       state: {
         vehicle_id: 7, state: 'driving', power: 14_000, battery_level: 72,
-        is_charging: false, charger_power: 0, updated_at: now,
+        is_charging: false, charger_power: 0, updated_at: now, timestamp: now,
+        rated_range: 410_000, ideal_range: 430_000, odometer: 32_100_000,
+        latitude: 37.4, longitude: -122.1, speed: 18, inside_temp: 21,
+        outside_temp: 18, is_climate_on: false, locked: true, is_locked: true,
+        sentry_mode: true, software_version: '2026.26.3',
       },
     },
     '/vehicles/7/energy': {
@@ -92,6 +118,11 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
       ],
     } satisfies EnergyStats,
     '/tesla/energy-sites': [site],
+    '/tesla/energy-sites/42/live-status': live,
+    '/tesla/energy-sites/42/backup-history': [{
+      id: 1, energy_site_id: 42, period: 'day', timestamp: earlier,
+      duration_seconds: 1800, fetched_at: now,
+    }] satisfies TeslaBackupEvent[],
     '/tesla/energy-sites/42/site-info': {
       data: {
         site_name: site.site_name, installation_time_zone: 'UTC',
@@ -117,17 +148,7 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
       id: 1, energy_site_id: 42, din: 'review-connector', timestamp: now,
       energy_wh: 14_000, fetched_at: now,
     }] satisfies TeslaWCChargingEntry[],
-    '/analytics/tco': {
-      vehicle_id: 7, total_charging_cost: 110, total_wh: 520_000, total_sessions: 11,
-      total_km: 1000, first_date: earlier, last_date: now, equivalent_gas_cost: 150,
-      total_savings: 40, monthly_savings: 40, cost_per_km_ev: 0.11, cost_per_km_ice: 0.15,
-      maintenance_savings_estimate: 20, months_of_ownership: 1, gas_price: 4,
-      gas_unit: 'gallon', gas_efficiency_mpg: 25, base_cost_per_kwh: 0.16,
-      monthly_breakdown: [{
-        month: day.slice(0, 7), ev_cost: 110, equiv_gas_cost: 150,
-        savings: 40, cumulative_savings: 40, energy_wh: 520_000,
-      }],
-    } satisfies CostBreakdown,
+    '/analytics/tco': catalogueCostBreakdown(now, earlier),
     '/analytics/cost-forecast': {
       historical: [
         { month: '2026-07', cost: 100, kwh: 500, sessions: 10, cost_per_kwh: 0.2 },
@@ -198,4 +219,7 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
       return fulfillApiFixture(route, mocks, { json });
     });
   }
+  await installCatalogueVehicleSources(page, mocks, chargingMode);
+  await installCatalogueBatterySources(page, mocks);
+  await installCatalogueDrivingSources(page, mocks);
 }
